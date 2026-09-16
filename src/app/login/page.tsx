@@ -26,12 +26,10 @@ function LoginSkeleton() {
         aria-hidden="true"
         className="hidden lg:flex lg:w-[56%] p-4 lg:p-5 xl:p-6 select-none"
       >
-        <div className="w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 rounded-2xl lg:rounded-[24px] bg-muted/80">
-          <div className="space-y-3">
-            <div className="h-5 w-44 bg-muted-foreground/20 rounded-full animate-pulse" />
-            <div className="h-8 w-72 bg-muted-foreground/20 rounded animate-pulse" />
-            <div className="h-4 w-52 bg-muted-foreground/15 rounded animate-pulse" />
-            <div className="h-3 w-48 bg-muted-foreground/10 rounded animate-pulse pt-3" />
+        <div className="w-full h-full flex flex-col justify-end p-8 lg:p-10 rounded-2xl lg:rounded-[24px] bg-muted/80">
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-muted-foreground/20 rounded animate-pulse" />
+            <div className="h-4 w-64 bg-muted-foreground/15 rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -39,13 +37,13 @@ function LoginSkeleton() {
       {/* Right Login Area Skeleton (44% on lg+, 100% on mobile) */}
       <div className="w-full lg:w-[44%] flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-[100dvh] lg:min-h-0">
         <div className="h-6 hidden sm:block" />
-        <div className="flex flex-col items-center text-center max-w-[380px] w-full mx-auto my-auto py-8">
-          <div className="size-12 rounded-xl bg-muted animate-pulse" />
-          <div className="mt-4 h-7 w-36 bg-muted rounded-md animate-pulse" />
-          <div className="mt-8 h-12 w-full bg-muted rounded-md animate-pulse" />
+        <div className="flex flex-col items-center text-center max-w-[340px] w-full mx-auto my-auto py-8">
+          <div className="size-10 rounded-full bg-muted animate-pulse" />
+          <div className="mt-3 h-6 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="mt-6 h-11 w-full bg-muted rounded-md animate-pulse" />
         </div>
         <div className="w-full flex justify-center py-4">
-          <div className="h-4 w-32 bg-muted/60 rounded animate-pulse" />
+          <div className="h-4 w-16 bg-muted/60 rounded animate-pulse" />
         </div>
       </div>
     </main>
@@ -111,7 +109,7 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET Work"
       className="flex min-h-[100dvh] w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Campus Photography Panel (56% on lg+) */}
+      {/* Desktop Left: Clean Institutional Campus Panel (56% on lg+) */}
       <div
         aria-hidden="true"
         className="hidden lg:flex lg:w-[56%] p-4 lg:p-5 xl:p-6 select-none"
@@ -134,48 +132,39 @@ function LoginFormContent() {
             />
           </m.div>
 
-          {/* Minimalist soft gradient overlay: preserves true photo colors while ensuring text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent z-1" />
+          {/* Minimalist soft gradient overlay: subtle shadow only at bottom text */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-1" />
 
-          {/* Lower Area: Institutional Statement & Footer */}
+          {/* Lower Area: Minimal Institutional Caption */}
           <m.div
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 space-y-4 max-w-lg"
+            className="relative z-10 space-y-1 max-w-sm"
           >
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-medium text-white/90 border border-white/15">
-                Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
-              </span>
-              <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug text-balance">
-                Không gian làm việc số của nhà trường
-              </h2>
-              <p className="text-xs xl:text-sm text-white/85 font-medium">
-                Nhiệm vụ · Văn bản &amp; Hồ sơ · Lịch công tác
-              </p>
-            </div>
-
-            <div className="text-[11px] text-white/65 font-medium border-t border-white/10 pt-3">
-              © 2026 QCET Work · Cổng điều hành tác nghiệp
-            </div>
+            <h2 className="text-lg font-semibold tracking-tight text-white font-heading">
+              Không gian làm việc số
+            </h2>
+            <p className="text-xs text-white/80 font-medium">
+              Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+            </p>
           </m.div>
         </div>
       </div>
 
-      {/* Desktop Right / Mobile: Minimalist Auth Panel (44% on lg+, 100% on mobile) */}
+      {/* Desktop Right / Mobile: True Minimalist Auth Panel (44% on lg+, 100% on mobile) */}
       <div className="w-full lg:w-[44%] flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-[100dvh] lg:min-h-0">
         {/* Top spacer for optical vertical centering */}
         <div className="h-6 hidden sm:block" />
 
-        {/* Minimal Auth Block: Logo -> QCET Work -> Google Login Button */}
+        {/* Pure Minimal Auth Block: Small Logo -> QCET Work -> Google Sign-in */}
         <m.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center text-center max-w-[380px] w-full mx-auto my-auto py-8"
+          className="flex flex-col items-center text-center max-w-[340px] w-full mx-auto my-auto py-8"
         >
-          {/* Logo nhỏ */}
+          {/* 1. Logo nhỏ 40px */}
           <m.div
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -184,21 +173,21 @@ function LoginFormContent() {
             <Image
               src="/logo-qcet.png"
               alt="Logo QCET"
-              width={96}
-              height={96}
-              className="size-12 object-contain select-none"
+              width={80}
+              height={80}
+              className="size-10 object-contain select-none"
               priority
             />
           </m.div>
 
-          {/* Tên ứng dụng */}
+          {/* 2. Tiêu đề ứng dụng */}
           <m.div
-            initial={{ opacity: 0, y: 4 }}
+            initial={{ opacity: 0, y: 3 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-4"
+            className="mt-3"
           >
-            <h1 className="text-2xl sm:text-[26px] font-semibold tracking-[-0.02em] text-foreground font-heading">
+            <h1 className="text-xl sm:text-[22px] font-semibold tracking-[-0.02em] text-foreground font-heading">
               QCET Work
             </h1>
           </m.div>
@@ -210,7 +199,7 @@ function LoginFormContent() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25 }}
               role="alert"
-              className="mt-6 flex items-start gap-2.5 w-full rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive text-left"
+              className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive text-left"
             >
               <AlertCircle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
               <div className="flex-1 space-y-1">
@@ -234,15 +223,15 @@ function LoginFormContent() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25 }}
               role="alert"
-              className="mt-6 flex items-start gap-2.5 w-full rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive text-left"
+              className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive text-left"
             >
               <AlertCircle className="size-4 shrink-0 text-destructive mt-0.5" strokeWidth={1.5} />
               <p className="flex-1 text-[11px] leading-relaxed">{errorMessage}</p>
             </m.div>
           )}
 
-          {/* Chuẩn Google Identity Services Button */}
-          <div className="w-full flex justify-center mt-7 sm:mt-8">
+          {/* 3. Nút Google Đăng nhập chuẩn 340px */}
+          <div className="w-full flex justify-center mt-6">
             <GoogleLoginButton
               returnTo={targetUrl}
               onError={handleError}
@@ -252,19 +241,12 @@ function LoginFormContent() {
         </m.div>
 
         {/* Minimal Footer Support Link */}
-        <footer className="w-full text-center py-4 text-xs text-muted-foreground/80 flex items-center justify-center gap-3">
+        <footer className="w-full text-center py-4 text-xs text-muted-foreground/70">
           <a
             href="mailto:support@cdktcnqn.edu.vn"
             className="hover:text-foreground transition-colors underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 rounded-xs"
           >
             Hỗ trợ kỹ thuật
-          </a>
-          <span className="text-border select-none" aria-hidden="true">·</span>
-          <a
-            href="mailto:qtm@cdktcnqn.edu.vn"
-            className="hover:text-foreground transition-colors underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 rounded-xs"
-          >
-            Quản trị mạng
           </a>
         </footer>
       </div>

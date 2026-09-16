@@ -46,7 +46,7 @@ const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
   { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28 min-w-[100px]" },
   { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20 min-w-[72px]" },
-  { id: "leadAssignee", label: "Chủ trì / Đơn vị", sortable: true, widthClass: "w-44 lg:w-52 min-w-[160px]" },
+  { id: "leadAssignee", label: "Chủ trì", sortable: true, widthClass: "w-40 lg:w-48 min-w-[140px]" },
   { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-32 min-w-[110px]" },
   { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20 min-w-[70px]", align: "center" },
   { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-24 min-w-[92px]" },
@@ -182,7 +182,7 @@ export function TaskTableHeader({
                       </div>
                     ) : (
                       <div
-                        className="size-4 rounded-[4px] border border-border/80 bg-background/80 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 flex items-center justify-center transition-all active:scale-95 shadow-2xs pointer-events-none"
+                        className="size-4 rounded-[4px] border border-border/90 bg-background/95 opacity-0 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
                         aria-label="Chọn tất cả nhiệm vụ hiển thị"
                       />
                     )}

@@ -26,6 +26,11 @@ const CommandSearchModal = dynamic(
   { ssr: false }
 );
 
+const GlobalShortcutsModal = dynamic(
+  () => import("@/components/layout/global-shortcuts-modal").then((mod) => mod.GlobalShortcutsModal),
+  { ssr: false }
+);
+
 const PWAInstallPrompt = dynamic(
   () => import("@/components/pwa/pwa-install-prompt").then((m) => m.PWAInstallPrompt),
   { ssr: false }
@@ -224,9 +229,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-[100dvh] bg-[#f4f5f7] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
+    <div className="relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
       {/* Desktop Sidebar (Fixed Linear width) */}
-      <React.Suspense fallback={<aside className="hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950 border-r border-black/[0.06] dark:border-white/[0.06]" />}>
+      <React.Suspense fallback={<aside className="hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
         <AppSidebar />
       </React.Suspense>
 
@@ -242,7 +247,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         </React.Suspense>
 
         {/* Desktop Top Header Bar (Linear-style matching sidebar top header) */}
-        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-[#f4f5f7] dark:bg-zinc-950" />}>
+        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
           <DesktopTopbar />
         </React.Suspense>
 
@@ -274,6 +279,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <MobileAppInstallModalContainer />
       <OnboardingHub />
       <CommandSearchModal />
+      <GlobalShortcutsModal />
     </div>
   );
 }

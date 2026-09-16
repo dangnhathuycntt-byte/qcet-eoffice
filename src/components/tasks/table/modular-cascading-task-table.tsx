@@ -130,109 +130,6 @@ export interface ModularCascadingTaskTableProps {
   emptyStateProps?: Partial<TaskEmptyStateProps>;
 }
 
-function TableShortcutHelpTrigger() {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen]);
-
-  return (
-    <div ref={containerRef} className="relative inline-flex items-center">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-expanded={isOpen}
-        aria-label="Xem danh sách phím tắt (? Phím tắt)"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg border border-border/70 bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none shadow-2xs"
-      >
-        <span className="inline-flex items-center justify-center font-mono font-bold text-xs bg-muted/60 rounded px-1 text-foreground">
-          ?
-        </span>
-        <span className="font-medium">Phím tắt</span>
-      </button>
-
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Phím tắt nhanh: Hướng dẫn thao tác bàn phím"
-          className="absolute bottom-full right-0 mb-2 w-72 rounded-2xl border border-border/80 bg-card p-3 shadow-lg z-50 text-xs text-foreground animate-in fade-in-0 zoom-in-95 duration-100"
-        >
-          <div className="flex items-center justify-between pb-1.5 border-b border-border/60 mb-2">
-            <span className="font-semibold text-foreground">Phím tắt nhanh:</span>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted min-h-[28px] min-w-[28px] flex items-center justify-center cursor-pointer"
-              aria-label="Đóng bảng phím tắt"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span>Tìm kiếm</span>
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                /
-              </kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Di chuyển dòng</span>
-              <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                  J
-                </kbd>
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                  K
-                </kbd>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Xem chi tiết</span>
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                ↵
-              </kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Chọn dòng</span>
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                X
-              </kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Đóng / Hủy chọn</span>
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                Esc
-              </kbd>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-muted-foreground">
-              <span>Menu lệnh toàn cục</span>
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
-                ⌘K
-              </kbd>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ModularCascadingTaskTable({
   tasks = [],
   scope,
@@ -832,26 +729,72 @@ export function ModularCascadingTaskTable({
     onRefresh: onRefresh ? async () => { await onRefresh(); } : undefined,
   });
 
-  // 11b. Keyboard navigation wrapper with Space peek preview (REQ-09 / REQ-10)
+  // 11b. Linear Mouse-Hover & Keyboard Space Peek Preview (REQ-09 / REQ-10)
+  const hoveredTaskIdRef = React.useRef<string | null>(null);
+
+  const handlePointerOver = React.useCallback((e: React.PointerEvent) => {
+    const rowEl = (e.target as HTMLElement)?.closest?.("[data-task-id]");
+    if (rowEl) {
+      const id = rowEl.getAttribute("data-task-id");
+      if (id) {
+        hoveredTaskIdRef.current = id;
+      }
+    }
+  }, []);
+
+  const handlePointerLeave = React.useCallback(() => {
+    hoveredTaskIdRef.current = null;
+  }, []);
+
+  // Helper tìm task theo ID (cả task cha và subtasks)
+  const findTaskById = React.useCallback(
+    (id: string): SchoolTask | undefined => {
+      const parent = paginatedResult.items.find((t) => t.id === id);
+      if (parent) return parent;
+      for (const t of paginatedResult.items) {
+        const sub = t.subTasks?.find((s) => s.id === id);
+        if (sub) return sub as unknown as SchoolTask;
+      }
+      return undefined;
+    },
+    [paginatedResult.items]
+  );
+
   const handleTableKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === " ") {
+        if (e.repeat || previewTask) {
+          return;
+        }
+
         if (!shouldIgnoreSpaceKey(e.nativeEvent)) {
           let targetTask: SchoolTask | undefined = undefined;
-          if (keyboardNav.activeId) {
-            targetTask = paginatedResult.items.find((t) => t.id === keyboardNav.activeId);
-          } else if (
+
+          // 1. Ưu tiên 1: Nhiệm vụ đang được con trỏ chuột rê/hover vào (Linear hover peek)
+          if (hoveredTaskIdRef.current) {
+            targetTask = findTaskById(hoveredTaskIdRef.current);
+          }
+
+          // 2. Ưu tiên 2: Nhiệm vụ đang active bằng phím tắt J/K
+          if (!targetTask && keyboardNav.activeId) {
+            targetTask = findTaskById(keyboardNav.activeId);
+          }
+
+          // 3. Fallback: Active index hoặc DOM focus
+          if (
+            !targetTask &&
             keyboardNav.activeIndex >= 0 &&
             keyboardNav.activeIndex < paginatedResult.items.length
           ) {
             targetTask = paginatedResult.items[keyboardNav.activeIndex];
-          } else {
+          }
+          if (!targetTask) {
             const focusedEl = document.activeElement as HTMLElement | null;
             const taskId = focusedEl
               ?.closest?.("[data-task-id]")
               ?.getAttribute("data-task-id");
             if (taskId) {
-              targetTask = paginatedResult.items.find((t) => t.id === taskId);
+              targetTask = findTaskById(taskId);
             }
           }
 
@@ -867,8 +810,28 @@ export function ModularCascadingTaskTable({
 
       keyboardNav.handleKeyDown(e);
     },
-    [keyboardNav, paginatedResult.items]
+    [keyboardNav, paginatedResult.items, findTaskById, previewTask]
   );
+
+  // Global listener: Khi chuột đang hover trên bất kỳ hàng nào, bấm Space là mở ngay Peek Preview
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " && !e.repeat && hoveredTaskIdRef.current && !previewTask) {
+        if (!shouldIgnoreSpaceKey(e)) {
+          const targetTask = findTaskById(hoveredTaskIdRef.current);
+          if (targetTask) {
+            e.preventDefault();
+            e.stopPropagation();
+            setPreviewTask(targetTask);
+            setPreviewTriggerEl(document.activeElement as HTMLElement | null);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [findTaskById, previewTask]);
 
   // 12. Month Period & Indicator
   const monthPeriod = React.useMemo(() => {
@@ -897,6 +860,8 @@ export function ModularCascadingTaskTable({
       tabIndex={0}
       data-slot="cascading-task-table"
       onKeyDown={handleTableKeyDown}
+      onPointerOver={handlePointerOver}
+      onPointerLeave={handlePointerLeave}
       className={cn(
         "flex flex-col gap-2.5 outline-hidden select-text transition-colors",
         className
@@ -1181,45 +1146,27 @@ export function ModularCascadingTaskTable({
                     );
 
                     return (
-                      <React.Fragment key={task.id}>
-                        <TaskRow
-                          task={task}
-                          scope={scope}
-                          isExpanded={isExpanded}
-                          isSelected={isSelected}
-                          isActive={isRowActive}
-                          isPreviewing={previewTask?.id === task.id}
-                          density={tableState.density}
-                          visibleColumns={effectiveVisibleColumns}
-                          showSelection={false}
-                          selectedAcademicMonth={selectedAcademicMonth}
-                          activeCategory={activeCategory}
-                          canAssign={canAssignUnit}
-                          onAddSubTask={effectiveOnAddSubTask}
-                          onToggleExpand={() => tableState.toggleExpand(task.id)}
-                          onToggleSelect={() => tableState.toggleSelect(task.id)}
-                          onClick={handleEffectiveSelectTask}
-                          onContextMenu={handleRowContextMenu}
-                          onStatusChange={onStatusChange}
-                          onUrge={onUrge}
-                        />
-                        {isExpanded && hasSubtasks && (
-                          <SubtaskRowGroup
-                            parentTask={task}
-                            scope={scope}
-                            isExpanded={isExpanded}
-                            density={tableState.density}
-                            colSpan={activeColSpan}
-                            selectedAcademicMonth={selectedAcademicMonth}
-                            onSelectSubTask={(sub) => handleEffectiveSelectTask(sub)}
-                            onStatusChange={onStatusChange}
-                            onOpenSubmitModal={onOpenSubmitModal}
-                            onAddSubTask={effectiveOnAddSubTask}
-                            canAssign={canAssignUnit}
-                            selectedTaskId={selectedTaskId}
-                          />
-                        )}
-                      </React.Fragment>
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        scope={scope}
+                        isExpanded={false}
+                        isSelected={isSelected}
+                        isActive={isRowActive}
+                        isPreviewing={previewTask?.id === task.id}
+                        density={tableState.density}
+                        visibleColumns={effectiveVisibleColumns}
+                        showSelection={false}
+                        selectedAcademicMonth={selectedAcademicMonth}
+                        activeCategory={activeCategory}
+                        canAssign={canAssignUnit}
+                        onAddSubTask={effectiveOnAddSubTask}
+                        onToggleSelect={() => tableState.toggleSelect(task.id)}
+                        onClick={handleEffectiveSelectTask}
+                        onContextMenu={handleRowContextMenu}
+                        onStatusChange={onStatusChange}
+                        onUrge={onUrge}
+                      />
                     );
                   })}
                 </tbody>
@@ -1255,7 +1202,6 @@ export function ModularCascadingTaskTable({
             totalItems={tableState.totalItems}
             onPageChange={handlePageChange}
             onPageSizeChange={tableState.setPageSize}
-            shortcutTrigger={<TableShortcutHelpTrigger />}
           />
         </div>
       )}

@@ -176,15 +176,15 @@ export function BatchActionBar({
       )}
     >
       <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 rounded-2xl border border-border/80 bg-card px-3.5 py-2 shadow-xl text-foreground">
-        {/* Bộ đếm số lượng mục đã chọn */}
+        {/* Bộ đếm số lượng mục đã chọn: ✓ Đã chọn 1 / 36 */}
         <div className="flex items-center gap-2 pr-2.5 border-r border-border">
           <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-            Đã chọn{" "}
+          <span className="text-xs font-medium text-foreground whitespace-nowrap">
+            ✓ Đã chọn{" "}
             <strong className="font-semibold font-mono tabular-nums text-foreground">
               {selectedCount}
             </strong>
-            {totalCount ? `/${totalCount}` : ""} nhiệm vụ được chọn
+            {totalCount ? ` / ${totalCount}` : ""}
           </span>
         </div>
 

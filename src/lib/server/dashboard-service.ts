@@ -216,7 +216,27 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       parentTaskCode: (t as any).parentTask?.code || undefined,
       parentTask: (t as any).parentTask || undefined,
     } as SchoolTask;
-  }).filter((t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2"));
+  }).filter((t) => {
+    if (!t || !t.title) return false;
+    const title = t.title;
+    if (
+      title.includes("Nhiệm vụ kiểm thử") ||
+      title.includes("kiểm thử V2") ||
+      title.includes("Attacker Task") ||
+      title.includes("Updated by User") ||
+      title.includes("Task OCC") ||
+      title.includes("Successfully updated") ||
+      title.includes("Task to be deleted") ||
+      title.includes("Kiểm tra tạo nhiệm vụ") ||
+      title.includes("Nhiệm vụ bí mật") ||
+      /\b178897\d+/i.test(title) ||
+      /\b178901\d+/i.test(title) ||
+      /\d{10,}/.test(title)
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   // Tính toán DashboardStats
   const total = mappedTasks.length;

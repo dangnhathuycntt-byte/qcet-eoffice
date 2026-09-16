@@ -47,7 +47,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { cn } from "@/lib/utils";
 
 const UserProfileModal = dynamic(
@@ -362,12 +361,21 @@ export function AppSidebar() {
     user?.departmentCode ||
     "Trường QCET";
 
+  const roleDepartmentSubtitle = React.useMemo(() => {
+    const role = userRoleLabel || "";
+    const dept = userDepartment || "";
+    if (!dept || dept === "Trường QCET" || role.trim().toLowerCase() === dept.trim().toLowerCase()) {
+      return role || dept;
+    }
+    return `${role} • ${dept}`;
+  }, [userRoleLabel, userDepartment]);
+
   return (
     <>
       <aside
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
-        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 border-r border-black/[0.06] dark:border-white/[0.06] text-foreground select-none group/sidebar w-[228px]"
+        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 text-foreground select-none group/sidebar w-[228px]"
       >
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
@@ -444,7 +452,7 @@ export function AppSidebar() {
           {isProfileDropdownOpen && user && (
             <div
               className={cn(
-                "rounded-xl border border-border/80 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-md p-2.5 shadow-dropdown z-50 animate-in fade-in zoom-in-95 w-64",
+                "rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 w-60",
                 isCollapsed
                   ? "absolute left-full top-2 ml-2"
                   : "absolute left-2 top-full mt-1"
@@ -457,44 +465,43 @@ export function AppSidebar() {
               )}
 
               {/* User Identity Card */}
-              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-muted/50 dark:bg-zinc-800/50">
-                <div className="size-8 rounded-lg flex items-center justify-center bg-primary text-primary-foreground text-xs font-bold shrink-0 shadow-2xs">
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05]">
+                <div className="size-8 rounded-[7px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white text-xs font-semibold shrink-0 shadow-2xs">
                   {getInitials(user.name)}
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-foreground truncate" title={formatDisplayName(user.name)}>
+                  <p className="text-[13px] font-medium text-foreground truncate" title={formatDisplayName(user.name)}>
                     {formatDisplayName(user.name)}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate" title={user.email}>
-                    {userRoleLabel}
-                    {userDepartment ? ` • ${userDepartment}` : ""}
+                    {roleDepartmentSubtitle}
                   </p>
-                  <p className="text-[10px] text-primary/90 font-medium truncate mt-0.5">
+                  <p className="text-[10px] text-primary/80 font-medium truncate mt-0.5">
                     QCET E-Office
                   </p>
                 </div>
               </div>
 
               {/* Menu Items */}
-              <div className="mt-2 space-y-0.5">
+              <div className="mt-1.5 space-y-0.5">
                 <button
                   type="button"
                   onClick={() => {
                     setIsProfileDropdownOpen(false);
                     setIsProfileModalOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/80 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer text-left"
+                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
                 >
-                  <User size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                  <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
                   <span>Hồ sơ cá nhân</span>
                 </button>
 
                 <Link
                   href="/settings"
                   onClick={() => setIsProfileDropdownOpen(false)}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/80 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer text-left"
+                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
                 >
-                  <Settings size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                  <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
                   <span>Cài đặt hệ thống</span>
                 </Link>
 
@@ -506,9 +513,9 @@ export function AppSidebar() {
                       window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
                     }
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/80 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer text-left"
+                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
                 >
-                  <Smartphone size={14} strokeWidth={1.5} className="text-primary shrink-0" />
+                  <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
                   <span>Cài đặt ứng dụng di động</span>
                 </button>
 
@@ -520,25 +527,22 @@ export function AppSidebar() {
                       window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
                     }
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/80 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer text-left"
+                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
                 >
-                  <Compass size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                  <Compass size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
                   <span>Hướng dẫn sử dụng</span>
                 </button>
               </div>
 
-              {/* Dev Role Switcher */}
-              <RoleSwitcherPill className="border-t border-border/50 pt-1.5 mt-1 px-1" />
-
               {/* Logout */}
-              <div className="border-t border-border/50 pt-1 mt-1">
+              <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-1 mt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setIsProfileDropdownOpen(false);
                     logout();
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer text-left"
+                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
                 >
                   <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
                   <span>Đăng xuất</span>
@@ -626,6 +630,33 @@ export function AppSidebar() {
               </div>
             );
           })}
+        </div>
+
+        {/* ========================================================= */}
+        {/* 3. LINEAR-STYLE BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
+        {/* ========================================================= */}
+        <div className="shrink-0 p-2.5 mt-auto flex items-center">
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("qcet:open-shortcuts"));
+                    }
+                  }}
+                  className="size-6 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 shadow-2xs hover:shadow-xs text-muted-foreground/75 hover:text-foreground font-mono font-semibold text-[12px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                  aria-label="Phím tắt và trợ giúp (?)"
+                >
+                  ?
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="text-xs">
+                Phím tắt & Trợ giúp (?)
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </aside>
 

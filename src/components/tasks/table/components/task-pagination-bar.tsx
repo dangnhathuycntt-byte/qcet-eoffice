@@ -232,13 +232,6 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         >
           <ChevronsRight className="size-3.5" strokeWidth={1.5} />
         </button>
-
-        {/* Optional Shortcut Help Trigger */}
-        {shortcutTrigger && (
-          <div className="hidden sm:flex items-center ml-1.5 pl-2 border-l border-border/60">
-            {shortcutTrigger}
-          </div>
-        )}
       </div>
     </nav>
   );

@@ -70,15 +70,35 @@ export function isSubTaskAssignedToUser(st: StaffTask, user: AuthUser | null): b
 
 import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
 
+export function isProductionTask(t: { title?: string }): boolean {
+  if (!t || !t.title) return false;
+  const title = t.title;
+  if (
+    title.includes("Nhiệm vụ kiểm thử") ||
+    title.includes("kiểm thử V2") ||
+    title.includes("Attacker Task") ||
+    title.includes("Updated by User") ||
+    title.includes("Task OCC") ||
+    title.includes("Successfully updated") ||
+    title.includes("Task to be deleted") ||
+    title.includes("Kiểm tra tạo nhiệm vụ") ||
+    title.includes("Nhiệm vụ bí mật") ||
+    /\b178897\d+/i.test(title) ||
+    /\b178901\d+/i.test(title) ||
+    /\d{10,}/.test(title)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function countScopeTasks(
   tasks: SchoolTask[] = [],
   user: AuthUser | null,
   scope: WorkspaceScope,
   selectedDepartment?: string
 ): number {
-  const cleanTasks = tasks.filter(
-    (t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2")
-  );
+  const cleanTasks = tasks.filter(isProductionTask);
   if (scope === "school") return cleanTasks.length;
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   if (scope === "unit") {
@@ -113,9 +133,7 @@ export function deriveAdaptiveWorkspaceData({
   scope,
   selectedDepartment,
 }: DeriveWorkspaceDataOptions): DerivedWorkspaceData {
-  const cleanTasks = tasks.filter(
-    (t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2")
-  );
+  const cleanTasks = tasks.filter(isProductionTask);
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user);

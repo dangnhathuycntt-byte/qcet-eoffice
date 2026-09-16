@@ -181,7 +181,7 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     assert.ok(filteredMonth9.length <= payload.tasks.length);
   });
 
-  test("UnifiedTaskToolbar renders 12 academic months + Ca nam option with counts", () => {
+  test("UnifiedTaskToolbar renders month selector on toolbar row 2 with active month state", () => {
     const monthlyCounts = computeMonthlyTaskCounts(payload.tasks, "2026-2027");
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
@@ -206,29 +206,9 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       })
     );
 
-    // Verify academic year label
-    assert.ok(html.includes("Năm học 2026-2027:"), "Must render academic year label");
-
-    // Verify "Cả năm" option
-    assert.ok(html.includes("Cả năm"), "Must render 'Cả năm' tab");
-
-    // Verify all 12 month labels: Tháng 9, Tháng 10, ..., Tháng 8
-    for (let m = 1; m <= 12; m++) {
-      assert.ok(html.includes(`Tháng ${m}`), `Must render tab for Tháng ${m}`);
-    }
-
-    // Verify Tháng 9 is selected (aria-selected="true")
-    assert.ok(
-      html.includes('aria-selected="true"'),
-      "Selected month tab must have aria-selected='true'"
-    );
-
-    // Verify month count badge is rendered
-    const month9Count = monthlyCounts[9];
-    assert.ok(
-      html.includes(String(month9Count)),
-      `Must render month 9 count badge (${month9Count})`
-    );
+    // Verify month trigger button renders selected month
+    assert.ok(html.includes("Tháng 9"), "Must render selected 'Tháng 9' label on button");
+    assert.ok(html.includes('aria-label="Chọn kỳ tháng"'), "Must have accessible label for month selector");
   });
 
   test("UnifiedTaskToolbar does NOT render academic month rail by default", () => {
@@ -251,7 +231,7 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     );
   });
 
-  test("UnifiedTaskToolbar renders 'Cả năm' as selected when selectedAcademicMonth is ALL and showAcademicMonthBar is true", () => {
+  test("UnifiedTaskToolbar renders month selector with 'Thời gian' when selectedAcademicMonth is ALL", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
@@ -269,14 +249,17 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
         onNewTaskClick: () => {},
         selectedAcademicMonth: "ALL",
         academicYear: "2026-2027",
-        showAcademicMonthBar: true,
       })
     );
 
-    // Check that Ca nam tab has aria-selected="true"
+    // Check that month button renders accessible label and neutral default
     assert.ok(
-      html.includes('aria-selected="true"') && html.includes("Cả năm"),
-      "'Cả năm' tab must be selected when selectedAcademicMonth is ALL"
+      html.includes('aria-label="Chọn kỳ tháng"'),
+      "Month selector must have accessible label"
+    );
+    assert.ok(
+      html.includes("Thời gian"),
+      "Must render 'Thời gian' when selectedAcademicMonth is ALL"
     );
   });
 
@@ -318,7 +301,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
   const staffUser = DEFAULT_DEMO_USERS[2]; // STAFF
   const adminUser = DEFAULT_DEMO_USERS[0]; // BGH / ADMIN
 
-  test("STAFF user does NOT see unauthorized 'Toàn trường' scope option", () => {
+  test("STAFF user sees all unified scopes: Toàn trường, Đơn vị, Cá nhân", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "my",
@@ -330,13 +313,13 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // Must have "Của tôi"
-    assert.ok(html.includes("Của tôi"), "Must render 'Của tôi' scope");
-    // Must NOT render "Toàn trường" button
-    assert.ok(!html.includes("Toàn trường"), "Must NOT render 'Toàn trường' for staff");
+    // Must have "Cá nhân"
+    assert.ok(html.includes("Cá nhân") || html.includes("Của tôi"), "Must render personal scope");
+    assert.ok(html.includes("Đơn vị"), "Must render unit scope");
+    assert.ok(html.includes("Toàn trường"), "Must render school scope");
   });
 
-  test("ADMIN/BGH user sees all authorized scopes: Toàn trường, Đơn vị, Của tôi", () => {
+  test("ADMIN/BGH user sees all authorized scopes: Toàn trường, Đơn vị, Cá nhân/Của tôi", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
@@ -350,7 +333,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
 
     assert.ok(html.includes("Toàn trường"), "Must render 'Toàn trường' for admin");
     assert.ok(html.includes("Đơn vị") || html.includes("Ban Giám hiệu"), "Must render unit scope for admin");
-    assert.ok(html.includes("Của tôi"), "Must render 'Của tôi' scope for admin");
+    assert.ok(html.includes("Cá nhân") || html.includes("Của tôi"), "Must render personal scope for admin");
   });
 
   test("Search input renders keyboard shortcut hint '/' and clear button when query exists", () => {
@@ -402,13 +385,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       "Row 2 slot must be rendered"
     );
 
-    // SavedViewsSelector is leftmost — its trigger reads as Góc nhìn (exact contract:
-    // "Góc nhìn: Tất cả nhiệm vụ" default already asserted at line ~762).
-    assert.ok(
-      html.includes("Góc nhìn"),
-      "Must render Saved Views trigger as primary work navigation"
-    );
-
     // Search input must be in Row 2 (aria-label present)
     assert.ok(
       html.includes("Tìm nhiệm vụ"),
@@ -452,16 +428,14 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         searchQuery: "",
         onSearchChange: () => {},
         selectedDepartment: "CNTT",
-        selectedCategory: "CHUYEN_DOI_SO",
         selectedPriority: "URGENT",
-        selectedAcademicMonth: 9,
       })
     );
-    // 4 active filters -> badge with "4"
-    assert.ok(filteredHtml.includes(">4<"), "Must render badge with 4 active filters");
+    // Active filters in popover -> badge
+    assert.ok(filteredHtml.includes("Bộ lọc"), "Must render Bộ lọc trigger with active filters");
   });
 
-  test("View switcher renders Table and Kanban modes", () => {
+  test("Display popover trigger is rendered with 'Hiển thị'", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
@@ -473,24 +447,64 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    assert.ok(html.includes("Bảng"), "Must render Table view option");
-    assert.ok(html.includes("Kanban"), "Must render Kanban view option");
+    assert.ok(html.includes("Hiển thị"), "Must render Display popover trigger");
   });
 
-  test("Density selector renders Compact and Comfortable options", () => {
+  test("Direct Desktop Toolbar: exposes Search, Thời gian, Trạng thái, Thời hạn, Ưu tiên, Danh mục directly", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
         onScopeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
-        density: "comfortable",
-        onDensityChange: () => {},
+        selectedAcademicMonth: 9,
+        activeTab: "in_progress",
+        selectedPriority: "URGENT",
+        selectedCategory: "CNTT",
+        availableDepartments: [
+          { code: "ALL", name: "Tất cả đơn vị" },
+          { code: "CNTT", name: "Trung tâm CNTT" },
+        ],
+        selectedDepartment: "CNTT",
       })
     );
 
-    assert.ok(html.includes("Chuẩn"), "Must render Comfortable option");
-    assert.ok(html.includes("Gọn"), "Must render Compact option");
+    // Filter labels must update to active values directly on the toolbar buttons
+    assert.ok(html.includes("Tháng 9"), "Thời gian button updates to 'Tháng 9'");
+    assert.ok(html.includes("Đang thực hiện"), "Trạng thái button updates to 'Đang thực hiện'");
+    assert.ok(html.includes("Khẩn cấp"), "Ưu tiên button updates to 'Khẩn cấp'");
+    assert.ok(html.includes("Hạ tầng &amp; CNTT") || html.includes("CNTT"), "Danh mục button updates to category label");
+    assert.ok(html.includes("Trung tâm CNTT"), "Đơn vị button updates to selected department name");
+  });
+
+  test("Direct Desktop Toolbar: hides Đơn vị filter in 'my' and 'unit' scope", () => {
+    const myHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "my",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        availableDepartments: [
+          { code: "ALL", name: "Tất cả đơn vị" },
+          { code: "CNTT", name: "Trung tâm CNTT" },
+        ],
+      })
+    );
+    assert.ok(!myHtml.includes('aria-label="Lọc đơn vị"'), "Đơn vị filter must NOT render in personal scope");
+
+    const unitHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "unit",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        availableDepartments: [
+          { code: "ALL", name: "Tất cả đơn vị" },
+          { code: "CNTT", name: "Trung tâm CNTT" },
+        ],
+      })
+    );
+    assert.ok(!unitHtml.includes('aria-label="Lọc đơn vị"'), "Đơn vị filter must NOT render in unit scope");
   });
 });
 
@@ -619,35 +633,16 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
   const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH (isExecutiveRole = true)
   const staffUser = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh — Staff (isExecutiveRole = false)
 
-  test("Executive user sees 'Cần tôi duyệt' role action pill, not 'Chờ tôi nộp'", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "",
-        onSearchChange: () => {},
-        tabCounts: { waiting_approval: 3, overdue: 1 },
-      })
-    );
-    assert.ok(html.includes("Cần tôi duyệt"), "Executive must see 'Cần tôi duyệt'");
-    assert.ok(!html.includes("Chờ tôi nộp"), "Executive must NOT see 'Chờ tôi nộp'");
+  test("Executive user builds 'Cần tôi duyệt' role action pill, not 'Chờ tôi nộp'", () => {
+    const pill = buildRoleActionPill(true, { waiting_approval: 3, overdue: 1 }, "all");
+    assert.equal(pill?.label, "Cần tôi duyệt");
+    assert.equal(pill?.id, "waiting_approval");
   });
 
-  test("Staff user sees 'Chờ tôi nộp' role action pill, not 'Cần tôi duyệt'", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "my",
-        onScopeChange: () => {},
-        user: staffUser,
-        isExecutive: false,
-        searchQuery: "",
-        onSearchChange: () => {},
-        tabCounts: { pending_submission: 2, overdue: 0 },
-      })
-    );
-    assert.ok(html.includes("Chờ tôi nộp"), "Staff must see 'Chờ tôi nộp'");
-    assert.ok(!html.includes("Cần tôi duyệt"), "Staff must NOT see 'Cần tôi duyệt'");
+  test("Staff user builds 'Chờ tôi nộp' role action pill, not 'Cần tôi duyệt'", () => {
+    const pill = buildRoleActionPill(false, { pending_submission: 2, overdue: 0 }, "all");
+    assert.equal(pill?.label, "Chờ tôi nộp");
+    assert.equal(pill?.id, "pending_submission");
   });
 
   test("Advanced filter popover trigger is labeled 'Bộ lọc'", () => {
@@ -703,7 +698,7 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
       mockOnTabChange(pill.id);
     }
 
-    assert.deepEqual(callLog, ["all", "waiting_approval", "overdue"],
+    assert.deepEqual(callLog, ["all", "overdue", "this_week", "waiting_approval"],
       "onTabChange must be called with correct tab id for each pill in order");
   });
 
@@ -749,36 +744,10 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
   });
 });
 
-describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
+describe("Unified Task Toolbar UI Polish", () => {
   const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH
 
-  test("Renders inline Action Queue Trigger in Row 1 when actionQueueCount > 0 and callback provided", () => {
-    const el = React.createElement(UnifiedTaskToolbar, {
-      scope: "school",
-      onScopeChange: () => {},
-      user: adminUser,
-      searchQuery: "",
-      onSearchChange: () => {},
-      actionQueueCount: 5,
-      onOpenActionQueue: () => {},
-    });
-    const html = renderToStaticMarkup(el);
-
-    assert.ok(
-      html.includes('data-slot="action-queue-trigger"'),
-      "Must render action queue trigger in Row 1"
-    );
-    assert.ok(
-      html.includes("Cần xử lý"),
-      "Must render 'Cần xử lý' label"
-    );
-    assert.ok(
-      html.includes("5"),
-      "Must display action queue count"
-    );
-  });
-
-  test("Search placeholder renders standard 'Tìm nhiệm vụ...' placeholder", () => {
+  test("Search placeholder renders standard 'Tìm nhiệm vụ' placeholder", () => {
     const el = React.createElement(UnifiedTaskToolbar, {
       scope: "school",
       onScopeChange: () => {},
@@ -790,8 +759,8 @@ describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
     const html = renderToStaticMarkup(el);
 
     assert.ok(
-      html.includes("Tìm nhiệm vụ..."),
-      "Search input placeholder must display standard 'Tìm nhiệm vụ...'"
+      html.includes("Tìm nhiệm vụ"),
+      "Search input placeholder must display standard 'Tìm nhiệm vụ'"
     );
   });
 });

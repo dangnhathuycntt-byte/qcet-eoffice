@@ -418,35 +418,11 @@ export const TaskRow = React.memo(function TaskRow({
                 <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
               </div>
             ) : (
-              <>
-                {/* Default State: Chevron for parent tasks, clean empty space for leaf tasks */}
-                {hasSubtasks ? (
-                  <button
-                    type="button"
-                    onClick={handleExpandClick}
-                    className="size-5 flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-colors group-hover/selector:opacity-0 group-hover:opacity-0"
-                    aria-expanded={isExpanded}
-                    aria-label={
-                      isExpanded
-                        ? "Thu gọn nhiệm vụ con"
-                        : "Mở rộng nhiệm vụ con"
-                    }
-                    title={isExpanded ? "Thu gọn nhiệm vụ con" : "Mở rộng nhiệm vụ con"}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="size-3.5" strokeWidth={1.8} />
-                    ) : (
-                      <ChevronRight className="size-3.5" strokeWidth={1.8} />
-                    )}
-                  </button>
-                ) : null}
-
-                {/* Hover State: Checkbox smoothly reveals with large hit target */}
-                <div
-                  className="size-4 rounded-[4px] border border-border/90 bg-background/95 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/selector:opacity-100 group-hover:opacity-100 flex items-center justify-center transition-all active:scale-95 shadow-2xs pointer-events-none"
-                  aria-hidden="true"
-                />
-              </>
+              /* Linear Checkbox: Idle Invisible, Hover -> Fade/Scale in smoothly, Title does not shift */
+              <div
+                className="size-4 rounded-[4px] border border-border/90 bg-background/95 opacity-0 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
+                aria-hidden="true"
+              />
             )}
           </div>
 
@@ -488,40 +464,30 @@ export const TaskRow = React.memo(function TaskRow({
         </td>
       )}
 
-      {/* 5. Người / Đơn vị phụ trách (Lead Assignee / Department) */}
-      <td className={cn("w-44 lg:w-52 min-w-[160px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      {/* 5. Chủ trì (Lead Assignee - Clean Single Line Aligned) */}
+      <td className={cn("w-40 lg:w-48 min-w-[140px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
         <div
-          className="flex flex-col min-w-0 justify-center"
+          className="flex items-center gap-2 min-w-0"
           title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            {task.leadAssigneeAvatar ? (
-              <img
-                src={task.leadAssigneeAvatar}
-                alt=""
-                aria-hidden="true"
-                width={20}
-                height={20}
-                loading="lazy"
-                className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-              />
-            ) : (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
-                {getInitials(driInfo.primaryName)}
-              </span>
-            )}
-            <span className="text-xs font-medium text-foreground truncate">
-              {driInfo.primaryName}
-            </span>
-          </div>
-          {departmentName && (
-            <span
-              className="text-[11px] text-muted-foreground/75 font-normal truncate mt-0.5 ml-7"
-              title={departmentName}
-            >
-              {departmentName}
+          {task.leadAssigneeAvatar ? (
+            <img
+              src={task.leadAssigneeAvatar}
+              alt=""
+              aria-hidden="true"
+              width={20}
+              height={20}
+              loading="lazy"
+              className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+            />
+          ) : (
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
+              {getInitials(driInfo.primaryName)}
             </span>
           )}
+          <span className="text-xs font-medium text-foreground truncate">
+            {driInfo.primaryName}
+          </span>
         </div>
       </td>
 

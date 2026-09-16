@@ -46,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import { useLinearTaskShortcuts } from "@/hooks/use-linear-task-shortcuts";
 
 const LinearCreateTaskModal = dynamic(
   () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
@@ -1713,6 +1714,12 @@ export function UnifiedAdaptiveWorkspace({
       openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG");
     }
   }, [onCreateTask, onAction, isStaff, activeScope, openCreateModal]);
+
+  // Keyboard shortcut 'C' / 'N P' to trigger task creation when modal is closed
+  useLinearTaskShortcuts({
+    enabled: !isCreateModalOpen,
+    onOpen: handleCreateTaskClick,
+  });
 
   // Canonical refresh: delegates to the parent when the dataset is controlled,
   // otherwise reloads the canonical server collection.

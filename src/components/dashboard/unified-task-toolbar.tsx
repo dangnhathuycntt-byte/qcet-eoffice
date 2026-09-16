@@ -496,9 +496,38 @@ export function UnifiedTaskToolbar({
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
   const displayMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Month selector dropdown menu state
+  // Filter dropdown states
   const [isMonthOpen, setIsMonthOpen] = React.useState(false);
   const monthMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isStatusOpen, setIsStatusOpen] = React.useState(false);
+  const statusMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isDeadlineOpen, setIsDeadlineOpen] = React.useState(false);
+  const deadlineMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isPriorityOpen, setIsPriorityOpen] = React.useState(false);
+  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isDepartmentOpen, setIsDepartmentOpen] = React.useState(false);
+  const departmentMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isCategoryOpen, setIsCategoryOpen] = React.useState(false);
+  const categoryMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
+  const collapsedFilterRef = React.useRef<HTMLDivElement>(null);
+
+  const closeAllMenus = React.useCallback(() => {
+    setIsMonthOpen(false);
+    setIsStatusOpen(false);
+    setIsDeadlineOpen(false);
+    setIsPriorityOpen(false);
+    setIsDepartmentOpen(false);
+    setIsCategoryOpen(false);
+    setIsCollapsedFilterOpen(false);
+    setIsDisplayOpen(false);
+  }, []);
 
   // Resolve Month props (supporting compatibility aliases)
   const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
@@ -651,45 +680,39 @@ export function UnifiedTaskToolbar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // 3. Popover outside click and Esc listener
+  // 3. Dropdowns outside click and Esc listener
   React.useEffect(() => {
-    if (!isFilterOpen) return;
-
     const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-        setActiveFilterField(null);
+      const target = e.target as Node;
+      if (monthMenuRef.current && !monthMenuRef.current.contains(target)) {
+        setIsMonthOpen(false);
       }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsFilterOpen(false);
-        setActiveFilterField(null);
+      if (statusMenuRef.current && !statusMenuRef.current.contains(target)) {
+        setIsStatusOpen(false);
       }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isFilterOpen]);
-
-  // Display options popover outside click and Esc listener
-  React.useEffect(() => {
-    if (!isDisplayOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (displayMenuRef.current && !displayMenuRef.current.contains(e.target as Node)) {
+      if (deadlineMenuRef.current && !deadlineMenuRef.current.contains(target)) {
+        setIsDeadlineOpen(false);
+      }
+      if (priorityMenuRef.current && !priorityMenuRef.current.contains(target)) {
+        setIsPriorityOpen(false);
+      }
+      if (departmentMenuRef.current && !departmentMenuRef.current.contains(target)) {
+        setIsDepartmentOpen(false);
+      }
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(target)) {
+        setIsCategoryOpen(false);
+      }
+      if (collapsedFilterRef.current && !collapsedFilterRef.current.contains(target)) {
+        setIsCollapsedFilterOpen(false);
+      }
+      if (displayMenuRef.current && !displayMenuRef.current.contains(target)) {
         setIsDisplayOpen(false);
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsDisplayOpen(false);
+        closeAllMenus();
       }
     };
 
@@ -699,31 +722,7 @@ export function UnifiedTaskToolbar({
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDisplayOpen]);
-
-  // Month options popover outside click and Esc listener
-  React.useEffect(() => {
-    if (!isMonthOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (monthMenuRef.current && !monthMenuRef.current.contains(e.target as Node)) {
-        setIsMonthOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsMonthOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isMonthOpen]);
+  }, [closeAllMenus]);
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
@@ -775,6 +774,80 @@ export function UnifiedTaskToolbar({
     () => buildQuickFilterPills(isExecutiveRole, tabCounts, activeTab, totalTasksCount),
     [isExecutiveRole, tabCounts, activeTab, totalTasksCount]
   );
+
+  const timeLabel = React.useMemo(() => {
+    if (effectiveMonth === "ALL" || effectiveMonth === undefined) return "Thời gian";
+    return `Tháng ${effectiveMonth}`;
+  }, [effectiveMonth]);
+
+  const statusLabel = React.useMemo(() => {
+    if (!activeTab || activeTab === "all" || activeTab === "today" || activeTab === "this_week") return "Trạng thái";
+    if (activeTab.includes(",")) {
+      const parts = activeTab.split(",").filter(Boolean);
+      return `Trạng thái · ${parts.length}`;
+    }
+    if (activeTab === "new") return "Mới";
+    if (activeTab === "in_progress") return "Đang thực hiện";
+    if (activeTab === "waiting_approval" || activeTab === "review") return isExecutiveRole ? "Cần tôi duyệt" : "Cần chỉnh sửa";
+    if (activeTab === "pending_submission") return "Chờ nộp BC";
+    if (activeTab === "overdue") return "Quá hạn";
+    if (activeTab === "completed") return "Hoàn thành";
+    return "Trạng thái";
+  }, [activeTab, isExecutiveRole]);
+
+  const deadlineOptions = React.useMemo(() => [
+    { value: "all", label: "Tất cả thời hạn" },
+    { value: "overdue", label: "Quá hạn", count: tabCounts?.overdue },
+    { value: "today", label: "Đến hạn hôm nay", count: tabCounts?.today },
+    { value: "this_week", label: "Trong tuần này", count: tabCounts?.this_week },
+  ], [tabCounts]);
+
+  const deadlineLabel = React.useMemo(() => {
+    if (activeTab === "today") return "Đến hạn hôm nay";
+    if (activeTab === "this_week") return "Trong tuần này";
+    if (activeTab === "overdue") return "Quá hạn";
+    return "Thời hạn";
+  }, [activeTab]);
+
+  const priorityLabel = React.useMemo(() => {
+    if (!selectedPriority || selectedPriority === "ALL") return "Ưu tiên";
+    if (selectedPriority.includes(",")) {
+      const parts = selectedPriority.split(",").filter(Boolean);
+      return `Ưu tiên · ${parts.length}`;
+    }
+    const found = PRIORITY_FILTER_OPTIONS.find((p) => p.id === selectedPriority);
+    return found ? found.label : selectedPriority;
+  }, [selectedPriority]);
+
+  const showDepartmentFilter = React.useMemo(() => {
+    return normalizedScope === "school" && availableDepartments.length > 1;
+  }, [normalizedScope, availableDepartments.length]);
+
+  const departmentLabel = React.useMemo(() => {
+    if (!selectedDepartment || selectedDepartment === "ALL") return "Đơn vị";
+    const found = availableDepartments.find((d) => d.code === selectedDepartment);
+    return found ? found.name : selectedDepartment;
+  }, [selectedDepartment, availableDepartments]);
+
+  const categoryLabel = React.useMemo(() => {
+    if (!selectedCategory || selectedCategory === "ALL") return "Danh mục";
+    if (selectedCategory.includes(",")) {
+      const parts = selectedCategory.split(",").filter(Boolean);
+      return `Danh mục · ${parts.length}`;
+    }
+    const found = CATEGORY_FILTER_OPTIONS.find((c) => c.id === selectedCategory);
+    return found ? found.label : selectedCategory;
+  }, [selectedCategory]);
+
+  const secondaryFiltersActiveCount = React.useMemo(() => {
+    let count = 0;
+    if (selectedPriority && selectedPriority !== "ALL") count++;
+    if (showDepartmentFilter && selectedDepartment && selectedDepartment !== "ALL") count++;
+    if (selectedCategory && selectedCategory !== "ALL") count++;
+    return count;
+  }, [selectedPriority, showDepartmentFilter, selectedDepartment, selectedCategory]);
+
+  const moreFiltersActiveCount = secondaryFiltersActiveCount;
 
   // Count active advanced filters (Department, Priority, Custom status)
   const activeAdvancedFilterCount = React.useMemo(() => {
@@ -952,7 +1025,7 @@ export function UnifiedTaskToolbar({
     <div
       data-slot="unified-task-toolbar"
       className={cn(
-        "flex flex-col gap-2 border-b border-border/60 pb-2.5 bg-transparent",
+        "flex flex-col gap-2 border-b border-border/60 pb-2.5 bg-transparent relative z-20 overflow-visible",
         className
       )}
     >
@@ -1027,29 +1100,32 @@ export function UnifiedTaskToolbar({
           )}
         </div>
 
-        {/* Right: Primary Action Button */}
+        {/* Right: Primary Page Action Button (Quiet/Flat Neutral Style) */}
         {canCreateTask && handlePrimaryAction && (
           <button
             type="button"
             onClick={() => handlePrimaryAction()}
-            title="Tạo nhiệm vụ mới (N P)"
-            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-2xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
+            title="Tạo nhiệm vụ (C)"
+            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-transparent bg-transparent px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:border-border/80 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer shrink-0"
           >
-            <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <Plus className="size-3.5 sm:size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ</span>
+            <kbd className="hidden sm:inline-flex items-center px-1 py-0.2 text-[10px] font-mono text-muted-foreground/70 bg-muted/60 border border-border/40 rounded select-none pointer-events-none ml-0.5">
+              C
+            </kbd>
           </button>
         )}
       </div>
 
       {/* ==================================================================== */}
-      {/* ROW 2: Search + Month Selector + Filter Menu + Display Menu          */}
+      {/* ROW 2: Search → Thời gian → Trạng thái → Thời hạn → Ưu tiên → Đơn vị → Danh mục ··· Hiển thị */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-2"
-        className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap"
+        className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap sm:flex-nowrap relative z-30 overflow-visible"
       >
-        {/* 1. Search Input: Always Scoped to Current Scope (440–500px) */}
-        <div className="relative w-full max-w-[440px] sm:max-w-[480px] shrink">
+        {/* 1. Search Input: Scoped to Current Scope */}
+        <div className="relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[260px] shrink-0">
           <Search
             className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
@@ -1061,7 +1137,7 @@ export function UnifiedTaskToolbar({
             onChange={(e) => handleSearchInputChange(e.target.value)}
             placeholder="Tìm nhiệm vụ… /"
             aria-label="Tìm nhiệm vụ"
-            className="h-9 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
+            className="h-8 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {loading && (
@@ -1075,7 +1151,7 @@ export function UnifiedTaskToolbar({
                 type="button"
                 onClick={handleSearchClear}
                 aria-label="Xóa từ khóa tìm kiếm"
-                className="size-5 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
               >
                 <X className="size-3" strokeWidth={1.5} />
               </button>
@@ -1087,26 +1163,23 @@ export function UnifiedTaskToolbar({
           </div>
         </div>
 
-        {/* 2. Month Filter Selector Outside Toolbar (Linear style) */}
+        {/* 2. Thời gian Filter */}
         <div className="relative shrink-0" ref={monthMenuRef}>
           <button
             type="button"
             aria-label="Chọn kỳ tháng"
             aria-expanded={isMonthOpen}
-            onClick={() => setIsMonthOpen((prev) => !prev)}
+            onClick={() => {
+              const next = !isMonthOpen;
+              closeAllMenus();
+              setIsMonthOpen(next);
+            }}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              effectiveMonth !== "ALL" && effectiveMonth !== undefined
-                ? "border-primary/40 bg-primary/5 text-primary font-semibold"
-                : "text-foreground hover:bg-accent"
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+              effectiveMonth !== "ALL" && effectiveMonth !== undefined && "bg-muted font-semibold border-border"
             )}
           >
-            <Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-            <span>
-              {effectiveMonth === "ALL" || effectiveMonth === undefined
-                ? "Cả năm học"
-                : `Tháng ${effectiveMonth}`}
-            </span>
+            <span>{timeLabel}</span>
             <ChevronDown
               className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isMonthOpen && "rotate-180")}
               strokeWidth={1.5}
@@ -1115,9 +1188,9 @@ export function UnifiedTaskToolbar({
 
           {isMonthOpen && (
             <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-md border border-border bg-popover py-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground max-h-60 overflow-y-auto"
+              className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground max-h-60 overflow-y-auto thin-scrollbar"
               role="dialog"
-              aria-label="Chọn tháng làm việc"
+              aria-label="Chọn thời gian làm việc"
             >
               <button
                 type="button"
@@ -1126,13 +1199,13 @@ export function UnifiedTaskToolbar({
                   setIsMonthOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
                   effectiveMonth === "ALL" || effectiveMonth === undefined
                     ? "text-primary font-semibold bg-primary/10"
                     : "text-foreground"
                 )}
               >
-                <span>Cả năm học (2026-2027)</span>
+                <span>Tất cả thời gian (Cả năm)</span>
                 {(effectiveMonth === "ALL" || effectiveMonth === undefined) && (
                   <Check className="size-3.5 text-primary" />
                 )}
@@ -1146,7 +1219,7 @@ export function UnifiedTaskToolbar({
                     setIsMonthOpen(false);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
                     effectiveMonth === period.monthNumber
                       ? "text-primary font-semibold bg-primary/10"
                       : "text-foreground"
@@ -1162,248 +1235,524 @@ export function UnifiedTaskToolbar({
           )}
         </div>
 
-        {/* 3. Filter Menu Trigger & Popover (Contains Status, Priority, Saved Filters) */}
-        <div className="ml-auto flex items-center gap-1.5 shrink-0 relative">
-          <div className="relative" ref={popoverRef}>
+        {/* 3. Trạng thái Filter */}
+        <div className="relative shrink-0" ref={statusMenuRef}>
+          <button
+            type="button"
+            aria-label="Lọc trạng thái"
+            aria-expanded={isStatusOpen}
+            onClick={() => {
+              const next = !isStatusOpen;
+              closeAllMenus();
+              setIsStatusOpen(next);
+            }}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+              activeTab && activeTab !== "all" && activeTab !== "today" && activeTab !== "this_week" && "bg-muted font-semibold border-border"
+            )}
+          >
+            <span>{statusLabel}</span>
+            <ChevronDown
+              className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isStatusOpen && "rotate-180")}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {isStatusOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground"
+              role="dialog"
+              aria-label="Chọn trạng thái"
+            >
+              {statusOptions.map((opt) => {
+                const isSelected = (activeTab === opt.value || (!activeTab && opt.value === "all"));
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onTabChange?.(opt.value);
+                      setIsStatusOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 4. Thời hạn Filter */}
+        <div className="relative shrink-0" ref={deadlineMenuRef}>
+          <button
+            type="button"
+            aria-label="Lọc thời hạn"
+            aria-expanded={isDeadlineOpen}
+            onClick={() => {
+              const next = !isDeadlineOpen;
+              closeAllMenus();
+              setIsDeadlineOpen(next);
+            }}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+              (activeTab === "today" || activeTab === "this_week" || activeTab === "overdue") && "bg-muted font-semibold border-border"
+            )}
+          >
+            <span>{deadlineLabel}</span>
+            <ChevronDown
+              className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDeadlineOpen && "rotate-180")}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {isDeadlineOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground"
+              role="dialog"
+              aria-label="Chọn thời hạn"
+            >
+              {deadlineOptions.map((opt) => {
+                const isSelected = (activeTab === opt.value || (!activeTab && opt.value === "all"));
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onTabChange?.(opt.value);
+                      setIsDeadlineOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 5. Ưu tiên Filter (Direct on desktop) */}
+        <div className="hidden lg:block relative shrink-0" ref={priorityMenuRef}>
+          <button
+            type="button"
+            aria-label="Lọc mức độ ưu tiên"
+            aria-expanded={isPriorityOpen}
+            onClick={() => {
+              const next = !isPriorityOpen;
+              closeAllMenus();
+              setIsPriorityOpen(next);
+            }}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+              selectedPriority && selectedPriority !== "ALL" && "bg-muted font-semibold border-border"
+            )}
+          >
+            <span>{priorityLabel}</span>
+            <ChevronDown
+              className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isPriorityOpen && "rotate-180")}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {isPriorityOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground"
+              role="dialog"
+              aria-label="Chọn mức độ ưu tiên"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  onPriorityChange?.("ALL");
+                  setIsPriorityOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                  !selectedPriority || selectedPriority === "ALL"
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-foreground"
+                )}
+              >
+                <span>Tất cả mức ưu tiên</span>
+                {(!selectedPriority || selectedPriority === "ALL") && (
+                  <Check className="size-3.5 text-primary" />
+                )}
+              </button>
+              {PRIORITY_FILTER_OPTIONS.map((prio) => {
+                const isSelected = selectedPriority === prio.id;
+                return (
+                  <button
+                    key={prio.id}
+                    type="button"
+                    onClick={() => {
+                      onPriorityChange?.(prio.id);
+                      setIsPriorityOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                    )}
+                  >
+                    <span>{prio.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 6. Đơn vị Filter (Direct on desktop - only when relevant to scope) */}
+        {showDepartmentFilter && (
+          <div className="hidden lg:block relative shrink-0" ref={departmentMenuRef}>
             <button
               type="button"
-              aria-label="Bộ lọc nhiệm vụ"
-              aria-expanded={isFilterOpen}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
+              aria-label="Lọc đơn vị"
+              aria-expanded={isDepartmentOpen}
+              onClick={() => {
+                const next = !isDepartmentOpen;
+                closeAllMenus();
+                setIsDepartmentOpen(next);
+              }}
               className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-                isFilterOpen || activeAdvancedFilterCount > 0 || (activeTab && activeTab !== "all")
-                  ? "bg-muted text-foreground font-semibold border-border"
-                  : "text-foreground hover:bg-accent"
+                "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+                selectedDepartment && selectedDepartment !== "ALL" && "bg-muted font-semibold border-border"
               )}
             >
-              <Filter className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-              <span>Bộ lọc</span>
-              {(activeAdvancedFilterCount > 0 || (activeTab && activeTab !== "all")) && (
-                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary/10 text-primary">
-                  {activeAdvancedFilterCount + (activeTab && activeTab !== "all" ? 1 : 0)}
-                </span>
-              )}
+              <span>{departmentLabel}</span>
+              <ChevronDown
+                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDepartmentOpen && "rotate-180")}
+                strokeWidth={1.5}
+              />
             </button>
 
-            {/* Compact Filter Popover Panel */}
-            {isFilterOpen && (
+            {isDepartmentOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 z-50 w-80 rounded-md border border-border bg-popover p-3 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
+                className="absolute left-0 top-full mt-1.5 z-50 w-56 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground max-h-60 overflow-y-auto thin-scrollbar"
                 role="dialog"
-                aria-label="Bảng chọn bộ lọc"
+                aria-label="Chọn đơn vị"
               >
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
-                  <span className="font-semibold text-foreground">Bộ lọc nhiệm vụ</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsFilterOpen(false);
-                      setActiveFilterField(null);
-                    }}
-                    aria-label="Đóng bộ lọc"
-                    className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
-                  >
-                    <X className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                </div>
-
-                {/* Section 1: Quick Status Options */}
-                <div className="mb-2.5">
-                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
-                    Trạng thái & Hạn chót
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    {[
-                      { id: "all", label: "Tất cả", count: tabCounts?.all },
-                      { id: "overdue", label: "Quá hạn", count: tabCounts?.overdue },
-                      { id: "this_week", label: "Đến hạn tuần này", count: tabCounts?.this_week ?? tabCounts?.today },
-                      {
-                        id: isExecutiveRole ? "waiting_approval" : "review",
-                        label: isExecutiveRole ? "Chờ duyệt" : "Chờ nộp/duyệt",
-                        count: tabCounts?.waiting_approval ?? tabCounts?.review ?? tabCounts?.pending_submission,
-                      },
-                    ].map((opt) => {
-                      const isSelected = (activeTab || "all") === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => onTabChange?.(opt.id)}
-                          className={cn(
-                            "flex items-center justify-between px-2 py-1.5 rounded text-left transition-colors cursor-pointer",
-                            isSelected
-                              ? "bg-foreground text-background font-medium shadow-2xs"
-                              : "hover:bg-accent text-foreground"
-                          )}
-                        >
-                          <span className="truncate">{opt.label}</span>
-                          {typeof opt.count === "number" && (
-                            <span
-                              className={cn(
-                                "text-[10px] font-mono tabular-nums px-1 rounded ml-1",
-                                isSelected ? "bg-background/20 text-background" : "text-muted-foreground"
-                              )}
-                            >
-                              {opt.count}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Section 2: Priority Filter */}
-                <div className="border-t border-border/60 pt-2 mb-2.5">
-                  <div className="relative">
-                    <div
-                      onClick={() => setActiveFilterField(activeFilterField === "prio" ? null : "prio")}
-                      className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-accent cursor-pointer"
-                    >
-                      <span className="text-muted-foreground">Độ ưu tiên</span>
-                      <div className="flex items-center gap-1 text-foreground font-medium max-w-[180px]">
-                        <span className="truncate">
-                          {PRIORITY_FILTER_OPTIONS.find((p) => p.id === selectedPriority)?.label || "Tất cả mức độ"}
-                        </span>
-                        <ChevronDown className="size-3 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                    {activeFilterField === "prio" && (
-                      <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-md border border-border bg-popover py-1 shadow-lg max-h-48 overflow-y-auto">
-                        {PRIORITY_FILTER_OPTIONS.map((prio) => (
-                          <button
-                            key={prio.id}
-                            type="button"
-                            onClick={() => {
-                              onPriorityChange?.(prio.id);
-                              setActiveFilterField(null);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                              (selectedPriority || "ALL") === prio.id ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                            )}
-                          >
-                            <span className="truncate">{prio.label}</span>
-                            {(selectedPriority || "ALL") === prio.id && <Check className="size-3.5 text-primary" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 3: Saved Filters & Save Current Filter */}
-                {showSavedViews && (
-                  <div className="border-t border-border/60 pt-2 mb-2">
-                    <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
-                      Bộ lọc của bạn
-                    </div>
-                    <SavedViewsSelector
-                      user={user}
-                      activeViewId={effectiveActiveViewId}
-                      onSelectView={(v) => {
-                        onSelectView?.(v);
-                        setIsFilterOpen(false);
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDepartmentChange?.("ALL");
+                    setIsDepartmentOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                    !selectedDepartment || selectedDepartment === "ALL"
+                      ? "text-primary font-semibold bg-primary/10"
+                      : "text-foreground"
+                  )}
+                >
+                  <span>Tất cả đơn vị</span>
+                  {(!selectedDepartment || selectedDepartment === "ALL") && (
+                    <Check className="size-3.5 text-primary" />
+                  )}
+                </button>
+                {availableDepartments.map((dept) => {
+                  const isSelected = selectedDepartment === dept.code;
+                  return (
+                    <button
+                      key={dept.code}
+                      type="button"
+                      onClick={() => {
+                        onDepartmentChange?.(dept.code);
+                        setIsDepartmentOpen(false);
                       }}
-                      currentCriteria={effectiveCriteria}
-                      onSaveView={onSaveView}
-                      onDeleteView={onDeleteView}
-                      onRenameView={onRenameView}
-                      availableDepartments={availableDepartments}
-                    />
-                  </div>
-                )}
-
-                {/* Footer Action: Reset & Apply */}
-                <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    Đặt lại bộ lọc
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsFilterOpen(false);
-                      setActiveFilterField(null);
-                    }}
-                    className="h-6.5 px-3 rounded bg-foreground text-xs font-medium text-background hover:opacity-90 cursor-pointer transition-opacity"
-                  >
-                    Đóng
-                  </button>
-                </div>
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                        isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                      )}
+                    >
+                      <span className="truncate">{dept.name}</span>
+                      {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
+        )}
 
-          {/* 4. Display Options Popover */}
-          {onViewModeChange && (
-            <div className="relative" ref={displayMenuRef}>
+        {/* 7. Danh mục Filter (Direct on desktop) */}
+        <div className="hidden lg:block relative shrink-0" ref={categoryMenuRef}>
+          <button
+            type="button"
+            aria-label="Lọc danh mục"
+            aria-expanded={isCategoryOpen}
+            onClick={() => {
+              const next = !isCategoryOpen;
+              closeAllMenus();
+              setIsCategoryOpen(next);
+            }}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation",
+              selectedCategory && selectedCategory !== "ALL" && "bg-muted font-semibold border-border"
+            )}
+          >
+            <span>{categoryLabel}</span>
+            <ChevronDown
+              className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isCategoryOpen && "rotate-180")}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {isCategoryOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground max-h-60 overflow-y-auto thin-scrollbar"
+              role="dialog"
+              aria-label="Chọn danh mục chuyên môn"
+            >
               <button
                 type="button"
-                aria-label="Tùy chọn hiển thị"
-                aria-expanded={isDisplayOpen}
-                onClick={() => setIsDisplayOpen((prev) => !prev)}
+                onClick={() => {
+                  onCategoryChange?.("ALL");
+                  setIsCategoryOpen(false);
+                }}
                 className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-                  isDisplayOpen
-                    ? "bg-muted text-foreground font-semibold border-border"
-                    : "text-foreground hover:bg-accent"
+                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                  !selectedCategory || selectedCategory === "ALL"
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-foreground"
                 )}
               >
-                <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                <span>Hiển thị</span>
+                <span>Tất cả danh mục</span>
+                {(!selectedCategory || selectedCategory === "ALL") && (
+                  <Check className="size-3.5 text-primary" />
+                )}
               </button>
-
-              {isDisplayOpen && (
-                <div
-                  className="absolute right-0 top-full mt-1.5 z-50 w-36 rounded-md border border-border bg-popover py-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-                  role="dialog"
-                  aria-label="Tùy chọn hiển thị"
-                >
+              {CATEGORY_FILTER_OPTIONS.map((cat) => {
+                const isSelected = selectedCategory === cat.id;
+                return (
                   <button
+                    key={cat.id}
                     type="button"
                     onClick={() => {
-                      onViewModeChange("table");
-                      setIsDisplayOpen(false);
+                      onCategoryChange?.(cat.id);
+                      setIsCategoryOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer",
-                      viewMode === "table" ? "text-foreground font-semibold bg-accent" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.05] cursor-pointer",
+                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                      <span>Bảng</span>
-                    </div>
-                    {viewMode === "table" && <Check className="size-3.5 text-foreground" strokeWidth={1.5} />}
+                    <span>{cat.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary" />}
                   </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
+        {/* Collapsed Secondary Filters on Narrower Screens (< 1024px) */}
+        <div className="lg:hidden relative shrink-0" ref={collapsedFilterRef}>
+          <button
+            type="button"
+            aria-label="Bộ lọc bổ sung"
+            aria-expanded={isCollapsedFilterOpen}
+            onClick={() => {
+              const next = !isCollapsedFilterOpen;
+              closeAllMenus();
+              setIsCollapsedFilterOpen(next);
+            }}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+              isCollapsedFilterOpen || secondaryFiltersActiveCount > 0
+                ? "bg-muted text-foreground font-semibold border-border"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <span>Bộ lọc</span>
+            {secondaryFiltersActiveCount > 0 && (
+              <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary/10 text-primary">
+                {secondaryFiltersActiveCount}
+              </span>
+            )}
+          </button>
+
+          {isCollapsedFilterOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-72 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-3 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground"
+              role="dialog"
+              aria-label="Bảng chọn bộ lọc bổ sung"
+            >
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
+                <span className="font-semibold text-foreground">Bộ lọc</span>
+                <button
+                  type="button"
+                  onClick={() => setIsCollapsedFilterOpen(false)}
+                  aria-label="Đóng bộ lọc"
+                  className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                >
+                  <X className="size-3.5" strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {/* Priority */}
+              <div className="mb-2.5">
+                <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
+                  Mức độ ưu tiên
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {PRIORITY_FILTER_OPTIONS.map((prio) => {
+                    const isSelected = (selectedPriority || "ALL") === prio.id;
+                    return (
+                      <button
+                        key={prio.id}
+                        type="button"
+                        onClick={() => onPriorityChange?.(prio.id)}
+                        className={cn(
+                          "px-2 py-1.5 rounded text-left transition-colors cursor-pointer text-xs",
+                          isSelected
+                            ? "bg-foreground text-background font-medium shadow-2xs"
+                            : "hover:bg-accent text-foreground"
+                        )}
+                      >
+                        {prio.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Department */}
+              {showDepartmentFilter && (
+                <div className="border-t border-border/60 pt-2 mb-2.5">
+                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
+                    Đơn vị
+                  </div>
+                  <select
+                    value={selectedDepartment || "ALL"}
+                    onChange={(e) => onDepartmentChange?.(e.target.value)}
+                    className="w-full h-8 px-2 rounded border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="ALL">Tất cả đơn vị</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept.code} value={dept.code}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Category */}
+              <div className="border-t border-border/60 pt-2 mb-2.5">
+                <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
+                  Danh mục chuyên môn
+                </div>
+                <select
+                  value={selectedCategory || "ALL"}
+                  onChange={(e) => onCategoryChange?.(e.target.value)}
+                  className="w-full h-8 px-2 rounded border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
+                >
+                  {CATEGORY_FILTER_OPTIONS.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Reset */}
+              {secondaryFiltersActiveCount > 0 && (
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => {
-                      onViewModeChange("kanban");
-                      setIsDisplayOpen(false);
+                      onPriorityChange?.("ALL");
+                      onCategoryChange?.("ALL");
+                      if (showDepartmentFilter) onDepartmentChange?.("ALL");
                     }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer",
-                      viewMode === "kanban" ? "text-foreground font-semibold bg-accent" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    )}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
-                      <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                      <span>Kanban</span>
-                    </div>
-                    {viewMode === "kanban" && <Check className="size-3.5 text-foreground" strokeWidth={1.5} />}
+                    Đặt lại bộ lọc
                   </button>
                 </div>
               )}
             </div>
           )}
         </div>
+
+        {/* 8. Hiển thị Menu Trigger (Right side - pinned) */}
+        {onViewModeChange && (
+          <div className="ml-auto relative shrink-0" ref={displayMenuRef}>
+            <button
+              type="button"
+              aria-label="Tùy chọn hiển thị"
+              aria-expanded={isDisplayOpen}
+              onClick={() => {
+                const next = !isDisplayOpen;
+                closeAllMenus();
+                setIsDisplayOpen(next);
+              }}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
+              )}
+            >
+              <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <span>Hiển thị</span>
+            </button>
+
+            {isDisplayOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 z-50 w-36 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-foreground"
+                role="dialog"
+                aria-label="Tùy chọn hiển thị"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onViewModeChange("table");
+                    setIsDisplayOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.05]",
+                    viewMode === "table" ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <span>Bảng</span>
+                  </div>
+                  {viewMode === "table" && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onViewModeChange("kanban");
+                    setIsDisplayOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.05]",
+                    viewMode === "kanban" ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <span>Kanban</span>
+                  </div>
+                  {viewMode === "kanban" && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

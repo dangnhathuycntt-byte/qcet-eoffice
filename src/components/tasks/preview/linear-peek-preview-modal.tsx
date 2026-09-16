@@ -46,10 +46,12 @@ export function LinearPeekPreviewModal({
 }: LinearPeekPreviewModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
   const previousActiveElement = React.useRef<HTMLElement | null>(null);
+  const openedAtRef = React.useRef<number>(0);
 
   // Focus trap & Return focus (REQ-09 / REQ-23)
   React.useEffect(() => {
     if (isOpen) {
+      openedAtRef.current = Date.now();
       previousActiveElement.current = (triggerElement || document.activeElement) as HTMLElement | null;
       const timer = setTimeout(() => {
         if (modalRef.current) {
@@ -75,6 +77,13 @@ export function LinearPeekPreviewModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if typing inside input/textarea or composing IME
       if (shouldIgnoreShortcut(e)) {
+        return;
+      }
+
+      // Ignore key repeat for toggle actions to prevent rapid flickering
+      if (e.repeat && (e.key === " " || e.key === "Escape")) {
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
 
@@ -105,9 +114,24 @@ export function LinearPeekPreviewModal({
         return;
       }
 
-      if (e.key === "Escape" || e.key === " ") {
+      if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
+        onClose();
+        return;
+      }
+
+      if (e.key === " ") {
+        // Cooldown 200ms after opening to prevent instant bounce
+        if (Date.now() - openedAtRef.current < 200) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
         return;
       }
