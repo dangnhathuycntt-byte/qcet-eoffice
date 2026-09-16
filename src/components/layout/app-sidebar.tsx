@@ -635,7 +635,7 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 3. LINEAR-STYLE BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
         {/* ========================================================= */}
-        <div className="shrink-0 p-2.5 mt-auto flex items-center">
+        <div className="shrink-0 px-3 py-2.5 mt-auto flex items-center">
           <TooltipProvider>
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
@@ -646,7 +646,7 @@ export function AppSidebar() {
                       window.dispatchEvent(new CustomEvent("qcet:open-shortcuts"));
                     }
                   }}
-                  className="size-6 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 shadow-2xs hover:shadow-xs text-muted-foreground/75 hover:text-foreground font-mono font-semibold text-[12px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                  className="size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/12 dark:border-white/15 shadow-2xs hover:shadow-xs hover:border-black/20 dark:hover:border-white/25 text-muted-foreground/80 hover:text-foreground font-mono font-semibold text-[13.5px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   aria-label="Phím tắt và trợ giúp (?)"
                 >
                   ?
