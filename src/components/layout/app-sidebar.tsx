@@ -388,7 +388,7 @@ export function AppSidebar() {
               type="button"
               onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
               className={cn(
-                "flex items-center gap-1.5 px-1 py-1 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user",
+                "h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user",
                 isProfileDropdownOpen
                   ? "bg-black/[0.06] dark:bg-white/[0.08]"
                   : "hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
@@ -413,16 +413,16 @@ export function AppSidebar() {
             </button>
 
             {/* Right: Quick Action Buttons (Search & Floating Create Task) */}
-            <div className="flex items-center gap-0.5 shrink-0 ml-1">
+            <div className="flex items-center gap-1 shrink-0 ml-0.5">
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={handleOpenSearch}
-                    className="size-6.5 rounded-[5px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none"
+                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15"
                     aria-label="Tìm kiếm (⌘K)"
                   >
-                    <Search size={13.5} strokeWidth={1.5} />
+                    <Search size={14} strokeWidth={1.5} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={4}>
@@ -435,10 +435,10 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleQuickCreate}
-                    className="size-6.5 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none"
+                    className="size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary"
                     aria-label="Giao việc mới (C)"
                   >
-                    <SquarePen size={13} strokeWidth={1.75} />
+                    <SquarePen size={13.5} strokeWidth={1.75} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={4}>
@@ -555,7 +555,7 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}
         {/* ========================================================= */}
-        <div className="overflow-y-auto flex-1 px-2 pt-2.5 pb-2 space-y-1 thin-scrollbar">
+        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar">
           {SECTIONS.map((sec) => {
             const items = SINGLE_TIER_NAV_ITEMS.filter(
               (item) => item.section === sec.key
@@ -564,7 +564,7 @@ export function AppSidebar() {
             return (
               <div key={sec.key} className="space-y-0.5">
                 {sec.label ? (
-                  <div className="text-[10.5px] font-medium text-muted-foreground/50 px-2 pt-2.5 pb-0.5 select-none tracking-wide">
+                  <div className="text-[10.5px] font-semibold text-muted-foreground/60 px-2 pt-2 pb-0.5 select-none tracking-wider uppercase">
                     {sec.label}
                   </div>
                 ) : null}
@@ -592,14 +592,14 @@ export function AppSidebar() {
                         className={cn(
                           "group relative flex items-center gap-2.5 rounded-[6px] px-2 h-[34px] text-[13px] transition-colors select-none tracking-tight",
                           active
-                            ? "bg-black/[0.04] dark:bg-white/[0.05] text-foreground font-medium"
-                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.025] dark:hover:bg-white/[0.03] font-normal"
+                            ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-semibold"
+                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
                         )}
                       >
                         <span className="size-4 shrink-0 flex items-center justify-center">
                           <Icon
                             size={16}
-                            strokeWidth={1.5}
+                            strokeWidth={active ? 1.75 : 1.5}
                             className={cn(
                               "shrink-0 transition-colors",
                               active
