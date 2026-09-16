@@ -72,17 +72,17 @@ export function GoogleLoginButton({
         onClick={handleStartOAuth}
         aria-label={isLoading ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
         aria-busy={isLoading}
-        className="flex h-11 w-full max-w-[360px] items-center justify-center gap-3 rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted/50 hover:border-border active:bg-muted active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+        className="flex h-11 w-full max-w-[360px] items-center justify-center gap-3 rounded-lg border border-border/80 bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted hover:border-border active:bg-muted active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
       >
         {isLoading ? (
-          <span role="status" className="inline-flex items-center gap-2">
+          <span role="status" className="inline-flex items-center gap-2.5">
             <Loader2 className="size-4 animate-spin text-primary" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground">Đang chuyển hướng...</span>
+            <span className="text-sm font-medium text-foreground tracking-[-0.01em]">Đang chuyển hướng...</span>
           </span>
         ) : (
           <>
             <GoogleIcon className="size-4.5 shrink-0" />
-            <span className="text-sm font-medium text-foreground">Tiếp tục với Google</span>
+            <span className="text-sm font-medium text-foreground tracking-[-0.01em]">Tiếp tục với Google</span>
           </>
         )}
       </button>

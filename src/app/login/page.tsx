@@ -20,7 +20,7 @@ function LoginSkeleton() {
       tabIndex={-1}
       role="main"
       aria-label="Đang tải trang đăng nhập"
-      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 outline-none"
+      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 sm:pb-20 outline-none"
     >
       <div className="flex w-full max-w-[360px] flex-col items-center text-center">
         {/* Logo skeleton */}
@@ -102,7 +102,7 @@ function LoginFormContent() {
       tabIndex={-1}
       role="main"
       aria-label="Trang đăng nhập QCET Work"
-      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 selection:bg-primary/15 selection:text-primary outline-none"
+      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 sm:pb-20 selection:bg-primary/15 selection:text-primary outline-none"
     >
       <m.div
         initial={{ opacity: 0, y: 8 }}
@@ -139,10 +139,10 @@ function LoginFormContent() {
             role="alert"
             className={`mt-5 flex w-full items-start gap-2.5 rounded-lg border p-3 text-left text-xs ${
               oauthError.variant === "amber"
-                ? "border-amber-500/20 bg-amber-500/5 text-amber-900"
+                ? "border-amber-500/25 bg-amber-500/[0.06] text-amber-900"
                 : oauthError.variant === "neutral"
                 ? "border-border bg-muted/50 text-muted-foreground"
-                : "border-destructive/20 bg-destructive/5 text-destructive"
+                : "border-destructive/25 bg-destructive/[0.06] text-destructive"
             }`}
           >
             <AlertCircle
@@ -156,13 +156,13 @@ function LoginFormContent() {
               strokeWidth={1.5}
             />
             <div className="flex-1 space-y-1">
-              <p className="font-semibold">{oauthError.title}</p>
-              <p className="text-[11px] leading-relaxed opacity-90">{oauthError.message}</p>
+              <p className="font-semibold text-xs leading-none">{oauthError.title}</p>
+              <p className="text-[11.5px] leading-relaxed opacity-90">{oauthError.message}</p>
               {oauthError.actionText && oauthError.actionHref && (
                 <div className="pt-1">
                   <a
                     href={oauthError.actionHref}
-                    className="inline-flex items-center text-[11px] font-medium underline underline-offset-2 transition-opacity hover:opacity-80"
+                    className="inline-flex items-center text-[11.5px] font-medium underline underline-offset-2 transition-opacity hover:opacity-80"
                   >
                     {oauthError.actionText}
                   </a>
@@ -187,10 +187,10 @@ function LoginFormContent() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.2 }}
             role="alert"
-            className="mt-5 flex w-full items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-left text-xs text-destructive"
+            className="mt-5 flex w-full items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive/[0.06] p-3 text-left text-xs text-destructive"
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" strokeWidth={1.5} />
-            <p className="flex-1 text-[11px] leading-relaxed">{errorMessage}</p>
+            <p className="flex-1 text-[11.5px] leading-relaxed">{errorMessage}</p>
             <button
               type="button"
               onClick={() => setErrorMessage(null)}
@@ -212,14 +212,14 @@ function LoginFormContent() {
         </div>
 
         {/* 5. Điều kiện đăng nhập */}
-        <p className="mt-4 text-center text-xs sm:text-[13px] leading-relaxed text-muted-foreground/80">
+        <p className="mt-4 text-center text-xs sm:text-[13px] leading-relaxed text-muted-foreground/80 max-w-[320px]">
           Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền.
         </p>
 
         {/* 6. Hỗ trợ sự cố */}
         <a
           href="mailto:support@cdktcnqn.edu.vn"
-          className="mt-6 rounded-xs text-xs sm:text-[13px] text-muted-foreground transition-colors hover:text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="mt-6 rounded-xs text-xs sm:text-[13px] text-muted-foreground/80 transition-colors hover:text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 py-1 px-2"
         >
           Gặp sự cố? Liên hệ hỗ trợ
         </a>
