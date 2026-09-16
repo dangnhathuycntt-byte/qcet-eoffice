@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
+import { isFeatureEnabled } from "@/features/flags";
+import { isAllowedDomain } from "@/lib/google-oauth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -9,15 +11,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
+        // 0. Operational kill switch check
+        if (!isFeatureEnabled("externalGoogleLogin")) {
+          return "/login?error=oauth_not_configured";
+        }
+
         const email = user.email?.toLowerCase().trim();
         if (!email) return false;
 
-        // 1. Verify email domain belongs to cdktcnqn.edu.vn
-        if (!email.endsWith("@cdktcnqn.edu.vn")) {
-          return "/login?error=domain_not_allowed";
+        // 1. Dual-layer domain & email verification check
+        if (
+          (profile as any)?.email_verified === false ||
+          (profile as any)?.email_verified === "false"
+        ) {
+          return "/login?error=oauth_failed";
         }
 
-        // 2. Verify user exists in database
+        const hd = (profile as any)?.hd || (account as any)?.hd;
+        if (!isAllowedDomain(email, hd)) {
+          return `/login?error=domain_not_allowed&email=${encodeURIComponent(email)}`;
+        }
+
+        // 2. Verify user exists in database (pre-provisioned)
         const dbUser = await prisma.user.findUnique({
           where: { email },
           include: { accounts: true },
@@ -42,7 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await prisma.account.create({
             data: {
               userId: dbUser.id,
-              type: account.type,
+              type: account.type || "oauth",
               provider: account.provider,
               providerAccountId: account.providerAccountId,
               access_token: account.access_token,
@@ -73,10 +88,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const source = user || token;
         if (source) {
           session.user.id = source.id || (source.sub as string) || session.user.id;
-          (session.user as any).role = source.role;
-          (session.user as any).departmentId = source.departmentId;
-          (session.user as any).title = source.title;
-          (session.user as any).isActive = source.isActive;
+          session.user.role = source.role;
+          session.user.departmentId = source.departmentId;
+          session.user.title = source.title;
+          session.user.isActive = source.isActive;
         }
       }
       return session;

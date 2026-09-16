@@ -28,14 +28,14 @@ export const OFFICIAL_DOMAIN = INSTITUTION_CONFIG.domain || "cdktcnqn.edu.vn";
 export function isAllowedDomain(email?: string | null, hd?: string | null): boolean {
   const officialDomain = OFFICIAL_DOMAIN.trim().toLowerCase();
 
-  // 1. Kiểm tra Google Workspace Hosted Domain (`hd`) claim
+  // 1. If hd is provided, it must strictly match official domain
   if (hd && typeof hd === "string") {
-    if (hd.trim().toLowerCase() === officialDomain) {
-      return true;
+    if (hd.trim().toLowerCase() !== officialDomain) {
+      return false;
     }
   }
 
-  // 2. Xác thực email suffix đối chiếu với tên miền chính thức của nhà trường
+  // 2. Email suffix must strictly match official domain
   if (email && typeof email === "string") {
     const normalized = email.trim().toLowerCase();
     if (normalized.endsWith(`@${officialDomain}`)) {

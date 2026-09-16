@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import { decode } from "next-auth/jwt";
 import { UserRole } from "@/types/auth";
 import { serverEnv } from "@/config/env.server";
+import { prisma } from "@/lib/prisma";
+import { isSessionExpired, isSessionRevoked } from "@/server/auth/session-policy";
 
 export const SESSION_COOKIE_NAME = "authjs.session-token";
 export const SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token";
@@ -51,12 +53,57 @@ export function verifySessionToken(token: string): SessionPayload | null {
 
 export async function verifySessionTokenAsync(token: string): Promise<SessionPayload | null> {
   if (!token || typeof token !== "string" || token.trim().length === 0) return null;
+  const trimmed = token.trim();
 
-  // 1. Try standard HMAC-SHA256 JWT
-  const syncVerified = verifySessionToken(token);
-  if (syncVerified) return syncVerified;
+  // 1. Try database Session lookup if token is a database sessionToken in prisma.session
+  try {
+    if (prisma?.session?.findUnique) {
+      const dbSession = await prisma.session.findUnique({
+        where: { sessionToken: trimmed },
+        include: { user: true },
+      });
 
-  // 2. Try NextAuth / Auth.js JWE token
+      if (dbSession) {
+        if (isSessionExpired(dbSession.expires)) {
+          return null;
+        }
+        if (
+          (dbSession as any).revokedAt != null ||
+          isSessionRevoked(dbSession.id, dbSession.userId) ||
+          isSessionRevoked(trimmed, dbSession.userId)
+        ) {
+          return null;
+        }
+        if (!dbSession.user || !dbSession.user.isActive) {
+          return null;
+        }
+
+        return {
+          id: dbSession.user.id,
+          email: dbSession.user.email,
+          name: dbSession.user.name,
+          role: dbSession.user.role,
+          departmentId: dbSession.user.departmentId ?? null,
+          title: dbSession.user.title ?? null,
+          isActive: dbSession.user.isActive,
+          sessionId: dbSession.id,
+        };
+      }
+    }
+  } catch {
+    // If Prisma is unavailable or query fails, fall through to JWT / JWE
+  }
+
+  // 2. Try standard HMAC-SHA256 JWT
+  const syncVerified = verifySessionToken(trimmed);
+  if (syncVerified) {
+    if (isSessionRevoked(trimmed, syncVerified.id)) {
+      return null;
+    }
+    return syncVerified;
+  }
+
+  // 3. Try NextAuth / Auth.js JWE token
   try {
     const secret = getJwtSecret();
     for (const salt of [
@@ -67,7 +114,7 @@ export async function verifySessionTokenAsync(token: string): Promise<SessionPay
     ]) {
       try {
         const decodedJwe = await decode({
-          token: token.trim(),
+          token: trimmed,
           secret,
           salt,
         });
@@ -77,8 +124,12 @@ export async function verifySessionTokenAsync(token: string): Promise<SessionPay
           if (decodedJwe.exp && typeof decodedJwe.exp === "number" && now > decodedJwe.exp) {
             return null;
           }
+          const userId = (decodedJwe.id || decodedJwe.sub) as string;
+          if (isSessionRevoked(trimmed, userId)) {
+            return null;
+          }
           return {
-            id: (decodedJwe.id || decodedJwe.sub) as string,
+            id: userId,
             email: decodedJwe.email as string,
             name: (decodedJwe.name as string) || "",
             role: (decodedJwe.role as string) || "CHUYEN_VIEN",
