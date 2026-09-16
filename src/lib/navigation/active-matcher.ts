@@ -54,19 +54,32 @@ export function isRouteActive(
   const zone = searchParams?.get("zone")?.toLowerCase();
   const view = searchParams?.get("view")?.toLowerCase();
 
-  // 1. Quản lý nhiệm vụ (/tasks là workspace chính, "/" redirect về /tasks)
-  if (targetBase === "/tasks") {
-    if (pathname === "/tasks" || pathname === "/") return true;
-  }
-
-  // 2. Khi đang ở "/" kèm query zone hoặc view tương ứng
+  // 1. Khi đang ở "/" kèm query zone hoặc view tương ứng
   if (pathname === "/") {
-    if (targetBase === "/calendar" && (zone === "calendar" || view === "calendar" || view === "month")) return true;
-    if (targetBase === "/documents" && zone === "documents") return true;
-    if (targetBase === "/org" && zone === "org") return true;
+    if (zone === "tasks" || view === "tasks") {
+      return targetBase === "/tasks";
+    }
+    if (zone === "calendar" || view === "calendar" || view === "month") {
+      return targetBase === "/calendar";
+    }
+    if (zone === "documents") {
+      return targetBase === "/documents";
+    }
+    if (zone === "org") {
+      return targetBase === "/org";
+    }
+    if (zone === "inbox" || zone === "notifications") {
+      return targetBase === "/inbox";
+    }
+    if (targetBase === "/") {
+      return !zone && !view;
+    }
+    if (targetBase === "/tasks") {
+      return false;
+    }
   }
 
-  // 3. Khớp chính xác Pathname
+  // 2. Khớp chính xác Pathname
   if (pathname === targetBase) return true;
 
   // 4. Khớp Aliases (kết hợp aliases tham số với CANONICAL_ROUTES)

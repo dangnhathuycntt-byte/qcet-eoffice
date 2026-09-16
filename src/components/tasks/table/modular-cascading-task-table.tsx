@@ -650,7 +650,7 @@ export function ModularCascadingTaskTable({
       tableState.setPage(newPage);
       if (typeof window !== "undefined") {
         if (tableContainerRef.current) {
-          const topbarHeight = 52;
+          const topbarHeight = window.innerWidth >= 768 ? 0 : 48;
           const rect = tableContainerRef.current.getBoundingClientRect();
           const targetY = rect.top + window.scrollY - topbarHeight - 12;
           window.scrollTo({
@@ -1136,7 +1136,7 @@ export function ModularCascadingTaskTable({
           canAddTask={emptyStateProps?.canAddTask ?? canAssignUnit}
         />
       ) : (
-        <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(52px+env(safe-area-inset-top,0px)+12px)]">
+        <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
           {/* Desktop Table View (>= 768px) - Flush on canvas */}
           <div className="hidden md:block overflow-hidden border-t border-border/40 bg-transparent">
             <div className="overflow-x-auto thin-scrollbar">

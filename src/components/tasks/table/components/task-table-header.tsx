@@ -107,7 +107,7 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(52px+env(safe-area-inset-top,0px))] z-20 border-b border-border/80 bg-slate-50 dark:bg-slate-900 select-none shadow-2xs",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/80 bg-slate-50 dark:bg-slate-900 select-none shadow-2xs",
         className
       )}
     >

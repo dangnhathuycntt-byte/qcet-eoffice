@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Calendar,
   Bell,
+  Inbox,
   CheckSquare,
   FileText,
   Building2,
@@ -21,11 +22,20 @@ export interface NavItemConfig {
 
 export const NAV_ITEMS: NavItemConfig[] = [
   {
+    id: "inbox",
+    label: "Hộp thư",
+    href: "/inbox",
+    icon: Inbox,
+    aliases: ["/notifications"],
+    badgeKey: "notifications",
+  },
+  {
     id: "tasks",
     label: "Nhiệm vụ",
     href: "/tasks",
     icon: CheckSquare,
     aliases: ["/unit-tasks", "/dashboard", "/workbench"],
+    badgeKey: "taskAttention",
   },
   {
     id: "calendar",
@@ -33,13 +43,6 @@ export const NAV_ITEMS: NavItemConfig[] = [
     href: "/calendar",
     icon: Calendar,
     badgeKey: "calendar",
-  },
-  {
-    id: "notifications",
-    label: "Thông báo & Nhắc việc",
-    href: "/notifications",
-    icon: Bell,
-    badgeKey: "notifications",
   },
   {
     id: "documents",

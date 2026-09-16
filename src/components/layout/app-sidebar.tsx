@@ -6,6 +6,8 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Settings,
   X,
   LayoutDashboard,
@@ -14,8 +16,19 @@ import {
   FileText,
   Building2,
   Bell,
+  Inbox,
+  Search,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User,
+  LogOut,
+  Smartphone,
+  Compass,
+  CheckCircle2,
+  MoreHorizontal,
   type LucideIcon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import {
   getSidebarNavItems,
   type CanonicalRouteConfig,
@@ -32,8 +45,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, isUserUnassignedDepartment, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
+import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
+import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { cn } from "@/lib/utils";
+
+const UserProfileModal = dynamic(
+  () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
+  { ssr: false }
+);
 
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
   LayoutDashboard,
@@ -43,7 +62,17 @@ const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
   Building2,
   Bell,
   Settings,
+  Inbox,
 };
+
+export function getInitials(name: string): string {
+  if (!name || !name.trim()) return "QC";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  const first = parts[0].charAt(0);
+  const last = parts[parts.length - 1].charAt(0);
+  return (first + last).toUpperCase();
+}
 
 export interface DesktopSidebarItem extends CanonicalRouteConfig {
   icon: LucideIcon;
@@ -51,8 +80,6 @@ export interface DesktopSidebarItem extends CanonicalRouteConfig {
   isMaintenance?: boolean;
 }
 
-// Canonical desktop sidebar items derived from getSidebarNavItems() (Single Source of Truth)
-// Exclude settings route from body sections since it is rendered in the sidebar footer
 export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
   .filter((item) => item.id !== "settings")
   .map((item) => ({
@@ -92,7 +119,6 @@ export function handleSidebarShortcut(
   },
   options: ShortcutHandlerOptions
 ): boolean {
-  // Never hijack keys when user is typing in forms or contenteditable elements
   if (isEditableTarget(e.target)) {
     return false;
   }
@@ -111,7 +137,6 @@ export function handleSidebarShortcut(
     const targetItem = items[navIndex - 1];
     if (targetItem && options.onNavigate) {
       if (targetItem.id === "documents") {
-        // Feature is under development - disable shortcut navigation
         e.preventDefault?.();
         return true;
       }
@@ -138,7 +163,28 @@ export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, setIsProfileModalOpen } = useAuth();
+  const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
+
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+  const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close profile dropdown on outside click
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    if (isProfileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
@@ -158,7 +204,7 @@ export function AppSidebar() {
     }
   }, [user, setIsProfileModalOpen]);
 
-  // Maintenance dialog state for items undergoing maintenance
+  // Maintenance dialog state
   const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
     isOpen: boolean;
     title: string;
@@ -166,7 +212,6 @@ export function AppSidebar() {
     description?: string;
   }>({ isOpen: false, title: "" });
 
-  // Global listener for opening maintenance dialog
   React.useEffect(() => {
     const handleOpenMaintenance = (e: Event) => {
       const customEvent = e as CustomEvent<{
@@ -185,9 +230,23 @@ export function AppSidebar() {
     return () => window.removeEventListener("qcet:open-maintenance", handleOpenMaintenance);
   }, []);
 
-  // Listen to Ctrl+B / Cmd+B (and number shortcuts 1-6) globally, guarded against editable targets
+  // Quick search launcher helper
+  const handleOpenSearch = React.useCallback(() => {
+    window.dispatchEvent(new CustomEvent("qcet:open-command-search", { detail: { open: true } }));
+  }, []);
+
+  // Global shortcuts: ⌘K / Ctrl+K and ⌘B / Ctrl+B
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+
+      const isKeyK = e.key === "k" || e.key === "K" || e.code === "KeyK";
+      if (isKeyK && (e.metaKey || e.ctrlKey) && !e.altKey) {
+        e.preventDefault();
+        handleOpenSearch();
+        return;
+      }
+
       handleSidebarShortcut(e, {
         toggleCollapse,
         onNavigate: (href) => {
@@ -197,9 +256,9 @@ export function AppSidebar() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleCollapse, router]);
+  }, [handleOpenSearch, toggleCollapse, router]);
 
-  // Helper to determine if a nav item is active using canonical matcher
+  // Helper to determine if a nav item is active
   const isItemActive = React.useCallback(
     (item: DesktopSidebarItem) => {
       return isRouteActive(
@@ -225,7 +284,7 @@ export function AppSidebar() {
         text = badgeCounts[item.badgeKey];
       } else if (item.href === "/calendar") {
         text = badgeCounts?.calendar;
-      } else if (item.href === "/notifications") {
+      } else if (item.href === "/inbox" || item.href === "/notifications") {
         text = badgeCounts?.notifications;
       } else if (item.href === "/documents") {
         text = badgeCounts?.docsInbox;
@@ -235,7 +294,7 @@ export function AppSidebar() {
 
       if (item.badgeKey === "calendar" || item.href === "/calendar") {
         variant = "sky";
-      } else if (item.badgeKey === "notifications" || item.href === "/notifications") {
+      } else if (item.badgeKey === "notifications" || item.href === "/inbox" || item.href === "/notifications") {
         variant = "rose";
       } else if (item.badgeKey === "docsInbox" || item.href === "/documents") {
         variant = "amber";
@@ -265,53 +324,126 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Desktop Navigation (>= md): Single-Tier 248px Sidebar */}
       <aside
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col transition-all duration-200 ease-in-out bg-card/90 backdrop-blur-md border-r border-border/70 select-none",
+          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col transition-all duration-200 ease-in-out bg-card/95 backdrop-blur-md border-r border-border/70 select-none shadow-xs",
           isCollapsed ? "w-16" : "w-[248px]"
         )}
       >
-        {/* Brand Header: 48px height (h-12) */}
+        {/* ========================================================= */}
+        {/* 1. BRAND HEADER & COLLAPSE TOGGLE (TOP)                   */}
+        {/* ========================================================= */}
         {isCollapsed ? (
-          <div className="h-12 border-b border-border/50 flex items-center justify-center shrink-0 w-full">
-            <Link href="/tasks" className="flex items-center justify-center" aria-label="QCET Trang chủ">
-              <Image
-                src="/logo-qcet.png"
-                alt="QCET Logo"
-                width={32}
-                height={32}
-                className="shrink-0 rounded object-contain"
-                priority
-              />
-            </Link>
+          <div className="h-12 border-b border-border/50 flex items-center justify-center shrink-0 w-full px-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={toggleCollapse}
+                    className="flex items-center justify-center p-1 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                    aria-label="Mở rộng thanh bên [⌘B]"
+                  >
+                    <Image
+                      src="/logo-qcet.png"
+                      alt="QCET Logo"
+                      width={28}
+                      height={28}
+                      className="shrink-0 rounded object-contain"
+                      priority
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <span>Mở rộng thanh bên [⌘B]</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         ) : (
-          <div className="h-12 border-b border-border/50 px-3 flex items-center shrink-0 min-w-0">
-            <Link href="/tasks" className="flex items-center gap-2.5 min-w-0 group" aria-label="QCET Trang chủ">
+          <div className="h-12 border-b border-border/50 px-3 flex items-center justify-between shrink-0 min-w-0">
+            <Link href="/tasks" className="flex items-center gap-2 min-w-0 group" aria-label="QCET Trang chủ">
               <Image
                 src="/logo-qcet.png"
                 alt="QCET Logo"
-                width={28}
-                height={28}
+                width={24}
+                height={24}
                 className="shrink-0 rounded object-contain"
                 priority
               />
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-bold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-                  CỔNG ĐIỀU HÀNH QCET
+                <span className="text-xs font-bold tracking-tight text-foreground truncate group-hover:text-primary transition-colors leading-tight">
+                  QCET E-OFFICE
                 </span>
-                <span className="text-xs text-muted-foreground/70 truncate font-sans">
-                  Năm học 2026–2027
+                <span className="text-[10px] text-muted-foreground/70 truncate font-sans">
+                  2026–2027
                 </span>
               </div>
             </Link>
+
+            {/* Sidebar Collapse Button at Header */}
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+              title="Thu gọn thanh bên [⌘B / Ctrl+B]"
+              aria-label="Thu gọn thanh bên"
+            >
+              <PanelLeftClose size={15} strokeWidth={1.5} />
+            </button>
           </div>
         )}
 
-        {/* Navigation Body */}
+        {/* ========================================================= */}
+        {/* 2. GLOBAL SEARCH BAR AT TOP OF SIDEBAR (LINEAR STYLE)     */}
+        {/* ========================================================= */}
+        <div className={cn("shrink-0", isCollapsed ? "p-2 pb-1" : "p-2.5 pb-1")}>
+          {isCollapsed ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleOpenSearch}
+                    className="size-9 w-full rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors cursor-pointer"
+                    aria-label="Tìm nhanh toàn hệ thống (⌘K)"
+                  >
+                    <Search size={16} strokeWidth={1.5} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <span>Tìm nhanh... [⌘K]</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenSearch}
+              className="w-full flex items-center justify-between h-8 px-2.5 rounded-lg border border-border/70 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group text-xs select-none"
+              title="Tìm kiếm nhanh toàn hệ thống (⌘K hoặc Ctrl+K)"
+              aria-label="Tìm kiếm toàn hệ thống"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Search
+                  size={13}
+                  strokeWidth={1.5}
+                  className="text-muted-foreground group-hover:text-foreground shrink-0 transition-colors"
+                />
+                <span className="text-[12px] truncate">Tìm nhanh...</span>
+              </div>
+              <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-border/60 bg-background text-muted-foreground group-hover:text-foreground shrink-0">
+                ⌘K
+              </kbd>
+            </button>
+          )}
+        </div>
+
+        {/* ========================================================= */}
+        {/* 3. NAVIGATION ITEMS BODY                                  */}
+        {/* ========================================================= */}
         {isCollapsed ? (
           /* Collapsed Mode (64px / w-16 icon-only) */
           <div className="overflow-y-auto flex-1 py-2 flex flex-col items-center gap-1 w-full thin-scrollbar">
@@ -353,13 +485,13 @@ export function AppSidebar() {
                               }}
                               aria-disabled={item.isComingSoon ? true : undefined}
                               tabIndex={item.isComingSoon ? -1 : undefined}
-                              aria-label={`${item.label}${item.isComingSoon ? " (Sắp có - Chưa thể truy cập)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
+                              aria-label={`${item.label}${item.isComingSoon ? " (Sắp có)" : badge ? ` (${badge.text})` : ""}`}
                               aria-current={active ? "page" : undefined}
                               className={cn(
                                 "size-9 rounded-lg relative flex items-center justify-center transition-colors",
                                 item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                                 active
-                                  ? "bg-primary/10 text-primary"
+                                  ? "bg-primary/10 text-primary font-medium"
                                   : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                               )}
                             >
@@ -372,15 +504,15 @@ export function AppSidebar() {
                               ) : badge ? (
                                 <span
                                   aria-label={`${badge.text} mục`}
-                                  className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-xs font-semibold tabular-nums leading-none select-none pointer-events-none bg-muted text-foreground border border-border/80 shadow-2xs"
+                                  className={cn(
+                                    "absolute -top-1 -right-1 flex items-center justify-center min-w-[17px] h-4 px-1 rounded-full text-[10px] font-mono font-bold tabular-nums leading-none select-none pointer-events-none shadow-2xs",
+                                    badge.variant === "rose"
+                                      ? "bg-rose-500 text-white"
+                                      : "bg-primary text-primary-foreground"
+                                  )}
                                 >
                                   {badge.text}
                                 </span>
-                              ) : item.isMaintenance ? (
-                                <span
-                                  className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
-                                  title="Đang bảo trì"
-                                />
                               ) : null}
                             </Link>
                           </TooltipTrigger>
@@ -388,19 +520,14 @@ export function AppSidebar() {
                             <div className="flex items-center gap-1.5">
                               <span>{item.label}</span>
                               {item.isComingSoon ? (
-                                <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
                                   Sắp có
                                 </span>
                               ) : badge ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-muted border border-border/60">
+                                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums bg-muted border border-border/60">
                                   {badge.text}
                                 </span>
                               ) : null}
-                              {item.isMaintenance && (
-                                <span className="text-xs text-amber-700 font-medium">
-                                  (Đang bảo trì)
-                                </span>
-                              )}
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -413,7 +540,7 @@ export function AppSidebar() {
           </div>
         ) : (
           /* Expanded Mode (248px width, full labels & sections) */
-          <div className="overflow-y-auto flex-1 px-2 py-2 space-y-2.5 thin-scrollbar">
+          <div className="overflow-y-auto flex-1 px-2.5 py-1.5 space-y-2 thin-scrollbar">
             {SECTIONS.map((sec) => {
               const items = SINGLE_TIER_NAV_ITEMS.filter(
                 (item) => item.section === sec.key
@@ -421,7 +548,7 @@ export function AppSidebar() {
               if (items.length === 0) return null;
               return (
                 <div key={sec.key} className="space-y-0.5">
-                  <div className="text-xs font-semibold text-muted-foreground/70 px-2.5 pt-3.5 pb-1 select-none">
+                  <div className="text-[11px] font-semibold text-muted-foreground/60 px-2 pt-2 pb-1 select-none tracking-wider">
                     {sec.label}
                   </div>
                   <div className="space-y-0.5">
@@ -451,13 +578,13 @@ export function AppSidebar() {
                           }}
                           aria-disabled={item.isComingSoon ? true : undefined}
                           tabIndex={item.isComingSoon ? -1 : undefined}
-                          aria-label={`${item.label}${item.isComingSoon ? " (Sắp có - Chưa thể truy cập)" : ""}`}
+                          aria-label={`${item.label}${item.isComingSoon ? " (Sắp có)" : ""}`}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 min-h-[36px] text-[13px] tracking-tight transition-colors select-none",
+                            "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 min-h-[34px] text-[13px] tracking-tight transition-colors select-none",
                             item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                             active
-                              ? "bg-primary/10 text-primary"
+                              ? "bg-primary/10 text-primary font-medium"
                               : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           )}
                         >
@@ -476,26 +603,22 @@ export function AppSidebar() {
                             <span
                               title="Sắp có"
                               aria-label="Sắp có"
-                              className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 select-none leading-none whitespace-nowrap"
+                              className="ml-auto inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 select-none leading-none whitespace-nowrap"
                             >
                               Sắp có
                             </span>
                           ) : badge ? (
                             <span
                               className={cn(
-                                "ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold tabular-nums leading-none border select-none",
+                                "ml-auto inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-semibold tabular-nums leading-none border select-none",
+                                badge.variant === "rose" && "bg-rose-500 text-white border-rose-600",
                                 badge.variant === "primary" && "bg-primary/10 text-primary border-primary/20",
                                 badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border-sky-500/20",
-                                badge.variant === "rose" && "bg-rose-500/10 text-rose-700 border-rose-500/20",
                                 badge.variant === "amber" && "bg-amber-500/10 text-amber-800 border-amber-500/20",
                                 (!badge.variant || badge.variant === "muted") && "bg-muted/80 text-muted-foreground border-border/50"
                               )}
                             >
                               {badge.text}
-                            </span>
-                          ) : item.isMaintenance && !badge ? (
-                            <span className="ml-auto text-xs font-medium text-amber-800 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded leading-none select-none">
-                              Bảo trì
                             </span>
                           ) : null}
                         </Link>
@@ -508,82 +631,191 @@ export function AppSidebar() {
           </div>
         )}
 
-        {/* Footer */}
-        {isCollapsed ? (
-          <div className="p-2 border-t border-border/50 shrink-0 w-full flex flex-col items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    href="/settings"
-                    className={cn(
-                      "size-9 rounded-lg flex items-center justify-center transition-colors select-none",
-                      pathname.startsWith("/settings")
-                        ? "bg-accent/80 text-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                    )}
-                    aria-label="Cài đặt"
-                  >
-                    <Settings
-                      size={18}
-                      strokeWidth={pathname.startsWith("/settings") ? 2 : 1.5}
-                    />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <span>Cài đặt</span>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={toggleCollapse}
-                    className="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors cursor-pointer select-none"
-                    aria-label="Mở rộng thanh bên [Ctrl+B / ⌘B]"
-                    title="Mở rộng thanh bên [Ctrl+B / ⌘B]"
-                  >
-                    <ChevronRight size={18} strokeWidth={1.5} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <span>Mở rộng thanh bên [⌘B / Ctrl+B]</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        ) : (
-          <div className="p-2 border-t border-border/50 shrink-0 space-y-1">
-            <Link
-              href="/settings"
-              className={cn(
-                "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] transition-colors select-none",
-                pathname.startsWith("/settings")
-                  ? "bg-accent/80 text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+        {/* ========================================================= */}
+        {/* 4. USER ACCOUNT & PROFILE MENU AT BOTTOM OF SIDEBAR       */}
+        {/* ========================================================= */}
+        <div className="p-2 border-t border-border/50 shrink-0 w-full relative" ref={profileDropdownRef}>
+          {user && (
+            <>
+              {isCollapsed ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+                        className="size-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary border border-primary/20 hover:opacity-90 transition-opacity cursor-pointer mx-auto text-xs font-semibold shadow-2xs"
+                        aria-label={`Tài khoản: ${user.name}`}
+                        aria-expanded={isProfileDropdownOpen}
+                      >
+                        {getInitials(user.name)}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <span>{user.name}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer text-left group"
+                  aria-label={`Tài khoản: ${user.name}`}
+                  aria-expanded={isProfileDropdownOpen}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="size-7.5 rounded-lg flex items-center justify-center bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shrink-0 shadow-2xs">
+                      {getInitials(user.name)}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors leading-tight">
+                        {user.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {user.role === "ADMIN"
+                          ? "Ban Giám hiệu"
+                          : user.role === "MANAGER"
+                          ? "Trưởng đơn vị"
+                          : "Chuyên viên"}
+                        {user.departmentCode ? ` • ${user.departmentCode}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <MoreHorizontal size={14} className="text-muted-foreground group-hover:text-foreground shrink-0" />
+                </button>
               )}
-            >
-              <Settings
-                size={18}
-                strokeWidth={pathname.startsWith("/settings") ? 2 : 1.5}
-                className={cn(
-                  "shrink-0 transition-colors",
-                  pathname.startsWith("/settings")
-                    ? "text-foreground"
-                    : "text-muted-foreground group-hover:text-foreground"
-                )}
-              />
-              <span className="truncate flex-1">Cài đặt</span>
-            </Link>
 
-            {/* Notion: Đang kết nối pill with active green dot */}
-            <div className="flex items-center gap-2 px-2.5 py-1 text-xs text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className="truncate">Notion: Đang kết nối</span>
+              {/* Profile Dropdown Popover (Opens Upward) */}
+              {isProfileDropdownOpen && (
+                <div
+                  className={cn(
+                    "absolute bottom-full mb-2 rounded-xl border border-border/80 bg-card/98 backdrop-blur-md p-2.5 shadow-dropdown z-50 animate-in fade-in zoom-in-95",
+                    isCollapsed ? "left-2 w-64" : "left-2 right-2"
+                  )}
+                >
+                  {isOfflineReadOnly && (
+                    <div className="mb-2 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
+                      Chế độ chỉ xem từ bộ nhớ tạm.
+                    </div>
+                  )}
+
+                  {/* User Summary */}
+                  <div className="flex items-start gap-2.5 border-b border-border/50 pb-2.5 px-1">
+                    <div className="size-8 rounded-lg flex items-center justify-center bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shrink-0">
+                      {getInitials(user.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground truncate" title={user.name}>
+                        {user.name}
+                      </p>
+                      <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="mt-2 space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        setIsProfileModalOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer text-left"
+                    >
+                      <User size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                      <span>Hồ sơ cá nhân</span>
+                    </button>
+
+                    <Link
+                      href="/settings"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer text-left"
+                    >
+                      <Settings size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                      <span>Cài đặt hệ thống</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                        }
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer text-left"
+                    >
+                      <Smartphone size={13} strokeWidth={1.5} className="text-primary shrink-0" />
+                      <span>Cài đặt ứng dụng di động</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
+                        }
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer text-left"
+                    >
+                      <Compass size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                      <span>Hướng dẫn sử dụng</span>
+                    </button>
+                  </div>
+
+                  {/* Dev Role Switcher */}
+                  <RoleSwitcherPill className="border-t border-border/50 pt-1.5 mt-1 px-1" />
+
+                  {/* Logout */}
+                  <div className="border-t border-border/50 pt-1 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        logout();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer text-left"
+                    >
+                      <LogOut size={13} strokeWidth={1.5} className="shrink-0" />
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Collapsed Expand Trigger at Bottom */}
+          {isCollapsed && (
+            <div className="pt-1 flex justify-center">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={toggleCollapse}
+                      className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                      aria-label="Mở rộng thanh bên [⌘B]"
+                    >
+                      <PanelLeftOpen size={14} strokeWidth={1.5} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <span>Mở rộng [⌘B]</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
+
+      {/* User Profile Modal Container */}
+      <UserProfileModal />
 
       {/* Maintenance Dialog Modal */}
       <MaintenanceDialog

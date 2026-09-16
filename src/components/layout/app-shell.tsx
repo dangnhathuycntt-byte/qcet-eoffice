@@ -234,17 +234,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           isCollapsed ? "md:pl-16" : "md:pl-[248px]"
         )}
       >
-        <React.Suspense fallback={<header className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80" />}>
+        <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>
           <AppTopbar />
         </React.Suspense>
         <OfflineBanner />
         {/* Centralized safe-area bottom clearance on main */}
         <main
           id="main-content"
-          className="flex-1 py-3 md:py-5 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6"
+          className="flex-1 py-2.5 md:py-4 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6"
           tabIndex={-1}
         >
-          <div className="max-w-[1600px] w-full mx-auto px-3.5 sm:px-6">
+          <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-6">
             {children}
           </div>
         </main>

@@ -11,6 +11,7 @@ import {
   Building2,
   Bell,
   Settings,
+  Inbox,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const ROUTE_ICONS: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
   Building2,
   Bell,
   Settings,
+  Inbox,
 };
 
 export interface MobileBottomNavProps {

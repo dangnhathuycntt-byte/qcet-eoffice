@@ -31,7 +31,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       // Verify canonical order
       assert.deepEqual(
         ids,
-        ["desk", "tasks", "calendar", "notifications", "documents", "org", "settings"],
+        ["desk", "tasks", "calendar", "inbox", "documents", "org", "settings"],
         "Items must follow canonical order"
       );
     });

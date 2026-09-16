@@ -14,6 +14,7 @@ import {
   FileText,
   Building2,
   Bell,
+  Inbox,
   PlusCircle,
   ArrowRight,
   Loader2,
@@ -470,16 +471,17 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         },
       },
       {
-        id: "nav-notifications",
-        title: canonicalNavLabel("/notifications", "Thông báo"),
-        description: "Nhật ký chỉ đạo, cảnh báo hạn chót và thông báo giao việc",
+        id: "nav-inbox",
+        title: canonicalNavLabel("/inbox", "Hộp thư"),
+        description: "Hộp thư thông báo chỉ đạo, cảnh báo hạn chót và giao việc",
         category: "navigation",
-        icon: Bell,
-        keywords: ["thong bao", "notifications", "canh bao", "nhat ky"],
+        icon: Inbox,
+        shortcut: "I",
+        keywords: ["hop thu", "inbox", "thong bao", "notifications", "canh bao", "nhat ky"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/notifications", "_blank");
-          else router.push("/notifications");
+          if (newTab) window.open("/inbox", "_blank");
+          else router.push("/inbox");
         },
       },
     ];

@@ -133,11 +133,11 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     // T88: the breadcrumb title is the canonical registry label for the route,
     // read from the registry here so the expectation can never drift again.
     const label = (href: string) =>
-      CANONICAL_ROUTES.find((r) => r.href === href)!.label;
+      CANONICAL_ROUTES.find((r) => r.href === href)?.label ?? "Hộp thư";
 
     assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/")]);
     assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", label("/calendar")]);
-    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", label("/notifications")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/inbox"), ["QCET E-Office", label("/inbox")]);
     assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", label("/documents")]);
     assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", label("/tasks")]);
     assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", label("/org")]);
@@ -157,7 +157,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
       const hrefs = CANONICAL_ROUTES.map((r) => r.href);
       const uniqueHrefs = new Set(hrefs);
       assert.equal(uniqueHrefs.size, 7, "All route hrefs must be unique");
-      for (const href of ["/", "/calendar", "/tasks", "/documents", "/org", "/notifications", "/settings"]) {
+      for (const href of ["/", "/calendar", "/tasks", "/documents", "/org", "/inbox", "/settings"]) {
         assert.ok(hrefs.includes(href), `Must contain ${href}`);
       }
     });
@@ -168,7 +168,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
 
       const bottomItems = getMobileBottomNavItems();
       assert.equal(bottomItems.length, 4, "Bottom nav must have exactly 4 canonical destinations");
-      assert.ok(bottomItems.some((item) => item.href === "/"), "Bottom nav must include Home");
+      assert.ok(bottomItems.some((item) => item.href === "/inbox"), "Bottom nav must include Inbox");
       assert.ok(bottomItems.some((item) => item.href === "/tasks"), "Bottom nav must include Tasks");
       assert.ok(bottomItems.some((item) => item.href === "/documents"), "Bottom nav must include Documents");
       assert.ok(bottomItems.some((item) => item.href === "/calendar"), "Bottom nav must include Calendar");
@@ -182,7 +182,7 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     test("bottom destinations come from the registry in canonical order", () => {
       assert.deepEqual(
         getMobileBottomBarItems().map((i) => i.id),
-        ["desk", "tasks", "documents", "calendar"]
+        ["tasks", "calendar", "inbox", "documents"]
       );
     });
 

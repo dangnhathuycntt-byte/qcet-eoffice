@@ -8,7 +8,7 @@ export interface CanonicalRouteConfig {
   label: string;
   shortLabel: string;
   section: NavigationSection;
-  iconName: "LayoutDashboard" | "Calendar" | "CheckSquare" | "FileText" | "Building2" | "Bell" | "Settings";
+  iconName: "LayoutDashboard" | "Calendar" | "CheckSquare" | "FileText" | "Building2" | "Bell" | "Settings" | "Inbox";
   zone?: WorkspaceZone;
   badgeKey?: "calendar" | "notifications" | "docsInbox" | "docsOutbox" | "docsPending" | "tasks" | "taskAttention";
   aliases?: string[];
@@ -19,6 +19,19 @@ export interface CanonicalRouteConfig {
 
 export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
   {
+    id: "desk",
+    href: "/",
+    label: "Bàn làm việc",
+    shortLabel: "Bàn làm việc",
+    section: "work",
+    iconName: "LayoutDashboard",
+    zone: "dashboard",
+    badgeKey: "tasks",
+    aliases: ["/dashboard", "/workbench"],
+    mobilePlacement: "none",
+    order: 1,
+  },
+  {
     id: "tasks",
     href: "/tasks",
     label: "Nhiệm vụ",
@@ -27,10 +40,10 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     iconName: "CheckSquare",
     zone: "tasks",
     badgeKey: "taskAttention",
-    aliases: ["/unit-tasks", "/?zone=tasks", "/dashboard", "/workbench"],
+    aliases: ["/unit-tasks", "/?zone=tasks"],
     mobilePlacement: "bottom-bar",
     mobileOrder: 1,
-    order: 1,
+    order: 2,
   },
   {
     id: "calendar",
@@ -43,18 +56,20 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     badgeKey: "calendar",
     aliases: ["/?zone=calendar", "/?view=calendar", "/?view=month"],
     mobilePlacement: "bottom-bar",
-    mobileOrder: 4,
+    mobileOrder: 2,
     order: 3,
   },
   {
-    id: "notifications",
-    href: "/notifications",
-    label: "Thông báo & Nhắc việc",
-    shortLabel: "Thông báo",
+    id: "inbox",
+    href: "/inbox",
+    label: "Hộp thư",
+    shortLabel: "Hộp thư",
     section: "work",
-    iconName: "Bell",
+    iconName: "Inbox",
     badgeKey: "notifications",
-    mobilePlacement: "none",
+    aliases: ["/notifications"],
+    mobilePlacement: "bottom-bar",
+    mobileOrder: 3,
     order: 4,
   },
   {
@@ -68,7 +83,7 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     badgeKey: "docsInbox",
     aliases: ["/?zone=documents"],
     mobilePlacement: "bottom-bar",
-    mobileOrder: 3,
+    mobileOrder: 4,
     order: 5,
   },
   {
@@ -134,7 +149,8 @@ export function getRouteByPath(pathname: string): CanonicalRouteConfig | undefin
 function pickNavItem(
   id: string
 ): Pick<CanonicalRouteConfig, "id" | "href" | "label" | "iconName"> {
-  const route = CANONICAL_ROUTES.find((r) => r.id === id);
+  const targetId = id === "notifications" ? "inbox" : id;
+  const route = CANONICAL_ROUTES.find((r) => r.id === targetId);
   if (!route) {
     throw new Error(`Unknown canonical route id: ${id}`);
   }
@@ -145,7 +161,8 @@ export const CANONICAL_NAV_ITEMS = {
   WORKBENCH: pickNavItem("tasks"),
   TASKS: pickNavItem("tasks"),
   CALENDAR: pickNavItem("calendar"),
-  NOTIFICATIONS: pickNavItem("notifications"),
+  INBOX: pickNavItem("inbox"),
+  NOTIFICATIONS: pickNavItem("inbox"),
   DOCUMENTS: pickNavItem("documents"),
   ORG: pickNavItem("org"),
 };

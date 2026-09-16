@@ -42,11 +42,14 @@ async function markNotificationAsRead(request: NextRequest, context: RouteContex
       throw new AuthorizationError('Không có quyền thao tác trên thông báo này');
     }
 
+    const reqBody = await request.json().catch(() => ({}));
+    const isReadTarget = typeof reqBody?.isRead === 'boolean' ? reqBody.isRead : true;
+
     const updated = await prisma.notification.update({
       where: { id },
       data: {
-        isRead: true,
-        readAt: new Date(),
+        isRead: isReadTarget,
+        readAt: isReadTarget ? new Date() : null,
       },
     });
 
