@@ -813,7 +813,7 @@ export function ModularCascadingTaskTable({
     [keyboardNav, paginatedResult.items, findTaskById, previewTask]
   );
 
-  // Global listener: Khi chuột đang hover trên bất kỳ hàng nào, bấm Space là mở ngay Peek Preview
+  // Global listener: Nhấn Space để mở Peek Preview, thả Space (keyup) để đóng ngay lập tức
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === " " && !e.repeat && hoveredTaskIdRef.current && !previewTask) {
@@ -829,8 +829,20 @@ export function ModularCascadingTaskTable({
       }
     };
 
+    const handleGlobalKeyUp = (e: KeyboardEvent) => {
+      if ((e.key === " " || e.code === "Space") && previewTask) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPreviewTask(null);
+      }
+    };
+
     window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keyup", handleGlobalKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+      window.removeEventListener("keyup", handleGlobalKeyUp);
+    };
   }, [findTaskById, previewTask]);
 
   // 12. Month Period & Indicator

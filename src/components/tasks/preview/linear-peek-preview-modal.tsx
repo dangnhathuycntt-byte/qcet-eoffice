@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   X,
-  Box,
   User,
   Building2,
   Calendar,
@@ -14,6 +13,9 @@ import {
   ArrowRight,
   ListTodo,
   ExternalLink,
+  ChevronUp,
+  ChevronDown,
+  Flag,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -31,6 +33,13 @@ export interface LinearPeekPreviewModalProps {
   onNavigatePrev?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
+}
+
+function getInitials(name: string): string {
+  if (!name) return "—";
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
 export function LinearPeekPreviewModal({
@@ -164,6 +173,25 @@ export function LinearPeekPreviewModal({
     };
   }, [isOpen, task, onClose, onOpenDetail, onNavigateNext, onNavigatePrev]);
 
+  // Linear Hold-to-Peek: Releasing Space immediately closes preview
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keyup", handleKeyUp, { capture: true });
+    return () => {
+      window.removeEventListener("keyup", handleKeyUp, { capture: true });
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !task) return null;
 
   const isSchool = isSchoolTask(task);
@@ -178,6 +206,8 @@ export function LinearPeekPreviewModal({
   const leadName = isSchool
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
+
+  const leadAvatar = isSchool ? schoolTask?.leadAssigneeAvatar : undefined;
 
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
@@ -203,19 +233,19 @@ export function LinearPeekPreviewModal({
     task.status === "COMPLETED"
       ? "Hoàn thành"
       : task.status === "IN_PROGRESS"
-      ? "Đang làm"
+      ? "Đang thực hiện"
       : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
       ? "Chờ duyệt"
       : "Chưa bắt đầu";
 
   const statusBadgeStyle =
     task.status === "COMPLETED"
-      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+      ? "text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-400"
       : task.status === "IN_PROGRESS"
-      ? "text-blue-700 bg-blue-50 border-blue-200"
+      ? "text-blue-700 bg-blue-500/10 border-blue-500/25 dark:text-blue-400"
       : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "text-amber-700 bg-amber-50 border-amber-200"
-      : "text-slate-600 bg-slate-100 border-slate-200";
+      ? "text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-400"
+      : "text-muted-foreground bg-muted border-border";
 
   const priorityVal = (task as any).priority || "NORMAL";
   const priorityLabel =
@@ -229,21 +259,21 @@ export function LinearPeekPreviewModal({
 
   const priorityStyle =
     priorityVal === "URGENT"
-      ? "text-red-700 bg-red-50 border-red-200"
+      ? "text-rose-700 bg-rose-500/10 border-rose-500/25 dark:text-rose-400"
       : priorityVal === "HIGH"
-      ? "text-amber-700 bg-amber-50 border-amber-200"
-      : "text-slate-700 bg-slate-50 border-slate-200";
+      ? "text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-400"
+      : "text-muted-foreground bg-muted/60 border-border/80";
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Xem nhanh nhiệm vụ"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
     >
-      {/* Backdrop */}
+      {/* Backdrop with soft blur */}
       <div
-        className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
+        className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -251,37 +281,55 @@ export function LinearPeekPreviewModal({
       {/* Modal Surface */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-white rounded-xl border border-border/60 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150 text-slate-900"
+        className="relative w-full max-w-xl sm:max-w-2xl bg-card rounded-xl sm:rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh] animate-in fade-in zoom-in-95 duration-150 text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top bar: Code, Breadcrumb, Close button */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-slate-50/50">
+        {/* Top Header: Code, Department, Navigation arrows, Close button */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/70 bg-muted/30 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="size-6 rounded-md bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
-              <Box className="size-3.5" strokeWidth={1.75} />
-            </div>
-            <span className="font-mono text-xs font-semibold text-slate-500 uppercase">
+            <span className="font-mono text-xs font-semibold text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded border border-border/60">
               {taskCode}
             </span>
-            <span className="text-slate-300">/</span>
-            <span className="text-xs font-medium text-slate-500 truncate">
+            <span className="text-border select-none">/</span>
+            <span className="text-xs font-medium text-muted-foreground truncate" title={departmentName}>
               {departmentName}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onOpenDetail(task)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-primary hover:bg-primary/5 transition-colors cursor-pointer"
-            >
-              <span>Mở chi tiết</span>
-              <ExternalLink className="size-3" />
-            </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Previous / Next task navigation in table */}
+            {onNavigatePrev && (
+              <button
+                type="button"
+                onClick={onNavigatePrev}
+                disabled={!hasPrev}
+                title="Nhiệm vụ trước (↑ hoặc K)"
+                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Nhiệm vụ trước"
+              >
+                <ChevronUp className="size-4" strokeWidth={1.5} />
+              </button>
+            )}
+            {onNavigateNext && (
+              <button
+                type="button"
+                onClick={onNavigateNext}
+                disabled={!hasNext}
+                title="Nhiệm vụ kế tiếp (↓ hoặc J)"
+                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Nhiệm vụ kế tiếp"
+              >
+                <ChevronDown className="size-4" strokeWidth={1.5} />
+              </button>
+            )}
+
+            <div className="w-px h-4 bg-border/80 mx-1 select-none" aria-hidden="true" />
+
             <button
               type="button"
               onClick={onClose}
-              className="size-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Đóng (Esc)"
+              className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               aria-label="Đóng xem nhanh"
             >
               <X className="size-4" strokeWidth={1.5} />
@@ -290,62 +338,90 @@ export function LinearPeekPreviewModal({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-5 overflow-y-auto space-y-5 text-xs thin-scrollbar flex-1">
-          {/* Title */}
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs thin-scrollbar flex-1">
+          {/* Title (Full wrap, no truncation) */}
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug">
+            <h2 className="text-base sm:text-lg font-semibold text-foreground tracking-tight leading-snug text-balance">
               {task.title}
             </h2>
           </div>
 
-          {/* Inline Properties Strip */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 pb-2 border-b border-border/40">
-            {/* Status */}
-            <span className={cn("px-2.5 py-1 rounded-md font-semibold border text-xs inline-flex items-center gap-1.5", statusBadgeStyle)}>
-              <span className="size-2 rounded-full bg-current" />
-              {statusLabel}
-            </span>
-
-            {/* Priority */}
-            <span className={cn("px-2.5 py-1 rounded-md font-medium border text-xs inline-flex items-center gap-1", priorityStyle)}>
-              <AlertCircle className="size-3 text-current" strokeWidth={1.5} />
-              {priorityLabel}
-            </span>
-
-            {/* Lead */}
-            <span
-              className="px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs inline-flex items-center gap-1.5"
-              title="Người chủ trì DRI"
-            >
-              <User className="size-3 text-slate-400" strokeWidth={1.5} />
-              <span className="font-medium text-slate-900">{leadName}</span>
-            </span>
-
-            {/* Due Date */}
-            <span
-              className="px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs inline-flex items-center gap-1.5 font-mono"
-              title="Hạn hoàn thành"
-            >
-              <Calendar className="size-3 text-slate-400" strokeWidth={1.5} />
-              <span>{formatDetailDate(task.dueDate)}</span>
-              {relativeDue && (
-                <span className={cn("ml-1 font-sans text-[10px] px-1 rounded", relativeDue.color)}>
-                  {relativeDue.text}
+          {/* Quick Properties Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 pb-3 border-b border-border/60">
+            {/* 1. Status */}
+            <div className="flex flex-col gap-1 p-2 rounded-lg bg-muted/40 border border-border/60">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                Trạng thái
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn("px-2 py-0.5 rounded text-xs font-medium border inline-flex items-center gap-1.5", statusBadgeStyle)}>
+                  <span className="size-1.5 rounded-full bg-current" />
+                  <span>{statusLabel}</span>
                 </span>
-              )}
-            </span>
+              </div>
+            </div>
+
+            {/* 2. Priority */}
+            <div className="flex flex-col gap-1 p-2 rounded-lg bg-muted/40 border border-border/60">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                Ưu tiên
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={cn("px-2 py-0.5 rounded text-xs font-medium border inline-flex items-center gap-1", priorityStyle)}>
+                  <Flag className="size-3" strokeWidth={1.5} />
+                  <span>{priorityLabel}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Lead Assignee */}
+            <div className="flex flex-col gap-1 p-2 rounded-lg bg-muted/40 border border-border/60 min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                Chủ trì
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0" title={leadName}>
+                {leadAvatar ? (
+                  <img
+                    src={leadAvatar}
+                    alt=""
+                    className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/60"
+                  />
+                ) : (
+                  <span className="size-4.5 rounded-full bg-slate-200 dark:bg-zinc-800 text-[9px] font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                    {getInitials(leadName)}
+                  </span>
+                )}
+                <span className="text-xs font-medium text-foreground truncate">{leadName}</span>
+              </div>
+            </div>
+
+            {/* 4. Due Date & SLA */}
+            <div className="flex flex-col gap-1 p-2 rounded-lg bg-muted/40 border border-border/60 min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                Hạn chót
+              </span>
+              <div className="flex items-center gap-1 mt-0.5 min-w-0 font-mono text-xs">
+                <Calendar className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <span className="text-foreground truncate">{formatDetailDate(task.dueDate)}</span>
+                {relativeDue && (
+                  <span className={cn("font-sans text-[10px] px-1 py-0.2 rounded font-medium shrink-0", relativeDue.color)}>
+                    {relativeDue.text}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Description Excerpt */}
+          {/* Description */}
           <div className="space-y-1.5">
-            <span className="font-semibold text-slate-500 uppercase text-[11px] font-mono tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Mô tả nhiệm vụ
             </span>
-            <div className="p-3 rounded-lg bg-slate-50 border border-border/40 text-slate-700 leading-relaxed text-xs">
+            <div className="p-3.5 rounded-lg bg-muted/30 border border-border/60 text-foreground leading-relaxed text-xs">
               {taskDescription ? (
-                <p className="line-clamp-4 whitespace-pre-line">{taskDescription}</p>
+                <p className="whitespace-pre-line text-xs">{taskDescription}</p>
               ) : (
-                <p className="italic text-slate-400">Chưa có mô tả chi tiết cho nhiệm vụ này.</p>
+                <p className="italic text-muted-foreground text-xs">Chưa có mô tả chi tiết cho nhiệm vụ này.</p>
               )}
             </div>
           </div>
@@ -353,22 +429,22 @@ export function LinearPeekPreviewModal({
           {/* Progress Bar */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                <TrendingUp className="size-3.5 text-slate-400" strokeWidth={1.5} />
-                Tiến độ thực hiện
+              <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <TrendingUp className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <span>Tiến độ thực hiện</span>
               </span>
-              <span className="font-mono font-bold text-slate-900 tabular-nums">
+              <span className="font-mono font-bold text-foreground tabular-nums">
                 {progressPercent}%
               </span>
             </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted border border-border/60">
               <div
                 className={cn(
-                  "h-full transition-all duration-300 ease-out",
+                  "h-full transition-all duration-300 ease-out rounded-full",
                   progressPercent === 100
                     ? "bg-emerald-500"
                     : progressPercent > 50
-                    ? "bg-blue-600"
+                    ? "bg-primary"
                     : "bg-amber-500"
                 )}
                 style={{ width: `${Math.min(Math.max(progressPercent, 0), 100)}%` }}
@@ -376,36 +452,36 @@ export function LinearPeekPreviewModal({
             </div>
           </div>
 
-          {/* Subtasks Preview (up to 3 items) */}
+          {/* Subtasks List Preview (up to 3 items) */}
           {subTasks.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-700 flex items-center gap-1.5 text-xs">
-                  <ListTodo className="size-3.5 text-slate-400" strokeWidth={1.5} />
-                  Đầu việc con ({subTasks.length})
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <ListTodo className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <span>Đầu việc con ({subTasks.length})</span>
                 </span>
-                <span className="text-[11px] font-mono text-slate-400">
+                <span className="text-[11px] font-mono text-muted-foreground">
                   {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length} hoàn thành
                 </span>
               </div>
 
-              <div className="divide-y divide-border/40 rounded-lg border border-border/50 overflow-hidden bg-slate-50/40">
+              <div className="divide-y divide-border/60 rounded-lg border border-border/80 overflow-hidden bg-muted/20">
                 {subTasks.slice(0, 3).map((st) => (
                   <div key={st.id} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <CheckCircle2
                         className={cn(
                           "size-3.5 shrink-0",
-                          st.status === "COMPLETED" ? "text-emerald-600" : "text-slate-300"
+                          st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/50"
                         )}
                         strokeWidth={2}
                       />
-                      <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-slate-400")}>
+                      <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-muted-foreground")}>
                         {st.title}
                       </span>
                     </div>
 
-                    <span className="text-slate-500 text-[11px] font-mono shrink-0">
+                    <span className="text-muted-foreground text-[11px] font-mono shrink-0">
                       {st.assigneeName || "Chưa giao"}
                     </span>
                   </div>
@@ -415,46 +491,51 @@ export function LinearPeekPreviewModal({
           )}
         </div>
 
-        {/* Footer: Keyboard hints & Primary CTA */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-border/40 bg-slate-50/70 text-xs">
-          {/* Keyboard shortcut pills */}
-          <div className="flex items-center gap-3 text-slate-500 text-[11px]">
+        {/* Footer: Concise Keyboard Hints & Single Clean CTA */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border/70 bg-muted/30 text-xs">
+          {/* Keyboard shortcut hints */}
+          <div className="flex items-center gap-2.5 text-muted-foreground text-[11px]">
             <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-border/80 font-mono text-[10px] shadow-2xs">
-                Phím cách
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] shadow-2xs">
+                Space
               </kbd>
               <span>/</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-border/80 font-mono text-[10px] shadow-2xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] shadow-2xs">
                 Esc
               </kbd>
-              <span>Đóng</span>
+              <span className="hidden sm:inline">Đóng</span>
             </span>
 
+            <span className="text-border select-none" aria-hidden="true">·</span>
+
             <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-border/80 font-mono text-[10px] shadow-2xs">
+              <kbd className="px-1 py-0.5 rounded bg-background border border-border font-mono text-[10px] shadow-2xs">
                 ↑
               </kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-border/80 font-mono text-[10px] shadow-2xs">
+              <kbd className="px-1 py-0.5 rounded bg-background border border-border font-mono text-[10px] shadow-2xs">
                 ↓
               </kbd>
-              <span>Chuyển việc</span>
+              <span className="hidden sm:inline">Chuyển</span>
             </span>
 
+            <span className="text-border select-none" aria-hidden="true">·</span>
+
             <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-border/80 font-mono text-[10px] shadow-2xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] shadow-2xs">
                 Enter
               </kbd>
-              <span>Xem chi tiết</span>
+              <span className="hidden sm:inline">Mở</span>
             </span>
           </div>
 
+          {/* Single Primary Action Button */}
           <button
             type="button"
             onClick={() => onOpenDetail(task)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-foreground text-background hover:opacity-90 font-medium text-xs transition-opacity cursor-pointer shadow-2xs shrink-0"
           >
-            <span>Mở trang chi tiết</span>
-            <ArrowRight className="size-3.5" strokeWidth={2} />
+            <span>Mở chi tiết</span>
+            <ArrowRight className="size-3.5" strokeWidth={1.5} />
           </button>
         </div>
       </div>
