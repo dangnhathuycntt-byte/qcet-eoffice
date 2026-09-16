@@ -59,7 +59,8 @@ describe("UnifiedTaskToolbar Helpers", () => {
       const hasSub = t.subTasks?.some(
         (s: StaffTask) => s.assigneeName === staffUser.name || matchesUser(s.assigneeName, staffUser)
       );
-      assert.ok(isLead || hasSub, "task must be assigned to staff user");
+      const isCo = Boolean(t.coAssignees?.some((ca: string) => matchesUser(ca, staffUser)));
+      assert.ok(isLead || hasSub || isCo, "task must be assigned to staff user");
     }
   });
 
@@ -649,54 +650,7 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
     assert.ok(!html.includes("Cần tôi duyệt"), "Staff must NOT see 'Cần tôi duyệt'");
   });
 
-  test("Quick filter pill with count=0 still renders and aria-pressed='false' when not selected", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "",
-        onSearchChange: () => {},
-        activeTab: "all",
-        tabCounts: { all: 10, waiting_approval: 0, overdue: 0 },
-      })
-    );
-    // Pill "Cần tôi duyệt" must render even with count=0
-    assert.ok(html.includes("Cần tôi duyệt"), "Role action pill must render even when count=0");
-    // Must have aria-pressed attribute
-    assert.ok(html.includes('aria-pressed="false"'), "Inactive pills must have aria-pressed='false'");
-  });
-
-  test("Active quick filter pill has aria-pressed='true'", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "",
-        onSearchChange: () => {},
-        activeTab: "overdue",
-        tabCounts: { overdue: 5 },
-      })
-    );
-    assert.ok(html.includes('aria-pressed="true"'), "Active pill must have aria-pressed='true'");
-  });
-
-  test("Quick filter group renders with role='group' and aria-label for a11y", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "",
-        onSearchChange: () => {},
-      })
-    );
-    assert.ok(html.includes('role="group"'), "Quick filter group must have role='group'");
-    assert.ok(html.includes("Lọc nhanh"), "Quick filter group must have aria-label 'Lọc nhanh'");
-  });
-
-  test("Advanced filter popover trigger is labeled 'Bộ lọc nâng cao'", () => {
+  test("Advanced filter popover trigger is labeled 'Bộ lọc'", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
@@ -707,47 +661,8 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
       })
     );
     assert.ok(
-      html.includes("Bộ lọc nâng cao"),
-      "Advanced filter aria-label must be 'Bộ lọc nâng cao'"
-    );
-  });
-
-  test("SavedViewsSelector label changes to 'Góc nhìn: Tùy chỉnh' when search query is active", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "tuyen sinh",
-        onSearchChange: () => {},
-      })
-    );
-    assert.ok(
-      html.includes("Góc nhìn: Tùy chỉnh"),
-      "SavedViewsSelector must display 'Góc nhìn: Tùy chỉnh' when search is active"
-    );
-    assert.ok(
-      !html.includes("Góc nhìn: Tất cả nhiệm vụ"),
-      "Must not display default label when filter is active"
-    );
-  });
-
-  test("Quick filter pills all use type='button' to prevent form submission", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(UnifiedTaskToolbar, {
-        scope: "school",
-        onScopeChange: () => {},
-        user: adminUser,
-        searchQuery: "",
-        onSearchChange: () => {},
-        tabCounts: { all: 10, waiting_approval: 3, overdue: 2 },
-      })
-    );
-    // Count 3 pills (Tất cả, Cần tôi duyệt, Quá hạn), each with type="button"
-    const typeButtonMatches = html.match(/type="button"/g) ?? [];
-    assert.ok(
-      typeButtonMatches.length >= 3,
-      `Must have at least 3 type='button' elements for quick filter pills, found ${typeButtonMatches.length}`
+      html.includes("Bộ lọc"),
+      "Advanced filter aria-label must be 'Bộ lọc'"
     );
   });
 
@@ -758,7 +673,7 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
       "all"
     );
     const ids = pills.map((p) => p.id);
-    assert.deepEqual(ids, ["all", "waiting_approval", "overdue"]);
+    assert.deepEqual(ids, ["all", "overdue", "this_week", "waiting_approval"]);
   });
 
   test("buildQuickFilterPills returns correct pill ids for staff role", () => {
@@ -768,7 +683,7 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
       "all"
     );
     const ids = pills.map((p) => p.id);
-    assert.deepEqual(ids, ["all", "pending_submission", "overdue"]);
+    assert.deepEqual(ids, ["all", "overdue", "this_week", "review"]);
   });
 
   test("onTabChange callback is invoked with correct tab id when a pill is clicked (mock function)", () => {

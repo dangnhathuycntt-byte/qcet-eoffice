@@ -67,14 +67,14 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
     <tr
       data-parent-id={parentTask.id}
       data-task-tier="2"
-      className={cn("bg-muted/20 transition-colors", className)}
+      className={cn("bg-muted/10 dark:bg-zinc-800/10 transition-colors", className)}
     >
-      <td colSpan={colSpan} className="p-0 border-b border-border/70">
-        <div className="py-2.5 pr-4 pl-8 sm:pl-10">
-          {/* Tree indentation vertical connector line */}
-          <div className="border-l-2 border-border ml-6 pl-3 space-y-2">
+      <td colSpan={colSpan} className="p-0 border-b border-border/40">
+        <div className="py-2 pr-3.5 pl-3.5 sm:pl-4">
+          {/* Tree indentation vertical connector line (Carbon Hierarchy) */}
+          <div className="border-l border-border/70 ml-2 pl-3 sm:pl-4 space-y-1.5">
             {!hasSubtasks ? (
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-card border border-dashed border-border text-xs text-muted-foreground">
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-card/60 border border-dashed border-border/80 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <ListTodo className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
                   <span>Nhiệm vụ này chưa có việc thành phần nào.</span>
@@ -83,7 +83,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                   <button
                     type="button"
                     onClick={() => onAddSubTask(parentTask.id)}
-                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-lg border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-95 transition-colors"
+                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-95 transition-colors"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
                     <span>Thêm việc con</span>

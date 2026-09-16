@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   AlertTriangle,
+  Box,
   Check,
   ChevronDown,
   ChevronRight,
@@ -288,7 +289,7 @@ export const TaskRow = React.memo(function TaskRow({
   isPreviewing = false,
   density = "comfortable",
   visibleColumns = { priority: true, subtasks: true, progress: true },
-  showSelection = true,
+  showSelection = false,
   canAssign = false,
   selectedAcademicMonth,
   referenceDate = getSystemReferenceDate(),
@@ -361,8 +362,9 @@ export const TaskRow = React.memo(function TaskRow({
     onContextMenu?.(task, e);
   };
 
-  const paddingClass = "py-1.5 px-2.5";
-  const rowHeightClass = "min-h-[38px] sm:min-h-[42px]";
+  const paddingClass = "py-2 px-2.5";
+  const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
+  const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
 
   return (
     <tr
@@ -375,70 +377,87 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-all border-b border-border/40 select-none bg-white text-slate-900",
+        "group cursor-pointer transition-colors border-b border-border/40 select-none bg-transparent text-slate-900 dark:text-zinc-100",
         rowHeightClass,
         // State 1: Hovered
-        "hover:bg-slate-50/90",
+        "hover:bg-muted/40 dark:hover:bg-zinc-800/40",
         // State 2: Focused (WCAG 2.2 AA Focus visible)
-        "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset focus-visible:bg-slate-50/90 focus-visible:outline-none",
-        // State 3: Selected
-        isSelected && "bg-primary/[0.05] border-l-2 border-l-primary",
+        "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
+        // State 3: Selected (Linear Highlight)
+        isSelected && "bg-primary/[0.08] dark:bg-primary/[0.14] border-l-2 border-l-primary",
         // State 4: Previewing (Peek preview)
-        isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
+        isPreviewing && "bg-blue-50/70 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
         isActive && !isPreviewing && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
-        isExpanded && "bg-slate-50/40",
+        isExpanded && "bg-muted/20",
         className
       )}
     >
-      {/* 1. Selection Checkbox */}
-      {showSelection && (
-        <td
-          className={cn("w-10 text-center align-middle", paddingClass)}
-          onClick={handleCheckboxClick}
-        >
-          <div className="flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => onToggleSelect?.(task.id, e)}
-              className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer transition-colors"
-              aria-label={`Chọn nhiệm vụ ${task.title}`}
-            />
-          </div>
-        </td>
-      )}
-
-      {/* 2. Nhiệm vụ (Expand Chevron + Title) - Dominant Column */}
-      <td className={cn("align-middle min-w-[320px] md:min-w-[420px] flex-1", paddingClass)}>
+      {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
+      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass)}>
         <div className="flex items-center gap-2">
-          {/* Subtask Expand Toggle */}
-          {hasSubtasks ? (
-            <button
-              type="button"
-              onClick={handleExpandClick}
-              className="inline-flex size-5 items-center justify-center rounded text-slate-400 hover:bg-slate-200/70 hover:text-slate-900 cursor-pointer shrink-0 transition-colors"
-              aria-expanded={isExpanded}
-              aria-label={
-                isExpanded
-                  ? "Thu gọn nhiệm vụ con"
-                  : "Mở rộng nhiệm vụ con"
-              }
-            >
-              {isExpanded ? (
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
-              ) : (
-                <ChevronRight className="size-3.5" strokeWidth={1.5} />
-              )}
-            </button>
-          ) : (
-            <span className="inline-flex size-5 shrink-0" aria-hidden="true" />
-          )}
+          {/* Linear Integrated Leading Selector (Icon/Chevron by default, Checkbox on Hover/Selected) */}
+          <div
+            className="size-5 shrink-0 flex items-center justify-center relative select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isSelected ? (
+              <button
+                type="button"
+                onClick={handleCheckboxClick}
+                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-2xs hover:opacity-90 transition-all active:scale-95"
+                aria-label={`Bỏ chọn nhiệm vụ ${task.title}`}
+                title="Bỏ chọn (X)"
+              >
+                <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+              </button>
+            ) : (
+              <>
+                {/* Default State: Chevron for parent tasks, Subtle Box Icon for leaf tasks */}
+                {hasSubtasks ? (
+                  <button
+                    type="button"
+                    onClick={handleExpandClick}
+                    className="size-4.5 flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-colors group-hover:opacity-0"
+                    aria-expanded={isExpanded}
+                    aria-label={
+                      isExpanded
+                        ? "Thu gọn nhiệm vụ con"
+                        : "Mở rộng nhiệm vụ con"
+                    }
+                    title={isExpanded ? "Thu gọn nhiệm vụ con" : "Mở rộng nhiệm vụ con"}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="size-3.5" strokeWidth={1.8} />
+                    ) : (
+                      <ChevronRight className="size-3.5" strokeWidth={1.8} />
+                    )}
+                  </button>
+                ) : (
+                  <span
+                    className="size-4 flex items-center justify-center text-muted-foreground/35 group-hover:opacity-0 transition-opacity"
+                    aria-hidden="true"
+                  >
+                    <Box className="size-3.5" strokeWidth={1.5} />
+                  </span>
+                )}
+
+                {/* Hover State: Checkbox smoothly reveals on hover */}
+                <button
+                  type="button"
+                  onClick={handleCheckboxClick}
+                  className="absolute inset-0 m-auto size-4 rounded-[4px] border border-border/90 bg-background/90 hover:border-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-2xs"
+                  aria-label={`Chọn nhiệm vụ ${task.title}`}
+                  title="Chọn nhiệm vụ (X)"
+                />
+              </>
+            )}
+          </div>
 
           {/* Title - Clean & Straight Aligned */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
-              className="text-xs sm:text-[13px] font-medium text-slate-900 group-hover:text-primary transition-colors truncate"
+              className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
             >
               {task.title}
@@ -458,7 +477,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 3. Tình trạng / Trạng thái (Status / Health) */}
-      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-28 min-w-[100px] align-middle whitespace-nowrap", paddingClass)}>
         <HealthIndicator
           status={task.status}
           isOverdue={Boolean(slaStatus.isOverdue)}
@@ -468,13 +487,13 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 4. Độ ưu tiên (Priority - Tùy chọn hiển thị) */}
       {visibleColumns.priority !== false && (
-        <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-20 min-w-[72px] align-middle whitespace-nowrap", paddingClass)}>
           <PriorityIndicator priority={task.priority} />
         </td>
       )}
 
       {/* 5. Người / Đơn vị phụ trách (Lead Assignee / Department) */}
-      <td className={cn("w-36 lg:w-44 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-44 lg:w-52 min-w-[160px] align-middle whitespace-nowrap", paddingClass)}>
         <div
           className="flex flex-col min-w-0 justify-center"
           title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
@@ -491,17 +510,17 @@ export const TaskRow = React.memo(function TaskRow({
                 className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
               />
             ) : (
-              <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold tabular-nums text-slate-600 border border-border/60">
+              <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[9px] font-semibold tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
                 {getInitials(driInfo.primaryName)}
               </span>
             )}
-            <span className="text-xs font-medium text-slate-800 truncate">
+            <span className="text-xs font-medium text-foreground truncate">
               {driInfo.primaryName}
             </span>
           </div>
           {departmentName && (
             <span
-              className="text-[11px] text-slate-500 font-normal truncate mt-0.5"
+              className="text-[11px] text-muted-foreground font-normal truncate mt-0.5"
               title={departmentName}
             >
               {departmentName}
@@ -511,12 +530,12 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 6. Hạn hoàn thành & Quá hạn (Target date & SLA Overdue text/badge) */}
-      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex flex-col gap-0.5">
           <span
             className={cn(
               "font-mono tabular-nums text-xs",
-              slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-slate-700"
+              slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-muted-foreground font-medium"
             )}
             title="Hạn hoàn thành"
           >
@@ -538,12 +557,12 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 7. Đầu việc con (Subtasks count - Tùy chọn hiển thị) */}
+      {/* 7. Đầu việc con (Subtasks count - T��y chọn hiển thị) */}
       {visibleColumns.subtasks !== false && (
-        <td className={cn("w-20 align-middle text-center whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-20 min-w-[70px] align-middle text-center whitespace-nowrap", paddingClass)}>
           {hasSubtasks ? (
             <span
-              className="rounded bg-slate-100/80 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-slate-600"
+              className="rounded bg-muted/80 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground"
               title={`Hoàn thành ${completedSubTasks}/${totalSubTasks} đầu việc con`}
             >
               {completedSubTasks}/{totalSubTasks}
@@ -556,14 +575,14 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 8. Tiến độ (Progress % - Tùy chọn hiển thị) */}
       {visibleColumns.progress !== false && (
-        <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-24 min-w-[92px] align-middle whitespace-nowrap", paddingClass)}>
           <CircularProgressRing percent={task.progressPercent || 0} />
         </td>
       )}
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td
-        className={cn("w-8 align-middle text-right whitespace-nowrap", paddingClass)}
+        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap", paddingClass)}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -572,7 +591,7 @@ export const TaskRow = React.memo(function TaskRow({
             e.stopPropagation();
             onContextMenu?.(task, e);
           }}
-          className="inline-flex size-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-900 cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
+          className="inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
           aria-label="Thao tác nhanh"
           title="Thao tác nhanh (Chuột phải hoặc nhấp)"
         >

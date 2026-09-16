@@ -121,7 +121,7 @@ export function UniversalActionQueue({
         data-slot="universal-action-queue"
         className={cn("py-8 text-center text-xs text-slate-400", className)}
       >
-        Không có công việc tồn đọng cần xử lý.
+        Không có nhiệm vụ cần xử lý gấp.
       </div>
     );
   }
@@ -130,11 +130,11 @@ export function UniversalActionQueue({
 
   const displayedApprovals = isApprovalsExpanded
     ? pendingApprovals
-    : pendingApprovals.slice(0, 5);
+    : pendingApprovals.slice(0, 3);
 
   const displayedSubmissions = isSubmissionsExpanded
     ? myPendingSubmissions
-    : myPendingSubmissions.slice(0, 5);
+    : myPendingSubmissions.slice(0, 3);
 
   return (
     <div
@@ -145,11 +145,12 @@ export function UniversalActionQueue({
       {totalOverdue > 0 && (
         <div
           role="alert"
+          aria-live="polite"
           className="flex items-center justify-between text-xs text-rose-600 bg-rose-50/60 rounded px-2.5 py-1.5"
         >
           <div className="flex items-center gap-1.5 font-medium">
             <AlertTriangle className="size-3.5 shrink-0 text-rose-500" strokeWidth={1.5} />
-            <span>Có <span className="font-semibold tabular-nums">{totalOverdue}</span> tác vụ quá hạn cần ưu tiên xử lý.</span>
+            <span>Có <span className="font-mono font-semibold tabular-nums">{totalOverdue}</span> tác vụ quá hạn cần ưu tiên xử lý.</span>
           </div>
           {onFilterCanvas && (
             <button
@@ -171,8 +172,8 @@ export function UniversalActionQueue({
               {scope === "school"
                 ? "Chờ BGH phê duyệt"
                 : scope === "unit"
-                ? "Cần thẩm định L1"
-                : "Cần thẩm định"}{" "}
+                ? "Hàng đợi thẩm định L1"
+                : "Hàng đợi thẩm định"}{" "}
               <span className="font-mono font-normal text-slate-400 tabular-nums">
                 ({pendingApprovals.length})
               </span>
@@ -258,6 +259,9 @@ export function UniversalActionQueue({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
+                      Cần duyệt
+                    </span>
                     {isItemOverdue && onRemindDRI && (
                       <button
                         type="button"
@@ -267,10 +271,10 @@ export function UniversalActionQueue({
                             item.submittedBy || (item.task as any).assignedTo || ""
                           )
                         }
-                        className="h-6 px-2 text-[11px] font-medium rounded text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-[11px] font-medium rounded text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
                         title="Đôn đốc tiến độ thực hiện nhiệm vụ"
                       >
-                        Đôn đốc
+                        Đôn đốc DRI
                       </button>
                     )}
 
@@ -278,7 +282,7 @@ export function UniversalActionQueue({
                       <button
                         type="button"
                         onClick={() => onCreateSubtask(item.task.id)}
-                        className="h-6 px-2 text-[11px] font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                        className="min-h-[30px] h-7 px-2 text-[11px] font-medium rounded text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                         title="Phân rã nhiệm vụ cho chuyên viên"
                       >
                         Phân công
@@ -287,7 +291,7 @@ export function UniversalActionQueue({
 
                     <button
                       type="button"
-                      className="h-6 px-2.5 text-xs font-medium rounded text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
                       onClick={() => {
                         if (onOpenReview) {
                           onOpenReview(item.task);
@@ -304,15 +308,16 @@ export function UniversalActionQueue({
             })}
           </div>
 
-          {pendingApprovals.length > 5 && (
+          {pendingApprovals.length > 3 && (
             <button
               type="button"
+              aria-expanded={isApprovalsExpanded}
               className="w-full py-1.5 text-[11px] text-slate-500 hover:text-slate-800 text-center cursor-pointer"
               onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
             >
               {isApprovalsExpanded
                 ? "Thu gọn"
-                : `Xem thêm (${pendingApprovals.length - 5})`}
+                : `Xem thêm (${pendingApprovals.length - 3})`}
             </button>
           )}
         </div>
@@ -400,10 +405,13 @@ export function UniversalActionQueue({
                     </div>
                   </div>
 
-                  <div className="shrink-0 pt-0.5">
+                  <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-800 border border-blue-200/60">
+                      Chờ nộp BC
+                    </span>
                     <button
                       type="button"
-                      className="h-6 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                      className="min-h-[30px] h-7 px-2.5 text-xs font-medium rounded text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                       onClick={() => {
                         if (onOpenSubmit) {
                           const staffTask: StaffTask = ("assigneeName" in item.task)
@@ -438,15 +446,16 @@ export function UniversalActionQueue({
             })}
           </div>
 
-          {myPendingSubmissions.length > 5 && (
+          {myPendingSubmissions.length > 3 && (
             <button
               type="button"
+              aria-expanded={isSubmissionsExpanded}
               className="w-full py-1.5 text-[11px] text-slate-500 hover:text-slate-800 text-center cursor-pointer"
               onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
             >
               {isSubmissionsExpanded
                 ? "Thu gọn"
-                : `Xem thêm (${myPendingSubmissions.length - 5})`}
+                : `Xem thêm (${myPendingSubmissions.length - 3})`}
             </button>
           )}
         </div>

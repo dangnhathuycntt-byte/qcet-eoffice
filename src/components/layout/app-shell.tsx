@@ -214,7 +214,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   // Khi chưa đăng nhập hoặc mất session trên protected route: hiển thị trạng thái chuyển hướng
   if (!isLoading && !isAuthenticated && !user) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#f4f5f7] dark:bg-zinc-950">
         <div className="flex flex-col items-center gap-3">
           <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground font-medium">Đang chuyển hướng đến trang đăng nhập...</p>
@@ -224,32 +224,39 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-[100dvh] bg-background text-foreground">
-      <React.Suspense fallback={<aside className="hidden md:flex w-[248px] shrink-0 border-r border-border/50 bg-card" />}>
+    <div className="relative min-h-[100dvh] bg-[#f4f5f7] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
+      {/* Desktop Sidebar (Floating on soft outer background) */}
+      <React.Suspense fallback={<aside className="hidden md:flex w-[208px] shrink-0 bg-[#f4f5f7] dark:bg-zinc-950" />}>
         <AppSidebar />
       </React.Suspense>
+
+      {/* Main Content Area: Content Panel on Desktop */}
       <div
         className={cn(
-          "min-h-[100dvh] flex flex-col transition-all duration-200 ease-in-out",
-          isCollapsed ? "md:pl-16" : "md:pl-[248px]"
+          "min-h-[100dvh] flex-1 flex flex-col transition-all duration-200 ease-in-out",
+          isCollapsed ? "md:pl-14" : "md:pl-[208px]"
         )}
       >
+        {/* Mobile Header (Only visible below md) */}
         <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>
           <AppTopbar />
         </React.Suspense>
+
         <OfflineBanner />
-        {/* Centralized safe-area bottom clearance on main */}
+
+        {/* Inner Content Panel: White rounded panel with subtle border on desktop */}
         <main
           id="main-content"
-          className="flex-1 py-2.5 md:py-4 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6"
           tabIndex={-1}
+          className="flex-1 flex flex-col md:my-2 md:mr-2.5 md:rounded-xl md:border md:border-black/[0.06] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[calc(100dvh-16px)] outline-none"
         >
-          <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-6">
+          <div className="w-full flex-1 p-3 sm:p-5 md:p-6 max-w-[1600px] mx-auto flex flex-col">
             {children}
           </div>
         </main>
       </div>
 
+      {/* Mobile Navigation */}
       <React.Suspense fallback={null}>
         <MobileBottomNav className="flex md:hidden" />
       </React.Suspense>

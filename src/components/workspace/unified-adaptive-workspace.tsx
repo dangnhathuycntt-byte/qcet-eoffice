@@ -1683,15 +1683,6 @@ export function UnifiedAdaptiveWorkspace({
     forcedScope !== "school" &&
     forcedScope !== "unit";
 
-  // Compute scope badge counts for AdaptiveScopeHeader tabs
-  const badgeCounts = React.useMemo<Partial<Record<WorkspaceScope, number>>>(() => {
-    return {
-      school: tasks.length,
-      unit: countScopeTasks(tasks, user, "unit", selectedDepartment),
-      my: countScopeTasks(tasks, user, "my", selectedDepartment),
-    };
-  }, [tasks, user, selectedDepartment]);
-
   // Modal creation state
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [createInitialLevel, setCreateInitialLevel] = React.useState<"TRUONG" | "DON_VI">("DON_VI");
@@ -1926,7 +1917,7 @@ export function UnifiedAdaptiveWorkspace({
           user={user}
           userRole={effectiveReviewerRole}
           isExecutive={isExecutive}
-          badgeCounts={badgeCounts || calculatedScopeBadgeCounts}
+          badgeCounts={calculatedScopeBadgeCounts}
           isUnassignedDepartment={isUnassigned}
           searchQuery={currentSearch || ""}
           onSearchChange={(q) => {

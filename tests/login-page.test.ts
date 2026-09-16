@@ -85,7 +85,7 @@ describe("OAuth Error Mapping & Resolution", () => {
     assert.ok(errorInfo.message.includes("user@gmail.com"), "Message should include the violating email");
     assert.equal(errorInfo.email, "user@gmail.com");
     assert.equal(errorInfo.actionText, "Thử lại bằng tài khoản trường");
-    assert.equal(errorInfo.actionHref, "/api/auth/google");
+    assert.equal(errorInfo.actionHref, "/api/auth/signin/google");
   });
 
   test("maps account_disabled with red variant and IT department contact guidance", () => {

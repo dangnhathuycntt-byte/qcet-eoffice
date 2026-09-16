@@ -157,10 +157,10 @@ export function GoogleLoginButton({
             theme: "outline",
             size: "large",
             type: "standard",
-            text: "signin_with",
+            text: "continue_with",
             shape: "rectangular",
-            logo_alignment: "center",
-            width: 360,
+            logo_alignment: "left",
+            width: 380,
             locale: "vi",
           });
           if (isMounted) {
@@ -220,18 +220,18 @@ export function GoogleLoginButton({
           type="button"
           disabled={isLoading}
           onClick={handleStartOAuth}
-          aria-label="Đăng nhập bằng Google (@cdktcnqn.edu.vn)"
-          className="flex h-11 sm:h-12 w-full max-w-[360px] items-center justify-center gap-2.5 rounded-[4px] border border-[#747775]/40 bg-white px-4 text-sm font-medium text-[#1F1F1F] shadow-xs hover:bg-[#F8FAFC] hover:border-[#747775] active:bg-[#F1F5F9] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+          aria-label="Tiếp tục bằng Google"
+          className="flex h-11 sm:h-12 w-full max-w-[380px] items-center justify-center gap-3 rounded-[4px] border border-border/80 bg-background px-4 text-sm font-medium text-foreground shadow-xs hover:bg-muted/50 hover:border-border active:bg-muted active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
         >
           {isLoading ? (
             <>
               <Loader2 className="size-4.5 animate-spin text-primary" strokeWidth={1.5} />
-              <span className="text-sm font-medium text-[#1F1F1F]">Đang chuyển hướng...</span>
+              <span className="text-sm font-medium text-foreground">Đang chuyển hướng...</span>
             </>
           ) : (
             <>
               <GoogleIcon className="size-5 shrink-0" />
-              <span className="text-sm font-medium text-[#1F1F1F]">Đăng nhập bằng Google</span>
+              <span className="text-sm font-medium text-foreground">Tiếp tục bằng Google</span>
             </>
           )}
         </button>

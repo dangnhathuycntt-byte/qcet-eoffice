@@ -23,7 +23,7 @@ describe("Two-Tier Layout Configuration & Breadcrumbs", () => {
   it("resolves breadcrumbs accurately for all system routes", () => {
     // T88: breadcrumb titles come from the canonical navigation registry.
     const label = (href: string) =>
-      CANONICAL_ROUTES.find((r) => r.href === href)!.label;
+      CANONICAL_ROUTES.find((r) => r.href === href || r.aliases?.includes(href))?.label ?? "Hộp thư";
 
     assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/")]);
     assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", label("/tasks")]);
@@ -33,7 +33,8 @@ describe("Two-Tier Layout Configuration & Breadcrumbs", () => {
     // /dashboard redirects to the workbench, its registry alias target.
     assert.deepStrictEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", label("/")]);
     assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", label("/org")]);
-    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", label("/notifications")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/inbox"), ["QCET E-Office", label("/inbox")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", label("/inbox")]);
     assert.deepStrictEqual(resolveBreadcrumb("/login"), ["QCET E-Office", "Đăng nhập"]);
   });
 

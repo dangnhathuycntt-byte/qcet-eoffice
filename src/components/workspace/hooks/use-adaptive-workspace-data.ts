@@ -68,6 +68,8 @@ export function isSubTaskAssignedToUser(st: StaffTask, user: AuthUser | null): b
   return false;
 }
 
+import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
+
 export function countScopeTasks(
   tasks: SchoolTask[] = [],
   user: AuthUser | null,
@@ -77,58 +79,28 @@ export function countScopeTasks(
   if (scope === "school") return tasks.length;
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   if (scope === "unit") {
-    const canonicalDept = resolveDepartmentId(userDept) || userDept;
-    return tasks.filter((t) => {
-      const taskDept =
-        t.departmentCode ||
-        t.department ||
-        t.leadDepartmentCode ||
-        t.leadDepartment ||
-        t.departmentId ||
-        t.leadDepartmentId;
-
-      const matchParent =
-        Boolean(userDept) &&
-        ((taskDept && (
-          taskDept.toUpperCase() === userDept.toUpperCase() ||
-          taskDept.toLowerCase() === userDept.toLowerCase() ||
-          taskDept === canonicalDept ||
-          resolveDepartmentId(taskDept) === canonicalDept
-        )) ||
-        t.coDepartmentCodes?.some(
-          (code) =>
-            code.toUpperCase() === userDept.toUpperCase() ||
-            code === canonicalDept ||
-            resolveDepartmentId(code) === canonicalDept
-        ) ||
-        t.coDepartments?.some(
-          (dept) =>
-            dept.toLowerCase() === userDept.toLowerCase() ||
-            dept === canonicalDept ||
-            resolveDepartmentId(dept) === canonicalDept
-        ));
-
-      const matchChild =
-        Boolean(userDept) &&
-        t.subTasks?.some((st) => {
-          const subDept = st.departmentCode || st.department || st.departmentId;
-          return (
-            subDept && (
-              subDept.toUpperCase() === userDept.toUpperCase() ||
-              subDept.toLowerCase() === userDept.toLowerCase() ||
-              subDept === canonicalDept ||
-              resolveDepartmentId(subDept) === canonicalDept
-            )
-          );
-        });
-
-      return Boolean(matchParent || matchChild);
-    }).length;
+    if (userDept && userDept !== "ALL") {
+      return filterTasksForTable(tasks, "ALL", "", userDept).length;
+    }
+    return tasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
   }
   // scope === "my"
+  if (!user) return tasks.length;
   return tasks.filter((t) => {
-    const matchingSub = (t.subTasks || []).some((st) => isSubTaskAssignedToUser(st, user));
-    return matchingSub || isTaskAssignedToUser(t, user);
+    const isLead =
+      t.leadAssigneeName === user.name ||
+      matchesUser(t.leadAssigneeName, user) ||
+      (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id));
+    const hasSub = t.subTasks?.some(
+      (s) =>
+        s.assigneeName === user.name ||
+        matchesUser(s.assigneeName, user) ||
+        (user.id && (s.assigneeId === user.id || s.assignedTo === user.id))
+    );
+    const isCo = Boolean(
+      t.coAssignees?.some((ca) => matchesUser(ca, user))
+    );
+    return Boolean(isLead || hasSub || isCo);
   }).length;
 }
 
@@ -147,53 +119,11 @@ export function deriveAdaptiveWorkspaceData({
   if (scope === "school") {
     scopedTasks = tasks;
   } else if (scope === "unit") {
-    const canonicalDept = resolveDepartmentId(userDept) || userDept;
-    scopedTasks = tasks.filter((t) => {
-      const taskDept =
-        t.departmentCode ||
-        t.department ||
-        t.leadDepartmentCode ||
-        t.leadDepartment ||
-        t.departmentId ||
-        t.leadDepartmentId;
-
-      const matchParent =
-        Boolean(userDept) &&
-        ((taskDept && (
-          taskDept.toUpperCase() === userDept.toUpperCase() ||
-          taskDept.toLowerCase() === userDept.toLowerCase() ||
-          taskDept === canonicalDept ||
-          resolveDepartmentId(taskDept) === canonicalDept
-        )) ||
-        t.coDepartmentCodes?.some(
-          (code) =>
-            code.toUpperCase() === userDept.toUpperCase() ||
-            code === canonicalDept ||
-            resolveDepartmentId(code) === canonicalDept
-        ) ||
-        t.coDepartments?.some(
-          (dept) =>
-            dept.toLowerCase() === userDept.toLowerCase() ||
-            dept === canonicalDept ||
-            resolveDepartmentId(dept) === canonicalDept
-        ));
-
-      const matchChild =
-        Boolean(userDept) &&
-        t.subTasks?.some((st) => {
-          const subDept = st.departmentCode || st.department || st.departmentId;
-          return (
-            subDept && (
-              subDept.toUpperCase() === userDept.toUpperCase() ||
-              subDept.toLowerCase() === userDept.toLowerCase() ||
-              subDept === canonicalDept ||
-              resolveDepartmentId(subDept) === canonicalDept
-            )
-          );
-        });
-
-      return Boolean(matchParent || matchChild);
-    });
+    if (userDept && userDept !== "ALL") {
+      scopedTasks = filterTasksForTable(tasks, "ALL", "", userDept);
+    } else {
+      scopedTasks = tasks.filter((t) => t.subTasks && t.subTasks.length > 0);
+    }
   } else {
     // scope === "my"
     scopedTasks = tasks

@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   ArrowUpDown,
+  Check,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -42,14 +43,14 @@ interface ColumnDefinition {
 
 // Linear Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
 const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[420px] flex-1" },
-  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28" },
-  { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
-  { id: "leadAssignee", label: "Chủ trì / Đơn vị", sortable: true, widthClass: "w-36 lg:w-44" },
-  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-32" },
-  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20", align: "center" },
-  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-20" },
-  { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8" },
+  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
+  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28 min-w-[100px]" },
+  { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20 min-w-[72px]" },
+  { id: "leadAssignee", label: "Chủ trì / Đơn vị", sortable: true, widthClass: "w-44 lg:w-52 min-w-[160px]" },
+  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-32 min-w-[110px]" },
+  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20 min-w-[70px]", align: "center" },
+  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-24 min-w-[92px]" },
+  { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8 min-w-[32px]" },
 ];
 
 export function TaskTableHeader({
@@ -62,8 +63,8 @@ export function TaskTableHeader({
   density = "comfortable",
   visibleColumns = { priority: true, subtasks: true, progress: true },
   className,
-  showSelection = true,
-  showExpandAll = true,
+  showSelection = false,
+  showExpandAll = false,
   isAllExpanded = false,
   onToggleExpandAll,
   hasTasks = true,
@@ -107,12 +108,12 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/80 bg-slate-50 dark:bg-slate-900 select-none shadow-2xs",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-semibold text-slate-700")}>
-        {/* Selection Checkbox */}
+      <tr className={cn(rowHeightClass, "text-xs font-medium text-muted-foreground")}>
+        {/* Optional Selection Checkbox (only rendered when explicitly enabled for batch ops) */}
         {showSelection && (
           <th
             scope="col"
@@ -125,7 +126,7 @@ export function TaskTableHeader({
                 checked={allSelected}
                 disabled={!hasTasks}
                 onChange={(e) => onToggleSelectAll?.(e.target.checked)}
-                className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                className="size-4 rounded border-border/80 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                 aria-label="Chọn tất cả nhiệm vụ hiển thị"
               />
             </div>
@@ -133,7 +134,7 @@ export function TaskTableHeader({
         )}
 
         {/* Data Columns */}
-        {activeColumns.map((col) => {
+        {activeColumns.map((col, colIdx) => {
           const isSortable = col.sortable && col.id !== "actions" && col.id !== "subtasks";
           const isSorted = isSortable && sortField === col.id;
           const ariaSortValue = isSorted
@@ -144,13 +145,80 @@ export function TaskTableHeader({
             ? "none"
             : undefined;
 
+          // First column padding alignment when selection checkbox is absent
+          const isFirstColumn = !showSelection && colIdx === 0;
+          const titlePaddingClass = isFirstColumn ? "pl-3 sm:pl-3.5 pr-2.5 py-1.5" : paddingClass;
+
+          // Special alignment for Title column: Linear Header Leading Selector + Label
+          if (col.id === "title") {
+            return (
+              <th
+                key={col.id}
+                scope="col"
+                aria-sort={ariaSortValue}
+                className={cn(
+                  "align-middle font-medium transition-colors group/th text-left",
+                  col.widthClass,
+                  titlePaddingClass
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {/* Linear Header Selector: reveals on hover or when some/all rows are selected */}
+                  <div
+                    className="size-5 shrink-0 flex items-center justify-center relative select-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {indeterminate || allSelected ? (
+                      <button
+                        type="button"
+                        onClick={() => onToggleSelectAll?.(!allSelected)}
+                        className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-2xs hover:opacity-90 transition-all active:scale-95"
+                        aria-label={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                        title={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                      >
+                        {allSelected ? (
+                          <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+                        ) : (
+                          <span className="w-2 h-0.5 bg-primary-foreground rounded-full" />
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onToggleSelectAll?.(true)}
+                        className="size-4 rounded-[4px] border border-border/80 bg-background/80 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/th:opacity-100 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-2xs"
+                        aria-label="Chọn tất cả nhiệm vụ hiển thị"
+                        title="Chọn tất cả"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {isSortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSort?.(col.id as TaskSortField)}
+                        className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none"
+                      >
+                        <span>{col.label}</span>
+                        {renderSortIndicator(col.id as TaskSortField)}
+                      </button>
+                    ) : (
+                      <span>{col.label}</span>
+                    )}
+                  </div>
+                </div>
+              </th>
+            );
+          }
+
           return (
             <th
               key={col.id}
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-semibold transition-colors group/th",
+                "align-middle font-medium transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"

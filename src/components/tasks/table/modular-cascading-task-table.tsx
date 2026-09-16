@@ -340,11 +340,11 @@ export function ModularCascadingTaskTable({
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
   const activeColSpan = React.useMemo(() => {
-    let span = 5; // Checkbox + Title + Status + Lead + Due + Actions = 6, with subtask tree
+    let span = 5; // Title + Status + Lead + Due + Actions = 5
     if (effectiveVisibleColumns.priority !== false) span++;
     if (effectiveVisibleColumns.subtasks !== false) span++;
     if (effectiveVisibleColumns.progress !== false) span++;
-    return span + 1; // total columns
+    return span; // total columns without checkbox
   }, [effectiveVisibleColumns]);
 
   const effectiveMonthInput =
@@ -898,7 +898,7 @@ export function ModularCascadingTaskTable({
       data-slot="cascading-task-table"
       onKeyDown={handleTableKeyDown}
       className={cn(
-        "flex flex-col gap-3.5 outline-hidden select-text transition-colors",
+        "flex flex-col gap-2.5 outline-hidden select-text transition-colors",
         className
       )}
     >
@@ -1156,8 +1156,8 @@ export function ModularCascadingTaskTable({
                   onSort={tableState.handleSort}
                   density={tableState.density}
                   visibleColumns={effectiveVisibleColumns}
-                  showSelection={true}
-                  showExpandAll={true}
+                  showSelection={false}
+                  showExpandAll={false}
                   isAllExpanded={tableState.expandedIds.size > 0}
                   onToggleExpandAll={() => {
                     if (tableState.expandedIds.size > 0) {
@@ -1191,6 +1191,7 @@ export function ModularCascadingTaskTable({
                           isPreviewing={previewTask?.id === task.id}
                           density={tableState.density}
                           visibleColumns={effectiveVisibleColumns}
+                          showSelection={false}
                           selectedAcademicMonth={selectedAcademicMonth}
                           activeCategory={activeCategory}
                           canAssign={canAssignUnit}

@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function getInitials(name: string): string {
+export function getInitials(name?: string | null): string {
   if (!name || !name.trim()) return "QC";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -41,7 +41,7 @@ function MobileHeaderTitle({ pathname }: { pathname: string }) {
         />
       </Link>
       <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
-      <span className="text-xs font-bold text-foreground truncate max-w-[150px]">
+      <span className="text-xs font-bold text-foreground truncate max-w-[160px]">
         {pageTitle}
       </span>
     </div>
@@ -62,7 +62,7 @@ function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
         />
       </Link>
       <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
-      <span className="text-xs font-bold text-foreground truncate max-w-[150px]">
+      <span className="text-xs font-bold text-foreground truncate max-w-[160px]">
         {pageTitle}
       </span>
     </div>
@@ -70,7 +70,7 @@ function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
 }
 
 /**
- * Mobile-only topbar (< 768px). On desktop (>= 768px), topbar is omitted per Linear layout standard.
+ * Mobile-only topbar (< 768px). On desktop (>= 768px), topbar is omitted per unified panel layout.
  */
 export function AppTopbar() {
   const pathname = usePathname();
@@ -91,7 +91,7 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-background/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none"
+      className="md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none"
     >
       {/* Left: Brand / Title */}
       <Suspense fallback={<MobileHeaderTitleFallback pathname={pathname} />}>
