@@ -47,6 +47,7 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useLinearTaskShortcuts } from "@/hooks/use-linear-task-shortcuts";
+import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 
 const LinearCreateTaskModal = dynamic(
   () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
@@ -900,9 +901,11 @@ export function UnifiedAdaptiveWorkspace({
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
   const router = useRouter();
+  const { saveScrollAndParams } = useListScrollRestore();
 
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
+      saveScrollAndParams();
       if (onSelectTask) {
         onSelectTask(task);
         return;
@@ -914,7 +917,7 @@ export function UnifiedAdaptiveWorkspace({
       workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
       router.push(`/tasks/${task.id}`);
     },
-    [onSelectTask, workspaceQuery, router]
+    [onSelectTask, workspaceQuery, router, saveScrollAndParams]
   );
 
   const handleCloseDetail = React.useCallback(() => {

@@ -180,40 +180,45 @@ export function BatchActionBar({
       aria-live="polite"
       className={cn(
         "hidden sm:block fixed bottom-6 inset-x-0 mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
-        "animate-in fade-in slide-in-from-bottom-4 duration-200",
+        "animate-in fade-in slide-in-from-bottom-3 duration-200",
         className
       )}
     >
-      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 rounded-2xl border border-border/80 bg-card px-3.5 py-2 shadow-xl text-foreground">
-        {/* Bộ đếm số lượng mục đã chọn: ✓ Đã chọn 1 / 36 */}
-        <div className="flex items-center gap-2 pr-2.5 border-r border-border">
-          <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-          <span className="text-xs font-medium text-foreground whitespace-nowrap">
-            ✓ Đã chọn{" "}
+      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 rounded-xl border border-border/80 bg-background/95 backdrop-blur-md px-2.5 py-1.5 shadow-xl text-foreground ring-1 ring-border/20">
+        {/* Bộ đếm số lượng mục đã chọn */}
+        <div className="flex items-center gap-1.5 pl-1.5 pr-2 py-0.5 text-xs font-medium text-foreground whitespace-nowrap">
+          <CheckSquare className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+          <span>
+            Đã chọn{" "}
             <strong className="font-semibold font-mono tabular-nums text-foreground">
               {selectedCount}
             </strong>
-            {totalCount ? ` / ${totalCount}` : ""}
+            {totalCount ? (
+              <span className="text-muted-foreground font-normal">/{totalCount}</span>
+            ) : (
+              ""
+            )}
+            <span className="sr-only">nhiệm vụ được chọn</span>
           </span>
         </div>
 
+        <div className="h-3.5 w-px bg-border/80 mx-0.5 shrink-0" aria-hidden="true" />
+
         {/* Nút hành động nhanh: Đánh dấu Hoàn thành (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
         {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={() => onBulkStatusChange("COMPLETED")}
             disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 gap-1.5 cursor-pointer shadow-2xs"
+            className="h-7.5 px-2.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-500/10 active:bg-emerald-500/20 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
             title="Đánh dấu hoàn thành tất cả công việc đã chọn"
           >
             <CheckCircle2
-              className="size-3.5 text-emerald-600"
+              className="size-3.5 text-emerald-600 shrink-0"
               strokeWidth={1.5}
             />
             <span className="hidden sm:inline">Hoàn thành</span>
-          </Button>
+          </button>
         )}
 
         {/* [Đổi trạng thái]: chỉ hiện các trạng thái hợp lệ cho TOÀN BỘ lựa chọn (P0-07) */}
@@ -230,7 +235,7 @@ export function BatchActionBar({
                 }
               }}
               disabled={isLoading}
-              className="h-8.5 pl-3 pr-7 rounded-lg border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/60 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
+              className="h-7.5 pl-2.5 pr-6 rounded-lg bg-transparent hover:bg-muted/80 text-xs font-medium text-foreground transition-colors cursor-pointer appearance-none border-0 focus:ring-1 focus:ring-primary/40 focus:outline-hidden"
             >
               <option value="" disabled>
                 Đổi trạng thái...
@@ -242,35 +247,17 @@ export function BatchActionBar({
               ))}
             </select>
             <ChevronDown
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
           </div>
-        )}
-
-        {/* [Giao lại]: Nút Phân công lại hàng loạt */}
-        {onBulkReassign && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onBulkReassign("")}
-            disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium border-border bg-background hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer shadow-2xs"
-            aria-label="Phân công lại các công việc đã chọn"
-            title="Giao lại nhiệm vụ"
-          >
-            <UserCheck className="size-3.5 text-primary" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Giao lại</span>
-            <span className="sr-only">Phân công lại</span>
-          </Button>
         )}
 
         {/* [Gia hạn]: Dropdown gia hạn hạn chót */}
         {onBulkExtendDeadline && (
           <div className="relative inline-flex items-center">
             <Calendar
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
             <select
@@ -288,7 +275,7 @@ export function BatchActionBar({
                 }
               }}
               disabled={isLoading}
-              className="h-8.5 pl-8 pr-7 rounded-lg border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/60 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
+              className="h-7.5 pl-7 pr-6 rounded-lg bg-transparent hover:bg-muted/80 text-xs font-medium text-foreground transition-colors cursor-pointer appearance-none border-0 focus:ring-1 focus:ring-primary/40 focus:outline-hidden"
             >
               <option value="" disabled>
                 Gia hạn hạn chót...
@@ -299,64 +286,76 @@ export function BatchActionBar({
               <option value="30">+30 ngày (1 tháng)</option>
             </select>
             <ChevronDown
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
           </div>
         )}
 
+        {/* [Giao lại]: Nút Phân công lại hàng loạt */}
+        {onBulkReassign && (
+          <button
+            type="button"
+            onClick={() => onBulkReassign("")}
+            disabled={isLoading}
+            className="h-7.5 px-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-muted/80 active:bg-muted inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+            aria-label="Phân công lại các công việc đã chọn"
+            title="Giao lại nhiệm vụ"
+          >
+            <UserCheck className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Giao lại</span>
+            <span className="sr-only">Phân công lại</span>
+          </button>
+        )}
+
         {/* [Xuất]: Nút Xuất Excel các mục đã chọn */}
         {onExportExcel && (
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={onExportExcel}
             disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium border-border bg-background hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer shadow-2xs"
+            className="h-7.5 px-2.5 rounded-lg text-xs font-medium text-foreground hover:bg-emerald-500/10 hover:text-emerald-700 active:bg-emerald-500/20 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
             aria-label="Xuất file Excel các công việc đã chọn"
           >
             <FileSpreadsheet
-              className="size-3.5 text-emerald-600"
+              className="size-3.5 text-emerald-600 shrink-0"
               strokeWidth={1.5}
             />
             <span className="hidden sm:inline">Xuất Excel</span>
-          </Button>
+          </button>
         )}
 
         {/* Nút Xóa hàng loạt (nếu có handler) */}
         {onBulkDelete && (
-          <Button
+          <button
             type="button"
-            variant="destructive"
-            size="sm"
             onClick={() => onBulkDelete(selectedIds)}
             disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium gap-1.5 cursor-pointer shadow-2xs"
+            className="h-7.5 px-2.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/20 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
             aria-label="Xóa các công việc đã chọn"
           >
-            <Trash2 className="size-3.5" strokeWidth={1.5} />
+            <Trash2 className="size-3.5 shrink-0" strokeWidth={1.5} />
             <span className="hidden sm:inline">Xóa</span>
-          </Button>
+          </button>
         )}
 
         {/* [Esc Bỏ chọn]: Nút Bỏ chọn tất cả (Escape) */}
-        <Button
+        <div className="h-3.5 w-px bg-border/80 mx-0.5 shrink-0" aria-hidden="true" />
+
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={onClearSelection}
           disabled={isLoading}
-          className="h-8.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 gap-1.5 cursor-pointer"
+          className="h-7.5 pl-2 pr-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 active:bg-muted inline-flex items-center gap-1.5 cursor-pointer transition-colors"
           aria-label="Bỏ chọn tất cả công việc"
           title="Bỏ chọn (Esc)"
         >
-          <X className="size-3.5" strokeWidth={1.5} />
+          <X className="size-3.5 shrink-0" strokeWidth={1.5} />
           <span className="hidden sm:inline">Bỏ chọn</span>
-          <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 font-mono text-xs text-muted-foreground">
+          <kbd className="inline-flex items-center rounded border border-border/80 bg-muted/60 px-1 py-0.2 font-mono text-[10px] text-muted-foreground leading-none font-medium">
             Esc
           </kbd>
-        </Button>
+        </button>
       </div>
     </aside>
   );

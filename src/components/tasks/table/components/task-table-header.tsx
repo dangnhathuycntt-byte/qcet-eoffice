@@ -182,7 +182,7 @@ export function TaskTableHeader({
                       </div>
                     ) : (
                       <div
-                        className="size-4 rounded-[4px] border border-border/90 bg-background/95 opacity-0 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
+                        className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
                         aria-label="Chọn tất cả nhiệm vụ hiển thị"
                       />
                     )}

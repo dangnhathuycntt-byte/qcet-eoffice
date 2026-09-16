@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,27 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: TaskDetailPageParams): Promise<Metadata> {
+  const { id } = await params;
+  if (!id) {
+    return { title: "Chi tiết nhiệm vụ | QCET E-Office" };
+  }
+
+  const task = await prisma.task.findUnique({
+    where: { id },
+    select: { code: true, title: true },
+  });
+
+  if (!task) {
+    return { title: "Không tìm thấy nhiệm vụ | QCET E-Office" };
+  }
+
+  const taskCodePrefix = task.code ? `${task.code} - ` : "";
+  return {
+    title: `${taskCodePrefix}${task.title} | QCET E-Office`,
+  };
 }
 
 export default async function Page({ params }: TaskDetailPageParams) {

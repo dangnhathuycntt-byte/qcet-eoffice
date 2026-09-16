@@ -555,7 +555,7 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}
         {/* ========================================================= */}
-        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar">
+        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar mt-2.5">
           {SECTIONS.map((sec) => {
             const items = SINGLE_TIER_NAV_ITEMS.filter(
               (item) => item.section === sec.key
