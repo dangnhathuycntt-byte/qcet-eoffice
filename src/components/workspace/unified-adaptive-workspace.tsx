@@ -1049,6 +1049,7 @@ export function UnifiedAdaptiveWorkspace({
     workspaceQuery?.queryState.priority,
     workspaceQuery?.queryState.category,
     workspaceQuery?.queryState.deadline,
+    workspaceQuery?.queryState.attention,
     workspaceQuery?.queryState.view,
     propScope,
     forcedScope,
@@ -1631,7 +1632,7 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
-    workspaceQuery?.resetFilters({ replace: true, preserveScope: true, preservePeriod: false, preserveView: true });
+    workspaceQuery?.resetFilters({ shallow: true, replace: true, preserveScope: true, preservePeriod: false, preserveView: true });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -2095,7 +2096,7 @@ export function UnifiedAdaptiveWorkspace({
           selectedAcademicMonth={currentMonth}
           onAcademicMonthChange={(m) => {
             setCurrentMonth(m);
-            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { shallow: true, replace: true });
+            workspaceQuery?.setPeriod({ month: m }, { shallow: true, replace: true });
           }}
           onResetFilters={handleResetFilters}
           activeViewId={activeViewId}

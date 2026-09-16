@@ -93,8 +93,8 @@ export function useWorkspaceQuery(
   const rawPathname = React.useContext(PathnameContext);
 
   const searchParams = React.useMemo(() => {
-    if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
     if (rawSearchParams) return new URLSearchParams(rawSearchParams);
+    if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
     return new URLSearchParams();
   }, [rawSearchParams]);
 
@@ -120,7 +120,7 @@ export function useWorkspaceQuery(
   // Memoized parsing of active search parameters, reacting to Next.js searchParams or browser popstate
   const queryState = React.useMemo(() => {
     const effectiveParams =
-      typeof window !== "undefined"
+      typeof window !== "undefined" && popstateCount > 0
         ? new URLSearchParams(window.location.search)
         : searchParams;
     return parseWorkspaceQuery(effectiveParams, {
@@ -129,6 +129,17 @@ export function useWorkspaceQuery(
       defaultScope,
     });
   }, [searchParams, isCalendar, defaultView, defaultScope, popstateCount]);
+
+  // Event handlers (including debounced search) must merge into the live URL,
+  // not the render snapshot captured before another filter or scope changed.
+  const readCurrentState = React.useCallback(() => {
+    if (typeof window === "undefined" || !window.location) return queryState;
+    return parseWorkspaceQuery(window.location.search || "", {
+      isCalendar,
+      defaultView,
+      defaultScope,
+    });
+  }, [queryState, isCalendar, defaultView, defaultScope]);
 
   // Internal navigation dispatcher with unrelated param preservation and shallow routing support
   const dispatchUpdate = React.useCallback(
@@ -167,7 +178,11 @@ export function useWorkspaceQuery(
         } else {
           window.history.pushState(null, "", targetUrl);
         }
-        window.dispatchEvent(new Event("popstate"));
+        if (typeof window.dispatchEvent === "function") {
+          window.dispatchEvent(new Event("popstate"));
+        } else {
+          setPopstateCount((c) => c + 1);
+        }
         return;
       }
 
@@ -201,6 +216,7 @@ export function useWorkspaceQuery(
 
   const setScope = React.useCallback(
     (scope: WorkspaceScopeType, navOptions?: SetScopeOptions) => {
+      const queryState = readCurrentState();
       const isScopeChanging = scope !== queryState.scope;
       const patch: Partial<WorkspaceFilterState> = {
         ...queryState,
@@ -241,11 +257,12 @@ export function useWorkspaceQuery(
 
       dispatchUpdate(patch, { shallow: true, replace: true, ...navOptions });
     },
-    [queryState, dispatchUpdate, unitParamKey]
+    [readCurrentState, dispatchUpdate, unitParamKey]
   );
 
   const setUnit = React.useCallback(
     (unitId?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const trimmed = unitId ? unitId.trim() : undefined;
       const clean =
         trimmed && trimmed !== "ALL" && trimmed !== "all" && trimmed.length > 0
@@ -262,11 +279,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setDept = React.useCallback(
     (dept?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const trimmed = dept ? dept.trim() : undefined;
       const clean =
         trimmed && trimmed !== "ALL" && trimmed !== "all" && trimmed.length > 0
@@ -275,6 +293,7 @@ export function useWorkspaceQuery(
       dispatchUpdate(
         {
           ...queryState,
+          scope: "unit",
           dept: clean,
           unitId: clean,
           unit: clean,
@@ -282,7 +301,7 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setPeriod = React.useCallback(
@@ -290,6 +309,7 @@ export function useWorkspaceQuery(
       period: { month?: number | "ALL"; date?: string | null },
       navOptions?: NavigationOptions
     ) => {
+      const queryState = readCurrentState();
       const patch: Partial<WorkspaceFilterState> = { ...queryState };
 
       if (period.month !== undefined) {
@@ -302,11 +322,12 @@ export function useWorkspaceQuery(
 
       dispatchUpdate(patch, navOptions);
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setStatus = React.useCallback(
     (status: TaskLifecycleStatus | "ALL", navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       dispatchUpdate(
         {
           ...queryState,
@@ -315,11 +336,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setPriority = React.useCallback(
     (priority?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const clean = priority && priority !== "ALL" ? priority.trim() : undefined;
       dispatchUpdate(
         {
@@ -329,11 +351,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setCategory = React.useCallback(
     (category?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const clean = category && category !== "ALL" ? category.trim() : undefined;
       dispatchUpdate(
         {
@@ -343,11 +366,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setDeadline = React.useCallback(
     (deadline?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const clean = deadline && deadline !== "ALL" ? deadline.trim() : undefined;
       dispatchUpdate(
         {
@@ -357,7 +381,7 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setAttention = React.useCallback(
@@ -365,6 +389,7 @@ export function useWorkspaceQuery(
       attention?: UserAttentionType | "ALL" | null,
       navOptions?: NavigationOptions
     ) => {
+      const queryState = readCurrentState();
       const clean =
         attention && attention !== "ALL"
           ? attention
@@ -377,11 +402,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setView = React.useCallback(
     (view: TaskViewMode | CalendarViewMode, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       dispatchUpdate(
         {
           ...queryState,
@@ -390,11 +416,12 @@ export function useWorkspaceQuery(
         { shallow: true, replace: true, ...navOptions }
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setSearchQuery = React.useCallback(
     (q: string, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const trimmed = q.trim();
       dispatchUpdate(
         {
@@ -405,11 +432,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const setSelectedTask = React.useCallback(
     (taskId?: string | null, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
       const trimmed = taskId ? taskId.trim() : undefined;
       dispatchUpdate(
         {
@@ -420,11 +448,12 @@ export function useWorkspaceQuery(
         navOptions
       );
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   const resetFilters = React.useCallback(
     (navOptions?: ResetFiltersOptions) => {
+      const queryState = readCurrentState();
       const preserveScope = navOptions?.preserveScope ?? false;
       const preservePeriod = navOptions?.preservePeriod ?? false;
       const preserveView = navOptions?.preserveView ?? false;
@@ -452,7 +481,7 @@ export function useWorkspaceQuery(
 
       dispatchUpdate(resetState, navOptions);
     },
-    [queryState, dispatchUpdate, isCalendar, defaultScope, defaultView]
+    [readCurrentState, dispatchUpdate, isCalendar, defaultScope, defaultView]
   );
 
   const updateWorkspaceQuery = React.useCallback(
@@ -462,6 +491,7 @@ export function useWorkspaceQuery(
         | ((prev: WorkspaceFilterState) => Partial<WorkspaceFilterState>),
       navOptions?: NavigationOptions
     ) => {
+      const queryState = readCurrentState();
       const rawPatch = typeof updater === "function" ? updater(queryState) : updater;
       const patch: Partial<WorkspaceFilterState> = { ...rawPatch };
 
@@ -546,7 +576,7 @@ export function useWorkspaceQuery(
 
       dispatchUpdate({ ...queryState, ...patch }, navOptions);
     },
-    [queryState, dispatchUpdate]
+    [readCurrentState, dispatchUpdate]
   );
 
   return {

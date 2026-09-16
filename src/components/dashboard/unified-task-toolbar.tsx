@@ -412,6 +412,25 @@ export function buildQuickFilterPills(
 // 3. UnifiedTaskToolbar Component
 // ============================================================================
 
+/** Prefer the workspace's atomic reset over competing per-filter updates. */
+export function resetTaskToolbarFilters(callbacks: Pick<UnifiedTaskToolbarProps,
+  "onResetFilters" | "onSearchChange" | "onTabChange" | "onStatusChange" |
+  "onDeadlineChange" | "onCategoryChange" | "onPriorityChange" |
+  "onMonthChange" | "onAcademicMonthChange"
+>) {
+  if (callbacks.onResetFilters) {
+    callbacks.onResetFilters();
+    return;
+  }
+  callbacks.onSearchChange("");
+  callbacks.onTabChange?.("all");
+  callbacks.onStatusChange?.("all");
+  callbacks.onDeadlineChange?.("all");
+  callbacks.onCategoryChange?.("ALL");
+  callbacks.onPriorityChange?.("ALL");
+  (callbacks.onMonthChange || callbacks.onAcademicMonthChange)?.("ALL");
+}
+
 export function UnifiedTaskToolbar({
   scope,
   onScopeChange,
@@ -485,15 +504,24 @@ export function UnifiedTaskToolbar({
   const [localSearch, setLocalSearch] = React.useState(searchQuery || "");
   const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const onSearchChangeRef = React.useRef(onSearchChange);
   React.useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  }, [onSearchChange]);
+
+  React.useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setLocalSearch(searchQuery || "");
-  }, [searchQuery]);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery, scope]);
 
   const handleSearchInputChange = React.useCallback((val: string) => {
     setLocalSearch(val);
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
-      onSearchChange(val);
+      onSearchChangeRef.current(val);
     }, 200);
   }, [onSearchChange]);
 
@@ -1031,12 +1059,14 @@ export function UnifiedTaskToolbar({
 
   // Reset all filters (Only clears supplementary filters, retains Scope & User Department)
   const handleResetFilters = () => {
-    onSearchChange("");
-    onTabChange?.("all");
-    onCategoryChange?.("ALL");
-    onPriorityChange?.("ALL");
-    handleEffectiveMonthChange?.("ALL");
-    onResetFilters?.();
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setLocalSearch("");
+    resetTaskToolbarFilters({
+      onResetFilters, onSearchChange, onTabChange, onStatusChange,
+      onDeadlineChange, onCategoryChange, onPriorityChange,
+      onMonthChange: handleEffectiveMonthChange,
+    });
+    closeAllMenus();
     setIsFilterOpen(false);
   };
 

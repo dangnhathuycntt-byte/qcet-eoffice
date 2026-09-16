@@ -242,10 +242,11 @@ export function parseWorkspaceQuery(
   const unitParamKey: "dept" | "unit" = rawUnitExplicit && !rawDeptExplicit ? "unit" : "dept";
 
   // 3. Academic Month & Period resolution
-  const rawPeriod = extractParam(params, "period");
+  const rawPeriod = extractParam(params, "period") || extractParam(params, "p");
   const rawMonth =
     extractParam(params, "month") ||
     extractParam(params, "academicMonth") ||
+    extractParam(params, "m") ||
     rawPeriod;
 
   let month: number | "ALL" = "ALL";
