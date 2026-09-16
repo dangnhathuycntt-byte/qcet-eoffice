@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
@@ -198,14 +199,13 @@ export function CreateEventModal({
               <label htmlFor="calendar-event-date" className="block text-xs font-semibold text-foreground mb-1.5">
                 Ngày <span className="text-rose-600">*</span>
               </label>
-              <input
+              <VietnameseDatePicker
                 id="calendar-event-date"
-                type="date"
                 required
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
-                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                onChange={(val) => setStartDate(val)}
+                variant="input"
+                className="w-full"
               />
             </div>
             <div>

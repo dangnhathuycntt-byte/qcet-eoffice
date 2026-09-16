@@ -15,6 +15,7 @@ import {
   Plus
 } from "lucide-react";
 import type { DocumentItem } from "@/types/document";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 
 export interface QuickDirectivePreset {
   id: string;
@@ -373,18 +374,16 @@ export function DirectiveActionPanel({
 
           {/* Deadline & Quick Buttons */}
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
               <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.5} />
               <span>Hạn xử lý / Báo cáo hoàn thành</span>
             </label>
-            <div className="mt-1.5 flex gap-2">
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
+            <VietnameseDatePicker
+              value={deadline}
+              onChange={(val) => setDeadline(val)}
+              variant="input"
+              className="w-full"
+            />
             {/* Quick buttons */}
             <div className="mt-2 flex flex-wrap gap-1.5">
               <button

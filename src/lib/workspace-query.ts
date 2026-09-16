@@ -36,6 +36,9 @@ export interface WorkspaceFilterState extends BaseWorkspaceFilterState {
   taskId?: string;
   month: number | "ALL";
   status: TaskLifecycleStatus | "ALL";
+  priority?: string;
+  category?: string;
+  deadline?: string;
   _unitParamKey?: "dept" | "unit";
 }
 
@@ -102,13 +105,16 @@ const WORKSPACE_QUERY_KEYS = [
   "department",
   "month",
   "academicMonth",
-  "m",
   "period",
-  "p",
   "date",
   "d",
   "status",
   "tab",
+  "priority",
+  "prio",
+  "category",
+  "cat",
+  "deadline",
   "view",
   "viewMode",
   "v",
@@ -236,11 +242,10 @@ export function parseWorkspaceQuery(
   const unitParamKey: "dept" | "unit" = rawUnitExplicit && !rawDeptExplicit ? "unit" : "dept";
 
   // 3. Academic Month & Period resolution
-  const rawPeriod = extractParam(params, "period") || extractParam(params, "p");
+  const rawPeriod = extractParam(params, "period");
   const rawMonth =
     extractParam(params, "month") ||
     extractParam(params, "academicMonth") ||
-    extractParam(params, "m") ||
     rawPeriod;
 
   let month: number | "ALL" = "ALL";
@@ -349,6 +354,18 @@ export function parseWorkspaceQuery(
     }
   }
 
+  // 10. Priority resolution
+  const rawPriority = extractParam(params, "priority") || extractParam(params, "prio");
+  const priority = rawPriority && rawPriority !== "ALL" && rawPriority !== "all" ? rawPriority : undefined;
+
+  // 11. Category resolution
+  const rawCategory = extractParam(params, "category") || extractParam(params, "cat");
+  const category = rawCategory && rawCategory !== "ALL" && rawCategory !== "all" ? rawCategory : undefined;
+
+  // 12. Deadline resolution
+  const rawDeadline = extractParam(params, "deadline");
+  const deadline = rawDeadline && rawDeadline !== "ALL" && rawDeadline !== "all" ? rawDeadline : undefined;
+
   return {
     scope,
     unitId,
@@ -357,6 +374,9 @@ export function parseWorkspaceQuery(
     month,
     date,
     status,
+    priority,
+    category,
+    deadline,
     attention,
     view,
     q,
@@ -500,6 +520,21 @@ export function serializeWorkspaceQuery(
   // 9. User Attention (omit 'ALL')
   if (state.attention && state.attention !== "ALL") {
     params.set("attention", state.attention);
+  }
+
+  // 10. Priority (omit 'ALL')
+  if (state.priority && state.priority !== "ALL") {
+    params.set("priority", state.priority);
+  }
+
+  // 11. Category (omit 'ALL')
+  if (state.category && state.category !== "ALL") {
+    params.set("category", state.category);
+  }
+
+  // 12. Deadline (omit 'ALL')
+  if (state.deadline && state.deadline !== "ALL") {
+    params.set("deadline", state.deadline);
   }
 
   return params;

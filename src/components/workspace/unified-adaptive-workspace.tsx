@@ -92,6 +92,7 @@ export interface FilterDisplayedTasksOptions {
   tasks: SchoolTask[];
   search?: string;
   status?: string;
+  deadline?: string;
   category?: string;
   priority?: string;
   academicMonth?: number | "ALL";
@@ -107,6 +108,7 @@ export function filterDisplayedTasks({
   tasks,
   search,
   status,
+  deadline,
   category,
   priority,
   academicMonth,
@@ -134,7 +136,7 @@ export function filterDisplayedTasks({
     );
   }
 
-  // 2. Status / Smart Filter Pills
+  // 2. Status Filter
   if (status && status !== "ALL" && status !== "all") {
     const refDate = getSystemReferenceDate();
     if (status === "my" || status === "my_tasks") {
@@ -146,6 +148,22 @@ export function filterDisplayedTasks({
         (t) =>
           isTaskWaitingApproval(t.status) ||
           Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)))
+      );
+    } else if (status === "new") {
+      result = result.filter(
+        (t) =>
+          (t.status as string) === "NEW" ||
+          (t.status as string) === "new" ||
+          t.status === "NOT_STARTED" ||
+          (t.status as string) === "ASSIGNED"
+      );
+    } else if (status === "in_progress") {
+      result = result.filter(
+        (t) => t.status === "IN_PROGRESS" || (t.status as string) === "in_progress"
+      );
+    } else if (status === "completed") {
+      result = result.filter(
+        (t) => t.status === "COMPLETED" || (t.status as string) === "completed"
       );
     } else if (status === "overdue") {
       result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
@@ -176,7 +194,36 @@ export function filterDisplayedTasks({
         return isTaskAssignedToUserOrUnit(t, user);
       });
     } else {
-      result = result.filter((t) => t.status === status);
+      result = result.filter(
+        (t) =>
+          (t.status as string) === status ||
+          (t.status as string)?.toLowerCase() === status.toLowerCase()
+      );
+    }
+  }
+
+  // 2b. Deadline Filter (Orthogonal SLA Dimension)
+  if (deadline && deadline !== "ALL" && deadline !== "all") {
+    const refDate = getSystemReferenceDate();
+    if (deadline === "today") {
+      result = result.filter((t) => Boolean(t.dueDate && t.dueDate.startsWith(refDate)));
+    } else if (deadline === "this_week") {
+      const refDateObj = new Date(refDate);
+      const endOfWeekObj = new Date(refDateObj);
+      endOfWeekObj.setDate(endOfWeekObj.getDate() + 7);
+      const endOfWeekStr = endOfWeekObj.toISOString().split("T")[0];
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
+        const taskDue = t.dueDate;
+        if (taskDue && taskDue >= refDate && taskDue <= endOfWeekStr) return true;
+        return Boolean(
+          t.subTasks?.some(
+            (s) => s.status !== "COMPLETED" && s.dueDate && s.dueDate >= refDate && s.dueDate <= endOfWeekStr
+          )
+        );
+      });
+    } else if (deadline === "overdue") {
+      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
     }
   }
 
@@ -721,7 +768,7 @@ export function UnifiedAdaptiveWorkspace({
   const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
 
   // Canonical workspace query state manager
-  const workspaceQuery = useWorkspaceQuery();
+  const workspaceQuery = useWorkspaceQuery({ defaultScope });
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
@@ -740,17 +787,19 @@ export function UnifiedAdaptiveWorkspace({
 
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
-      const target = newScope;
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("qcet_preferred_task_scope", target);
-        } catch {
-          // ignore
-        }
+      setActiveScope(newScope);
+      setInternalStatus(undefined);
+      setInternalDeadline(undefined);
+      setInternalWorkbox("ALL");
+      setInternalOverdue(false);
+      setInternalSearch(undefined);
+      setCurrentPriority("ALL");
+      setCurrentCategory("ALL");
+      if (newScope !== "unit") {
+        setInternalDept("ALL");
       }
-      setActiveScope(target);
-      onScopeChange?.(target);
-      workspaceQuery?.setScope(target, { shallow: true, replace: true });
+      onScopeChange?.(newScope);
+      workspaceQuery?.setScope(newScope, { shallow: true, replace: true });
     },
     [onScopeChange, workspaceQuery]
   );
@@ -880,6 +929,7 @@ export function UnifiedAdaptiveWorkspace({
   // Filter state synchronized with props
   const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
   const [internalStatus, setInternalStatus] = React.useState<string | undefined>(activeStatus);
+  const [internalDeadline, setInternalDeadline] = React.useState<string | undefined>(undefined);
   const [internalSearch, setInternalSearch] = React.useState<string | undefined>(searchQuery);
   const [internalOverdue, setInternalOverdue] = React.useState<boolean>(Boolean(isOverdueOnly));
   const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(activeWorkbox);
@@ -923,18 +973,56 @@ export function UnifiedAdaptiveWorkspace({
     if (!propScope && !forcedScope && queryState.scope) {
       setActiveScope(queryState.scope);
     }
-    if (!selectedDepartment && (queryState.unit || queryState.dept)) {
-      setInternalDept(queryState.unit || queryState.dept);
+    if (!selectedDepartment) {
+      if (queryState.unit || queryState.dept) {
+        setInternalDept(queryState.unit || queryState.dept);
+      } else {
+        setInternalDept("ALL");
+      }
     }
-    if (!activeStatus && queryState.status && queryState.status !== "ALL") {
-      setInternalStatus(queryState.status);
+    if (!activeStatus) {
+      if (queryState.status && queryState.status !== "ALL") {
+        setInternalStatus(queryState.status);
+      } else {
+        setInternalStatus(undefined);
+      }
     }
     const qVal = queryState.query || queryState.q;
-    if (!searchQuery && qVal) {
-      setInternalSearch(qVal);
+    if (!searchQuery) {
+      setInternalSearch(qVal || undefined);
+    }
+    if (queryState.priority !== undefined) {
+      setCurrentPriority(queryState.priority);
+    } else {
+      setCurrentPriority("ALL");
+    }
+    if (queryState.category !== undefined) {
+      setCurrentCategory(queryState.category);
+    } else {
+      setCurrentCategory("ALL");
+    }
+    if (queryState.deadline !== undefined) {
+      setInternalDeadline(queryState.deadline);
+    } else {
+      setInternalDeadline(undefined);
     }
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
+    } else {
+      setCurrentMonth("ALL");
+    }
+    if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
+      setInternalOverdue(true);
+      setInternalWorkbox("overdue");
+    } else if (queryState.attention === "requires_my_approval") {
+      setInternalWorkbox("my_pending_approval");
+      setInternalOverdue(false);
+    } else if (queryState.attention === "requires_my_action") {
+      setInternalWorkbox("my_pending_submission");
+      setInternalOverdue(false);
+    } else {
+      setInternalOverdue(false);
+      setInternalWorkbox("ALL");
     }
     // View sync: only sync from URL if URL explicitly contains the view parameter
     // (avoid resetting to "table" when URL has no view parameter or when queryState defaults)
@@ -958,6 +1046,9 @@ export function UnifiedAdaptiveWorkspace({
     workspaceQuery?.queryState.query,
     workspaceQuery?.queryState.q,
     workspaceQuery?.queryState.month,
+    workspaceQuery?.queryState.priority,
+    workspaceQuery?.queryState.category,
+    workspaceQuery?.queryState.deadline,
     workspaceQuery?.queryState.view,
     propScope,
     forcedScope,
@@ -1382,12 +1473,59 @@ export function UnifiedAdaptiveWorkspace({
     ]
   );
 
-  // Filter tasks based on search, smart status, workbox, category, priority, month, and overdue criteria
+  const handleStatusFilterChange = React.useCallback(
+    (status: string) => {
+      const normStatus = status === "all" ? undefined : status;
+      setInternalStatus(normStatus);
+      onStatusFilterChange?.(normStatus);
+      workspaceQuery?.setStatus((normStatus as any) || "ALL", { shallow: true, replace: true });
+    },
+    [onStatusFilterChange, workspaceQuery]
+  );
+
+  const handleDeadlineFilterChange = React.useCallback(
+    (deadline: string) => {
+      const normDeadline = deadline === "all" ? undefined : deadline;
+      setInternalDeadline(normDeadline);
+      const isOverdue = normDeadline === "overdue";
+      setInternalOverdue(isOverdue);
+      onOverdueFilterChange?.(isOverdue);
+      workspaceQuery?.updateWorkspaceQuery(
+        {
+          deadline: normDeadline,
+          attention: isOverdue ? "overdue" : undefined,
+        },
+        { shallow: true, replace: true }
+      );
+    },
+    [onOverdueFilterChange, workspaceQuery]
+  );
+
+  const handlePriorityChange = React.useCallback(
+    (prio: string) => {
+      const clean = prio && prio !== "ALL" ? prio : "ALL";
+      setCurrentPriority(clean);
+      workspaceQuery?.setPriority(clean !== "ALL" ? clean : undefined, { shallow: true, replace: true });
+    },
+    [workspaceQuery]
+  );
+
+  const handleCategoryChange = React.useCallback(
+    (cat: string) => {
+      const clean = cat && cat !== "ALL" ? cat : "ALL";
+      setCurrentCategory(clean);
+      workspaceQuery?.setCategory(clean !== "ALL" ? clean : undefined, { shallow: true, replace: true });
+    },
+    [workspaceQuery]
+  );
+
+  // Filter tasks based on search, smart status, deadline, workbox, category, priority, month, and overdue criteria
   const displayedTasks = React.useMemo(() => {
     return filterDisplayedTasks({
       tasks: scopedTasks,
       search: currentSearch,
       status: currentStatus,
+      deadline: internalDeadline,
       workbox: currentWorkbox,
       category: currentCategory,
       priority: currentPriority,
@@ -1399,6 +1537,7 @@ export function UnifiedAdaptiveWorkspace({
     scopedTasks,
     currentSearch,
     currentStatus,
+    internalDeadline,
     currentWorkbox,
     currentCategory,
     currentPriority,
@@ -1478,13 +1617,13 @@ export function UnifiedAdaptiveWorkspace({
     setActiveViewId(null);
     setInternalDept(undefined);
     setInternalStatus(undefined);
+    setInternalDeadline(undefined);
     setInternalSearch(undefined);
     setInternalOverdue(false);
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    // Giữ nguyên currentMonth — kỳ công tác có điều khiển đổi kỳ riêng
-    // "Xóa bộ lọc" không âm thầm chuyển sang dữ liệu cả năm hoặc mở rộng scope
+    setCurrentMonth("ALL");
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1492,7 +1631,7 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
-    workspaceQuery?.resetFilters({ replace: true, preserveScope: true, preservePeriod: true, preserveView: true });
+    workspaceQuery?.resetFilters({ replace: true, preserveScope: true, preservePeriod: false, preserveView: true });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -1938,24 +2077,21 @@ export function UnifiedAdaptiveWorkspace({
           createButtonLabel="Tạo việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
+          selectedStatus={currentStatus || "all"}
+          onStatusChange={handleStatusFilterChange}
+          selectedDeadline={internalDeadline || "all"}
+          onDeadlineChange={handleDeadlineFilterChange}
           tabCounts={tabCounts}
           selectedDepartment={currentDept || "ALL"}
           onDepartmentChange={(dept) => {
             setInternalDept(dept);
             onDepartmentChange?.(dept);
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem("qcet_preferred_task_department", dept);
-              } catch {
-                // ignore
-              }
-            }
             workspaceQuery?.setDept(dept !== "ALL" ? dept : null, { shallow: true, replace: true });
           }}
           selectedCategory={currentCategory}
-          onCategoryChange={setCurrentCategory}
+          onCategoryChange={handleCategoryChange}
           selectedPriority={currentPriority}
-          onPriorityChange={setCurrentPriority}
+          onPriorityChange={handlePriorityChange}
           selectedAcademicMonth={currentMonth}
           onAcademicMonthChange={(m) => {
             setCurrentMonth(m);
@@ -1971,7 +2107,8 @@ export function UnifiedAdaptiveWorkspace({
           onDensityChange={setTableDensity}
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
-          totalTasksCount={tasks.length}
+          totalTasksCount={scopedTasks.length}
+          filteredTasksCount={displayedTasks.length}
           actionQueueCount={actionQueueTotal}
           onOpenActionQueue={() => setIsActionQueueOpen(true)}
           onActionQueueClick={() => setIsActionQueueOpen(true)}
@@ -2004,32 +2141,14 @@ export function UnifiedAdaptiveWorkspace({
             data-slot="split-cockpit-primary"
             className="lg:col-span-7 xl:col-span-8 space-y-3 min-w-0"
           >
-            {/* Active Filter Breadcrumb & Action Queue Quick Trigger */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex-1 min-w-0">
-                <ActiveFilterBreadcrumb
-                  department={currentDept}
-                  status={currentStatus}
-                  search={currentSearch}
-                  overdue={currentOverdue}
-                  workbox={currentWorkbox}
-                  totalFilteredCount={displayedTasks.length}
-                  totalCount={tasks.length}
-                  onResetFilters={handleResetFilters}
-                  onRemoveDepartment={handleRemoveDept}
-                  onRemoveStatus={handleRemoveStatus}
-                  onRemoveSearch={handleRemoveSearch}
-                  onRemoveOverdue={handleRemoveOverdue}
-                  onRemoveWorkbox={handleRemoveWorkbox}
-                />
-              </div>
-
-              {actionQueueTotal > 0 && (
+            {/* Action Queue Quick Trigger */}
+            {actionQueueTotal > 0 && (
+              <div className="flex items-center justify-end pb-1">
                 <button
                   type="button"
                   data-slot="action-queue-trigger"
                   onClick={() => setIsActionQueueOpen(true)}
-                  className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
+                  className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0"
                   aria-label="Mở hàng đợi xử lý công việc"
                   title="Mở Hộp việc khẩn cấp (Smart Workbox)"
                 >
@@ -2039,8 +2158,8 @@ export function UnifiedAdaptiveWorkspace({
                     {actionQueueTotal}
                   </span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Unassigned Department State or Empty State or Table/Kanban */}
             {activeScope === "unit" && isUnassigned ? (
@@ -2189,23 +2308,6 @@ export function UnifiedAdaptiveWorkspace({
             data-slot="full-width-task-canvas"
             className="w-full space-y-3 min-w-0"
           >
-            {/* Active Filter Breadcrumb */}
-            <ActiveFilterBreadcrumb
-              department={currentDept}
-              status={currentStatus}
-              search={currentSearch}
-              overdue={currentOverdue}
-              workbox={currentWorkbox}
-              totalFilteredCount={displayedTasks.length}
-              totalCount={tasks.length}
-              onResetFilters={handleResetFilters}
-              onRemoveDepartment={handleRemoveDept}
-              onRemoveStatus={handleRemoveStatus}
-              onRemoveSearch={handleRemoveSearch}
-              onRemoveOverdue={handleRemoveOverdue}
-              onRemoveWorkbox={handleRemoveWorkbox}
-            />
-
             {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
             <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />

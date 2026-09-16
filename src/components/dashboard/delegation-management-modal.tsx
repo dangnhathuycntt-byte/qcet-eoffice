@@ -16,6 +16,7 @@ import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organiza
 import { QCET_UNIT_CANONICAL_MAP } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -474,18 +475,16 @@ export function DelegationManagementModal({
                 {/* 5. Thời hạn hiệu lực: Từ ngày - Đến ngày */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="font-medium text-foreground flex items-center gap-1">
+                    <label className="font-medium text-foreground flex items-center gap-1 text-xs">
                       <Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />
                       Từ ngày
                     </label>
-                    <input
-                      type="date"
+                    <VietnameseDatePicker
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className={cn(
-                        "w-full font-mono tabular-nums rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary",
-                        errors.startDate && "border-destructive"
-                      )}
+                      onChange={(val) => setStartDate(val)}
+                      error={Boolean(errors.startDate)}
+                      variant="input"
+                      className="w-full"
                     />
                     {errors.startDate && (
                       <p className="text-xs text-destructive">{errors.startDate}</p>
@@ -493,18 +492,16 @@ export function DelegationManagementModal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-medium text-foreground flex items-center gap-1">
+                    <label className="font-medium text-foreground flex items-center gap-1 text-xs">
                       <Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />
                       Đến ngày
                     </label>
-                    <input
-                      type="date"
+                    <VietnameseDatePicker
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className={cn(
-                        "w-full font-mono tabular-nums rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary",
-                        errors.endDate && "border-destructive"
-                      )}
+                      onChange={(val) => setEndDate(val)}
+                      error={Boolean(errors.endDate)}
+                      variant="input"
+                      className="w-full"
                     />
                     {errors.endDate && (
                       <p className="text-xs text-destructive">{errors.endDate}</p>

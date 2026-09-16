@@ -49,7 +49,18 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   // Determine contextual heading and description
   let displayTitle = title;
   let displayDescription = description;
-  let isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
+  const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
+
+  const isTimeSoleActive = Boolean(
+    (academicMonth !== undefined && academicMonth !== "ALL") &&
+    !isSearchEmpty &&
+    (!department || department === "ALL") &&
+    (!category || category === "ALL") &&
+    (!priority || priority === "ALL") &&
+    (!status || status === "ALL" || status === "all") &&
+    (!attention || attention === "ALL" || attention === "all") &&
+    (!activeTab || activeTab === "all" || activeTab === "ALL")
+  );
 
   const hasFilterActive = Boolean(
     isSearchEmpty ||
@@ -65,49 +76,12 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   );
 
   if (!displayTitle) {
-    if (isSearchEmpty) {
-      displayTitle = `Không tìm thấy nhiệm vụ với từ khóa "${searchQuery}"`;
-      displayDescription =
-        "Vui lòng thử tìm kiếm với từ khóa khác, hoặc kiểm tra lại bộ lọc danh mục và trạng thái.";
-    } else if (activeTab === "my_tasks") {
-      displayTitle = "Hòm việc cá nhân chưa có nhiệm vụ";
-      displayDescription = userName
-        ? `Tài khoản cán bộ ${userName} hiện không có nhiệm vụ trực tiếp nào cần xử lý.`
-        : "Hiện tại bạn chưa được phân công nhiệm vụ nào trong kỳ đánh giá này.";
-    } else if (activeTab === "overdue") {
-      displayTitle = "Không có nhiệm vụ nào quá hạn";
-      displayDescription =
-        "Tuyệt vời! Tất cả các nhiệm vụ đều đang đúng tiến độ hoặc đã được giải quyết.";
-    } else if (
-      status === "WAITING_APPROVAL" ||
-      status === "waiting_approval" ||
-      status === "approvals" ||
-      activeTab === "waiting_approval" ||
-      activeTab === "review"
-    ) {
-      displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
-      displayDescription =
-        "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
-    } else if (status === "COMPLETED" || activeTab === "completed") {
-      displayTitle = "Chưa có nhiệm vụ hoàn thành";
-      displayDescription =
-        "Chưa có nhiệm vụ nào được đánh dấu hoàn thành trong phạm vi hiển thị.";
-    } else if (academicMonth !== undefined && academicMonth !== "ALL") {
+    if (isTimeSoleActive) {
       displayTitle = `Không có nhiệm vụ trong Tháng ${academicMonth}`;
-      displayDescription =
-        `Không có nhiệm vụ nào được lên lịch hoặc giao trong tháng ${academicMonth}.`;
-    } else if (activeTab === "due_this_month") {
-      displayTitle = "Không có nhiệm vụ nào đến hạn trong tháng này";
-      displayDescription =
-        "Kỳ tháng này không ghi nhận công việc cần bàn giao hoàn thành.";
-    } else if (department && department !== "ALL") {
-      displayTitle = `Đơn vị "${department}" chưa có nhiệm vụ`;
-      displayDescription =
-        "Không có nhiệm vụ nào được phân công hoặc đăng ký cho đơn vị này theo các tiêu chí hiện tại.";
+      displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
     } else if (hasFilterActive) {
       displayTitle = "Không có nhiệm vụ phù hợp";
-      displayDescription =
-        "Không có nhiệm vụ nào phù hợp với bộ lọc hiện thời. Thầy/Cô có thể xóa bộ lọc để mở rộng kết quả tìm kiếm.";
+      displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
     } else {
       displayTitle = "Chưa có nhiệm vụ nào trong danh sách";
       displayDescription =

@@ -108,7 +108,7 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
         className
       )}
     >
@@ -117,7 +117,7 @@ export function TaskTableHeader({
         {showSelection && (
           <th
             scope="col"
-            className={cn("w-10 text-center align-middle", paddingClass)}
+            className={cn("w-10 text-center align-middle border-b border-border/60", paddingClass)}
           >
             <div className="flex items-center justify-center">
               <input
@@ -157,7 +157,7 @@ export function TaskTableHeader({
                 scope="col"
                 aria-sort={ariaSortValue}
                 className={cn(
-                  "align-middle font-medium transition-colors group/th text-left",
+                  "align-middle font-medium transition-colors group/th text-left border-b border-border/60",
                   col.widthClass,
                   titlePaddingClass
                 )}
@@ -213,7 +213,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-medium transition-colors group/th",
+                "align-middle font-medium transition-colors group/th border-b border-border/60",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"

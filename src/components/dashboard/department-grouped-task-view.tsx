@@ -453,14 +453,6 @@ export function DepartmentGroupedTaskView({
                               >
                                 <td className="py-2.5 px-2 font-medium text-foreground max-w-[280px] sm:max-w-md truncate">
                                   <div className="flex items-center gap-1.5 truncate">
-                                    {"dacumTaskDef" in t && (t as SchoolTask).dacumTaskDef?.code && (
-                                      <span
-                                        className="shrink-0 px-1.5 py-0.5 rounded text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200"
-                                        title={(t as SchoolTask).dacumTaskDef?.title}
-                                      >
-                                        {(t as SchoolTask).dacumTaskDef?.code}
-                                      </span>
-                                    )}
                                     <span className="truncate">{title}</span>
                                   </div>
                                 </td>

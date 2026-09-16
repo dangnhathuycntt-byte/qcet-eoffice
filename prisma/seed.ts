@@ -208,7 +208,7 @@ async function main() {
     },
     {
       code: 'NV-2026-09-003',
-      title: 'Biên soạn đề cương chi tiết môn Lập trình Web Nâng cao theo chuẩn DACUM',
+      title: 'Biên soạn đề cương chi tiết môn Lập trình Web Nâng cao',
       description: 'Cập nhật công nghệ Next.js 15 và Tailwind CSS v4 vào chương trình giảng dạy.',
       scope: TaskScope.DEPARTMENT,
       status: TaskStatus.IN_PROGRESS,
@@ -2659,7 +2659,7 @@ async function main() {
       issuedDate: new Date('2026-09-02T08:00:00Z'),
       issuingAuthority: 'Tổng cục Giáo dục Nghề nghiệp',
       category: 'Hướng dẫn',
-      summary: 'V/v Hướng dẫn giao chỉ tiêu tuyển sinh cao đẳng, trung cấp năm học 2026-2027 và đổi mới cấu trúc chuẩn đầu ra theo phương pháp DACUM',
+      summary: 'V/v Hướng dẫn giao chỉ tiêu tuyển sinh cao đẳng, trung cấp năm học 2026-2027 và đổi mới cấu trúc chuẩn đầu ra',
       urgency: DocumentUrgency.KHAN,
       securityLevel: DocumentSecurityLevel.THUONG,
       status: DocumentStatus.DANG_XU_LY,
@@ -2670,7 +2670,7 @@ async function main() {
       directives: [
         {
           leaderId: bghOwnerId,
-          instruction: 'Giao Phòng Đào tạo chủ trì, phối hợp Khoa CNTT rà soát chuẩn đầu ra DACUM và phân bổ chỉ tiêu cho các khoa chuyên môn.',
+          instruction: 'Giao Phòng Đào tạo chủ trì, phối hợp Khoa CNTT rà soát chuẩn đầu ra và phân bổ chỉ tiêu cho các khoa chuyên môn.',
           deadline: new Date('2026-09-18T17:00:00Z'),
           assignedDeptId: 'phong-dao-tao',
           collaboratorIds: 'khoa-cntt,tt-tuyensinh',
@@ -2679,8 +2679,8 @@ async function main() {
       ],
       attachments: [
         {
-          fileName: '128_TCGDNN_HuongDan_TuyenSinh_DACUM.pdf',
-          fileUrl: '/documents/2026/128_TCGDNN_HuongDan_TuyenSinh_DACUM.pdf',
+          fileName: '128_TCGDNN_HuongDan_TuyenSinh.pdf',
+          fileUrl: '/documents/2026/128_TCGDNN_HuongDan_TuyenSinh.pdf',
           fileSize: 2516582,
           mimeType: 'application/pdf',
           isOriginal: true,
@@ -3085,7 +3085,7 @@ async function main() {
       issuedDate: new Date('2026-09-05T15:00:00Z'),
       issuingAuthority: 'Phòng Đào tạo',
       category: 'Tờ trình',
-      summary: 'Tờ trình ban hành Quy chế khảo thí trực tuyến và quy trình thẩm định minh chứng giảng dạy số hóa theo khung DACUM',
+      summary: 'Tờ trình ban hành Quy chế khảo thí trực tuyến và quy trình thẩm định minh chứng giảng dạy số hóa',
       urgency: DocumentUrgency.THUONG,
       securityLevel: DocumentSecurityLevel.THUONG,
       status: DocumentStatus.DA_HOAN_THANH,
@@ -3106,8 +3106,8 @@ async function main() {
       ],
       attachments: [
         {
-          fileName: '28_TTr_DT_QuyChe_KhaoThi_DACUM.pdf',
-          fileUrl: '/documents/2026/28_TTr_DT_QuyChe_KhaoThi_DACUM.pdf',
+          fileName: '28_TTr_DT_QuyChe_KhaoThi.pdf',
+          fileUrl: '/documents/2026/28_TTr_DT_QuyChe_KhaoThi.pdf',
           fileSize: 2936012,
           mimeType: 'application/pdf',
           isOriginal: true,

@@ -26,6 +26,7 @@ import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
 import { formatDetailDate, getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 
 export interface AuditLogItem {
   id: string;
@@ -532,11 +533,12 @@ export function LinearPropertiesSidebar({
                     <X className="size-3.5" />
                   </button>
                 </div>
-                <input
-                  type="date"
+                <VietnameseDatePicker
                   value={dueDateInput}
-                  onChange={(e) => setDueDateInput(e.target.value)}
-                  className="w-full px-2 py-1 text-xs border border-border/60 rounded bg-slate-50 text-slate-900 font-mono focus:ring-1 focus:ring-primary"
+                  onChange={(val) => setDueDateInput(val)}
+                  variant="input"
+                  placeholder="Chọn hạn hoàn thành..."
+                  className="w-full"
                 />
                 <div className="flex items-center justify-end gap-1.5 pt-1">
                   <button

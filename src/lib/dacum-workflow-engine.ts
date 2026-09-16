@@ -103,7 +103,7 @@ export function validateDeliverableSubmission(
     return {
       valid: false,
       error:
-        "Theo chuẩn DACUM và Nghị định 232, bắt buộc phải có sản phẩm minh chứng (đường dẫn tài liệu, tệp đính kèm hoặc mô tả kết quả) trước khi nộp duyệt.",
+        "Theo chuẩn quy định và Nghị định 232, bắt buộc phải có sản phẩm minh chứng (đường dẫn tài liệu, tệp đính kèm hoặc mô tả kết quả) trước khi nộp duyệt.",
     };
   }
 
@@ -123,12 +123,12 @@ export function transitionStaffTaskStatus(
 ): { success: boolean; updatedTask?: StaffTask; error?: string } {
   const role = actor.role;
 
-  // Rule 1: STAFF cannot directly complete task if it requires review (Nhiệm vụ trọng điểm / DACUM)
+  // Rule 1: STAFF cannot directly complete task if it requires review (Nhiệm vụ trọng điểm)
   if (newStatus === "COMPLETED" && role === "STAFF" && task.requiresReview) {
     return {
       success: false,
       error:
-        "Nhiệm vụ này yêu cầu nghiệm thu sản phẩm (DACUM). Chỉ Trưởng phòng hoặc BGH mới có quyền nghiệm thu và hoàn thành nhiệm vụ. Viên chức vui lòng nộp minh chứng để chuyển sang Chờ duyệt (NEEDS_REVIEW).",
+        "Nhiệm vụ này yêu cầu nghiệm thu sản phẩm. Chỉ Trưởng phòng hoặc BGH mới có quyền nghiệm thu và hoàn thành nhiệm vụ. Viên chức vui lòng nộp minh chứng để chuyển sang Chờ duyệt (NEEDS_REVIEW).",
     };
   }
 
@@ -334,7 +334,7 @@ export function screenDeliverablesWithAI(
 
   let executiveSummary = "";
   if (status === "CLEAN") {
-    executiveSummary = `Hồ sơ sản phẩm đầy đủ ${deliverables.length} minh chứng, đáp ứng chuẩn kỹ năng DACUM (Điểm tuân thủ: ${complianceScore}%). Đề xuất Lãnh đạo nghiệm thu.`;
+    executiveSummary = `Hồ sơ sản phẩm đầy đủ ${deliverables.length} minh chứng, đáp ứng chuẩn chất lượng chuyên môn (Điểm tuân thủ: ${complianceScore}%). Đề xuất Lãnh đạo nghiệm thu.`;
   } else if (status === "NEEDS_ATTENTION") {
     executiveSummary = `Hồ sơ cơ bản hoàn thành nhưng có điểm cần lưu ý (${flags.map((f) => f.message).join("; ")}). Đề xuất Lãnh đạo kiểm tra trước khi duyệt.`;
   } else {

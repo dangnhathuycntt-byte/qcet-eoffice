@@ -23,69 +23,29 @@ export interface TasksPageClientProps {
 export function TasksPageClient({ initialTasks, initialScope, initialView }: TasksPageClientProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { queryState, setScope, setDept, setView } = useWorkspaceQuery({
-    defaultView: initialView,
-    defaultScope: initialScope,
-  });
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
   const isUnassigned = isUserUnassignedDepartment(user);
 
-  const userId = user?.id || "guest";
-
-  // Persistence: Read stored scope and department preference per user account
-  const [storedScope, setStoredScope] = React.useState<WorkspaceScope | null>(null);
-  const [storedDept, setStoredDept] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const userScopeKey = `qcet_preferred_task_scope_${userId}`;
-      const savedScope = (localStorage.getItem(userScopeKey) || localStorage.getItem("qcet_preferred_task_scope")) as WorkspaceScope | null;
-      if (savedScope === "school" || savedScope === "unit" || savedScope === "my") {
-        setStoredScope(savedScope);
-      }
-
-      const userDeptKey = `qcet_preferred_task_department_${userId}`;
-      const savedDept = localStorage.getItem(userDeptKey) || localStorage.getItem("qcet_preferred_task_department");
-      if (savedDept) {
-        setStoredDept(savedDept);
-      }
-    } catch {
-      // Ignore localStorage read errors
-    }
-  }, [userId]);
-
   const defaultRoleScope: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
+  const { queryState, setScope, setDept, setView } = useWorkspaceQuery({
+    defaultView: initialView,
+    defaultScope: initialScope || defaultRoleScope,
+  });
+
   const activeScope: WorkspaceScope =
-    queryState.scope || initialScope || storedScope || defaultRoleScope;
+    queryState.scope || initialScope || defaultRoleScope;
 
   const currentDept =
-    queryState.dept || queryState.unit || storedDept || user?.departmentCode || user?.department || "ALL";
+    queryState.dept || queryState.unit || "ALL";
 
   const onScopeChange = (s: WorkspaceScope) => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(`qcet_preferred_task_scope_${userId}`, s);
-        localStorage.setItem("qcet_preferred_task_scope", s);
-      } catch {
-        // Ignore localStorage write errors
-      }
-    }
     setScope(s, { shallow: true, replace: true });
   };
 
   const handleDepartmentChange = (dept?: string) => {
     const nextDept = dept || "ALL";
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(`qcet_preferred_task_department_${userId}`, nextDept);
-        localStorage.setItem("qcet_preferred_task_department", nextDept);
-      } catch {
-        // Ignore localStorage write errors
-      }
-    }
     setDept(nextDept !== "ALL" ? nextDept : null, { shallow: true, replace: true });
   };
 

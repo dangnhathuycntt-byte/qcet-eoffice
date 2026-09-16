@@ -26,6 +26,7 @@ import type {
 } from "@/types/document";
 import { DEFAULT_QCET_DEPARTMENTS } from "./directive-action-panel";
 import { useAuth } from "@/lib/auth-context";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
@@ -330,15 +331,15 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Ngày ban hành <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="date"
+              <VietnameseDatePicker
                 value={issuedDate}
-                onChange={(e) => setIssuedDate(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                onChange={(val) => setIssuedDate(val)}
                 required
+                variant="input"
+                className="w-full"
               />
             </div>
           </div>
@@ -452,14 +453,14 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Hạn giải quyết (nếu có)
               </label>
-              <input
-                type="date"
+              <VietnameseDatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                onChange={(val) => setDueDate(val)}
+                variant="input"
+                className="w-full"
               />
               {/* Quick Due Date buttons */}
               <div className="mt-1 flex gap-1">

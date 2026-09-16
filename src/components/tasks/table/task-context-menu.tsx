@@ -30,6 +30,7 @@ import {
   updateTaskDueDate,
   deleteTask,
 } from "@/lib/tasks/task-actions";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 
 export interface TaskContextMenuProps {
   task: SchoolTask | StaffTask | null;
@@ -588,20 +589,21 @@ export function TaskContextMenu({
               <span>Cuối tháng này</span>
             </button>
             <div className="pt-1 mt-1 border-t border-border/40 px-1">
-              <input
-                type="date"
-                defaultValue={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-                onChange={(e) => {
-                  if (e.target.value) {
+              <VietnameseDatePicker
+                value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
+                onChange={(val) => {
+                  if (val) {
                     if (onDueDateChange) {
-                      onDueDateChange(task.id, e.target.value);
+                      onDueDateChange(task.id, val);
                     } else {
-                      updateTaskDueDate(task.id, e.target.value);
+                      updateTaskDueDate(task.id, val);
                     }
                     onClose();
                   }
                 }}
-                className="w-full text-xs px-2 py-1 rounded border border-slate-200 bg-slate-50 text-slate-800"
+                variant="input"
+                placeholder="Chọn ngày cụ thể..."
+                className="w-full"
               />
             </div>
           </div>

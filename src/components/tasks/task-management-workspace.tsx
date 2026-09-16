@@ -67,7 +67,8 @@ export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
   return (
     <UnifiedAdaptiveWorkspace
       initialScope={initialScope || effectiveScope || "school"}
-      forcedScope={effectiveScope}
+      scope={scope}
+      forcedScope={forcedScope}
       onScopeChange={onScopeChange}
       className={className}
       initialViewMode={props.initialViewMode ?? "table"}

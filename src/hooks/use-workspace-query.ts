@@ -47,6 +47,9 @@ export interface UseWorkspaceQueryReturn {
     options?: NavigationOptions
   ) => void;
   setStatus: (status: TaskLifecycleStatus | "ALL", options?: NavigationOptions) => void;
+  setPriority: (priority?: string | null, options?: NavigationOptions) => void;
+  setCategory: (category?: string | null, options?: NavigationOptions) => void;
+  setDeadline: (deadline?: string | null, options?: NavigationOptions) => void;
   setAttention: (
     attention?: UserAttentionType | "ALL" | null,
     options?: NavigationOptions
@@ -198,10 +201,22 @@ export function useWorkspaceQuery(
 
   const setScope = React.useCallback(
     (scope: WorkspaceScopeType, navOptions?: SetScopeOptions) => {
+      const isScopeChanging = scope !== queryState.scope;
       const patch: Partial<WorkspaceFilterState> = {
         ...queryState,
         scope,
       };
+
+      if (isScopeChanging) {
+        // Clear sticky filters when transitioning between scopes (Personal -> Unit -> School)
+        patch.status = "ALL";
+        patch.priority = undefined;
+        patch.category = undefined;
+        patch.deadline = undefined;
+        patch.attention = undefined;
+        patch.q = undefined;
+        patch.query = undefined;
+      }
 
       const specifiedUnit = navOptions?.unit || navOptions?.dept;
       if (scope === "unit") {
@@ -252,9 +267,22 @@ export function useWorkspaceQuery(
 
   const setDept = React.useCallback(
     (dept?: string | null, navOptions?: NavigationOptions) => {
-      setUnit(dept, navOptions);
+      const trimmed = dept ? dept.trim() : undefined;
+      const clean =
+        trimmed && trimmed !== "ALL" && trimmed !== "all" && trimmed.length > 0
+          ? trimmed
+          : undefined;
+      dispatchUpdate(
+        {
+          ...queryState,
+          dept: clean,
+          unitId: clean,
+          unit: clean,
+        },
+        navOptions
+      );
     },
-    [setUnit]
+    [queryState, dispatchUpdate]
   );
 
   const setPeriod = React.useCallback(
@@ -283,6 +311,48 @@ export function useWorkspaceQuery(
         {
           ...queryState,
           status,
+        },
+        navOptions
+      );
+    },
+    [queryState, dispatchUpdate]
+  );
+
+  const setPriority = React.useCallback(
+    (priority?: string | null, navOptions?: NavigationOptions) => {
+      const clean = priority && priority !== "ALL" ? priority.trim() : undefined;
+      dispatchUpdate(
+        {
+          ...queryState,
+          priority: clean,
+        },
+        navOptions
+      );
+    },
+    [queryState, dispatchUpdate]
+  );
+
+  const setCategory = React.useCallback(
+    (category?: string | null, navOptions?: NavigationOptions) => {
+      const clean = category && category !== "ALL" ? category.trim() : undefined;
+      dispatchUpdate(
+        {
+          ...queryState,
+          category: clean,
+        },
+        navOptions
+      );
+    },
+    [queryState, dispatchUpdate]
+  );
+
+  const setDeadline = React.useCallback(
+    (deadline?: string | null, navOptions?: NavigationOptions) => {
+      const clean = deadline && deadline !== "ALL" ? deadline.trim() : undefined;
+      dispatchUpdate(
+        {
+          ...queryState,
+          deadline: clean,
         },
         navOptions
       );
@@ -367,6 +437,9 @@ export function useWorkspaceQuery(
         month: preservePeriod ? queryState.month : "ALL",
         date: preservePeriod ? queryState.date : undefined,
         status: "ALL",
+        priority: undefined,
+        category: undefined,
+        deadline: undefined,
         attention: undefined,
         view: preserveView
           ? (queryState.view || defaultView || (isCalendar ? "month" : "table"))
@@ -483,6 +556,9 @@ export function useWorkspaceQuery(
     setDept,
     setPeriod,
     setStatus,
+    setPriority,
+    setCategory,
+    setDeadline,
     setAttention,
     setView,
     setSearchQuery,

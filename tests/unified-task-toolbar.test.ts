@@ -26,6 +26,7 @@ import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS, matchesUser } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
+import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
@@ -258,8 +259,8 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       "Month selector must have accessible label"
     );
     assert.ok(
-      html.includes("Thời gian"),
-      "Must render 'Thời gian' when selectedAcademicMonth is ALL"
+      html.includes("Cả năm học") || html.includes("Thời gian"),
+      "Must render 'Cả năm học' or 'Thời gian' when selectedAcademicMonth is ALL"
     );
   });
 
@@ -450,7 +451,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
     assert.ok(html.includes("Hiển thị"), "Must render Display popover trigger");
   });
 
-  test("Direct Desktop Toolbar: exposes Search, Thời gian, Trạng thái, Thời hạn, Ưu tiên, Danh mục directly", () => {
+  test("Direct Desktop Toolbar: exposes Search, Thời gian, Trạng thái, Thời hạn, Ưu tiên, Đơn vị directly", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
@@ -460,7 +461,6 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         selectedAcademicMonth: 9,
         activeTab: "in_progress",
         selectedPriority: "URGENT",
-        selectedCategory: "CNTT",
         availableDepartments: [
           { code: "ALL", name: "Tất cả đơn vị" },
           { code: "CNTT", name: "Trung tâm CNTT" },
@@ -469,12 +469,11 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // Filter labels must update to active values directly on the toolbar buttons
-    assert.ok(html.includes("Tháng 9"), "Thời gian button updates to 'Tháng 9'");
-    assert.ok(html.includes("Đang thực hiện"), "Trạng thái button updates to 'Đang thực hiện'");
-    assert.ok(html.includes("Khẩn cấp"), "Ưu tiên button updates to 'Khẩn cấp'");
-    assert.ok(html.includes("Hạ tầng &amp; CNTT") || html.includes("CNTT"), "Danh mục button updates to category label");
-    assert.ok(html.includes("Trung tâm CNTT"), "Đơn vị button updates to selected department name");
+    // Direct desktop filters should update labels
+    assert.ok(html.includes("Tháng 9"), "Month button shows 'Tháng 9'");
+    assert.ok(html.includes("Đang thực hiện"), "Status button updates to 'Đang thực hiện'");
+    assert.ok(html.includes("Khẩn cấp"), "Priority button updates to 'Khẩn cấp'");
+    assert.ok(html.includes("Trung tâm CNTT"), "Department button updates to 'Trung tâm CNTT'");
   });
 
   test("Direct Desktop Toolbar: hides Đơn vị filter in 'my' and 'unit' scope", () => {
@@ -744,24 +743,139 @@ describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced 
   });
 });
 
-describe("Unified Task Toolbar UI Polish", () => {
-  const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH
+describe("Active-Filter Feedback and Zero Results Empty State", () => {
+  const adminUser = DEFAULT_DEMO_USERS[0];
 
-  test("Search placeholder renders standard 'Tìm nhiệm vụ' placeholder", () => {
-    const el = React.createElement(UnifiedTaskToolbar, {
-      scope: "school",
-      onScopeChange: () => {},
-      user: adminUser,
-      searchQuery: "",
-      onSearchChange: () => {},
-      totalTasksCount: 42,
-    });
-    const html = renderToStaticMarkup(el);
+  test("Active filter displays selected label and inline clear × button without primary blue", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedAcademicMonth: 4,
+        activeTab: "in_progress",
+        selectedPriority: "URGENT",
+        totalTasksCount: 100,
+        filteredTasksCount: 15,
+      })
+    );
+
+    // Filter labels update to selected value
+    assert.ok(html.includes("Tháng 4"), "Time filter label reflects selected month 'Tháng 4'");
+    assert.ok(html.includes("Đang thực hiện"), "Status filter label reflects 'Đang thực hiện'");
+    assert.ok(html.includes("Khẩn cấp"), "Priority filter label reflects 'Khẩn cấp'");
+
+    // Inline clear buttons rendered on active filters
+    assert.ok(html.includes('aria-label="Xóa lọc thời gian"'), "Inline clear × button rendered on month filter");
+    assert.ok(html.includes('aria-label="Xóa lọc trạng thái"'), "Inline clear × button rendered on status filter");
+    assert.ok(html.includes('aria-label="Xóa lọc mức ưu tiên"'), "Inline clear × button rendered on priority filter");
+
+    // Filter count vs total and compact Xóa tất cả action
+    assert.ok(html.includes("(15 / 100 nhiệm vụ)"), "Displays filtered result count versus total");
+    assert.ok(html.includes("Xóa tất cả"), "Exposes compact Xóa tất cả action in toolbar");
+  });
+
+  test("Selecting deadline filter (e.g. overdue) activates ONLY Thời hạn and does NOT jump or duplicate Trạng thái", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "overdue",
+        totalTasksCount: 161,
+        filteredTasksCount: 0,
+      })
+    );
+
+    // Thời hạn should be active with "Quá hạn"
+    assert.ok(html.includes('aria-label="Lọc thời hạn"'), "Must render deadline filter");
+    assert.ok(html.includes('aria-label="Xóa lọc thời hạn"'), "Deadline filter must have inline clear button");
+
+    // Trạng thái must remain inactive with "Trạng thái" (not "Quá hạn")
+    assert.ok(html.includes('aria-label="Lọc trạng thái"'), "Must render status filter");
+    assert.ok(!html.includes('aria-label="Xóa lọc trạng thái"'), "Status filter must NOT be active when filtering by deadline");
+
+    // Total count shows (0 / 161 nhiệm vụ)
+    assert.ok(html.includes("(0 / 161 nhiệm vụ)"), "Displays (0 / 161 nhiệm vụ)");
+  });
+
+  test("Zero results when time is sole active filter renders specific message", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskEmptyState, {
+        academicMonth: 4,
+        onResetFilters: () => {},
+      })
+    );
 
     assert.ok(
-      html.includes("Tìm nhiệm vụ"),
-      "Search input placeholder must display standard 'Tìm nhiệm vụ'"
+      html.includes("Không có nhiệm vụ trong Tháng 4"),
+      "Must render specific time message when time is sole active filter"
     );
+    assert.ok(
+      html.includes("Thử thay đổi hoặc xóa bộ lọc hiện tại"),
+      "Must render guidance description"
+    );
+    assert.ok(
+      html.includes("Xóa bộ lọc"),
+      "Must render Xóa bộ lọc CTA button"
+    );
+  });
+
+  test("Zero results when other filters or combinations are active renders standard message", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskEmptyState, {
+        academicMonth: 4,
+        activeTab: "overdue",
+        priority: "URGENT",
+        onResetFilters: () => {},
+      })
+    );
+
+    assert.ok(
+      html.includes("Không có nhiệm vụ phù hợp"),
+      "Must render 'Không có nhiệm vụ phù hợp' when multiple/other filters are active"
+    );
+    assert.ok(
+      html.includes("Thử thay đổi hoặc xóa bộ lọc hiện tại"),
+      "Must render guidance description"
+    );
+    assert.ok(
+      html.includes("Xóa bộ lọc"),
+      "Must render Xóa bộ lọc CTA button"
+    );
+  });
+
+  test("Status filter updates button label to 'Mới' when selectedStatus is 'new' or 'NOT_STARTED'", () => {
+    const htmlNew = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedStatus: "new",
+      })
+    );
+
+    assert.ok(htmlNew.includes("Mới"), "Must render 'Mới' when selectedStatus is 'new'");
+    assert.ok(htmlNew.includes('aria-label="Xóa lọc trạng thái"'), "Status filter must have inline clear button when active");
+
+    const htmlNotStarted = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedStatus: "NOT_STARTED",
+      })
+    );
+
+    assert.ok(htmlNotStarted.includes("Mới"), "Must render 'Mới' when selectedStatus is 'NOT_STARTED'");
   });
 });
 

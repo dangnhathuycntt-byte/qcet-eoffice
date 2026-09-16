@@ -145,6 +145,15 @@ export function BatchActionBar({
   const permittedStatusOptions = BULK_STATUS_OPTIONS.filter((option) =>
     isTargetAllowed(option.value)
   );
+
+  const hasAnyAction = Boolean(
+    (onBulkStatusChange && (isTargetAllowed("COMPLETED") || permittedStatusOptions.length > 0)) ||
+    onBulkReassign ||
+    onBulkExtendDeadline ||
+    onExportExcel ||
+    onBulkDelete
+  );
+
   // Lắng nghe phím Escape để hủy chọn toàn bộ
   React.useEffect(() => {
     if (selectedCount <= 0) return;
@@ -160,7 +169,7 @@ export function BatchActionBar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedCount, onClearSelection]);
 
-  if (selectedCount <= 0) {
+  if (selectedCount <= 0 || !hasAnyAction) {
     return null;
   }
 

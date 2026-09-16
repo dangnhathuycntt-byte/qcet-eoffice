@@ -76,7 +76,7 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
       const parsed = parseInt(monthQuery, 10);
       if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
     }
-    return getAcademicMonthInfo(new Date()).monthNumber;
+    return "ALL";
   });
 
   const [isStaffExpanded, setIsStaffExpanded] = React.useState<boolean>(
@@ -104,7 +104,7 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
         else params.delete("dept");
       }
       if (updates.month !== undefined) {
-        if (updates.month === "ALL") params.set("month", "ALL");
+        if (updates.month === "ALL") params.delete("month");
         else params.set("month", String(updates.month));
       }
       const qs = params.toString();

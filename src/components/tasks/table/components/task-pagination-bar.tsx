@@ -6,6 +6,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZES } from "../constants";
@@ -22,7 +24,10 @@ export interface TaskPaginationBarProps {
   shortcutTrigger?: React.ReactNode;
 }
 
-export function getPageNumbers(currentPage: number, totalPages: number): (number | "...")[] {
+export function getPageNumbers(
+  currentPage: number,
+  totalPages: number
+): (number | "...")[] {
   if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
@@ -60,6 +65,14 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   className,
   shortcutTrigger,
 }: TaskPaginationBarProps) {
+  // Hide the entire pagination footer (including page size selector) when results fit within one page
+  if (totalItems <= pageSize) {
+    return null;
+  }
+
+  const [isSizeMenuOpen, setIsSizeMenuOpen] = React.useState(false);
+  const sizeMenuRef = React.useRef<HTMLDivElement>(null);
+
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
@@ -72,6 +85,36 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   const endItem = Math.min(totalItems, safeCurrentPage * pageSize);
 
   const pageNumbers = getPageNumbers(safeCurrentPage, totalPages);
+
+  // Click outside listener for custom page size dropdown
+  React.useEffect(() => {
+    if (!isSizeMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        sizeMenuRef.current &&
+        !sizeMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsSizeMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSizeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside, true);
+    document.addEventListener("touchstart", handleClickOutside, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("touchstart", handleClickOutside, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSizeMenuOpen]);
 
   const handlePrevious = () => {
     if (safeCurrentPage > 1 && !disabled) {
@@ -105,7 +148,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         className
       )}
     >
-      {/* Left section: Item range counter & page size selector */}
+      {/* Left section: Item range counter & custom page size selector */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
         <div className="tabular-nums">
           {totalItems === 0 ? (
@@ -124,18 +167,81 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           )}
         </div>
 
-        {/* Page Size Selector */}
-        <div className="flex items-center gap-1.5 ml-1">
+        {/* Custom Page Size Dropdown Popover */}
+        <div className="relative flex items-center gap-1.5 ml-1" ref={sizeMenuRef}>
           <label htmlFor="task-table-page-size" className="sr-only">
             Số lượng công việc trên mỗi trang
           </label>
+
+          <button
+            type="button"
+            id="task-table-page-size-trigger"
+            aria-label="Số lượng công việc trên mỗi trang"
+            aria-expanded={isSizeMenuOpen}
+            aria-haspopup="listbox"
+            disabled={disabled || totalItems === 0}
+            onClick={() => !disabled && setIsSizeMenuOpen((prev) => !prev)}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-all hover:bg-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+              isSizeMenuOpen && "border-primary ring-1 ring-primary bg-muted/40"
+            )}
+          >
+            <span className="font-mono tabular-nums">{pageSize} / trang</span>
+            <ChevronDown
+              className={cn(
+                "size-3 text-muted-foreground transition-transform duration-150",
+                isSizeMenuOpen && "rotate-180 text-foreground"
+              )}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {/* Floating Dropdown Popover */}
+          {isSizeMenuOpen && (
+            <div
+              role="listbox"
+              aria-label="Chọn số lượng công việc mỗi trang"
+              className="absolute bottom-full mb-1.5 left-0 z-50 min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
+            >
+              <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 mb-1">
+                Kích thước trang
+              </div>
+              {effectivePageSizeOptions.map((size) => {
+                const isSelected = size === pageSize;
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onPageSizeChange(size);
+                      setIsSizeMenuOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer font-mono tabular-nums",
+                      isSelected
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-foreground hover:bg-muted/70 hover:text-foreground"
+                    )}
+                  >
+                    <span>{size} / trang</span>
+                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={2} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Hidden native select for accessibility, testing & fallback sync */}
           <select
             id="task-table-page-size"
             value={pageSize}
             disabled={disabled || totalItems === 0}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="h-8 rounded-lg border border-border/80 bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-2xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-            aria-label="Số lượng công việc trên mỗi trang"
+            className="sr-only"
+            aria-hidden="true"
+            tabIndex={-1}
           >
             {effectivePageSizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -153,7 +259,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
@@ -165,7 +271,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
@@ -196,7 +302,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                 disabled={disabled}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
-                  "inline-flex size-8 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-colors shadow-2xs cursor-pointer active:scale-95",
+                  "inline-flex size-8 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs cursor-pointer active:scale-95",
                   isCurrent
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                     : "border border-border/80 bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -214,7 +320,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
@@ -226,7 +332,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang cuối"
           aria-label="Về trang cuối"
         >

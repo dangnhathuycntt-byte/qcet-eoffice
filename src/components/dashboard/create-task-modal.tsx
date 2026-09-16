@@ -36,6 +36,7 @@ import {
   getDepartmentForMember,
 } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
 import type { TaskPriorityInput } from "@/contracts/tasks";
 import {
@@ -1759,22 +1760,18 @@ export function CreateTaskModal({
                     )}
                   </div>
 
-                  <input
-                    type="date"
+                  <VietnameseDatePicker
                     id="task-due-date-input"
                     value={formData.dueDate}
-                    max={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
-                    aria-invalid={Boolean(errors.dueDate)}
-                    aria-describedby={errors.dueDate ? "task-due-date-error" : undefined}
-                    onChange={(e) => {
-                      setFormData((p) => ({ ...p, dueDate: e.target.value }));
+                    maxDate={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
+                    error={Boolean(errors.dueDate)}
+                    variant="input"
+                    onChange={(val) => {
+                      setFormData((p) => ({ ...p, dueDate: val }));
                       if (errors.dueDate) clearError("dueDate");
                     }}
-                    onFocus={() => scrollActiveInputIntoView()}
-                    className={cn(
-                      "w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
-                      errors.dueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
-                    )}
+                    placeholder="Chọn hạn chót (dd/mm/yyyy)..."
+                    className="w-full"
                   />
 
                   {/* Preset Pills Rail */}
@@ -1855,21 +1852,17 @@ export function CreateTaskModal({
                     <span className="text-xs text-muted-foreground">Nghiệm thu cấp 1</span>
                   </div>
 
-                  <input
-                    type="date"
+                  <VietnameseDatePicker
                     id="task-internal-due-input"
                     value={formData.internalDueDate || ""}
-                    aria-invalid={Boolean(errors.internalDueDate)}
-                    aria-describedby={errors.internalDueDate ? "task-internal-due-error" : undefined}
-                    onChange={(e) => {
-                      setFormData((p) => ({ ...p, internalDueDate: e.target.value }));
+                    error={Boolean(errors.internalDueDate)}
+                    variant="input"
+                    onChange={(val) => {
+                      setFormData((p) => ({ ...p, internalDueDate: val }));
                       if (errors.internalDueDate) clearError("internalDueDate");
                     }}
-                    onFocus={() => scrollActiveInputIntoView()}
-                    className={cn(
-                      "w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
-                      errors.internalDueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
-                    )}
+                    placeholder="Chọn hạn chót nội bộ (dd/mm/yyyy)..."
+                    className="w-full"
                   />
 
                   {errors.internalDueDate && (

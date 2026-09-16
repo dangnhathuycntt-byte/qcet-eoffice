@@ -110,7 +110,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
   const currentActualMonth = currentActualPeriod.monthNumber;
   const currentAcademicYear = React.useMemo(() => getAcademicYear(now), [now]);
 
-  // Determine active month: prioritize dashboard context if available, otherwise searchParams, fallback to current actual month
+  // Determine active month: prioritize dashboard context if available, otherwise searchParams, fallback to ALL
   const monthParam = searchParams?.get("month");
   const selectedMonth: number | "ALL" = React.useMemo(() => {
     if (optionalData?.selectedAcademicMonth !== undefined) {
@@ -123,8 +123,8 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         return parsed;
       }
     }
-    return currentActualMonth;
-  }, [optionalData?.selectedAcademicMonth, monthParam, currentActualMonth]);
+    return "ALL";
+  }, [optionalData?.selectedAcademicMonth, monthParam]);
 
   // Active period details
   const activePeriod: AcademicMonthPeriod | null = React.useMemo(() => {

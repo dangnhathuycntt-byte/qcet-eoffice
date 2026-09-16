@@ -340,5 +340,40 @@ describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, comp
       "rendered footer must not use verbose 'trên tổng số' copy"
     );
   });
+
+  it("hides the entire pagination footer when totalItems <= pageSize (filtered results fit within one page)", () => {
+    const htmlFit = renderToStaticMarkup(
+      React.createElement(TaskPaginationBar, {
+        currentPage: 1,
+        pageSize: 20,
+        totalItems: 6,
+        onPageChange: () => {},
+        onPageSizeChange: () => {},
+      })
+    );
+    assert.equal(htmlFit, "", "footer must return null when items fit within one page (6 <= 20)");
+
+    const htmlExact = renderToStaticMarkup(
+      React.createElement(TaskPaginationBar, {
+        currentPage: 1,
+        pageSize: 20,
+        totalItems: 20,
+        onPageChange: () => {},
+        onPageSizeChange: () => {},
+      })
+    );
+    assert.equal(htmlExact, "", "footer must return null when items exactly equal pageSize (20 <= 20)");
+
+    const htmlEmpty = renderToStaticMarkup(
+      React.createElement(TaskPaginationBar, {
+        currentPage: 1,
+        pageSize: 20,
+        totalItems: 0,
+        onPageChange: () => {},
+        onPageSizeChange: () => {},
+      })
+    );
+    assert.equal(htmlEmpty, "", "footer must return null when totalItems is 0");
+  });
 });
 

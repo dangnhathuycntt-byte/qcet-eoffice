@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import {
   LinearTaskAgentPanel,
   type TaskAgentSuggestion,
@@ -943,49 +944,39 @@ export function LinearCreateTaskModal({
               </div>
 
               {/* 5. Start Date Chip */}
-              <div className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:bg-slate-100 transition-colors">
-                <Calendar className="size-3 text-slate-400" strokeWidth={1.5} />
-                <span className="text-slate-400">Bắt đầu:</span>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent border-0 p-0 text-xs font-normal text-slate-700 focus:outline-none cursor-pointer"
-                />
-              </div>
+              <VietnameseDatePicker
+                value={startDate}
+                onChange={(val) => setStartDate(val)}
+                label="Bắt đầu:"
+                variant="chip"
+                icon={<Calendar className="size-3 text-slate-400" strokeWidth={1.5} />}
+                placeholder="dd/mm/yyyy"
+              />
 
               {/* 6. Target Due Date Chip (P0 Field) */}
-              <div
-                className={cn(
-                  "inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-normal transition-colors",
-                  fieldErrors.dueDate
-                    ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
-                    : "text-slate-600 hover:bg-slate-100"
-                )}
-              >
-                <CalendarClock
-                  className={cn(
-                    "size-3",
-                    fieldErrors.dueDate ? "text-rose-500" : "text-slate-400"
-                  )}
-                  strokeWidth={1.5}
-                />
-                <span className={cn(fieldErrors.dueDate ? "text-rose-600 font-medium" : "text-slate-700 font-medium")}>
-                  Hạn chót: *
-                </span>
-                <input
-                  type="date"
-                  value={dueDate}
-                  required
-                  onChange={(e) => {
-                    setDueDate(e.target.value);
-                    if (fieldErrors.dueDate) {
-                      setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
-                    }
-                  }}
-                  className="bg-transparent border-0 p-0 text-xs font-medium text-slate-900 focus:outline-none cursor-pointer"
-                />
-              </div>
+              <VietnameseDatePicker
+                value={dueDate}
+                required
+                onChange={(val) => {
+                  setDueDate(val);
+                  if (fieldErrors.dueDate) {
+                    setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
+                  }
+                }}
+                label="Hạn chót: *"
+                variant="chip"
+                error={Boolean(fieldErrors.dueDate)}
+                icon={
+                  <CalendarClock
+                    className={cn(
+                      "size-3",
+                      fieldErrors.dueDate ? "text-rose-500" : "text-slate-400"
+                    )}
+                    strokeWidth={1.5}
+                  />
+                }
+                placeholder="dd/mm/yyyy"
+              />
 
               {/* 7. Category / Domain Chip */}
               <div className="relative">

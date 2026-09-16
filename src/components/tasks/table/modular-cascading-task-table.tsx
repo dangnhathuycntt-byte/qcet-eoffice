@@ -99,6 +99,7 @@ export interface ModularCascadingTaskTableProps {
   className?: string;
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
+  hidePagination?: boolean;
   onOpenSubmitModal?: (task: StaffTask) => void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   selectedAcademicMonth?: number | "ALL";
@@ -142,6 +143,7 @@ export function ModularCascadingTaskTable({
   className,
   hideWorkbox = false,
   hideToolbar = false,
+  hidePagination = false,
   onOpenSubmitModal,
   onAddSubTask,
   selectedAcademicMonth,
@@ -598,14 +600,79 @@ export function ModularCascadingTaskTable({
     );
   }, [tableState.selectedIds, filteredTasks, user]);
 
+  const effectiveOnBulkStatusChange = React.useMemo(() => {
+    if (onBulkStatusChange) return onBulkStatusChange;
+    if (onStatusChange) {
+      return async (newStatus: TaskStatus) => {
+        const ids = Array.from(tableState.selectedIds);
+        await Promise.all(ids.map((id) => onStatusChange(id, newStatus)));
+        tableState.clearSelection();
+      };
+    }
+    return undefined;
+  }, [onBulkStatusChange, onStatusChange, tableState]);
+
+  const effectiveOnBulkExtendDeadline = React.useMemo(() => {
+    if (onBulkExtendDeadline) return onBulkExtendDeadline;
+    if (handleContextMenuDueDateChange) {
+      return async (newDueDate: string) => {
+        const ids = Array.from(tableState.selectedIds);
+        await Promise.all(ids.map((id) => handleContextMenuDueDateChange(id, newDueDate)));
+        tableState.clearSelection();
+      };
+    }
+    return undefined;
+  }, [onBulkExtendDeadline, handleContextMenuDueDateChange, tableState]);
+
+  const effectiveOnBulkDelete = React.useMemo(() => {
+    if (onBulkDelete) return onBulkDelete;
+    if (handleContextMenuDelete) {
+      return async (ids: string[]) => {
+        await Promise.all(ids.map((id) => handleContextMenuDelete(id)));
+        tableState.clearSelection();
+      };
+    }
+    return undefined;
+  }, [onBulkDelete, handleContextMenuDelete, tableState]);
+
+  const effectiveOnExportExcel = React.useMemo(() => {
+    if (onExportExcel) return onExportExcel;
+    return () => {
+      const selected = filteredTasks.filter((t) => tableState.selectedIds.has(t.id));
+      if (selected.length === 0) return;
+      const headers = ["Mã nhiệm vụ", "Tiêu đề", "Đơn vị", "Chủ trì", "Hạn chót", "Trạng thái", "Tiến độ"];
+      const rows = selected.map((t) => [
+        `"${t.code || t.id}"`,
+        `"${(t.title || "").replace(/"/g, '""')}"`,
+        `"${t.department || t.leadDepartment || ""}"`,
+        `"${t.leadAssigneeName || ""}"`,
+        `"${t.dueDate || ""}"`,
+        `"${t.status || ""}"`,
+        `"${t.progressPercent ?? 0}%"`,
+      ]);
+      const csvContent = "﻿" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `danh-sach-nhiem-vu-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+  }, [onExportExcel, filteredTasks, tableState.selectedIds]);
+
   const prevFilterKeyRef = React.useRef<string>("");
   React.useEffect(() => {
-    const currentKey = `${scope || ""}-${activeSearch || ""}-${activeTab || ""}-${activeDept || ""}-${activeCategory || ""}-${activeMonth || ""}`;
+    const currentKey = hideToolbar
+      ? `${tasks.length}-${tasks.map((t) => t.id).slice(0, 10).join(",")}`
+      : `${scope || ""}-${activeSearch || ""}-${activeTab || ""}-${activeDept || ""}-${activeCategory || ""}-${activeMonth || ""}`;
     if (prevFilterKeyRef.current && prevFilterKeyRef.current !== currentKey) {
       tableState.setPage(1);
     }
     prevFilterKeyRef.current = currentKey;
-  }, [scope, activeSearch, activeTab, activeDept, activeCategory, activeMonth, tableState.setPage]);
+  }, [hideToolbar, tasks, scope, activeSearch, activeTab, activeDept, activeCategory, activeMonth, tableState.setPage]);
 
   React.useEffect(() => {
     if (propDensity && tableState.density !== propDensity) {
@@ -854,10 +921,7 @@ export function ModularCascadingTaskTable({
   }, [selectedAcademicMonth]);
 
   const monthlyIndicator = React.useMemo(() => {
-    if (selectedAcademicMonth === undefined) return null;
-    if (selectedAcademicMonth === "ALL") {
-      return `Toàn năm học - ${filteredTasks.length} nhiệm vụ`;
-    }
+    if (selectedAcademicMonth === undefined || selectedAcademicMonth === "ALL") return null;
     const dateSpan = monthPeriod
       ? `(${monthPeriod.shortDateSpan}/${monthPeriod.endDate.slice(0, 4)})`
       : "";
@@ -1207,14 +1271,16 @@ export function ModularCascadingTaskTable({
             ))}
           </div>
 
-          {/* Pagination Controls */}
-          <TaskPaginationBar
-            currentPage={tableState.currentPage}
-            pageSize={tableState.pageSize}
-            totalItems={tableState.totalItems}
-            onPageChange={handlePageChange}
-            onPageSizeChange={tableState.setPageSize}
-          />
+          {/* Pagination Controls - Show only when totalItems > pageSize and not explicitly hidden */}
+          {!hidePagination && tableState.totalItems > tableState.pageSize && (
+            <TaskPaginationBar
+              currentPage={tableState.currentPage}
+              pageSize={tableState.pageSize}
+              totalItems={tableState.totalItems}
+              onPageChange={handlePageChange}
+              onPageSizeChange={tableState.setPageSize}
+            />
+          )}
         </div>
       )}
 
@@ -1227,11 +1293,11 @@ export function ModularCascadingTaskTable({
         selectedIds={Array.from(tableState.selectedIds)}
         totalCount={filteredTasks.length}
         onClearSelection={tableState.clearSelection}
-        onBulkStatusChange={onBulkStatusChange}
-        onBulkExtendDeadline={onBulkExtendDeadline}
+        onBulkStatusChange={effectiveOnBulkStatusChange}
+        onBulkExtendDeadline={effectiveOnBulkExtendDeadline}
         onBulkReassign={onBulkReassign}
-        onBulkDelete={onBulkDelete}
-        onExportExcel={onExportExcel}
+        onBulkDelete={effectiveOnBulkDelete}
+        onExportExcel={effectiveOnExportExcel}
         allowedLifecycleTargets={allowedLifecycleTargets}
       />
 
