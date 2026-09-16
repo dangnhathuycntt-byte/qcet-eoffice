@@ -1,191 +1,243 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   validateLoginForm,
   resolveDemoUserByRole,
   resolveOAuthError,
   sanitizeRedirectUrl,
+  shouldShowLoginSkeleton,
 } from "../src/lib/login-helpers";
 
-describe("Login Form Validation & Safe Fallback Contract", () => {
-  test("resolveDemoUserByRole safely returns undefined in zero-mock environment", () => {
-    assert.equal(resolveDemoUserByRole("ADMIN"), undefined);
-    assert.equal(resolveDemoUserByRole("MANAGER"), undefined);
-    assert.equal(resolveDemoUserByRole("STAFF"), undefined);
+describe("Issue #6: Single Centered Column Architecture & Institutional Copy Verification", () => {
+  const loginPageSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/app/login/page.tsx"),
+    "utf-8"
+  );
+
+  test("does not contain campus-qcet.jpg or 56% desktop split panel", () => {
+    assert.strictEqual(
+      loginPageSource.includes("campus-qcet.jpg"),
+      false,
+      "src/app/login/page.tsx must NOT contain campus-qcet.jpg"
+    );
+    assert.strictEqual(
+      loginPageSource.includes("w-[56%]"),
+      false,
+      "src/app/login/page.tsx must NOT contain 56% column panel"
+    );
+    assert.strictEqual(
+      loginPageSource.includes("w-[44%]"),
+      false,
+      "src/app/login/page.tsx must NOT contain 44% column panel"
+    );
+  });
+
+  test("uses centered container with max-w-[360px]", () => {
+    assert.ok(
+      loginPageSource.includes("max-w-[360px]"),
+      "src/app/login/page.tsx must have max-w-[360px] centered container"
+    );
+    assert.ok(
+      loginPageSource.includes("flex-col items-center"),
+      "src/app/login/page.tsx must center items vertically and horizontally"
+    );
+  });
+
+  test("contains standard institutional Vietnamese labels and copy", () => {
+    // Heading
+    assert.ok(
+      loginPageSource.includes("Đăng nhập QCET Work"),
+      "Must contain 'Đăng nhập QCET Work' heading"
+    );
+    // Subheading
+    assert.ok(
+      loginPageSource.includes("Sử dụng tài khoản Google của nhà trường."),
+      "Must contain 'Sử dụng tài khoản Google của nhà trường.' subheading"
+    );
+    // Role condition note
+    assert.ok(
+      loginPageSource.includes("Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền."),
+      "Must contain 'Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền.' copy"
+    );
+    // Support link & email
+    assert.ok(
+      loginPageSource.includes("Gặp sự cố? Liên hệ hỗ trợ"),
+      "Must contain 'Gặp sự cố? Liên hệ hỗ trợ' text"
+    );
+    assert.ok(
+      loginPageSource.includes("mailto:support@cdktcnqn.edu.vn"),
+      "Must link to mailto:support@cdktcnqn.edu.vn"
+    );
+  });
+
+  test("includes dismiss buttons for OAuth and runtime error notices", () => {
+    assert.ok(
+      loginPageSource.includes('aria-label="Đóng thông báo"'),
+      "OAuth notice must have dismiss button with accessible label"
+    );
+    assert.ok(
+      loginPageSource.includes('aria-label="Đóng thông báo lỗi"'),
+      "Runtime error notice must have dismiss button with accessible label"
+    );
   });
 });
 
-describe("Login Form Validation & Authentication Logic", () => {
-  test("rejects empty or whitespace-only email", () => {
-    const resultEmpty = validateLoginForm("");
-    assert.equal(resultEmpty.valid, false);
-    assert.ok(resultEmpty.error?.includes("Vui lòng nhập địa chỉ email"));
+describe("Issue #6: Login Skeleton State Protection", () => {
+  test("shouldShowLoginSkeleton behaves correctly under all session states", () => {
+    // 1. Initial page load (isLoading=true) -> skeleton
+    assert.strictEqual(
+      shouldShowLoginSkeleton({ isLoading: true, isAuthenticated: false, user: null }),
+      true,
+      "Must show skeleton while session is loading"
+    );
 
-    const resultWhitespace = validateLoginForm("   ");
-    assert.equal(resultWhitespace.valid, false);
-  });
+    // 2. Fully authenticated user -> skeleton while redirecting
+    assert.strictEqual(
+      shouldShowLoginSkeleton({
+        isLoading: false,
+        isAuthenticated: true,
+        user: { id: "usr_1", email: "test@cdktcnqn.edu.vn" },
+      }),
+      true,
+      "Must show skeleton for authenticated user during auto-redirect"
+    );
 
-  test("rejects malformed email formats", () => {
-    const result = validateLoginForm("invalid-email-address");
-    assert.equal(result.valid, false);
-    assert.ok(result.error?.includes("không đúng định dạng"));
-  });
+    // 3. Unauthenticated visitor -> do NOT show skeleton (render login form)
+    assert.strictEqual(
+      shouldShowLoginSkeleton({ isLoading: false, isAuthenticated: false, user: null }),
+      false,
+      "Must NOT show skeleton for unauthenticated visitor"
+    );
 
-  test("rejects password shorter than 4 characters when provided", () => {
-    const result = validateLoginForm("bgh@cdktcnqn.edu.vn", "123");
-    assert.equal(result.valid, false);
-    assert.ok(result.error?.includes("ít nhất 4 ký tự"));
-  });
-
-  test("validates properly formatted credentials without synthesizing mock users", () => {
-    const resultAdmin = validateLoginForm("bgh@cdktcnqn.edu.vn", "password123");
-    assert.equal(resultAdmin.valid, true);
-    assert.equal(resultAdmin.user, undefined, "Must not synthesize mock user");
-
-    const resultManager = validateLoginForm("daotao@cdktcnqn.edu.vn", "password123");
-    assert.equal(resultManager.valid, true);
-    assert.equal(resultManager.user, undefined);
-
-    const resultStaff = validateLoginForm("vinhnn@cdktcnqn.edu.vn", "password123");
-    assert.equal(resultStaff.valid, true);
-    assert.equal(resultStaff.user, undefined);
-  });
-
-  test("validates unknown emails without synthesizing fake privilege or staff users", () => {
-    const fakeBgh = validateLoginForm("bgh-hacker@cdktcnqn.edu.vn", "pass1234");
-    assert.equal(fakeBgh.valid, true);
-    assert.equal(fakeBgh.user, undefined);
-
-    const fakeDaotao = validateLoginForm("phong.daotao.fake@cdktcnqn.edu.vn", "pass1234");
-    assert.equal(fakeDaotao.valid, true);
-    assert.equal(fakeDaotao.user, undefined);
-
-    const standardUnknown = validateLoginForm("nguyenvana@cdktcnqn.edu.vn", "pass1234");
-    assert.equal(standardUnknown.valid, true);
-    assert.equal(standardUnknown.user, undefined);
+    // 4. Stale offline cache (user object present but isAuthenticated is false) -> do NOT show skeleton
+    assert.strictEqual(
+      shouldShowLoginSkeleton({
+        isLoading: false,
+        isAuthenticated: false,
+        user: { id: "stale_usr", email: "stale@cdktcnqn.edu.vn" },
+      }),
+      false,
+      "Must NOT trap unauthenticated visitor in infinite skeleton even with stale cached user"
+    );
   });
 });
 
-describe("OAuth Error Mapping & Resolution", () => {
+describe("Issue #6: OAuth Error Resolution & Error Variants", () => {
   test("returns null when no error code is provided", () => {
     assert.equal(resolveOAuthError(null), null);
     assert.equal(resolveOAuthError(undefined), null);
     assert.equal(resolveOAuthError(""), null);
   });
 
-  test("maps domain_not_allowed with amber variant, message, email, and retry action", () => {
-    const errorInfo = resolveOAuthError("domain_not_allowed", "user@gmail.com");
-    assert.ok(errorInfo, "errorInfo should not be null");
+  test("domain_not_allowed: amber alert with email details & retry action", () => {
+    const errorInfo = resolveOAuthError("domain_not_allowed", "personal@gmail.com");
+    assert.ok(errorInfo);
     assert.equal(errorInfo.code, "domain_not_allowed");
     assert.equal(errorInfo.variant, "amber");
-    assert.ok(
-      errorInfo.message.includes("Tài khoản không thuộc miền @cdktcnqn.edu.vn"),
-      "Message must mention @cdktcnqn.edu.vn"
-    );
-    assert.ok(errorInfo.message.includes("user@gmail.com"), "Message should include the violating email");
-    assert.equal(errorInfo.email, "user@gmail.com");
+    assert.ok(errorInfo.title.includes("Email không thuộc hệ thống"));
+    assert.ok(errorInfo.message.includes("personal@gmail.com"));
+    assert.ok(errorInfo.message.includes("@cdktcnqn.edu.vn"));
     assert.equal(errorInfo.actionText, "Thử lại bằng tài khoản trường");
     assert.equal(errorInfo.actionHref, "/api/auth/signin/google");
   });
 
-  test("maps account_disabled with red variant and IT department contact guidance", () => {
+  test("account_not_found / AccessDenied: amber alert informing user to contact IT", () => {
+    const notFound = resolveOAuthError("account_not_found");
+    assert.ok(notFound);
+    assert.equal(notFound.variant, "amber");
+    assert.ok(notFound.title.includes("chưa được cấp quyền"));
+    assert.ok(notFound.message.includes("qtm@cdktcnqn.edu.vn"));
+
+    const accessDenied = resolveOAuthError("AccessDenied");
+    assert.ok(accessDenied);
+    assert.equal(accessDenied.variant, "amber");
+    assert.ok(accessDenied.title.includes("chưa được cấp quyền"));
+  });
+
+  test("account_disabled: red alert for suspended account", () => {
     const errorInfo = resolveOAuthError("account_disabled");
     assert.ok(errorInfo);
     assert.equal(errorInfo.code, "account_disabled");
     assert.equal(errorInfo.variant, "red");
-    assert.ok(
-      errorInfo.message.includes("Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa"),
-      "Message must state account is locked or disabled"
-    );
-    assert.ok(
-      errorInfo.message.includes("Phòng Quản trị Mạng và CNTT"),
-      "Message must instruct contacting IT department"
-    );
+    assert.ok(errorInfo.title.includes("khóa"));
   });
 
-  test("maps oauth_cancelled with neutral variant", () => {
+  test("oauth_cancelled: neutral alert when user cancels OAuth consent", () => {
     const errorInfo = resolveOAuthError("oauth_cancelled");
     assert.ok(errorInfo);
     assert.equal(errorInfo.code, "oauth_cancelled");
     assert.equal(errorInfo.variant, "neutral");
-    assert.ok(
-      errorInfo.message.includes("Bạn đã hủy quá trình đăng nhập bằng Google"),
-      "Message must state user cancelled"
-    );
+    assert.ok(errorInfo.message.includes("hủy quá trình đăng nhập"));
   });
 
-  test("maps oauth_state_invalid with red variant and expired/invalid message", () => {
+  test("oauth_state_invalid: red alert for expired CSRF state", () => {
     const errorInfo = resolveOAuthError("oauth_state_invalid");
     assert.ok(errorInfo);
-    assert.equal(errorInfo.code, "oauth_state_invalid");
     assert.equal(errorInfo.variant, "red");
-    assert.ok(
-      errorInfo.message.includes("Phiên đăng nhập đã hết hạn hoặc không hợp lệ"),
-      "Message must state session expired or invalid"
-    );
+    assert.ok(errorInfo.message.includes("hết hạn"));
   });
 
-  test("maps oauth_not_configured with red variant and unconfigured message", () => {
+  test("oauth_not_configured: red alert for server configuration issue", () => {
     const errorInfo = resolveOAuthError("oauth_not_configured");
     assert.ok(errorInfo);
-    assert.equal(errorInfo.code, "oauth_not_configured");
     assert.equal(errorInfo.variant, "red");
-    assert.ok(
-      errorInfo.message.includes("Hệ thống chưa cấu hình Google OAuth"),
-      "Message must state Google OAuth is unconfigured"
-    );
+    assert.ok(errorInfo.message.includes("chưa cấu hình Google OAuth"));
   });
 
-  test("maps generic or unknown oauth errors (oauth_failed, etc.) with default message", () => {
-    const errorInfo = resolveOAuthError("oauth_failed");
-    assert.ok(errorInfo);
-    assert.equal(errorInfo.variant, "red");
-    assert.ok(
-      errorInfo.message.includes("Đã xảy ra lỗi trong quá trình xác thực với Google"),
-      "Message must provide generic Google authentication error notice"
-    );
+  test("fallback for missing_code, oauth_failed, or arbitrary error strings", () => {
+    const generic = resolveOAuthError("oauth_failed");
+    assert.ok(generic);
+    assert.equal(generic.variant, "red");
+    assert.ok(generic.title.includes("Đăng nhập không thành công"));
 
-    const unknownInfo = resolveOAuthError("unknown_error_xyz");
-    assert.ok(unknownInfo);
-    assert.equal(unknownInfo.variant, "red");
-    assert.ok(
-      unknownInfo.message.includes("Đã xảy ra lỗi trong quá trình xác thực với Google"),
-      "Message must provide generic Google authentication error notice"
-    );
+    const unknown = resolveOAuthError("unknown_custom_oauth_code");
+    assert.ok(unknown);
+    assert.equal(unknown.variant, "red");
+    assert.equal(unknown.code, "unknown_custom_oauth_code");
   });
 });
 
-describe("Open Redirect Protection (OWASP A01)", () => {
-  test("allows legitimate relative URLs and normalizes root to /tasks", () => {
-    assert.equal(sanitizeRedirectUrl("/"), "/tasks");
+describe("Issue #6: Open Redirect Protection (OWASP A01)", () => {
+  test("allows legitimate relative application paths", () => {
+    assert.equal(sanitizeRedirectUrl("/tasks"), "/tasks");
     assert.equal(sanitizeRedirectUrl("/tasks?scope=my"), "/tasks?scope=my");
-    assert.equal(sanitizeRedirectUrl("/documents"), "/documents");
+    assert.equal(sanitizeRedirectUrl("/documents/inbound"), "/documents/inbound");
     assert.equal(sanitizeRedirectUrl("/settings/profile?tab=security"), "/settings/profile?tab=security");
   });
 
-  test("blocks external protocol-relative URLs", () => {
-    assert.equal(sanitizeRedirectUrl("//evil.com"), "/tasks");
-    assert.equal(sanitizeRedirectUrl("//google.com/phishing"), "/tasks");
+  test("normalizes root, login, and auth api paths to /tasks to prevent loops", () => {
+    assert.equal(sanitizeRedirectUrl("/"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/login"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/login?error=oauth_cancelled"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/api/auth/signin"), "/tasks");
   });
 
-  test("blocks backslash bypasses", () => {
+  test("blocks protocol-relative URLs", () => {
+    assert.equal(sanitizeRedirectUrl("//evil.com"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("//attacker.com/malicious"), "/tasks");
+  });
+
+  test("blocks backslash open-redirect bypass tricks", () => {
     assert.equal(sanitizeRedirectUrl("/\\evil.com"), "/tasks");
     assert.equal(sanitizeRedirectUrl("\\evil.com"), "/tasks");
   });
 
-  test("blocks absolute URLs with schemes", () => {
+  test("blocks absolute URLs and malicious schemes", () => {
     assert.equal(sanitizeRedirectUrl("https://evil.com"), "/tasks");
     assert.equal(sanitizeRedirectUrl("http://evil.com"), "/tasks");
     assert.equal(sanitizeRedirectUrl("javascript:alert(1)"), "/tasks");
     assert.equal(sanitizeRedirectUrl("data:text/html,<script>alert(1)</script>"), "/tasks");
   });
 
-  test("blocks control characters and CRLF injection", () => {
+  test("blocks CRLF and control character injections", () => {
     assert.equal(sanitizeRedirectUrl("/path\r\nevil"), "/tasks");
     assert.equal(sanitizeRedirectUrl("/path\tfoo"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/path\0evil"), "/tasks");
   });
 
-  test("handles null, undefined, and empty string safely", () => {
+  test("handles null, undefined, empty, and whitespace-only values safely", () => {
     assert.equal(sanitizeRedirectUrl(null), "/tasks");
     assert.equal(sanitizeRedirectUrl(undefined), "/tasks");
     assert.equal(sanitizeRedirectUrl(""), "/tasks");
@@ -193,3 +245,22 @@ describe("Open Redirect Protection (OWASP A01)", () => {
   });
 });
 
+describe("Issue #6: Form Validation Fallbacks & Mock Zero-Tolerance", () => {
+  test("resolveDemoUserByRole returns undefined (no mock accounts in production codebase)", () => {
+    assert.equal(resolveDemoUserByRole("ADMIN"), undefined);
+    assert.equal(resolveDemoUserByRole("MANAGER"), undefined);
+    assert.equal(resolveDemoUserByRole("STAFF"), undefined);
+  });
+
+  test("validateLoginForm performs strict input validation", () => {
+    const emptyResult = validateLoginForm("");
+    assert.equal(emptyResult.valid, false);
+
+    const malformedResult = validateLoginForm("invalid-email");
+    assert.equal(malformedResult.valid, false);
+
+    const validResult = validateLoginForm("teacher@cdktcnqn.edu.vn");
+    assert.equal(validResult.valid, true);
+    assert.equal(validResult.user, undefined);
+  });
+});

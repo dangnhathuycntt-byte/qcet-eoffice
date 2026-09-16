@@ -15,7 +15,7 @@ export const authConfig: NextAuthConfig = {
           prompt: "select_account",
           access_type: "offline",
           response_type: "code",
-          hd: process.env.AUTH_ALLOWED_DOMAINS || "cdktcnqn.edu.vn",
+          hd: "cdktcnqn.edu.vn",
         },
       },
     }),
@@ -25,8 +25,8 @@ export const authConfig: NextAuthConfig = {
     error: "/login",
   },
   session: {
-    strategy: "jwt",
+    strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.AUTH_SECRET || process.env.JWT_SECRET || "qcet_dev_fallback_secret_key_2026_super_safe_32_chars",
+  secret: process.env.AUTH_SECRET || process.env.JWT_SECRET,
 };

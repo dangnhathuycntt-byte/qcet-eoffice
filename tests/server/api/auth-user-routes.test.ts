@@ -184,7 +184,7 @@ describe('Authentication and User API Routes Hardening', () => {
   });
 
   describe('2. POST /api/auth/register', () => {
-    test('rejects validation failure with 400 VALIDATION_ERROR', async () => {
+    test('public self-registration is permanently disabled and returns 403 Forbidden', async () => {
       const req = new Request('http://localhost:3000/api/auth/register', {
         method: 'POST',
         headers: {
@@ -192,31 +192,7 @@ describe('Authentication and User API Routes Hardening', () => {
           'X-Forwarded-For': `10.1.0.${testRunId % 200}`,
         },
         body: JSON.stringify({
-          email: 'invalid-email-format',
-          password: '123', // Too short (< 6)
-          name: 'A', // Too short (< 2)
-        }),
-      });
-
-      const res = await registerPost(req);
-      assert.strictEqual(res.status, 400);
-
-      const json = await res.json();
-      assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'VALIDATION_ERROR');
-      assert.ok(json.fieldErrors || json.error?.fieldErrors);
-    });
-
-    test('successfully registers new user with 201 and enforces CHUYEN_VIEN role unconditionally', async () => {
-      const newEmail = `reg.${testRunId}@qcet.edu.vn`;
-      const req = new Request('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Forwarded-For': `10.2.0.${testRunId % 200}`,
-        },
-        body: JSON.stringify({
-          email: newEmail,
+          email: `reg.${testRunId}@qcet.edu.vn`,
           password: 'SecurePassword123!',
           name: 'Cán Bộ Mới',
           departmentId: 'CNTT',
@@ -224,62 +200,12 @@ describe('Authentication and User API Routes Hardening', () => {
       });
 
       const res = await registerPost(req);
-      assert.strictEqual(res.status, 201);
-      assert.strictEqual(res.headers.get('cache-control'), 'private, no-store');
-
-      const json = await res.json();
-      assert.strictEqual(json.success, true);
-      assert.ok(json.user);
-      assert.strictEqual(json.user.email, newEmail);
-      // Unconditionally enforced
-      assert.strictEqual(json.user.role, 'CHUYEN_VIEN');
-      assert.strictEqual(json.user.passwordHash, undefined);
-    });
-
-    test('rejects attempt to escalate role via mass-assignment with 400 VALIDATION_ERROR', async () => {
-      const req = new Request('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Forwarded-For': `10.2.0.${testRunId % 200}`,
-        },
-        body: JSON.stringify({
-          email: `escalate.${testRunId}@qcet.edu.vn`,
-          password: 'SecurePassword123!',
-          name: 'Attacker User',
-          role: 'ADMIN',
-          departmentId: 'CNTT',
-        }),
-      });
-
-      const res = await registerPost(req);
-      assert.strictEqual(res.status, 400);
-      const json = await res.json();
-      assert.strictEqual(json.code || json.error?.code, 'VALIDATION_ERROR');
-    });
-
-    test('rejects duplicate email with 409 CONFLICT', async () => {
-      const req = new Request('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Forwarded-For': `10.3.0.${testRunId % 200}`,
-        },
-        body: JSON.stringify({
-          email: testUserEmail, // Already registered in before()
-          password: 'AnotherPassword123!',
-          name: 'Trùng Email',
-          departmentId: 'CNTT',
-        }),
-      });
-
-      const res = await registerPost(req);
-      assert.strictEqual(res.status, 409);
+      assert.strictEqual(res.status, 403);
 
       const json = await res.json();
       assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'CONFLICT');
-      assert.strictEqual(json.message || json.error?.message || json.error, 'Email này đã được đăng ký trong hệ thống');
+      assert.strictEqual(json.code || json.error?.code, 'FORBIDDEN');
+      assert.match(json.message || json.error?.message || json.error, /Đăng ký công khai đã bị vô hiệu hóa/);
     });
   });
 

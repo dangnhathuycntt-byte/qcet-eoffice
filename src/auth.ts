@@ -1,32 +1,39 @@
 import NextAuth from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  adapter: PrismaAdapter(prisma),
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
         const email = user.email?.toLowerCase().trim();
         if (!email) return false;
 
-        // 1. Verify user exists in database
+        // 1. Verify email domain belongs to cdktcnqn.edu.vn
+        if (!email.endsWith("@cdktcnqn.edu.vn")) {
+          return "/login?error=domain_not_allowed";
+        }
+
+        // 2. Verify user exists in database
         const dbUser = await prisma.user.findUnique({
           where: { email },
           include: { accounts: true },
         });
 
-        // 2. Reject non-existing users (do not auto-create accounts with business permissions)
+        // 3. Reject non-existing users (do not auto-create accounts or elevate privileges)
         if (!dbUser) {
           return "/login?error=account_not_found";
         }
 
-        // 3. Reject deactivated users
+        // 4. Reject deactivated users
         if (!dbUser.isActive) {
           return "/login?error=account_disabled";
         }
 
-        // 4. Link Google account if not yet linked
+        // 5. Link Google account if not yet linked
         const isLinked = dbUser.accounts.some(
           (acc) => acc.provider === "google" && acc.providerAccountId === account.providerAccountId
         );
@@ -48,7 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
         }
 
-        // 5. Update avatar if user doesn't have one
+        // 6. Update avatar if user doesn't have one
         if (!dbUser.avatarUrl && profile?.picture) {
           await prisma.user.update({
             where: { id: dbUser.id },
@@ -61,43 +68,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return false;
     },
 
-    async jwt({ token, user }) {
-      if (token?.email) {
-        const email = (token.email as string).toLowerCase().trim();
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              role: true,
-              departmentId: true,
-              title: true,
-              isActive: true,
-            },
-          });
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role;
-            token.departmentId = dbUser.departmentId;
-            token.title = dbUser.title;
-            token.isActive = dbUser.isActive;
-          }
-        } catch {
-          // Gracefully fallback
-        }
-      }
-      return token;
-    },
-
-    async session({ session, token }) {
+    async session({ session, user, token }: any) {
       if (session.user) {
-        session.user.id = (token.id as string) || session.user.id;
-        (session.user as any).role = token.role;
-        (session.user as any).departmentId = token.departmentId;
-        (session.user as any).title = token.title;
-        (session.user as any).isActive = token.isActive;
+        const source = user || token;
+        if (source) {
+          session.user.id = source.id || (source.sub as string) || session.user.id;
+          (session.user as any).role = source.role;
+          (session.user as any).departmentId = source.departmentId;
+          (session.user as any).title = source.title;
+          (session.user as any).isActive = source.isActive;
+        }
       }
       return session;
     },

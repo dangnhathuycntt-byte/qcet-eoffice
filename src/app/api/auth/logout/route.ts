@@ -50,6 +50,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
         Pragma: "no-cache",
         Expires: "0",
+        "Clear-Site-Data": '"cache"',
       },
     }
   );

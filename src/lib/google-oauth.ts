@@ -76,7 +76,8 @@ export function getAppBaseUrl(req?: Request): string {
     return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
   }
 
-  return "http://localhost:3000";
+  const port = process.env.PORT || "3001";
+  return `http://localhost:${port}`;
 }
 
 /**

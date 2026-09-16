@@ -200,15 +200,15 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
     assert.strictEqual(sessionCookie, undefined, "Session cookie must not be issued for disabled accounts");
   });
 
-  test("5. Callback with new valid user: auto-provisions user, sets 30-day qcet_session cookie, deletes state cookie, and redirects to /", async () => {
-    const validState = "state-new-user-e2e-test";
+  test("5. Callback with unlisted user: enforces closed admission, rejects with account_not_found, and does not auto-provision", async () => {
+    const validState = "state-unlisted-user-e2e-test";
 
     globalThis.fetch = async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("oauth2.googleapis.com/token")) {
         return new Response(
           JSON.stringify({
-            access_token: "mock-new-access-token",
+            access_token: "mock-unlisted-access-token",
             token_type: "Bearer",
             expires_in: 3600,
           }),
@@ -218,11 +218,11 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
       if (url.includes("googleapis.com/oauth2/v3/userinfo")) {
         return new Response(
           JSON.stringify({
-            sub: "google-new-staff-sub",
-            email: "tan.giangvien@cdktcnqn.edu.vn",
+            sub: "google-unlisted-staff-sub",
+            email: "unlisted.staff@cdktcnqn.edu.vn",
             email_verified: true,
-            name: "Tân Giảng Viên",
-            picture: "https://lh3.googleusercontent.com/a/new-staff-photo",
+            name: "Cán Bộ Chưa Đăng Ký",
+            picture: "https://lh3.googleusercontent.com/a/unlisted-staff-photo",
             hd: "cdktcnqn.edu.vn",
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
@@ -231,7 +231,7 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
       return new Response("Not Found", { status: 404 });
     };
 
-    let createdUserPayload: any;
+    let userCreateCalled = false;
 
     prisma.$transaction = (async (callback: any) => {
       const txMock = {
@@ -240,25 +240,16 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
         },
         user: {
           findUnique: async () => null,
-          create: async ({ data }: any) => {
-            createdUserPayload = data;
-            return {
-              id: "new-user-e2e-id-123",
-              email: data.email,
-              name: data.name,
-              role: data.role,
-              departmentId: null,
-              title: data.title,
-              isActive: true,
-              avatarUrl: data.avatarUrl,
-            };
+          create: async () => {
+            userCreateCalled = true;
+            throw new Error("PROVISIONING_DISALLOWED");
           },
         },
       };
       return callback(txMock);
     }) as any;
 
-    const req = new NextRequest(`http://localhost:3001/api/auth/callback/google?state=${validState}&code=new_staff_code`, {
+    const req = new NextRequest(`http://localhost:3001/api/auth/callback/google?state=${validState}&code=unlisted_staff_code`, {
       headers: {
         cookie: `qcet_oauth_state=${validState}`,
       },
@@ -266,36 +257,19 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(res.headers.get("location"), "http://localhost:3001/tasks");
+    const location = res.headers.get("location");
+    assert.ok(location?.includes("/login?error=account_not_found"));
+    assert.strictEqual(userCreateCalled, false, "Auto-provisioning user.create must not be called for unlisted user");
 
-    // Verify DB provisioning
-    assert.ok(createdUserPayload, "New user must be created in DB transaction");
-    assert.strictEqual(createdUserPayload.email, "tan.giangvien@cdktcnqn.edu.vn");
-    assert.strictEqual(createdUserPayload.name, "Tân Giảng Viên");
-    assert.strictEqual(createdUserPayload.role, "CHUYEN_VIEN");
-    assert.strictEqual(createdUserPayload.provider, "google");
-    assert.strictEqual(createdUserPayload.isActive, true);
-    assert.strictEqual(createdUserPayload.onboardedAt, null);
-    assert.strictEqual(createdUserPayload.accounts.create.providerAccountId, "google-new-staff-sub");
-
-    // Verify session cookie
+    // Verify session cookie is NOT set
     const sessionCookie = res.cookies.get(SESSION_COOKIE_NAME);
-    assert.ok(sessionCookie, "qcet_session cookie must be set");
-    assert.strictEqual(sessionCookie.maxAge, 30 * 24 * 60 * 60, "Session cookie maxAge must be 30 days (2592000s)");
-    assert.strictEqual(sessionCookie.httpOnly, true, "Session cookie must be httpOnly");
-    assert.strictEqual(sessionCookie.sameSite, "lax", "Session cookie sameSite must be lax");
-    assert.strictEqual(sessionCookie.path, "/", "Session cookie path must be /");
-
-    const decodedSession = verifySessionToken(sessionCookie.value);
-    assert.strictEqual(decodedSession?.email, "tan.giangvien@cdktcnqn.edu.vn");
-    assert.strictEqual(decodedSession?.role, "CHUYEN_VIEN");
-    assert.strictEqual(decodedSession?.name, "Tân Giảng Viên");
+    assert.strictEqual(sessionCookie, undefined, "Session cookie must not be set for unlisted user");
 
     // Verify state cookie deleted
     const stateCookie = res.cookies.get("qcet_oauth_state");
     assert.ok(
       !stateCookie || stateCookie.value === "" || stateCookie.maxAge === 0,
-      "State cookie must be cleared on successful callback"
+      "State cookie must be cleared"
     );
   });
 

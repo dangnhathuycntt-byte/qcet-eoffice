@@ -10,11 +10,15 @@ import {
 } from "../src/lib/storage";
 import { GET } from "../src/app/api/documents/download/route";
 import { signSessionToken } from "../src/lib/jwt-session";
+import { prisma } from "../src/lib/prisma";
 
 const TEST_UPLOADS_DIR = path.resolve("./test_storage_sandbox");
 
 describe("File Storage & Streaming Security Unit Tests", () => {
-  before(() => {
+  let testUserId = "";
+  let sessionToken = "";
+
+  before(async () => {
     process.env.UPLOADS_DIR = TEST_UPLOADS_DIR;
     fs.mkdirSync(path.join(TEST_UPLOADS_DIR, "docs/subfolder"), { recursive: true });
     fs.writeFileSync(
@@ -25,10 +29,33 @@ describe("File Storage & Streaming Security Unit Tests", () => {
       path.join(TEST_UPLOADS_DIR, "docs/report.pdf"),
       "%PDF-1.4 sample content"
     );
+
+    // Create a real active user in DB for session resolution
+    const user = await prisma.user.create({
+      data: {
+        email: `file_stream_test_${Date.now()}@cdktcnqn.edu.vn`,
+        name: "Cán Bộ Thử Nghiệm Tệp",
+        role: "CHUYEN_VIEN",
+        isActive: true,
+      },
+    });
+    testUserId = user.id;
+
+    sessionToken = signSessionToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
   });
 
-  after(() => {
+  after(async () => {
     fs.rmSync(TEST_UPLOADS_DIR, { recursive: true, force: true });
+    if (testUserId) {
+      await prisma.user.deleteMany({
+        where: { id: testUserId },
+      });
+    }
   });
 
   describe("resolveSafeFilePath", () => {
@@ -91,13 +118,6 @@ describe("File Storage & Streaming Security Unit Tests", () => {
   });
 
   describe("GET /api/documents/download", () => {
-    const sessionToken = signSessionToken({
-      id: "test-user-id",
-      email: "test@cdktcnqn.edu.vn",
-      name: "Test User",
-      role: "CHUYEN_VIEN",
-    });
-
     it("should return 401 when unauthenticated", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/report.pdf");
       const res = await GET(req);

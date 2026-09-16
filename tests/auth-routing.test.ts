@@ -1,11 +1,27 @@
-import { test, describe } from "node:test";
+import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
+
+const TEST_SECRET = "test-secret-key-for-authjs-v5-validation-32chars";
+process.env.AUTH_SECRET = TEST_SECRET;
+process.env.JWT_SECRET = TEST_SECRET;
+
 import { middleware } from "../src/middleware";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { sanitizeRedirectUrl } from "../src/lib/login-helpers";
 
 describe("QCET Authentication Routing & Middleware Invariants", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.AUTH_SECRET = TEST_SECRET;
+    process.env.JWT_SECRET = TEST_SECRET;
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   const validToken = signSessionToken({
     id: "user-test-123",
     email: "test@cdktcnqn.edu.vn",

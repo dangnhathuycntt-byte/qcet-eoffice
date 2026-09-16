@@ -8,6 +8,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { signOut } from "next-auth/react";
 import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "../types/auth";
 import { purgeUserOfflineData } from "./pwa/offline-store";
 
@@ -381,88 +382,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyResolution]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
-      try {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          const errorMsg =
-            data.error?.message ||
-            (typeof data.error === "string" ? data.error : data.message) ||
-            "Email hoặc mật khẩu không chính xác";
-          return {
-            success: false,
-            error: errorMsg,
-          };
-        }
-
-        const authenticatedUser = mapDbUserToAuthUser(data.user);
-        setAuthState({ status: "authenticated", user: authenticatedUser });
-        setUser(authenticatedUser);
-        setIsAuthenticated(true);
-        setIsOfflineReadOnly(false);
-        setCanMutate(true);
-
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
-          } catch {
-            // ignore
-          }
-        }
-
-        return { success: true, user: authenticatedUser };
-      } catch (error) {
-        console.error("Login request failed:", error);
-        return {
-          success: false,
-          error: "Không thể kết nối đến máy chủ xác thực",
-        };
-      }
+    async (_email: string, _password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
+      return {
+        success: false,
+        error: "Đăng nhập bằng mật khẩu đã bị vô hiệu hóa. Vui lòng sử dụng tài khoản Google Nhà trường (@cdktcnqn.edu.vn).",
+      };
     },
     []
   );
 
   const register = useCallback(
-    async (data: RegisterPayload): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
-      try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        const result = await res.json();
-        if (!res.ok || !result.success) {
-          const errorMsg =
-            result.error?.message ||
-            (typeof result.error === "string" ? result.error : result.message) ||
-            "Không thể tạo tài khoản mới";
-          return {
-            success: false,
-            error: errorMsg,
-          };
-        }
-
-        const createdUser = mapDbUserToAuthUser(result.user);
-        setAuthState({ status: "authenticated", user: createdUser });
-        setUser(createdUser);
-        setIsAuthenticated(true);
-        setIsOfflineReadOnly(false);
-        setCanMutate(true);
-        return { success: true, user: createdUser };
-      } catch (error) {
-        console.error("Register request failed:", error);
-        return {
-          success: false,
-          error: "Không thể kết nối đến máy chủ xác thực",
-        };
-      }
+    async (_data: RegisterPayload): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
+      return {
+        success: false,
+        error: "Đăng ký tài khoản công khai đã bị vô hiệu hóa. Vui lòng liên hệ Quản trị viên để được cấp tài khoản.",
+      };
     },
     []
   );
@@ -486,16 +420,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 1. Clear local storage immediately
+    // 1. Clear all local storage auth keys immediately
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem(REGISTERED_USERS_KEY);
+        localStorage.removeItem(UNASSIGNED_DEPT_PROMPT_KEY);
+        localStorage.removeItem(UNASSIGNED_DEPT_DISMISSED_KEY);
       } catch {
         // ignore
       }
     }
 
-    // 2. Call server logout with keepalive: true and await response
+    // 2. Call server logout with keepalive: true to clear session cookies
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -523,9 +460,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsOfflineReadOnly(false);
     setCanMutate(false);
 
-    // 5. Navigate cleanly to /login with hard replace
-    if (typeof window !== "undefined") {
-      window.location.replace("/login");
+    // 5. Sign out via NextAuth / Auth.js with hard redirect fallback
+    try {
+      await signOut({ callbackUrl: "/login" });
+    } catch {
+      if (typeof window !== "undefined") {
+        window.location.replace("/login");
+      }
     }
   }, [user?.id]);
 

@@ -10,10 +10,10 @@ export { SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_
 export type { SessionPayload };
 
 export function getEdgeJwtSecret(): string {
-  const secret =
-    process.env.AUTH_SECRET ||
-    process.env.JWT_SECRET ||
-    "qcet_dev_fallback_secret_key_2026_super_safe_32_chars";
+  const secret = process.env.AUTH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("AUTH_SECRET or JWT_SECRET environment variable is required");
+  }
   return secret;
 }
 
