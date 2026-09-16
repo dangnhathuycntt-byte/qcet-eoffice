@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  CheckCircle2,
   Clock,
   AlertCircle,
   TrendingUp,
@@ -12,8 +11,13 @@ import {
   Check,
   X,
   ChevronDown,
-  Shield,
   Layers,
+  Calendar,
+  Sparkles,
+  Paperclip,
+  Plus,
+  ExternalLink,
+  FolderOpen,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -26,6 +30,7 @@ export interface TaskIdentityBlockProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onTitleChange?: (taskId: string, newTitle: string) => Promise<void> | void;
+  onAddDeliverable?: () => void;
   className?: string;
 }
 
@@ -74,12 +79,24 @@ const STATUS_OPTIONS: Array<{
   },
 ];
 
+const PRIORITY_OPTIONS: Array<{
+  value: TaskPriority;
+  label: string;
+  colorClass: string;
+}> = [
+  { value: "URGENT", label: "Khẩn cấp", colorClass: "text-rose-700 bg-rose-50 border-rose-200" },
+  { value: "HIGH", label: "Cao", colorClass: "text-amber-700 bg-amber-50 border-amber-200" },
+  { value: "NORMAL", label: "Bình thường", colorClass: "text-blue-700 bg-blue-50 border-blue-200" },
+  { value: "LOW", label: "Thấp", colorClass: "text-muted-foreground bg-muted border-border/70" },
+];
+
 export function TaskIdentityBlock({
   task,
   canEdit = true,
   onStatusChange,
   onPriorityChange,
   onTitleChange,
+  onAddDeliverable,
   className,
 }: TaskIdentityBlockProps) {
   const isSchool = isSchoolTask(task);
@@ -101,18 +118,15 @@ export function TaskIdentityBlock({
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
 
-  const currentProgressPercent =
-    typeof (task as any).progressPercent === "number"
-      ? (task as any).progressPercent
-      : isSchool
-      ? schoolTask?.progress ?? 0
-      : 0;
-
   const dueInfo = computeDueStatus(task.dueDate);
 
   // Status popover state
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = React.useState(false);
   const statusMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Priority popover state
+  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = React.useState(false);
+  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Title inline editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -150,33 +164,41 @@ export function TaskIdentityBlock({
   const currentStatusObj =
     STATUS_OPTIONS.find((s) => s.value === task.status) || STATUS_OPTIONS[0];
 
-  // Close status dropdown on click outside
+  const currentPriorityVal = (task as any).priority === "MEDIUM" ? "NORMAL" : (task as any).priority || "NORMAL";
+  const currentPriorityObj =
+    PRIORITY_OPTIONS.find((p) => p.value === currentPriorityVal) || PRIORITY_OPTIONS[2];
+
+  // Close dropdowns on click outside
   React.useEffect(() => {
-    if (!isStatusDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
         setIsStatusDropdownOpen(false);
       }
+      if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
+        setIsPriorityDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isStatusDropdownOpen]);
+  }, []);
 
   return (
-    <section data-slot="task-identity-block" className={cn("space-y-3.5", className)}>
-      {/* 1. Identifier & Scope Tag */}
+    <section data-slot="task-identity-block" className={cn("space-y-4", className)}>
+      {/* 1. Linear-style Identifier & Scope */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium flex-wrap">
+        {isSchool ? (
+          <Layers className="size-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
+        ) : (
+          <FolderOpen className="size-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
+        )}
         <span className="font-mono font-semibold text-foreground bg-muted px-2 py-0.5 rounded-md text-xs tracking-tight">
           {taskCode}
         </span>
-        <span className="text-muted-foreground/50 select-none">•</span>
-        <span className="inline-flex items-center gap-1 text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-md text-xs font-medium">
-          <Layers className="size-3" strokeWidth={1.5} />
-          {scopeLabel}
-        </span>
+        <span className="text-muted-foreground/40 select-none">•</span>
+        <span className="text-muted-foreground">{scopeLabel}</span>
       </div>
 
-      {/* 2. Main Title (Full readability ~60-80ch, no truncation, wrap naturally, inline edit) */}
+      {/* 2. Main Title (Linear-style large readable heading, wrap 60-80ch, inline edit) */}
       <div className="group/title relative max-w-4xl">
         {isEditingTitle && canEdit ? (
           <div className="space-y-2">
@@ -194,14 +216,14 @@ export function TaskIdentityBlock({
                 }
               }}
               rows={2}
-              className="w-full text-xl sm:text-2xl font-bold tracking-tight text-foreground bg-background p-2 rounded-lg border-2 border-primary focus:outline-hidden resize-none leading-snug"
+              className="w-full text-2xl sm:text-3xl font-bold tracking-tight text-foreground bg-background p-2 rounded-lg border-2 border-primary focus:outline-hidden resize-none leading-snug"
               aria-label="Chỉnh sửa tên nhiệm vụ"
             />
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={handleSaveTitle}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-2xs"
               >
                 <Check className="size-3.5" strokeWidth={1.5} />
                 <span>Lưu (Enter)</span>
@@ -223,7 +245,7 @@ export function TaskIdentityBlock({
                 if (canEdit) setIsEditingTitle(true);
               }}
               className={cn(
-                "text-xl sm:text-2xl md:text-[26px] font-bold tracking-tight text-foreground leading-snug break-words",
+                "text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-snug break-words",
                 canEdit && "cursor-pointer hover:text-primary transition-colors rounded-sm"
               )}
               title={canEdit ? "Nhấp để đổi tên nhiệm vụ" : undefined}
@@ -234,7 +256,7 @@ export function TaskIdentityBlock({
               <button
                 type="button"
                 onClick={() => setIsEditingTitle(true)}
-                className="opacity-0 group-hover/title:opacity-100 p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-all cursor-pointer mt-1 shrink-0"
+                className="opacity-0 group-hover/title:opacity-100 p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-all cursor-pointer mt-1.5 shrink-0"
                 title="Sửa tên nhiệm vụ"
                 aria-label="Sửa tên nhiệm vụ"
               >
@@ -245,9 +267,11 @@ export function TaskIdentityBlock({
         )}
       </div>
 
-      {/* 3. Pinned Status, Progress, and Due Badge Row (Linear-inspired quick scan) */}
-      <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        {/* Status Dropdown/Badge */}
+      {/* 3. Linear-style Inline Properties Row (Properties: Status · Priority · Lead · Dates · Department) */}
+      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
+        <span className="text-muted-foreground font-medium mr-1 select-none">Thuộc tính:</span>
+
+        {/* Status Pill */}
         <div className="relative" ref={statusMenuRef}>
           <button
             type="button"
@@ -258,12 +282,11 @@ export function TaskIdentityBlock({
             className={cn(
               "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all shadow-2xs",
               currentStatusObj.colorClass,
-              canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default opacity-90"
+              canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
             )}
             aria-label={`Trạng thái: ${currentStatusObj.label}`}
-            aria-expanded={isStatusDropdownOpen}
           >
-            <span className={cn("size-2 rounded-full", currentStatusObj.dotClass)} aria-hidden="true" />
+            <span className={cn("size-2 rounded-full", currentStatusObj.dotClass)} />
             <span>{currentStatusObj.label}</span>
             {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
           </button>
@@ -303,54 +326,94 @@ export function TaskIdentityBlock({
           )}
         </div>
 
-        {/* Progress Badge */}
-        <div
-          className={cn(
-            "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold font-mono tabular-nums shadow-2xs",
-            currentProgressPercent === 100
-              ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-              : "text-foreground bg-muted/60 border-border/60"
+        {/* Priority Pill */}
+        <div className="relative" ref={priorityMenuRef}>
+          <button
+            type="button"
+            onClick={() => {
+              if (canEdit) setIsPriorityDropdownOpen((prev) => !prev);
+            }}
+            disabled={!canEdit}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all shadow-2xs",
+              currentPriorityObj.colorClass,
+              canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
+            )}
+          >
+            <AlertCircle className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+            <span>{currentPriorityObj.label}</span>
+            {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
+          </button>
+
+          {isPriorityDropdownOpen && canEdit && (
+            <div
+              role="menu"
+              className="absolute left-0 top-full mt-1.5 w-40 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+            >
+              {PRIORITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsPriorityDropdownOpen(false);
+                    if (opt.value !== currentPriorityVal && onPriorityChange) {
+                      onPriorityChange(task.id, opt.value as TaskPriority);
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                    currentPriorityVal === opt.value
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-foreground hover:bg-muted font-medium"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {currentPriorityVal === opt.value && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
+                </button>
+              ))}
+            </div>
           )}
-          title={`Tiến độ hiện tại: ${currentProgressPercent}%`}
-        >
-          <TrendingUp className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
-          <span>{currentProgressPercent}%</span>
         </div>
 
-        {/* Due Date & Overdue Indicator */}
+        {/* Lead Assignee */}
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 bg-muted/40 text-xs font-medium text-foreground">
+          <User className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+          <span>{leadName}</span>
+        </div>
+
+        {/* Due Date */}
         <div
           className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium shadow-2xs",
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium",
             dueInfo.isOverdue
               ? "text-rose-700 bg-rose-50 border-rose-200 font-semibold"
               : "text-muted-foreground bg-muted/40 border-border/60"
           )}
           title={task.dueDate ? `Hạn: ${formatDetailDate(task.dueDate)}` : "Chưa có hạn"}
         >
-          {dueInfo.isOverdue ? (
-            <AlertCircle className="size-3 text-rose-600 shrink-0" strokeWidth={1.5} />
-          ) : (
-            <Clock className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
-          )}
+          <Calendar className="size-3.5" strokeWidth={1.5} />
           <span>{dueInfo.text}</span>
         </div>
-      </div>
 
-      {/* 4. Sub-metadata line: Assignee & Department */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 flex-wrap">
-        <div className="flex items-center gap-1.5 font-medium text-foreground">
-          <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px]">
-            {leadName.charAt(0).toUpperCase()}
-          </div>
-          <span>{leadName}</span>
-        </div>
-
-        <span className="text-muted-foreground/40 select-none">•</span>
-
-        <div className="flex items-center gap-1 text-muted-foreground">
+        {/* Department */}
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
           <Building2 className="size-3.5" strokeWidth={1.5} />
           <span>{departmentName}</span>
         </div>
+      </div>
+
+      {/* 4. Linear-style Resources Row (Resources: + Add document or link...) */}
+      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
+        <span className="text-muted-foreground font-medium mr-1 select-none">Tài liệu:</span>
+        <button
+          type="button"
+          onClick={onAddDeliverable}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors cursor-pointer py-0.5 px-1.5 rounded-md hover:bg-muted"
+        >
+          <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
+          <span>Thêm tài liệu hoặc liên kết minh chứng...</span>
+        </button>
       </div>
     </section>
   );
