@@ -420,7 +420,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const isMobile = useIsMobile();
 
   const [isOpen, setIsOpen] = React.useState(false);
@@ -458,6 +458,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
 
   // Silent URL guard: non-executive users accessing school scope must be redirected
   React.useEffect(() => {
+    if (isLoading || !user) return;
     const norm = (scopeParam || "").trim().toLowerCase();
     if ((norm === "school" || norm === "school_tasks") && !isExecutive) {
       const fallbackScope: ScopeType = isManager ? "unit" : "my";
@@ -473,6 +474,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
       router.replace(newUrl);
     }
   }, [
+    isLoading,
     scopeParam,
     isExecutive,
     isManager,

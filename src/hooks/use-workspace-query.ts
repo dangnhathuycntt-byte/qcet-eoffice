@@ -165,7 +165,6 @@ export function useWorkspaceQuery(
           window.history.pushState(null, "", targetUrl);
         }
         window.dispatchEvent(new Event("popstate"));
-        setPopstateCount((c) => c + 1);
         return;
       }
 

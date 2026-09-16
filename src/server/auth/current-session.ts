@@ -36,6 +36,8 @@ const VALID_COOKIE_NAMES = [
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
+  'next-auth.session-token',
+  '__Secure-next-auth.session-token',
 ];
 
 /**

@@ -33,11 +33,11 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
       await revokeSession(token);
     }
     const session = await getSessionFromRequest(req as any);
-    if (session?.id) {
-      const sessionId = (session as any).sessionId || (session as any).jti || `session_${session.id}`;
-      await revokeSession(sessionId);
-      await revokeSession(session.id);
-      await revokeSession(`session_${session.id}`);
+    if (session) {
+      const sessionId = (session as any).sessionId || (session as any).jti;
+      if (sessionId && sessionId !== session.id && sessionId !== `session_${session.id}`) {
+        await revokeSession(sessionId);
+      }
     }
   } catch {
     // Gracefully continue on error

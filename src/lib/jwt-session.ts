@@ -28,10 +28,17 @@ export interface SessionPayload {
   departmentId?: string | null;
   title?: string | null;
   isActive?: boolean;
+  sessionId?: string;
+  jti?: string;
 }
 
 export function signSessionToken(payload: SessionPayload): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: "30d" });
+  const sessionId = payload.sessionId || payload.jti || `sess_${crypto.randomUUID()}`;
+  return jwt.sign(
+    { ...payload, sessionId, jti: sessionId },
+    getJwtSecret(),
+    { expiresIn: "30d" }
+  );
 }
 
 export function verifySessionToken(token: string): SessionPayload | null {
