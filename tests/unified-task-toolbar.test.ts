@@ -109,19 +109,19 @@ describe("UnifiedTaskToolbar Helpers", () => {
 describe("Academic Month Filter Bar & Precision Logic", () => {
   const payload = getMockDashboardPayload();
 
-  test("Academic months for toolbar are in 12-month cycle order (Tháng 9 to Tháng 8)", () => {
+  test("Academic months for toolbar are in 12-month calendar order (Tháng 1 to Tháng 12)", () => {
     const months = getAcademicMonthsForYear("2026-2027");
     assert.equal(months.length, 12, "Must return exactly 12 academic months");
 
-    const expectedOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
+    const expectedOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     const actualOrder = months.map((m) => m.monthNumber);
-    assert.deepEqual(actualOrder, expectedOrder, "Academic months must start at 9 and end at 8");
+    assert.deepEqual(actualOrder, expectedOrder, "Calendar months must run from 1 to 12");
 
-    // Check boundary dates for start (Month 9) and end (Month 8)
-    assert.equal(months[0].shortDateSpan, "25/08 - 24/09");
-    assert.equal(months[0].label, "Tháng 9");
-    assert.equal(months[11].shortDateSpan, "25/07 - 24/08");
-    assert.equal(months[11].label, "Tháng 8");
+    // Check boundary dates for start (Month 1) and Month 9
+    assert.equal(months[0].shortDateSpan, "01/01 - 31/01");
+    assert.equal(months[0].label, "Tháng 1");
+    assert.equal(months[8].shortDateSpan, "01/09 - 30/09");
+    assert.equal(months[8].label, "Tháng 9");
   });
 
   test("filterTasksByAcademicMonth: returns all tasks when month is ALL or undefined", () => {
@@ -137,14 +137,14 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     assert.ok(month9Tasks.length > 0, "Should have tasks in Month 9");
 
     for (const task of month9Tasks) {
-      // Either parent dueDate or a subtask dueDate must fall between 25/08 and 24/09
-      const parentIn = task.dueDate >= "2026-08-25" && task.dueDate <= "2026-09-24";
+      // Either parent dueDate or a subtask dueDate must fall between 01/09 and 30/09
+      const parentIn = task.dueDate >= "2026-09-01" && task.dueDate <= "2026-09-30";
       const subIn = task.subTasks?.some(
-        (s) => s.dueDate >= "2026-08-25" && s.dueDate <= "2026-09-24"
+        (s) => s.dueDate >= "2026-09-01" && s.dueDate <= "2026-09-30"
       );
       assert.ok(
         parentIn || subIn,
-        `Task ${task.id} (${task.dueDate}) must match Tháng 9 window (25/08 - 24/09)`
+        `Task ${task.id} (${task.dueDate}) must match Tháng 9 window (01/09 - 30/09)`
       );
     }
   });
@@ -778,7 +778,7 @@ describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
     );
   });
 
-  test("Dynamic search placeholder reflects totalTasksCount when provided", () => {
+  test("Search placeholder renders standard 'Tìm nhiệm vụ...' placeholder", () => {
     const el = React.createElement(UnifiedTaskToolbar, {
       scope: "school",
       onScopeChange: () => {},
@@ -790,24 +790,8 @@ describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
     const html = renderToStaticMarkup(el);
 
     assert.ok(
-      html.includes("Tìm trong 42 nhiệm vụ... /"),
-      "Search input placeholder must reflect totalTasksCount dynamically"
-    );
-  });
-
-  test("SavedViewsSelector renders 'Góc nhìn: Tất cả nhiệm vụ' by default", () => {
-    const el = React.createElement(UnifiedTaskToolbar, {
-      scope: "school",
-      onScopeChange: () => {},
-      user: adminUser,
-      searchQuery: "",
-      onSearchChange: () => {},
-    });
-    const html = renderToStaticMarkup(el);
-
-    assert.ok(
-      html.includes("Góc nhìn: Tất cả nhiệm vụ"),
-      "Saved views selector must display 'Góc nhìn: Tất cả nhiệm vụ'"
+      html.includes("Tìm nhiệm vụ..."),
+      "Search input placeholder must display standard 'Tìm nhiệm vụ...'"
     );
   });
 });

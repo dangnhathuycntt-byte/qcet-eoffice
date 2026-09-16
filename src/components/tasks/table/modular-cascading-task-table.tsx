@@ -1137,10 +1137,10 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
-          {/* Desktop Table View (>= 768px) - Flush on canvas */}
-          <div className="hidden md:block overflow-hidden border-t border-border/40 bg-transparent">
-            <div className="overflow-x-auto thin-scrollbar">
-              <table className="w-full text-left border-collapse">
+          {/* Desktop Table View (>= 768px) - Linear Soft Rounded Rows */}
+          <div className="hidden md:block overflow-hidden bg-transparent">
+            <div className="overflow-x-auto thin-scrollbar px-0.5 sm:px-1">
+              <table className="w-full text-left border-separate border-spacing-y-[1.5px]">
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
                   indeterminate={tableState.someVisibleSelected}
@@ -1168,7 +1168,7 @@ export function ModularCascadingTaskTable({
                   }}
                   hasTasks={paginatedResult.items.length > 0}
                 />
-                <tbody className="divide-y divide-border/40">
+                <tbody>
                   {paginatedResult.items.map((task, index) => {
                     const isExpanded = tableState.isExpanded(task.id);
                     const isSelected = tableState.isSelected(task.id);

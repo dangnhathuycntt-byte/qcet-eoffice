@@ -119,7 +119,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.95 0.005 250)",
   },
   NOT_STARTED: {
-    label: "Mới",
+    label: "Chưa bắt đầu",
     className: "border-zinc-300 bg-zinc-100 text-zinc-600",
     variant: "outline",
     oklchColor: "oklch(0.55 0.01 250)",

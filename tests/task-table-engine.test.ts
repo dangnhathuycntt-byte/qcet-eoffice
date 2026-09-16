@@ -71,8 +71,8 @@ describe("Task Table Engine - Foundations & Utilities", () => {
       }
     });
 
-    it("provides default page sizes including 10, 20, 50", () => {
-      assert.deepEqual(DEFAULT_PAGE_SIZES, [10, 20, 50, 100]);
+    it("provides default page sizes including 20, 50, 100", () => {
+      assert.deepEqual(DEFAULT_PAGE_SIZES, [20, 50, 100]);
     });
 
     it("has 7 smart filter tabs with valid labels", () => {

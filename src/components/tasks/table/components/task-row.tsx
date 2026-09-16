@@ -365,6 +365,7 @@ export const TaskRow = React.memo(function TaskRow({
   const paddingClass = "py-2 px-2.5";
   const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
+  const tdBaseClass = "first:rounded-l-lg last:rounded-r-lg transition-colors";
 
   return (
     <tr
@@ -377,14 +378,14 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-colors border-b border-border/40 select-none bg-transparent text-slate-900 dark:text-zinc-100",
+        "group cursor-pointer transition-all select-none bg-transparent text-slate-900 dark:text-zinc-100",
         rowHeightClass,
-        // State 1: Hovered
-        "hover:bg-muted/40 dark:hover:bg-zinc-800/40",
+        // State 1: Hovered (Linear soft rounded row)
+        "hover:bg-muted/50 dark:hover:bg-zinc-800/50",
         // State 2: Focused (WCAG 2.2 AA Focus visible)
         "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
-        // State 3: Selected (Linear Highlight)
-        isSelected && "bg-primary/[0.08] dark:bg-primary/[0.14] border-l-2 border-l-primary",
+        // State 3: Selected (Linear Soft Rounded Highlight)
+        isSelected && "bg-primary/[0.08] dark:bg-primary/[0.14]",
         // State 4: Previewing (Peek preview)
         isPreviewing && "bg-blue-50/70 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
@@ -394,7 +395,7 @@ export const TaskRow = React.memo(function TaskRow({
       )}
     >
       {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
-      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass)}>
+      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, tdBaseClass)}>
         <div className="flex items-center gap-1.5">
           {/* Linear Integrated Leading Selector: Large hit area (~32px) for effortless clicking */}
           <div
@@ -472,7 +473,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 3. Tình trạng / Trạng thái (Status / Health) */}
-      <td className={cn("w-28 min-w-[100px] align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-28 min-w-[100px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
         <HealthIndicator
           status={task.status}
           isOverdue={Boolean(slaStatus.isOverdue)}
@@ -482,13 +483,13 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 4. Độ ưu tiên (Priority - Tùy chọn hiển thị) */}
       {visibleColumns.priority !== false && (
-        <td className={cn("w-20 min-w-[72px] align-middle whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-20 min-w-[72px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
           <PriorityIndicator priority={task.priority} />
         </td>
       )}
 
       {/* 5. Người / Đơn vị phụ trách (Lead Assignee / Department) */}
-      <td className={cn("w-44 lg:w-52 min-w-[160px] align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-44 lg:w-52 min-w-[160px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
         <div
           className="flex flex-col min-w-0 justify-center"
           title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
@@ -525,7 +526,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 6. Hạn hoàn thành & Quá hạn (Target date & SLA Overdue text/badge) */}
-      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
         <div className="flex flex-col gap-0.5">
           <span
             className={cn(
@@ -554,7 +555,7 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 7. Đầu việc con (Subtasks count - T��y chọn hiển thị) */}
       {visibleColumns.subtasks !== false && (
-        <td className={cn("w-20 min-w-[70px] align-middle text-center whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-20 min-w-[70px] align-middle text-center whitespace-nowrap", paddingClass, tdBaseClass)}>
           {hasSubtasks ? (
             <span
               className="rounded bg-muted/80 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground"
@@ -570,14 +571,14 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 8. Tiến độ (Progress % - Tùy chọn hiển thị) */}
       {visibleColumns.progress !== false && (
-        <td className={cn("w-24 min-w-[92px] align-middle whitespace-nowrap", paddingClass)}>
+        <td className={cn("w-24 min-w-[92px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
           <CircularProgressRing percent={task.progressPercent || 0} />
         </td>
       )}
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td
-        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap", paddingClass)}
+        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, tdBaseClass)}
         onClick={(e) => e.stopPropagation()}
       >
         <button
