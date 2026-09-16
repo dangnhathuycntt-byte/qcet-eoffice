@@ -395,22 +395,20 @@ export const TaskRow = React.memo(function TaskRow({
     >
       {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
       <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass)}>
-        <div className="flex items-center gap-2">
-          {/* Linear Integrated Leading Selector (Icon/Chevron by default, Checkbox on Hover/Selected) */}
+        <div className="flex items-center gap-1.5">
+          {/* Linear Integrated Leading Selector: Large hit area (~32px) for effortless clicking */}
           <div
-            className="size-5 shrink-0 flex items-center justify-center relative select-none"
-            onClick={(e) => e.stopPropagation()}
+            className="size-7 sm:size-8 -my-2 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector"
+            onClick={handleCheckboxClick}
+            title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
           >
             {isSelected ? (
-              <button
-                type="button"
-                onClick={handleCheckboxClick}
-                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-2xs hover:opacity-90 transition-all active:scale-95"
+              <div
+                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-95 pointer-events-none"
                 aria-label={`Bỏ chọn nhiệm vụ ${task.title}`}
-                title="Bỏ chọn (X)"
               >
                 <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-              </button>
+              </div>
             ) : (
               <>
                 {/* Default State: Chevron for parent tasks, Subtle Box Icon for leaf tasks */}
@@ -418,7 +416,7 @@ export const TaskRow = React.memo(function TaskRow({
                   <button
                     type="button"
                     onClick={handleExpandClick}
-                    className="size-4.5 flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-colors group-hover:opacity-0"
+                    className="size-5 flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-colors group-hover/selector:opacity-0 group-hover:opacity-0"
                     aria-expanded={isExpanded}
                     aria-label={
                       isExpanded
@@ -435,20 +433,17 @@ export const TaskRow = React.memo(function TaskRow({
                   </button>
                 ) : (
                   <span
-                    className="size-4 flex items-center justify-center text-muted-foreground/35 group-hover:opacity-0 transition-opacity"
+                    className="size-4 flex items-center justify-center text-muted-foreground/35 group-hover/selector:opacity-0 group-hover:opacity-0 transition-opacity"
                     aria-hidden="true"
                   >
                     <Box className="size-3.5" strokeWidth={1.5} />
                   </span>
                 )}
 
-                {/* Hover State: Checkbox smoothly reveals on hover */}
-                <button
-                  type="button"
-                  onClick={handleCheckboxClick}
-                  className="absolute inset-0 m-auto size-4 rounded-[4px] border border-border/90 bg-background/90 hover:border-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-2xs"
-                  aria-label={`Chọn nhiệm vụ ${task.title}`}
-                  title="Chọn nhiệm vụ (X)"
+                {/* Hover State: Checkbox smoothly reveals with large hit target */}
+                <div
+                  className="size-4 rounded-[4px] border border-border/90 bg-background/95 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/selector:opacity-100 group-hover:opacity-100 flex items-center justify-center transition-all active:scale-95 shadow-2xs pointer-events-none"
+                  aria-hidden="true"
                 />
               </>
             )}

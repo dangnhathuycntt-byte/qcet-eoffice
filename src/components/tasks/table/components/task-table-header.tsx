@@ -163,32 +163,27 @@ export function TaskTableHeader({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  {/* Linear Header Selector: reveals on hover or when some/all rows are selected */}
+                  {/* Linear Header Selector: Large hit area (~32px) for effortless clicking */}
                   <div
-                    className="size-5 shrink-0 flex items-center justify-center relative select-none"
-                    onClick={(e) => e.stopPropagation()}
+                    className="size-7 sm:size-8 -my-1.5 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector"
+                    onClick={() => onToggleSelectAll?.(!allSelected)}
+                    title={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
                   >
                     {indeterminate || allSelected ? (
-                      <button
-                        type="button"
-                        onClick={() => onToggleSelectAll?.(!allSelected)}
-                        className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-2xs hover:opacity-90 transition-all active:scale-95"
+                      <div
+                        className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-95 pointer-events-none"
                         aria-label={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
-                        title={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
                       >
                         {allSelected ? (
                           <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
                         ) : (
                           <span className="w-2 h-0.5 bg-primary-foreground rounded-full" />
                         )}
-                      </button>
+                      </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => onToggleSelectAll?.(true)}
-                        className="size-4 rounded-[4px] border border-border/80 bg-background/80 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/th:opacity-100 flex items-center justify-center cursor-pointer transition-all active:scale-95 shadow-2xs"
+                      <div
+                        className="size-4 rounded-[4px] border border-border/80 bg-background/80 hover:border-primary hover:bg-primary/10 opacity-0 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 flex items-center justify-center transition-all active:scale-95 shadow-2xs pointer-events-none"
                         aria-label="Chọn tất cả nhiệm vụ hiển thị"
-                        title="Chọn tất cả"
                       />
                     )}
                   </div>
