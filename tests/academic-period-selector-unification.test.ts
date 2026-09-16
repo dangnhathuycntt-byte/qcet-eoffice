@@ -24,12 +24,12 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
     });
 
     it("evaluates dates in Semester 1 (months 9, 10, 11, 12) accurately", () => {
-      // 2026-08-25 is the start of operational Month 9
-      const periodAug25 = getCurrentAcademicPeriod("2026-08-25");
-      assert.equal(periodAug25.academicYear, "2026-2027");
-      assert.equal(periodAug25.semester, 1);
-      assert.equal(periodAug25.month, 9);
-      assert.equal(periodAug25.label, "Học kỳ I (2026 - 2027)");
+      // 2026-09-01 is the start of Month 9 in 2026-2027
+      const periodSep01 = getCurrentAcademicPeriod("2026-09-01");
+      assert.equal(periodSep01.academicYear, "2026-2027");
+      assert.equal(periodSep01.semester, 1);
+      assert.equal(periodSep01.month, 9);
+      assert.equal(periodSep01.label, "Học kỳ I (2026 - 2027)");
 
       // 2026-10-15 is Month 10
       const periodOct = getCurrentAcademicPeriod("2026-10-15");
@@ -38,21 +38,21 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
       assert.equal(periodOct.month, 10);
       assert.equal(periodOct.label, "Học kỳ I (2026 - 2027)");
 
-      // 2026-12-24 is the end of Month 12
-      const periodDec24 = getCurrentAcademicPeriod("2026-12-24");
-      assert.equal(periodDec24.academicYear, "2026-2027");
-      assert.equal(periodDec24.semester, 1);
-      assert.equal(periodDec24.month, 12);
-      assert.equal(periodDec24.label, "Học kỳ I (2026 - 2027)");
+      // 2026-12-31 is the end of Month 12
+      const periodDec31 = getCurrentAcademicPeriod("2026-12-31");
+      assert.equal(periodDec31.academicYear, "2026-2027");
+      assert.equal(periodDec31.semester, 1);
+      assert.equal(periodDec31.month, 12);
+      assert.equal(periodDec31.label, "Học kỳ I (2026 - 2027)");
     });
 
     it("evaluates dates in Semester 2 (months 1 through 8) accurately", () => {
-      // 2026-12-25 is the start of operational Month 1 in 2026-2027
-      const periodDec25 = getCurrentAcademicPeriod("2026-12-25");
-      assert.equal(periodDec25.academicYear, "2026-2027");
-      assert.equal(periodDec25.semester, 2);
-      assert.equal(periodDec25.month, 1);
-      assert.equal(periodDec25.label, "Học kỳ II (2026 - 2027)");
+      // 2027-01-01 is the start of Month 1 in 2026-2027
+      const periodJan01 = getCurrentAcademicPeriod("2027-01-01");
+      assert.equal(periodJan01.academicYear, "2026-2027");
+      assert.equal(periodJan01.semester, 2);
+      assert.equal(periodJan01.month, 1);
+      assert.equal(periodJan01.label, "Học kỳ II (2026 - 2027)");
 
       // 2027-03-10 is Month 3
       const periodMar = getCurrentAcademicPeriod("2027-03-10");
@@ -61,12 +61,12 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
       assert.equal(periodMar.month, 3);
       assert.equal(periodMar.label, "Học kỳ II (2026 - 2027)");
 
-      // 2027-08-24 is the last day of operational Month 8 in 2026-2027
-      const periodAug24 = getCurrentAcademicPeriod("2027-08-24");
-      assert.equal(periodAug24.academicYear, "2026-2027");
-      assert.equal(periodAug24.semester, 2);
-      assert.equal(periodAug24.month, 8);
-      assert.equal(periodAug24.label, "Học kỳ II (2026 - 2027)");
+      // 2027-08-31 is the last day of Month 8 in 2026-2027
+      const periodAug31 = getCurrentAcademicPeriod("2027-08-31");
+      assert.equal(periodAug31.academicYear, "2026-2027");
+      assert.equal(periodAug31.semester, 2);
+      assert.equal(periodAug31.month, 8);
+      assert.equal(periodAug31.label, "Học kỳ II (2026 - 2027)");
     });
 
     it("handles getAcademicMonthInfo with numeric operational month input", () => {

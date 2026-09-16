@@ -108,8 +108,8 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
 describe("C19 — academic-period labels (vocabulary §G.3)", () => {
   it("emits operational month labels and spans from the canonical engine", () => {
     assert.equal(formatAcademicMonthLabel(9), "Tháng 9");
-    assert.equal(formatAcademicMonthFullLabel(9, "2026-2027"), "Tháng 9 / 2026 (25/08 - 24/09)");
-    assert.equal(formatAcademicMonthSpan(9, "2026-2027"), "25/08 - 24/09");
+    assert.equal(formatAcademicMonthFullLabel(9, "2026-2027"), "Tháng 9 / 2026 (01/09 - 30/09)");
+    assert.equal(formatAcademicMonthSpan(9, "2026-2027"), "01/09 - 30/09");
   });
 
   it("emits semester labels in both short and full forms", () => {
@@ -119,9 +119,9 @@ describe("C19 — academic-period labels (vocabulary §G.3)", () => {
     assert.equal(formatSemesterFullLabel(2, "2026-2027"), "Học kỳ II (2026 - 2027)");
   });
 
-  it("emits the academic year label with the 25/08 cut-off", () => {
+  it("emits the academic year label with the 01/09 cut-off", () => {
     assert.equal(formatAcademicYear("2026-09-09"), "2026-2027");
-    assert.equal(formatAcademicYear("2026-08-24"), "2025-2026");
+    assert.equal(formatAcademicYear("2026-08-31"), "2025-2026");
   });
 
   it("derives the current academic period label from the canonical engine", () => {

@@ -510,7 +510,7 @@ export function CalendarMonthGrid({
             <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5 text-rose-600" aria-hidden="true" />Quá hạn</span>
             <span className="inline-flex items-center gap-1.5"><CalendarIcon className="size-3.5 text-sky-600" aria-hidden="true" />Sự kiện</span>
           </div>
-          <span className="hidden md:inline font-mono tabular-nums">Chu kỳ: 25/tháng trước - 24/tháng này</span>
+          <span className="hidden md:inline font-mono tabular-nums">Chu kỳ: Ngày 01 - Cuối tháng (Lịch dương)</span>
         </div>
       </div>
     </div>

@@ -1,68 +1,98 @@
 /**
- * Academic Calendar Cycle & Operational Month Engine for QCET
+ * Calendar Cycle & Time Period Engine for QCET E-Office
+ * Standardized to Gregorian Solar Calendar (Lịch dương) & ICT Timezone (Asia/Ho_Chi_Minh)
  *
- * Operational cycle rules:
- * - Operational month begins on day 25 of prior month and ends on day 24 of the named month.
- *   Example: Tháng 9 starts on 25/08 and ends on 24/09.
- * - Academic year starts on 25/08 (start of Tháng 9) and ends on 24/08 (end of Tháng 8).
- *   Example: "2026-2027" runs from 2026-08-25 to 2027-08-24.
- * - 12 operational months ordered: 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8
+ * Rules:
+ * - Months start on day 01 and end on the last day of the month (28/29/30/31).
+ * - Years start on 01/01 and end on 31/12 (Calendar Year).
+ * - Quarters (Quý):
+ *   - Quý 1: Tháng 1–3 (01/01 – 31/03)
+ *   - Quý 2: Tháng 4–6 (01/04 – 30/06)
+ *   - Quý 3: Tháng 7–9 (01/07 – 30/09)
+ *   - Quý 4: Tháng 10–12 (01/10 – 31/12)
+ * - Academic Year (Năm học) is distinct from Calendar Year: 01/09/(N) to 31/08/(N+1).
+ * - Timezone: Asia/Ho_Chi_Minh (ICT, UTC+7), leap-year safe (năm nhuận tháng 2 có 29 ngày).
  */
 
 import type { SchoolTask } from "@/types/dashboard";
 
 export interface AcademicMonthPeriod {
-  monthNumber: number; // 1 to 12 (12 operational months: 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8)
-  monthIndexInYear: number; // 0 for Month 9, 11 for Month 8
+  monthNumber: number; // 1 to 12
+  monthIndexInYear: number; // 0 for Month 1, 11 for Month 12
   academicYear: string; // e.g. "2026-2027"
-  startDate: string; // YYYY-MM-25
-  endDate: string; // YYYY-MM-24
+  calendarYear: number; // e.g. 2026
+  startDate: string; // YYYY-MM-01
+  endDate: string; // YYYY-MM-(lastDay)
+  nextPeriodStartDate: string; // First day of next month (YYYY-MM-01)
   label: string; // "Tháng 9"
-  fullLabel: string; // "Tháng 9 / 2026 (25/08 - 24/09)"
-  shortDateSpan: string; // "25/08 - 24/09"
-  calendarYear?: number;
+  fullLabel: string; // "Tháng 9 / 2026 (01/09 - 30/09)"
+  shortDateSpan: string; // "01/09 - 30/09"
   dateSpanVi?: string;
+  quarter: number; // 1, 2, 3, or 4
 }
 
 export type AcademicMonthInfo = AcademicMonthPeriod;
 
+export interface QuarterPeriod {
+  quarter: number; // 1, 2, 3, 4
+  year: number; // e.g. 2026
+  startDate: string; // YYYY-MM-01
+  endDate: string; // YYYY-MM-(lastDay)
+  nextQuarterStartDate: string;
+  label: string; // "Quý 1"
+  fullLabel: string; // "Quý 1 / 2026 (01/01 - 31/03)"
+  shortDateSpan: string; // "01/01 - 31/03"
+  months: number[]; // [1, 2, 3] for Q1, etc.
+}
+
 export interface CurrentAcademicPeriod {
   academicYear: string; // e.g. "2026-2027"
+  calendarYear: number; // e.g. 2026
   semester: number; // 1 or 2
-  month: number; // 1-12 (operational month number, e.g. 9)
+  quarter: number; // 1 to 4
+  month: number; // 1-12
   label: string; // e.g. "Học kỳ I (2026 - 2027)"
 }
 
 /**
- * Trả về thông tin chu kỳ học vụ hiện tại (năm học, học kỳ, tháng vận hành và nhãn hiển thị).
- * Mặc định sử dụng ngày tham chiếu hệ thống getSystemReferenceDate().
+ * 12 months ordered chronologically by solar calendar (Tháng 1 -> Tháng 12).
  */
-export function getCurrentAcademicPeriod(referenceDateInput?: unknown): CurrentAcademicPeriod {
-  const refDate = referenceDateInput ?? getSystemReferenceDate();
-  const info = getAcademicMonthInfo(refDate);
-  const month = info.monthNumber;
-  const academicYear = info.academicYear;
-  // Tháng 9, 10, 11, 12 thuộc Học kỳ I; Tháng 1..8 thuộc Học kỳ II
-  const semester = month >= 9 && month <= 12 ? 1 : 2;
-  const roman = semester === 1 ? "I" : "II";
-  const formattedYear = academicYear.includes(" - ")
-    ? academicYear
-    : academicYear.replace("-", " - ");
-  const label = `Học kỳ ${roman} (${formattedYear})`;
+export const CALENDAR_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+export const ACADEMIC_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
-  return {
-    academicYear,
-    semester,
-    month,
-    label,
-  };
+/**
+ * Check if a calendar year is a leap year (năm nhuận).
+ */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
 /**
- * The 12 operational academic months ordered according to QCET cycle:
- * Month 9, 10, 11, 12 in the fall, followed by 1, 2, 3, 4, 5 in the spring, and 6, 7, 8 in the summer.
+ * Get the exact number of days in a given calendar month, handling leap years.
  */
-export const ACADEMIC_MONTH_ORDER = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8] as const;
+export function getDaysInMonth(year: number, month: number): number {
+  if (month === 2) {
+    return isLeapYear(year) ? 29 : 28;
+  }
+  if (month === 4 || month === 6 || month === 9 || month === 11) {
+    return 30;
+  }
+  return 31;
+}
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+/**
+ * Determine Quarter (1-4) for a given month (1-12).
+ */
+export function getQuarterFromMonth(month: number): number {
+  if (month >= 1 && month <= 3) return 1;
+  if (month >= 4 && month <= 6) return 2;
+  if (month >= 7 && month <= 9) return 3;
+  return 4;
+}
 
 /**
  * Trả về chuỗi ngày hệ thống chuẩn (YYYY-MM-DD) theo múi giờ Việt Nam (Asia/Ho_Chi_Minh).
@@ -79,7 +109,6 @@ export const getSystemReferenceDateStr = getSystemReferenceDate;
 /**
  * Kiểm tra quá hạn an toàn theo phép so sánh chuỗi ISO YYYY-MM-DD.
  * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) khi trích xuất ngày từ đối tượng Date.
- * Loại trừ hoàn toàn lỗi parse UTC nửa đêm làm quá hạn sớm trong ngày làm việc.
  */
 export function isTaskPastDue(
   dateStr?: string | Date | null,
@@ -108,10 +137,7 @@ export function isTaskPastDue(
 }
 
 /**
- * Hàm kiểm tra trạng thái quá hạn quy chuẩn toàn hệ thống (Single Source of Truth).
- * Một nhiệm vụ bị xem là quá hạn nếu:
- * 1. Không ở trạng thái kết thúc (COMPLETED, CANCELLED).
- * 2. Trạng thái bản ghi là OVERDUE HOẶC hạn chót (dueDate) trước ngày tham chiếu hệ thống.
+ * Hàm kiểm tra trạng thái quá hạn quy chuẩn toàn hệ thống.
  */
 export function isTaskOverdue(
   status: string,
@@ -124,11 +150,9 @@ export function isTaskOverdue(
   return s === "OVERDUE" || isTaskPastDue(dueDate, referenceDate);
 }
 
-
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : `${n}`;
-}
-
+/**
+ * Parse date parts according to Asia/Ho_Chi_Minh timezone.
+ */
 export function parseDateParts(dateInput: unknown): { year: number; month: number; day: number } | null {
   if (!dateInput) return null;
   if (typeof dateInput === "string") {
@@ -168,60 +192,118 @@ export function parseDateParts(dateInput: unknown): { year: number; month: numbe
   return null;
 }
 
+/**
+ * Internal helper to build Gregorian Solar Month Period: Day 01 to Last Day of Month.
+ */
 function buildAcademicMonthPeriod(
   calendarYearForMonth: number,
   namedMonth: number,
   academicYear?: string
 ): AcademicMonthPeriod {
-  const prevYear = namedMonth === 1 ? calendarYearForMonth - 1 : calendarYearForMonth;
-  const prevMonth = namedMonth === 1 ? 12 : namedMonth - 1;
-  const startDate = `${prevYear}-${pad(prevMonth)}-25`;
-  const endDate = `${calendarYearForMonth}-${pad(namedMonth)}-24`;
-  const shortDateSpan = `25/${pad(prevMonth)} - 24/${pad(namedMonth)}`;
+  const lastDay = getDaysInMonth(calendarYearForMonth, namedMonth);
+  const startDate = `${calendarYearForMonth}-${pad(namedMonth)}-01`;
+  const endDate = `${calendarYearForMonth}-${pad(namedMonth)}-${pad(lastDay)}`;
+
+  // Next period start date (first day of following month) for interval queries [start, nextStart)
+  const nextMonthYear = namedMonth === 12 ? calendarYearForMonth + 1 : calendarYearForMonth;
+  const nextMonthNum = namedMonth === 12 ? 1 : namedMonth + 1;
+  const nextPeriodStartDate = `${nextMonthYear}-${pad(nextMonthNum)}-01`;
+
+  const shortDateSpan = `01/${pad(namedMonth)} - ${pad(lastDay)}/${pad(namedMonth)}`;
   const label = `Tháng ${namedMonth}`;
   const fullLabel = `Tháng ${namedMonth} / ${calendarYearForMonth} (${shortDateSpan})`;
-  const monthIndexInYear = namedMonth >= 9 ? namedMonth - 9 : namedMonth + 3;
+  const monthIndexInYear = namedMonth - 1;
+
   const derivedAcademicYear =
     academicYear ??
     (namedMonth >= 9
       ? `${calendarYearForMonth}-${calendarYearForMonth + 1}`
       : `${calendarYearForMonth - 1}-${calendarYearForMonth}`);
 
+  const quarter = getQuarterFromMonth(namedMonth);
+
   return {
     monthNumber: namedMonth,
     monthIndexInYear,
     academicYear: derivedAcademicYear,
+    calendarYear: calendarYearForMonth,
     startDate,
     endDate,
+    nextPeriodStartDate,
     label,
     fullLabel,
     shortDateSpan,
-    calendarYear: calendarYearForMonth,
     dateSpanVi: shortDateSpan,
+    quarter,
   };
 }
 
 /**
- * Returns the academic year string "YYYY-(YYYY+1)" for any given date.
- * Academic year cut-off is 25/08:
- * - Dates on or after 25/08 belong to currentYear - (currentYear + 1)
- * - Dates on or before 24/08 belong to (currentYear - 1) - currentYear
+ * Returns QuarterPeriod object for a given quarter (1-4) and year.
+ */
+export function getQuarterPeriod(quarter: number, year: number = 2026): QuarterPeriod {
+  const clampedQuarter = Math.max(1, Math.min(4, quarter));
+  const startMonth = (clampedQuarter - 1) * 3 + 1;
+  const endMonth = clampedQuarter * 3;
+  const lastDay = getDaysInMonth(year, endMonth);
+
+  const startDate = `${year}-${pad(startMonth)}-01`;
+  const endDate = `${year}-${pad(endMonth)}-${pad(lastDay)}`;
+
+  const nextQuarterYear = clampedQuarter === 4 ? year + 1 : year;
+  const nextQuarterStartMonth = clampedQuarter === 4 ? 1 : endMonth + 1;
+  const nextQuarterStartDate = `${nextQuarterYear}-${pad(nextQuarterStartMonth)}-01`;
+
+  const shortDateSpan = `01/${pad(startMonth)} - ${pad(lastDay)}/${pad(endMonth)}`;
+  const label = `Quý ${clampedQuarter}`;
+  const fullLabel = `Quý ${clampedQuarter} / ${year} (${shortDateSpan})`;
+  const months = [startMonth, startMonth + 1, endMonth];
+
+  return {
+    quarter: clampedQuarter,
+    year,
+    startDate,
+    endDate,
+    nextQuarterStartDate,
+    label,
+    fullLabel,
+    shortDateSpan,
+    months,
+  };
+}
+
+/**
+ * Returns the Academic Year string "YYYY-(YYYY+1)" for any given date.
+ * Academic year cut-off is 01/09:
+ * - Dates on or after 01/09 belong to currentYear - (currentYear + 1)
+ * - Dates on or before 31/08 belong to (currentYear - 1) - currentYear
  */
 export function getAcademicYear(dateInput: unknown): string {
   const parts = parseDateParts(dateInput);
   if (!parts) {
     return "2026-2027";
   }
-  const { year, month, day } = parts;
-  if (month > 8 || (month === 8 && day >= 25)) {
+  const { year, month } = parts;
+  if (month >= 9) {
     return `${year}-${year + 1}`;
   }
   return `${year - 1}-${year}`;
 }
 
 /**
- * Trả về danh sách các năm học khả dụng (ví dụ: ["2025-2026", "2026-2027", "2027-2028"]).
- * Tự động suy biến xung quanh năm học hiện tại theo quy tắc không hardcode.
+ * Returns the Calendar Year number (e.g. 2026) for any given date.
+ * Year starts on 01/01 and ends on 31/12.
+ */
+export function getCalendarYear(dateInput: unknown): number {
+  const parts = parseDateParts(dateInput);
+  if (!parts) {
+    return 2026;
+  }
+  return parts.year;
+}
+
+/**
+ * Returns available academic years.
  */
 export function getAvailableAcademicYears(referenceDateInput?: unknown): string[] {
   const ref = referenceDateInput ?? getSystemReferenceDate();
@@ -232,6 +314,15 @@ export function getAvailableAcademicYears(referenceDateInput?: unknown): string[
     `${startYear}-${startYear + 1}`,
     `${startYear + 1}-${startYear + 2}`,
   ];
+}
+
+/**
+ * Returns available calendar years.
+ */
+export function getAvailableCalendarYears(referenceDateInput?: unknown): number[] {
+  const ref = referenceDateInput ?? getSystemReferenceDate();
+  const year = getCalendarYear(ref);
+  return [year - 1, year, year + 1];
 }
 
 export interface CalendarDayCell {
@@ -245,9 +336,9 @@ export interface CalendarDayCell {
 }
 
 /**
- * Tạo danh sách các ô ngày lịch theo chu kỳ vận hành học vụ (25 tháng trước đến 24 tháng này).
+ * Tạo danh sách các ô ngày lịch theo tháng dương lịch (ngày 01 đến ngày cuối tháng).
  * Lưới bắt đầu từ Thứ Hai (T2) và kết thúc ở Chủ Nhật (CN).
- * Đảm bảo số ô là bội số của 7 (35 hoặc 42 ô).
+ * Đảm bảo số ô là b��i số của 7 (35 hoặc 42 ô).
  */
 export function generateAcademicMonthGrid(period: AcademicMonthPeriod): CalendarDayCell[] {
   const sysDate = getSystemReferenceDate();
@@ -264,7 +355,7 @@ export function generateAcademicMonthGrid(period: AcademicMonthPeriod): Calendar
 
   const grid: CalendarDayCell[] = [];
 
-  // 1. Preceding days before startDate (starting from Monday of that week)
+  // 1. Preceding days before 1st of month (starting from Monday of that week)
   for (let i = mondayOffset; i >= 1; i--) {
     const prevDate = new Date(startYear, startMonth - 1, startDay - i, 12, 0, 0);
     const dateString = `${prevDate.getFullYear()}-${pad(prevDate.getMonth() + 1)}-${pad(prevDate.getDate())}`;
@@ -281,7 +372,7 @@ export function generateAcademicMonthGrid(period: AcademicMonthPeriod): Calendar
     });
   }
 
-  // 2. Active operational period days (from 25th of prev month to 24th of current month)
+  // 2. Active calendar days in month (01 to lastDay)
   const endDateObj = new Date(endYear, endMonth - 1, endDay, 12, 0, 0);
   let curr = new Date(startYear, startMonth - 1, startDay, 12, 0, 0);
   while (curr <= endDateObj) {
@@ -325,7 +416,7 @@ export function generateAcademicMonthGrid(period: AcademicMonthPeriod): Calendar
 }
 
 /**
- * Returns the complete AcademicMonthPeriod for a given date.
+ * Returns the complete AcademicMonthPeriod for a given date or month number.
  */
 export function getAcademicMonthInfo(dateInput: unknown): AcademicMonthPeriod {
   if (typeof dateInput === "number" && dateInput >= 1 && dateInput <= 12) {
@@ -336,79 +427,81 @@ export function getAcademicMonthInfo(dateInput: unknown): AcademicMonthPeriod {
     month: 9,
     day: 1,
   };
-  const { year, month, day } = parts;
+  const { year, month } = parts;
 
-  let namedMonth: number;
-  let calendarYearForMonth: number;
-
-  if (day >= 25) {
-    if (month === 12) {
-      namedMonth = 1;
-      calendarYearForMonth = year + 1;
-    } else {
-      namedMonth = month + 1;
-      calendarYearForMonth = year;
-    }
-  } else {
-    namedMonth = month;
-    calendarYearForMonth = year;
-  }
-
-  return buildAcademicMonthPeriod(calendarYearForMonth, namedMonth);
+  return buildAcademicMonthPeriod(year, month);
 }
 
 /**
- * Returns all 12 operational academic months for the specified academic year (e.g. "2026-2027").
- * Ordered from Month 9 (index 0) to Month 8 (index 11).
+ * Returns all 12 solar calendar months for the specified year (e.g. "2026" or "2026-2027").
+ * Ordered from Month 1 (index 0) to Month 12 (index 11).
  */
-export function getAcademicMonthsForYear(academicYear: string): AcademicMonthPeriod[] {
-  const parts = academicYear.split("-").map((p) => parseInt(p.trim(), 10));
-  const startYear = parts[0];
-  const months: AcademicMonthPeriod[] = [];
+export function getAcademicMonthsForYear(yearOrAcademicYear: string | number = "2026"): AcademicMonthPeriod[] {
+  let targetYear: number;
+  let academicYearTag: string | undefined;
 
-  // Indices 0 to 3: Months 9, 10, 11, 12 in startYear
-  for (let m = 9; m <= 12; m++) {
-    months.push(buildAcademicMonthPeriod(startYear, m, academicYear));
+  if (typeof yearOrAcademicYear === "number") {
+    targetYear = yearOrAcademicYear;
+  } else {
+    const trimmed = String(yearOrAcademicYear).trim();
+    if (trimmed.includes("-")) {
+      academicYearTag = trimmed;
+      targetYear = parseInt(trimmed.split("-")[0], 10);
+    } else {
+      targetYear = parseInt(trimmed, 10) || 2026;
+    }
   }
 
-  // Indices 4 to 11: Months 1, 2, 3, 4, 5, 6, 7, 8 in startYear + 1
-  for (let m = 1; m <= 8; m++) {
-    months.push(buildAcademicMonthPeriod(startYear + 1, m, academicYear));
+  const months: AcademicMonthPeriod[] = [];
+  for (let m = 1; m <= 12; m++) {
+    months.push(buildAcademicMonthPeriod(targetYear, m, academicYearTag));
   }
 
   return months;
 }
 
 /**
- * Checks if a given date falls inside the operational month window.
+ * Checks if a given date falls inside the solar calendar month window.
  */
 export function isDateInAcademicMonth(
   dateInput: string | Date,
   monthNumber: number,
-  academicYear?: string
+  year?: number | string
 ): boolean {
-  const info = getAcademicMonthInfo(dateInput);
-  if (info.monthNumber !== monthNumber) {
-    return false;
-  }
-  if (academicYear && info.academicYear !== academicYear) {
-    return false;
+  const parts = parseDateParts(dateInput);
+  if (!parts) return false;
+  if (parts.month !== monthNumber) return false;
+  if (year !== undefined) {
+    const targetYear = typeof year === "number" ? year : parseInt(String(year).split("-")[0], 10);
+    if (!isNaN(targetYear) && parts.year !== targetYear) return false;
   }
   return true;
 }
 
 /**
- * Calculates the adjacent academic month period given a delta (+1, -1, etc.).
+ * Checks if a given date falls inside a Quarter (1-4).
+ */
+export function isDateInQuarter(
+  dateInput: string | Date,
+  quarter: number,
+  year?: number
+): boolean {
+  const parts = parseDateParts(dateInput);
+  if (!parts) return false;
+  const q = getQuarterFromMonth(parts.month);
+  if (q !== quarter) return false;
+  if (year !== undefined && parts.year !== year) return false;
+  return true;
+}
+
+/**
+ * Calculates the adjacent calendar month period given a delta (+1, -1, etc.).
  */
 export function getAdjacentAcademicMonth(
   period: AcademicMonthPeriod,
   delta: number
 ): AcademicMonthPeriod {
-  const startYear = parseInt(period.academicYear.split("-")[0], 10);
-  const calendarYearForMonth = period.monthNumber >= 9 ? startYear : startYear + 1;
-
-  // Use day 10 to comfortably sit inside the target month
-  const target = new Date(calendarYearForMonth, period.monthNumber - 1 + delta, 10);
+  const target = new Date(period.calendarYear, period.monthNumber - 1 + delta, 1);
   const targetYear = target.getFullYear();
   const targetMonth = target.getMonth() + 1;
 
@@ -446,16 +539,30 @@ export interface MonthPartitionBucket<T = SchoolTask> {
 }
 
 /**
- * Resolves the operational AcademicMonthPeriod for a given month number (1-12) and academic year.
+ * Resolves the operational AcademicMonthPeriod for a given month number (1-12) and year.
  */
 export function getAcademicMonthPeriod(
   monthNumber: number,
-  academicYear?: string
+  yearOrAcademicYear?: string | number
 ): AcademicMonthPeriod {
-  const yearStr = academicYear || getAcademicYear(getSystemReferenceDate());
-  const startYear = parseInt(yearStr.split("-")[0], 10);
-  const calendarYear = monthNumber >= 9 ? startYear : startYear + 1;
-  return buildAcademicMonthPeriod(calendarYear, monthNumber, yearStr);
+  const ref = getSystemReferenceDate();
+  let calendarYear = getCalendarYear(ref);
+  let academicYear: string | undefined;
+
+  if (typeof yearOrAcademicYear === "number") {
+    calendarYear = yearOrAcademicYear;
+  } else if (typeof yearOrAcademicYear === "string") {
+    const trimmed = yearOrAcademicYear.trim();
+    if (trimmed.includes("-")) {
+      academicYear = trimmed;
+      const startYear = parseInt(trimmed.split("-")[0], 10);
+      calendarYear = monthNumber >= 9 ? startYear : startYear + 1;
+    } else {
+      calendarYear = parseInt(trimmed, 10) || calendarYear;
+    }
+  }
+
+  return buildAcademicMonthPeriod(calendarYear, monthNumber, academicYear);
 }
 
 function extractDateString(val: unknown): string | null {
@@ -486,20 +593,20 @@ function extractDateString(val: unknown): string | null {
 }
 
 /**
- * Lọc các nhiệm vụ thuộc về tháng nghiệp vụ chỉ định theo chu kỳ 25 - 24.
- * Hỗ trợ "ALL" để giữ nguyên toàn bộ nhiệm vụ.
+ * Lọc các nhiệm vụ thuộc về tháng dương lịch chỉ định (ngày 01 đến ngày cuối tháng).
+ * Sử dụng truy vấn khoảng [startDate, endDate] hoặc [startDate, nextPeriodStartDate).
  * Cắt tỉa (prune) các subtask không thuộc tháng đang lọc để đảm bảo thống kê chính xác.
  */
 export function filterTasksByAcademicMonthStrict<T extends { dueDate?: string | Date | null } = SchoolTask>(
   tasks: T[],
   month: number | "ALL",
-  academicYear?: string
+  yearOrAcademicYear?: string | number
 ): T[] {
   if (month === "ALL") {
     return tasks;
   }
 
-  const period = getAcademicMonthPeriod(month, academicYear);
+  const period = getAcademicMonthPeriod(month, yearOrAcademicYear);
 
   return tasks.reduce<T[]>((acc, task) => {
     const rawSubTasks = (task as any).subTasks;
@@ -566,18 +673,17 @@ export function filterTasksByAcademicMonthStrict<T extends { dueDate?: string | 
 }
 
 /**
- * Tính toán danh sách nợ đọng/tồn đọng (overdue backlog) từ các chu kỳ trước chưa hoàn thành.
- * Nhiệm vụ có hạn chót trước ngày bắt đầu của tháng nghiệp vụ hiện tại và chưa hoàn thành.
+ * Tính toán danh sách nợ đọng/tồn đọng (overdue backlog) từ trước ngày 01 của tháng đang chọn chưa hoàn thành.
  */
 export function computePriorOverdueBacklog<
   T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
 >(
   tasks: T[],
   month: number,
-  academicYear: string,
+  yearOrAcademicYear?: string | number,
   referenceDate?: string
 ): T[] {
-  const period = getAcademicMonthPeriod(month, academicYear);
+  const period = getAcademicMonthPeriod(month, yearOrAcademicYear);
   const cutoffDate =
     referenceDate && referenceDate < period.startDate ? referenceDate : period.startDate;
 
@@ -591,14 +697,87 @@ export function computePriorOverdueBacklog<
 }
 
 /**
- * Nghiêm ngặt xác thực một chuỗi date-only `YYYY-MM-DD`.
- *
- * Khác với {@link parseDateParts} (vốn chỉ khớp regex và chấp nhận cả ngày không
- * tồn tại như `2026-02-30`), hàm này kiểm tra ngày đó có thật trên lịch hay không
- * bằng cách dựng lại qua `Date.UTC` rồi đối chiếu từng thành phần.
- *
- * Trả về chuỗi `YYYY-MM-DD` đã chuẩn hoá, hoặc `null` nếu không hợp lệ.
- * KHÔNG bao giờ fallback về "hôm nay" — ngày lỗi phải được giữ nguyên là missing.
+ * Tạo bucket phân vùng nhiệm vụ theo tháng kèm thống kê và danh sách nợ đọng.
+ */
+export function computeMonthPartitionBucket<
+  T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
+>(
+  tasks: T[],
+  month: number,
+  yearOrAcademicYear?: string | number,
+  referenceDate?: string
+): MonthPartitionBucket<T> {
+  const period = getAcademicMonthPeriod(month, yearOrAcademicYear);
+  const filteredTasks = filterTasksByAcademicMonthStrict(tasks, month, yearOrAcademicYear);
+  const priorBacklog = computePriorOverdueBacklog(tasks, month, yearOrAcademicYear, referenceDate);
+  const ref = referenceDate ?? getSystemReferenceDate();
+
+  let completedTasks = 0;
+  let inProgressTasks = 0;
+  let overdueTasks = 0;
+
+  for (const t of filteredTasks) {
+    const s = String(t.status || "").toUpperCase();
+    if (s === "COMPLETED") {
+      completedTasks++;
+    } else if (s === "IN_PROGRESS" || s === "NOT_STARTED" || s === "NEW") {
+      inProgressTasks++;
+    }
+    if (isTaskOverdue(s, t.dueDate, ref)) {
+      overdueTasks++;
+    }
+  }
+
+  const totalTasks = filteredTasks.length;
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  return {
+    monthNumber: month,
+    academicYear: period.academicYear,
+    period,
+    tasks: filteredTasks,
+    priorOverdueBacklog: priorBacklog,
+    stats: {
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      overdueTasks,
+      completionRate,
+    },
+  };
+}
+
+/**
+ * Trả về thông tin chu kỳ hiện tại (năm dương lịch, năm học, quý, học kỳ, tháng và nhãn hiển thị).
+ */
+export function getCurrentAcademicPeriod(referenceDateInput?: unknown): CurrentAcademicPeriod {
+  const refDate = referenceDateInput ?? getSystemReferenceDate();
+  const info = getAcademicMonthInfo(refDate);
+  const month = info.monthNumber;
+  const calendarYear = info.calendarYear;
+  const academicYear = info.academicYear;
+  const quarter = getQuarterFromMonth(month);
+
+  // Học kỳ I: Tháng 9 - 12 (hoặc tháng 9 - 1), Học kỳ II: Tháng 1 - 5 (hoặc 2 - 6)
+  const semester = month >= 9 && month <= 12 ? 1 : 2;
+  const roman = semester === 1 ? "I" : "II";
+  const formattedYear = academicYear.includes(" - ")
+    ? academicYear
+    : academicYear.replace("-", " - ");
+  const label = `Học kỳ ${roman} (${formattedYear})`;
+
+  return {
+    academicYear,
+    calendarYear,
+    semester,
+    quarter,
+    month,
+    label,
+  };
+}
+
+/**
+ * Xác thực chuỗi date-only YYYY-MM-DD.
  */
 export function parseStrictDateOnly(input: unknown): string | null {
   if (input == null) return null;
@@ -626,10 +805,9 @@ export function parseStrictDateOnly(input: unknown): string | null {
   const day = parseInt(match[3], 10);
 
   if (month < 1 || month > 12) return null;
-  if (day < 1 || day > 31) return null;
+  const maxDay = getDaysInMonth(year, month);
+  if (day < 1 || day > maxDay) return null;
 
-  // Round-trip through UTC: an impossible date like 2026-02-30 normalises to
-  // 2026-03-02, so the component comparison catches it.
   const probe = new Date(Date.UTC(year, month - 1, day));
   if (
     probe.getUTCFullYear() !== year ||
@@ -642,12 +820,10 @@ export function parseStrictDateOnly(input: unknown): string | null {
   return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
-/** Số ngày của cửa sổ "hạn chót sắp tới" — bao gồm D và D+6 (7 ngày lịch). */
 export const UPCOMING_WINDOW_DAYS = 6;
 
 /**
- * Cộng thêm `days` ngày lịch vào một chuỗi date-only, theo phép tính ngày lịch
- * (không cộng mili-giây vào timestamp), nên an toàn qua ranh giới tháng/năm.
+ * Cộng thêm ngày lịch an toàn qua ranh giới tháng/năm.
  */
 export function addCalendarDays(dateOnly: string, days: number): string | null {
   const strict = parseStrictDateOnly(dateOnly);
@@ -659,7 +835,6 @@ export function addCalendarDays(dateOnly: string, days: number): string | null {
 }
 
 export interface UpcomingDeadlineCandidate {
-  /** The real task/subtask id, so the caller can open the correct detail. */
   taskId: string;
   title: string;
   dueDate: string;
@@ -669,24 +844,13 @@ export interface UpcomingDeadlineCandidate {
 }
 
 export interface UpcomingDeadlineSelection<T> {
-  /** Every task inside the window, sorted. The full set — not a preview. */
   items: T[];
-  /** Total size of the window. Equal to `items.length`; carried explicitly so a
-   *  caller can never mistake a preview slice's length for the full total. */
   total: number;
-  /** First `previewLimit` rows of the sorted full set. */
   preview: T[];
 }
 
 /**
- * Chọn các nhiệm vụ còn hiệu lực có hạn trong cửa sổ [referenceDate, +windowDays].
- *
- * Quy tắc (plan T05 "Deadline"):
- *  - Chỉ nhận ngày date-only hợp lệ theo lịch; ngày lỗi/không tồn tại bị loại,
- *    KHÔNG được quy về hôm nay.
- *  - Nhiệm vụ đã hoàn thành hoặc đã huỷ bị loại.
- *  - Việc quá hạn KHÔNG bao giờ xuất hiện ở đây.
- *  - Sắp xếp: hạn tăng dần → ưu tiên giảm dần → id tăng dần.
+ * Chọn các nhiệm vụ có hạn trong cửa sổ [referenceDate, +windowDays].
  */
 export function selectUpcomingDeadlines<
   T extends {
@@ -729,8 +893,6 @@ export function selectUpcomingDeadlines<
       if (status === "COMPLETED" || status === "CANCELLED") return false;
       const due = parseStrictDateOnly(t.dueDate);
       if (!due) return false;
-      // Window is inclusive on both ends: D <= due <= D+windowDays.
-      // Anything before D is overdue and must not appear here.
       return due >= ref && due <= windowEnd;
     })
     .sort((a, b) => {
@@ -749,54 +911,3 @@ export function selectUpcomingDeadlines<
     preview: items.slice(0, previewLimit),
   };
 }
-
-/**
- * Phân vùng dữ liệu nhiệm vụ cho một tháng học thuật cụ thể cùng với backlog từ trước và thống kê hoàn chỉnh.
- */
-export function computeMonthPartitionBucket<
-  T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
->(
-  tasks: T[],
-  month: number,
-  academicYear: string,
-  referenceDate?: string
-): MonthPartitionBucket<T> {
-  const period = getAcademicMonthPeriod(month, academicYear);
-  const monthTasks = filterTasksByAcademicMonthStrict(tasks, month, academicYear);
-  const priorOverdueBacklog = computePriorOverdueBacklog(tasks, month, academicYear, referenceDate);
-
-  const refDateStr = referenceDate
-    ? extractDateString(referenceDate)
-    : extractDateString(new Date());
-
-  const totalTasks = monthTasks.length;
-  const completedTasks = monthTasks.filter((t) => t.status === "COMPLETED").length;
-  const inProgressTasks = monthTasks.filter(
-    (t) => t.status !== "COMPLETED" && (t.status as string) !== "CANCELLED"
-  ).length;
-
-  const overdueTasks = monthTasks.filter((t) => {
-    if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
-    if ((t.status as string) === "OVERDUE") return true;
-    const due = extractDateString(t.dueDate);
-    return Boolean(due && refDateStr && due < refDateStr);
-  }).length;
-
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  return {
-    monthNumber: month,
-    academicYear,
-    period,
-    tasks: monthTasks,
-    priorOverdueBacklog,
-    stats: {
-      totalTasks,
-      completedTasks,
-      inProgressTasks,
-      overdueTasks,
-      completionRate,
-    },
-  };
-}
-

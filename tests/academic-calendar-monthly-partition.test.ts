@@ -156,11 +156,11 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
 
   test("getAcademicMonthPeriod returns accurate cycle dates for Month 9 and Month 1", () => {
     const m9 = getAcademicMonthPeriod(9, "2026-2027");
-    assert.equal(m9.startDate, "2026-08-25");
-    assert.equal(m9.endDate, "2026-09-24");
+    assert.equal(m9.startDate, "2026-09-01");
+    assert.equal(m9.endDate, "2026-09-30");
 
     const m1 = getAcademicMonthPeriod(1, "2026-2027");
-    assert.equal(m1.startDate, "2026-12-25");
-    assert.equal(m1.endDate, "2027-01-24");
+    assert.equal(m1.startDate, "2027-01-01");
+    assert.equal(m1.endDate, "2027-01-31");
   });
 });

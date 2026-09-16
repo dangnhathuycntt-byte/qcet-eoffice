@@ -86,7 +86,7 @@ describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () =
       })
     );
     assert.match(markupMonth9, /Kỳ vận hành Tháng 9/);
-    assert.match(markupMonth9, /25\/08 - 24\/09\/2026/);
+    assert.match(markupMonth9, /01\/09 - 30\/09\/2026/);
     assert.match(markupMonth9, /1 nhiệm vụ/);
 
     // Month ALL

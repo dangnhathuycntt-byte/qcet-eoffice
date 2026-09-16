@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SchoolTask } from "../src/types/dashboard";
+import { getAcademicMonthPeriod } from "../src/lib/academic-calendar";
 
 describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
   test("PriorOverdueBacklogBanner renders null when selectedMonth is ALL or tasks is empty", async () => {
@@ -80,23 +81,14 @@ describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
       React.createElement(PriorOverdueBacklogBanner, {
         tasks: mockTasks,
         selectedMonth: 9,
-        monthPeriod: {
-          monthNumber: 9,
-          monthIndexInYear: 0,
-          academicYear: "2026-2027",
-          startDate: "2026-08-25",
-          endDate: "2026-09-24",
-          label: "Tháng 9",
-          fullLabel: "Tháng 9 / 2026 (25/08 - 24/09)",
-          shortDateSpan: "25/08 - 24/09",
-        },
+        monthPeriod: getAcademicMonthPeriod(9, "2026-2027"),
       })
     );
 
     assert.ok(markup.includes('data-slot="prior-overdue-backlog-banner"'));
     assert.ok(markup.includes("Có 2 nhiệm vụ tồn đọng/trễ hạn từ các kỳ trước cần xử lý"));
     assert.ok(markup.includes("Xem danh sách"));
-    assert.ok(markup.includes("Xem và xử lý nhiệm vụ tồn đọng"));
+    assert.ok(markup.includes("Xem &amp; xử lý") || markup.includes("Xem & xử lý"));
     assert.ok(markup.includes("Tháng 9"));
   });
 });

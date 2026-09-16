@@ -13,8 +13,11 @@ import {
   getAcademicMonthInfo,
   getAcademicMonthPeriod,
   getAcademicYear,
+  getCalendarYear,
   getCurrentAcademicPeriod,
+  getQuarterPeriod,
   type AcademicMonthPeriod,
+  type QuarterPeriod,
 } from "@/lib/academic-calendar";
 import { DATE_FALLBACK, toIctDateTimeParts } from "./date";
 
@@ -132,6 +135,23 @@ export function formatSemesterFullLabel(semester: 1 | 2, academicYear: string): 
 export function formatAcademicYear(input: DateLike): string {
   const resolved = resolveDateInput(input);
   return resolved === null ? DATE_FALLBACK : getAcademicYear(resolved);
+}
+
+/** Quarter label — `Quý {Q}` (1-4). */
+export function formatQuarterLabel(quarter: number): string {
+  return `Quý ${Math.max(1, Math.min(4, quarter))}`;
+}
+
+/** Full quarter label — `Quý {Q} / {YYYY} ({span})`. */
+export function formatQuarterFullLabel(quarter: number, year: number = 2026): string {
+  const qPeriod = getQuarterPeriod(quarter, year);
+  return qPeriod.fullLabel;
+}
+
+/** Calendar year label — `YYYY` (e.g. `2026`). */
+export function formatCalendarYear(input: DateLike): string {
+  const resolved = resolveDateInput(input);
+  return resolved === null ? DATE_FALLBACK : String(getCalendarYear(resolved));
 }
 
 /**

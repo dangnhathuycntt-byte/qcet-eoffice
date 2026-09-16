@@ -185,8 +185,8 @@ describe("Calendar Month View Component & Precision Specs", () => {
     });
   });
 
-  describe("25th-to-24th Academic Cycle Calendar Grid", () => {
-    test("generateAcademicMonthGrid creates grid for Tháng 9 / 2026 (25/08 - 24/09)", () => {
+  describe("Gregorian Solar Calendar Grid", () => {
+    test("generateAcademicMonthGrid creates grid for Tháng 9 / 2026 (01/09 - 30/09)", () => {
       const period = getAcademicMonthInfo("2026-09-04");
       const grid = generateAcademicMonthGrid(period);
 
@@ -198,38 +198,38 @@ describe("Calendar Month View Component & Precision Specs", () => {
       assert.equal(grid[0].dayOfWeek, 1); // Monday
       assert.equal(grid[grid.length - 1].dayOfWeek, 0); // Sunday
 
-      // Preceding day: 2026-08-24 is Monday before start, so isCurrentMonth is false
-      const aug24 = grid.find((d) => d.dateString === "2026-08-24");
-      assert.ok(aug24);
-      assert.equal(aug24?.isCurrentMonth, false);
-
-      // Operational start: 2026-08-25 has isCurrentMonth: true
-      const aug25 = grid.find((d) => d.dateString === "2026-08-25");
-      assert.ok(aug25);
-      assert.equal(aug25?.isCurrentMonth, true);
-
-      // Mid-month: 2026-08-31 and 2026-09-01 both have isCurrentMonth: true
+      // Preceding day: 2026-08-31 is Monday before start, so isCurrentMonth is false
       const aug31 = grid.find((d) => d.dateString === "2026-08-31");
       assert.ok(aug31);
-      assert.equal(aug31?.isCurrentMonth, true);
+      assert.equal(aug31?.isCurrentMonth, false);
 
+      // Operational start: 2026-09-01 has isCurrentMonth: true
       const sep01 = grid.find((d) => d.dateString === "2026-09-01");
       assert.ok(sep01);
       assert.equal(sep01?.isCurrentMonth, true);
 
-      // Operational end: 2026-09-24 has isCurrentMonth: true
+      // Mid-month: 2026-09-24 and 2026-09-25 both have isCurrentMonth: true
       const sep24 = grid.find((d) => d.dateString === "2026-09-24");
       assert.ok(sep24);
       assert.equal(sep24?.isCurrentMonth, true);
 
-      // Trailing day: 2026-09-25 has isCurrentMonth: false
       const sep25 = grid.find((d) => d.dateString === "2026-09-25");
       assert.ok(sep25);
-      assert.equal(sep25?.isCurrentMonth, false);
+      assert.equal(sep25?.isCurrentMonth, true);
 
-      // Exactly 31 days in active operational period (Aug 25-31: 7 days, Sep 1-24: 24 days)
+      // Operational end: 2026-09-30 has isCurrentMonth: true
+      const sep30 = grid.find((d) => d.dateString === "2026-09-30");
+      assert.ok(sep30);
+      assert.equal(sep30?.isCurrentMonth, true);
+
+      // Trailing day: 2026-10-01 has isCurrentMonth: false
+      const oct01 = grid.find((d) => d.dateString === "2026-10-01");
+      assert.ok(oct01);
+      assert.equal(oct01?.isCurrentMonth, false);
+
+      // Exactly 30 days in active operational period for September
       const activeDays = grid.filter((d) => d.isCurrentMonth);
-      assert.equal(activeDays.length, 31);
+      assert.equal(activeDays.length, 30);
     });
 
     test("generateMonthGrid accepts AcademicMonthPeriod directly", () => {
@@ -238,48 +238,47 @@ describe("Calendar Month View Component & Precision Specs", () => {
 
       assert.ok(grid.length >= 35);
       const activeDays = grid.filter((d) => d.isCurrentMonth);
-      assert.equal(activeDays.length, 31);
-      assert.equal(activeDays[0].dateString, "2026-08-25");
-      assert.equal(activeDays[activeDays.length - 1].dateString, "2026-09-24");
+      assert.equal(activeDays.length, 30);
+      assert.equal(activeDays[0].dateString, "2026-09-01");
+      assert.equal(activeDays[activeDays.length - 1].dateString, "2026-09-30");
     });
 
-    test("handles cross-calendar-year academic month: Tháng 1 / 2027 (25/12 - 24/01)", () => {
-      const period = getAcademicMonthInfo("2026-12-28");
+    test("handles cross-calendar-year academic month: Tháng 1 / 2027 (01/01 - 31/01)", () => {
+      const period = getAcademicMonthInfo("2027-01-15");
       assert.equal(period.monthNumber, 1);
-      assert.equal(period.startDate, "2026-12-25");
-      assert.equal(period.endDate, "2027-01-24");
+      assert.equal(period.startDate, "2027-01-01");
+      assert.equal(period.endDate, "2027-01-31");
 
       const grid = generateAcademicMonthGrid(period);
       assert.equal(grid[0].dayOfWeek, 1); // Starts on Monday
       assert.equal(grid[grid.length - 1].dayOfWeek, 0); // Ends on Sunday
 
-      // Preceding day: Dec 24, 2026 is Thursday before start, so isCurrentMonth is false
-      const dec24 = grid.find((d) => d.dateString === "2026-12-24");
-      assert.ok(dec24);
-      assert.equal(dec24?.isCurrentMonth, false);
+      // Preceding day: Dec 31, 2026 is Thursday before start, so isCurrentMonth is false
+      const dec31 = grid.find((d) => d.dateString === "2026-12-31");
+      assert.ok(dec31);
+      assert.equal(dec31?.isCurrentMonth, false);
 
-      // Dec 25 to Jan 24 are active
-      const dec25 = grid.find((d) => d.dateString === "2026-12-25");
-      assert.ok(dec25?.isCurrentMonth);
-
+      // Jan 01 to Jan 31 are active
       const jan01 = grid.find((d) => d.dateString === "2027-01-01");
       assert.ok(jan01?.isCurrentMonth);
 
-      const jan24 = grid.find((d) => d.dateString === "2027-01-24");
-      assert.ok(jan24?.isCurrentMonth);
+      const jan15 = grid.find((d) => d.dateString === "2027-01-15");
+      assert.ok(jan15?.isCurrentMonth);
 
-      // Jan 24 is Sunday, so grid terminates cleanly on the end of the academic period
-      assert.equal(grid[grid.length - 1].dateString, "2027-01-24");
-      assert.equal(grid[grid.length - 1].isCurrentMonth, true);
+      const jan31 = grid.find((d) => d.dateString === "2027-01-31");
+      assert.ok(jan31?.isCurrentMonth);
+
+      const activeDays = grid.filter((d) => d.isCurrentMonth);
+      assert.equal(activeDays.length, 31);
     });
 
-    test("handles month where 25th is already Monday (zero preceding days offset)", () => {
-      // 2027-01-25 was a Monday (Tháng 2 / 2027: 25/01 - 24/02)
-      const period = getAcademicMonthInfo("2027-02-05");
-      assert.equal(period.startDate, "2027-01-25");
+    test("handles month where 1st is already Monday (zero preceding days offset)", () => {
+      // 2026-06-01 was a Monday
+      const period = getAcademicMonthInfo("2026-06-15");
+      assert.equal(period.startDate, "2026-06-01");
 
       const grid = generateAcademicMonthGrid(period);
-      assert.equal(grid[0].dateString, "2027-01-25");
+      assert.equal(grid[0].dateString, "2026-06-01");
       assert.equal(grid[0].dayOfWeek, 1); // Monday
       assert.equal(grid[0].isCurrentMonth, true);
     });
@@ -290,13 +289,13 @@ describe("Calendar Month View Component & Precision Specs", () => {
       const periodSep = getAcademicMonthInfo("2026-09-04");
       assert.equal(
         formatAcademicMonthHeader(periodSep),
-        "Tháng 9 / 2026 (25/08 - 24/09) • Năm học 2026 - 2027"
+        "Tháng 9 / 2026 (01/09 - 30/09) • Năm học 2026 - 2027"
       );
 
-      const periodJan = getAcademicMonthInfo("2026-12-28");
+      const periodJan = getAcademicMonthInfo("2027-01-15");
       assert.equal(
         formatAcademicMonthHeader(periodJan),
-        "Tháng 1 / 2027 (25/12 - 24/01) • Năm học 2026 - 2027"
+        "Tháng 1 / 2027 (01/01 - 31/01) • Năm học 2026 - 2027"
       );
     });
 
@@ -306,43 +305,43 @@ describe("Calendar Month View Component & Precision Specs", () => {
       // Next month
       const oct = getAdjacentAcademicMonth(sept, 1);
       assert.equal(oct.monthNumber, 10);
-      assert.equal(oct.startDate, "2026-09-25");
-      assert.equal(oct.endDate, "2026-10-24");
+      assert.equal(oct.startDate, "2026-10-01");
+      assert.equal(oct.endDate, "2026-10-31");
       assert.equal(oct.academicYear, "2026-2027");
 
       // Previous month steps back to Tháng 8 of prior academic year
       const aug = getAdjacentAcademicMonth(sept, -1);
       assert.equal(aug.monthNumber, 8);
-      assert.equal(aug.startDate, "2026-07-25");
-      assert.equal(aug.endDate, "2026-08-24");
+      assert.equal(aug.startDate, "2026-08-01");
+      assert.equal(aug.endDate, "2026-08-31");
       assert.equal(aug.academicYear, "2025-2026");
     });
   });
 
   // Consolidated from calendar-monthly-sync.test.ts — academic cycle scoping.
   describe("Academic Calendar Cycle & Scoping Invariants", () => {
-    test("Month 9 operational cycle spans 2026-08-25 to 2026-09-24", () => {
+    test("Month 9 operational cycle spans 2026-09-01 to 2026-09-30", () => {
       const period = getAcademicMonthPeriod(9, "2026-2027");
       assert.equal(period.monthNumber, 9);
-      assert.equal(period.startDate, "2026-08-25");
-      assert.equal(period.endDate, "2026-09-24");
+      assert.equal(period.startDate, "2026-09-01");
+      assert.equal(period.endDate, "2026-09-30");
       assert.equal(period.academicYear, "2026-2027");
     });
 
-    test("Month 1 cross-year cycle spans 2026-12-25 to 2027-01-24", () => {
+    test("Month 1 cross-year cycle spans 2027-01-01 to 2027-01-31", () => {
       const period = getAcademicMonthPeriod(1, "2026-2027");
       assert.equal(period.monthNumber, 1);
-      assert.equal(period.startDate, "2026-12-25");
-      assert.equal(period.endDate, "2027-01-24");
+      assert.equal(period.startDate, "2027-01-01");
+      assert.equal(period.endDate, "2027-01-31");
       assert.equal(period.academicYear, "2026-2027");
     });
 
-    test("ACADEMIC_MONTH_ORDER contains 12 months starting with 9 through 8", () => {
-      assert.deepEqual(ACADEMIC_MONTH_ORDER, [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]);
-      const months = getAcademicMonthsForYear("2026-2027");
+    test("CALENDAR_MONTH_ORDER contains 12 months starting with 1 through 12", () => {
+      assert.deepEqual(ACADEMIC_MONTH_ORDER, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+      const months = getAcademicMonthsForYear(2026);
       assert.equal(months.length, 12);
-      assert.equal(months[0].monthNumber, 9);
-      assert.equal(months[11].monthNumber, 8);
+      assert.equal(months[0].monthNumber, 1);
+      assert.equal(months[11].monthNumber, 12);
     });
 
     test("Tasks scoping correctly isolates milestones to selected cycle", () => {
