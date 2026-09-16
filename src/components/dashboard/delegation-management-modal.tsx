@@ -32,9 +32,9 @@ export interface DelegationScopeConfig {
 export const DELEGATION_SCOPES: DelegationScopeConfig[] = [
   {
     id: "DACUM_REVIEW_STEP1",
-    label: "Nghiệm thu hồ sơ DACUM (Bước 1)",
-    shortLabel: "Thẩm định DACUM",
-    description: "Thẩm định và xác nhận hồ sơ kỹ năng DACUM cấp đơn vị trước khi trình Hội đồng nhà trường.",
+    label: "Nghiệm thu hồ sơ chuyên môn (Bước 1)",
+    shortLabel: "Thẩm định chuyên môn",
+    description: "Thẩm định và xác nhận hồ sơ kỹ năng chuyên môn cấp đơn vị trước khi trình Hội đồng nhà trường.",
   },
   {
     id: "TASK_ASSIGNMENT",

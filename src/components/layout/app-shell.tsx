@@ -8,7 +8,7 @@ import {
   useSidebarLayout,
 } from "@/components/layout/sidebar-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { AppTopbar } from "@/components/layout/app-topbar";
+import { AppTopbar, DesktopTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
@@ -225,16 +225,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-[100dvh] bg-[#f4f5f7] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
-      {/* Desktop Sidebar (Floating on soft outer background) */}
-      <React.Suspense fallback={<aside className="hidden md:flex w-[208px] shrink-0 bg-[#f4f5f7] dark:bg-zinc-950" />}>
+      {/* Desktop Sidebar (Fixed Linear width) */}
+      <React.Suspense fallback={<aside className="hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950 border-r border-black/[0.06] dark:border-white/[0.06]" />}>
         <AppSidebar />
       </React.Suspense>
 
       {/* Main Content Area: Content Panel on Desktop */}
       <div
         className={cn(
-          "min-h-[100dvh] flex-1 flex flex-col transition-all duration-200 ease-in-out",
-          isCollapsed ? "md:pl-14" : "md:pl-[208px]"
+          "min-h-[100dvh] flex-1 flex flex-col transition-all duration-200 ease-in-out md:pl-[228px]"
         )}
       >
         {/* Mobile Header (Only visible below md) */}
@@ -242,13 +241,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <AppTopbar />
         </React.Suspense>
 
+        {/* Desktop Top Header Bar (Linear-style matching sidebar top header) */}
+        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-[#f4f5f7] dark:bg-zinc-950" />}>
+          <DesktopTopbar />
+        </React.Suspense>
+
         <OfflineBanner />
 
-        {/* Inner Content Panel: White rounded panel with subtle border on desktop */}
+        {/* Inner Content Panel: Linear white canvas with rounded top-left corner */}
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 flex flex-col md:my-2 md:mr-2.5 md:rounded-xl md:border md:border-black/[0.06] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[calc(100dvh-16px)] outline-none"
+          className="flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-black/[0.08] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden"
         >
           <div className="w-full flex-1 p-3 sm:p-5 md:p-6 max-w-[1600px] mx-auto flex flex-col">
             {children}

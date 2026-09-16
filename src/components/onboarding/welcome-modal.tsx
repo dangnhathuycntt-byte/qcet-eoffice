@@ -106,7 +106,7 @@ export function WelcomeModal({ isOpen, onStartTour, onDismiss }: WelcomeModalPro
             <div className="p-2.5 rounded-lg border border-border/50 bg-background/60 flex items-start gap-2">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-foreground">Cơ chế DACUM</p>
+                <p className="font-medium text-foreground">Quy trình phân công & nghiệm thu</p>
                 <p className="text-xs text-muted-foreground leading-tight mt-0.5">Phân công rõ vai trò, nhiệm vụ và báo cáo sản phẩm.</p>
               </div>
             </div>

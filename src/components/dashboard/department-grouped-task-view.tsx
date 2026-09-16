@@ -458,7 +458,7 @@ export function DepartmentGroupedTaskView({
                                         className="shrink-0 px-1.5 py-0.5 rounded text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200"
                                         title={(t as SchoolTask).dacumTaskDef?.title}
                                       >
-                                        DACUM {(t as SchoolTask).dacumTaskDef?.code}
+                                        {(t as SchoolTask).dacumTaskDef?.code}
                                       </span>
                                     )}
                                     <span className="truncate">{title}</span>

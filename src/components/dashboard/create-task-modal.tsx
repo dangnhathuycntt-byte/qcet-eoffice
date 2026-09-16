@@ -402,7 +402,7 @@ export function validateTaskForm(
     (!data.requiredDeliverables || data.requiredDeliverables.trim().length === 0)
   ) {
     errors.requiredDeliverables =
-      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232/DACUM).";
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232).";
   }
   if (data.internalDueDate && data.dueDate) {
     if (new Date(data.internalDueDate).getTime() > new Date(data.dueDate).getTime()) {
@@ -2031,14 +2031,14 @@ export function CreateTaskModal({
               </div>
             ))}
 
-            {/* 5. DACUM Section: Cấu hình quy trình phê duyệt & Sản phẩm đầu ra (Level: DON_VI) */}
+            {/* 5. Cấu hình quy trình phê duyệt & Sản phẩm đầu ra (Level: DON_VI) */}
             {showAdvanced && formData.level === "DON_VI" && (
               <div className="space-y-2.5 pt-3 border-t border-border/60">
                 <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div className="flex items-center gap-2">
                     <FileCheck className="size-3.5 text-primary" strokeWidth={1.5} />
                     <span className="text-xs font-bold text-foreground">
-                      Sản phẩm đầu ra đo lường được (DACUM)
+                      Sản phẩm đầu ra đo lường được
                     </span>
                     {formData.requiresReview && <span className="text-destructive font-bold">*</span>}
                   </div>
@@ -2063,7 +2063,7 @@ export function CreateTaskModal({
 
                 {formData.requiresReview ? (
                   <div className="text-xs text-amber-700 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl leading-relaxed">
-                    Nhiệm vụ trọng điểm theo Nghị định 232/DACUM: Cán bộ thực hiện bắt buộc phải nộp tài liệu/kết quả minh chứng đo lường được trước khi hoàn tất.
+                    Nhiệm vụ trọng điểm theo Nghị định 232: Cán bộ thực hiện bắt buộc phải nộp tài liệu/kết quả minh chứng đo lường được trước khi hoàn tất.
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">

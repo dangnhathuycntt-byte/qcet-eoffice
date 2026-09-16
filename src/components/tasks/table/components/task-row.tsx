@@ -150,7 +150,7 @@ function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
 
 /**
  * Health Badge Indicator (Linear Health style: On track / At risk / Off track)
- * Refined: restrained dot indicator without bulky container chrome
+ * Refined: restrained dot indicator with lowered saturation to avoid competing with task title
  */
 function HealthIndicator({
   status,
@@ -163,7 +163,7 @@ function HealthIndicator({
 }) {
   if (status === "COMPLETED") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90 dark:text-emerald-400">
         <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
         <span className="font-medium">Hoàn thành</span>
       </div>
@@ -171,8 +171,8 @@ function HealthIndicator({
   }
   if (isOverdue) {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-600">
-        <span className="size-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-400">
+        <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
         <span className="font-medium">Quá hạn</span>
       </div>
     );
@@ -180,23 +180,23 @@ function HealthIndicator({
   if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
     const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
-        <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+        <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
         <span className="font-medium">{label}</span>
       </div>
     );
   }
   if (status === "IN_PROGRESS") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-blue-600">
-        <span className="size-1.5 rounded-full bg-blue-500 shrink-0" />
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-300">
+        <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
         <span className="font-medium">Đang thực hiện</span>
       </div>
     );
   }
-  // Mới (thay thế "Chưa làm")
+  // Mới
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
       <span className="size-1.5 rounded-full bg-slate-400 shrink-0" />
       <span className="font-medium">Mới</span>
     </div>
@@ -205,15 +205,23 @@ function HealthIndicator({
 
 /**
  * Circular Progress Ring (Linear style)
+ * Clean: When progress is 0%, render subtle plain text to avoid visual clutter
  */
 function CircularProgressRing({ percent }: { percent: number }) {
   const bounded = Math.min(100, Math.max(0, percent || 0));
+  if (bounded === 0) {
+    return (
+      <span className="font-mono text-xs tabular-nums text-muted-foreground/50 font-normal">
+        0%
+      </span>
+    );
+  }
   const radius = 5.5;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (circumference * bounded) / 100;
 
   return (
-    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700">
+    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
       <svg className="size-3.5 shrink-0 -rotate-90" viewBox="0 0 16 16">
         <circle
           cx="8"
@@ -222,7 +230,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-slate-200"
+          className="text-slate-200 dark:text-zinc-700"
         />
         <circle
           cx="8"
@@ -236,7 +244,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
           strokeLinecap="round"
           className={cn(
             "transition-all duration-300",
-            bounded === 100 ? "text-emerald-500" : bounded > 0 ? "text-primary" : "text-transparent"
+            bounded === 100 ? "text-emerald-500" : "text-primary"
           )}
         />
       </svg>
@@ -486,19 +494,19 @@ export const TaskRow = React.memo(function TaskRow({
           className="flex flex-col min-w-0 justify-center"
           title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
         >
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             {task.leadAssigneeAvatar ? (
               <img
                 src={task.leadAssigneeAvatar}
                 alt=""
                 aria-hidden="true"
-                width={18}
-                height={18}
+                width={20}
+                height={20}
                 loading="lazy"
-                className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+                className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
               />
             ) : (
-              <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[9px] font-semibold tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
                 {getInitials(driInfo.primaryName)}
               </span>
             )}
@@ -508,7 +516,7 @@ export const TaskRow = React.memo(function TaskRow({
           </div>
           {departmentName && (
             <span
-              className="text-[11px] text-muted-foreground font-normal truncate mt-0.5"
+              className="text-[11px] text-muted-foreground/75 font-normal truncate mt-0.5 ml-7"
               title={departmentName}
             >
               {departmentName}
@@ -523,7 +531,11 @@ export const TaskRow = React.memo(function TaskRow({
           <span
             className={cn(
               "font-mono tabular-nums text-xs",
-              slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-muted-foreground font-medium"
+              slaStatus.isOverdue
+                ? "text-rose-600 font-semibold"
+                : slaStatus.isToday
+                ? "text-amber-600 font-semibold"
+                : "text-slate-600 dark:text-zinc-400 font-normal"
             )}
             title="Hạn hoàn thành"
           >

@@ -253,7 +253,7 @@ export function UniversalActionQueue({
                         </span>
                       )}
                       {item.complianceScore !== undefined && (
-                        <span>• DACUM: {item.complianceScore}%</span>
+                        <span>• Chuẩn đầu ra: {item.complianceScore}%</span>
                       )}
                     </div>
                   </div>

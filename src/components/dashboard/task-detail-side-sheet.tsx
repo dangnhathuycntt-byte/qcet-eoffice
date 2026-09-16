@@ -921,7 +921,7 @@ export function TaskDetailSideSheet({
     if (!validation.valid) {
       setDeliverableError(
         validation.error ||
-          "Theo chuẩn DACUM và Nghị định 232, bắt buộc phải có sản phẩm minh chứng hoặc mô tả kết quả."
+          "Theo quy định phân công và Nghị định 232, bắt buộc phải có sản phẩm minh chứng hoặc mô tả kết quả."
       );
       return;
     }
@@ -1150,7 +1150,7 @@ export function TaskDetailSideSheet({
                       : "border-blue-500/20 bg-blue-500/10 text-blue-600"
                   )}
                 >
-                  {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự nghiệm thu)"}
+                  {(task as StaffTask).requiresReview ? "Trọng điểm (Yêu cầu nghiệm thu)" : "Thường quy (Tự nghiệm thu)"}
                 </span>
               )}
             </div>
@@ -1338,7 +1338,7 @@ export function TaskDetailSideSheet({
                 <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                   <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   {(task as StaffTask).requiresReview
-                    ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu - DACUM)"
+                    ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu)"
                     : "Tài liệu đính kèm (Nhiệm vụ thường quy - Tùy chọn)"}
                 </h3>
                 {((task as StaffTask).deliverables?.length || 0) > 0 && (
@@ -1407,7 +1407,7 @@ export function TaskDetailSideSheet({
                     </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {(task as StaffTask).requiresReview
-                        ? "Cung cấp đường dẫn tệp tài liệu và mô tả kết quả công việc theo tiêu chuẩn DACUM & Nghị định 232 để Trưởng phòng nghiệm thu."
+                        ? "Cung cấp đường dẫn tệp tài liệu và mô tả kết quả công việc theo tiêu chuẩn Nghị định 232 để Trưởng phòng nghiệm thu."
                         : "Viên chức có thể đính kèm đường dẫn tài liệu lưu trữ hoặc dùng nút 'Hoàn thành nhiệm vụ' trên thanh tác vụ."}
                     </p>
                   </div>
@@ -1803,11 +1803,11 @@ export function TaskDetailSideSheet({
                     {aiReview.executiveSummary}
                   </p>
 
-                  {/* DACUM Criteria Matched */}
+                  {/* Criteria Matched */}
                   {aiReview.dacumCriteriaMatched.length > 0 && (
                     <div className="space-y-1">
                       <span className="text-xs font-semibold text-muted-foreground">
-                        Tiêu chí DACUM đạt:
+                        Tiêu chí chuyên môn đạt:
                       </span>
                       <ul className="list-disc list-inside text-xs text-foreground space-y-0.5 pl-1">
                         {aiReview.dacumCriteriaMatched.map((c, i) => (
@@ -2360,7 +2360,7 @@ export function TaskDetailSideSheet({
                 </div>
 
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Theo quy định phân quyền DACUM và Nghị định 232, Trưởng đơn vị bắt buộc phải ghi rõ lý do và nội dung cần khắc phục khi trả lại công việc.
+                  Theo quy định phân công và Nghị định 232, Trưởng đơn vị bắt buộc phải ghi rõ lý do và nội dung cần khắc phục khi trả lại công việc.
                 </p>
 
                 <form onSubmit={handleManagerReject} className="space-y-3">

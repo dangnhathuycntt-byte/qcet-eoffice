@@ -16,9 +16,13 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { formatDisplayName } from "@/components/layout/app-sidebar";
+
 export function getInitials(name?: string | null): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
+  const cleanName = formatDisplayName(name);
+  if (!cleanName || cleanName === "Người dùng") return "QC";
+  const parts = cleanName.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "QC";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   const first = parts[0].charAt(0);
   const last = parts[parts.length - 1].charAt(0);
@@ -69,8 +73,50 @@ function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
   );
 }
 
+function DesktopHeaderTitle({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-medium select-none">
+      <span className="text-muted-foreground/60">{rootTitle}</span>
+      <span className="text-muted-foreground/30">›</span>
+      <span className="font-semibold text-foreground">{pageTitle}</span>
+    </div>
+  );
+}
+
+function DesktopHeaderTitleFallback({ pathname }: { pathname: string }) {
+  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-medium select-none">
+      <span className="text-muted-foreground/60">{rootTitle}</span>
+      <span className="text-muted-foreground/30">›</span>
+      <span className="font-semibold text-foreground">{pageTitle}</span>
+    </div>
+  );
+}
+
 /**
- * Mobile-only topbar (< 768px). On desktop (>= 768px), topbar is omitted per unified panel layout.
+ * Desktop-only topbar (>= 768px). Linear-style header bar with matching background.
+ */
+export function DesktopTopbar() {
+  const pathname = usePathname();
+
+  return (
+    <header
+      data-slot="desktop-topbar"
+      className="hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-[#f4f5f7] dark:bg-zinc-950 select-none"
+    >
+      <Suspense fallback={<DesktopHeaderTitleFallback pathname={pathname} />}>
+        <DesktopHeaderTitle pathname={pathname} />
+      </Suspense>
+    </header>
+  );
+}
+
+/**
+ * Mobile-only topbar (< 768px).
  */
 export function AppTopbar() {
   const pathname = usePathname();

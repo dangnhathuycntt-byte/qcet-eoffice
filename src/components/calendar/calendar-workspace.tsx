@@ -70,7 +70,7 @@ export const QCET_ITEM_TYPE_OPTIONS = [
   { id: "ALL", label: "Tất cả loại hình" },
   { id: "school_milestone", label: "Mốc cấp Trường" },
   { id: "subtask", label: "Nhiệm vụ Đơn vị" },
-  { id: "deliverable", label: "Sản phẩm DACUM" },
+  { id: "deliverable", label: "Sản phẩm minh chứng" },
   { id: "urgent_overdue", label: "Khẩn / Quá hạn" },
 ];
 

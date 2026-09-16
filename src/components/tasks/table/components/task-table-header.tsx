@@ -61,7 +61,7 @@ export function TaskTableHeader({
   indeterminate = false,
   onToggleSelectAll,
   density = "comfortable",
-  visibleColumns = { priority: true, subtasks: true, progress: true },
+  visibleColumns = { priority: false, subtasks: false, progress: true },
   className,
   showSelection = false,
   showExpandAll = false,
@@ -108,11 +108,11 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-20 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-medium text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-xs font-semibold text-slate-700 dark:text-zinc-300")}>
         {/* Optional Selection Checkbox (only rendered when explicitly enabled for batch ops) */}
         {showSelection && (
           <th

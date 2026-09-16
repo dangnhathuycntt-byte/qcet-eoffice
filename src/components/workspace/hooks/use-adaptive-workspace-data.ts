@@ -76,17 +76,20 @@ export function countScopeTasks(
   scope: WorkspaceScope,
   selectedDepartment?: string
 ): number {
-  if (scope === "school") return tasks.length;
+  const cleanTasks = tasks.filter(
+    (t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2")
+  );
+  if (scope === "school") return cleanTasks.length;
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   if (scope === "unit") {
     if (userDept && userDept !== "ALL") {
-      return filterTasksForTable(tasks, "ALL", "", userDept).length;
+      return filterTasksForTable(cleanTasks, "ALL", "", userDept).length;
     }
-    return tasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
+    return cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
   }
   // scope === "my"
-  if (!user) return tasks.length;
-  return tasks.filter((t) => {
+  if (!user) return cleanTasks.length;
+  return cleanTasks.filter((t) => {
     const isLead =
       t.leadAssigneeName === user.name ||
       matchesUser(t.leadAssigneeName, user) ||
@@ -110,6 +113,9 @@ export function deriveAdaptiveWorkspaceData({
   scope,
   selectedDepartment,
 }: DeriveWorkspaceDataOptions): DerivedWorkspaceData {
+  const cleanTasks = tasks.filter(
+    (t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2")
+  );
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user);
@@ -117,16 +123,16 @@ export function deriveAdaptiveWorkspaceData({
   let scopedTasks: SchoolTask[] = [];
 
   if (scope === "school") {
-    scopedTasks = tasks;
+    scopedTasks = cleanTasks;
   } else if (scope === "unit") {
     if (userDept && userDept !== "ALL") {
-      scopedTasks = filterTasksForTable(tasks, "ALL", "", userDept);
+      scopedTasks = filterTasksForTable(cleanTasks, "ALL", "", userDept);
     } else {
-      scopedTasks = tasks.filter((t) => t.subTasks && t.subTasks.length > 0);
+      scopedTasks = cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0);
     }
   } else {
     // scope === "my"
-    scopedTasks = tasks
+    scopedTasks = cleanTasks
       .map((t) => {
         const matchingSub = (t.subTasks || []).filter((st) => isSubTaskAssignedToUser(st, user));
         if (matchingSub.length > 0) {

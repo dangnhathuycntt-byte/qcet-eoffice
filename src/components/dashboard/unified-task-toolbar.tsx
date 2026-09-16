@@ -776,13 +776,11 @@ export function UnifiedTaskToolbar({
     [isExecutiveRole, tabCounts, activeTab, totalTasksCount]
   );
 
-  // Count active advanced filters
+  // Count active advanced filters (Department, Priority, Custom status)
   const activeAdvancedFilterCount = React.useMemo(() => {
     let count = 0;
     if (selectedDepartment && selectedDepartment !== "ALL") count++;
-    if (selectedCategory && selectedCategory !== "ALL") count++;
     if (selectedPriority && selectedPriority !== "ALL") count++;
-    if (effectiveMonth !== undefined && effectiveMonth !== "ALL") count++;
     if (
       activeTab === "today" ||
       (isExecutiveRole
@@ -794,9 +792,7 @@ export function UnifiedTaskToolbar({
     return count;
   }, [
     selectedDepartment,
-    selectedCategory,
     selectedPriority,
-    effectiveMonth,
     activeTab,
     isExecutiveRole,
   ]);
@@ -1046,14 +1042,14 @@ export function UnifiedTaskToolbar({
       </div>
 
       {/* ==================================================================== */}
-      {/* ROW 2: Search + Filter Menu + Display Menu (Minimal Layout)          */}
+      {/* ROW 2: Search + Month Selector + Filter Menu + Display Menu          */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-2"
-        className="flex items-center gap-2 pt-1"
+        className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap"
       >
-        {/* 1. Search Input: Always Scoped to Current Scope */}
-        <div className="relative flex-1 max-w-[560px] md:max-w-[640px] min-w-[150px]">
+        {/* 1. Search Input: Always Scoped to Current Scope (440–500px) */}
+        <div className="relative w-full max-w-[440px] sm:max-w-[480px] shrink">
           <Search
             className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
@@ -1065,7 +1061,7 @@ export function UnifiedTaskToolbar({
             onChange={(e) => handleSearchInputChange(e.target.value)}
             placeholder="Tìm nhiệm vụ… /"
             aria-label="Tìm nhiệm vụ"
-            className="h-7.5 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
+            className="h-9 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {loading && (
@@ -1091,7 +1087,82 @@ export function UnifiedTaskToolbar({
           </div>
         </div>
 
-        {/* 2. Filter Menu Trigger & Popover (Contains Status, Advanced, Saved Filters) */}
+        {/* 2. Month Filter Selector Outside Toolbar (Linear style) */}
+        <div className="relative shrink-0" ref={monthMenuRef}>
+          <button
+            type="button"
+            aria-label="Chọn kỳ tháng"
+            aria-expanded={isMonthOpen}
+            onClick={() => setIsMonthOpen((prev) => !prev)}
+            className={cn(
+              "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+              effectiveMonth !== "ALL" && effectiveMonth !== undefined
+                ? "border-primary/40 bg-primary/5 text-primary font-semibold"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+            <span>
+              {effectiveMonth === "ALL" || effectiveMonth === undefined
+                ? "Cả năm học"
+                : `Tháng ${effectiveMonth}`}
+            </span>
+            <ChevronDown
+              className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isMonthOpen && "rotate-180")}
+              strokeWidth={1.5}
+            />
+          </button>
+
+          {isMonthOpen && (
+            <div
+              className="absolute left-0 top-full mt-1.5 z-50 w-52 rounded-md border border-border bg-popover py-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground max-h-60 overflow-y-auto"
+              role="dialog"
+              aria-label="Chọn tháng làm việc"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  handleEffectiveMonthChange?.("ALL");
+                  setIsMonthOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                  effectiveMonth === "ALL" || effectiveMonth === undefined
+                    ? "text-primary font-semibold bg-primary/10"
+                    : "text-foreground"
+                )}
+              >
+                <span>Cả năm học (2026-2027)</span>
+                {(effectiveMonth === "ALL" || effectiveMonth === undefined) && (
+                  <Check className="size-3.5 text-primary" />
+                )}
+              </button>
+              {academicMonths.map((period) => (
+                <button
+                  key={period.monthNumber}
+                  type="button"
+                  onClick={() => {
+                    handleEffectiveMonthChange?.(period.monthNumber);
+                    setIsMonthOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                    effectiveMonth === period.monthNumber
+                      ? "text-primary font-semibold bg-primary/10"
+                      : "text-foreground"
+                  )}
+                >
+                  <span>{period.label}</span>
+                  {effectiveMonth === period.monthNumber && (
+                    <Check className="size-3.5 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Filter Menu Trigger & Popover (Contains Status, Priority, Saved Filters) */}
         <div className="ml-auto flex items-center gap-1.5 shrink-0 relative">
           <div className="relative" ref={popoverRef}>
             <button
@@ -1100,16 +1171,16 @@ export function UnifiedTaskToolbar({
               aria-expanded={isFilterOpen}
               onClick={() => setIsFilterOpen((prev) => !prev)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
                 isFilterOpen || activeAdvancedFilterCount > 0 || (activeTab && activeTab !== "all")
-                  ? "bg-muted text-foreground font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "bg-muted text-foreground font-semibold border-border"
+                  : "text-foreground hover:bg-accent"
               )}
             >
               <Filter className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
               <span>Bộ lọc</span>
               {(activeAdvancedFilterCount > 0 || (activeTab && activeTab !== "all")) && (
-                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-muted text-foreground">
+                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary/10 text-primary">
                   {activeAdvancedFilterCount + (activeTab && activeTab !== "all" ? 1 : 0)}
                 </span>
               )}
@@ -1183,46 +1254,8 @@ export function UnifiedTaskToolbar({
                   </div>
                 </div>
 
-                {/* Section 2: Advanced Criteria (Category, Priority, Month) */}
-                <div className="border-t border-border/60 pt-2 mb-2.5 divide-y divide-border/60">
-                  {/* Category */}
-                  <div className="relative">
-                    <div
-                      onClick={() => setActiveFilterField(activeFilterField === "cat" ? null : "cat")}
-                      className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-accent cursor-pointer"
-                    >
-                      <span className="text-muted-foreground">Danh mục DACUM</span>
-                      <div className="flex items-center gap-1 text-foreground font-medium max-w-[180px]">
-                        <span className="truncate">
-                          {CATEGORY_FILTER_OPTIONS.find((c) => c.id === selectedCategory)?.label || "Tất cả danh mục"}
-                        </span>
-                        <ChevronDown className="size-3 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                    {activeFilterField === "cat" && (
-                      <div className="absolute right-0 top-full mt-1 z-30 w-52 rounded-md border border-border bg-popover py-1 shadow-lg max-h-48 overflow-y-auto">
-                        {CATEGORY_FILTER_OPTIONS.map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              onCategoryChange?.(cat.id);
-                              setActiveFilterField(null);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                              (selectedCategory || "ALL") === cat.id ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                            )}
-                          >
-                            <span className="truncate">{cat.label}</span>
-                            {(selectedCategory || "ALL") === cat.id && <Check className="size-3.5 text-primary" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Priority */}
+                {/* Section 2: Priority Filter */}
+                <div className="border-t border-border/60 pt-2 mb-2.5">
                   <div className="relative">
                     <div
                       onClick={() => setActiveFilterField(activeFilterField === "prio" ? null : "prio")}
@@ -1253,59 +1286,6 @@ export function UnifiedTaskToolbar({
                           >
                             <span className="truncate">{prio.label}</span>
                             {(selectedPriority || "ALL") === prio.id && <Check className="size-3.5 text-primary" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Academic Month */}
-                  <div className="relative">
-                    <div
-                      onClick={() => setActiveFilterField(activeFilterField === "month" ? null : "month")}
-                      className="flex items-center justify-between py-1.5 px-1 rounded hover:bg-accent cursor-pointer"
-                    >
-                      <span className="text-muted-foreground">Tháng học kỳ</span>
-                      <div className="flex items-center gap-1 text-foreground font-medium max-w-[180px]">
-                        <span className="truncate">
-                          {effectiveMonth === "ALL" || effectiveMonth === undefined
-                            ? "Cả năm học"
-                            : `Tháng ${effectiveMonth}`}
-                        </span>
-                        <ChevronDown className="size-3 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                    {activeFilterField === "month" && (
-                      <div className="absolute right-0 top-full mt-1 z-30 w-56 rounded-md border border-border bg-popover py-1 shadow-lg max-h-48 overflow-y-auto">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleEffectiveMonthChange?.("ALL");
-                            setActiveFilterField(null);
-                          }}
-                          className={cn(
-                            "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                            (effectiveMonth === "ALL" || effectiveMonth === undefined) ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                          )}
-                        >
-                          <span>Cả năm học</span>
-                          {(effectiveMonth === "ALL" || effectiveMonth === undefined) && <Check className="size-3.5 text-primary" />}
-                        </button>
-                        {academicMonths.map((period) => (
-                          <button
-                            key={period.monthNumber}
-                            type="button"
-                            onClick={() => {
-                              handleEffectiveMonthChange?.(period.monthNumber);
-                              setActiveFilterField(null);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                              effectiveMonth === period.monthNumber ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                            )}
-                          >
-                            <span>{period.label}</span>
-                            {effectiveMonth === period.monthNumber && <Check className="size-3.5 text-primary" />}
                           </button>
                         ))}
                       </div>
@@ -1359,7 +1339,7 @@ export function UnifiedTaskToolbar({
             )}
           </div>
 
-          {/* 3. Display Options Popover (Bảng / Kanban) */}
+          {/* 4. Display Options Popover */}
           {onViewModeChange && (
             <div className="relative" ref={displayMenuRef}>
               <button
@@ -1368,10 +1348,10 @@ export function UnifiedTaskToolbar({
                 aria-expanded={isDisplayOpen}
                 onClick={() => setIsDisplayOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                  "inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
                   isDisplayOpen
-                    ? "bg-muted text-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    ? "bg-muted text-foreground font-semibold border-border"
+                    : "text-foreground hover:bg-accent"
                 )}
               >
                 <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />

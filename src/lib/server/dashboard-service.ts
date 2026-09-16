@@ -216,7 +216,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       parentTaskCode: (t as any).parentTask?.code || undefined,
       parentTask: (t as any).parentTask || undefined,
     } as SchoolTask;
-  });
+  }).filter((t) => !t.title?.includes("Nhiệm vụ kiểm thử") && !t.title?.includes("kiểm thử V2"));
 
   // Tính toán DashboardStats
   const total = mappedTasks.length;

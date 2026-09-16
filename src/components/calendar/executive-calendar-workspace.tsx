@@ -304,7 +304,7 @@ export function WorkCalendarCard({
   let badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
 
   if (type === "deliverable") {
-    badgeLabel = "Sản phẩm DACUM";
+    badgeLabel = "Sản phẩm minh chứng";
     badgeStyle = "bg-violet-50 text-violet-700 border-violet-200";
   } else if (type === "subtask") {
     badgeLabel = "Việc đơn vị";
@@ -917,7 +917,7 @@ export function ExecutiveCalendarWorkspace({
           {[
             { id: "ALL", label: "Tất cả mốc" },
             { id: "school_milestone", label: "Mốc trường" },
-            { id: "deliverable", label: "Sản phẩm DACUM" },
+            { id: "deliverable", label: "Sản phẩm minh chứng" },
             { id: "subtask", label: "Việc đơn vị" },
           ].map((typeOpt) => (
             <button

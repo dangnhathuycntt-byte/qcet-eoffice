@@ -643,30 +643,6 @@ export function TaskTableToolbar({
                 </div>
               )}
 
-              {/* Filter: Danh mục DACUM */}
-              {onCategoryChange && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Danh mục chuyên môn DACUM
-                  </label>
-                  <div className="relative">
-                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => onCategoryChange(e.target.value as TaskCategory | "ALL")}
-                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                    >
-                      {categoryOptions.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-              )}
-
               {/* Filter: Sắp xếp theo */}
               {onSort && (
                 <div className="space-y-1.5">
@@ -855,34 +831,6 @@ export function TaskTableToolbar({
                 {departmentOptions.map((dept) => (
                   <option key={dept.id} value={dept.id}>
                     {dept.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
-              />
-            </div>
-          )}
-
-          {/* Dropdown Danh mục DACUM */}
-          {onCategoryChange && (
-            <div className="relative inline-flex items-center">
-              <Layers
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
-              />
-              <select
-                value={selectedCategory}
-                onChange={(e) =>
-                  onCategoryChange(e.target.value as TaskCategory | "ALL")
-                }
-                aria-label="Lọc theo danh mục DACUM"
-                className="h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none max-w-[170px] truncate"
-              >
-                {categoryOptions.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.label}
                   </option>
                 ))}
               </select>

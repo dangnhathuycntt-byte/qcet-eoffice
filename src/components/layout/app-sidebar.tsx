@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   MoreHorizontal,
   SquarePen,
+  Focus,
   type LucideIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -57,7 +58,7 @@ const UserProfileModal = dynamic(
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
   LayoutDashboard,
   Calendar,
-  CheckSquare,
+  CheckSquare: Focus,
   FileText,
   Building2,
   Bell,
@@ -67,17 +68,25 @@ const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
 
 export function formatDisplayName(name?: string | null): string {
   if (!name || !name.trim()) return "Người dùng";
-  // Loại bỏ các tiền tố học hàm, học vị phổ biến
-  const cleaned = name
-    .replace(/^(GS\.|PGS\.|TS\.|ThS\.|BS\.|BSCK[I|II]\.|KS\.|CN\.|NCS\.|Giáo sư|Phó Giáo sư|Tiến sĩ|Thạc sĩ|Bác sĩ|Kỹ sư|Cử nhân)\s+/gi, "")
-    .replace(/^(GS|PGS|TS|ThS|BS|KS|CN)\s+/g, "")
-    .trim();
+  let cleaned = name.trim();
+
+  // 1. Loại bỏ các tiền tố học hàm, học vị (kể cả ghép như PGS.TS., GS.TS., ThS.BS.,...)
+  const titlePrefixRegex = /^(GS\.|PGS\.|TS\.|ThS\.|BS\.|BSCK[I|II]\.|KS\.|CN\.|NCS\.|GS|PGS|TS|ThS|BS|KS|CN|Giáo sư|Phó Giáo sư|Tiến sĩ|Thạc sĩ|Bác sĩ|Kỹ sư|Cử nhân)\s*/i;
+  while (titlePrefixRegex.test(cleaned)) {
+    cleaned = cleaned.replace(titlePrefixRegex, "").trim();
+  }
+
+  // 2. Loại bỏ phần ghi chú chức vụ/đơn vị trong ngoặc đơn ở cuối hoặc giữa tên: (Hiệu trưởng), (Phó Hiệu trưởng), (Trưởng khoa...), (...)
+  cleaned = cleaned.replace(/\s*\([^)]*\)/g, "").trim();
+
   return cleaned || name.trim();
 }
 
 export function getInitials(name?: string | null): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
+  const cleanName = formatDisplayName(name);
+  if (!cleanName || cleanName === "Người dùng") return "QC";
+  const parts = cleanName.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "QC";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   const first = parts[0].charAt(0);
   const last = parts[parts.length - 1].charAt(0);
@@ -91,7 +100,7 @@ export interface DesktopSidebarItem extends CanonicalRouteConfig {
 }
 
 export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
-  .filter((item) => item.id !== "settings" && item.id !== "documents")
+  .filter((item) => item.id !== "settings" && item.id !== "documents" && item.id !== "desk")
   .map((item) => ({
     ...item,
     icon: ICON_MAP[item.iconName] || LayoutDashboard,
@@ -158,8 +167,8 @@ export function handleSidebarShortcut(
   return false;
 }
 
-const SECTIONS: { key: NavigationSection; label: string }[] = [
-  { key: "work", label: "Công việc" },
+const SECTIONS: { key: NavigationSection; label?: string }[] = [
+  { key: "work" },
   { key: "org", label: "Tổ chức" },
 ];
 
@@ -358,55 +367,57 @@ export function AppSidebar() {
       <aside
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
-        className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col transition-all duration-200 ease-in-out bg-[#f4f5f7] dark:bg-zinc-950 text-foreground select-none group/sidebar",
-          isCollapsed ? "w-14" : "w-[208px]"
-        )}
+        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 border-r border-black/[0.06] dark:border-white/[0.06] text-foreground select-none group/sidebar w-[228px]"
       >
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
         {/* ========================================================= */}
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
-          {isCollapsed ? (
-            /* Collapsed Mode Top: User Avatar Trigger + Search + Quick Create */
-            <div className="p-2 pb-1 flex flex-col items-center gap-1.5">
-              <Tooltip delayDuration={300}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
-                    className={cn(
-                      "size-7 rounded-md flex items-center justify-center font-semibold text-[11px] transition-all cursor-pointer shadow-2xs",
-                      isProfileDropdownOpen
-                        ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
-                        : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
-                    )}
-                    aria-label={`Tài khoản: ${user?.name || "Người dùng"}`}
-                    aria-expanded={isProfileDropdownOpen}
-                  >
-                    {getInitials(user?.name)}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <div className="flex flex-col">
-                    <span className="font-semibold">{formatDisplayName(user?.name)}</span>
-                    <span className="text-[11px] text-muted-foreground">{userDepartment}</span>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+          {/* Linear Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
+          <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
+            {/* Left: User Identity / Account Menu Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1.5 px-1 py-1 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user",
+                isProfileDropdownOpen
+                  ? "bg-black/[0.06] dark:bg-white/[0.08]"
+                  : "hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
+              )}
+              aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
+              aria-expanded={isProfileDropdownOpen}
+            >
+              <div className="size-5 rounded-[5px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white font-medium text-[10px] shrink-0 shadow-2xs">
+                {getInitials(user?.name)}
+              </div>
+              <span className="text-[13px] font-medium text-foreground/90 truncate leading-none group-hover/user:text-foreground transition-colors">
+                {formatDisplayName(user?.name)}
+              </span>
+              <ChevronDown
+                size={10}
+                strokeWidth={1.5}
+                className={cn(
+                  "text-muted-foreground/45 shrink-0 ml-0.5 transition-transform duration-200",
+                  isProfileDropdownOpen && "rotate-180 text-foreground"
+                )}
+              />
+            </button>
 
+            {/* Right: Quick Action Buttons (Search & Floating Create Task) */}
+            <div className="flex items-center gap-0.5 shrink-0 ml-1">
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={handleOpenSearch}
-                    className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    className="size-6.5 rounded-[5px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none"
                     aria-label="Tìm kiếm (⌘K)"
                   >
-                    <Search size={14} strokeWidth={1.5} />
+                    <Search size={13.5} strokeWidth={1.5} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="bottom" sideOffset={4}>
                   <span>Tìm kiếm [⌘K]</span>
                 </TooltipContent>
               </Tooltip>
@@ -416,94 +427,27 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleQuickCreate}
-                    className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    className="size-6.5 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none"
                     aria-label="Giao việc mới (C)"
                   >
-                    <SquarePen size={14} strokeWidth={1.5} />
+                    <SquarePen size={13} strokeWidth={1.75} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="bottom" sideOffset={4}>
                   <span>Giao việc mới [C]</span>
                 </TooltipContent>
               </Tooltip>
             </div>
-          ) : (
-            /* Expanded Mode Top: Avatar + Name + Chevron (Left) & Search + Create (Right) */
-            <div className="px-2 pt-2.5 pb-2 flex items-center justify-between gap-1 w-full">
-              {/* Left: User Identity / Account Menu Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
-                className={cn(
-                  "flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-md transition-colors cursor-pointer text-left min-w-0 flex-1 group/user",
-                  isProfileDropdownOpen
-                    ? "bg-black/[0.06] dark:bg-white/[0.08]"
-                    : "hover:bg-black/[0.035] dark:hover:bg-white/[0.04]"
-                )}
-                aria-label={`Tài khoản: ${user?.name || "Người dùng"}`}
-                aria-expanded={isProfileDropdownOpen}
-              >
-                <div className="size-5.5 rounded-md flex items-center justify-center bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold shrink-0 shadow-2xs group-hover/user:scale-105 transition-transform">
-                  {getInitials(user?.name)}
-                </div>
-                <span className="text-[13px] font-medium text-foreground truncate leading-tight group-hover/user:text-primary transition-colors">
-                  {formatDisplayName(user?.name)}
-                </span>
-                <ChevronDown
-                  size={12}
-                  strokeWidth={1.5}
-                  className={cn(
-                    "text-muted-foreground/60 group-hover/user:text-foreground shrink-0 transition-transform duration-200",
-                    isProfileDropdownOpen && "rotate-180 text-foreground"
-                  )}
-                />
-              </button>
-
-              {/* Right: Quick Action Buttons (Search & Create Task) */}
-              <div className="flex items-center gap-0.5 shrink-0">
-                <Tooltip delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleOpenSearch}
-                      className="size-7 rounded-md flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
-                      aria-label="Tìm kiếm (⌘K)"
-                    >
-                      <Search size={14} strokeWidth={1.5} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={4}>
-                    <span>Tìm kiếm [⌘K]</span>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleQuickCreate}
-                      className="size-7 rounded-md flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
-                      aria-label="Giao việc mới (C)"
-                    >
-                      <SquarePen size={14} strokeWidth={1.5} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={4}>
-                    <span>Giao việc mới [C]</span>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Unified Account Dropdown Popover */}
           {isProfileDropdownOpen && user && (
             <div
               className={cn(
-                "rounded-xl border border-border/80 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-md p-2.5 shadow-dropdown z-50 animate-in fade-in zoom-in-95",
+                "rounded-xl border border-border/80 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-md p-2.5 shadow-dropdown z-50 animate-in fade-in zoom-in-95 w-64",
                 isCollapsed
-                  ? "absolute left-full top-2 ml-2 w-64"
-                  : "absolute left-2 right-2 top-full mt-1"
+                  ? "absolute left-full top-2 ml-2"
+                  : "absolute left-2 top-full mt-1"
               )}
             >
               {isOfflineReadOnly && (
@@ -518,8 +462,8 @@ export function AppSidebar() {
                   {getInitials(user.name)}
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-foreground truncate" title={user.name}>
-                    {user.name}
+                  <p className="text-[13px] font-semibold text-foreground truncate" title={formatDisplayName(user.name)}>
+                    {formatDisplayName(user.name)}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate" title={user.email}>
                     {userRoleLabel}
@@ -607,124 +551,48 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}
         {/* ========================================================= */}
-        {isCollapsed ? (
-          /* Collapsed Mode (Icon-only) */
-          <div className="overflow-y-auto flex-1 py-1.5 flex flex-col items-center gap-1.5 w-full thin-scrollbar">
-            <TooltipProvider>
-              {SECTIONS.map((sec, idx) => {
-                const items = SINGLE_TIER_NAV_ITEMS.filter(
-                  (item) => item.section === sec.key
-                );
-                if (items.length === 0) return null;
-                return (
-                  <React.Fragment key={sec.key}>
-                    {idx > 0 && (
-                      <div className="w-6 h-px bg-border/40 my-1 shrink-0" />
-                    )}
-                    {items.map((item) => {
-                      const active = isItemActive(item);
-                      const Icon = item.icon;
-                      const badge = getBadgeInfo(item);
-                      return (
-                        <Tooltip key={item.id} delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <Link
-                              href={item.href}
-                              onClick={(e) => {
-                                if (item.isMaintenance) {
-                                  e.preventDefault();
-                                  setMaintenanceDialog({
-                                    isOpen: true,
-                                    title: item.label,
-                                    feature: item.id,
-                                  });
-                                  return;
-                                }
-                              }}
-                              aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}`}
-                              aria-current={active ? "page" : undefined}
-                              className={cn(
-                                "size-8 rounded-lg relative flex items-center justify-center transition-colors",
-                                active
-                                  ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-medium"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
-                              )}
-                            >
-                              <Icon size={16} strokeWidth={1.5} />
-                              {badge ? (
-                                <span
-                                  aria-label={`${badge.text} mục`}
-                                  className={cn(
-                                    "absolute -top-1 -right-1 flex items-center justify-center min-w-[15px] h-3.5 px-0.5 rounded-full text-[9px] font-mono font-bold tabular-nums leading-none select-none pointer-events-none shadow-2xs",
-                                    badge.variant === "rose"
-                                      ? "bg-rose-500 text-white"
-                                      : "bg-primary text-primary-foreground"
-                                  )}
-                                >
-                                  {badge.text}
-                                </span>
-                              ) : null}
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <div className="flex items-center gap-1.5">
-                              <span>{item.label}</span>
-                              {badge ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums bg-muted border border-border/60">
-                                  {badge.text}
-                                </span>
-                              ) : null}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-            </TooltipProvider>
-          </div>
-        ) : (
-          /* Expanded Mode (~208px width, compact, precise grid) */
-          <div className="overflow-y-auto flex-1 px-2 py-1.5 space-y-3.5 thin-scrollbar">
-            {SECTIONS.map((sec) => {
-              const items = SINGLE_TIER_NAV_ITEMS.filter(
-                (item) => item.section === sec.key
-              );
-              if (items.length === 0) return null;
-              return (
-                <div key={sec.key} className="space-y-0.5">
-                  <div className="text-[11px] font-medium text-muted-foreground/60 px-2 py-0.5 select-none tracking-tight">
+        <div className="overflow-y-auto flex-1 px-2 pt-2.5 pb-2 space-y-1 thin-scrollbar">
+          {SECTIONS.map((sec) => {
+            const items = SINGLE_TIER_NAV_ITEMS.filter(
+              (item) => item.section === sec.key
+            );
+            if (items.length === 0) return null;
+            return (
+              <div key={sec.key} className="space-y-0.5">
+                {sec.label ? (
+                  <div className="text-[10.5px] font-medium text-muted-foreground/50 px-2 pt-2.5 pb-0.5 select-none tracking-wide">
                     {sec.label}
                   </div>
-                  <div className="space-y-0.5">
-                    {items.map((item) => {
-                      const active = isItemActive(item);
-                      const Icon = item.icon;
-                      const badge = getBadgeInfo(item);
-                      return (
-                        <Link
-                          key={item.id}
-                          href={item.href}
-                          onClick={(e) => {
-                            if (item.isMaintenance) {
-                              e.preventDefault();
-                              setMaintenanceDialog({
-                                isOpen: true,
-                                title: item.label,
-                                feature: item.id,
-                              });
-                              return;
-                            }
-                          }}
-                          aria-current={active ? "page" : undefined}
-                          className={cn(
-                            "group relative flex items-center gap-2 rounded-md px-2 h-8 text-[13px] transition-colors select-none",
-                            active
-                              ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-medium"
-                              : "text-muted-foreground hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
-                          )}
-                        >
+                ) : null}
+                <div className="space-y-0.5">
+                  {items.map((item) => {
+                    const active = isItemActive(item);
+                    const Icon = item.icon;
+                    const badge = getBadgeInfo(item);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={(e) => {
+                          if (item.isMaintenance) {
+                            e.preventDefault();
+                            setMaintenanceDialog({
+                              isOpen: true,
+                              title: item.label,
+                              feature: item.id,
+                            });
+                            return;
+                          }
+                        }}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "group relative flex items-center gap-2.5 rounded-[6px] px-2 h-[34px] text-[13px] transition-colors select-none tracking-tight",
+                          active
+                            ? "bg-black/[0.04] dark:bg-white/[0.05] text-foreground font-medium"
+                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.025] dark:hover:bg-white/[0.03] font-normal"
+                        )}
+                      >
+                        <span className="size-4 shrink-0 flex items-center justify-center">
                           <Icon
                             size={16}
                             strokeWidth={1.5}
@@ -732,71 +600,32 @@ export function AppSidebar() {
                               "shrink-0 transition-colors",
                               active
                                 ? "text-foreground"
-                                : "text-muted-foreground/80 group-hover:text-foreground"
+                                : "text-muted-foreground/75 group-hover:text-foreground"
                             )}
                           />
-                          <span className="truncate flex-1">{item.label}</span>
-                          {badge ? (
-                            <span
-                              className={cn(
-                                "ml-auto inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-mono font-medium tabular-nums leading-none border select-none",
-                                badge.variant === "rose" && "bg-rose-500 text-white border-rose-600 shadow-2xs",
-                                badge.variant === "primary" && "bg-primary/10 text-primary border-primary/20",
-                                badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border-sky-500/20",
-                                badge.variant === "amber" && "bg-amber-500/10 text-amber-800 border-amber-500/20",
-                                (!badge.variant || badge.variant === "muted") && "bg-muted/80 text-muted-foreground border-border/50"
-                              )}
-                            >
-                              {badge.text}
-                            </span>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                  </div>
+                        </span>
+                        <span className="truncate flex-1">{item.label}</span>
+                        {badge ? (
+                          <span
+                            className={cn(
+                              "ml-auto inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none",
+                              badge.variant === "rose" && "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                              badge.variant === "primary" && "bg-primary/10 text-primary border border-primary/20",
+                              badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border border-sky-500/20",
+                              badge.variant === "amber" && "bg-amber-500/10 text-amber-800 border border-amber-500/20",
+                              (!badge.variant || badge.variant === "muted") && "bg-muted/70 text-muted-foreground border border-border/40"
+                            )}
+                          >
+                            {badge.text}
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* 3. FOOTER: COLLAPSE / EXPAND TOGGLE TRIGGER                */}
-        {/* ========================================================= */}
-        <div className="shrink-0 p-2 border-t border-border/30 flex items-center justify-end">
-          {isCollapsed ? (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={toggleCollapse}
-                  className="size-7 w-full rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
-                  aria-label="Mở rộng thanh bên (⌘B)"
-                >
-                  <PanelLeftOpen size={14} strokeWidth={1.5} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <span>Mở rộng [⌘B]</span>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={toggleCollapse}
-                  className="size-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] opacity-0 group-hover/sidebar:opacity-100 focus:opacity-100 transition-opacity cursor-pointer"
-                  aria-label="Thu gọn thanh bên (⌘B)"
-                >
-                  <PanelLeftClose size={13} strokeWidth={1.5} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={6}>
-                <span>Thu gọn thanh bên [⌘B]</span>
-              </TooltipContent>
-            </Tooltip>
-          )}
+              </div>
+            );
+          })}
         </div>
       </aside>
 

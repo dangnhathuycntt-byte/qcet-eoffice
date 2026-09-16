@@ -433,11 +433,11 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       {
         id: "nav-tasks",
         title: canonicalNavLabel("/tasks", "Nhiệm vụ"),
-        description: "Xem và quản lý bảng nhiệm vụ, tiến độ phân công DACUM",
+        description: "Xem và quản lý bảng nhiệm vụ, tiến độ phân công",
         category: "navigation",
         icon: CheckSquare,
         shortcut: "T",
-        keywords: ["danh sach cong viec", "nhiem vu", "tasks", "dacum"],
+        keywords: ["danh sach cong viec", "nhiem vu", "tasks"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/tasks", "_blank");
