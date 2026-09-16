@@ -51,6 +51,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
   ): NextRequest {
     const headers: Record<string, string> = {
       "content-type": "application/json",
+      origin: "http://localhost:3000",
     };
     if (token) {
       headers["cookie"] = `${SESSION_COOKIE_NAME}=${token}`;

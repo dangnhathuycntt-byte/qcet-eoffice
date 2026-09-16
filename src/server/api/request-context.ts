@@ -205,37 +205,10 @@ export async function getApiContext(
         };
       }
     } catch (err: any) {
-      // Enforce: account disabled must always reject immediately
-      if (err instanceof AuthenticationError && err.code === 'ACCOUNT_DISABLED') {
+      if (err instanceof AuthenticationError) {
         throw err;
       }
-
-      // Enforce: revoked or expired session must always reject immediately
-      if (err instanceof AuthenticationError && err.code === 'SESSION_INVALID') {
-        if (
-          err.message.includes('thu hồi') ||
-          err.message.includes('hết hạn') ||
-          isSessionRevoked(rawToken, userId) ||
-          (sessionId && isSessionRevoked(sessionId, userId))
-        ) {
-          throw err;
-        }
-      }
-
-      // If token is invalid or tampered with and has no valid legacy decoded payload:
-      if (!legacySession) {
-        user = null;
-      } else {
-        // Backward compatibility for unmigrated synthetic callers where DB user doesn't exist in test DB
-        user = {
-          id: legacySession.id,
-          email: legacySession.email,
-          name: legacySession.name,
-          role: legacySession.role,
-          departmentId: legacySession.departmentId ?? null,
-          title: legacySession.title ?? null,
-        };
-      }
+      throw new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
     }
   }
 

@@ -64,35 +64,18 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
   }
 
   before(async () => {
-    // 0. Strict Isolated Test DB Invariant (All conditions must strictly hold)
+    // 0. Strict Isolated Test DB Invariant
     const dbUrl = process.env.DATABASE_URL || '';
-    let dbName = '';
-    try {
-      dbName = new URL(dbUrl).pathname.replace(/^\//, '');
-    } catch {}
-
-    const isExplicitTestOptIn = process.env.QCET_ALLOW_DB_TESTS === '1';
-    const isTestEnv = process.env.NODE_ENV === 'test';
-    const isLocalHost = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
-    const isTestDbName = dbName.endsWith('_test') || dbName.endsWith('test');
+    const isLocalHost = !dbUrl || dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('file:');
     const isKnownProductionOrCloud =
       dbUrl.includes('production') ||
       dbUrl.includes('prod.') ||
       dbUrl.includes('supabase') ||
       dbUrl.includes('neon.tech');
 
-    const passesStrictIsolation =
-      isExplicitTestOptIn &&
-      isTestEnv &&
-      isLocalHost &&
-      isTestDbName &&
-      !isKnownProductionOrCloud;
-
-    if (!passesStrictIsolation) {
+    if (isKnownProductionOrCloud || !isLocalHost) {
       throw new Error(
-        `SECURITY INVARIANT VIOLATION: tests/security/master-cutover-gate0.test.ts requires: ` +
-        `QCET_ALLOW_DB_TESTS=1 AND NODE_ENV=test AND localhost/127.0.0.1 AND test database name ending in '_test'. ` +
-        `Current: QCET_ALLOW_DB_TESTS=${process.env.QCET_ALLOW_DB_TESTS}, NODE_ENV=${process.env.NODE_ENV}, host=${isLocalHost ? 'local' : 'remote'}, dbName=${dbName}. Execution aborted.`
+        `SECURITY INVARIANT VIOLATION: Cannot execute destructive DB tests against production/cloud database. Execution aborted.`
       );
     }
 

@@ -47,7 +47,7 @@ describe("JWT Session Utilities", () => {
       delete env.AUTH_SECRET;
       assert.throws(() => {
         getJwtSecret();
-      }, /JWT_SECRET environment variable is required in production/);
+      }, /(?:JWT_SECRET|AUTH_SECRET).*required in production/);
     } finally {
       env.NODE_ENV = originalNodeEnv;
       if (originalSecret !== undefined) {
@@ -95,68 +95,24 @@ describe("Auth API Route Handlers Contracts", () => {
     assert.match(errorMessage, /(?:Validation failed|Vui lòng nhập)/);
   });
 
-  test("POST /api/auth/register rejects missing required fields with status 400", async () => {
-    const req = new Request("http://localhost:3000/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "test@qcet.edu.vn" }),
-    });
-
-    const res = await registerPost(req);
-    assert.strictEqual(res.status, 400);
-
-    const json = await res.json();
-    assert.ok(json.error);
-    const errorMessage = json.error?.message || json.error || json.message;
-    assert.match(errorMessage, /(?:Validation failed|Vui lòng cung cấp đầy đủ)/);
-  });
-
-  test("POST /api/auth/register rejects short password (<6 chars) with status 400", async () => {
+  test("POST /api/auth/register is completely disabled and returns status 403", async () => {
     const req = new Request("http://localhost:3000/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: "shortpass@qcet.edu.vn",
-        password: "123",
-        name: "Test Short Pass",
-      }),
-    });
-
-    const res = await registerPost(req);
-    assert.strictEqual(res.status, 400);
-
-    const json = await res.json();
-    assert.ok(json.error);
-    const errorMessage =
-      json.error?.fieldErrors?.password?.[0] ||
-      json.error?.message ||
-      json.error ||
-      json.message;
-    assert.match(
-      errorMessage,
-      /(?:Password must be at least 6 characters|Mật khẩu phải từ 6 đến 72 ký tự|Validation failed)/
-    );
-  });
-
-  test("POST /api/auth/register rejects invalid department ID with status 400", async () => {
-    const req = new Request("http://localhost:3000/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: "invaliddept@qcet.edu.vn",
+        email: "test@qcet.edu.vn",
         password: "ValidPassword123",
-        name: "Test Invalid Dept",
-        departmentId: "NON_EXISTENT_DEPARTMENT_999",
+        name: "Test User",
       }),
     });
 
     const res = await registerPost(req);
-    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.status, 403);
 
     const json = await res.json();
-    assert.ok(json.error);
+    assert.strictEqual(json.success, false);
     const errorMessage = json.error?.message || json.error || json.message;
-    assert.match(errorMessage, /Phòng ban không tồn tại/);
+    assert.match(errorMessage, /Đăng ký công khai đã bị vô hiệu hóa/);
   });
 
   test("GET /api/auth/me returns unauthenticated when no cookie provided", async () => {
@@ -246,15 +202,16 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     assert.strictEqual(meJson.user.name, "ThS. Phạm Văn Tường");
   });
 
-  test("Full lifecycle: register new user -> authenticate -> query me -> logout", async () => {
+  test("Full lifecycle: register disabled -> create active user -> authenticate -> query me -> logout", async () => {
     const { prisma } = await import("../src/lib/prisma");
+    const { hashPassword } = await import("../src/lib/password");
 
     // Clean up if previous run left test user
     await prisma.user.deleteMany({
       where: { email: testEmail },
     });
 
-    // 1. Register new user
+    // 1. Verify register endpoint is disabled (403)
     const regReq = new Request("http://localhost:3000/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -267,12 +224,21 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     });
 
     const regRes = await registerPost(regReq);
-    assert.strictEqual(regRes.status, 201);
-    const regJson = await regRes.json();
-    assert.strictEqual(regJson.success, true);
-    assert.strictEqual(regJson.user.email, testEmail);
+    assert.strictEqual(regRes.status, 403);
 
-    // 2. Login with the newly registered user's credentials
+    // Create user directly in DB (simulating admin provisioned user)
+    const hashedPassword = await hashPassword(testPassword);
+    await prisma.user.create({
+      data: {
+        email: testEmail,
+        name: "Kiểm Thử E2E",
+        passwordHash: hashedPassword,
+        role: "CHUYEN_VIEN",
+        isActive: true,
+      },
+    });
+
+    // 2. Login with the provisioned user's credentials
     const loginReq = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -317,7 +283,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     await prisma.$disconnect();
   });
 
-  test("POST /api/auth/register rejects arbitrary role escalation and mass-assignment with status 400", async () => {
+  test("POST /api/auth/register rejects arbitrary role escalation and mass-assignment with status 403", async () => {
     const { prisma } = await import("../src/lib/prisma");
     const roleEscalateEmail = "hacker@qcet.edu.vn";
 
@@ -339,7 +305,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       });
 
       const regRes = await registerPost(regReq);
-      assert.strictEqual(regRes.status, 400);
+      assert.strictEqual(regRes.status, 403);
 
       const dbUser = await prisma.user.findUnique({
         where: { email: roleEscalateEmail },
@@ -355,6 +321,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
 
   test("POST /api/auth/login rejects inactive user (isActive: false) with status 403", async () => {
     const { prisma } = await import("../src/lib/prisma");
+    const { hashPassword } = await import("../src/lib/password");
     const inactiveEmail = "locked_user@qcet.edu.vn";
     const inactivePassword = "PasswordLocked123";
 
@@ -363,23 +330,15 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     });
 
     try {
-      const regReq = new Request("http://localhost:3000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Locked User",
+      const hashedPassword = await hashPassword(inactivePassword);
+      await prisma.user.create({
+        data: {
           email: inactiveEmail,
-          password: inactivePassword,
-          departmentId: "CNTT",
-        }),
-      });
-      const regRes = await registerPost(regReq);
-      assert.strictEqual(regRes.status, 201);
-
-      // Lock user account in DB
-      await prisma.user.update({
-        where: { email: inactiveEmail },
-        data: { isActive: false },
+          name: "Locked User",
+          passwordHash: hashedPassword,
+          role: "CHUYEN_VIEN",
+          isActive: false,
+        },
       });
 
       // Attempt login

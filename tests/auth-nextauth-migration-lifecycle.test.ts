@@ -18,6 +18,8 @@ import { prisma } from "@/lib/prisma";
 describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
   let activeUserToken: string;
   let activeUser: { id: string; email: string; name: string; role: string };
+  let disabledUser: { id: string; email: string; name: string; role: string };
+  let disabledUserToken: string;
 
   before(async () => {
     let dbUser = await prisma.user.findFirst({
@@ -49,14 +51,44 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       departmentId: dbUser.departmentId,
       title: dbUser.title,
     });
+
+    let dbDisabledUser = await prisma.user.findFirst({
+      where: { isActive: false },
+    });
+    if (!dbDisabledUser) {
+      dbDisabledUser = await prisma.user.create({
+        data: {
+          email: `disabled_test_${Date.now()}@cdktcnqn.edu.vn`,
+          name: "Cán Bộ Bị Khóa Thử Nghiệm",
+          role: "CHUYEN_VIEN",
+          isActive: false,
+        },
+      });
+    }
+
+    disabledUser = {
+      id: dbDisabledUser.id,
+      email: dbDisabledUser.email,
+      name: dbDisabledUser.name,
+      role: dbDisabledUser.role,
+    };
+
+    disabledUserToken = signSessionToken({
+      id: dbDisabledUser.id,
+      email: dbDisabledUser.email,
+      name: dbDisabledUser.name,
+      role: dbDisabledUser.role,
+      departmentId: dbDisabledUser.departmentId,
+      title: dbDisabledUser.title,
+    });
   });
 
   // =========================================================================
   // 1. Auth.js Configuration & Architecture Invariants
   // =========================================================================
   describe("1. Auth.js Configuration & Architecture Invariants", () => {
-    test("authConfig is Edge-compatible and specifies JWT strategy with 30-day maxAge", () => {
-      assert.equal(authConfig.session?.strategy, "jwt");
+    test("authConfig is Edge-compatible and specifies database strategy with 30-day maxAge", () => {
+      assert.equal(authConfig.session?.strategy, "database");
       assert.equal(authConfig.session?.maxAge, 30 * 24 * 60 * 60);
       assert.equal(authConfig.pages?.signIn, "/login");
       assert.equal(authConfig.pages?.error, "/login");
@@ -262,36 +294,16 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
   // =========================================================================
   describe("6. Security Guards & Server Truth Enforcement", () => {
     test("6.1 Disabled or invalid user session is rejected by requireAuthenticated with AUTH_REQUIRED/ACCOUNT_DISABLED", async () => {
-      const disabledToken = signSessionToken({
-        id: "disabled_user_999",
-        email: "locked@cdktcnqn.edu.vn",
-        name: "Tài Khoản Bị Khóa",
-        role: "CHUYEN_VIEN",
-        isActive: false,
-      });
-
       const req = new Request("http://localhost:3000/api/tasks", {
         headers: {
-          authorization: `Bearer ${disabledToken}`,
+          authorization: `Bearer ${disabledUserToken}`,
         },
       });
 
-      const ctx = await getApiContext(req);
-      assert.throws(
-        () => {
-          requireAuthenticated({
-            ...ctx,
-            session: {
-              sessionId: "ses_disabled",
-              userId: "disabled_user_999",
-              user: {
-                id: "disabled_user_999",
-                email: "locked@cdktcnqn.edu.vn",
-                name: "Tài Khoản Bị Khóa",
-                isActive: false,
-              },
-            },
-          });
+      await assert.rejects(
+        async () => {
+          const ctx = await getApiContext(req);
+          requireAuthenticated(ctx);
         },
         (err: any) => {
           return err.code === "ACCOUNT_DISABLED" || err.message.includes("vô hiệu hóa");

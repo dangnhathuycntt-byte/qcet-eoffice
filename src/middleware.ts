@@ -22,7 +22,7 @@ import { sanitizeRedirectUrl } from '@/lib/login-helpers';
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Extract and cryptographically verify session token via Edge Web Crypto
+  // 1. Extract session token cookie (Auth.js database session or JWT/JWE)
   const token =
     request.cookies.get(SESSION_COOKIE_NAME)?.value ||
     request.cookies.get(SECURE_SESSION_COOKIE_NAME)?.value ||
@@ -30,8 +30,17 @@ export async function middleware(request: NextRequest) {
     request.cookies.get('next-auth.session-token')?.value ||
     request.cookies.get('__Secure-next-auth.session-token')?.value;
 
-  const session = token ? await verifySessionTokenEdge(token) : null;
-  const isAuthenticated = Boolean(session && session.id && session.email);
+  let isAuthenticated = false;
+  if (token && token.trim().length > 0) {
+    const parts = token.trim().split('.');
+    if (parts.length === 3 || parts.length === 5) {
+      const session = await verifySessionTokenEdge(token);
+      isAuthenticated = Boolean(session && session.id && session.email);
+    } else {
+      // Database session token (opaque string, e.g. cuid/uuid)
+      isAuthenticated = token.trim().length >= 10;
+    }
+  }
 
   // 2. Intercept legacy zone parameters (?zone=...)
   const zone = searchParams.get('zone');

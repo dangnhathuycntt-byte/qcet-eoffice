@@ -371,10 +371,10 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
       assert.strictEqual(canReadDocument(clerkUser, publicDoc), true);
     });
 
-    it('allows ADMIN, BAN_GIAM_HIEU, and VAN_THU to read private documents', () => {
-      assert.strictEqual(canReadDocument(adminUser, internalDeptADoc), true);
+    it('allows BAN_GIAM_HIEU and VAN_THU to read internal documents, while ADMIN without business relation is restricted', () => {
       assert.strictEqual(canReadDocument(bghUser, internalDeptADoc), true);
       assert.strictEqual(canReadDocument(clerkUser, internalDeptADoc), true);
+      assert.strictEqual(canReadDocument(adminUser, internalDeptADoc), false, 'System Admin cannot access internal business documents (Separation of Powers)');
     });
 
     it('allows creator and users from same department to read internal documents', () => {
@@ -398,10 +398,10 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
   });
 
   describe('canUpdateDocument', () => {
-    it('allows ADMIN, VAN_THU, creator, and department manager to update document', () => {
-      assert.strictEqual(canUpdateDocument(adminUser, internalDeptADoc), true);
+    it('allows VAN_THU and department manager to update document, while foreign admin is restricted', () => {
       assert.strictEqual(canUpdateDocument(clerkUser, internalDeptADoc), true);
       assert.strictEqual(canUpdateDocument(managerDeptA, internalDeptADoc), true);
+      assert.strictEqual(canUpdateDocument(adminUser, internalDeptADoc), false, 'System Admin cannot update internal business documents (Separation of Powers)');
     });
 
     it('allows staff creator to update their document', () => {
@@ -422,9 +422,9 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
   });
 
   describe('canDirectDocument (Bút phê / Chỉ đạo)', () => {
-    it('allows BAN_GIAM_HIEU and ADMIN to direct any document', () => {
-      assert.strictEqual(canDirectDocument(adminUser, internalDeptADoc), true);
+    it('allows BAN_GIAM_HIEU to direct documents, while ADMIN without statutory authority is restricted', () => {
       assert.strictEqual(canDirectDocument(bghUser, internalDeptADoc), true);
+      assert.strictEqual(canDirectDocument(adminUser, internalDeptADoc), false, 'System Admin cannot direct documents without statutory leadership assignment');
     });
 
     it('allows department manager (TRUONG_PHONG) to direct documents in their department', () => {
@@ -442,9 +442,9 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
   });
 
   describe('canDeleteDocument', () => {
-    it('allows ADMIN, creator, and department manager to delete document', () => {
-      assert.strictEqual(canDeleteDocument(adminUser, internalDeptADoc), true);
+    it('allows creator and department manager to delete document, while foreign admin is restricted', () => {
       assert.strictEqual(canDeleteDocument(managerDeptA, internalDeptADoc), true);
+      assert.strictEqual(canDeleteDocument(adminUser, internalDeptADoc), false, 'System Admin cannot delete unit documents without creator or manager role');
     });
 
     it('BOLA: rejects foreign department manager and non-creator staff', () => {

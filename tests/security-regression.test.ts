@@ -338,13 +338,13 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ progressPercent: 50 }),
+      body: JSON.stringify({ description: "Updated description by assignee" }),
     });
     const res = await patchTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.success, true);
-    assert.equal(body.data.progress, 50);
+    assert.equal(body.data.description, "Updated description by assignee");
   });
 
   it("PATCH /api/tasks/[id] allows department leader (TRUONG_PHONG with matching departmentId) to update task", async () => {
@@ -458,7 +458,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
   });
 
   it("POST /api/documents/[id]/directives returns 403 if role is not BAN_GIAM_HIEU or ADMIN", async () => {
-    const token = createTestToken({ id: "user-gv", role: "GIANG_VIEN", departmentId: "dept-cntt" });
+    const token = createTestToken({ id: "user-cntt", role: "CHUYEN_VIEN", departmentId: "dept-cntt" });
     const req = new NextRequest("http://localhost:3001/api/documents/doc-1/directives", {
       method: "POST",
       headers: {

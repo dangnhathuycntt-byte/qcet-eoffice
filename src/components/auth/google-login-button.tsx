@@ -3,7 +3,6 @@
 import * as React from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
-import { clientEnv } from "@/config/env.client";
 import { cn } from "@/lib/utils";
 
 // Official Google Multi-Color SVG Icon
@@ -35,42 +34,11 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
   );
 }
 
-interface GoogleLoginButtonProps {
+export interface GoogleLoginButtonProps {
   className?: string;
   returnTo?: string;
   onError?: (errorMsg: string) => void;
   onSuccess?: (returnUrl: string) => void;
-}
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: {
-            client_id: string;
-            callback: (response: { credential: string }) => void;
-            auto_select?: boolean;
-            hd?: string;
-            use_fedcm_for_prompt?: boolean;
-          }) => void;
-          renderButton: (
-            parent: HTMLElement,
-            options: {
-              type?: "standard" | "icon";
-              theme?: "outline" | "filled_blue" | "filled_black";
-              size?: "large" | "medium" | "small";
-              text?: "signin_with" | "signup_with" | "continue_with" | "signin";
-              shape?: "rectangular" | "pill" | "circle" | "square";
-              logo_alignment?: "left" | "center";
-              width?: number;
-              locale?: string;
-            }
-          ) => void;
-        };
-      };
-    };
-  }
 }
 
 export function GoogleLoginButton({
@@ -80,162 +48,44 @@ export function GoogleLoginButton({
   onSuccess,
 }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isGisRendered, setIsGisRendered] = React.useState(false);
-  const gisContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const googleClientId = clientEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-  const onErrorRef = React.useRef(onError);
-  const onSuccessRef = React.useRef(onSuccess);
-  const returnToRef = React.useRef(returnTo);
-
-  React.useEffect(() => {
-    onErrorRef.current = onError;
-    onSuccessRef.current = onSuccess;
-    returnToRef.current = returnTo;
-  });
-
-  // Handle GIS Credential response (ID Token) with stable callback
-  const handleCredentialResponse = React.useCallback(
-    async (response: { credential: string }) => {
-      if (!response.credential) return;
-      setIsLoading(true);
-
-      try {
-        const currentReturnTo = returnToRef.current;
-        const res = await fetch("/api/auth/google/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            credential: response.credential,
-            returnTo: currentReturnTo,
-          }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.success) {
-          setIsLoading(false);
-          onErrorRef.current?.(data.error || "Đăng nhập Google không thành công");
-          return;
-        }
-
-        const target = data.returnTo || currentReturnTo || "/tasks";
-        if (onSuccessRef.current) {
-          onSuccessRef.current(target);
-        } else {
-          window.location.href = target;
-        }
-      } catch {
-        setIsLoading(false);
-        onErrorRef.current?.("Không thể kết nối đến máy chủ xác thực");
-      }
-    },
-    []
-  );
-
-  // Initialize Google Identity Services / FedCM once on mount
-  React.useEffect(() => {
-    if (!googleClientId || typeof window === "undefined") return;
-
-    let isMounted = true;
-
-    const initGIS = () => {
-      if (!window.google?.accounts?.id || !gisContainerRef.current) return;
-
-      try {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleCredentialResponse,
-          auto_select: false, // Do not enable automatic account selection per security requirement
-          hd: "cdktcnqn.edu.vn",
-          use_fedcm_for_prompt: true, // Google Identity Services / FedCM standard
-        });
-
-        if (gisContainerRef.current) {
-          gisContainerRef.current.innerHTML = "";
-          window.google.accounts.id.renderButton(gisContainerRef.current, {
-            theme: "outline",
-            size: "large",
-            type: "standard",
-            text: "signin_with",
-            shape: "rectangular",
-            logo_alignment: "left",
-            width: 340,
-            locale: "vi",
-          });
-          if (isMounted) {
-            setIsGisRendered(true);
-          }
-        }
-      } catch {
-        // Fallback to standard redirect button if GIS fails
-      }
-    };
-
-    if (window.google?.accounts?.id) {
-      initGIS();
-    } else {
-      const scriptId = "google-jssdk";
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement("script");
-        script.id = scriptId;
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = initGIS;
-        document.head.appendChild(script);
-      }
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [googleClientId, handleCredentialResponse]);
-
-  // Standard OAuth 2.0 Auth.js handler
   const handleStartOAuth = async () => {
+    if (isLoading) return;
     setIsLoading(true);
     try {
-      const currentReturnTo = returnToRef.current;
-      const target = currentReturnTo && currentReturnTo !== "/tasks" && currentReturnTo !== "/" ? currentReturnTo : "/tasks";
-      await signIn("google", { callbackUrl: target });
+      const target = returnTo && returnTo !== "/login" && returnTo !== "/" ? returnTo : "/tasks";
+      const result = (await signIn("google", { callbackUrl: target })) as any;
+      if (result?.url && onSuccess) {
+        onSuccess(result.url);
+      }
     } catch {
       setIsLoading(false);
-      onErrorRef.current?.("Không thể kết nối đến máy chủ xác thực");
+      onError?.("Không thể kết nối đến máy chủ xác thực");
     }
   };
 
   return (
     <div className={cn("flex flex-col items-center justify-center w-full", className)}>
-      {/* 1. Google Identity Services Container */}
-      <div
-        ref={gisContainerRef}
-        className={cn("min-h-[44px] flex items-center justify-center w-full", !isGisRendered && "hidden")}
-        aria-hidden={!isGisRendered}
-      />
-
-      {/* 2. Accessible institutional button fallback matching Google Sign-In Branding Guidelines */}
-      {(!isGisRendered || isLoading) && (
-        <button
-          type="button"
-          disabled={isLoading}
-          onClick={handleStartOAuth}
-          aria-label="Đăng nhập bằng Google"
-          className="flex h-11 w-full max-w-[340px] items-center justify-center gap-3 rounded-[4px] border border-border/80 bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted/50 hover:border-border active:bg-muted active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="size-4 animate-spin text-primary" strokeWidth={1.5} />
-              <span className="text-sm font-medium text-foreground">Đang chuyển hướng...</span>
-            </>
-          ) : (
-            <>
-              <GoogleIcon className="size-4.5 shrink-0" />
-              <span className="text-sm font-medium text-foreground">Đăng nhập bằng Google</span>
-            </>
-          )}
-        </button>
-      )}
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={handleStartOAuth}
+        aria-label={isLoading ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
+        aria-busy={isLoading}
+        className="flex h-11 w-full max-w-[360px] items-center justify-center gap-3 rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted/50 hover:border-border active:bg-muted active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+      >
+        {isLoading ? (
+          <span role="status" className="inline-flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin text-primary" strokeWidth={1.5} />
+            <span className="text-sm font-medium text-foreground">Đang chuyển hướng...</span>
+          </span>
+        ) : (
+          <>
+            <GoogleIcon className="size-4.5 shrink-0" />
+            <span className="text-sm font-medium text-foreground">Tiếp tục với Google</span>
+          </>
+        )}
+      </button>
     </div>
   );
 }

@@ -98,12 +98,11 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
 /**
  * Resolves and strictly validates the current authenticated session and DB user.
  * Invariants:
- * - User exists in DB
- * - User.isActive = true
- * - Session not expired
- * - Session not revoked
- * - Does NOT return business role snapshot as final authority.
- * Throws 401 AUTH_REQUIRED, 401 SESSION_INVALID, or 401 ACCOUNT_DISABLED on failure.
+ * - Session exists in DB (or valid verified cryptographic token)
+ * - Session not expired (session.expires > new Date())
+ * - Session not revoked (session.revokedAt == null && isSessionRevoked() === false)
+ * - User exists in DB and user.isActive === true
+ * - Fail-closed on invalid token, expired session, disabled account, or DB failure
  */
 export async function resolveCurrentSession(request: RequestLike): Promise<CurrentSession> {
   const token = extractTokenFromRequest(request);
@@ -111,6 +110,47 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
     throw new AuthenticationError('Yêu cầu xác thực tài khoản', 'AUTH_REQUIRED');
   }
 
+  // 1. Primary path: Query database Session by sessionToken with included User
+  try {
+    const dbSession = await prisma.session.findUnique({
+      where: { sessionToken: token },
+      include: { user: true },
+    });
+
+    if (dbSession) {
+      if (isSessionExpired(dbSession.expires)) {
+        throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
+      }
+      if (
+        dbSession.revokedAt != null ||
+        isSessionRevoked(dbSession.id, dbSession.userId) ||
+        isSessionRevoked(token, dbSession.userId)
+      ) {
+        throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
+      }
+      if (!dbSession.user.isActive) {
+        throw new AuthenticationError('Tài khoản đã bị vô hiệu hóa hoặc tạm khóa', 'ACCOUNT_DISABLED');
+      }
+
+      return {
+        sessionId: dbSession.id,
+        userId: dbSession.user.id,
+        user: {
+          id: dbSession.user.id,
+          email: dbSession.user.email,
+          name: dbSession.user.name,
+          isActive: dbSession.user.isActive,
+        },
+      };
+    }
+  } catch (err) {
+    if (err instanceof AuthenticationError) {
+      throw err;
+    }
+    // If not AuthenticationError, continue to token decode check
+  }
+
+  // 2. Secondary path: Cryptographic JWT / JWE validation with DB User verification
   let decoded: any = null;
   let isJwt = false;
 
@@ -154,49 +194,14 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
         }
       }
     } catch {
-      // Continue to DB session check
+      // Continue to fail-closed
     }
   }
 
-  // 1. If not a valid JWT, check if it's an opaque token in prisma.session
-  if (!isJwt) {
-    try {
-      const dbSession = await prisma.session.findUnique({
-        where: { sessionToken: token },
-      });
-
-      if (dbSession) {
-        if (isSessionExpired(dbSession.expires)) {
-          throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
-        }
-        if (
-          (dbSession as any).revokedAt != null ||
-          isSessionRevoked(dbSession.id, dbSession.userId) ||
-          isSessionRevoked(token, dbSession.userId)
-        ) {
-          throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
-        }
-
-        const user = await loadCurrentUser(dbSession.userId);
-        return {
-          sessionId: dbSession.id,
-          userId: user.id,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            isActive: user.isActive,
-          },
-        };
-      }
-    } catch (err) {
-      if (err instanceof AuthenticationError) throw err;
-    }
-
+  if (!isJwt || !decoded) {
     throw new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
   }
 
-  // 2. Process validated JWT payload
   const userId = decoded.id || decoded.userId;
   if (!userId) {
     throw new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
@@ -215,33 +220,7 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
     token,
   });
 
-  // Check database session table if record exists
-  try {
-    const dbSession = await prisma.session.findFirst({
-      where: {
-        OR: [
-          { id: sessionId },
-          { sessionToken: token },
-        ],
-      },
-    });
-
-    if (dbSession) {
-      if (isSessionExpired(dbSession.expires)) {
-        throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
-      }
-      if (
-        (dbSession as any).revokedAt != null ||
-        isSessionRevoked(dbSession.id, dbSession.userId)
-      ) {
-        throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
-      }
-    }
-  } catch (err) {
-    if (err instanceof AuthenticationError) throw err;
-  }
-
-  // 3. Validate DB user on every protected request
+  // Verify DB user exists and is active
   const user = await loadCurrentUser(userId);
 
   return {

@@ -345,7 +345,7 @@ describe("GET /api/auth/callback/google", () => {
     assert.strictEqual(payload?.email, "existing@cdktcnqn.edu.vn");
   });
 
-  test("auto-provisions new user and links Google account on first login", async () => {
+  test("rejects new user with account_not_found error and does not auto-provision on first login", async () => {
     globalThis.fetch = async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("oauth2.googleapis.com/token")) {
@@ -374,7 +374,7 @@ describe("GET /api/auth/callback/google", () => {
       return new Response("Not Found", { status: 404 });
     };
 
-    let createdUserData: any;
+    let userCreateCalled = false;
 
     prisma.$transaction = (async (callback: any) => {
       const txMock = {
@@ -383,18 +383,9 @@ describe("GET /api/auth/callback/google", () => {
         },
         user: {
           findUnique: async () => null,
-          create: async ({ data }: any) => {
-            createdUserData = data;
-            return {
-              id: "new-user-id",
-              email: data.email,
-              name: data.name,
-              role: data.role,
-              departmentId: null,
-              title: data.title,
-              isActive: true,
-              avatarUrl: data.avatarUrl,
-            };
+          create: async () => {
+            userCreateCalled = true;
+            return null;
           },
         },
       };
@@ -409,24 +400,13 @@ describe("GET /api/auth/callback/google", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/tasks");
+    const location = res.headers.get("location")!;
+    assert.strictEqual(new URL(location).pathname, "/login");
+    assert.ok(location.includes("error=account_not_found"));
+    assert.strictEqual(userCreateCalled, false, "Must not auto-provision user in DB");
 
-    // Verify created user data
-    assert.ok(createdUserData, "User should be created in DB");
-    assert.strictEqual(createdUserData.email, "newstaff@cdktcnqn.edu.vn");
-    assert.strictEqual(createdUserData.name, "New Staff Member");
-    assert.strictEqual(createdUserData.role, "CHUYEN_VIEN");
-    assert.strictEqual(createdUserData.provider, "google");
-    assert.strictEqual(createdUserData.isActive, true);
-    assert.strictEqual(createdUserData.onboardedAt, null);
-    assert.strictEqual(createdUserData.accounts.create.providerAccountId, "google-sub-new");
-
-    // Check session cookie
+    // Session cookie must not be set
     const sessionCookie = res.cookies.get(SESSION_COOKIE_NAME);
-    assert.ok(sessionCookie, "Session cookie must be set");
-    assert.strictEqual(sessionCookie.maxAge, 30 * 24 * 60 * 60, "Session cookie maxAge must be 30 days");
-    const payload = verifySessionToken(sessionCookie.value);
-    assert.strictEqual(payload?.email, "newstaff@cdktcnqn.edu.vn");
-    assert.strictEqual(payload?.role, "CHUYEN_VIEN");
+    assert.strictEqual(sessionCookie, undefined, "Session cookie must not be set for unknown user");
   });
 });

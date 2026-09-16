@@ -1,13 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/password";
-import { UserRole as PrismaUserRole } from "@prisma/client";
+import { ForbiddenError } from "@/server/api/errors";
+import { apiError } from "@/server/api/response";
 import { getApiContext } from "@/server/api/request-context";
-import { parseAndValidateJson, MAX_AUTH_BODY_SIZE } from "@/server/api/validation";
-import { RegisterInputSchema } from "@/contracts/auth";
-import { assertRateLimit } from "@/server/security/rate-limit";
-import { ConflictError, ValidationError } from "@/server/api/errors";
-import { toUserPublicDTO } from "@/server/dto";
-import { apiError, apiSuccess } from "@/server/api/response";
 
 export async function POST(req: Request) {
   let requestId = crypto.randomUUID();
@@ -15,136 +8,10 @@ export async function POST(req: Request) {
     const context = await getApiContext(req);
     requestId = context.requestId;
 
-    // Rate limiting: Key by `${context.ip || 'ip'}:register` using `RATE_LIMIT_PRESETS.AUTH_REGISTER`
-    assertRateLimit(`${context.ip || 'ip'}:register`, 'AUTH_REGISTER');
-
-    const body = await parseAndValidateJson(req, RegisterInputSchema, {
-      maxBytes: MAX_AUTH_BODY_SIZE,
-    });
-
-    const normalizedEmail = body.email.trim().toLowerCase();
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existingUser) {
-      throw new ConflictError("Email này đã được đăng ký trong hệ thống");
-    }
-
-    let assignedUnitId: string | null = null;
-    let assignedDepartmentId: string | null = null;
-    if (body.departmentId && body.departmentId.trim() !== "") {
-      const target = body.departmentId.trim();
-      let unit = await prisma.organizationalUnit.findFirst({
-        where: {
-          OR: [{ id: target }, { code: target }],
-        },
-      });
-      const dept = await prisma.department.findUnique({
-        where: { id: target },
-      });
-      if (!unit && dept) {
-        unit = await prisma.organizationalUnit.findFirst({
-          where: {
-            OR: [
-              { id: dept.id },
-              { code: dept.id },
-              { code: dept.shortName || dept.id },
-              { code: `K_${dept.id}` },
-              { code: `P_${dept.id}` },
-            ],
-          },
-        });
-      }
-      if (!unit && !dept) {
-        throw new ValidationError("Phòng ban không tồn tại trong hệ thống");
-      }
-      assignedUnitId = unit ? unit.id : null;
-      assignedDepartmentId = dept ? dept.id : null;
-    } else {
-      const defaultUnit = await prisma.organizationalUnit.findFirst({
-        where: {
-          OR: [{ code: "K_CNTT" }, { code: "CNTT" }, { id: "CNTT" }],
-        },
-      });
-      if (defaultUnit) {
-        assignedUnitId = defaultUnit.id;
-        const dept = await prisma.department.findFirst({
-          where: {
-            OR: [{ id: defaultUnit.code || defaultUnit.id }, { id: "CNTT" }],
-          },
-        });
-        assignedDepartmentId = dept ? dept.id : null;
-      }
-    }
-
-    let positionDefId: string | null = null;
-    if (assignedUnitId) {
-      const posDef = await prisma.positionDefinition.findFirst({
-        where: { code: "CHUYEN_VIEN" },
-      });
-      if (posDef) {
-        positionDefId = posDef.id;
-      }
-    }
-
-    const hashedPassword = await hashPassword(body.password);
-
-    // Public registration strictly enforces CHUYEN_VIEN role unconditionally
-    const newUser = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        name: body.name.trim(),
-        passwordHash: hashedPassword,
-        role: PrismaUserRole.CHUYEN_VIEN,
-        departmentId: assignedDepartmentId,
-        title: body.title?.trim() || "Chuyên viên",
-        onboardedAt: null,
-        onboardingData: {
-          hasSeenWelcome: false,
-          hasCompletedTour: false,
-          completedSteps: ["step-profile"],
-          isDismissed: false,
-          snoozedUntil: null,
-        },
-        ...(assignedUnitId && positionDefId
-          ? {
-              positionAssignments: {
-                create: {
-                  unitId: assignedUnitId,
-                  positionDefinitionId: positionDefId,
-                  type: "PRIMARY",
-                  status: "ACTIVE",
-                },
-              },
-            }
-          : {}),
-      },
-      include: {
-        department: {
-          select: { id: true, name: true, shortName: true },
-        },
-        positionAssignments: {
-          include: {
-            unit: true,
-          },
-        },
-      },
-    });
-
-    return apiSuccess(
-      {
-        success: true,
-        user: toUserPublicDTO(newUser),
-      },
-      {
-        status: 201,
-        headers: { "Cache-Control": "private, no-store" },
-        requestId: context.requestId,
-      }
-    );
+    // P0 Hotfix: Vô hiệu hóa hoàn toàn endpoint đăng ký tự do
+    throw new ForbiddenError("Đăng ký công khai đã bị vô hiệu hóa. Vui lòng liên hệ Quản trị viên");
   } catch (error) {
-    // Canonical error handling adheres to RFC 7807 problem details (status: 500 on unexpected errors)
+    // Canonical error handling adheres to RFC 7807 problem details (status: 403 Forbidden)
     return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }

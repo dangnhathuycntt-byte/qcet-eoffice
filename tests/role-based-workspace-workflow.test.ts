@@ -1874,9 +1874,9 @@ describe("Sidebar Navigation Hygiene", () => {
 
   test("defines clean canonical routes in SIDEBAR_ZONE_ITEMS", () => {
     const routes = SIDEBAR_ZONE_ITEMS.map((item) => item.href);
-    assert.ok(routes.includes("/"), "Must contain root path /");
     assert.ok(routes.includes("/tasks"), "Must contain /tasks");
     assert.ok(routes.includes("/calendar"), "Must contain /calendar");
+    assert.ok(routes.includes("/documents"), "Must contain /documents");
     assert.ok(routes.includes("/org"), "Must contain /org");
     assert.ok(routes.includes("/notifications"), "Must contain /notifications");
   });
