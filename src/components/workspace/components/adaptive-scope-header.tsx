@@ -14,6 +14,9 @@ export interface AdaptiveScopeHeaderProps {
   activeScope: WorkspaceScope;
   onScopeChange: (scope: WorkspaceScope) => void;
   badgeCounts?: Partial<Record<WorkspaceScope, number>>;
+  selectedDepartment?: string;
+  onDepartmentChange?: (dept: string) => void;
+  availableDepartments?: Array<{ code: string; name: string }>;
   onRefresh?: () => void;
   onCreateTask?: () => void;
   isRefreshing?: boolean;
@@ -54,6 +57,9 @@ export function AdaptiveScopeHeader({
   activeScope,
   onScopeChange,
   badgeCounts,
+  selectedDepartment,
+  onDepartmentChange,
+  availableDepartments,
   onRefresh,
   onCreateTask,
   isRefreshing,
@@ -66,9 +72,22 @@ export function AdaptiveScopeHeader({
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
   const isUnassigned = isUserUnassignedDepartment(user);
-  const unitLabel = isUnassigned
-    ? "Chưa chọn đơn vị"
-    : (user.department || user.departmentCode || "Đơn vị");
+
+  // Derive active unit name from real data
+  const currentDeptCode = selectedDepartment && selectedDepartment !== "ALL"
+    ? selectedDepartment
+    : user.departmentCode || user.department || "";
+
+  const resolvedUnitName = React.useMemo(() => {
+    if (isUnassigned) return "Chưa chọn đơn vị";
+    if (availableDepartments && currentDeptCode) {
+      const found = availableDepartments.find(
+        (d) => d.code.toUpperCase() === currentDeptCode.toUpperCase()
+      );
+      if (found) return found.name;
+    }
+    return user.department || user.departmentCode || currentDeptCode || "Đơn vị";
+  }, [isUnassigned, availableDepartments, currentDeptCode, user]);
 
   // Check URL search params on mount if not matching current activeScope
   React.useEffect(() => {
@@ -81,13 +100,12 @@ export function AdaptiveScopeHeader({
         (scopeParam === "school" || scopeParam === "unit" || scopeParam === "my") &&
         scopeParam !== activeScope
       ) {
-        if (scopeParam === "school" && !isExecutive) return;
         onScopeChange(scopeParam);
       }
     } catch {
       // Ignore errors in non-standard window environments
     }
-  }, [isExecutive, activeScope, onScopeChange]);
+  }, [activeScope, onScopeChange]);
 
   const handleScopeClick = (scope: WorkspaceScope) => {
     syncScopeToUrl(scope);
@@ -113,14 +131,14 @@ export function AdaptiveScopeHeader({
       label: "Đơn vị",
       shortLabel: isUnassigned ? "Chưa chọn đ/vị" : "Đơn vị",
       icon: isUnassigned ? AlertTriangle : Building2,
-      visible: !isUnassigned,
+      visible: true,
     },
     {
       id: "school",
       label: "Toàn trường",
       shortLabel: "Trường",
       icon: School,
-      visible: isExecutive,
+      visible: true,
     },
   ];
 
@@ -155,7 +173,7 @@ export function AdaptiveScopeHeader({
               const Icon = s.icon;
               const isActive = activeScope === s.id;
               const count = badgeCounts?.[s.id];
-              const showBadge = typeof count === "number" && count > 0;
+              const showBadge = typeof count === "number" && !isNaN(count);
               const isUnitUnassigned = s.id === "unit" && isUnassigned;
 
               return (
@@ -182,6 +200,20 @@ export function AdaptiveScopeHeader({
                   />
                   <span className="hidden sm:inline">{s.label}</span>
                   <span className="sm:hidden">{s.shortLabel}</span>
+                  {showBadge && (
+                    <span
+                      data-slot="scope-badge-count"
+                      data-scope={s.id}
+                      className={cn(
+                        "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold",
+                        isActive
+                          ? "bg-muted text-foreground border border-border/60"
+                          : "bg-muted/80 text-muted-foreground"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
                   {isUnitUnassigned && (
                     <span
                       data-slot="unassigned-scope-badge"
@@ -190,24 +222,17 @@ export function AdaptiveScopeHeader({
                       Cần chọn
                     </span>
                   )}
-                  {showBadge && (
-                    <span
-                      data-slot="scope-badge"
-                      aria-label={`${count} nhiệm vụ`}
-                      className={cn(
-                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
-                        isActive
-                          ? scopeBadgeActiveStyles[s.id]
-                          : "bg-muted text-muted-foreground border-border/60"
-                      )}
-                    >
-                      {count}
-                    </span>
-                  )}
                 </button>
               );
             })}
         </div>
+
+        {/* Clean Secondary Text: Unit Name beside Scope Tabs */}
+        {activeScope === "unit" && !isUnassigned && (
+          <span className="text-xs text-muted-foreground font-normal truncate max-w-[260px] select-none" title={resolvedUnitName}>
+            ({resolvedUnitName})
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -268,11 +293,11 @@ export function AdaptiveScopeHeader({
             id="tour-create-task-btn"
             size="sm"
             onClick={onCreateTask}
-            aria-label="Thêm nhiệm vụ / Giao nhiệm vụ"
+            aria-label="Tạo nhiệm vụ mới"
             className="hidden sm:inline-flex h-8 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-            <span>Thêm nhiệm vụ</span>
+            <span>Tạo nhiệm vụ</span>
           </Button>
         )}
       </div>

@@ -154,6 +154,15 @@ export type FlattenedPersonalTask = (SchoolTask | StaffTask) & {
 };
 
 /**
+ * Cấu hình hiển thị các cột tùy chọn trên bảng (Column Visibility)
+ */
+export interface TableColumnVisibility {
+  priority?: boolean;
+  subtasks?: boolean;
+  progress?: boolean;
+}
+
+/**
  * Props cho bảng nhiệm vụ phân cấp mới (TaskTableProps)
  */
 export interface TaskTableProps {

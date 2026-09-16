@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type {
   SortDirection,
   TableDensity,
+  TableColumnVisibility,
   TaskSortField,
 } from "../types";
 
@@ -22,6 +23,7 @@ export interface TaskTableHeaderProps {
   indeterminate?: boolean;
   onToggleSelectAll?: (selected: boolean) => void;
   density?: TableDensity;
+  visibleColumns?: TableColumnVisibility;
   className?: string;
   showSelection?: boolean;
   showExpandAll?: boolean;
@@ -38,13 +40,13 @@ interface ColumnDefinition {
   widthClass?: string;
 }
 
-// Linear Columns: Checkbox | Name & Code | Health | Priority | Lead | Target date | Subtasks | Progress | Actions
-const TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[340px] md:min-w-[440px] flex-1" },
+// Linear Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
+const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
+  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[420px] flex-1" },
   { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28" },
   { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
-  { id: "leadAssignee", label: "Chủ trì", sortable: true, widthClass: "w-32" },
-  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-28" },
+  { id: "leadAssignee", label: "Chủ trì / Đơn vị", sortable: true, widthClass: "w-36 lg:w-44" },
+  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-32" },
   { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20", align: "center" },
   { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-20" },
   { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8" },
@@ -58,6 +60,7 @@ export function TaskTableHeader({
   indeterminate = false,
   onToggleSelectAll,
   density = "comfortable",
+  visibleColumns = { priority: true, subtasks: true, progress: true },
   className,
   showSelection = true,
   showExpandAll = true,
@@ -73,6 +76,15 @@ export function TaskTableHeader({
     }
   }, [indeterminate]);
 
+  const activeColumns = React.useMemo(() => {
+    return ALL_TABLE_COLUMNS.filter((col) => {
+      if (col.id === "priority" && visibleColumns.priority === false) return false;
+      if (col.id === "subtasks" && visibleColumns.subtasks === false) return false;
+      if (col.id === "progress" && visibleColumns.progress === false) return false;
+      return true;
+    });
+  }, [visibleColumns]);
+
   const renderSortIndicator = (colId: TaskSortField) => {
     if (sortField === colId) {
       return sortDirection === "asc" ? (
@@ -83,23 +95,23 @@ export function TaskTableHeader({
     }
     return (
       <ArrowUpDown
-        className="size-3 text-muted-foreground/30 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
+        className="size-3 text-slate-400 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
         strokeWidth={1.5}
       />
     );
   };
 
-  const rowHeightClass = "h-8";
-  const paddingClass = "px-2 py-1";
+  const rowHeightClass = "h-9";
+  const paddingClass = "px-2.5 py-1.5";
 
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 border-b border-border/40 bg-white/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(52px+env(safe-area-inset-top,0px))] z-20 border-b border-border/80 bg-slate-50 dark:bg-slate-900 select-none shadow-2xs",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-medium text-slate-500")}>
+      <tr className={cn(rowHeightClass, "text-xs font-semibold text-slate-700")}>
         {/* Selection Checkbox */}
         {showSelection && (
           <th
@@ -121,7 +133,7 @@ export function TaskTableHeader({
         )}
 
         {/* Data Columns */}
-        {TABLE_COLUMNS.map((col) => {
+        {activeColumns.map((col) => {
           const isSortable = col.sortable && col.id !== "actions" && col.id !== "subtasks";
           const isSorted = isSortable && sortField === col.id;
           const ariaSortValue = isSorted
@@ -138,7 +150,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-medium transition-colors group/th",
+                "align-middle font-semibold transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"

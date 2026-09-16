@@ -308,6 +308,7 @@ export interface WorkspaceTabCounts {
   pending_submission: number;
   overdue: number;
   today: number;
+  this_week: number;
 }
 
 /**
@@ -359,6 +360,20 @@ export function computeWorkspaceTabCounts({
     Boolean(t.dueDate && t.dueDate.startsWith(referenceDate))
   ).length;
 
+  // Due within 7 days from reference date
+  const refDateObj = new Date(referenceDate);
+  const endOfWeekObj = new Date(refDateObj);
+  endOfWeekObj.setDate(endOfWeekObj.getDate() + 7);
+  const endOfWeekStr = endOfWeekObj.toISOString().split("T")[0];
+
+  const this_week = activeTasks.filter((t) => {
+    const isDueThisWeek = t.dueDate && t.dueDate >= referenceDate && t.dueDate <= endOfWeekStr;
+    const hasSubDueThisWeek = t.subTasks?.some(
+      (s) => s.status !== "COMPLETED" && s.dueDate && s.dueDate >= referenceDate && s.dueDate <= endOfWeekStr
+    );
+    return isDueThisWeek || hasSubDueThisWeek;
+  }).length;
+
   return {
     all: scopedTasks.length,
     my,
@@ -366,6 +381,7 @@ export function computeWorkspaceTabCounts({
     pending_submission,
     overdue,
     today,
+    this_week,
   };
 }
 

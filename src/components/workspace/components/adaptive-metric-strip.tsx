@@ -33,6 +33,9 @@ export function AdaptiveMetricStrip({
     urgentOverdueCount: metrics?.urgentOverdueCount ?? 0,
     waitingApprovalCount: metrics?.waitingApprovalCount ?? 0,
     completedRate: metrics?.completedRate ?? 0,
+    totalParentTasks: metrics?.totalParentTasks ?? metrics?.totalTasks ?? 0,
+    totalSubtasks: metrics?.totalSubtasks ?? 0,
+    totalWorkItems: metrics?.totalWorkItems ?? metrics?.totalTasks ?? 0,
     labelScope:
       metrics?.labelScope ??
       (scope === "school" ? "Toàn trường" : scope === "unit" ? "Đơn vị" : "Cá nhân"),
@@ -50,7 +53,10 @@ export function AdaptiveMetricStrip({
             status: "ALL",
             title: "Khối lượng công việc",
             value: safeMetrics.totalTasks,
-            subtitle: "Nhiệm vụ toàn trường",
+            subtitle:
+              typeof safeMetrics.totalSubtasks === "number" && safeMetrics.totalSubtasks > 0
+                ? `Nhiệm vụ chính (${safeMetrics.totalSubtasks} việc con)`
+                : "Nhiệm vụ toàn trường",
             icon: Layers,
             iconColor: "text-blue-700 bg-blue-500/10 border-blue-500/20",
           },

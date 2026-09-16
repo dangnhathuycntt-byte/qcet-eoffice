@@ -30,6 +30,7 @@ import { DashboardModalContext } from "@/components/dashboard/dashboard-context"
 import type {
   SmartFilterTab,
   TableDensity,
+  TableColumnVisibility,
   TaskSortField,
   SortDirection,
 } from "./types";
@@ -112,6 +113,8 @@ export interface ModularCascadingTaskTableProps {
   initialDensity?: TableDensity;
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
+  visibleColumns?: TableColumnVisibility;
+  onVisibleColumnsChange?: (cols: TableColumnVisibility) => void;
   initialPageSize?: number;
   syncWithUrl?: boolean;
   referenceDate?: string | Date;
@@ -256,6 +259,8 @@ export function ModularCascadingTaskTable({
   initialDensity,
   density: propDensity,
   onDensityChange: propOnDensityChange,
+  visibleColumns: propVisibleColumns,
+  onVisibleColumnsChange: propOnVisibleColumnsChange,
   initialPageSize = DEFAULT_PAGE_SIZE,
   syncWithUrl = false,
   referenceDate = getSystemReferenceDate(),
@@ -317,6 +322,30 @@ export function ModularCascadingTaskTable({
     }
     return undefined;
   }, [onAddSubTask, dashboardModal]);
+
+  const [localVisibleColumns, setLocalVisibleColumns] =
+    React.useState<TableColumnVisibility>(
+      propVisibleColumns ?? { priority: true, subtasks: true, progress: true }
+    );
+
+  const effectiveVisibleColumns = propVisibleColumns ?? localVisibleColumns;
+  const handleVisibleColumnsChange = React.useCallback(
+    (cols: TableColumnVisibility) => {
+      setLocalVisibleColumns(cols);
+      propOnVisibleColumnsChange?.(cols);
+    },
+    [propOnVisibleColumnsChange]
+  );
+
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const activeColSpan = React.useMemo(() => {
+    let span = 5; // Checkbox + Title + Status + Lead + Due + Actions = 6, with subtask tree
+    if (effectiveVisibleColumns.priority !== false) span++;
+    if (effectiveVisibleColumns.subtasks !== false) span++;
+    if (effectiveVisibleColumns.progress !== false) span++;
+    return span + 1; // total columns
+  }, [effectiveVisibleColumns]);
 
   const effectiveMonthInput =
     selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
@@ -616,6 +645,24 @@ export function ModularCascadingTaskTable({
     initialExpandedIds: autoExpandedParentIds,
   });
 
+  const handlePageChange = React.useCallback(
+    (newPage: number) => {
+      tableState.setPage(newPage);
+      if (typeof window !== "undefined") {
+        if (tableContainerRef.current) {
+          const topbarHeight = 52;
+          const rect = tableContainerRef.current.getBoundingClientRect();
+          const targetY = rect.top + window.scrollY - topbarHeight - 12;
+          window.scrollTo({
+            top: Math.max(0, targetY),
+            behavior: "smooth",
+          });
+        }
+      }
+    },
+    [tableState]
+  );
+
   // 5b. P0-07 / R-T07-bulk: lifecycle targets valid for the ENTIRE selection.
   // Derived from the canonical capability engine, never from a role string.
   // Note: SchoolTask carries no creator identity, so the engine's SoD
@@ -654,11 +701,22 @@ export function ModularCascadingTaskTable({
     );
   }, [tableState.selectedIds, filteredTasks, user]);
 
-  const prevAutoExpandedKeyRef = React.useRef<string>("");  React.useEffect(() => {
+  const prevFilterKeyRef = React.useRef<string>("");
+  React.useEffect(() => {
+    const currentKey = `${scope || ""}-${activeSearch || ""}-${activeTab || ""}-${activeDept || ""}-${activeCategory || ""}-${activeMonth || ""}`;
+    if (prevFilterKeyRef.current && prevFilterKeyRef.current !== currentKey) {
+      tableState.setPage(1);
+    }
+    prevFilterKeyRef.current = currentKey;
+  }, [scope, activeSearch, activeTab, activeDept, activeCategory, activeMonth, tableState.setPage]);
+
+  React.useEffect(() => {
     if (propDensity && tableState.density !== propDensity) {
       tableState.setDensity(propDensity);
     }
   }, [propDensity, tableState.density, tableState.setDensity]);
+
+  const prevAutoExpandedKeyRef = React.useRef<string>("");
 
   React.useEffect(() => {
     const key = `${isPersonalScope}-${autoExpandedParentIds.join(",")}`;
@@ -874,8 +932,8 @@ export function ModularCascadingTaskTable({
         priorOverdueBacklog &&
         priorOverdueBacklog.length > 0 && (
           <section
-            aria-label="Nhiệm vụ tồn đọng kỳ trước"
-            className="border-b border-amber-200/80 bg-amber-50/30 text-xs transition-all select-none"
+            aria-label="Prior Overdue Backlog - Nhiệm vụ tồn đọng kỳ trước"
+            className="border-b border-amber-300 bg-amber-50 text-xs transition-all select-none"
           >
             {/* Sleek Hairline Section Header */}
             <div
@@ -891,13 +949,13 @@ export function ModularCascadingTaskTable({
                   strokeWidth={1.5}
                 />
                 <span className="font-semibold text-amber-950 tracking-wide">
-                  TỒN ĐỌNG KỲ TRƯỚC
+                  TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
                 </span>
                 <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-[10px] font-bold">
                   {priorOverdueBacklog.length}
                 </span>
                 <span className="text-[11px] text-amber-800/80 hidden sm:inline">
-                  (Cần ưu tiên xử lý dứt điểm)
+                  (Prior Overdue Backlog - Cần ưu tiên xử lý dứt điểm)
                 </span>
               </div>
               <span className="text-[11px] font-medium text-amber-800">
@@ -1054,6 +1112,8 @@ export function ModularCascadingTaskTable({
           onCategoryChange={handleCategoryChange}
           density={tableState.density}
           onDensityChange={tableState.setDensity}
+          visibleColumns={effectiveVisibleColumns}
+          onVisibleColumnsChange={handleVisibleColumnsChange}
           onAddTask={onAddTask}
           totalTasksCount={filteredTasks.length}
         />
@@ -1076,7 +1136,7 @@ export function ModularCascadingTaskTable({
           canAddTask={emptyStateProps?.canAddTask ?? canAssignUnit}
         />
       ) : (
-        <div className="space-y-3">
+        <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(52px+env(safe-area-inset-top,0px)+12px)]">
           {/* Desktop Table View (>= 768px) - Flush on canvas */}
           <div className="hidden md:block overflow-hidden border-t border-border/40 bg-transparent">
             <div className="overflow-x-auto thin-scrollbar">
@@ -1095,6 +1155,7 @@ export function ModularCascadingTaskTable({
                   sortDirection={tableState.sortDirection}
                   onSort={tableState.handleSort}
                   density={tableState.density}
+                  visibleColumns={effectiveVisibleColumns}
                   showSelection={true}
                   showExpandAll={true}
                   isAllExpanded={tableState.expandedIds.size > 0}
@@ -1123,11 +1184,13 @@ export function ModularCascadingTaskTable({
                       <React.Fragment key={task.id}>
                         <TaskRow
                           task={task}
+                          scope={scope}
                           isExpanded={isExpanded}
                           isSelected={isSelected}
                           isActive={isRowActive}
                           isPreviewing={previewTask?.id === task.id}
                           density={tableState.density}
+                          visibleColumns={effectiveVisibleColumns}
                           selectedAcademicMonth={selectedAcademicMonth}
                           activeCategory={activeCategory}
                           canAssign={canAssignUnit}
@@ -1145,7 +1208,7 @@ export function ModularCascadingTaskTable({
                             scope={scope}
                             isExpanded={isExpanded}
                             density={tableState.density}
-                            colSpan={9}
+                            colSpan={activeColSpan}
                             selectedAcademicMonth={selectedAcademicMonth}
                             onSelectSubTask={(sub) => handleEffectiveSelectTask(sub)}
                             onStatusChange={onStatusChange}
@@ -1189,7 +1252,7 @@ export function ModularCascadingTaskTable({
             currentPage={tableState.currentPage}
             pageSize={tableState.pageSize}
             totalItems={tableState.totalItems}
-            onPageChange={tableState.setPage}
+            onPageChange={handlePageChange}
             onPageSizeChange={tableState.setPageSize}
             shortcutTrigger={<TableShortcutHelpTrigger />}
           />

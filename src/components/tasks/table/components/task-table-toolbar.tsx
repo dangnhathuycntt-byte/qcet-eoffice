@@ -35,6 +35,7 @@ import type {
   SmartFilterTab,
   SmartFilterTabOption,
   TableDensity,
+  TableColumnVisibility,
   TaskViewMode,
 } from "../types";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
@@ -161,6 +162,8 @@ export interface TaskTableToolbarProps {
   // Mật độ và Chế độ hiển thị
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
+  visibleColumns?: TableColumnVisibility;
+  onVisibleColumnsChange?: (cols: TableColumnVisibility) => void;
   viewMode?: TaskViewMode;
   onViewModeChange?: (mode: TaskViewMode) => void;
 
@@ -205,6 +208,8 @@ export function TaskTableToolbar({
   categoryOptions = CATEGORY_TABS,
   density = "comfortable",
   onDensityChange,
+  visibleColumns = { priority: true, subtasks: true, progress: true },
+  onVisibleColumnsChange,
   viewMode = "table",
   onViewModeChange,
   sortField,
@@ -504,7 +509,7 @@ export function TaskTableToolbar({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Nút Thêm việc mới */}
+            {/* Nút Tạo nhiệm vụ mới */}
             {canCreateTask && onAddTask && (
               <button
                 type="button"
@@ -512,7 +517,7 @@ export function TaskTableToolbar({
                 className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs active:scale-95 transition-all touch-manipulation cursor-pointer"
               >
                 <Plus className="size-4" strokeWidth={1.5} />
-                <span>Giao việc</span>
+                <span>Tạo nhiệm vụ</span>
               </button>
             )}
           </div>
@@ -1019,21 +1024,70 @@ export function TaskTableToolbar({
               <span className="hidden md:inline">Xuất Excel</span>
             </Button>
           )}
+
+          {/* Tùy chọn ẩn/hiển thị các cột phụ */}
+          {onVisibleColumnsChange && (
+            <div className="flex items-center gap-2 border-l border-border/70 pl-2.5 text-xs py-0.5">
+              <span className="text-slate-500 text-[11px] font-medium select-none">Cột phụ:</span>
+              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns.priority !== false}
+                  onChange={(e) =>
+                    onVisibleColumnsChange({
+                      ...visibleColumns,
+                      priority: e.target.checked,
+                    })
+                  }
+                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
+                />
+                <span className="text-xs">Ưu tiên</span>
+              </label>
+              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns.subtasks !== false}
+                  onChange={(e) =>
+                    onVisibleColumnsChange({
+                      ...visibleColumns,
+                      subtasks: e.target.checked,
+                    })
+                  }
+                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
+                />
+                <span className="text-xs">Việc con</span>
+              </label>
+              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns.progress !== false}
+                  onChange={(e) =>
+                    onVisibleColumnsChange({
+                      ...visibleColumns,
+                      progress: e.target.checked,
+                    })
+                  }
+                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
+                />
+                <span className="text-xs">Tiến độ</span>
+              </label>
+            </div>
+          )}
             </div>
           )}
 
-          {/* Nút Thêm công việc mới */}
+          {/* Nút Tạo nhiệm vụ mới */}
           {onAddTask && canCreateTask && (
             <Button
               type="button"
               variant="default"
               size="sm"
               onClick={onAddTask}
-              className="h-9 px-3 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer"
-              aria-label="Thêm công việc mới"
+              className="h-9 px-3.5 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer"
+              aria-label="Tạo nhiệm vụ mới"
             >
               <Plus className="size-4" strokeWidth={1.5} />
-              <span>Thêm công việc</span>
+              <span>Tạo nhiệm vụ</span>
             </Button>
           )}
         </div>

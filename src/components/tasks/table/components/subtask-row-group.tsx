@@ -134,7 +134,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                       className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
                     >
                       <Plus className="size-3 text-primary" strokeWidth={1.5} />
-                      <span>Thêm việc con cho [{parentTask.taskCode || parentTask.id}]</span>
+                      <span>Thêm việc con cho nhiệm vụ này</span>
                     </button>
                   </div>
                 )}

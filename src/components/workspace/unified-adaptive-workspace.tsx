@@ -150,6 +150,21 @@ export function filterDisplayedTasks({
       result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
     } else if (status === "today") {
       result = result.filter((t) => Boolean(t.dueDate && t.dueDate.startsWith(refDate)));
+    } else if (status === "this_week") {
+      const refDateObj = new Date(refDate);
+      const endOfWeekObj = new Date(refDateObj);
+      endOfWeekObj.setDate(endOfWeekObj.getDate() + 7);
+      const endOfWeekStr = endOfWeekObj.toISOString().split("T")[0];
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
+        const taskDue = t.dueDate;
+        if (taskDue && taskDue >= refDate && taskDue <= endOfWeekStr) return true;
+        return Boolean(
+          t.subTasks?.some(
+            (s) => s.status !== "COMPLETED" && s.dueDate && s.dueDate >= refDate && s.dueDate <= endOfWeekStr
+          )
+        );
+      });
     } else if (status === "pending_submission" || status === "waiting_submission") {
       result = result.filter((t) => {
         if (t.status === "COMPLETED") return false;
@@ -724,15 +739,19 @@ export function UnifiedAdaptiveWorkspace({
 
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
-      let target = newScope;
-      if (target === "school" && !isExecutive) {
-        target = "unit";
+      const target = newScope;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("qcet_preferred_task_scope", target);
+        } catch {
+          // ignore
+        }
       }
       setActiveScope(target);
       onScopeChange?.(target);
       workspaceQuery?.setScope(target, { shallow: true, replace: true });
     },
-    [isExecutive, onScopeChange, workspaceQuery]
+    [onScopeChange, workspaceQuery]
   );
 
   // View mode management (Table vs Kanban)
@@ -901,9 +920,7 @@ export function UnifiedAdaptiveWorkspace({
     const { queryState } = workspaceQuery;
 
     if (!propScope && !forcedScope && queryState.scope) {
-      if (queryState.scope !== "school" || isExecutive) {
-        setActiveScope(queryState.scope);
-      }
+      setActiveScope(queryState.scope);
     }
     if (!selectedDepartment && (queryState.unit || queryState.dept)) {
       setInternalDept(queryState.unit || queryState.dept);
@@ -1128,6 +1145,19 @@ export function UnifiedAdaptiveWorkspace({
 
   const actionQueueTotal =
     actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length;
+
+  // Scope Badge Counts: Total tasks visible per scope BEFORE search/supplementary filters
+  const calculatedScopeBadgeCounts = React.useMemo<Record<WorkspaceScope, number>>(() => {
+    const myTasks = filterTasksByScope(tasks, "my", user);
+    const unitTasks = filterTasksByScope(tasks, "unit", user, currentDept);
+    const schoolTasks = filterTasksByScope(tasks, "school", user, currentDept);
+
+    return {
+      my: myTasks.length,
+      unit: unitTasks.length,
+      school: schoolTasks.length,
+    };
+  }, [tasks, user, currentDept]);
 
   // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
   const tabCounts = React.useMemo(() => {
@@ -1896,7 +1926,7 @@ export function UnifiedAdaptiveWorkspace({
           user={user}
           userRole={effectiveReviewerRole}
           isExecutive={isExecutive}
-          badgeCounts={badgeCounts}
+          badgeCounts={badgeCounts || calculatedScopeBadgeCounts}
           isUnassignedDepartment={isUnassigned}
           searchQuery={currentSearch || ""}
           onSearchChange={(q) => {
@@ -1915,7 +1945,14 @@ export function UnifiedAdaptiveWorkspace({
           onDepartmentChange={(dept) => {
             setInternalDept(dept);
             onDepartmentChange?.(dept);
-            workspaceQuery?.setDept(dept, { shallow: true, replace: true });
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("qcet_preferred_task_department", dept);
+              } catch {
+                // ignore
+              }
+            }
+            workspaceQuery?.setDept(dept !== "ALL" ? dept : null, { shallow: true, replace: true });
           }}
           selectedCategory={currentCategory}
           onCategoryChange={setCurrentCategory}

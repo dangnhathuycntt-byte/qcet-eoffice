@@ -118,6 +118,50 @@ describe("TaskManagementWorkspace Unit & Integration Suite", () => {
     assert.ok(subIds.includes("sub-1-1"));
   });
 
+  test("filterTasksByScope: allows BGH / Admin to select any department explicitly", () => {
+    const bghUser: AuthUser = {
+      id: "u-bgh",
+      name: "ThS. Đặng Nhật Huy",
+      email: "bgh@qcet.edu.vn",
+      role: "ADMIN",
+      roleLabel: "Hiệu trưởng",
+      department: "Ban Giám hiệu",
+      departmentCode: "BGH",
+    };
+
+    // BGH selects CTSV department
+    const ctsvResult = filterTasksByScope(sampleTasks, "unit", bghUser, "CTSV");
+    assert.strictEqual(ctsvResult.length, 1);
+    assert.strictEqual(ctsvResult[0].id, "task-school-2");
+
+    // BGH selects CNTT department
+    const cnttResult = filterTasksByScope(sampleTasks, "unit", bghUser, "CNTT");
+    assert.strictEqual(cnttResult.length, 1);
+    assert.strictEqual(cnttResult[0].id, "task-school-1");
+  });
+
+  test("filterTasksByScope: staff view in personal scope filters only assigned work", () => {
+    const staffUser: AuthUser = {
+      id: "u-staff-b",
+      name: "Lê Văn B",
+      email: "b@qcet.edu.vn",
+      role: "STAFF",
+      roleLabel: "Chuyên viên",
+      department: "Trung tâm CNTT-TT",
+      departmentCode: "CNTT",
+    };
+
+    const myResult = filterTasksByScope(sampleTasks, "my", staffUser);
+    assert.strictEqual(myResult.length, 1);
+    assert.strictEqual(myResult[0].id, "task-school-1");
+    assert.strictEqual(myResult[0].subTasks?.length, 1);
+    assert.strictEqual(myResult[0].subTasks?.[0].id, "sub-1-1");
+
+    // Staff in school scope can see shared school tasks
+    const schoolResult = filterTasksByScope(sampleTasks, "school", staffUser);
+    assert.strictEqual(schoolResult.length, 2);
+  });
+
   test("applyOptimisticStatusChange: updates subtask status and recalculates rollup", () => {
     const updated = applyOptimisticStatusChange(
       sampleTasks,

@@ -113,7 +113,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         className
       )}
     >
-      {/* Left section: Status Badge, Code, Title & Month Tag */}
+      {/* Left section: Status Badge, Title & Month Tag */}
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         {/* Status Badge */}
         <Badge
@@ -129,13 +129,8 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
           {statusConfig.label}
         </Badge>
 
-        {/* Subtask ID */}
-        <span className="font-mono text-xs text-muted-foreground/70 tabular-nums font-semibold shrink-0">
-          {subTask.id.toUpperCase()}
-        </span>
-
-        {/* Subtask Title */}
-        <span className="truncate text-foreground font-medium text-sm leading-snug">
+        {/* Subtask Title - Straight Aligned */}
+        <span className="truncate text-slate-900 font-medium text-xs sm:text-[13px] leading-snug">
           {subTask.title}
         </span>
 
@@ -240,7 +235,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
       </div>
 
       {/* Right section: Progress bar, Single DRI Assignee, SLA Date */}
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-3.5 shrink-0">
         {/* Progress percent if subtask tracks progress */}
         {typeof subTask.progressPercent === "number" && (
           <div className="flex items-center gap-1.5">
@@ -250,7 +245,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                 style={{ width: `${Math.min(100, Math.max(0, subTask.progressPercent))}%` }}
               />
             </div>
-            <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+            <span className="font-mono text-xs font-semibold tabular-nums text-slate-700">
               {subTask.progressPercent}%
             </span>
           </div>
@@ -266,14 +261,14 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
               width={20}
               height={20}
               loading="lazy"
-              className="size-5 rounded-full object-cover shrink-0"
+              className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
             />
           ) : (
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold tabular-nums text-slate-700">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-border/60">
               {getInitials(subTask.assigneeName)}
             </span>
           )}
-          <span className="text-xs font-medium text-muted-foreground max-w-[120px] truncate">
+          <span className="text-xs font-medium text-slate-800 max-w-[130px] truncate">
             {subTask.assigneeName || "Chưa giao"}
           </span>
         </div>
@@ -281,12 +276,12 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         {/* SLA Date Pill */}
         <span
           className={cn(
-            "text-xs tabular-nums font-mono font-semibold px-1.5 py-0.5 rounded border",
+            "text-xs tabular-nums font-mono font-semibold px-2 py-0.5 rounded border",
             slaStatus.colorClass
           )}
           title={slaStatus.label ?? undefined}
         >
-          {formatTableDate(subTask.dueDate)}
+          {slaStatus.isOverdue && slaStatus.label ? `${slaStatus.label} · ` : ""}{formatTableDate(subTask.dueDate)}
         </span>
       </div>
     </div>

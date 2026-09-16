@@ -11,6 +11,9 @@ export interface AdaptiveWorkspaceMetrics {
   waitingApprovalCount: number;
   completedRate: number;
   labelScope: string;
+  totalParentTasks?: number;
+  totalSubtasks?: number;
+  totalWorkItems?: number;
 }
 
 export interface UniversalActionQueueItems {

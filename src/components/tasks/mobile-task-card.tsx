@@ -269,15 +269,15 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         className
       )}
     >
-      {/* Top Row: Task code + Priority & Status badge */}
+      {/* Top Row: Department / Context + Priority & Status badge */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground shrink-0 bg-muted/60 border border-border/50 px-1.5 py-0.5 rounded">
-            {formattedCode}
+          <span className="text-xs font-semibold text-slate-700 truncate bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md">
+            {departmentName}
           </span>
-          {isSubTask && (flattenedTask?.parentSchoolTaskCode || flattenedTask?.parentTaskCode) && (
-            <span className="text-xs font-mono text-muted-foreground/80 truncate">
-              [{flattenedTask?.parentSchoolTaskCode || flattenedTask?.parentTaskCode}]
+          {isSubTask && (flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle) && (
+            <span className="text-xs text-slate-500 truncate" title={flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}>
+              • {flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}
             </span>
           )}
         </div>
@@ -306,16 +306,13 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       </div>
 
       {/* Title */}
-      <h3 className="text-[14.5px] font-semibold text-foreground leading-snug line-clamp-2 font-heading tracking-tight">
+      <h3 className="text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
         {title}
       </h3>
 
-      {/* Unit & Assignee: Department name • Assignee name with avatar/dot */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-        <span className="font-medium text-foreground/85 truncate max-w-[140px]" title={departmentName}>
-          {departmentName}
-        </span>
-        <span className="inline-block size-1 rounded-full bg-muted-foreground/40 shrink-0" aria-hidden="true" />
+      {/* Lead Assignee: Assignee name with avatar/dot */}
+      <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
+        <span className="text-slate-500 shrink-0">Phụ trách:</span>
         <div className="flex items-center gap-1.5 min-w-0 truncate">
           {assigneeAvatar ? (
             <img
@@ -325,14 +322,14 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
               width={18}
               height={18}
               loading="lazy"
-              className="size-4.5 rounded-full object-cover shrink-0 border border-border/60"
+              className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
             />
           ) : (
-            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary border border-primary/20">
+            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-700 border border-border/60">
               {getInitials(assigneeName)}
             </span>
           )}
-          <span className="font-medium text-foreground/80 truncate max-w-[120px]" title={assigneeName}>
+          <span className="font-medium text-slate-800 truncate" title={assigneeName}>
             {assigneeName}
           </span>
         </div>

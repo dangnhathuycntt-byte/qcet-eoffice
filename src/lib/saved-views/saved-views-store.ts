@@ -431,6 +431,26 @@ export function urlParamsToCriteria(
 
 const STORAGE_KEY_PREFIX = "qcet_saved_task_views_v1";
 
+// In-memory fallback map for non-browser environments (SSR/Tests)
+const memoryStorageMap = new Map<string, string>();
+
+const memoryStorageFallback: Storage = {
+  getItem: (key: string) => memoryStorageMap.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    memoryStorageMap.set(key, String(value));
+  },
+  removeItem: (key: string) => {
+    memoryStorageMap.delete(key);
+  },
+  clear: () => {
+    memoryStorageMap.clear();
+  },
+  key: (index: number) => Array.from(memoryStorageMap.keys())[index] ?? null,
+  get length() {
+    return memoryStorageMap.size;
+  },
+};
+
 function getLocalStorage(): Storage | null {
   try {
     if (typeof window !== "undefined" && window.localStorage) {
@@ -442,7 +462,7 @@ function getLocalStorage(): Storage | null {
   } catch {
     // Storage access blocked or restricted
   }
-  return null;
+  return memoryStorageFallback;
 }
 
 function getStorageKey(userId?: string): string {

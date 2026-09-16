@@ -188,7 +188,7 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] transition-colors"
+      className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border bg-background pt-[env(safe-area-inset-top,0px)] transition-colors shadow-2xs"
     >
       <div className="h-full w-full px-3.5 sm:px-6 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_minmax(280px,384px)_minmax(0,1fr)] items-center gap-2 sm:gap-4">
         {/* Left Zone: Desktop Collapse Toggle & Deep Breadcrumbs */}

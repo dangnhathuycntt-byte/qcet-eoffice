@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
-import type { TableDensity } from "../types";
+import type { TableDensity, TableColumnVisibility } from "../types";
 import {
   formatTableDate,
   getSlaBadgeStatus,
@@ -27,11 +27,13 @@ import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export interface TaskRowProps {
   task: SchoolTask;
+  scope?: string;
   isSelected?: boolean;
   isExpanded?: boolean;
   isActive?: boolean;
   isPreviewing?: boolean;
   density?: TableDensity;
+  visibleColumns?: TableColumnVisibility;
   showSelection?: boolean;
   canAssign?: boolean;
   selectedAcademicMonth?: number | "ALL";
@@ -175,11 +177,12 @@ function HealthIndicator({
       </div>
     );
   }
-  if (isWaitingApproval) {
+  if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
+    const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
       <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
         <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
-        <span className="font-medium">Cần chỉnh sửa</span>
+        <span className="font-medium">{label}</span>
       </div>
     );
   }
@@ -278,11 +281,13 @@ export function areTaskRowPropsEqual(
 
 export const TaskRow = React.memo(function TaskRow({
   task,
+  scope,
   isSelected = false,
   isExpanded = false,
   isActive = false,
   isPreviewing = false,
   density = "comfortable",
+  visibleColumns = { priority: true, subtasks: true, progress: true },
   showSelection = true,
   canAssign = false,
   selectedAcademicMonth,
@@ -312,6 +317,7 @@ export const TaskRow = React.memo(function TaskRow({
   );
 
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
+  const departmentName = task.department || driInfo.subtext;
 
   const isWaitingApproval =
     task.status === "WAITING_APPROVAL" ||
@@ -355,10 +361,8 @@ export const TaskRow = React.memo(function TaskRow({
     onContextMenu?.(task, e);
   };
 
-  const paddingClass = "py-1 px-2";
-  const rowHeightClass = "h-8 sm:h-8.5";
-
-  const taskCodeDisplay = (task.code || task.taskCode || task.id).toUpperCase();
+  const paddingClass = "py-1.5 px-2.5";
+  const rowHeightClass = "min-h-[38px] sm:min-h-[42px]";
 
   return (
     <tr
@@ -399,21 +403,21 @@ export const TaskRow = React.memo(function TaskRow({
               checked={isSelected}
               onChange={(e) => onToggleSelect?.(task.id, e)}
               className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer transition-colors"
-              aria-label={`Chọn nhiệm vụ ${task.taskCode || task.id}`}
+              aria-label={`Chọn nhiệm vụ ${task.title}`}
             />
           </div>
         </td>
       )}
 
-      {/* 2. Nhiệm vụ (Box icon + Title + Code + Expand) - Dominant Column */}
-      <td className={cn("align-middle min-w-[340px] md:min-w-[440px] flex-1", paddingClass)}>
+      {/* 2. Nhiệm vụ (Expand Chevron + Title) - Dominant Column */}
+      <td className={cn("align-middle min-w-[320px] md:min-w-[420px] flex-1", paddingClass)}>
         <div className="flex items-center gap-2">
           {/* Subtask Expand Toggle */}
           {hasSubtasks ? (
             <button
               type="button"
               onClick={handleExpandClick}
-              className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer shrink-0 transition-colors"
+              className="inline-flex size-5 items-center justify-center rounded text-slate-400 hover:bg-slate-200/70 hover:text-slate-900 cursor-pointer shrink-0 transition-colors"
               aria-expanded={isExpanded}
               aria-label={
                 isExpanded
@@ -422,21 +426,17 @@ export const TaskRow = React.memo(function TaskRow({
               }
             >
               {isExpanded ? (
-                <ChevronDown className="size-3" strokeWidth={1.5} />
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
               ) : (
-                <ChevronRight className="size-3" strokeWidth={1.5} />
+                <ChevronRight className="size-3.5" strokeWidth={1.5} />
               )}
             </button>
           ) : (
             <span className="inline-flex size-5 shrink-0" aria-hidden="true" />
           )}
 
-          {/* Linear Task Code + Title */}
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <span className="font-mono text-[11px] text-slate-400 shrink-0 select-none">
-              {taskCodeDisplay}
-            </span>
-
+          {/* Title - Clean & Straight Aligned */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
               className="text-xs sm:text-[13px] font-medium text-slate-900 group-hover:text-primary transition-colors truncate"
               title={task.title}
@@ -450,14 +450,14 @@ export const TaskRow = React.memo(function TaskRow({
                 className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-[10px] font-semibold tabular-nums shrink-0"
                 title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
               >
-                T{selectedAcademicMonth} ({dueInMonthCount})
+                Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
               </span>
             )}
           </div>
         </div>
       </td>
 
-      {/* 3. Tình trạng (Health) */}
+      {/* 3. Tình trạng / Trạng thái (Status / Health) */}
       <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
         <HealthIndicator
           status={task.status}
@@ -466,69 +466,100 @@ export const TaskRow = React.memo(function TaskRow({
         />
       </td>
 
-      {/* 4. Độ ưu tiên (Priority - Wave/Signal) */}
-      <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
-        <PriorityIndicator priority={task.priority} />
-      </td>
+      {/* 4. Độ ưu tiên (Priority - Tùy chọn hiển thị) */}
+      {visibleColumns.priority !== false && (
+        <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+          <PriorityIndicator priority={task.priority} />
+        </td>
+      )}
 
-      {/* 5. Người chủ trì (Lead DRI) */}
-      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
+      {/* 5. Người / Đơn vị phụ trách (Lead Assignee / Department) */}
+      <td className={cn("w-36 lg:w-44 align-middle whitespace-nowrap", paddingClass)}>
         <div
-          className="flex items-center gap-1.5 min-w-0"
-          title={`${driInfo.primaryName}${driInfo.subtext ? ` (${driInfo.subtext})` : ""}`}
+          className="flex flex-col min-w-0 justify-center"
+          title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
         >
-          {task.leadAssigneeAvatar ? (
-            <img
-              src={task.leadAssigneeAvatar}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              loading="lazy"
-              className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-            />
-          ) : (
-            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold tabular-nums text-slate-600 border border-border/60">
-              {getInitials(driInfo.primaryName)}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {task.leadAssigneeAvatar ? (
+              <img
+                src={task.leadAssigneeAvatar}
+                alt=""
+                aria-hidden="true"
+                width={18}
+                height={18}
+                loading="lazy"
+                className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+              />
+            ) : (
+              <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold tabular-nums text-slate-600 border border-border/60">
+                {getInitials(driInfo.primaryName)}
+              </span>
+            )}
+            <span className="text-xs font-medium text-slate-800 truncate">
+              {driInfo.primaryName}
+            </span>
+          </div>
+          {departmentName && (
+            <span
+              className="text-[11px] text-slate-500 font-normal truncate mt-0.5"
+              title={departmentName}
+            >
+              {departmentName}
             </span>
           )}
-          <span className="text-xs font-medium text-slate-800 truncate">
-            {driInfo.primaryName}
-          </span>
         </div>
       </td>
 
-      {/* 6. Hạn hoàn thành (Target date) */}
-      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
-        <span
-          className={cn(
-            "font-mono tabular-nums text-xs",
-            slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-slate-600"
-          )}
-          title="Hạn hoàn thành"
-        >
-          {formatTableDate(task.dueDate)}
-        </span>
-      </td>
-
-      {/* 7. Đầu việc con (Subtasks count) */}
-      <td className={cn("w-20 align-middle text-center whitespace-nowrap", paddingClass)}>
-        {hasSubtasks ? (
+      {/* 6. Hạn hoàn thành & Quá hạn (Target date & SLA Overdue text/badge) */}
+      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
+        <div className="flex flex-col gap-0.5">
           <span
-            className="rounded bg-slate-100/80 px-1 py-0.2 font-mono text-[10px] font-medium tabular-nums text-slate-500"
-            title={`Hoàn thành ${completedSubTasks}/${totalSubTasks} đầu vi��c con`}
+            className={cn(
+              "font-mono tabular-nums text-xs",
+              slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-slate-700"
+            )}
+            title="Hạn hoàn thành"
           >
-            {completedSubTasks}/{totalSubTasks}
+            {formatTableDate(task.dueDate)}
           </span>
-        ) : (
-          <span className="text-muted-foreground/30 text-xs">-</span>
-        )}
+          {slaStatus.isOverdue && (
+            <span
+              className="inline-flex items-center text-[10px] font-semibold text-rose-600"
+              title={slaStatus.label || "Quá hạn"}
+            >
+              {slaStatus.label || "Quá hạn"}
+            </span>
+          )}
+          {!slaStatus.isOverdue && slaStatus.isToday && (
+            <span className="inline-flex items-center text-[10px] font-semibold text-amber-600">
+              Hôm nay
+            </span>
+          )}
+        </div>
       </td>
 
-      {/* 8. Tiến độ (Status / Progress %) */}
-      <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
-        <CircularProgressRing percent={task.progressPercent || 0} />
-      </td>
+      {/* 7. Đầu việc con (Subtasks count - Tùy chọn hiển thị) */}
+      {visibleColumns.subtasks !== false && (
+        <td className={cn("w-20 align-middle text-center whitespace-nowrap", paddingClass)}>
+          {hasSubtasks ? (
+            <span
+              className="rounded bg-slate-100/80 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-slate-600"
+              title={`Hoàn thành ${completedSubTasks}/${totalSubTasks} đầu việc con`}
+            >
+              {completedSubTasks}/{totalSubTasks}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/40 text-xs">-</span>
+          )}
+        </td>
+      )}
+
+      {/* 8. Tiến độ (Progress % - Tùy chọn hiển thị) */}
+      {visibleColumns.progress !== false && (
+        <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+          <CircularProgressRing percent={task.progressPercent || 0} />
+        </td>
+      )}
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td

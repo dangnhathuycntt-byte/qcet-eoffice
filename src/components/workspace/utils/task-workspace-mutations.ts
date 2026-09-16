@@ -19,25 +19,53 @@ export type OptimisticTaskCreationInput = Partial<CreateTaskFormData> & {
  */
 export function filterTasksByScope(
   tasks: SchoolTask[],
-  scope: WorkspaceScope = "school",
-  user?: AuthUser | null
+  scope: WorkspaceScope | string = "school",
+  user?: AuthUser | null,
+  selectedDepartment?: string
 ): SchoolTask[] {
-  if (scope === "school") {
+  const normScope = scope === "SCHOOL_TASKS" ? "school" : scope === "UNIT_TASKS" ? "unit" : scope === "MY_TASKS" ? "my" : scope;
+
+  if (normScope === "school") {
     return tasks;
   }
 
-  if (scope === "my") {
+  if (normScope === "my") {
     if (!user) return [];
 
     return tasks
       .map((task) => {
-        const isLead = matchesUser(task.leadAssigneeName, user);
+        const isLead =
+          matchesUser(task.leadAssigneeName, user) ||
+          (user.id && (task as any).leadAssigneeId === user.id) ||
+          (user.id && (task as any).assignedTo === user.id);
+
         const isCoAssignee = Boolean(
-          task.coAssignees && task.coAssignees.some((name) => matchesUser(name, user))
+          task.coAssignees &&
+            task.coAssignees.some(
+              (ca: any) =>
+                (typeof ca === "string" && (ca === user.name || matchesUser(ca, user))) ||
+                (ca && typeof ca === "object" && ((user.id && ca.id === user.id) || ca.name === user.name || matchesUser(ca.name, user)))
+            )
         );
-        const matchingSubtasks = (task.subTasks || []).filter((sub) =>
-          matchesUser(sub.assigneeName, user)
-        );
+
+        const matchingSubtasks = (task.subTasks || []).filter((sub: any) => {
+          const isSubAssignee =
+            (user.id && (sub.assigneeId === user.id || sub.assignedTo === user.id)) ||
+            sub.assigneeName === user.name ||
+            matchesUser(sub.assigneeName, user) ||
+            matchesUser(sub.assignedTo, user);
+
+          const isSubCollab = Array.isArray(sub.collaborators)
+            ? sub.collaborators.some(
+                (c: any) =>
+                  (user.id && c.id === user.id) ||
+                  c.name === user.name ||
+                  matchesUser(c.name, user)
+              )
+            : false;
+
+          return Boolean(isSubAssignee || isSubCollab);
+        });
 
         // If user is DRI (lead), retain full task with all subtasks for coordination
         if (isLead) {
@@ -62,34 +90,52 @@ export function filterTasksByScope(
       .filter((t): t is SchoolTask => t !== null);
   }
 
-  const userDeptCode = user?.departmentCode;
-  const userDeptName = user?.department;
+  // scope === "unit"
+  const targetDept =
+    selectedDepartment && selectedDepartment !== "ALL"
+      ? selectedDepartment
+      : user?.departmentCode || user?.department;
 
-  if (!userDeptCode && !userDeptName) {
+  if (!targetDept || targetDept === "ALL") {
     return tasks;
   }
 
+  const deptUpper = targetDept.trim().toUpperCase();
+  const deptLower = targetDept.trim().toLowerCase();
+
   return tasks
     .map((task) => {
-      const matchesMainDept =
-        (userDeptCode &&
-          (task.departmentCode === userDeptCode ||
-            task.leadDepartmentCode === userDeptCode ||
-            task.coDepartmentCodes?.includes(userDeptCode))) ||
-        (userDeptName &&
-          (task.department === userDeptName ||
-            task.leadDepartment === userDeptName));
+      const taskDeptCode = (task.departmentCode || task.leadDepartmentCode || "").toUpperCase();
+      const taskDeptName = (task.department || task.leadDepartment || "").toLowerCase();
+      const taskDeptId = (task as any).departmentId || (task as any).leadDepartmentId || "";
 
-      const matchingSubtasks = (task.subTasks || []).filter((sub) => {
+      const isLeadDept =
+        taskDeptCode === deptUpper ||
+        taskDeptName === deptLower ||
+        taskDeptName.includes(deptLower) ||
+        (taskDeptId && taskDeptId.toUpperCase() === deptUpper);
+
+      const isCoDept = Boolean(
+        task.coDepartmentCodes?.some((c) => c.toUpperCase() === deptUpper) ||
+        task.coDepartments?.some(
+          (d) => d.toLowerCase() === deptLower || d.toLowerCase().includes(deptLower)
+        )
+      );
+
+      const matchingSubtasks = (task.subTasks || []).filter((sub: any) => {
+        const subDeptCode = (sub.departmentCode || "").toUpperCase();
+        const subDeptName = (sub.department || "").toLowerCase();
+        const subDeptId = (sub.departmentId || "").toUpperCase();
+
         return (
-          (userDeptCode && sub.departmentCode === userDeptCode) ||
-          (userDeptName && sub.department === userDeptName) ||
-          (user?.name &&
-            sub.assigneeName?.toLowerCase().includes(user.name.toLowerCase()))
+          subDeptCode === deptUpper ||
+          subDeptName === deptLower ||
+          subDeptName.includes(deptLower) ||
+          subDeptId === deptUpper
         );
       });
 
-      if (matchesMainDept) {
+      if (isLeadDept || isCoDept) {
         return {
           ...task,
           subTasks: matchingSubtasks.length > 0 ? matchingSubtasks : task.subTasks,
