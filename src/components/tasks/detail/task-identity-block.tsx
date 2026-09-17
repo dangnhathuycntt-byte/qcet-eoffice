@@ -37,9 +37,15 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { DirectInlineEditor } from "./direct-inline-editor";
+import {
+  taskStateMachine,
+  buildActorContext,
+  buildTaskContext,
+} from "@/domain/tasks/state-machine";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;
+  currentUser?: any;
   canEdit?: boolean;
   deliverables?: Array<{ id: string; title: string; fileUrl?: string; notes?: string }>;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
@@ -131,29 +137,9 @@ export const PRIORITY_OPTIONS: Array<{
   },
 ];
 
-
-function LinearInlineStartDateIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
-      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
-      <path d="M5.5 10h3M7 8.5l1.5 1.5-1.5 1.5" />
-    </svg>
-  );
-}
-
-function LinearInlineTargetDateIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
-      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
-      <path d="M8 8.5v3M6.5 10h3" />
-    </svg>
-  );
-}
-
 export function TaskIdentityBlock({
   task,
+  currentUser,
   canEdit = true,
   deliverables = [],
   onStatusChange,
@@ -170,6 +156,20 @@ export function TaskIdentityBlock({
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
+
+  // Allowed transitions validation via domain State Machine
+  const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);
+  const taskContext = React.useMemo(() => buildTaskContext(task), [task]);
+  const allowedTransitions = React.useMemo(() => {
+    return taskStateMachine.getAllowedTransitions(actorContext, taskContext, task.status);
+  }, [actorContext, taskContext, task.status]);
+  const allowedMap = React.useMemo(() => {
+    const map = new Map<string, { allowed: boolean; reason?: string }>();
+    for (const t of allowedTransitions) {
+      map.set(t.status, { allowed: t.allowed, reason: t.reason });
+    }
+    return map;
+  }, [allowedTransitions]);
 
   const taskCode =
     task.code ||
@@ -242,68 +242,6 @@ export function TaskIdentityBlock({
       .catch(() => {});
   }, []);
 
-  // Resource popover state
-  const [isResourcePopoverOpen, setIsResourcePopoverOpen] = React.useState(false);
-  const [resourceTitle, setResourceTitle] = React.useState("");
-  const [resourceUrl, setResourceUrl] = React.useState("");
-  const [resourceError, setResourceError] = React.useState<string | null>(null);
-  const [isSavingResource, setIsSavingResource] = React.useState(false);
-  const resourceMenuRef = React.useRef<HTMLDivElement>(null);
-
-  const isValidHttpUrl = (str: string): boolean => {
-    const trimmed = str.trim();
-    if (!trimmed) return false;
-    try {
-      const url = new URL(trimmed);
-      return url.protocol === "http:" || url.protocol === "https:";
-    } catch {
-      return false;
-    }
-  };
-
-  const handleOpenResourcePopover = () => {
-    setResourceError(null);
-    setIsResourcePopoverOpen((prev) => !prev);
-  };
-
-  const handleAddResourceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResourceError(null);
-
-    const trimmedTitle = resourceTitle.trim();
-    const trimmedUrl = resourceUrl.trim();
-
-    if (!trimmedTitle) {
-      setResourceError("Vui lòng nhập tên tài liệu hoặc văn bản minh chứng");
-      return;
-    }
-
-    if (!trimmedUrl) {
-      setResourceError("Đường dẫn liên kết (URL) là bắt buộc");
-      return;
-    }
-
-    if (!isValidHttpUrl(trimmedUrl)) {
-      setResourceError("Đường dẫn không hợp lệ. Vui lòng nhập URL bắt đầu bằng http:// hoặc https://");
-      return;
-    }
-
-    setIsSavingResource(true);
-    try {
-      if (onAddDeliverable) {
-        await onAddDeliverable(trimmedTitle, trimmedUrl);
-      }
-      setResourceTitle("");
-      setResourceUrl("");
-      setResourceError(null);
-      setIsResourcePopoverOpen(false);
-    } catch (err: any) {
-      setResourceError(err?.message || "Không thể lưu tài liệu minh chứng. Vui lòng thử lại");
-    } finally {
-      setIsSavingResource(false);
-    }
-  };
-
   const rawStatus = (task as any).status || "NOT_STARTED";
   const normalizedStatus: TaskStatus = typeof rawStatus === "string"
     ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
@@ -352,9 +290,6 @@ export function TaskIdentityBlock({
       if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
         setIsLeadDropdownOpen(false);
       }
-      if (resourceMenuRef.current && !resourceMenuRef.current.contains(e.target as Node)) {
-        setIsResourcePopoverOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -384,18 +319,15 @@ export function TaskIdentityBlock({
             />
           </div>
 
-          {/* Subtitle / Sub-heading (Linear Project Style) */}
-          <p className="text-sm text-muted-foreground font-normal pt-0.5 select-none">
-            {taskCode} · {scopeLabel} · {departmentName}
+          {/* Subtitle / Sub-heading (Linear Project Style: NV-2026-001 · Cấp Trường) */}
+          <p className="text-xs text-muted-foreground font-normal pt-0.5 select-none">
+            {taskCode} · {scopeLabel}
           </p>
         </div>
 
       {showInlineProperties && (
-      /* 2. Linear-style Minimalist Inline Properties Bar */
-      <div className="flex items-center gap-4 pt-1 flex-wrap text-xs text-foreground font-normal select-none">
-        <span className="text-muted-foreground select-none font-normal text-xs">
-          Properties
-        </span>
+      /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */
+      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-muted-foreground font-normal select-none">
 
         {/* Status */}
         <div className="relative" ref={statusMenuRef}>
@@ -419,83 +351,50 @@ export function TaskIdentityBlock({
               role="listbox"
               className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
             >
-              {STATUS_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    setIsStatusDropdownOpen(false);
-                    if (onStatusChange) onStatusChange(task.id, opt.value);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                    normalizedStatus === opt.value
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground hover:bg-muted"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={cn("size-2 rounded-full", opt.dotClass)} />
-                    <span>{opt.label}</span>
-                  </div>
-                  {normalizedStatus === opt.value && (
-                    <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                  )}
-                </button>
-              ))}
+              {STATUS_OPTIONS.map((opt) => {
+                const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
+                const isCurrent = normalizedStatus === opt.value;
+                const isOptionDisabled = !isCurrent && !check.allowed;
+
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={isOptionDisabled}
+                    title={isOptionDisabled ? check.reason : undefined}
+                    onClick={() => {
+                      if (!isOptionDisabled) {
+                        setIsStatusDropdownOpen(false);
+                        if (onStatusChange) onStatusChange(task.id, opt.value);
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left",
+                      isOptionDisabled
+                        ? "opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent"
+                        : "cursor-pointer",
+                      isCurrent
+                        ? "bg-primary/10 text-primary font-medium"
+                        : !isOptionDisabled
+                        ? "text-foreground hover:bg-muted"
+                        : ""
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={cn("size-2 rounded-full", opt.dotClass)} />
+                      <span>{opt.label}</span>
+                    </div>
+                    {isCurrent && (
+                      <Check className="size-3.5 text-primary" strokeWidth={1.5} />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Priority */}
-        <div className="relative" ref={priorityMenuRef}>
-          <button
-            type="button"
-            onClick={() => {
-              if (canEdit) setIsPriorityDropdownOpen((prev) => !prev);
-            }}
-            disabled={!canEdit}
-            className={cn(
-              "inline-flex items-center gap-1.5 py-0.5 rounded text-xs font-normal text-foreground transition-colors",
-              canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
-            )}
-          >
-            <Signal className={cn("size-3.5", currentPriorityObj.iconClass)} strokeWidth={1.5} />
-            <span>{currentPriorityObj.label}</span>
-          </button>
-
-          {isPriorityDropdownOpen && canEdit && (
-            <div
-              role="listbox"
-              className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-            >
-              {PRIORITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    setIsPriorityDropdownOpen(false);
-                    if (onPriorityChange) onPriorityChange(task.id, opt.value);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                    normalizedPriority === opt.value
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground hover:bg-muted"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <Signal className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
-                    <span>{opt.label}</span>
-                  </div>
-                  {normalizedPriority === opt.value && (
-                    <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <span>·</span>
 
         {/* Người phụ trách (Lead) với Popover lựa chọn / chuyển giao */}
         <div className="relative" ref={leadMenuRef}>
@@ -504,7 +403,6 @@ export function TaskIdentityBlock({
             onClick={() => {
               if (canEdit) {
                 setIsStatusDropdownOpen(false);
-                setIsPriorityDropdownOpen(false);
                 setReassignError(null);
                 setIsLeadDropdownOpen((prev) => !prev);
               }
@@ -598,189 +496,30 @@ export function TaskIdentityBlock({
           )}
         </div>
 
-        {/* Dates Range (Linear style: Start date -> Target date) */}
-        <div className="inline-flex items-center gap-1 text-xs text-foreground flex-wrap">
-          {/* Start Date */}
-          {canEdit && onStartDateChange ? (
-            <VietnameseDatePicker
-              value={startDateIso}
-              onChange={(newDate) => onStartDateChange(task.id, newDate)}
-              placeholder="Chọn ngày bắt đầu"
-              variant="chip"
-              icon={<LinearInlineStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
-              showPresets={false}
-              align="left"
-              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
-            />
-          ) : (
-            <div className="inline-flex items-center gap-1 text-muted-foreground">
-              <LinearInlineStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
-              <span>{startDateIso ? formatDisplayDate(startDateIso) : "Chọn ngày bắt đầu"}</span>
-            </div>
-          )}
+        <span>·</span>
 
-          <ArrowRight className="size-3 text-muted-foreground/60 mx-0.5 shrink-0" strokeWidth={1.5} />
-
-          {/* Due Date */}
+        {/* Due Date */}
+        <div className="inline-flex items-center gap-1 text-xs text-foreground">
           {canEdit && onDueDateChange ? (
             <VietnameseDatePicker
               value={dueDateIso}
               onChange={(newDate) => onDueDateChange(task.id, newDate)}
               placeholder="Chọn hạn chót"
               variant="chip"
-              icon={<LinearInlineTargetDateIcon className="size-3.5 text-rose-500 shrink-0" />}
+              icon={<Calendar className="size-3.5 text-rose-500 shrink-0" />}
               showPresets={true}
               align="left"
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
             />
           ) : (
             <div className="inline-flex items-center gap-1 text-muted-foreground">
-              <LinearInlineTargetDateIcon className="size-3.5 text-rose-500 shrink-0" />
-              <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chọn hạn chót"}</span>
+              <Calendar className="size-3.5 text-rose-500 shrink-0" />
+              <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
             </div>
           )}
         </div>
       </div>
       )}
-
-      {/* 3. Linear-style Inline Resources Row */}
-      <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs" ref={resourceMenuRef}>
-        <span className="text-muted-foreground select-none font-normal text-xs mr-1">
-          Resources
-        </span>
-
-        {/* Existing deliverables as clean chips */}
-        {deliverables.map((item) => (
-          <div
-            key={item.id}
-            className="group/chip inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-background hover:bg-muted/50 text-xs font-medium text-foreground transition-colors"
-          >
-            <FileText className="size-3 text-muted-foreground" strokeWidth={1.5} />
-            {item.fileUrl ? (
-              <a
-                href={item.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary flex items-center gap-1 max-w-[180px] truncate"
-              >
-                <span>{item.title}</span>
-                <ExternalLink className="size-2.5 text-muted-foreground/70" />
-              </a>
-            ) : (
-              <span className="max-w-[180px] truncate">{item.title}</span>
-            )}
-
-            {canEdit && onDeleteDeliverable && (
-              <button
-                type="button"
-                onClick={() => onDeleteDeliverable(item.id)}
-                className="opacity-0 group-hover/chip:opacity-100 text-muted-foreground hover:text-rose-600 ml-0.5 cursor-pointer transition-opacity"
-                title="Xóa tài liệu"
-              >
-                <X className="size-3" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
-        ))}
-
-        {/* Add Resource Trigger Button */}
-        {canEdit && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleOpenResourcePopover}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-            >
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              <span>Thêm tài liệu hoặc liên kết...</span>
-            </button>
-
-            {/* Compact Add Resource Popover */}
-            {isResourcePopoverOpen && (
-              <div className="absolute left-0 top-full mt-2 w-80 rounded-xl border border-border bg-white p-3 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100">
-                <form onSubmit={handleAddResourceSubmit} className="space-y-2.5">
-                  <div className="text-xs font-semibold text-foreground flex items-center justify-between">
-                    <span>Đính kèm tài liệu / liên kết</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsResourcePopoverOpen(false)}
-                      className="text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-
-                  {resourceError && (
-                    <div className="p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
-                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{resourceError}</span>
-                    </div>
-                  )}
-
-                  <label className="block space-y-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      Tên tài liệu <span className="text-rose-500">*</span>
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      value={resourceTitle}
-                      onChange={(e) => {
-                        setResourceTitle(e.target.value);
-                        if (resourceError) setResourceError(null);
-                      }}
-                      placeholder="Ví dụ: Kế hoạch triển khai năm học"
-                      className="w-full text-xs font-medium text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
-                    />
-                  </label>
-
-                  <label className="block space-y-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      Đường dẫn liên kết (URL) <span className="text-rose-500">*</span>
-                    </span>
-                    <input
-                      type="url"
-                      required
-                      value={resourceUrl}
-                      onChange={(e) => {
-                        setResourceUrl(e.target.value);
-                        if (resourceError) setResourceError(null);
-                      }}
-                      placeholder="https://drive.google.com/..."
-                      className="w-full text-xs font-mono text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
-                    />
-                  </label>
-
-                  <div className="flex items-center justify-end gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setIsResourcePopoverOpen(false)}
-                      className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSavingResource}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                    >
-                      {isSavingResource ? (
-                        <>
-                          <Loader2 className="size-3 animate-spin" />
-                          <span>Đang lưu...</span>
-                        </>
-                      ) : (
-                        <span>Thêm tài liệu</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </section>
   );
 }

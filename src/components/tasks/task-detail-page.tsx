@@ -25,6 +25,7 @@ import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/d
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
+import { useFeedback } from "@/components/ui/feedback-layer";
 
 export type DetailTab = "overview" | "subtasks" | "activity";
 
@@ -54,9 +55,11 @@ export function TaskDetailPage({
   const { setBreadcrumbItems } = useSidebarLayout();
 
   const { restoreScrollAndNavigateBack } = useListScrollRestore();
+  const { notifySuccess, notifyError, notifyWarning } = useFeedback();
 
   // Task local state
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
+  const [isStatusUpdating, setIsStatusUpdating] = React.useState(false);
   React.useEffect(() => {
     setTask(initialTask);
   }, [initialTask]);
@@ -417,41 +420,79 @@ export function TaskDetailPage({
     ]);
   };
 
-  // Status change handler (REQ-20)
+  // Status change handler (REQ-20 & State Machine Integration)
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus, note?: string) => {
-    const res = await updateTaskStatus(taskId, newStatus, note);
-    if (!res.ok) {
-      console.error("Lỗi cập nhật trạng thái:", res.error);
-      alert(`Lỗi cập nhật trạng thái: "${res.error}"`);
-      return;
-    }
+    if (isStatusUpdating) return;
+    setIsStatusUpdating(true);
 
+    const previousTask = task;
+    const previousAudit = auditEvents;
+
+    const statusMap: Record<string, string> = {
+      NOT_STARTED: "Mới",
+      IN_PROGRESS: "Đang thực hiện",
+      WAITING_APPROVAL: "Chờ duyệt",
+      COMPLETED: "Hoàn thành",
+      CANCELLED: "Đã hủy",
+    };
+    const targetLabel = statusMap[newStatus] || newStatus;
+    const fromLabel = statusMap[previousTask.status] || previousTask.status;
+
+    // Optimistic Update
     setTask((prev) => ({
       ...prev,
       status: newStatus,
-      ...(newStatus === "COMPLETED" ? { progressPercent: 100, progress: 100 } : {}),
+      ...(newStatus === "COMPLETED"
+        ? { progressPercent: 100, progress: 100 }
+        : newStatus === "NOT_STARTED"
+        ? { progressPercent: 0, progress: 0 }
+        : {}),
     }));
 
-    setAuditEvents((prev) => [
-      {
-        id: `audit-${Date.now()}`,
-        action: newStatus,
-        timestamp: new Date().toISOString(),
-        actorName: currentUser?.name || "Người dùng",
-        description: `Đổi trạng thái sang: ${
-          newStatus === "COMPLETED"
-            ? "Hoàn thành"
-            : newStatus === "IN_PROGRESS"
-            ? "Đang thực hiện"
-            : newStatus === "WAITING_APPROVAL"
-            ? "Chờ duyệt"
-            : "Chưa bắt đầu"
-        }${note ? ` (${note})` : ""}`,
-      },
-      ...prev,
-    ]);
+    try {
+      const res = await updateTaskStatus(taskId, newStatus, note, (task as any).version);
+      if (!res.ok) {
+        // Rollback state
+        setTask(previousTask);
+        setAuditEvents(previousAudit);
 
-    router.refresh();
+        const errorReason = res.reason || res.error || "Không thể chuyển trạng thái nhiệm vụ";
+        notifyError(errorReason, "Không thể đổi trạng thái");
+        return;
+      }
+
+      // Success - update version & verified status from server
+      if (res.data) {
+        setTask((prev) => ({
+          ...prev,
+          version: res.data?.version ?? ((prev as any).version ? (prev as any).version + 1 : 1),
+          status: res.data?.status ?? newStatus,
+          ...(res.data?.progressPercent !== undefined
+            ? { progressPercent: res.data.progressPercent, progress: res.data.progressPercent }
+            : {}),
+        }));
+      }
+
+      setAuditEvents((prev) => [
+        {
+          id: `audit-${Date.now()}`,
+          action: "TASK_STATUS_CHANGED",
+          timestamp: new Date().toISOString(),
+          actorName: currentUser?.name || "Người dùng",
+          description: `Chuyển trạng thái từ '${fromLabel}' sang '${targetLabel}'${note ? ` (${note})` : ""}`,
+        },
+        ...prev,
+      ]);
+
+      notifySuccess(`Đã chuyển trạng thái sang "${targetLabel}"`);
+      router.refresh();
+    } catch (err: any) {
+      setTask(previousTask);
+      setAuditEvents(previousAudit);
+      notifyError(err?.message || "Lỗi kết nối máy chủ", "Lỗi thao tác");
+    } finally {
+      setIsStatusUpdating(false);
+    }
   };
 
   // Priority change handler (REQ-20)
@@ -767,7 +808,7 @@ export function TaskDetailPage({
     } catch (error: any) {
       // Rollback on failure
       setDeliverables(previousDeliverables);
-      alert(error?.message || "Không thể xóa tài liệu minh chứng");
+      notifyError(error?.message || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
   };
 
@@ -873,9 +914,10 @@ export function TaskDetailPage({
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <>
-              {/* Task Identity Block (Icon, Title, Subtitle, Linear Properties Row, Resources Row) */}
+              {/* Task Identity Block (Icon, Title, Subtitle, Compact Properties khi Sidebar đóng) */}
               <TaskIdentityBlock
                 task={task}
+                currentUser={currentUser}
                 canEdit={true}
                 deliverables={deliverables}
                 onStatusChange={handleStatusChange}
@@ -886,7 +928,7 @@ export function TaskDetailPage({
                 onReassignLead={handleReassignLead}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
-                showInlineProperties={true}
+                showInlineProperties={!showInspector}
               />
 
 
