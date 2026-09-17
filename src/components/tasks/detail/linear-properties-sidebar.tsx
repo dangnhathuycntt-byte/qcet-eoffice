@@ -841,7 +841,7 @@ export function LinearPropertiesSidebar({
           </div>
 
           {/* Dates Row (Linear Start -> Target Range style) */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none">
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none">
             <span className="text-muted-foreground text-xs font-normal shrink-0">Thời hạn</span>
             <div className="flex items-center gap-1 text-xs shrink-0 whitespace-nowrap">
               {/* Start Date */}

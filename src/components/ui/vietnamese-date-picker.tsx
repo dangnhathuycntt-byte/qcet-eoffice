@@ -282,10 +282,11 @@ export function VietnameseDatePicker({
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
+          data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent shadow-none whitespace-nowrap",
-            isOpen ? "bg-muted/60 text-foreground" : "hover:bg-muted/50",
+            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent hover:bg-muted/50 shadow-none whitespace-nowrap focus-visible:outline-hidden",
             hasValue ? "text-foreground" : "text-muted-foreground",
+            isOpen && "text-foreground",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName
           )}
@@ -304,8 +305,9 @@ export function VietnameseDatePicker({
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
+          data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap",
+            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap focus-visible:outline-hidden",
             error
               ? "border-rose-300 bg-rose-50 text-rose-700"
               : isOpen
@@ -331,8 +333,9 @@ export function VietnameseDatePicker({
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
+          data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "w-full flex items-center justify-between h-9 px-3 rounded-lg border border-border bg-background text-xs text-foreground font-mono tabular-nums transition-colors cursor-pointer",
+            "w-full flex items-center justify-between h-9 px-3 rounded-lg border border-border bg-background text-xs text-foreground font-mono tabular-nums transition-colors cursor-pointer focus-visible:outline-hidden",
             isOpen && "border-foreground/40",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName

@@ -154,6 +154,23 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       );
     });
 
+    it("ensures hover and open states are independent without permanent pill background on open", () => {
+      const datePickerFile = path.resolve(
+        process.cwd(),
+        "src/components/ui/vietnamese-date-picker.tsx"
+      );
+      const datePickerContent = fs.readFileSync(datePickerFile, "utf-8");
+
+      assert.ok(
+        datePickerContent.includes('data-state={isOpen ? "open" : "closed"}'),
+        "DatePicker must manage open state independently via data-state attribute"
+      );
+      assert.ok(
+        !datePickerContent.includes('isOpen ? "bg-muted/60 text-foreground" : "hover:bg-muted/50"'),
+        "DatePicker must NOT lock a permanent pill background when open"
+      );
+    });
+
     it("makes both start date and due date directly clickable to open date picker", () => {
       assert.ok(
         sidebarContent.includes("handleStartDateChangeInternal") &&
