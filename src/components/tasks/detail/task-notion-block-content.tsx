@@ -1691,7 +1691,7 @@ export function TaskNotionBlockContent({
       onDragOver={(e) => {
         if (!isDraggingRef.current) e.preventDefault();
       }}
-      className={cn("w-full relative font-sans text-sm text-foreground", className)}
+      className={cn("w-full relative font-sans text-sm text-foreground flex flex-col", className)}
     >
       {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar, continuous selection group) */}
       <div className="flex flex-col">
@@ -2451,6 +2451,32 @@ export function TaskNotionBlockContent({
             />
           </div>
         </div>
+      )}
+
+      {/* 2b. Click-to-focus: toàn bộ vùng trống phía dưới block editor trở thành vùng clickable */}
+      {canEdit && (
+        <div
+          className="flex-1 min-h-[200px] cursor-text"
+          onClick={() => {
+            // Focus vào block cuối cùng hoặc trailing input
+            if (trailingInputRef.current) {
+              trailingInputRef.current.focus();
+            } else {
+              const lastBlockId = blocks[blocks.length - 1]?.id;
+              if (lastBlockId) {
+                const el = blockInputRefs.current.get(lastBlockId);
+                if (el) {
+                  el.focus();
+                  // Di chuyển cursor về cuối nội dung
+                  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+                    const len = el.value?.length || 0;
+                    el.setSelectionRange(len, len);
+                  }
+                }
+              }
+            }
+          }}
+        />
       )}
 
       {/* 3. Slash Command Popover Menu qua Portal ra document.body */}
