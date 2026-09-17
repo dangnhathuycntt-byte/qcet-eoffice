@@ -216,3 +216,63 @@ export async function deleteTask(
     };
   }
 }
+
+export async function deleteDeliverable(
+  taskId: string,
+  deliverableId: string
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(
+      `/api/tasks/${taskId}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi xóa tài liệu minh chứng (${res.status})`,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+export async function updateTaskCollaborators(
+  taskId: string,
+  collaboratorIds: string[]
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collaboratorIds }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi cập nhật người phối hợp (${res.status})`,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
