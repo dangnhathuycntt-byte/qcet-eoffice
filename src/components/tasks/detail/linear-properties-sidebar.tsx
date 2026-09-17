@@ -34,6 +34,8 @@ import {
   SquareUserRound,
   PenLine,
   Box,
+  Loader2,
+  Search,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -146,8 +148,27 @@ export function LinearPropertiesSidebar({
   const priorityMenuRef = React.useRef<HTMLDivElement>(null);
   // Lead popover state
   const [isLeadMenuOpen, setIsLeadMenuOpen] = React.useState(false);
+  const [isReassigning, setIsReassigning] = React.useState(false);
+  const [reassignError, setReassignError] = React.useState<string | null>(null);
   const [personnelList, setPersonnelList] = React.useState<Array<{ id: string; name: string; email?: string; departmentName?: string }>>([]);
   const leadMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Collaborators popover state
+  const [isCollaboratorMenuOpen, setIsCollaboratorMenuOpen] = React.useState(false);
+  const [isUpdatingCollaborators, setIsUpdatingCollaborators] = React.useState(false);
+  const [collaboratorError, setCollaboratorError] = React.useState<string | null>(null);
+  const [collaboratorSearchQuery, setCollaboratorSearchQuery] = React.useState("");
+  const collaboratorMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const initialCollabIds = React.useMemo(() => {
+    const raw = (task as any).collaboratorIds;
+    if (Array.isArray(raw)) return raw;
+    if (staffTask?.collaborators && Array.isArray(staffTask.collaborators)) {
+      return staffTask.collaborators.map((c: any) => c.id).filter(Boolean);
+    }
+    return [];
+  }, [task, staffTask]);
+  const [selectedCollaboratorIds, setSelectedCollaboratorIds] = React.useState<string[]>(initialCollabIds);
 
   React.useEffect(() => {
     fetch("/api/users")
@@ -177,12 +198,16 @@ export function LinearPropertiesSidebar({
       if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
         setIsLeadMenuOpen(false);
       }
+      if (collaboratorMenuRef.current && !collaboratorMenuRef.current.contains(e.target as Node)) {
+        setIsCollaboratorMenuOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsStatusMenuOpen(false);
         setIsPriorityMenuOpen(false);
         setIsLeadMenuOpen(false);
+        setIsCollaboratorMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -229,6 +254,16 @@ export function LinearPropertiesSidebar({
 
   // Members / Collaborators
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
+    if (selectedCollaboratorIds.length > 0 && personnelList.length > 0) {
+      return selectedCollaboratorIds.map((id) => {
+        const found = personnelList.find((p) => p.id === id);
+        return {
+          id,
+          name: found ? found.name : id,
+        };
+      });
+    }
+
     if (isSchool && schoolTask) {
       const list: Array<{ id: string; name: string; avatarUrl?: string }> = [];
       if (Array.isArray(schoolTask.coAssignees)) {
@@ -259,7 +294,7 @@ export function LinearPropertiesSidebar({
       }));
     }
     return [];
-  }, [isSchool, schoolTask, staffTask]);
+  }, [selectedCollaboratorIds, personnelList, isSchool, schoolTask, staffTask]);
 
   // Dates
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
@@ -287,9 +322,10 @@ export function LinearPropertiesSidebar({
   };
 
   const handleSelectLead = async (personId: string, personName: string) => {
-    setIsLeadMenuOpen(false);
+    setIsReassigning(true);
+    setReassignError(null);
     try {
-      await fetch(`/api/tasks/${task.id}/actions/reassign`, {
+      const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -297,9 +333,61 @@ export function LinearPropertiesSidebar({
           newAssigneeName: personName,
         }),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền chuyển giao người phụ trách (403 Forbidden)"
+            : "Không thể chuyển giao người phụ trách. Vui lòng thử lại");
+        setReassignError(errMsg);
+        return;
+      }
+
+      setIsLeadMenuOpen(false);
       window.location.reload();
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setReassignError(e?.message || "Lỗi kết nối khi chuyển giao người phụ trách");
+    } finally {
+      setIsReassigning(false);
+    }
+  };
+
+  const handleToggleCollaborator = async (userId: string) => {
+    if (!canEdit || isUpdatingCollaborators) return;
+    setCollaboratorError(null);
+    const isCurrentlySelected = selectedCollaboratorIds.includes(userId);
+    const nextIds = isCurrentlySelected
+      ? selectedCollaboratorIds.filter((id) => id !== userId)
+      : [...selectedCollaboratorIds, userId];
+
+    setIsUpdatingCollaborators(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collaboratorIds: nextIds }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền cập nhật người phối hợp cho nhiệm vụ này (403 Forbidden)"
+            : "Không thể cập nhật danh sách người phối hợp. Vui lòng thử lại");
+        setCollaboratorError(errMsg);
+        return;
+      }
+
+      setSelectedCollaboratorIds(nextIds);
+    } catch (e: any) {
+      setCollaboratorError(e?.message || "Lỗi kết nối khi cập nhật người phối hợp");
+    } finally {
+      setIsUpdatingCollaborators(false);
     }
   };
 
@@ -452,9 +540,11 @@ export function LinearPropertiesSidebar({
           <div
             ref={leadMenuRef}
             onClick={() => {
-              if (canEdit) {
+              if (canEdit && !isReassigning) {
                 setIsStatusMenuOpen(false);
                 setIsPriorityMenuOpen(false);
+                setIsCollaboratorMenuOpen(false);
+                setReassignError(null);
                 setIsLeadMenuOpen(!isLeadMenuOpen);
               }
             }}
@@ -468,7 +558,12 @@ export function LinearPropertiesSidebar({
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground max-w-[180px] truncate"
               >
-                {leadName && leadName !== "Chưa phân công" ? (
+                {isReassigning ? (
+                  <div className="flex items-center gap-1.5 text-primary text-xs">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Đang cập nhật...</span>
+                  </div>
+                ) : leadName && leadName !== "Chưa phân công" ? (
                   <>
                     <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0">
                       {getInitials(leadName)}
@@ -488,20 +583,31 @@ export function LinearPropertiesSidebar({
               {isLeadMenuOpen && canEdit && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-1.5 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-60 max-h-72 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
                 >
-                  <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 select-none">
-                    Chọn người phụ trách
+                  <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 select-none flex items-center justify-between">
+                    <span>Chọn người phụ trách</span>
+                    {isReassigning && <Loader2 className="size-3 animate-spin text-primary" />}
                   </div>
+
+                  {reassignError && (
+                    <div className="mx-1 my-1 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{reassignError}</span>
+                    </div>
+                  )}
+
                   {personnelList.map((p) => {
                     const isSelected = p.name === leadName;
                     return (
                       <button
                         key={p.id}
                         type="button"
+                        disabled={isReassigning}
                         onClick={() => handleSelectLead(p.id, p.name)}
                         className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
                           isSelected
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-foreground hover:bg-muted"
@@ -527,31 +633,136 @@ export function LinearPropertiesSidebar({
             </div>
           </div>
 
-          {/* Members / Collaborators Row */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+          {/* Members / Collaborators Row with Popover */}
+          <div
+            ref={collaboratorMenuRef}
+            onClick={() => {
+              if (canEdit && !isUpdatingCollaborators) {
+                setIsStatusMenuOpen(false);
+                setIsPriorityMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setCollaboratorError(null);
+                setCollaboratorSearchQuery("");
+                setIsCollaboratorMenuOpen(!isCollaboratorMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
             <span className="text-muted-foreground text-xs font-normal">Thành viên</span>
-            <div className="flex items-center gap-1.5">
-              {collaborators.length > 0 ? (
-                <div className="flex items-center -space-x-1">
-                  {collaborators.slice(0, 3).map((m) => (
-                    <span
-                      key={m.id}
-                      className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[7px] font-semibold text-foreground overflow-hidden"
-                      title={m.name}
-                    >
-                      {getInitials(m.name)}
+            <div className="relative">
+              <div className="flex items-center gap-1.5">
+                {isUpdatingCollaborators ? (
+                  <div className="flex items-center gap-1 text-primary text-xs">
+                    <Loader2 className="size-3 animate-spin" />
+                    <span className="text-[11px]">Đang lưu...</span>
+                  </div>
+                ) : collaborators.length > 0 ? (
+                  <div className="flex items-center -space-x-1">
+                    {collaborators.slice(0, 3).map((m) => (
+                      <span
+                        key={m.id}
+                        className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[7px] font-semibold text-foreground overflow-hidden"
+                        title={m.name}
+                      >
+                        {getInitials(m.name)}
+                      </span>
+                    ))}
+                    {collaborators.length > 3 && (
+                      <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
+                        +{collaborators.length - 3}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Users className="size-3.5" strokeWidth={1.5} />
+                    <span>Thêm thành viên</span>
+                  </div>
+                )}
+              </div>
+
+              {isCollaboratorMenuOpen && canEdit && (
+                <div
+                  role="dialog"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-64 max-h-80 overflow-y-auto rounded-xl border border-border bg-white p-2 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  <div className="text-[11px] font-semibold text-muted-foreground px-1 pb-1.5 select-none flex items-center justify-between">
+                    <span>Người phối hợp</span>
+                    <span className="font-mono text-[10px] text-primary">
+                      {selectedCollaboratorIds.length} đã chọn
                     </span>
-                  ))}
-                  {collaborators.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
-                      +{collaborators.length - 3}
-                    </span>
+                  </div>
+
+                  {/* Search box */}
+                  <div className="relative mb-2">
+                    <Search className="size-3.5 text-muted-foreground absolute left-2 top-2" />
+                    <input
+                      type="text"
+                      value={collaboratorSearchQuery}
+                      onChange={(e) => setCollaboratorSearchQuery(e.target.value)}
+                      placeholder="Tìm kiếm cán bộ..."
+                      className="w-full text-xs pl-7 pr-2 py-1 rounded-md bg-muted/30 border border-border/60 focus:outline-none focus:border-primary text-foreground"
+                    />
+                  </div>
+
+                  {collaboratorError && (
+                    <div className="mb-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{collaboratorError}</span>
+                    </div>
                   )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Users className="size-3.5" strokeWidth={1.5} />
-                  <span>Thêm thành viên</span>
+
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {personnelList
+                      .filter((p) => {
+                        if (!collaboratorSearchQuery.trim()) return true;
+                        const query = collaboratorSearchQuery.toLowerCase();
+                        return (
+                          p.name.toLowerCase().includes(query) ||
+                          (p.departmentName && p.departmentName.toLowerCase().includes(query)) ||
+                          (p.email && p.email.toLowerCase().includes(query))
+                        );
+                      })
+                      .map((p) => {
+                        const isSelected = selectedCollaboratorIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={isUpdatingCollaborators}
+                            onClick={() => handleToggleCollaborator(p.id)}
+                            className={cn(
+                              "w-full flex items-center justify-between px-2 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-foreground hover:bg-muted/60"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
+                                {getInitials(p.name)}
+                              </div>
+                              <div className="truncate">
+                                <div className="truncate text-foreground font-normal">{p.name}</div>
+                                {p.departmentName && (
+                                  <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
+                                )}
+                              </div>
+                            </div>
+                            <div className={cn(
+                              "size-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border/80 bg-background"
+                            )}>
+                              {isSelected && <Check className="size-3 text-white" strokeWidth={1.5} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
               )}
             </div>

@@ -584,55 +584,143 @@ export function TaskDetailPage({
 
   // Inline subtask creation handler
   const handleCreateSubTaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          parentTaskId: task.id,
-          dueDate: dueDate || task.dueDate,
-          scope: "DEPARTMENT",
-          priority: "NORMAL",
-        }),
-      });
-
-      if (res.ok) {
-        router.refresh();
-      }
-    } catch {
-      // safe fallback
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      throw new Error("Tên việc thành phần không được để trống");
     }
+
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: trimmedTitle,
+        parentTaskId: task.id,
+        dueDate: dueDate || task.dueDate,
+        scope: "DEPARTMENT",
+        priority: "NORMAL",
+      }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      const errMsg =
+        errJson?.error?.message ||
+        errJson?.message ||
+        (res.status === 403
+          ? "Bạn không có quyền tạo việc thành phần cho nhiệm vụ này (403 Forbidden)"
+          : "Không thể tạo việc thành phần. Vui lòng thử lại");
+      throw new Error(errMsg);
+    }
+
+    router.refresh();
   };
 
   // Deliverables add handler
   const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
-    const newDeliverable = {
-      id: `res-${Date.now()}`,
-      title: title.trim() || "Tài liệu minh chứng",
-      fileUrl: fileUrl?.trim() || undefined,
-      notes: notes?.trim() || undefined,
-    };
+    const trimmedTitle = title.trim();
+    const trimmedUrl = fileUrl?.trim();
 
-    await fetch(`/api/tasks/${task.id}/deliverables`, {
+    if (!trimmedTitle) {
+      throw new Error("Tên tài liệu minh chứng không được để trống");
+    }
+    if (!trimmedUrl) {
+      throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
+    }
+
+    const res = await fetch(`/api/tasks/${task.id}/deliverables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDeliverable),
+      body: JSON.stringify({
+        title: trimmedTitle,
+        fileUrl: trimmedUrl,
+        notes: notes?.trim() || undefined,
+      }),
     });
 
-    setDeliverables((prev) => [...prev, newDeliverable]);
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      const errMsg =
+        errJson?.error?.message ||
+        errJson?.message ||
+        (res.status === 403
+          ? "Bạn không có quyền nộp tài liệu minh chứng cho nhiệm vụ này (403 Forbidden)"
+          : "Không thể thêm tài liệu minh chứng. Vui lòng thử lại");
+      throw new Error(errMsg);
+    }
+
+    const data = await res.json();
+    const createdDeliverable = data?.deliverable || data?.data;
+
+    if (!createdDeliverable || !createdDeliverable.id) {
+      throw new Error("Dữ liệu tài liệu phản hồi từ máy chủ không hợp lệ");
+    }
+
+    setDeliverables((prev) => [
+      ...prev,
+      {
+        id: createdDeliverable.id,
+        title: createdDeliverable.title || trimmedTitle,
+        fileUrl: createdDeliverable.fileUrl || trimmedUrl,
+        notes: createdDeliverable.notes,
+        reviewStatus: createdDeliverable.reviewStatus,
+        createdAt: createdDeliverable.createdAt,
+      },
+    ]);
+
+    setAuditEvents((prev) => [
+      {
+        id: `audit-deliv-${Date.now()}`,
+        action: "SUBMIT_DELIVERABLE",
+        timestamp: new Date().toISOString(),
+        actorName: currentUser?.name || "Người thực hiện",
+        description: `Đã nộp tài liệu minh chứng: "${trimmedTitle}"`,
+      },
+      ...prev,
+    ]);
   };
 
   // Deliverables delete handler
   const handleDeleteDeliverable = async (deliverableId: string) => {
-    try {
-      await fetch(`/api/tasks/${task.id}/deliverables?deliverableId=${deliverableId}`, {
-        method: "DELETE",
-      });
-    } catch {
-      // transient
-    }
+    const previousDeliverables = deliverables;
+    // Optimistic remove from local list
     setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
+
+    try {
+      const res = await fetch(
+        `/api/tasks/${task.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền xóa tài liệu minh chứng này (403 Forbidden)"
+            : res.status === 404
+            ? "Không tìm thấy tài liệu minh chứng cần xóa"
+            : "Không thể xóa tài liệu minh chứng. Vui lòng thử lại");
+        throw new Error(errMsg);
+      }
+
+      setAuditEvents((prev) => [
+        {
+          id: `audit-del-deliv-${Date.now()}`,
+          action: "DELETE_DELIVERABLE",
+          timestamp: new Date().toISOString(),
+          actorName: currentUser?.name || "Người thực hiện",
+          description: `Đã xóa tài liệu minh chứng`,
+        },
+        ...prev,
+      ]);
+    } catch (error: any) {
+      // Rollback on failure
+      setDeliverables(previousDeliverables);
+      alert(error?.message || "Không thể xóa tài liệu minh chứng");
+    }
   };
 
   return (
