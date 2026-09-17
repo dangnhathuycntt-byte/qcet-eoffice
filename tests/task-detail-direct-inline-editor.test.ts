@@ -6,6 +6,7 @@ import {
   getTextOffsetInContainer,
   getCaretFromPoint,
 } from "@/components/tasks/detail/direct-inline-editor";
+import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 
 describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => {
   // Mock DOM Node types
@@ -175,6 +176,77 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     assert.ok(
       detailContent.includes("DirectInlineEditor"),
       "TaskDetailPage must use DirectInlineEditor for task description"
+    );
+  });
+
+  it("formatAssigneeNameWithTitle strips parenthesized roles and resolves academic titles from personnel directory", () => {
+    // 1. Chuỗi có chức vụ trong ngoặc và đã có học vị -> giữ học vị + họ tên, bỏ chức vụ
+    const res1 = formatAssigneeNameWithTitle("ThS. Phạm Văn Tường (Phó Hiệu trưởng)");
+    assert.equal(res1, "ThS. Phạm Văn Tường");
+
+    // 2. Chuỗi có chức vụ viết tắt trong ngoặc [PHT] -> giữ học vị + họ tên
+    const res2 = formatAssigneeNameWithTitle("ThS. Phạm Văn Tường [PHT]");
+    assert.equal(res2, "ThS. Phạm Văn Tường");
+
+    // 3. Chuỗi chưa có học vị nhưng có trong danh bạ QCET -> tra cứu lấy title "ThS. Phạm Văn Tường"
+    const res3 = formatAssigneeNameWithTitle("Phạm Văn Tường (Phó Hiệu trưởng)");
+    assert.equal(res3, "ThS. Phạm Văn Tường");
+
+    const res4 = formatAssigneeNameWithTitle("Phạm Văn Tường");
+    assert.equal(res4, "ThS. Phạm Văn Tường");
+
+    // 4. Các nhân sự lãnh đạo khác trong trường
+    const res5 = formatAssigneeNameWithTitle("Đặng Nhật Huy (Hiệu trưởng)");
+    assert.equal(res5, "ThS. Đặng Nhật Huy");
+
+    const res6 = formatAssigneeNameWithTitle("Lê Văn Thí (Trưởng phòng QLĐT)");
+    assert.equal(res6, "ThS. Lê Văn Thí");
+
+    // 5. Nhân sự có học vị TS.
+    const res7 = formatAssigneeNameWithTitle("TS. Trần Minh Quang (Trưởng khoa)");
+    assert.equal(res7, "TS. Trần Minh Quang");
+
+    // 6. Trường hợp rỗng hoặc chưa phân công
+    assert.equal(formatAssigneeNameWithTitle(""), "Chưa phân công");
+    assert.equal(formatAssigneeNameWithTitle(null), "Chưa phân công");
+    assert.equal(formatAssigneeNameWithTitle("Chưa phân công"), "Chưa phân công");
+  });
+
+  it("TaskIdentityBlock Properties line excludes department pill and more-options dots, while including start date picker", () => {
+    const identityBlockPath = path.join(
+      process.cwd(),
+      "src/components/tasks/detail/task-identity-block.tsx"
+    );
+    const content = fs.readFileSync(identityBlockPath, "utf-8");
+
+    // Must NOT contain department name pill in Properties line
+    assert.ok(
+      !content.includes('{/* Team / Department */}'),
+      "Properties line must eliminate department pill (Ban Giám hiệu)"
+    );
+
+    // Must NOT contain More options dots in Properties line
+    assert.ok(
+      !content.includes('{/* More options dots */}'),
+      "Properties line must eliminate more options dots (...)"
+    );
+
+    // Must have start date picker support with 'Chọn ngày bắt đầu' placeholder
+    assert.ok(
+      content.includes('placeholder="Chọn ngày bắt đầu"'),
+      "Properties line must allow picking start date with 'Chọn ngày bắt đầu'"
+    );
+
+    // Must have due date picker support with 'Chọn hạn chót' placeholder
+    assert.ok(
+      content.includes('placeholder="Chọn hạn chót"'),
+      "Properties line must allow picking due date with 'Chọn hạn chót'"
+    );
+
+    // Must support onStartDateChange
+    assert.ok(
+      content.includes("onStartDateChange"),
+      "TaskIdentityBlock must support onStartDateChange callback"
     );
   });
 });

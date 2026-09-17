@@ -121,6 +121,39 @@ export async function updateTaskAssignee(
   }
 }
 
+export async function updateTaskStartDate(
+  taskId: string,
+  startDate: string | null
+): Promise<TaskActionResult> {
+  try {
+    const formattedStartDate = startDate && startDate.length === 10
+      ? new Date(`${startDate}T00:00:00.000+07:00`).toISOString()
+      : startDate || null;
+
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startDate: formattedStartDate }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi thay đổi ngày bắt đầu (${res.status})`,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
 export async function updateTaskDueDate(
   taskId: string,
   dueDate: string

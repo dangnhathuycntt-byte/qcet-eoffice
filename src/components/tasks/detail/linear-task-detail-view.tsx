@@ -20,6 +20,7 @@ import { TaskActivityTimeline, type ActivityEvent } from "./task-activity-timeli
 import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-sidebar";
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
+import { updateTaskStartDate } from "@/lib/tasks/task-actions";
 
 export interface LinearTaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -293,6 +294,11 @@ export function LinearTaskDetailView({
             onStatusChange={handleStatusChangeInternal}
             onPriorityChange={handlePriorityChangeInternal}
             onTitleChange={handleTitleChangeInternal}
+            onStartDateChange={async (taskId, newStartDate) => {
+              await updateTaskStartDate(taskId, newStartDate);
+              setTask((prev) => ({ ...prev, startDate: newStartDate } as any));
+            }}
+            onDueDateChange={handleDueDateChangeInternal}
           />
 
           {/* B. Progress Composer */}

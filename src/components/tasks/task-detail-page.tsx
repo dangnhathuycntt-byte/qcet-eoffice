@@ -36,7 +36,7 @@ import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-co
 import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
-import { updateTaskStatus, updateTaskPriority, updateTaskDueDate } from "@/lib/tasks/task-actions";
+import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 
 export type DetailTab = "overview" | "subtasks" | "activity";
 
@@ -291,6 +291,31 @@ export function TaskDetailPage({
     }));
   };
 
+  // Start date change handler
+  const handleStartDateChange = async (taskId: string, newStartDate: string) => {
+    const res = await updateTaskStartDate(taskId, newStartDate);
+    if (!res.ok) {
+      console.error("Lỗi cập nhật ngày bắt đầu:", res.error);
+      return;
+    }
+
+    setTask((prev) => ({
+      ...prev,
+      startDate: newStartDate,
+    } as any));
+
+    setAuditEvents((prev) => [
+      {
+        id: `audit-start-${Date.now()}`,
+        action: "UPDATE_START_DATE",
+        timestamp: new Date().toISOString(),
+        actorName: currentUser?.name || "Người điều hành",
+        description: `Cập nhật ngày bắt đầu: ${formatDetailDate(newStartDate)}`,
+      },
+      ...prev,
+    ]);
+  };
+
   // Due date change handler (REQ-20)
   const handleDueDateChange = async (taskId: string, newDueDate: string) => {
     const res = await updateTaskDueDate(taskId, newDueDate);
@@ -531,6 +556,8 @@ export function TaskDetailPage({
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onTitleChange={handleTitleChange}
+                onStartDateChange={handleStartDateChange}
+                onDueDateChange={handleDueDateChange}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
                 showInlineProperties={true}

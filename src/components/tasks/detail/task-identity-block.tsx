@@ -31,6 +31,9 @@ import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/da
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { formatDisplayDate } from "@/lib/format/date";
+import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { DirectInlineEditor } from "./direct-inline-editor";
 
 export interface TaskIdentityBlockProps {
@@ -40,6 +43,8 @@ export interface TaskIdentityBlockProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onTitleChange?: (taskId: string, newTitle: string) => Promise<void> | void;
+  onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
+  onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
   onAddDeliverable?: (title: string, fileUrl?: string, notes?: string) => Promise<void> | void;
   onDeleteDeliverable?: (deliverableId: string) => Promise<void> | void;
   showInlineProperties?: boolean;
@@ -151,6 +156,8 @@ export function TaskIdentityBlock({
   onStatusChange,
   onPriorityChange,
   onTitleChange,
+  onStartDateChange,
+  onDueDateChange,
   onAddDeliverable,
   onDeleteDeliverable,
   showInlineProperties = true,
@@ -167,9 +174,25 @@ export function TaskIdentityBlock({
 
   const scopeLabel = isSchool ? "Cấp Trường" : "Cấp Đơn vị";
 
-  const leadName = isSchool
+  const rawLeadName = isSchool
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
+
+  const leadName = formatAssigneeNameWithTitle(rawLeadName);
+
+  const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
+  const startDateIso = rawStartDate
+    ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
+      ? rawStartDate.slice(0, 10)
+      : new Date(rawStartDate).toISOString().slice(0, 10)
+    : "";
+
+  const rawDueDate = task.dueDate;
+  const dueDateIso = rawDueDate
+    ? typeof rawDueDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawDueDate)
+      ? rawDueDate.slice(0, 10)
+      : new Date(rawDueDate).toISOString().slice(0, 10)
+    : "";
 
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
@@ -378,38 +401,54 @@ export function TaskIdentityBlock({
           )}
         </div>
 
-        {/* Lead */}
-        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
-          <UserPlus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-          <span className="max-w-[150px] truncate">{leadName || "Lead"}</span>
+        {/* Người phụ trách (Lead) */}
+        <div className="inline-flex items-center gap-1.5 text-xs text-foreground" title={`Người phụ trách: ${leadName}`}>
+          <UserPlus className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+          <span className="font-normal whitespace-nowrap">{leadName}</span>
         </div>
 
         {/* Dates Range (Linear style: Start date -> Target date) */}
-        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
-          <LinearInlineStartDateIcon className="size-3.5 text-muted-foreground" />
-          <span className="tabular-nums">
-            {task.createdAt ? new Date(task.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Bắt đầu"}
-          </span>
-          <ArrowRight className="size-3 text-muted-foreground/60 mx-0.5" strokeWidth={1.5} />
-          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Hạn chót"}</span>
-        </div>
+        <div className="inline-flex items-center gap-1 text-xs text-foreground flex-wrap">
+          {/* Start Date */}
+          {canEdit && onStartDateChange ? (
+            <VietnameseDatePicker
+              value={startDateIso}
+              onChange={(newDate) => onStartDateChange(task.id, newDate)}
+              placeholder="Chọn ngày bắt đầu"
+              variant="chip"
+              icon={<LinearInlineStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
+              showPresets={false}
+              align="left"
+              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+            />
+          ) : (
+            <div className="inline-flex items-center gap-1 text-muted-foreground">
+              <LinearInlineStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+              <span>{startDateIso ? formatDisplayDate(startDateIso) : "Chọn ngày bắt đầu"}</span>
+            </div>
+          )}
 
-        {/* Team / Department */}
-        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
-          <div className="size-3.5 rounded bg-sky-500/15 text-sky-600 border border-sky-500/30 flex items-center justify-center text-[8px] font-bold">
-            {departmentName.charAt(0)}
-          </div>
-          <span className="max-w-[140px] truncate">{departmentName}</span>
-        </div>
+          <ArrowRight className="size-3 text-muted-foreground/60 mx-0.5 shrink-0" strokeWidth={1.5} />
 
-        {/* More options dots */}
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground p-0.5 transition-colors cursor-pointer"
-          title="Tùy chọn khác"
-        >
-          <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
-        </button>
+          {/* Due Date */}
+          {canEdit && onDueDateChange ? (
+            <VietnameseDatePicker
+              value={dueDateIso}
+              onChange={(newDate) => onDueDateChange(task.id, newDate)}
+              placeholder="Chọn hạn chót"
+              variant="chip"
+              icon={<LinearInlineTargetDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
+              showPresets={true}
+              align="left"
+              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+            />
+          ) : (
+            <div className="inline-flex items-center gap-1 text-muted-foreground">
+              <LinearInlineTargetDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+              <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chọn hạn chót"}</span>
+            </div>
+          )}
+        </div>
       </div>
       )}
 

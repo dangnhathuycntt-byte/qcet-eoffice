@@ -84,6 +84,7 @@ export interface UpdateTaskInput {
   progress?: number;
   status?: string | TaskStatus;
   priority?: string | TaskPriority;
+  startDate?: string | Date | null;
   dueDate?: string | Date | null;
   departmentId?: string | null;
   assigneeId?: string | null;
@@ -617,6 +618,7 @@ export class TaskCommandService {
       progress,
       status,
       priority,
+      startDate,
       dueDate,
       departmentId,
       assigneeId,
@@ -678,6 +680,9 @@ export class TaskCommandService {
       scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progressPercent));
     } else if (typeof progress === 'number') {
       scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progress));
+    }
+    if (startDate) {
+      scalarUpdateData.startDate = new Date(startDate);
     }
     if (dueDate) {
       scalarUpdateData.dueDate = new Date(dueDate);
