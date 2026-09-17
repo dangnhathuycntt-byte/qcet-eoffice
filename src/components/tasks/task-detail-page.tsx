@@ -24,7 +24,7 @@ import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-bl
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
-import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
+import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
 export type DetailTab = "overview" | "subtasks" | "activity";
@@ -998,7 +998,7 @@ export function TaskDetailPage({
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-medium text-foreground">
-                              {evt.description || evt.action}
+                              {evt.description || getAuditActionLabel(evt.action)}
                             </span>
                             {evt.count > 1 && (
                               <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono text-muted-foreground">

@@ -56,6 +56,7 @@ import {
   buildActorContext,
   buildTaskContext,
 } from "@/domain/tasks/state-machine";
+import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 
 export interface AuditLogItem {
   id: string;
@@ -1253,7 +1254,7 @@ export function LinearPropertiesSidebar({
                     </span>
                     <div className="min-w-0 flex-1">
                       <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
-                      <span className="text-foreground/80">{evt.description || evt.action}</span>
+                      <span className="text-foreground/80">{evt.description || getAuditActionLabel(evt.action)}</span>
                       <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
                         · {formatDisplayDate(evt.timestamp)}
                       </span>

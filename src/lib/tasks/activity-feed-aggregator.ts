@@ -40,6 +40,51 @@ export const CONSOLIDATABLE_TEXT_ACTIONS = new Set([
   "EDIT_TITLE",
 ]);
 
+/**
+ * Danh mục nhãn tiếng Việt chuẩn mực cho các hành vi kiểm toán nhiệm vụ (Audit Actions)
+ */
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  TASK_CREATED: "Tạo mới nhiệm vụ",
+  TASK_UPDATED: "Cập nhật thông tin nhiệm vụ",
+  TASK_ASSIGNED: "Phân công người phụ trách",
+  TASK_REASSIGNED: "Chuyển giao người phụ trách",
+  TASK_STATUS_CHANGED: "Thay đổi trạng thái",
+  STATUS_CHANGED: "Thay đổi trạng thái",
+  TASK_DEADLINE_CHANGED: "Điều chỉnh thời hạn hoàn thành",
+  TASK_START_DATE_CHANGED: "Điều chỉnh ngày bắt đầu",
+  TASK_APPROVED: "Nghiệm thu và hoàn thành",
+  APPROVED: "Nghiệm thu và hoàn thành",
+  TASK_REJECTED: "Yêu cầu làm lại",
+  REJECTED: "Yêu cầu làm lại",
+  TASK_REVISION_REQUESTED: "Yêu cầu điều chỉnh",
+  REVISION_REQUESTED: "Yêu cầu điều chỉnh",
+  TASK_REMINDED: "Gửi thông báo nhắc việc",
+  UPDATE_DESCRIPTION: "Cập nhật nội dung mô tả",
+  EDIT_DESCRIPTION: "Cập nhật nội dung mô tả",
+  UPDATE_TITLE: "Cập nhật tiêu đề nhiệm vụ",
+  EDIT_TITLE: "Cập nhật tiêu đề nhiệm vụ",
+  UPDATE_DUE_DATE: "Gia hạn thời hạn hoàn thành",
+  UPDATE_START_DATE: "Điều chỉnh ngày bắt đầu",
+  UPDATE_PRIORITY: "Thay đổi độ ưu tiên",
+  UPDATE_PROGRESS: "Cập nhật tiến độ nhiệm vụ",
+  DELIVERABLE_SUBMITTED: "Nộp tài liệu minh chứng",
+  DELIVERABLE_REVIEWED: "Đánh giá minh chứng",
+  DELIVERABLE_UPLOADED: "Tải lên minh chứng",
+  DELIVERABLE_APPROVED: "Phê duyệt minh chứng",
+  DELETE_DELIVERABLE: "Xóa tài liệu minh chứng",
+  TASK_DELIVERABLE_DELETED: "Xóa tài liệu minh chứng",
+  COMMENT: "Thêm ý kiến trao đổi",
+  DIRECTIVE: "Ý kiến chỉ đạo",
+};
+
+/**
+ * Lấy nhãn tiếng Việt thân thiện của audit action. Fallback về chính action nếu chưa được định nghĩa.
+ */
+export function getAuditActionLabel(action: string): string {
+  if (!action) return "Hoạt động nhiệm vụ";
+  return AUDIT_ACTION_LABELS[action] || action;
+}
+
 /** Danh sách các hành động nghiệp vụ then chốt - tuyệt đối KHÔNG được gộp và đóng vai trò là rào cản (barrier) */
 export const BUSINESS_BARRIER_ACTIONS = new Set([
   "NOT_STARTED",
@@ -137,7 +182,8 @@ export function formatConsolidatedDescription(
   if (category === "title") {
     return `Cập nhật tiêu đề nhiệm vụ (${count} lần chỉnh sửa)`;
   }
-  return `${baseDescription} (${count} lần lưu)`;
+  const displayBase = getAuditActionLabel(baseDescription);
+  return `${displayBase} (${count} lần lưu)`;
 }
 
 /**
@@ -183,6 +229,7 @@ export function consolidateActivityFeed(
     if (result.length === 0) {
       result.push({
         ...evt,
+        description: evt.description || getAuditActionLabel(evt.action),
         count: 1,
         firstTimestamp: evt.timestamp,
         lastTimestamp: evt.timestamp,
@@ -215,8 +262,10 @@ export function consolidateActivityFeed(
       }
 
       // Cập nhật mô tả hiển thị thân thiện
+      const fallbackDesc =
+        lastGroup.rawEvents[0].description || getAuditActionLabel(lastGroup.action);
       lastGroup.description = formatConsolidatedDescription(
-        lastGroup.rawEvents[0].description || lastGroup.action,
+        fallbackDesc,
         lastGroup.action,
         lastGroup.count
       );
@@ -224,6 +273,7 @@ export function consolidateActivityFeed(
       // Bắt đầu một nhóm mới (barrier hoặc khác người hoặc vượt ngưỡng thời gian)
       result.push({
         ...evt,
+        description: evt.description || getAuditActionLabel(evt.action),
         count: 1,
         firstTimestamp: evt.timestamp,
         lastTimestamp: evt.timestamp,

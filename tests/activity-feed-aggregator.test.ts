@@ -5,6 +5,7 @@ import {
   canConsolidate,
   isConsolidatableAction,
   getEditCategory,
+  getAuditActionLabel,
   type RawAuditLogItem,
 } from "@/lib/tasks/activity-feed-aggregator";
 
@@ -213,5 +214,26 @@ describe("Activity Feed Aggregator & Consolidation Engine Suite", () => {
     const feed = consolidateActivityFeed(rawEvents, 60000);
     assert.equal(feed.length, 1);
     assert.equal(feed[0].count, 1);
+  });
+
+  it("formats raw technical audit actions into natural Vietnamese labels", () => {
+    assert.equal(getAuditActionLabel("TASK_UPDATED"), "Cập nhật thông tin nhiệm vụ");
+    assert.equal(getAuditActionLabel("TASK_CREATED"), "Tạo mới nhiệm vụ");
+    assert.equal(getAuditActionLabel("TASK_ASSIGNED"), "Phân công người phụ trách");
+    assert.equal(getAuditActionLabel("TASK_STATUS_CHANGED"), "Thay đổi trạng thái");
+
+    // Fallback in consolidated description when description is missing
+    const rawEvents: RawAuditLogItem[] = [
+      {
+        id: "evt-raw-1",
+        action: "TASK_UPDATED",
+        timestamp: new Date(baseTime).toISOString(),
+        actorName: "ThS. Đặng Nhật Huy",
+      },
+    ];
+
+    const feed = consolidateActivityFeed(rawEvents, 60000);
+    assert.equal(feed.length, 1);
+    assert.equal(feed[0].description, "Cập nhật thông tin nhiệm vụ");
   });
 });

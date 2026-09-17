@@ -8,6 +8,7 @@ import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@/lib/adapt
 import { TaskDetailPage } from "@/components/tasks/task-detail-page";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { canReadTask, canUpdateTask } from "@/server/policies/task-policy";
+import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
@@ -78,10 +79,10 @@ function formatAuditDescription(event: {
       if (after?.description !== undefined && before?.description !== after.description) {
         return "Cập nhật nội dung mô tả nhiệm vụ";
       }
-      return undefined;
+      return "Cập nhật thông tin nhiệm vụ";
     }
     default:
-      return after?.note || after?.reason || undefined;
+      return after?.note || after?.reason || getAuditActionLabel(event.action);
   }
 }
 
