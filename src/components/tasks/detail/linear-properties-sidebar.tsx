@@ -560,13 +560,6 @@ export function LinearPropertiesSidebar({
             <span>Thuộc tính</span>
             <ChevronDown className="size-3 text-muted-foreground" />
           </span>
-          <button
-            type="button"
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            title="Thêm thuộc tính"
-          >
-            <Plus className="size-3.5" />
-          </button>
         </div>
 
         {/* 2-Column Key-Value Table */}

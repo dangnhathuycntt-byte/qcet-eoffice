@@ -306,6 +306,13 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       );
     });
 
+    it("eliminates redundant add property plus button in Properties section header", () => {
+      assert.ok(
+        !sidebarContent.includes('title="Thêm thuộc tính"'),
+        "Properties section header must NOT contain plus button to add property"
+      );
+    });
+
     it("maintains lightweight compact cards with reduced padding and gap", () => {
       assert.ok(
         cssContent.includes("gap: 6px;") &&
