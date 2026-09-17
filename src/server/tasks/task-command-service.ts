@@ -494,7 +494,7 @@ export class TaskCommandService {
       const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
 
       // Resolve valid department ID against database to guarantee foreign key integrity
-      let validDepartmentId: string = effectiveDepartmentId;
+      let validDepartmentId: string | null = null;
       const dept = await tx.department.findFirst({
         where: {
           OR: [
@@ -509,7 +509,30 @@ export class TaskCommandService {
       });
       if (dept) {
         validDepartmentId = dept.id;
+      } else {
+        const fallbackDept = await tx.department.findFirst({ select: { id: true } });
+        if (fallbackDept) {
+          validDepartmentId = fallbackDept.id;
+        }
       }
+
+      // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
+      const candidateUserIds = [
+        ...(validAssigneeId ? [validAssigneeId] : []),
+        ...validCollaboratorIds,
+      ];
+      const existingUsers =
+        candidateUserIds.length > 0
+          ? await tx.user.findMany({
+              where: { id: { in: candidateUserIds } },
+              select: { id: true },
+            })
+          : [];
+      const existingUserIdSet = new Set(existingUsers.map((u) => u.id));
+
+      const safeAssigneesToCreate = assigneesToCreate.filter((a) =>
+        existingUserIdSet.has(a.userId)
+      );
 
       // Sinh mã tự động atomic O(1)
       const code =
@@ -518,7 +541,7 @@ export class TaskCommandService {
           year: curYear,
           month: monthNum,
           scope: taskScope,
-          departmentCode: validDepartmentId,
+          departmentCode: validDepartmentId || undefined,
         }));
 
       const task = await tx.task.create({
@@ -534,10 +557,10 @@ export class TaskCommandService {
           priority: taskPriority,
           createdById: effectiveCreatorId,
           parentTaskId: parentTaskId || null,
-          ...(assigneesToCreate.length > 0
+          ...(safeAssigneesToCreate.length > 0
             ? {
                 assignees: {
-                  create: assigneesToCreate,
+                  create: safeAssigneesToCreate,
                 },
               }
             : {}),
@@ -582,7 +605,7 @@ export class TaskCommandService {
       });
       const resolvedUnitId = matchedOrgUnit?.id || null;
 
-      if (validAssigneeId) {
+      if (validAssigneeId && existingUserIdSet.has(validAssigneeId)) {
         await tx.taskActor.create({
           data: {
             taskId: task.id,
@@ -595,7 +618,7 @@ export class TaskCommandService {
         });
       }
       for (const cId of validCollaboratorIds) {
-        if (cId !== validAssigneeId) {
+        if (cId !== validAssigneeId && existingUserIdSet.has(cId)) {
           await tx.taskActor.create({
             data: {
               taskId: task.id,

@@ -1,30 +1,32 @@
 /**
  * tests/linear-create-task-modal-composer.test.ts
  *
- * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI Redesign:
- * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description -> Subtasks -> Footer
+ * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI:
+ * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description Canvas -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
- * 3. Progressive disclosure: Subtasks section only displays "+ Thêm đầu việc" when empty
- * 4. Header action: "Tạo cùng Agent" auxiliary action in top right
- * 5. Footer contract: Sticky footer with Cancel + "Tạo nhiệm vụ" action & shortcut hint
- * 6. Shortcut contract: 'C' key opens create modal when not typing in interactive input
- * 7. Dismiss & Backdrop: Backdrop click dismisses modal, portal clicks are protected
- * 8. Agent panel: Header contains only "Trợ lý soạn thảo" without redundant collapse/close buttons
- * 9. FloatingPortal: Floating content renders outside scroll container with z-index 9999
+ * 3. Scope integrity: No fake AI Agent or "+ Thêm đầu việc" in create modal (subtasks created at task detail)
+ * 4. Footer contract: Sticky footer with Cancel + "Tạo nhiệm vụ" action & shortcut hint
+ * 5. Shortcut contract: 'C' key opens create modal when not typing in interactive input
+ * 6. Dismiss & Backdrop: Backdrop click dismisses modal, portal clicks are protected
+ * 7. Agent panel isolation: Standalone component ready behind feature flag
+ * 8. FloatingPortal: Floating content renders outside scroll container with z-index 9999
  */
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LinearCreateTaskModal } from "../src/components/tasks/create/linear-create-task-modal";
+import {
+  LinearCreateTaskModal,
+  ENABLE_TASK_AGENT_ASSISTANT,
+} from "../src/components/tasks/create/linear-create-task-modal";
 import { LinearTaskAgentPanel } from "../src/components/tasks/create/linear-task-agent-panel";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
 import { FloatingPortal } from "../src/components/ui/floating-portal";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
 
-describe("Linear Compact Composer Modal - Layout & Structure", () => {
+describe("Linear Compact Composer Modal - Production Specification", () => {
   test("Renders modal with correct Linear hierarchy & accessible dialog attributes", () => {
     const html = renderToStaticMarkup(
       React.createElement(LinearCreateTaskModal, {
@@ -43,37 +45,60 @@ describe("Linear Compact Composer Modal - Layout & Structure", () => {
     // 2. Header & Breadcrumb
     assert.ok(html.includes("Phòng Quản lý Đào tạo"), "Must show current department name in breadcrumb");
     assert.ok(html.includes("Tạo nhiệm vụ"), "Must show 'Tạo nhiệm vụ' in breadcrumb");
-    assert.ok(html.includes("Tạo cùng Agent"), "Must have 'Tạo cùng Agent' action in header");
 
-    // 3. Title & Summary Inputs
-    assert.ok(html.includes('placeholder="Tên nhiệm vụ... *"'), "Must have prominent title input with required placeholder");
-    assert.ok(html.includes('placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng..."'), "Must have short summary input directly beneath title");
+    // 3. AI / Mock Feature Scope: Must NOT render 'Tạo cùng Agent' in production
+    assert.equal(
+      ENABLE_TASK_AGENT_ASSISTANT,
+      false,
+      "ENABLE_TASK_AGENT_ASSISTANT feature flag must default to false"
+    );
+    assert.ok(
+      !html.includes("Tạo cùng Agent"),
+      "Must NOT render 'Tạo cùng Agent' button in production modal header"
+    );
 
-    // 4. Compact Property Chips (Status, Priority, DRI, Collaborators, StartDate, DueDate, Category)
+    // 4. Subtasks Scope: Must NOT render '+ Thêm đầu việc' in create modal
+    assert.ok(
+      !html.includes("Thêm đầu việc"),
+      "Must NOT render '+ Thêm đầu việc' subtasks in create modal (subtasks belong to detail page)"
+    );
+
+    // 5. Title & Summary Inputs
+    assert.ok(
+      html.includes('placeholder="Tên nhiệm vụ... *"'),
+      "Must have prominent title input with required placeholder"
+    );
+    assert.ok(
+      html.includes('placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng..."'),
+      "Must have short summary input directly beneath title"
+    );
+
+    // 6. Compact Property Chips (Status, Priority, DRI, Collaborators, StartDate, DueDate, Category)
     assert.ok(html.includes("Đang thực hiện") || html.includes("Mới"), "Must render Status property chip");
-    assert.ok(html.includes("Bình thường") || html.includes("Khẩn cấp") || html.includes("Cao"), "Must render Priority property chip");
+    assert.ok(
+      html.includes("Bình thường") || html.includes("Khẩn cấp") || html.includes("Cao"),
+      "Must render Priority property chip"
+    );
     assert.ok(html.includes("Chủ trì"), "Must render DRI (Chủ trì) property chip");
     assert.ok(html.includes("+ Phối hợp") || html.includes("Phối hợp"), "Must render Collaborators property chip");
     assert.ok(html.includes("Bắt đầu:"), "Must render Start date property chip");
     assert.ok(html.includes("Hạn:"), "Must render Due date property chip");
     assert.ok(html.includes("Chuyển đổi số") || html.includes("Lĩnh vực"), "Must render Category property chip");
 
-    // 5. Description Canvas
+    // 7. Description Canvas
     assert.ok(
       html.includes('placeholder="Mô tả nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu..."'),
       "Must render borderless description textarea canvas"
     );
 
-    // 6. Progressive Subtasks: when empty, only "+ Thêm đầu việc" button is shown
-    assert.ok(html.includes("Thêm đầu việc"), "Must render lightweight 'Thêm đầu việc' affordance");
-
-    // 7. Footer: Sticky bottom with Cancel + Submit and shortcut hint
+    // 8. Footer: Sticky bottom with Cancel + Submit and shortcut hint
     assert.ok(html.includes("Hủy"), "Must render Cancel button");
     assert.ok(html.includes("Tạo nhiệm vụ"), "Must render primary submit button labeled 'Tạo nhiệm vụ'");
     assert.ok(html.includes("Enter"), "Must render shortcut hint in footer");
 
-    // 8. Dimensions: Fixed desktop height (h-[560px]) and layout classes
-    assert.ok(html.includes("h-[560px]"), "Modal must have 560px fixed desktop height");
+    // 9. Dimensions: Clean compact composer with fixed height
+    assert.ok(html.includes("h-[540px]"), "Modal must have 540px fixed desktop height");
+    assert.ok(html.includes("max-w-[680px]"), "Modal must have max-w-[680px] compact composer width");
   });
 
   test("When closed (isOpen=false), modal renders nothing (null)", () => {
@@ -88,8 +113,8 @@ describe("Linear Compact Composer Modal - Layout & Structure", () => {
   });
 });
 
-describe("Agent Panel UX & Controls", () => {
-  test("Agent Panel header contains only 'Trợ lý soạn thảo' text without chevron or close buttons", () => {
+describe("Agent Panel UX & Standalone Component", () => {
+  test("Agent Panel header contains only 'Trợ lý soạn thảo' text when isolated", () => {
     const html = renderToStaticMarkup(
       React.createElement(LinearTaskAgentPanel, {
         isOpen: true,
