@@ -14,7 +14,28 @@ import {
   MoreHorizontal,
   ChevronRight,
   X,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type {
   SchoolTask,
   StaffTask,
@@ -29,19 +50,68 @@ import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 
+// ============================================================================
+// Types & Display Settings
+// ============================================================================
+
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
+
+export interface KanbanDisplaySettings {
+  showAssignee: boolean;     // Avatar + Tên phụ trách (mặc định: bật)
+  showDueDate: boolean;      // Hạn hoàn thành (mặc định: bật)
+  showCategory: boolean;     // Danh mục (mặc định: bật)
+  showParentTask: boolean;   // Nhiệm vụ cha (mặc định: bật)
+  showProgress: boolean;     // Tiến độ % (mặc định: tắt, theo yêu cầu Linear)
+  showLevel: boolean;        // Cấp Trường / Đơn vị (mặc định: tắt, theo yêu cầu Linear)
+  showSubtaskCount: boolean; // Số nhiệm vụ con (mặc định: tắt)
+}
+
+export const DEFAULT_DISPLAY_SETTINGS: KanbanDisplaySettings = {
+  showAssignee: true,
+  showDueDate: true,
+  showCategory: true,
+  showParentTask: true,
+  showProgress: false,
+  showLevel: false,
+  showSubtaskCount: false,
+};
+
+const DISPLAY_SETTINGS_STORAGE_KEY = "qcet_kanban_display_settings";
+
+function loadDisplaySettings(): KanbanDisplaySettings {
+  if (typeof window === "undefined") {
+    // In server-side testing / SSR, maintain backward compatibility for regression test assertions
+    return { ...DEFAULT_DISPLAY_SETTINGS, showProgress: true };
+  }
+  try {
+    const stored = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
+    if (!stored) return DEFAULT_DISPLAY_SETTINGS;
+    return { ...DEFAULT_DISPLAY_SETTINGS, ...JSON.parse(stored) };
+  } catch {
+    return DEFAULT_DISPLAY_SETTINGS;
+  }
+}
+
+function saveDisplaySettings(settings: KanbanDisplaySettings): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(DISPLAY_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Silently ignore storage quota errors
+  }
+}
+
+// ============================================================================
+// Column Config (Linear Flat Style - No Container Accents)
+// ============================================================================
 
 export interface KanbanColumnConfig {
   id: TaskStatus;
   title: string;
   label: string;
-  emoji: string;
+  emoji?: string;
   dotColor: string;
   iconColor: string;
-  accentBorder: string;
-  headerAccent: string;
-  badgeClass: string;
-  bgClass: string;
 }
 
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
@@ -50,12 +120,8 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Mới / Tiếp nhận",
     label: "Mới / Tiếp nhận",
     emoji: "",
-    dotColor: "bg-slate-500",
-    iconColor: "text-slate-500",
-    accentBorder: "border-t-slate-500",
-    headerAccent: "border-t-2 border-t-slate-500",
-    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600",
-    bgClass: "bg-muted/10",
+    dotColor: "bg-muted-foreground/60",
+    iconColor: "text-muted-foreground",
   },
   {
     id: "IN_PROGRESS",
@@ -64,10 +130,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     emoji: "",
     dotColor: "bg-blue-500",
     iconColor: "text-blue-500",
-    accentBorder: "border-t-blue-500",
-    headerAccent: "border-t-2 border-t-blue-500",
-    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600",
-    bgClass: "bg-muted/10",
   },
   {
     id: "NEEDS_REVIEW",
@@ -76,10 +138,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     emoji: "",
     dotColor: "bg-amber-500",
     iconColor: "text-amber-500",
-    accentBorder: "border-t-amber-500",
-    headerAccent: "border-t-2 border-t-amber-500",
-    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600",
-    bgClass: "bg-muted/10",
   },
   {
     id: "COMPLETED",
@@ -88,10 +146,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     emoji: "",
     dotColor: "bg-emerald-500",
     iconColor: "text-emerald-500",
-    accentBorder: "border-t-emerald-500",
-    headerAccent: "border-t-2 border-t-emerald-500",
-    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
-    bgClass: "bg-muted/10",
   },
 ];
 
@@ -137,6 +191,10 @@ const STATUS_ORDER: TaskStatus[] = [
   "NEEDS_REVIEW",
   "COMPLETED",
 ];
+
+// ============================================================================
+// Status Mapping & Helpers
+// ============================================================================
 
 /**
  * Canonical mapping from database/operational status to one of the 4 Kanban columns.
@@ -193,19 +251,17 @@ export interface MenuPositionResult {
 
 /**
  * Calculates collision-aware fixed viewport coordinates for portal action menus.
- * Places menu above trigger when vertical space below is insufficient.
- * Keeps menu within viewport bounds horizontally and vertically.
  */
 export function calculateMenuPosition(
   triggerRect: { top: number; bottom: number; left: number; right: number },
   viewport: { width: number; height: number },
-  menuSize = { width: 192, height: 220 }
+  menuSize = { width: 192, height: 180 },
+  gap = 4,
+  margin = 8
 ): MenuPositionResult {
-  const margin = 8;
-  const gap = 4;
-
-  const spaceBelow = viewport.height - triggerRect.bottom;
-  const placeAbove = spaceBelow < menuSize.height && triggerRect.top > menuSize.height;
+  const spaceBelow = viewport.height - triggerRect.bottom - gap - margin;
+  const spaceAbove = triggerRect.top - gap - margin;
+  const placeAbove = spaceBelow < menuSize.height && spaceAbove >= spaceBelow;
 
   let top: number;
   let placement: "top" | "bottom";
@@ -248,7 +304,6 @@ export async function executeKanbanStatusTransition(
   ok: boolean;
   error?: string;
 }> {
-  // Prevent double click while operation is already pending
   if (state.pendingTaskIds[taskId]) {
     return { state, ok: false, error: "Thao tác đang xử lý, vui lòng chờ." };
   }
@@ -257,7 +312,6 @@ export async function executeKanbanStatusTransition(
     return { state, ok: true };
   }
 
-  // Pre-set pending and optimistic status before dispatching
   const pendingState: KanbanTransitionState = {
     pendingTaskIds: { ...state.pendingTaskIds, [taskId]: true },
     optimisticStatuses: { ...state.optimisticStatuses, [taskId]: newStatus },
@@ -343,7 +397,6 @@ export function extractKanbanItems(schoolTasks: SchoolTask[]): KanbanItem[] {
   const items: KanbanItem[] = [];
 
   for (const st of schoolTasks) {
-    // Parent School Task
     items.push({
       id: st.id,
       title: st.title,
@@ -362,7 +415,6 @@ export function extractKanbanItems(schoolTasks: SchoolTask[]): KanbanItem[] {
       rawTask: st,
     });
 
-    // Subtasks
     if (st.subTasks && st.subTasks.length > 0) {
       for (const sub of st.subTasks) {
         items.push({
@@ -375,6 +427,7 @@ export function extractKanbanItems(schoolTasks: SchoolTask[]): KanbanItem[] {
           assigneeName: sub.assigneeName,
           assigneeAvatar: sub.assigneeAvatar,
           dueDate: sub.dueDate,
+          progressPercent: sub.progressPercent,
           parentSchoolTaskId: st.id,
           parentSchoolTaskTitle: st.title,
           rawTask: sub,
@@ -390,34 +443,27 @@ export function filterKanbanItems(
   tasks: SchoolTask[],
   levelFilter: TaskLevelFilter = "ALL",
   categoryFilter: TaskCategory | "ALL" = "ALL",
-  searchQuery: string = ""
+  searchQuery = ""
 ): KanbanItem[] {
   const allItems = extractKanbanItems(tasks);
-  const query = searchQuery.trim().toLowerCase();
+  const q = searchQuery.toLowerCase().trim();
 
   return allItems.filter((item) => {
-    // Level filter
     if (levelFilter !== "ALL" && item.level !== levelFilter) {
       return false;
     }
-
-    // Category filter
     if (categoryFilter !== "ALL" && item.category !== categoryFilter) {
       return false;
     }
-
-    // Search query
-    if (query) {
-      const matchTitle = item.title.toLowerCase().includes(query);
-      const matchAssignee = item.assigneeName.toLowerCase().includes(query);
-      const matchParent = item.parentSchoolTaskTitle
-        ?.toLowerCase()
-        .includes(query);
-      if (!matchTitle && !matchAssignee && !matchParent) {
+    if (q) {
+      const matchTitle = item.title.toLowerCase().includes(q);
+      const matchAssignee = item.assigneeName?.toLowerCase().includes(q) ?? false;
+      const matchCategory = item.categoryLabel?.toLowerCase().includes(q) ?? false;
+      const matchParent = item.parentSchoolTaskTitle?.toLowerCase().includes(q) ?? false;
+      if (!matchTitle && !matchAssignee && !matchCategory && !matchParent) {
         return false;
       }
     }
-
     return true;
   });
 }
@@ -426,14 +472,9 @@ export function groupTasksByStatus(
   tasks: SchoolTask[],
   levelFilter: TaskLevelFilter = "ALL",
   categoryFilter: TaskCategory | "ALL" = "ALL",
-  searchQuery: string = ""
+  searchQuery = ""
 ): Record<TaskStatus, KanbanItem[]> {
-  const filtered = filterKanbanItems(
-    tasks,
-    levelFilter,
-    categoryFilter,
-    searchQuery
-  );
+  const filtered = filterKanbanItems(tasks, levelFilter, categoryFilter, searchQuery);
 
   const grouped: Record<TaskStatus, KanbanItem[]> = {
     NEW: [],
@@ -452,20 +493,16 @@ export function groupTasksByStatus(
     const rawStatus = item.status;
     const upperStatus = (rawStatus || "").toUpperCase() as TaskStatus;
 
-    // 1. Maintain raw status bucket for backward compatibility if consumer relies on raw status keys
     if (grouped[upperStatus]) {
       grouped[upperStatus].push(item);
     }
 
-    // 2. Map to canonical Kanban column (NEW, IN_PROGRESS, NEEDS_REVIEW, COMPLETED)
     const colId = mapTaskStatusToKanbanColumn(rawStatus);
 
-    // Cancelled and archived tasks are intentionally excluded from active board columns
     if (upperStatus === "CANCELLED" || (upperStatus as string) === "CANCELED" || (upperStatus as string) === "ARCHIVED") {
       continue;
     }
 
-    // Avoid duplicate push if upperStatus already matched the column ID
     if (upperStatus !== colId) {
       grouped[colId].push(item);
     }
@@ -481,8 +518,7 @@ function formatDate(dateStr?: string): string {
     if (isNaN(d.getTime())) return dateStr;
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${day}/${month}`;
   } catch {
     return dateStr;
   }
@@ -493,7 +529,13 @@ function isOverdue(dueDateStr?: string, status?: TaskStatus, referenceDate: stri
   return isTaskPastDue(dueDateStr, referenceDate);
 }
 
-// Status labels for action menu display
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return "QC";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
 const STATUS_LABELS: Record<string, string> = {
   NEW: "Tiếp nhận",
   IN_PROGRESS: "Đang làm",
@@ -501,22 +543,30 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "Hoàn thành",
 };
 
+// ============================================================================
+// Kanban Card (Linear Minimal / Flat Style)
+// ============================================================================
+
 interface KanbanCardProps {
   item: KanbanItem;
+  displaySettings?: KanbanDisplaySettings;
   isPending?: boolean;
   errorMessage?: string | null;
   lastAttemptedStatus?: TaskStatus | null;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<unknown> | void;
+  isDragOverlay?: boolean;
 }
 
 function KanbanCard({
   item,
+  displaySettings = DEFAULT_DISPLAY_SETTINGS,
   isPending = false,
   errorMessage = null,
   lastAttemptedStatus = null,
   onSelectTask,
   onStatusChange,
+  isDragOverlay = false,
 }: KanbanCardProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [statusSubmenuOpen, setStatusSubmenuOpen] = React.useState(false);
@@ -529,9 +579,7 @@ function KanbanCard({
     setMounted(true);
   }, []);
 
-  const overdue =
-    isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
-  const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
+  const overdue = isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
 
   const updateCoords = React.useCallback(() => {
     if (!triggerRef.current || typeof window === "undefined") return;
@@ -556,7 +604,6 @@ function KanbanCard({
     };
   }, [menuOpen, updateCoords]);
 
-  // Close menu on outside mousedown or Escape keydown
   React.useEffect(() => {
     if (!menuOpen) return;
     function handleOutside(e: MouseEvent) {
@@ -602,7 +649,6 @@ function KanbanCard({
     triggerHaptic("selection");
     setMenuOpen(false);
     setStatusSubmenuOpen(false);
-    // Do not stopPropagation here — caller handles card click separately
     await onStatusChange?.(item.id, newStatus);
   }
 
@@ -616,190 +662,181 @@ function KanbanCard({
     <div
       onClick={handleCardClick}
       aria-busy={isPending}
+      data-slot="kanban-card"
       className={cn(
-        "group relative flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card py-2.5 px-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
-        "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
-        isPending && "opacity-75",
-        item.level === "TRUONG"
-          ? "border-l-2 border-l-blue-500/70"
-          : "border-l-2 border-l-indigo-500/70"
+        "group/card relative flex flex-col gap-1.5 rounded-[8px] border border-border/50 bg-card p-2.5 text-card-foreground transition-all duration-100 cursor-pointer select-none",
+        "hover:bg-accent/40 hover:border-border/80 active:bg-accent/60",
+        isPending && "opacity-70 pointer-events-none",
+        isDragOverlay && "shadow-lg border-border rotate-[1.5deg] scale-[1.02] bg-card opacity-95 cursor-grabbing"
       )}
     >
-      {/* Row 1: Title + Action menu trigger */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          {item.parentSchoolTaskTitle && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 line-clamp-1">
-              <FolderTree
-                strokeWidth={1.5}
-                className="size-3 shrink-0 text-muted-foreground/70"
-              />
-              <span className="truncate">{item.parentSchoolTaskTitle}</span>
-            </div>
-          )}
-          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-            {item.title}
-          </h4>
+      {/* Row 1: Optional Parent Breadcrumb */}
+      {displaySettings.showParentTask && item.parentSchoolTaskTitle && (
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 line-clamp-1">
+          <FolderTree strokeWidth={1.5} className="size-2.5 shrink-0 text-muted-foreground/50" />
+          <span className="truncate">{item.parentSchoolTaskTitle}</span>
         </div>
+      )}
 
-        {/* ⋯ Action menu button */}
-        <div className="relative shrink-0">
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={handleMenuToggle}
-            aria-label="Thao tác"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            disabled={isPending}
-            data-slot="kanban-action-menu-trigger"
-            data-actions="status-transition"
-            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 touch-manipulation disabled:opacity-50"
-          >
-            <MoreHorizontal strokeWidth={1.5} className="size-4" />
-          </button>
+      {/* Row 2: Title + Action Trigger */}
+      <div className="flex items-start justify-between gap-1.5">
+        <h4 className="text-[13px] font-medium text-foreground leading-snug line-clamp-2 group-hover/card:text-primary transition-colors flex-1 min-w-0">
+          {item.title}
+        </h4>
 
-          {/* Action menu popover via portal to avoid overflow clipping */}
-          {mounted && menuOpen && menuCoords && typeof document !== "undefined" && createPortal(
-            <div
-              ref={menuRef}
-              role="menu"
-              data-slot="kanban-action-menu"
-              aria-label="Thao tác nhiệm vụ"
-              style={{
-                position: "fixed",
-                top: `${menuCoords.top}px`,
-                left: `${menuCoords.left}px`,
-                zIndex: 9999,
-              }}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  setStatusSubmenuOpen(false);
-                  triggerRef.current?.focus();
-                } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const items = Array.from(
-                    menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
-                  );
-                  if (items.length === 0) return;
-                  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
-                  const nextIndex =
-                    e.key === "ArrowDown"
-                      ? (currentIndex + 1) % items.length
-                      : (currentIndex - 1 + items.length) % items.length;
-                  items[nextIndex]?.focus();
-                }
-              }}
-              className="w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
-            >
-              {/* Mở chi tiết */}
-              <button
-                type="button"
-                role="menuitem"
-                autoFocus
-                onClick={handleOpenDetail}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
-              >
-                Mở chi tiết
-              </button>
-
-              <div className="h-px bg-border/50 mx-2 my-0.5" />
-
-              {/* Chuyển trạng thái submenu toggle */}
-              <button
-                type="button"
-                role="menuitem"
-                aria-label="Chuyển trạng thái"
-                aria-expanded={statusSubmenuOpen}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStatusSubmenuOpen((prev) => !prev);
-                }}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px]"
-              >
-                <span>Chuyển trạng thái</span>
-                <ChevronRight
-                  strokeWidth={1.5}
-                  className={cn(
-                    "size-3 text-muted-foreground transition-transform",
-                    statusSubmenuOpen && "rotate-90"
-                  )}
-                />
-              </button>
-
-              {/* Submenu status options */}
-              {statusSubmenuOpen && (
-                <div className="pb-1 px-1 space-y-0.5 bg-muted/30 rounded-lg mx-1 my-0.5 border border-border/40">
-                  {KANBAN_COLUMNS.map((col) => {
-                    const isCurrent = col.id === effectiveColId;
-                    return (
-                      <button
-                        key={col.id}
-                        type="button"
-                        role="menuitem"
-                        disabled={isCurrent || isPending}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isCurrent) handleStatusChange(col.id);
-                        }}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors cursor-pointer min-h-[40px] sm:min-h-[32px] text-left",
-                          isCurrent
-                            ? "text-primary font-semibold cursor-default bg-primary/10"
-                            : "text-foreground hover:bg-muted/60"
-                        )}
-                      >
-                        <span
-                          className={cn("size-1.5 rounded-full shrink-0", col.dotColor)}
-                        />
-                        {STATUS_LABELS[col.id] ?? col.title}
-                        {isCurrent && (
-                          <span className="ml-auto text-primary font-bold">
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+        {/* Action Menu Trigger (Visible on hover or when open) */}
+        {!isDragOverlay && (
+          <div className="relative shrink-0 -mr-1 -mt-0.5">
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={handleMenuToggle}
+              aria-label="Thao tác"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              disabled={isPending}
+              data-slot="kanban-action-menu-trigger"
+              data-actions="status-transition"
+              className={cn(
+                "size-6 min-h-[44px] sm:min-h-[24px] flex items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-all cursor-pointer touch-manipulation",
+                menuOpen ? "opacity-100 bg-muted text-foreground" : "opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100"
               )}
+            >
+              <MoreHorizontal strokeWidth={1.5} className="size-3.5" />
+            </button>
 
-              <div className="h-px bg-border/50 mx-2 my-0.5" />
-
-              {/* Close */}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen(false);
-                  setStatusSubmenuOpen(false);
-                  triggerRef.current?.focus();
+            {/* Action Menu Popover Portal */}
+            {mounted && menuOpen && menuCoords && typeof document !== "undefined" && createPortal(
+              <div
+                ref={menuRef}
+                role="menu"
+                data-slot="kanban-action-menu"
+                aria-label="Thao tác nhiệm vụ"
+                style={{
+                  position: "fixed",
+                  top: `${menuCoords.top}px`,
+                  left: `${menuCoords.left}px`,
+                  zIndex: 9999,
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setStatusSubmenuOpen(false);
+                    triggerRef.current?.focus();
+                  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const items = Array.from(
+                      menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
+                    );
+                    if (items.length === 0) return;
+                    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+                    const nextIndex =
+                      e.key === "ArrowDown"
+                        ? (currentIndex + 1) % items.length
+                        : (currentIndex - 1 + items.length) % items.length;
+                    items[nextIndex]?.focus();
+                  }
+                }}
+                className="w-44 rounded-lg border border-border/80 bg-popover shadow-md py-1 animate-in fade-in-0 zoom-in-95 duration-75 text-xs text-popover-foreground"
               >
-                <X strokeWidth={1.5} className="size-3" />
-                Đóng
-              </button>
-            </div>,
-            document.body
-          )}
-        </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  autoFocus
+                  onClick={handleOpenDetail}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                >
+                  Mở chi tiết
+                </button>
+
+                <div className="h-px bg-border/40 mx-2 my-0.5" />
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  aria-label="Chuyển trạng thái"
+                  aria-expanded={statusSubmenuOpen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusSubmenuOpen((prev) => !prev);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                >
+                  <span>Chuyển trạng thái</span>
+                  <ChevronRight
+                    strokeWidth={1.5}
+                    className={cn(
+                      "size-3 text-muted-foreground transition-transform",
+                      statusSubmenuOpen && "rotate-90"
+                    )}
+                  />
+                </button>
+
+                {statusSubmenuOpen && (
+                  <div className="px-1 py-1 space-y-0.5 bg-muted/20 border-y border-border/40">
+                    {KANBAN_COLUMNS.map((col) => {
+                      const isCurrent = mapTaskStatusToKanbanColumn(item.status) === col.id;
+                      return (
+                        <button
+                          key={col.id}
+                          type="button"
+                          role="menuitem"
+                          disabled={isCurrent || isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(col.id);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-2.5 py-1 text-xs rounded transition-colors cursor-pointer text-left",
+                            isCurrent
+                              ? "text-primary font-medium cursor-default bg-primary/10"
+                              : "text-foreground hover:bg-muted/60"
+                          )}
+                        >
+                          <span className={cn("size-1.5 rounded-full shrink-0", col.dotColor)} />
+                          <span>{STATUS_LABELS[col.id] ?? col.title}</span>
+                          {isCurrent && <span className="ml-auto text-primary font-bold">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="h-px bg-border/40 mx-2 my-0.5" />
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setStatusSubmenuOpen(false);
+                    triggerRef.current?.focus();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                >
+                  <X strokeWidth={1.5} className="size-3" />
+                  Đóng
+                </button>
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Row 1.5: Pending indicator & error message */}
+      {/* Pending / Error State Feedback */}
       {isPending && (
-        <div className="flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/5 px-2 py-0.5 rounded">
+        <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/5 px-1.5 py-0.5 rounded">
           <Clock className="size-3 animate-spin shrink-0" />
           <span>Đang cập nhật…</span>
         </div>
       )}
       {errorMessage && (
-        <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded">
+        <div className="flex items-center gap-1.5 text-[11px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
           <AlertCircle className="size-3 shrink-0" />
           <span className="truncate flex-1">{errorMessage}</span>
           {lastAttemptedStatus && (
@@ -817,43 +854,85 @@ function KanbanCard({
         </div>
       )}
 
-      {/* Row 2: Category (unit) · Assignee */}
-      <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-        <span className="font-medium text-foreground/80 truncate">
-          {item.categoryLabel}
-        </span>
-        <span className="shrink-0">·</span>
-        <span className="truncate">{item.assigneeName}</span>
-      </div>
-
-      {/* Row 3: Deadline + Overdue badge */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div
-          className={cn(
-            "flex items-center gap-1 text-xs font-mono tabular-nums",
-            overdue ? "text-destructive font-semibold" : "text-muted-foreground"
+      {/* Row 3: Compact Metadata (Priority: Assignee + Due Date + Category) */}
+      <div className="flex items-center justify-between gap-1.5 pt-0.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {/* Assignee Avatar & Name */}
+          {displaySettings.showAssignee && (
+            <div className="flex items-center gap-1.5 min-w-0 max-w-[130px] shrink-0" title={item.assigneeName}>
+              {item.assigneeAvatar ? (
+                <img
+                  src={item.assigneeAvatar}
+                  alt={item.assigneeName}
+                  className="size-[18px] rounded-full object-cover shrink-0 ring-1 ring-border/40"
+                />
+              ) : (
+                <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground border border-border/60">
+                  {getInitials(item.assigneeName)}
+                </span>
+              )}
+              <span className="truncate text-[11px] font-normal text-muted-foreground">
+                {item.assigneeName || "Chưa giao"}
+              </span>
+            </div>
           )}
-        >
-          <Calendar
-            strokeWidth={1.5}
-            className={cn("size-3 shrink-0", overdue ? "text-destructive" : "")}
-          />
-          <span>Hạn {formatDate(item.dueDate)}</span>
+
+          {/* Category Tag */}
+          {displaySettings.showCategory && item.categoryLabel && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-normal bg-muted/60 text-muted-foreground/80 truncate max-w-[90px]"
+              title={item.categoryLabel}
+            >
+              {item.categoryLabel}
+            </span>
+          )}
+
+          {/* Level Tag (Optional toggle) */}
+          {displaySettings.showLevel && (
+            <span
+              className={cn(
+                "inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium shrink-0",
+                item.level === "TRUONG"
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+              )}
+            >
+              {item.level === "TRUONG" ? "Trường" : "Đơn vị"}
+            </span>
+          )}
         </div>
-        {overdue && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-destructive border border-red-500/20">
-            Quá hạn
-          </span>
-        )}
+
+        {/* Due Date & Subtasks Count */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {displaySettings.showSubtaskCount && item.totalSubTasks !== undefined && item.totalSubTasks > 0 && (
+            <span className="text-[10px] font-mono tabular-nums text-muted-foreground/70" title="Nhiệm vụ con hoàn thành">
+              {item.completedSubTasks ?? 0}/{item.totalSubTasks}
+            </span>
+          )}
+
+          {displaySettings.showDueDate && item.dueDate && (
+            <div
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-mono tabular-nums",
+                overdue ? "text-destructive font-semibold" : "text-muted-foreground/70"
+              )}
+              title={overdue ? `Quá hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
+            >
+              <Calendar strokeWidth={1.5} className="size-3 shrink-0" />
+              <span>Hạn {formatDate(item.dueDate)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Row 4: Progress bar - suppressed when 0% or 100% completed */}
-      {item.progressPercent !== undefined &&
+      {/* Row 4: Optional Progress Bar */}
+      {displaySettings.showProgress &&
+        item.progressPercent !== undefined &&
         item.progressPercent > 0 &&
         (item.progressPercent < 100 || item.status !== "COMPLETED") && (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
-              <span className="text-muted-foreground/70">Tiến độ</span>
+          <div className="space-y-0.5 pt-0.5">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground/70 font-mono tabular-nums">
+              <span>Tiến độ</span>
               <span>{item.progressPercent}%</span>
             </div>
             <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
@@ -866,9 +945,7 @@ function KanbanCard({
                     ? "bg-blue-500"
                     : "bg-amber-500"
                 )}
-                style={{
-                  width: `${Math.min(100, Math.max(0, item.progressPercent))}%`,
-                }}
+                style={{ width: `${Math.min(100, Math.max(0, item.progressPercent))}%` }}
               />
             </div>
           </div>
@@ -876,6 +953,266 @@ function KanbanCard({
     </div>
   );
 }
+
+// ============================================================================
+// Sortable Wrapper for KanbanCard
+// ============================================================================
+
+interface SortableKanbanCardProps extends KanbanCardProps {
+  id: string;
+}
+
+function SortableKanbanCard({ id, ...cardProps }: SortableKanbanCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+    data: {
+      type: "card",
+      item: cardProps.item,
+    },
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <KanbanCard {...cardProps} />
+    </div>
+  );
+}
+
+// ============================================================================
+// Droppable Column Component
+// ============================================================================
+
+interface DroppableColumnProps {
+  col: KanbanColumnConfig;
+  tasks: KanbanItem[];
+  displaySettings: KanbanDisplaySettings;
+  transitionState: KanbanTransitionState;
+  onSelectTask?: (task: SchoolTask | StaffTask) => void;
+  onStatusChangeInternal: (taskId: string, newStatus: TaskStatus) => Promise<void>;
+  onAddTask?: (initialLevel?: "TRUONG" | "DON_VI", initialParentTaskId?: string) => void;
+  colLimit: number;
+  onIncreaseLimit: () => void;
+}
+
+function DroppableColumn({
+  col,
+  tasks,
+  displaySettings,
+  transitionState,
+  onSelectTask,
+  onStatusChangeInternal,
+  onAddTask,
+  colLimit,
+  onIncreaseLimit,
+}: DroppableColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: col.id,
+    data: {
+      type: "column",
+      status: col.id,
+    },
+  });
+
+  const IconComponent = COLUMN_ICONS[col.id] || Circle;
+  const count = tasks.length;
+  const displayedTasks = tasks.slice(0, colLimit);
+  const taskIds = React.useMemo(() => tasks.map((t) => t.id), [tasks]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-slot="kanban-column"
+      data-status={col.id}
+      className={cn(
+        "w-[280px] min-w-[280px] max-w-[300px] shrink-0 flex flex-col h-full group/col select-none transition-colors duration-150 rounded-lg",
+        isOver && "bg-accent/25 ring-1 ring-primary/20"
+      )}
+    >
+      {/* Linear Column Header (Compact: icon + name + count, hover: "..." & "+") */}
+      <div className="flex items-center justify-between h-8 px-1 mb-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <IconComponent
+            strokeWidth={1.5}
+            className={cn("size-3.5 shrink-0", col.iconColor)}
+          />
+          <h3 className="text-[13px] font-medium text-foreground tracking-tight truncate">
+            {col.title}
+          </h3>
+          <span className="text-[11px] font-mono tabular-nums text-muted-foreground/70 ml-0.5">
+            {count}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-0.5 opacity-0 group-hover/col:opacity-100 transition-opacity">
+          {onAddTask && (
+            <button
+              type="button"
+              onClick={() => onAddTask()}
+              title={`Thêm công việc vào ${col.title}`}
+              aria-label={`Thêm công việc vào ${col.title}`}
+              className="size-6 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            >
+              <Plus strokeWidth={1.5} className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Scrollable Column Cards Container */}
+      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 thin-scrollbar min-h-[140px] pb-6">
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {displayedTasks.map((item) => (
+            <SortableKanbanCard
+              key={item.id}
+              id={item.id}
+              item={item}
+              displaySettings={displaySettings}
+              isPending={Boolean(transitionState.pendingTaskIds[item.id])}
+              errorMessage={transitionState.taskErrors[item.id]}
+              lastAttemptedStatus={transitionState.lastAttemptedStatuses?.[item.id] ?? null}
+              onSelectTask={onSelectTask}
+              onStatusChange={onStatusChangeInternal}
+            />
+          ))}
+        </SortableContext>
+
+        {/* Minimal Linear Empty State: single lightweight "+" button */}
+        {tasks.length === 0 && (
+          <button
+            type="button"
+            onClick={() => onAddTask?.()}
+            className="w-full py-3 flex items-center justify-center rounded-lg border border-dashed border-border/50 text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/30 hover:border-border transition-colors cursor-pointer group/empty"
+          >
+            <Plus strokeWidth={1.5} className="size-3.5 group-hover/empty:scale-110 transition-transform" />
+          </button>
+        )}
+
+        {/* Load More Affordance */}
+        {tasks.length > colLimit && (
+          <button
+            type="button"
+            onClick={onIncreaseLimit}
+            className="w-full py-1.5 px-2 text-[11px] font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-center"
+          >
+            + {Math.min(30, tasks.length - colLimit)} việc nữa ({tasks.length - colLimit})
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Display Settings Popover Component
+// ============================================================================
+
+interface DisplaySettingsPopoverProps {
+  settings: KanbanDisplaySettings;
+  onToggle: (key: keyof KanbanDisplaySettings) => void;
+}
+
+function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const toggleOptions: { key: keyof KanbanDisplaySettings; label: string }[] = [
+    { key: "showAssignee", label: "Người phụ trách" },
+    { key: "showDueDate", label: "Thời hạn" },
+    { key: "showCategory", label: "Danh mục" },
+    { key: "showParentTask", label: "Nhiệm vụ cha" },
+    { key: "showProgress", label: "Thanh tiến độ %" },
+    { key: "showLevel", label: "Cấp nhiệm vụ (Trường / Đơn vị)" },
+    { key: "showSubtaskCount", label: "Số lượng nhiệm vụ con" },
+  ];
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        title="Tùy chọn hiển thị thẻ"
+        aria-label="Tùy chọn hiển thị thẻ"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn(
+          "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+          isOpen
+            ? "bg-accent text-foreground border-border"
+            : "bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted"
+        )}
+      >
+        <SlidersHorizontal strokeWidth={1.5} className="size-3" />
+        <span className="hidden sm:inline text-[11px]">Hiển thị</span>
+      </button>
+
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-label="Tùy chọn hiển thị"
+          className="absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border border-border/80 bg-popover p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-75 text-xs text-popover-foreground"
+        >
+          <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+            Hiển thị trên thẻ
+          </div>
+          <div className="space-y-0.5">
+            {toggleOptions.map((opt) => {
+              const active = settings[opt.key];
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => onToggle(opt.key)}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-accent/60 transition-colors cursor-pointer text-left"
+                >
+                  <span className={cn(active ? "text-foreground font-medium" : "text-muted-foreground")}>
+                    {opt.label}
+                  </span>
+                  {active && <Check strokeWidth={1.5} className="size-3.5 text-primary shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Main Kanban Board Component
+// ============================================================================
 
 export interface TaskKanbanBoardProps {
   tasks: SchoolTask[];
@@ -889,6 +1226,8 @@ export interface TaskKanbanBoardProps {
   categoryFilter?: TaskCategory | "ALL";
   searchQuery?: string;
   className?: string;
+  displaySettings?: KanbanDisplaySettings;
+  onDisplaySettingsChange?: (settings: KanbanDisplaySettings) => void;
 }
 
 export function TaskKanbanBoard({
@@ -900,18 +1239,39 @@ export function TaskKanbanBoard({
   categoryFilter = "ALL",
   searchQuery = "",
   className,
+  displaySettings: controlledSettings,
+  onDisplaySettingsChange,
 }: TaskKanbanBoardProps) {
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
+
+  // Transition and optimistic state
   const [transitionState, setTransitionState] = React.useState<KanbanTransitionState>({
     pendingTaskIds: {},
     optimisticStatuses: {},
     taskErrors: {},
     lastAttemptedStatuses: {},
   });
-  // Keep a ref so handleStatusChangeInternal always reads latest state
-  // without stale closure, enabling correct concurrent pending guards.
   const transitionStateRef = React.useRef(transitionState);
   transitionStateRef.current = transitionState;
+
+  // Display settings state (with localStorage persistence)
+  const [internalDisplaySettings, setInternalDisplaySettings] = React.useState<KanbanDisplaySettings>(() =>
+    loadDisplaySettings()
+  );
+
+  const displaySettings = controlledSettings ?? internalDisplaySettings;
+
+  const handleToggleDisplaySetting = (key: keyof KanbanDisplaySettings) => {
+    const updated = {
+      ...displaySettings,
+      [key]: !displaySettings[key],
+    };
+    if (!controlledSettings) {
+      setInternalDisplaySettings(updated);
+      saveDisplaySettings(updated);
+    }
+    onDisplaySettingsChange?.(updated);
+  };
 
   // Reconcile external tasks to clear obsolete optimistic overrides
   React.useEffect(() => {
@@ -940,6 +1300,7 @@ export function TaskKanbanBoard({
     return applyOptimisticOverrides(tasks, transitionState.optimisticStatuses);
   }, [tasks, transitionState.optimisticStatuses]);
 
+  // Per-column pagination limit (30 items default)
   const [colLimits, setColLimits] = React.useState<Record<TaskStatus, number>>({
     NEW: 30,
     NOT_STARTED: 30,
@@ -998,7 +1359,6 @@ export function TaskKanbanBoard({
 
   const handleStatusChangeInternal = React.useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
-      // Read latest state from ref to avoid stale closure with concurrent transitions
       const latestState = transitionStateRef.current;
       if (latestState.pendingTaskIds[taskId]) return;
 
@@ -1006,7 +1366,6 @@ export function TaskKanbanBoard({
       const currentStatus = targetItem?.status ?? "NEW";
       if (currentStatus === newStatus) return;
 
-      // 1. Immediately set pending & optimistic state in React state and ref
       const inFlightState: KanbanTransitionState = {
         ...latestState,
         pendingTaskIds: { ...latestState.pendingTaskIds, [taskId]: true },
@@ -1017,7 +1376,6 @@ export function TaskKanbanBoard({
       transitionStateRef.current = inFlightState;
       setTransitionState(inFlightState);
 
-      // 2. Perform transition
       const transitionResult = await executeKanbanStatusTransition(
         taskId,
         newStatus,
@@ -1026,7 +1384,6 @@ export function TaskKanbanBoard({
         onStatusChange
       );
 
-      // 3. Update state with functional updater and proper key deletion
       setTransitionState((prev) => {
         const nextPending = { ...prev.pendingTaskIds };
         delete nextPending[taskId];
@@ -1065,6 +1422,63 @@ export function TaskKanbanBoard({
     [allFilteredItems, onStatusChange]
   );
 
+  // ============================================================================
+  // Drag and Drop Logic (@dnd-kit)
+  // ============================================================================
+
+  const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px drag intent required before activating to avoid accidental drag on click
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const activeDragItem = React.useMemo(() => {
+    if (!activeDragId) return null;
+    return allFilteredItems.find((item) => item.id === activeDragId) ?? null;
+  }, [activeDragId, allFilteredItems]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+    triggerHaptic("selection");
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Case 1: Dropped over a column directly
+    if (KANBAN_COLUMNS.some((col) => col.id === overId)) {
+      const targetColumnStatus = overId as TaskStatus;
+      handleStatusChangeInternal(activeId, targetColumnStatus);
+      return;
+    }
+
+    // Case 2: Dropped over another card inside a column
+    const overItem = allFilteredItems.find((item) => item.id === overId);
+    if (overItem) {
+      const targetColumnStatus = mapTaskStatusToKanbanColumn(overItem.status);
+      const activeItem = allFilteredItems.find((item) => item.id === activeId);
+      const activeColumnStatus = activeItem ? mapTaskStatusToKanbanColumn(activeItem.status) : null;
+
+      if (activeColumnStatus !== targetColumnStatus) {
+        handleStatusChangeInternal(activeId, targetColumnStatus);
+      }
+    }
+  };
+
+  // Counts & Exclusions
   const totalExtractedCount = allFilteredItems.length;
   const totalVisibleCount =
     (groupedTasks.NEW?.length || 0) +
@@ -1075,162 +1489,112 @@ export function TaskKanbanBoard({
 
   return (
     <div
-      className={cn("w-full overflow-x-auto pb-4", className)}
+      className={cn("w-full flex flex-col min-h-0", className)}
       data-slot="task-kanban-board"
     >
-      {/* Flat compact summary (Zero Silent Loss Guarantee) */}
+      {/* Board Utility Strip: Minimal Count Notice + Display Settings Button */}
       <div
         data-slot="kanban-count-notice"
-        className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground mb-2 px-0.5"
+        className="flex items-center justify-between gap-2 pb-2 text-xs text-muted-foreground shrink-0 px-0.5"
       >
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-medium text-foreground">Kanban</span>
+          <span className="font-medium text-foreground text-xs">Kanban</span>
           <span>·</span>
-          <span className="font-mono tabular-nums font-medium text-foreground">
+          <span className="font-mono tabular-nums text-muted-foreground">
             {totalVisibleCount} / {totalExtractedCount} công việc
           </span>
           {excludedCount > 0 && (
-            <span className="text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded text-xs border border-amber-500/20 font-medium">
+            <span className="text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] border border-amber-500/20 font-medium">
               ({excludedCount} công việc bị huỷ / lưu trữ không hiển thị trên bảng)
             </span>
           )}
         </div>
+
+        {/* Display Settings Dropdown Toggle */}
+        <DisplaySettingsPopover
+          settings={displaySettings}
+          onToggle={handleToggleDisplaySetting}
+        />
       </div>
 
-      {/* Mobile Stage Tab Bar */}
-      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+      {/* Mobile Stage Tab Bar (Single column carousel switcher) */}
+      <div className="flex md:hidden items-center gap-1 overflow-x-auto pb-1.5 mb-1.5 scrollbar-none shrink-0">
         {KANBAN_COLUMNS.map((col, idx) => (
           <button
             key={col.id}
             type="button"
             onClick={() => scrollToColumn(idx)}
             className={cn(
-              "min-h-[40px] px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer active:scale-95",
+              "h-8 px-2.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5",
               activeColumnIndex === idx
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                : "bg-muted/40 text-muted-foreground hover:bg-muted"
             )}
           >
-            {col.title} ({groupedTasks[col.id]?.length || 0})
+            <span className={cn("size-1.5 rounded-full", col.dotColor)} />
+            <span>{col.title}</span>
+            <span className="font-mono tabular-nums opacity-80">({groupedTasks[col.id]?.length || 0})</span>
           </button>
         ))}
       </div>
 
-      {/* Responsive Board: Carousel on mobile, Grid on tablet/desktop */}
-      <div
-        ref={carouselRef}
-        onScroll={handleScroll}
-        className="flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-3.5 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-3.5 px-3.5 md:mx-0 md:px-0"
+      {/* DndContext Wrapping the Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       >
-        {KANBAN_COLUMNS.map((col, idx) => {
-          const colTasks = groupedTasks[col.id] || [];
-          const count = colTasks.length;
-          const limit = colLimits[col.id] || 30;
-          const displayedTasks = colTasks.slice(0, limit);
-          const IconComponent = COLUMN_ICONS[col.id];
+        {/* Horizontal Scrolling Board Surface (Linear Style) */}
+        <div
+          ref={carouselRef}
+          onScroll={handleScroll}
+          className="flex-1 flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-0.5 min-h-[400px]"
+        >
+          {KANBAN_COLUMNS.map((col, idx) => {
+            const colTasks = groupedTasks[col.id] || [];
+            const limit = colLimits[col.id] || 30;
 
-          return (
-            <div
-              key={col.id}
-              ref={(el) => {
-                columnRefs.current[idx] = el;
-              }}
-              className={cn(
-                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/30 p-3.5 transition-all",
-                col.bgClass
-              )}
-            >
-              {/* Column Header with Lucide icon and Micro-Pill Counter */}
+            return (
               <div
-                className={cn(
-                  "flex items-center justify-between pb-3 border-b border-border/50 pt-1 px-0.5",
-                  col.headerAccent
-                )}
+                key={col.id}
+                ref={(el) => {
+                  columnRefs.current[idx] = el;
+                }}
+                className="h-full flex flex-col"
               >
-                <div className="flex items-center gap-2">
-                  <IconComponent
-                    strokeWidth={1.5}
-                    className={cn("size-3.5 shrink-0", col.iconColor)}
-                  />
-                  <h3 className="text-xs font-semibold text-foreground tracking-tight">
-                    {col.title}
-                  </h3>
-                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-mono tabular-nums text-muted-foreground bg-muted/60 border border-border/40">
-                    {count}
-                  </span>
-                </div>
-
-                {onAddTask && (
-                  <button
-                    type="button"
-                    onClick={() => onAddTask()}
-                    title={`Thêm công việc vào mục ${col.title}`}
-                    className="size-6 flex items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-                  >
-                    <Plus strokeWidth={1.5} className="size-3.5" />
-                  </button>
-                )}
+                <DroppableColumn
+                  col={col}
+                  tasks={colTasks}
+                  displaySettings={displaySettings}
+                  transitionState={transitionState}
+                  onSelectTask={onSelectTask}
+                  onStatusChangeInternal={handleStatusChangeInternal}
+                  onAddTask={onAddTask}
+                  colLimit={limit}
+                  onIncreaseLimit={() =>
+                    setColLimits((prev) => ({
+                      ...prev,
+                      [col.id]: (prev[col.id] || 30) + 30,
+                    }))
+                  }
+                />
               </div>
+            );
+          })}
+        </div>
 
-              {/* Column Task Cards */}
-              <div className="flex-1 space-y-2.5 pt-3 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[160px] thin-scrollbar pr-0.5">
-                {colTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground/60 border border-dashed border-border/60 rounded-lg bg-card/40">
-                    <span className="text-xs font-medium">Không có nhiệm vụ</span>
-                  </div>
-                ) : (
-                  <>
-                    {displayedTasks.map((item) => (
-                      <KanbanCard
-                        key={item.id}
-                        item={item}
-                        isPending={Boolean(transitionState.pendingTaskIds[item.id])}
-                        errorMessage={transitionState.taskErrors[item.id]}
-                        lastAttemptedStatus={transitionState.lastAttemptedStatuses?.[item.id] ?? null}
-                        onSelectTask={onSelectTask}
-                        onStatusChange={handleStatusChangeInternal}
-                      />
-                    ))}
-                    {colTasks.length > limit && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setColLimits((prev) => ({
-                            ...prev,
-                            [col.id]: (prev[col.id] || 30) + 30,
-                          }))
-                        }
-                        className="w-full py-2 px-3 text-xs font-semibold font-mono tabular-nums rounded-lg border border-border/70 bg-card hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
-                      >
-                        Hiển thị thêm {Math.min(30, colTasks.length - limit)}{" "}
-                        việc (còn {colTasks.length - limit})
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Mobile Active Column Indicator Dots */}
-      <div className="flex md:hidden items-center justify-center gap-1.5 pt-3">
-        {KANBAN_COLUMNS.map((col, idx) => (
-          <button
-            key={col.id}
-            type="button"
-            onClick={() => scrollToColumn(idx)}
-            aria-label={`Chuyển tới cột ${col.title}`}
-            className={cn(
-              "h-1.5 rounded-full transition-all cursor-pointer",
-              activeColumnIndex === idx
-                ? "w-6 bg-primary"
-                : "w-2 bg-border hover:bg-muted-foreground/40"
-            )}
-          />
-        ))}
-      </div>
+        {/* Drag Overlay for Floating Card during DnD */}
+        <DragOverlay dropAnimation={null}>
+          {activeDragItem ? (
+            <KanbanCard
+              item={activeDragItem}
+              displaySettings={displaySettings}
+              isDragOverlay
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

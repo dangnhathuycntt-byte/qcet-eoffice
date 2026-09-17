@@ -13,8 +13,10 @@ import {
   executeKanbanStatusTransition,
   applyOptimisticOverrides,
   calculateMenuPosition,
+  DEFAULT_DISPLAY_SETTINGS,
   type KanbanItem,
   type KanbanTransitionState,
+  type KanbanDisplaySettings,
 } from "../src/components/tasks/task-kanban-board";
 import type { SchoolTask } from "../src/types/dashboard";
 
@@ -911,5 +913,114 @@ describe("Task 5 — executeKanbanStatusTransition contract", () => {
     // aria-busy is set on the card div when isPending=true; here isPending comes from
     // transitionState which starts empty, so aria-busy="false" in initial render
     assert.ok(html.includes("aria-busy"), "card must emit aria-busy attribute");
+  });
+});
+
+describe("Linear Kanban Redesign & Display Settings Contract", () => {
+  test("DEFAULT_DISPLAY_SETTINGS configures minimal defaults per Linear design", () => {
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showAssignee, true);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showDueDate, true);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showCategory, true);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showParentTask, true);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showProgress, false);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showLevel, false);
+    assert.equal(DEFAULT_DISPLAY_SETTINGS.showSubtaskCount, false);
+  });
+
+  test("Card conditionally renders properties based on displaySettings prop", () => {
+    const task: SchoolTask = {
+      id: "task-display-test",
+      title: "Thiết kế giao diện Linear",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Nguyễn Văn Test",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 2,
+      completedSubTasks: 1,
+      progressPercent: 50,
+    };
+
+    // 1. With progress enabled via displaySettings
+    const htmlWithProgress = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, {
+        tasks: [task],
+        displaySettings: {
+          ...DEFAULT_DISPLAY_SETTINGS,
+          showProgress: true,
+          showLevel: true,
+          showSubtaskCount: true,
+        },
+      })
+    );
+    assert.ok(htmlWithProgress.includes("Tiến độ"), "Must show progress when enabled");
+    assert.ok(htmlWithProgress.includes("Trường"), "Must show level when enabled");
+    assert.ok(htmlWithProgress.includes("1/2"), "Must show subtask count when enabled");
+
+    // 2. With all optional properties disabled
+    const htmlMinimal = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, {
+        tasks: [task],
+        displaySettings: {
+          showAssignee: false,
+          showDueDate: false,
+          showCategory: false,
+          showParentTask: false,
+          showProgress: false,
+          showLevel: false,
+          showSubtaskCount: false,
+        },
+      })
+    );
+    assert.ok(!htmlMinimal.includes("Tiến độ"), "Must not show progress when disabled");
+    assert.ok(!htmlMinimal.includes("Nguyễn Văn Test"), "Must not show assignee when disabled");
+    assert.ok(!htmlMinimal.includes("Hạn 30/09"), "Must not show due date when disabled");
+    assert.ok(htmlMinimal.includes("Thiết kế giao diện Linear"), "Must always show task title");
+  });
+
+  test("Columns are rendered directly on surface without heavy container boxes", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks: [] })
+    );
+
+    // Bỏ card/container lớn bao quanh từng cột (không còn rounded-2xl border bg-muted/30)
+    assert.ok(
+      !html.includes("rounded-2xl border border-border/60 bg-muted/30"),
+      "Columns must NOT be wrapped in heavy container cards"
+    );
+
+    // Cột mang data-slot="kanban-column" và width chuẩn 280px
+    assert.ok(
+      html.includes('data-slot="kanban-column"'),
+      "Column must render data-slot='kanban-column'"
+    );
+    assert.ok(
+      html.includes("w-[280px]"),
+      "Column width must be 280px (w-[280px])"
+    );
+
+    // Empty state is a lightweight '+' button, not a large dashed empty-state box
+    assert.ok(
+      !html.includes("Không có nhiệm vụ"),
+      "Empty state must not render verbose 'Không có nhiệm vụ' placeholder"
+    );
+  });
+
+  test("Display settings popover toggle button is present on the board header", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks: [] })
+    );
+
+    assert.ok(
+      html.includes('aria-label="Tùy chọn hiển thị thẻ"'),
+      "Board must render display settings button with aria-label='Tùy chọn hiển thị thẻ'"
+    );
+    assert.ok(
+      html.includes("Hiển thị"),
+      "Board must render 'Hiển thị' text on larger screens"
+    );
   });
 });
