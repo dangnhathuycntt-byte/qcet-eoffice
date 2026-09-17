@@ -310,17 +310,21 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
   });
 
   describe("6. Fast Block Handle & Multi-Select Notion Interaction Suite", () => {
-    it("strictly separates hover state from selected state without accidental selection", () => {
+    it("strictly separates hover state from selected state without accidental selection or heavy borders", () => {
       // 1. Hover has neutral subtle background when not selected
       assert.ok(
         componentContent.includes('!isSelected && "hover:bg-muted/30"'),
         "Hover must apply subtle neutral background only when not selected"
       );
 
-      // 2. Selected state uses persistent blueish background and ring
+      // 2. Selected state uses light tint background without border or ring
       assert.ok(
-        componentContent.includes('isSelected && "bg-primary/10 ring-1 ring-primary/30 shadow-2xs"'),
-        "Selected state must have dedicated persistent visual highlight"
+        componentContent.includes('isSelected && "bg-primary/[0.08]"'),
+        "Selected state must have light tint background without heavy border or ring"
+      );
+      assert.ok(
+        !componentContent.includes("ring-1 ring-primary/30"),
+        "Selected state must NOT contain heavy ring border"
       );
     });
 
@@ -378,7 +382,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
       // 2. Insertion indicator
       assert.ok(
-        componentContent.includes('isDragOver && "ring-2 ring-primary/70 bg-primary/5"'),
+        componentContent.includes('isDragOver && "bg-primary/10"'),
         "Must render clean insertion line indicator on drag over"
       );
 
@@ -394,6 +398,67 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         componentContent.includes("onFocus={() => {") &&
           componentContent.includes("setSelectedBlockIds(new Set())"),
         "Focusing text input must clear block selection"
+      );
+    });
+  });
+
+  describe("7. Empty Block Prevention, Auto-Sanitization & Non-Persistence", () => {
+    it("identifies meaningful blocks and rejects placeholder-only empty blocks", () => {
+      const { isMeaningfulBlock } = require("@/components/tasks/detail/task-notion-block-content");
+
+      // Divider is always meaningful
+      assert.equal(isMeaningfulBlock({ id: "1", type: "divider", content: "" }), true);
+
+      // Text / Heading / Quote / List require non-whitespace content
+      assert.equal(isMeaningfulBlock({ id: "2", type: "text", content: "   " }), false);
+      assert.equal(isMeaningfulBlock({ id: "3", type: "text", content: "Nội dung" }), true);
+      assert.equal(isMeaningfulBlock({ id: "4", type: "heading", content: "" }), false);
+      assert.equal(isMeaningfulBlock({ id: "5", type: "bulleted_list", content: "" }), false);
+      assert.equal(isMeaningfulBlock({ id: "6", type: "checklist", content: "" }), false);
+      assert.equal(isMeaningfulBlock({ id: "7", type: "callout", content: "" }), false);
+      assert.equal(isMeaningfulBlock({ id: "8", type: "callout", content: "Lưu ý quan trọng" }), true);
+
+      // Link requires title or actual URL
+      assert.equal(isMeaningfulBlock({ id: "9", type: "link", content: "", url: "https://" }), false);
+      assert.equal(isMeaningfulBlock({ id: "10", type: "link", content: "QCET", url: "https://" }), true);
+      assert.equal(isMeaningfulBlock({ id: "11", type: "link", content: "", url: "https://qcet.edu.vn" }), true);
+
+      // Attachment requires actual file or url
+      assert.equal(isMeaningfulBlock({ id: "12", type: "attachment", content: "", fileName: "Tài liệu đính kèm" }), false);
+      assert.equal(isMeaningfulBlock({ id: "13", type: "attachment", content: "Báo cáo.pdf", fileName: "Báo cáo.pdf" }), true);
+    });
+
+    it("filters legacy empty blocks on parse and never persists empty blocks to storage", () => {
+      const payloadWithEmptyBlocks = JSON.stringify({
+        qcetBlocks: true,
+        version: 1,
+        blocks: [
+          { id: "e1", type: "callout", content: "" },
+          { id: "e2", type: "link", content: "", url: "https://" },
+          { id: "e3", type: "bulleted_list", content: "   " },
+          { id: "m1", type: "text", content: "Văn bản hợp lệ" },
+          { id: "e4", type: "heading", content: "" },
+        ],
+      });
+
+      const parsed = parseContentToBlocks(payloadWithEmptyBlocks);
+      assert.equal(parsed.length, 1);
+      assert.equal(parsed[0].content, "Văn bản hợp lệ");
+
+      const serialized = serializeBlocksToContent([
+        { id: "e1", type: "callout", content: "" },
+        { id: "m1", type: "text", content: "Văn bản hợp lệ" },
+      ]);
+      const reserialized = JSON.parse(serialized);
+      assert.equal(reserialized.blocks.length, 1);
+      assert.equal(reserialized.blocks[0].content, "Văn bản hợp lệ");
+    });
+
+    it("wires handleBlockBlur on input fields to clean up empty blocks when leaving", () => {
+      assert.ok(
+        componentContent.includes("handleBlockBlur") &&
+          componentContent.includes("isMeaningfulBlock"),
+        "Must implement handleBlockBlur to remove empty blocks when focus leaves"
       );
     });
   });

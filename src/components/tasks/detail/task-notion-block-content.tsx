@@ -92,8 +92,47 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
 }
 
 /**
+ * Kiểm tra xem một block có chứa dữ liệu thực tế hay không.
+ * Các block rỗng (chỉ có placeholder) không được lưu hoặc hiển thị như dữ liệu thật.
+ */
+export function isMeaningfulBlock(b: NotionBlockItem | null | undefined): boolean {
+  if (!b) return false;
+
+  // 1. Divider luôn là content có ý nghĩa dù không có text
+  if (b.type === "divider") return true;
+
+  // 2. File / Attachment: chỉ có ý nghĩa khi có URL hoặc tên file thực tế (khác placeholder)
+  if (b.type === "attachment") {
+    const hasValidUrl = Boolean(b.url && b.url.trim() && b.url !== "https://" && b.url !== "https:///");
+    const hasValidFile = Boolean(
+      b.fileName &&
+      b.fileName.trim() &&
+      b.fileName !== "Tài liệu đính kèm" &&
+      b.fileName !== "Tên tài liệu đính kèm..."
+    );
+    const hasContent = Boolean(
+      b.content &&
+      b.content.trim() &&
+      b.content !== "Tài liệu đính kèm" &&
+      b.content !== "Tên tài liệu đính kèm..."
+    );
+    return hasValidUrl || hasValidFile || hasContent;
+  }
+
+  // 3. Link: chỉ có ý nghĩa khi có title/content hoặc có URL thực tế
+  if (b.type === "link") {
+    const hasValidUrl = Boolean(b.url && b.url.trim() && b.url !== "https://" && b.url !== "https:///");
+    const hasContent = Boolean(b.content && b.content.trim());
+    return hasValidUrl || hasContent;
+  }
+
+  // 4. Text, heading, list, checklist, quote, callout: cần content có dữ liệu
+  return Boolean(b.content && b.content.trim().length > 0);
+}
+
+/**
  * Phân tích chuỗi mô tả thành danh sách các block Notion.
- * Dọn sạch mọi widget legacy (như subtasks_view) khỏi model document.
+ * Dọn sạch mọi widget legacy (như subtasks_view) và loại bỏ các empty block cũ khỏi model document.
  */
 export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
   if (!raw || !raw.trim()) {
@@ -104,9 +143,9 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
     if (raw.includes('"qcetBlocks":true')) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-        // Dọn dữ liệu legacy: loại bỏ subtasks widgets khỏi document model
+        // Dọn dữ liệu legacy: loại bỏ subtasks widgets VÀ loại bỏ các block rỗng không có dữ liệu thật
         const cleanedBlocks = parsed.blocks.filter(
-          (b: any) => b && !LEGACY_STRIP_TYPES.has(b.type)
+          (b: any) => b && !LEGACY_STRIP_TYPES.has(b.type) && isMeaningfulBlock(b)
         );
         if (cleanedBlocks.length > 0) {
           return cleanedBlocks;
@@ -124,22 +163,18 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
 
 /**
  * Đóng gói danh sách blocks thành chuỗi JSON lưu vào DB.
+ * Chỉ persist các block có ý nghĩa, loại bỏ hoàn toàn các block rỗng.
  */
 export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
-  // Dọn các block legacy nếu còn sót và các block text rỗng ở cuối
-  const cleaned = blocks.filter((b) => !LEGACY_STRIP_TYPES.has(b.type));
-  while (
-    cleaned.length > 1 &&
-    cleaned[cleaned.length - 1].type === "text" &&
-    !cleaned[cleaned.length - 1].content.trim()
-  ) {
-    cleaned.pop();
-  }
+  const cleaned = blocks.filter(
+    (b) => !LEGACY_STRIP_TYPES.has(b.type) && isMeaningfulBlock(b)
+  );
 
-  // Nếu chỉ có đúng 1 block text và rỗng
-  if (cleaned.length === 1 && cleaned[0].type === "text" && !cleaned[0].content.trim()) {
+  // Nếu không còn block nào có ý nghĩa
+  if (cleaned.length === 0) {
     return "";
   }
+
   return JSON.stringify({
     qcetBlocks: true,
     version: 1,
@@ -347,18 +382,51 @@ export function TaskNotionBlockContent({
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Bỏ selection và context menu khi click ra ngoài editor
+  // Debounced Autosave
+  const triggerAutoSave = React.useCallback(
+    (newBlocks: NotionBlockItem[]) => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          const payload = serializeBlocksToContent(newBlocks);
+          await onSaveContent(payload);
+        } catch {
+          // silent autosave fallback
+        }
+      }, 800);
+    },
+    [onSaveContent]
+  );
+
+  // Bỏ selection, context menu và dọn sạch block rỗng khi click ra ngoài editor
   React.useEffect(() => {
     const handleGlobalPointerDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setSelectedBlockIds(new Set());
         setAnchorBlockId(null);
         setActiveContextMenu(null);
+
+        // Dọn dẹp bất kỳ block rỗng nào chưa được lưu (trừ trailing block)
+        setBlocks((prev) => {
+          const meaningful = prev.filter((b) => isMeaningfulBlock(b));
+          if (meaningful.length === prev.length) return prev;
+
+          if (meaningful.length === 0) {
+            const reset = [{ id: `b-${Date.now()}-1`, type: "text" as const, content: "" }];
+            triggerAutoSave(reset);
+            return reset;
+          }
+
+          triggerAutoSave(meaningful);
+          return meaningful;
+        });
       }
     };
     window.addEventListener("mousedown", handleGlobalPointerDown);
     return () => window.removeEventListener("mousedown", handleGlobalPointerDown);
-  }, []);
+  }, [triggerAutoSave]);
 
   // Đồng bộ khi initialDescription từ server đổi
   React.useEffect(() => {
@@ -429,24 +497,6 @@ export function TaskNotionBlockContent({
       return matchTitle || matchDesc || matchGroup || matchShortcut;
     });
   }, [menuSearchQuery, blocks]);
-
-  // Debounced Autosave
-  const triggerAutoSave = React.useCallback(
-    (newBlocks: NotionBlockItem[]) => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      debounceTimerRef.current = setTimeout(async () => {
-        try {
-          const payload = serializeBlocksToContent(newBlocks);
-          await onSaveContent(payload);
-        } catch {
-          // silent autosave fallback
-        }
-      }, 800);
-    },
-    [onSaveContent]
-  );
 
   React.useEffect(() => {
     setMounted(true);
@@ -640,6 +690,43 @@ export function TaskNotionBlockContent({
       const next = prev.map((b) => (b.id === blockId ? { ...b, ...updates } : b));
       triggerAutoSave(next);
       return next;
+    });
+  };
+
+  // Xử lý blur khỏi một block: tự động remove block nếu không có dữ liệu thực tế
+  const handleBlockBlur = (e: React.FocusEvent, blockId: string) => {
+    // Nếu focus chuyển sang một phần tử khác bên trong CÙNG block wrapper (ví dụ chuyển giữa title và url của link/attachment)
+    const wrapperEl = blockWrapperRefs.current.get(blockId);
+    if (wrapperEl && e.relatedTarget && wrapperEl.contains(e.relatedTarget as Node)) {
+      return;
+    }
+
+    setBlocks((prev) => {
+      const current = prev.find((b) => b.id === blockId);
+      if (!current) return prev;
+
+      // Divider luôn giữ
+      if (current.type === "divider") return prev;
+
+      // Nếu block rỗng (không có dữ liệu ý nghĩa):
+      if (!isMeaningfulBlock(current)) {
+        // Nếu đây là block duy nhất trong editor:
+        if (prev.length <= 1) {
+          if (current.type !== "text" || current.content !== "") {
+            const next = [{ id: current.id, type: "text" as const, content: "" }];
+            triggerAutoSave(next);
+            return next;
+          }
+          return prev;
+        }
+
+        // Tự động remove block rỗng khỏi document
+        const next = prev.filter((b) => b.id !== blockId);
+        triggerAutoSave(next);
+        return next;
+      }
+
+      return prev;
     });
   };
 
@@ -949,9 +1036,28 @@ export function TaskNotionBlockContent({
       return;
     }
 
-    // 2. Phím Esc khi đang edit text: chuyển current block sang selected
+    // 2. Phím Esc khi đang edit text:
+    // Nếu block hiện tại rỗng (và không phải block text duy nhất): tự động rollback/remove block
     if (e.key === "Escape") {
       e.preventDefault();
+      if (!isMeaningfulBlock(block)) {
+        if (blocks.length > 1) {
+          setBlocks((prev) => {
+            const next = prev.filter((b) => b.id !== block.id);
+            triggerAutoSave(next);
+            return next;
+          });
+          const targetBlock = blocks[index - 1] || blocks[index + 1];
+          if (targetBlock) {
+            blockInputRefs.current.get(targetBlock.id)?.focus();
+          } else {
+            trailingInputRef.current?.focus();
+          }
+          return;
+        }
+      }
+
+      // Nếu có nội dung: chuyển current block sang selected
       setSelectedBlockIds(new Set([block.id]));
       setAnchorBlockId(block.id);
       blockWrapperRefs.current.get(block.id)?.focus();
@@ -1145,8 +1251,8 @@ export function TaskNotionBlockContent({
               className={cn(
                 "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-md transition-colors duration-75 outline-hidden",
                 !isSelected && "hover:bg-muted/30",
-                isDragOver && "ring-2 ring-primary/70 bg-primary/5",
-                isSelected && "bg-primary/10 ring-1 ring-primary/30 shadow-2xs"
+                isDragOver && "bg-primary/10",
+                isSelected && "bg-primary/[0.08]"
               )}
             >
               {/* Gutter trái: Handle ⋮⋮ (Hover hiện icon, click/shift/cmd để chọn block, drag để sắp xếp) */}
@@ -1213,6 +1319,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onInput={(e) => autoResizeTextarea(e.currentTarget)}
                       onChange={(e) => {
                         handleUpdateBlock(block.id, { content: e.target.value });
@@ -1240,6 +1347,7 @@ export function TaskNotionBlockContent({
                         setAnchorBlockId(null);
                       }
                     }}
+                    onBlur={(e) => handleBlockBlur(e, block.id)}
                     onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                     onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                     placeholder={!block.content ? "Tiêu đề..." : undefined}
@@ -1270,6 +1378,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Danh sách..." : undefined}
@@ -1298,6 +1407,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Danh sách..." : undefined}
@@ -1336,6 +1446,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Việc cần làm..." : undefined}
@@ -1364,6 +1475,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Trích dẫn..." : undefined}
@@ -1390,6 +1502,7 @@ export function TaskNotionBlockContent({
                           setAnchorBlockId(null);
                         }
                       }}
+                      onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Ghi chú lưu ý..." : undefined}
@@ -1421,6 +1534,7 @@ export function TaskNotionBlockContent({
                               setAnchorBlockId(null);
                             }
                           }}
+                          onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) =>
                             handleUpdateBlock(block.id, {
                               fileName: e.target.value,
@@ -1440,6 +1554,7 @@ export function TaskNotionBlockContent({
                               setAnchorBlockId(null);
                             }
                           }}
+                          onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           placeholder="URL tải xuống (https://...)"
                           className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
@@ -1476,6 +1591,7 @@ export function TaskNotionBlockContent({
                               setAnchorBlockId(null);
                             }
                           }}
+                          onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                           placeholder="Tiêu đề liên kết..."
                           className="w-full bg-transparent font-medium text-foreground focus:outline-hidden cursor-text"
@@ -1490,6 +1606,7 @@ export function TaskNotionBlockContent({
                               setAnchorBlockId(null);
                             }
                           }}
+                          onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           placeholder="https://..."
                           className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
