@@ -276,8 +276,12 @@ export function VietnameseDatePicker({
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           className={cn(
-            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-[11px] font-medium transition-colors cursor-pointer select-none",
-            error && "border-rose-300 bg-rose-50 text-rose-700",
+            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none",
+            error
+              ? "border-rose-300 bg-rose-50 text-rose-700"
+              : isOpen
+              ? "border-border bg-accent text-foreground shadow-2xs"
+              : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground",
             hasValue ? "text-foreground" : "text-muted-foreground",
             disabled && "opacity-50 cursor-not-allowed"
           )}

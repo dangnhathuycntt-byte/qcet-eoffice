@@ -214,14 +214,22 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     .map(a => a.user?.name || '')
     .filter(Boolean);
 
-  // Ánh xạ trạng thái chuẩn hóa
-  const statusMap: Record<string, SchoolTask['status']> = {
-    NOT_STARTED: 'not_started',
-    IN_PROGRESS: 'in_progress',
-    WAITING_APPROVAL: 'waiting_approval',
-    COMPLETED: 'completed',
-    OVERDUE: 'overdue',
-    CANCELLED: 'cancelled'
+  // Ánh xạ trạng thái chuẩn hóa (chuẩn TaskStatus viết hoa)
+  const statusMap: Record<string, TaskStatus> = {
+    NOT_STARTED: 'NOT_STARTED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    WAITING_APPROVAL: 'WAITING_APPROVAL',
+    COMPLETED: 'COMPLETED',
+    OVERDUE: 'OVERDUE',
+    CANCELLED: 'CANCELLED',
+    not_started: 'NOT_STARTED',
+    in_progress: 'IN_PROGRESS',
+    waiting_approval: 'WAITING_APPROVAL',
+    completed: 'COMPLETED',
+    overdue: 'OVERDUE',
+    cancelled: 'CANCELLED',
+    NEW: 'NOT_STARTED',
+    NEEDS_REVIEW: 'WAITING_APPROVAL',
   };
 
   // Ánh xạ độ ưu tiên chuẩn hóa (chuẩn TaskPriority viết hoa)

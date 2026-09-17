@@ -221,13 +221,16 @@ export function LinearPropertiesSidebar({
   }, []);
 
   // Status mapping
-  const currentStatus = task.status;
-  const normalizedStatus =
-    currentStatus === "NEW"
-      ? "NOT_STARTED"
-      : currentStatus === "NEEDS_REVIEW" || currentStatus === "PENDING_EXECUTIVE_APPROVAL"
+  const rawStatus = (task.status || "NOT_STARTED") as string;
+  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
+    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
+      ? "COMPLETED"
+      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
+      ? "IN_PROGRESS"
+      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "PENDING_EXECUTIVE_APPROVAL"
       ? "WAITING_APPROVAL"
-      : currentStatus;
+      : "NOT_STARTED"
+    : "NOT_STARTED";
 
   const activeStatusOption =
     STATUS_OPTIONS.find((opt) => opt.value === normalizedStatus) || STATUS_OPTIONS[0];

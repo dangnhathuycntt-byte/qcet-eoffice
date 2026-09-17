@@ -304,8 +304,19 @@ export function TaskIdentityBlock({
     }
   };
 
+  const rawStatus = (task as any).status || "NOT_STARTED";
+  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
+    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
+      ? "COMPLETED"
+      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
+      ? "IN_PROGRESS"
+      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "CHO_DUYET"
+      ? "WAITING_APPROVAL"
+      : "NOT_STARTED"
+    : "NOT_STARTED";
+
   const currentStatusObj =
-    STATUS_OPTIONS.find((s) => s.value === task.status) || STATUS_OPTIONS[0];
+    STATUS_OPTIONS.find((s) => s.value === normalizedStatus) || STATUS_OPTIONS[0];
 
   const rawPriority =
     (task as any).priority || (isSchool ? schoolTask?.priority : "NORMAL") || "NORMAL";
@@ -418,7 +429,7 @@ export function TaskIdentityBlock({
                   }}
                   className={cn(
                     "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                    task.status === opt.value
+                    normalizedStatus === opt.value
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-foreground hover:bg-muted"
                   )}
@@ -427,7 +438,7 @@ export function TaskIdentityBlock({
                     <span className={cn("size-2 rounded-full", opt.dotClass)} />
                     <span>{opt.label}</span>
                   </div>
-                  {task.status === opt.value && (
+                  {normalizedStatus === opt.value && (
                     <Check className="size-3.5 text-primary" strokeWidth={1.5} />
                   )}
                 </button>

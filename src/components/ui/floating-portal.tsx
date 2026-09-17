@@ -19,6 +19,9 @@ export interface FloatingPortalProps {
   ariaLabel?: string;
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
 export function FloatingPortal({
   isOpen,
   onClose,
@@ -41,8 +44,13 @@ export function FloatingPortal({
     placement: "top" | "bottom";
   } | null>(null);
 
+  // Smooth mount/unmount state for fluid enter & exit animations
+  const [isMounted, setIsMounted] = React.useState(isOpen);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+
+  // Position calculator with viewport clamping and flip detection
   const updatePosition = React.useCallback(() => {
-    if (!triggerRef.current || !isOpen) return;
+    if (!triggerRef.current) return;
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
@@ -76,7 +84,7 @@ export function FloatingPortal({
       }
     }
 
-    // Clamp inside viewport
+    // Clamp inside viewport horizontally
     if (left + popoverWidth > viewportWidth - collisionPadding) {
       left = viewportWidth - collisionPadding - popoverWidth;
     }
@@ -90,13 +98,45 @@ export function FloatingPortal({
       maxHeight: Math.min(maxHeight, viewportHeight - collisionPadding * 2),
       placement,
     });
-  }, [triggerRef, isOpen, align, offset, collisionPadding]);
+  }, [triggerRef, align, offset, collisionPadding]);
 
-  // Cập nhật vị trí khi mở & khi resize/scroll
+  // Handle open/close with graceful enter & exit transitions
   React.useEffect(() => {
-    if (!isOpen) return;
+    let animTimer: ReturnType<typeof setTimeout> | undefined;
+    let frameId: number | undefined;
 
-    updatePosition();
+    if (isOpen) {
+      setIsMounted(true);
+      // Double rAF ensures the layout is painted and coordinates applied before triggering transition
+      frameId = requestAnimationFrame(() => {
+        frameId = requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+      animTimer = setTimeout(() => {
+        setIsMounted(false);
+        setCoords(null);
+      }, 140); // Matches exit duration
+    }
+
+    return () => {
+      if (animTimer) clearTimeout(animTimer);
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [isOpen]);
+
+  // Measure and position synchronously before paint
+  useIsomorphicLayoutEffect(() => {
+    if (isMounted) {
+      updatePosition();
+    }
+  }, [isMounted, updatePosition]);
+
+  // Keep position updated on scroll and resize
+  React.useEffect(() => {
+    if (!isMounted) return;
 
     const handleScrollOrResize = () => {
       updatePosition();
@@ -109,11 +149,11 @@ export function FloatingPortal({
       window.removeEventListener("scroll", handleScrollOrResize, true);
       window.removeEventListener("resize", handleScrollOrResize);
     };
-  }, [isOpen, updatePosition]);
+  }, [isMounted, updatePosition]);
 
   // Click outside & Escape handling
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isMounted) return;
 
     const handlePointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
@@ -143,9 +183,12 @@ export function FloatingPortal({
       document.removeEventListener("touchstart", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [isOpen, triggerRef, onClose]);
+  }, [isMounted, triggerRef, onClose]);
 
-  if (!isOpen) return null;
+  if (!isMounted && !isOpen) return null;
+
+  const placement = coords?.placement ?? "bottom";
+  const isReady = coords !== null;
 
   const content = (
     <div
@@ -155,18 +198,26 @@ export function FloatingPortal({
       data-floating-portal="true"
       style={{
         position: "fixed",
-        top: coords ? `${coords.top}px` : "-9999px",
-        left: coords ? `${coords.left}px` : "-9999px",
+        top: coords ? `${coords.top}px` : "0px",
+        left: coords ? `${coords.left}px` : "0px",
         maxHeight: coords ? `${coords.maxHeight}px` : undefined,
         zIndex: 9999,
         minWidth: minWidth ?? undefined,
         maxWidth: maxWidth ?? undefined,
+        transformOrigin: placement === "top" ? "bottom center" : "top center",
+        visibility: isReady || typeof document === "undefined" ? "visible" : "hidden",
+        opacity: isAnimating ? 1 : 0,
+        transform: isAnimating
+          ? "scale(1) translateY(0)"
+          : placement === "top"
+          ? "scale(0.96) translateY(4px)"
+          : "scale(0.96) translateY(-4px)",
+        transition:
+          "opacity 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1)",
+        willChange: "transform, opacity",
       }}
       className={cn(
-        "rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-y-auto",
-        coords?.placement === "top"
-          ? "animate-in fade-in-0 slide-in-from-bottom-1 duration-100"
-          : "animate-in fade-in-0 slide-in-from-top-1 duration-100",
+        "rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-2xl overflow-y-auto",
         className
       )}
     >

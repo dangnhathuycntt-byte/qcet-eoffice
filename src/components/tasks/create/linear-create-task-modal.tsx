@@ -551,10 +551,20 @@ export function LinearCreateTaskModal({
                 onClick={() =>
                   setOpenDropdown(openDropdown === "dept" ? null : "dept")
                 }
-                className="inline-flex items-center gap-1 font-medium text-foreground hover:text-foreground/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5 cursor-pointer"
+                className={cn(
+                  "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
+                  openDropdown === "dept"
+                    ? "text-foreground bg-accent shadow-2xs"
+                    : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
+                )}
               >
                 <span>{currentDept.name}</span>
-                <ChevronDown className="size-3 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-3 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "dept" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               {/* Department Floating Portal Dropdown */}
@@ -562,7 +572,7 @@ export function LinearCreateTaskModal({
                 isOpen={openDropdown === "dept"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={deptTriggerRef}
-                className="w-64 py-1"
+                className="w-64 p-1 space-y-0.5"
                 ariaLabel="Chọn đơn vị phòng ban"
               >
                 {QCET_DEPARTMENT_GROUPS.map((dept) => (
@@ -576,10 +586,10 @@ export function LinearCreateTaskModal({
                       setOpenDropdown(null);
                     }}
                     className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent transition-colors cursor-pointer",
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
                       selectedDeptCode === dept.code
                         ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground"
+                        : "text-foreground hover:bg-accent/70"
                     )}
                   >
                     <span className="truncate">{dept.name}</span>
@@ -696,23 +706,33 @@ export function LinearCreateTaskModal({
                 onClick={() =>
                   setOpenDropdown(openDropdown === "status" ? null : "status")
                 }
-                className="inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground transition-colors cursor-pointer select-none"
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "status"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
               >
                 <span
                   className={cn(
-                    "size-1.5 rounded-full",
-                    status === "IN_PROGRESS" ? "bg-blue-500" : "bg-muted-foreground"
+                    "size-1.5 rounded-full transition-transform duration-150",
+                    status === "IN_PROGRESS" ? "bg-blue-500 scale-110" : "bg-muted-foreground"
                   )}
                 />
                 <span>{status === "IN_PROGRESS" ? "Đang thực hiện" : "Mới"}</span>
-                <ChevronDown className="size-2.5 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "status" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               <FloatingPortal
                 isOpen={openDropdown === "status"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={statusTriggerRef}
-                className="w-36 py-1"
+                className="w-36 p-1 space-y-0.5"
                 ariaLabel="Chọn trạng thái"
               >
                 <button
@@ -721,10 +741,18 @@ export function LinearCreateTaskModal({
                     setStatus("IN_PROGRESS");
                     setOpenDropdown(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
+                    status === "IN_PROGRESS" ? "bg-accent font-semibold" : "hover:bg-accent/70"
+                  )}
                 >
-                  <span className="size-1.5 rounded-full bg-blue-500" />
-                  <span>Đang thực hiện</span>
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-blue-500" />
+                    <span>Đang thực hiện</span>
+                  </div>
+                  {status === "IN_PROGRESS" && (
+                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                  )}
                 </button>
                 <button
                   type="button"
@@ -732,10 +760,18 @@ export function LinearCreateTaskModal({
                     setStatus("TODO");
                     setOpenDropdown(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
+                    status === "TODO" ? "bg-accent font-semibold" : "hover:bg-accent/70"
+                  )}
                 >
-                  <span className="size-1.5 rounded-full bg-muted-foreground/60" />
-                  <span>Mới</span>
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                    <span>Mới</span>
+                  </div>
+                  {status === "TODO" && (
+                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                  )}
                 </button>
               </FloatingPortal>
             </div>
@@ -747,21 +783,31 @@ export function LinearCreateTaskModal({
                 onClick={() =>
                   setOpenDropdown(openDropdown === "priority" ? null : "priority")
                 }
-                className="inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground transition-colors cursor-pointer select-none"
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "priority"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
               >
                 <Flag
                   className={cn("size-3", PRIORITY_CONFIG[priority].iconColor)}
                   strokeWidth={1.5}
                 />
                 <span>{PRIORITY_CONFIG[priority].label}</span>
-                <ChevronDown className="size-2.5 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "priority" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               <FloatingPortal
                 isOpen={openDropdown === "priority"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={priorityTriggerRef}
-                className="w-36 py-1"
+                className="w-40 p-1 space-y-0.5"
                 ariaLabel="Chọn mức độ ưu tiên"
               >
                 {PRIORITY_KEYS.map((p) => (
@@ -773,10 +819,10 @@ export function LinearCreateTaskModal({
                       setOpenDropdown(null);
                     }}
                     className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
                       priority === p
                         ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground"
+                        : "text-foreground hover:bg-accent/70"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -786,7 +832,7 @@ export function LinearCreateTaskModal({
                       />
                       <span>{PRIORITY_CONFIG[p].label}</span>
                     </div>
-                    {priority === p && <Check className="size-3 text-foreground" strokeWidth={1.5} />}
+                    {priority === p && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
                   </button>
                 ))}
               </FloatingPortal>
@@ -800,9 +846,11 @@ export function LinearCreateTaskModal({
                   setOpenDropdown(openDropdown === "dri" ? null : "dri")
                 }
                 className={cn(
-                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-colors cursor-pointer select-none",
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
                   fieldErrors.lead
                     ? "bg-rose-50 text-rose-700 border-rose-300"
+                    : openDropdown === "dri"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
                     : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
                 )}
               >
@@ -810,14 +858,19 @@ export function LinearCreateTaskModal({
                 <span>
                   {leadAssigneeName ? `Chủ trì: ${leadAssigneeName}` : "Chủ trì *"}
                 </span>
-                <ChevronDown className="size-2.5 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "dri" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               <FloatingPortal
                 isOpen={openDropdown === "dri"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={driTriggerRef}
-                className="w-56 py-1 max-h-52"
+                className="w-60 p-1 space-y-0.5 max-h-56"
                 ariaLabel="Chọn người chủ trì"
               >
                 {availablePersonnel.map((person) => (
@@ -832,10 +885,10 @@ export function LinearCreateTaskModal({
                       setOpenDropdown(null);
                     }}
                     className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
                       leadAssigneeName === person.name
                         ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground"
+                        : "text-foreground hover:bg-accent/70"
                     )}
                   >
                     <div>
@@ -857,7 +910,12 @@ export function LinearCreateTaskModal({
                 onClick={() =>
                   setOpenDropdown(openDropdown === "co" ? null : "co")
                 }
-                className="inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground transition-colors cursor-pointer select-none"
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "co"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
               >
                 <Users className="size-3 text-muted-foreground" strokeWidth={1.5} />
                 <span>
@@ -865,14 +923,19 @@ export function LinearCreateTaskModal({
                     ? `Phối hợp (${coAssignees.length})`
                     : "+ Phối hợp"}
                 </span>
-                <ChevronDown className="size-2.5 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "co" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               <FloatingPortal
                 isOpen={openDropdown === "co"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={coTriggerRef}
-                className="w-56 py-1 max-h-52"
+                className="w-60 p-1 space-y-0.5 max-h-56"
                 ariaLabel="Chọn nhân sự phối hợp"
               >
                 {availablePersonnel
@@ -890,7 +953,7 @@ export function LinearCreateTaskModal({
                               : [...prev, person.name]
                           );
                         }}
-                        className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent text-foreground cursor-pointer transition-colors"
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between text-foreground hover:bg-accent/70 active:scale-[0.99] cursor-pointer transition-all duration-150"
                       >
                         <div>
                           <div className="font-medium">{person.name}</div>
@@ -898,7 +961,7 @@ export function LinearCreateTaskModal({
                         </div>
                         <div
                           className={cn(
-                            "size-4 rounded border flex items-center justify-center text-[10px]",
+                            "size-4 rounded border flex items-center justify-center text-[10px] transition-colors",
                             isSelected
                               ? "bg-primary border-primary text-primary-foreground"
                               : "border-border"
@@ -954,20 +1017,30 @@ export function LinearCreateTaskModal({
                 onClick={() =>
                   setOpenDropdown(openDropdown === "cat" ? null : "cat")
                 }
-                className="inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground transition-colors cursor-pointer select-none"
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "cat"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
               >
                 <Tag className="size-3 text-muted-foreground" strokeWidth={1.5} />
                 <span>
                   {CATEGORY_OPTIONS.find((c) => c.id === category)?.label || "Lĩnh vực"}
                 </span>
-                <ChevronDown className="size-2.5 text-muted-foreground" />
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "cat" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
               <FloatingPortal
                 isOpen={openDropdown === "cat"}
                 onClose={() => setOpenDropdown(null)}
                 triggerRef={catTriggerRef}
-                className="w-48 py-1"
+                className="w-52 p-1 space-y-0.5"
                 ariaLabel="Chọn lĩnh vực công việc"
               >
                 {CATEGORY_OPTIONS.map((opt) => (
@@ -979,14 +1052,14 @@ export function LinearCreateTaskModal({
                       setOpenDropdown(null);
                     }}
                     className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
                       category === opt.id
                         ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground"
+                        : "text-foreground hover:bg-accent/70"
                     )}
                   >
                     <span>{opt.label}</span>
-                    {category === opt.id && <Check className="size-3 text-foreground" strokeWidth={1.5} />}
+                    {category === opt.id && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
                   </button>
                 ))}
               </FloatingPortal>
