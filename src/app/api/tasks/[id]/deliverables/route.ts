@@ -121,3 +121,45 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
   }
 }
+
+export async function DELETE(req: Request, routeContext: RouteContext) {
+  let requestId = crypto.randomUUID();
+  try {
+    assertCsrf(req);
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const { id: taskId } = await Promise.resolve(routeContext.params);
+    const url = new URL(req.url);
+    const deliverableId =
+      url.searchParams.get('deliverableId') || url.searchParams.get('id');
+
+    if (!deliverableId) {
+      throw new NotFoundError('Mã tài liệu minh chứng (deliverableId) là bắt buộc');
+    }
+
+    const result = await taskCommandService.deleteDeliverable(
+      context,
+      taskId,
+      deliverableId
+    );
+
+    return apiSuccess(
+      {
+        success: true,
+        deliverableId,
+        deletedId: deliverableId,
+        data: result,
+      },
+      {
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId: context.requestId,
+      }
+    );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+  }
+}

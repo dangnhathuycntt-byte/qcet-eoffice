@@ -45,6 +45,7 @@ import {
   InvalidTransitionError,
   PreconditionFailedError,
 } from "@/server/api/errors";
+import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
 
 // ============================================================================
 // Input Validation Schemas

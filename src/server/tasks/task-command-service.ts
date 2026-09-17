@@ -650,6 +650,11 @@ export class TaskCommandService {
         });
       }
 
+      // Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha (REQ-4)
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, user.id, requestId);
+      }
+
       return task;
     });
 
@@ -787,6 +792,25 @@ export class TaskCommandService {
     } else if (typeof progress === 'number') {
       scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progress));
     }
+    // Ghép dữ liệu ngày tháng với bản ghi hiện tại để validate nghiêm ngặt (phân biệt undefined với null)
+    let mergedStartDate: Date | null = existing.startDate ? new Date(existing.startDate) : null;
+    if (startDate !== undefined) {
+      mergedStartDate = startDate ? new Date(startDate) : null;
+    }
+
+    let mergedDueDate: Date | null = existing.dueDate ? new Date(existing.dueDate) : null;
+    if (dueDate !== undefined) {
+      mergedDueDate = dueDate ? new Date(dueDate) : null;
+    }
+
+    if (mergedStartDate && mergedDueDate) {
+      if (mergedStartDate.getTime() > mergedDueDate.getTime()) {
+        throw new ValidationError(
+          'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)'
+        );
+      }
+    }
+
     if (startDate) {
       scalarUpdateData.startDate = new Date(startDate);
     }
@@ -1090,10 +1114,10 @@ export class TaskCommandService {
       }
 
       // 2. Audit trail: TASK_DEADLINE_CHANGED if due date changed
-      if (scalarUpdateData.dueDate) {
+      if (scalarUpdateData.dueDate !== undefined) {
         const oldDueTime = existing.dueDate ? new Date(existing.dueDate).getTime() : null;
-        const newDueDate = new Date(scalarUpdateData.dueDate as Date);
-        if (oldDueTime !== newDueDate.getTime()) {
+        const newDueTime = scalarUpdateData.dueDate ? new Date(scalarUpdateData.dueDate as Date).getTime() : null;
+        if (oldDueTime !== newDueTime) {
           auditLogged = true;
           await logAuditEvent(tx, {
             actorId: user.id,
@@ -1102,7 +1126,25 @@ export class TaskCommandService {
             entityId: taskId,
             requestId,
             beforeData: { dueDate: existing.dueDate ? existing.dueDate.toISOString() : null },
-            afterData: { dueDate: newDueDate.toISOString() },
+            afterData: { dueDate: scalarUpdateData.dueDate ? new Date(scalarUpdateData.dueDate as Date).toISOString() : null },
+          });
+        }
+      }
+
+      // 2b. Audit trail: TASK_START_DATE_CHANGED if start date changed
+      if (scalarUpdateData.startDate !== undefined) {
+        const oldStartTime = existing.startDate ? new Date(existing.startDate).getTime() : null;
+        const newStartTime = scalarUpdateData.startDate ? new Date(scalarUpdateData.startDate as Date).getTime() : null;
+        if (oldStartTime !== newStartTime) {
+          auditLogged = true;
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: 'TASK_START_DATE_CHANGED',
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { startDate: existing.startDate ? existing.startDate.toISOString() : null },
+            afterData: { startDate: scalarUpdateData.startDate ? new Date(scalarUpdateData.startDate as Date).toISOString() : null },
           });
         }
       }
@@ -1156,6 +1198,14 @@ export class TaskCommandService {
         });
       }
 
+      // 5. Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha (REQ-4)
+      if (updatedTask.parentTaskId) {
+        await recalculateParentTaskProgress(tx, updatedTask.parentTaskId, user.id, requestId);
+      }
+      if (existing.parentTaskId && existing.parentTaskId !== updatedTask.parentTaskId) {
+        await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
+      }
+
       return updatedTask;
     });
 
@@ -1173,7 +1223,7 @@ export class TaskCommandService {
 
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, createdById: true },
+      select: { id: true, createdById: true, parentTaskId: true },
     });
 
     if (!existing) {
@@ -1232,6 +1282,15 @@ export class TaskCommandService {
 
       // 4. Xóa nhiệm vụ chính
       await tx.task.delete({ where: { id: taskId } });
+
+      // Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha nếu xóa việc con (REQ-4)
+      if (existing.parentTaskId) {
+        const requestId =
+          ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+            ? ctx.requestId
+            : undefined;
+        await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
+      }
     });
 
     return {
@@ -1548,6 +1607,90 @@ export class TaskCommandService {
       }
 
       return updatedDeliverable;
+    });
+
+    return result;
+  }
+
+  /**
+   * Xóa minh chứng với kiểm tra phân lập và quan hệ task-deliverable an toàn (ngăn IDOR/BOLA).
+   */
+  async deleteDeliverable(
+    ctx: ApiRequestContext | { user: AuthenticatedUser | null },
+    taskId: string,
+    deliverableId: string
+  ) {
+    const user = resolveUser(ctx);
+
+    if (!deliverableId || typeof deliverableId !== 'string') {
+      throw new ValidationError('Mã minh chứng (deliverableId) là bắt buộc');
+    }
+
+    const deliverable = await prisma.taskDeliverable.findUnique({
+      where: { id: deliverableId },
+      include: {
+        task: {
+          include: {
+            assignees: true,
+          },
+        },
+      },
+    });
+
+    if (!deliverable) {
+      throw new NotFoundError('Không tìm thấy tài liệu minh chứng');
+    }
+
+    // Bảo vệ BOLA/IDOR: Minh chứng phải thuộc đúng taskId yêu cầu
+    if (deliverable.taskId !== taskId) {
+      throw new AuthorizationError('Minh chứng không thuộc về nhiệm vụ được yêu cầu');
+    }
+
+    const deleteCheck = canUserDeleteDeliverable(
+      user,
+      deliverable,
+      deliverable.task
+    );
+
+    if (!deleteCheck.allowed) {
+      throw new AuthorizationError(
+        deleteCheck.reason || 'Bạn không có quyền xóa minh chứng này'
+      );
+    }
+
+    const requestId =
+      ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+        ? ctx.requestId
+        : undefined;
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.taskDeliverable.delete({
+        where: { id: deliverableId },
+      });
+
+      await tx.task.update({
+        where: { id: taskId },
+        data: { version: { increment: 1 } },
+      });
+
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: 'TASK_DELIVERABLE_DELETED',
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        requestId,
+        beforeData: {
+          deliverableId: deliverable.id,
+          title: deliverable.title,
+          fileUrl: deliverable.fileUrl,
+        },
+        afterData: null,
+        metadata: {
+          deletedAt: new Date().toISOString(),
+        },
+      });
+
+      return { success: true, deliverableId };
     });
 
     return result;
