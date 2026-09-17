@@ -51,38 +51,38 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("displays concise 'Gõ / để chèn' placeholder without standalone '/' or long sentence", () => {
-      // 1. Must use concise 'Gõ / để chèn'
+    it("displays 'Nhập nội dung hoặc gõ / để chọn' with keycap hint without standalone '/' line", () => {
+      // 1. Must use 'Nhập nội dung hoặc gõ' and 'để chọn'
       assert.ok(
-        componentContent.includes('placeholder="Gõ / để chèn"') ||
-          componentContent.includes('placeholder={!block.content ? "Gõ / để chèn" : undefined}'),
-        "Must provide concise 'Gõ / để chèn' placeholder"
+        componentContent.includes("Nhập nội dung hoặc gõ") &&
+          componentContent.includes("để chọn"),
+        "Must provide 'Nhập nội dung hoặc gõ ... để chọn' affordance"
       );
 
-      // 2. Must NOT use standalone '/' placeholder
+      // 2. Must render '/' as keycap/kbd hint
+      assert.ok(
+        componentContent.includes("<kbd") && componentContent.includes("font-mono"),
+        "Must render '/' as a keycap/kbd keyboard hint"
+      );
+
+      // 3. Must NOT use standalone '/' placeholder as sole text line
       assert.ok(
         !componentContent.includes('placeholder="/"'),
-        "Must NOT use standalone '/' as placeholder"
-      );
-
-      // 3. Must NOT use long sentence 'Nhập nội dung hoặc gõ / để chèn…'
-      assert.ok(
-        !componentContent.includes("Nhập nội dung hoặc gõ / để chèn…"),
-        "Must NOT use long sentence 'Nhập nội dung hoặc gõ / để chèn…'"
+        "Must NOT use standalone '/' as placeholder line"
       );
     });
 
-    it("provides exactly one ~32px trailing empty row with 'Gõ / để chèn' affordance when content exists", () => {
+    it("provides exactly one ~32px trailing empty row with keyboard hint affordance when content exists", () => {
       // 1. Must render trailing empty block row with height around 32px (h-8)
       assert.ok(
         componentContent.includes("group/trailing") && componentContent.includes("h-8"),
         "Must render a ~32px (h-8) trailing empty block"
       );
 
-      // 2. Trailing placeholder
+      // 2. Trailing visual keycap hint
       assert.ok(
-        componentContent.includes('placeholder="Gõ / để chèn"'),
-        "Trailing empty block must show 'Gõ / để chèn' as placeholder"
+        componentContent.includes("group-hover/trailing:text-muted-foreground/80"),
+        "Trailing empty block must show refined hover transition on hint"
       );
 
       // 3. Handles direct typing and slash menu trigger in trailing block
@@ -163,8 +163,8 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       assert.ok(componentContent.includes('"Văn bản"'), "Must support Text");
       assert.ok(componentContent.includes('"Tiêu đề 1"'), "Must support Heading 1");
       assert.ok(componentContent.includes('"Tiêu đề 2"'), "Must support Heading 2");
-      assert.ok(componentContent.includes('"Danh sách chấm"'), "Must support Bullet list");
-      assert.ok(componentContent.includes('"Danh sách số"'), "Must support Numbered list");
+      assert.ok(componentContent.includes('"Danh sách dấu đầu dòng"'), "Must support Bullet list");
+      assert.ok(componentContent.includes('"Danh sách đánh số"'), "Must support Numbered list");
       assert.ok(componentContent.includes('"Checklist"'), "Must support Checklist");
       assert.ok(componentContent.includes('"Trích dẫn"'), "Must support Quote");
       assert.ok(componentContent.includes('"Ghi chú nổi bật"'), "Must support Callout");

@@ -129,7 +129,7 @@ export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
 interface MenuItemOption {
   id: string;
   type: NotionBlockType | "create_subtask_action";
-  group: "Cơ bản" | "Danh sách" | "Nâng cao" | "Tài liệu & Việc";
+  group: "Soạn thảo" | "Danh sách" | "Tiêu đề" | "Trích dẫn & Ghi chú" | "Tệp & Liên kết" | "Phân cách";
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -139,53 +139,23 @@ interface MenuItemOption {
 }
 
 const MENU_OPTIONS: MenuItemOption[] = [
-  // 1. Nhóm Cơ bản
+  // 1. Soạn thảo văn bản cơ bản
   {
     id: "opt-text",
     type: "text",
-    group: "Cơ bản",
+    group: "Soạn thảo",
     title: "Văn bản",
     description: "Văn bản thuần túy, tự do định dạng",
     icon: Type,
     shortcut: "text",
   },
-  {
-    id: "opt-h1",
-    type: "heading",
-    level: 1,
-    group: "Cơ bản",
-    title: "Tiêu đề 1",
-    description: "Tiêu đề lớn phân mục",
-    icon: Heading1,
-    shortcut: "#",
-  },
-  {
-    id: "opt-h2",
-    type: "heading",
-    level: 2,
-    group: "Cơ bản",
-    title: "Tiêu đề 2",
-    description: "Tiêu đề vừa",
-    icon: Heading2,
-    shortcut: "##",
-  },
-  {
-    id: "opt-h3",
-    type: "heading",
-    level: 3,
-    group: "Cơ bản",
-    title: "Tiêu đề 3",
-    description: "Tiêu đề nhỏ",
-    icon: Heading3,
-    shortcut: "###",
-  },
 
-  // 2. Nhóm Danh sách
+  // 2. Danh sách (Ưu tiên E-Office)
   {
     id: "opt-bulleted",
     type: "bulleted_list",
     group: "Danh sách",
-    title: "Danh sách chấm",
+    title: "Danh sách dấu đầu dòng",
     description: "Danh sách dấu chấm đầu dòng",
     icon: List,
     shortcut: "-",
@@ -194,7 +164,7 @@ const MENU_OPTIONS: MenuItemOption[] = [
     id: "opt-numbered",
     type: "numbered_list",
     group: "Danh sách",
-    title: "Danh sách số",
+    title: "Danh sách đánh số",
     description: "Danh sách đánh số thứ tự",
     icon: ListOrdered,
     shortcut: "1.",
@@ -209,11 +179,43 @@ const MENU_OPTIONS: MenuItemOption[] = [
     shortcut: "[]",
   },
 
-  // 3. Nhóm Nâng cao
+  // 3. Tiêu đề
+  {
+    id: "opt-h1",
+    type: "heading",
+    level: 1,
+    group: "Tiêu đề",
+    title: "Tiêu đề 1",
+    description: "Tiêu đề lớn phân mục chính",
+    icon: Heading1,
+    shortcut: "#",
+  },
+  {
+    id: "opt-h2",
+    type: "heading",
+    level: 2,
+    group: "Tiêu đề",
+    title: "Tiêu đề 2",
+    description: "Tiêu đề vừa",
+    icon: Heading2,
+    shortcut: "##",
+  },
+  {
+    id: "opt-h3",
+    type: "heading",
+    level: 3,
+    group: "Tiêu đề",
+    title: "Tiêu đề 3",
+    description: "Tiêu đề nhỏ",
+    icon: Heading3,
+    shortcut: "###",
+  },
+
+  // 4. Trích dẫn & Ghi chú
   {
     id: "opt-quote",
     type: "quote",
-    group: "Nâng cao",
+    group: "Trích dẫn & Ghi chú",
     title: "Trích dẫn",
     description: "Trích dẫn ý kiến hoặc chỉ đạo",
     icon: Quote,
@@ -222,26 +224,17 @@ const MENU_OPTIONS: MenuItemOption[] = [
   {
     id: "opt-callout",
     type: "callout",
-    group: "Nâng cao",
+    group: "Trích dẫn & Ghi chú",
     title: "Ghi chú nổi bật",
     description: "Hộp lưu ý hoặc thông điệp quan trọng",
     icon: Info,
   },
-  {
-    id: "opt-divider",
-    type: "divider",
-    group: "Nâng cao",
-    title: "Đường phân cách",
-    description: "Đường kẻ chia tách phân đoạn",
-    icon: Minus,
-    shortcut: "---",
-  },
 
-  // 4. Nhóm Tài liệu & Việc
+  // 5. Tệp / Liên kết
   {
     id: "opt-attachment",
     type: "attachment",
-    group: "Tài liệu & Việc",
+    group: "Tệp & Liên kết",
     title: "Tệp đính kèm",
     description: "Đính kèm tệp tài liệu, văn bản",
     icon: Paperclip,
@@ -249,7 +242,7 @@ const MENU_OPTIONS: MenuItemOption[] = [
   {
     id: "opt-link",
     type: "link",
-    group: "Tài liệu & Việc",
+    group: "Tệp & Liên kết",
     title: "Liên kết",
     description: "Đường dẫn website hoặc tài liệu ngoài",
     icon: Link2,
@@ -257,11 +250,22 @@ const MENU_OPTIONS: MenuItemOption[] = [
   {
     id: "opt-subtasks-view",
     type: "subtasks_view",
-    group: "Tài liệu & Việc",
+    group: "Tệp & Liên kết",
     title: "Chèn việc thành phần",
     description: "Hiển thị đồng bộ danh sách việc con",
     icon: Layers,
     badge: "Đồng bộ",
+  },
+
+  // 6. Đường phân cách
+  {
+    id: "opt-divider",
+    type: "divider",
+    group: "Phân cách",
+    title: "Đường phân cách",
+    description: "Đường kẻ chia tách phân đoạn",
+    icon: Minus,
+    shortcut: "---",
   },
 ];
 
@@ -292,6 +296,9 @@ export function TaskNotionBlockContent({
   // Drag and drop state
   const [draggedBlockIndex, setDraggedBlockIndex] = React.useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+
+  // Trailing input state (controlled để quản lý hiển thị keycap hint)
+  const [trailingValue, setTrailingValue] = React.useState("");
 
   // Ref tracking
   const menuInputRef = React.useRef<HTMLInputElement>(null);
@@ -408,6 +415,7 @@ export function TaskNotionBlockContent({
   const handleSelectMenuItem = (option: MenuItemOption) => {
     const targetIdx = menuTargetIndex ?? blocks.length;
     handleCloseSlashMenu();
+    setTrailingValue("");
 
     if (option.type === "create_subtask_action") {
       onOpenCreateSubtask?.();
@@ -562,11 +570,12 @@ export function TaskNotionBlockContent({
     if (e.key === "/") {
       e.preventDefault();
       handleOpenSlashMenu(blocks.length, e.currentTarget);
+      setTrailingValue("");
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const val = e.currentTarget.value.trim();
+      const val = trailingValue.trim();
       const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const nextId = `b-${Date.now() + 1}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -579,7 +588,7 @@ export function TaskNotionBlockContent({
         triggerAutoSave(next);
         return next;
       });
-      e.currentTarget.value = "";
+      setTrailingValue("");
       pendingFocusBlockIdRef.current = nextId;
     }
   };
@@ -588,9 +597,15 @@ export function TaskNotionBlockContent({
     const val = e.target.value;
     if (val === "/") {
       handleOpenSlashMenu(blocks.length, e.target);
-      e.target.value = "";
+      setTrailingValue("");
       return;
     }
+    setTrailingValue(val);
+  };
+
+  // Khi blur khỏi trailing input nếu có text thì commit thành block
+  const handleTrailingBlur = () => {
+    const val = trailingValue.trim();
     if (val) {
       const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       setBlocks((prev) => {
@@ -598,8 +613,7 @@ export function TaskNotionBlockContent({
         triggerAutoSave(next);
         return next;
       });
-      e.target.value = "";
-      pendingFocusBlockIdRef.current = newId;
+      setTrailingValue("");
     }
   };
 
@@ -665,7 +679,7 @@ export function TaskNotionBlockContent({
                 isDragOver && "bg-primary/10 ring-1 ring-primary/30"
               )}
             >
-              {/* Gutter trái: Handle ⋮⋮ (Chỉ hiện khi hover hoặc focus block) */}
+              {/* Gutter trái: Handle ⋮⋮ (Chỉ hi���n khi hover hoặc focus block) */}
               {canEdit && (
                 <div
                   className={cn(
@@ -741,6 +755,16 @@ export function TaskNotionBlockContent({
                 {/* 1. Text Block */}
                 {block.type === "text" && (
                   <div className="relative flex items-center min-h-[28px]">
+                    {/* Placeholder Hint Layer với kbd '/' keycap khi block rỗng duy nhất */}
+                    {isOnlyOneEmptyBlock && !block.content && (
+                      <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/block:text-muted-foreground/80 font-normal">
+                        <span>Nhập nội dung hoặc gõ</span>
+                        <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
+                          /
+                        </kbd>
+                        <span>để chọn</span>
+                      </div>
+                    )}
                     <textarea
                       ref={(el) => {
                         if (el) {
@@ -759,8 +783,7 @@ export function TaskNotionBlockContent({
                         autoResizeTextarea(e.target);
                       }}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Gõ / để chèn" : undefined}
-                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 hover:placeholder:text-muted-foreground/60 focus:placeholder:text-muted-foreground/70 focus:outline-hidden py-0.5 cursor-text block transition-colors"
+                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text block relative z-10"
                     />
                   </div>
                 )}
@@ -1074,20 +1097,31 @@ export function TaskNotionBlockContent({
         >
           {/* Khoảng trống căn chỉnh ngang hàng với text block phía trên */}
           <div className="w-5 shrink-0 -ml-6 mr-1 pointer-events-none" />
-          <div className="flex-1 min-w-0 flex items-center min-h-[28px]">
+          <div className="relative flex-1 min-w-0 flex items-center min-h-[28px]">
+            {/* Visual Hint Layer với keyboard keycap '/' */}
+            {!trailingValue && (
+              <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/trailing:text-muted-foreground/80 font-normal">
+                <span>Nhập nội dung hoặc gõ</span>
+                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
+                  /
+                </kbd>
+                <span>để chọn</span>
+              </div>
+            )}
             <input
               ref={trailingInputRef}
               type="text"
+              value={trailingValue}
               onKeyDown={handleTrailingKeyDown}
               onChange={handleTrailingChange}
-              placeholder="Gõ / để chèn"
-              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 group-hover/trailing:placeholder:text-muted-foreground/60 focus:placeholder:text-muted-foreground/70 focus:outline-hidden py-0.5 cursor-text transition-colors"
+              onBlur={handleTrailingBlur}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text relative z-10"
             />
           </div>
         </div>
       )}
 
-      {/* 3. Slash Command Popover Menu (Tối giản kiểu Notion) */}
+      {/* 3. Slash Command Popover Menu (Tối giản kiểu Notion, ưu tiên nghiệp vụ E-Office) */}
       {isMenuOpen && (
         <div
           role="dialog"
@@ -1147,7 +1181,7 @@ export function TaskNotionBlockContent({
 
             {/* Danh sách lựa chọn */}
             <div className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
-              {(["Cơ bản", "Danh sách", "Nâng cao", "Tài liệu & Việc"] as const).map((groupName) => {
+              {(["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Tệp & Liên kết", "Phân cách"] as const).map((groupName) => {
                 const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
                 if (groupOptions.length === 0) return null;
 
