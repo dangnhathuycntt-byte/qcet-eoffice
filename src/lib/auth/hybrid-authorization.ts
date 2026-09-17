@@ -1307,6 +1307,7 @@ function evaluateCapabilityMatrix(
       action.startsWith("org.") ||
       action.startsWith("position.") ||
       action.startsWith("audit.") ||
+      action.startsWith("task.") ||
       action === "task.monitor";
 
     if (isTechnicalAction) {
@@ -1512,7 +1513,14 @@ function evaluateCapabilityMatrix(
     }
 
     if (action === "task.update_execution" || action === "task.submit_result") {
-      if (relationships.has("DRI") || relationships.has("COLLABORATOR")) {
+      if (
+        relationships.has("DRI") ||
+        relationships.has("COLLABORATOR") ||
+        relationships.has("ASSIGNER") ||
+        relationships.has("LEAD_UNIT") ||
+        resource.scope === "SCHOOL" ||
+        resource.scope === "school"
+      ) {
         return { allowed: true, policyMatched: "UNIT_LEADER_SELF_EXECUTION" };
       }
     }
@@ -1578,7 +1586,14 @@ function evaluateCapabilityMatrix(
     }
 
     if (action === "task.update_execution" || action === "task.submit_result") {
-      if (relationships.has("DRI") || relationships.has("COLLABORATOR")) {
+      if (
+        relationships.has("DRI") ||
+        relationships.has("COLLABORATOR") ||
+        relationships.has("ASSIGNER") ||
+        relationships.has("LEAD_UNIT") ||
+        resource.scope === "SCHOOL" ||
+        resource.scope === "school"
+      ) {
         return { allowed: true, policyMatched: "DEPUTY_LEADER_EXECUTION" };
       }
     }
@@ -1601,13 +1616,19 @@ function evaluateCapabilityMatrix(
     return { allowed: false, rejectionCode: "INSUFFICIENT_CAPABILITY" };
   }
 
-  // 5. GIANG_VIEN_CHUYEN_VIEN (Staff / Lecturer / Specialist)
+  // 5. GIANG_VIEN_CHUYEN_VIEN (Staff / Lecturer / Specialist / General User)
   if (
     pos === "GIANG_VIEN_CHUYEN_VIEN" ||
     pos === "CHUYEN_VIEN" ||
     pos === "GIANG_VIEN" ||
     pos === "VIEN_CHUC" ||
-    user.role === "STAFF"
+    pos === "CAN_BO" ||
+    pos === "STAFF" ||
+    pos === "USER" ||
+    pos === "" ||
+    user.role === "STAFF" ||
+    user.role === "USER" ||
+    !pos
   ) {
     if (action === "task.view") {
       const isSchoolScope = resource.scope === "SCHOOL" || resource.scope === "school";
@@ -1633,8 +1654,28 @@ function evaluateCapabilityMatrix(
       return { allowed: true, policyMatched: "STAFF_TASK_CREATE_INDIVIDUAL" };
     }
 
+    if (action === "task.assign" || action === "task.reassign") {
+      if (
+        relationships.has("DRI") ||
+        relationships.has("ASSIGNER") ||
+        relationships.has("LEAD_UNIT") ||
+        resource.scope === "SCHOOL" ||
+        resource.scope === "school"
+      ) {
+        return { allowed: true, policyMatched: "STAFF_TASK_REASSIGN" };
+      }
+    }
+
     if (action === "task.update_execution" || action === "task.submit_result") {
-      if (relationships.has("DRI") || relationships.has("COLLABORATOR")) {
+      if (
+        relationships.has("DRI") ||
+        relationships.has("COLLABORATOR") ||
+        relationships.has("ASSIGNER") ||
+        relationships.has("LEAD_UNIT") ||
+        relationships.has("OBSERVER") ||
+        resource.scope === "SCHOOL" ||
+        resource.scope === "school"
+      ) {
         return { allowed: true, policyMatched: "STAFF_EXECUTION_AND_SUBMIT" };
       }
       return {
@@ -1737,6 +1778,30 @@ function evaluateCapabilityMatrix(
       rejectionCode: "INSUFFICIENT_CAPABILITY",
       reason: "Hành động này nằm ngoài thẩm quyền nghiệp vụ lưu trữ cơ quan.",
     };
+  }
+
+  // General Fallback for Task Execution, Submission, View and Creation
+  if (
+    action === "task.view" ||
+    action === "task.update_execution" ||
+    action === "task.submit_result" ||
+    action === "task.create" ||
+    action === "task.monitor"
+  ) {
+    if (
+      relationships.has("DRI") ||
+      relationships.has("COLLABORATOR") ||
+      relationships.has("ASSIGNER") ||
+      relationships.has("LEAD_UNIT") ||
+      relationships.has("OBSERVER") ||
+      resource.scope === "SCHOOL" ||
+      resource.scope === "school" ||
+      !pos ||
+      pos === "STAFF" ||
+      pos === "USER"
+    ) {
+      return { allowed: true, policyMatched: "GENERAL_TASK_PARTICIPANT_AUTHORITY" };
+    }
   }
 
   return {
