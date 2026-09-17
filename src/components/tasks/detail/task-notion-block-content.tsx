@@ -68,6 +68,16 @@ export interface TaskNotionBlockContentProps {
 }
 
 /**
+ * Helper tự động co giãn chiều cao textarea theo đúng scrollHeight,
+ * loại bỏ hoàn toàn scrollbar riêng trong textarea.
+ */
+function autoResizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+/**
  * Phân tích chuỗi mô tả thành danh sách các block Notion.
  * Nếu đã lưu dạng JSON blocks thì parse ra, nếu là văn bản cũ thì đưa vào block text đầu tiên.
  */
@@ -296,6 +306,15 @@ export function TaskNotionBlockContent({
     setBlocks(parseContentToBlocks(initialDescription));
   }, [initialDescription]);
 
+  // Tự động resize toàn bộ textareas khi blocks thay đổi
+  React.useEffect(() => {
+    blockInputRefs.current.forEach((el) => {
+      if (el instanceof HTMLTextAreaElement) {
+        autoResizeTextarea(el);
+      }
+    });
+  }, [blocks]);
+
   // Tự động focus vào block mới sau khi chèn
   React.useEffect(() => {
     if (pendingFocusBlockIdRef.current) {
@@ -305,6 +324,9 @@ export function TaskNotionBlockContent({
         const el = blockInputRefs.current.get(pendingFocusBlockIdRef.current);
         if (el) {
           el.focus();
+          if (el instanceof HTMLTextAreaElement) {
+            autoResizeTextarea(el);
+          }
           if ("select" in el && el instanceof HTMLInputElement) {
             el.select();
           }
@@ -607,40 +629,21 @@ export function TaskNotionBlockContent({
     setDragOverIndex(null);
   };
 
-  // Click vào bất kỳ khoảng trống canvas nào bên dưới -> focus vào trailing empty block
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    if (e.target === containerRef.current || (e.target as HTMLElement)?.dataset?.slot === "canvas-blank-area") {
-      // Focus vào block cuối cùng nếu rỗng, hoặc focus vào trailing input
-      const lastBlock = blocks[blocks.length - 1];
-      if (lastBlock && !lastBlock.content.trim() && lastBlock.type === "text") {
-        const el = blockInputRefs.current.get(lastBlock.id);
-        if (el) {
-          el.focus();
-          return;
-        }
-      }
-      trailingInputRef.current?.focus();
-    }
-  };
-
   // Tính số thứ tự cho numbered list
   let numberedCounter = 0;
 
   // Kiểm tra xem block cuối cùng có rỗng không
   const lastBlock = blocks[blocks.length - 1];
   const lastBlockIsEmptyText = lastBlock && lastBlock.type === "text" && !lastBlock.content;
+  const isOnlyOneEmptyBlock = blocks.length === 1 && blocks[0].type === "text" && !blocks[0].content;
 
   return (
     <div
       ref={containerRef}
       data-slot="task-notion-block-content"
-      onClick={handleCanvasClick}
-      className={cn(
-        "w-full min-h-[160px] sm:min-h-[220px] flex flex-col relative font-sans text-sm text-foreground cursor-text",
-        className
-      )}
+      className={cn("w-full relative font-sans text-sm text-foreground", className)}
     >
-      {/* 1. Các Blocks Nội Dung (Clean document canvas) */}
+      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar) */}
       <div className="space-y-0.5">
         {blocks.map((block, index) => {
           const isDragOver = dragOverIndex === index;
@@ -740,16 +743,30 @@ export function TaskNotionBlockContent({
                   <div className="relative flex items-center min-h-[28px]">
                     <textarea
                       ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
+                        if (el) {
+                          blockInputRefs.current.set(block.id, el);
+                          autoResizeTextarea(el);
+                        } else {
+                          blockInputRefs.current.delete(block.id);
+                        }
                       }}
-                      rows={Math.max(1, (block.content || "").split("\n").length)}
+                      rows={1}
                       disabled={!canEdit}
                       value={block.content}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onInput={(e) => autoResizeTextarea(e.currentTarget)}
+                      onChange={(e) => {
+                        handleUpdateBlock(block.id, { content: e.target.value });
+                        autoResizeTextarea(e.target);
+                      }}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
-                      className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text"
+                      placeholder={
+                        !block.content
+                          ? isOnlyOneEmptyBlock
+                            ? "Nhập nội dung hoặc gõ / để chèn…"
+                            : "/"
+                          : undefined
+                      }
+                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text block"
                     />
                   </div>
                 )}
@@ -1055,13 +1072,15 @@ export function TaskNotionBlockContent({
         })}
       </div>
 
-      {/* 2. Trailing Empty Row (28-32px, ghost affordance '/', gõ được ngay lập tức) */}
+      {/* 2. Trailing Empty Row (Chỉ render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
       {canEdit && !lastBlockIsEmptyText && (
         <div
-          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md cursor-text select-none"
+          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md select-none"
           onClick={() => trailingInputRef.current?.focus()}
         >
-          <div className="flex-1 flex items-center min-h-[28px]">
+          {/* Khoảng trống căn chỉnh ngang hàng với text block phía trên */}
+          <div className="w-5 shrink-0 -ml-6 mr-1 pointer-events-none" />
+          <div className="flex-1 min-w-0 flex items-center min-h-[28px]">
             <input
               ref={trailingInputRef}
               type="text"
@@ -1074,21 +1093,7 @@ export function TaskNotionBlockContent({
         </div>
       )}
 
-      {/* 3. Vùng trắng usable phía dưới (Click bất kỳ đâu để focus soạn thảo) */}
-      <div
-        data-slot="canvas-blank-area"
-        className="flex-1 min-h-[80px] cursor-text"
-        onClick={() => {
-          if (lastBlockIsEmptyText) {
-            const el = blockInputRefs.current.get(lastBlock.id);
-            el?.focus();
-          } else {
-            trailingInputRef.current?.focus();
-          }
-        }}
-      />
-
-      {/* 4. Slash Command Popover Menu (Tối giản kiểu Notion) */}
+      {/* 3. Slash Command Popover Menu (Tối giản kiểu Notion) */}
       {isMenuOpen && (
         <div
           role="dialog"
@@ -1148,19 +1153,19 @@ export function TaskNotionBlockContent({
 
             {/* Danh sách lựa chọn */}
             <div className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
-              {["Cơ bản", "Danh sách", "Nâng cao", "Tài liệu & Việc"].map((groupName) => {
-                const groupItems = filteredMenuOptions.filter((o) => o.group === groupName);
-                if (groupItems.length === 0) return null;
+              {(["Cơ bản", "Danh sách", "Nâng cao", "Tài liệu & Việc"] as const).map((groupName) => {
+                const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
+                if (groupOptions.length === 0) return null;
 
                 return (
                   <div key={groupName} className="space-y-0.5">
-                    <div className="text-[10px] font-semibold text-muted-foreground/70 px-2 pt-1">
+                    <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground/80">
                       {groupName}
                     </div>
-                    {groupItems.map((opt) => {
+                    {groupOptions.map((opt) => {
                       const itemGlobalIndex = filteredMenuOptions.indexOf(opt);
-                      const isSelected = activeMenuIndex === itemGlobalIndex;
-                      const IconComp = opt.icon;
+                      const isSelected = itemGlobalIndex === activeMenuIndex;
+                      const IconComponent = opt.icon;
 
                       return (
                         <button
@@ -1169,28 +1174,33 @@ export function TaskNotionBlockContent({
                           onClick={() => handleSelectMenuItem(opt)}
                           onMouseEnter={() => setActiveMenuIndex(itemGlobalIndex)}
                           className={cn(
-                            "w-full flex items-center justify-between px-2 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer",
-                            isSelected
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-foreground hover:bg-muted/60"
+                            "w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer",
+                            isSelected ? "bg-muted text-foreground font-medium" : "hover:bg-muted/60 text-muted-foreground"
                           )}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="size-6 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                              <IconComp className="size-3.5" />
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="p-1 rounded-lg border border-border/60 bg-white shrink-0">
+                              <IconComponent className="size-3.5 text-foreground" />
                             </div>
                             <div className="min-w-0">
-                              <div className="text-xs font-medium truncate">{opt.title}</div>
+                              <div className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
+                                <span>{opt.title}</span>
+                                {opt.badge && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-primary/10 text-primary font-normal">
+                                    {opt.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground truncate">
+                                {opt.description}
+                              </div>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-1 shrink-0 ml-2">
-                            {opt.shortcut && (
-                              <span className="font-mono text-[10px] text-muted-foreground/60">
-                                {opt.shortcut}
-                              </span>
-                            )}
-                          </div>
+                          {opt.shortcut && (
+                            <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0">
+                              {opt.shortcut}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -1199,15 +1209,10 @@ export function TaskNotionBlockContent({
               })}
 
               {filteredMenuOptions.length === 0 && (
-                <div className="py-3 text-center text-xs text-muted-foreground">
-                  Không có lệnh nào phù hợp.
+                <div className="p-4 text-center text-xs text-muted-foreground">
+                  Không tìm thấy lệnh phù hợp
                 </div>
               )}
-            </div>
-
-            <div className="pt-1.5 mt-1 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground px-2">
-              <span>Đóng menu</span>
-              <kbd className="px-1 py-0.2 rounded bg-muted text-[10px] font-mono">Esc</kbd>
             </div>
           </div>
         </div>

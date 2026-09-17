@@ -8,7 +8,7 @@ import {
   type NotionBlockItem,
 } from "@/components/tasks/detail/task-notion-block-content";
 
-describe("Notion/Linear Minimalist Document Editor Suite — UX Fixes & Trailing Canvas", () => {
+describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No Internal Scroll", () => {
   const componentPath = path.join(
     process.cwd(),
     "src/components/tasks/detail/task-notion-block-content.tsx"
@@ -21,9 +21,45 @@ describe("Notion/Linear Minimalist Document Editor Suite — UX Fixes & Trailing
   const componentContent = fs.readFileSync(componentPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
 
-  describe("1. Trailing Empty Block & Dead-Zone Click-to-Focus", () => {
-    it("provides a 28-32px trailing empty block with ghost '/' placeholder and cursor-text", () => {
-      // 1. Must render trailing empty block row with height around 28-32px (h-8)
+  describe("1. Auto-Height Canvas & Elimination of Internal Scrollbar", () => {
+    it("strictly eliminates internal scroll, large min-height, and fake blank area containers", () => {
+      // 1. Must NOT contain min-h-[160px] or min-h-[220px] on editor canvas
+      assert.ok(
+        !componentContent.includes("min-h-[160px]") && !componentContent.includes("min-h-[220px]"),
+        "Editor canvas must NOT have artificial large min-height (min-h-[160px] / min-h-[220px])"
+      );
+
+      // 2. Must NOT contain data-slot='canvas-blank-area' or min-h-[80px] filler
+      assert.ok(
+        !componentContent.includes('data-slot="canvas-blank-area"'),
+        "Must NOT contain artificial canvas-blank-area container"
+      );
+
+      // 3. Must NOT have overflow-y: auto/scroll on the document editor container
+      assert.ok(
+        !componentContent.includes("overflow-y-auto") ||
+          componentContent.indexOf("overflow-y-auto") === componentContent.lastIndexOf("overflow-y-auto"),
+        "Must NOT have internal scroll on main editor (only dropdown menu if applicable)"
+      );
+
+      // 4. Textarea must have autoResizeTextarea and overflow-hidden to auto-grow with text
+      assert.ok(
+        componentContent.includes("autoResizeTextarea") &&
+          componentContent.includes("overflow-hidden") &&
+          componentContent.includes("resize-none"),
+        "Textarea must auto-grow and hide internal overflow"
+      );
+    });
+
+    it("displays single-line placeholder when task has no content without artificial white canvas", () => {
+      assert.ok(
+        componentContent.includes("Nhập nội dung hoặc gõ / để chèn…"),
+        "Empty state must show minimal single-line placeholder"
+      );
+    });
+
+    it("provides exactly one ~32px trailing empty row with ghost '/' affordance when content exists", () => {
+      // 1. Must render trailing empty block row with height around 32px (h-8)
       assert.ok(
         componentContent.includes("group/trailing") && componentContent.includes("h-8"),
         "Must render a ~32px (h-8) trailing empty block"
@@ -35,32 +71,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — UX Fixes & Trailing
         "Trailing empty block must show '/' as ghost affordance placeholder"
       );
 
-      // 3. Cursor text on entire row
-      assert.ok(
-        componentContent.includes("cursor-text"),
-        "Must have cursor-text on editor canvas and trailing row"
-      );
-    });
-
-    it("makes the blank area below content usable by focusing the trailing block on click", () => {
-      // 1. Container has reasonable min-height
-      assert.ok(
-        componentContent.includes("min-h-[160px]"),
-        "Editor canvas must have reasonable min-height (>= 160px)"
-      );
-
-      // 2. Canvas blank area handles click to focus trailing input
-      assert.ok(
-        componentContent.includes('data-slot="canvas-blank-area"'),
-        "Must provide canvas-blank-area element to eliminate dead zone"
-      );
-      assert.ok(
-        componentContent.includes("trailingInputRef.current?.focus()"),
-        "Clicking blank area must focus trailing empty block"
-      );
-    });
-
-    it("allows typing normal text directly in trailing block or typing '/' to trigger slash menu", () => {
+      // 3. Handles direct typing and slash menu trigger in trailing block
       assert.ok(
         componentContent.includes("handleTrailingKeyDown") &&
           componentContent.includes("handleTrailingChange"),
