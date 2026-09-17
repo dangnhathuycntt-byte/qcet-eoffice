@@ -45,6 +45,7 @@ import {
   formatDateTime,
   formatIsoDate,
 } from "@/lib/format/date";
+import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "./task-identity-block";
 
@@ -64,6 +65,8 @@ export interface LinearPropertiesSidebarProps {
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
   onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
   onNavigateTab?: (tab: "overview" | "subtasks" | "activity") => void;
+  onSelectSubtask?: (subtask: StaffTask) => void;
+  onAddSubTask?: (parentId: string) => void;
   auditEvents?: AuditLogItem[];
   isMobileAccordion?: boolean;
   canEdit?: boolean;
@@ -123,6 +126,8 @@ export function LinearPropertiesSidebar({
   onDueDateChange,
   onStartDateChange,
   onNavigateTab,
+  onSelectSubtask,
+  onAddSubTask,
   auditEvents = [],
   isMobileAccordion = false,
   canEdit = true,
@@ -622,44 +627,107 @@ export function LinearPropertiesSidebar({
 
       {showRelatedSections && (
       <>
-      {/* 2. SECTION: MILESTONES / SUBTASKS (Linear Style) */}
-      <div className="space-y-2.5 pt-2 border-t border-border/40">
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <span>Việc thành phần</span>
-            <ChevronDown className="size-3 text-muted-foreground" />
-          </span>
-          <button
-            type="button"
-            onClick={() => onNavigateTab && onNavigateTab("subtasks")}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            title="Thêm milestone"
-          >
-            <Plus className="size-3.5" />
-          </button>
+      {/* 2. SECTION: MILESTONES / SUBTASKS (Compact Notion-style list) */}
+      <div className="space-y-2 pt-2.5 border-t border-border/40 select-none">
+        {/* Header với số lượng, nút Thêm, và nút Xem tất cả */}
+        <div className="flex items-center justify-between gap-1.5 text-muted-foreground">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-xs font-semibold text-foreground truncate">
+              Việc thành phần
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums shrink-0">
+              {completedSubTasks}/{subTasks.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Thêm việc thành phần mới"
+                aria-label="Thêm việc thành phần"
+              >
+                <Plus className="size-3.5" strokeWidth={1.5} />
+              </button>
+            )}
+            {onNavigateTab && subTasks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab("subtasks")}
+                className="text-[11px] font-medium text-primary hover:underline cursor-pointer pl-1"
+                title="Xem tất cả việc thành phần dưới dạng bảng đầy đủ"
+              >
+                Xem tất cả
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Danh sách việc con gọn / Trạng thái rỗng */}
         {subTasks.length > 0 ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>Việc thành phần</span>
-              <span className="font-mono text-foreground font-semibold tabular-nums">
-                {completedSubTasks}/{subTasks.length}
-              </span>
-            </div>
-            <div className="h-1 w-full bg-muted/60 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-300"
-                style={{
-                  width: `${subTasks.length > 0 ? (completedSubTasks / subTasks.length) * 100 : 0}%`,
-                }}
-              />
-            </div>
+          <div className="space-y-1.5 pt-0.5">
+            {subTasks.map((st) => {
+              const isCompleted = st.status === "COMPLETED";
+              const statusObj = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
+              const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
+              const formattedDue = st.dueDate ? formatDisplayDate(st.dueDate) : "";
+
+              return (
+                <div
+                  key={st.id}
+                  onClick={() => onSelectSubtask && onSelectSubtask(st)}
+                  className={cn(
+                    "group p-2 rounded-lg border border-border/40 hover:border-border/80 bg-background/60 hover:bg-muted/30 transition-all cursor-pointer space-y-1",
+                    isCompleted && "opacity-75 bg-muted/10"
+                  )}
+                  title={`Xem việc thành phần: ${st.title}`}
+                >
+                  {/* Tên việc con: tối đa 2 dòng */}
+                  <div
+                    className={cn(
+                      "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug",
+                      isCompleted && "line-through text-muted-foreground"
+                    )}
+                  >
+                    {st.title}
+                  </div>
+
+                  {/* Dòng phụ gọn: Trạng thái dot/pill, người phụ trách, hạn chót */}
+                  <div className="flex items-center justify-between gap-1.5 text-[11px] text-muted-foreground pt-0.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={cn("size-1.5 rounded-full shrink-0", statusObj.dotClass)} />
+                      <span className="truncate text-[11px]" title={assigneeTitle}>
+                        {assigneeTitle}
+                      </span>
+                    </div>
+
+                    {formattedDue && (
+                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80 shrink-0">
+                        {formattedDue}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <p className="text-[11px] text-muted-foreground/80">
-            Thêm việc thành phần để phân rã nhiệm vụ và theo dõi tiến độ chi tiết.
-          </p>
+          /* Trạng thái rỗng chỉ một dòng cùng nút thêm */
+          <div className="flex items-center justify-between text-xs text-muted-foreground py-1">
+            <span>Chưa có việc thành phần</span>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+              >
+                <Plus className="size-3" />
+                <span>Thêm</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 

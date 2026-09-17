@@ -408,6 +408,8 @@ export function LinearTaskDetailView({
               onStatusChange={handleStatusChangeInternal}
               onPriorityChange={handlePriorityChangeInternal}
               onDueDateChange={handleDueDateChangeInternal}
+              onSelectSubtask={onSelectSubTask}
+              onAddSubTask={onAddSubTask}
               auditEvents={feedActivityEvents as AuditLogItem[]}
               canEdit={true}
             />

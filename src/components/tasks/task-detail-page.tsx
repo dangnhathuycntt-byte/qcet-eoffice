@@ -34,6 +34,7 @@ import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block
 import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
+import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
@@ -107,6 +108,73 @@ export function TaskDetailPage({
       // Fallback safe
     }
   };
+
+  // Subtask Drawer State & History Navigation (URL: ?subtaskId=...)
+  const initialSubtaskId = searchParams.get("subtaskId");
+  const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
+  const [subtaskHistory, setSubtaskHistory] = React.useState<string[]>([]);
+
+  // Sync with URL search params changes (e.g. reload or back/forward)
+  React.useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      const sid = params.get("subtaskId");
+      setSelectedSubtaskId(sid || null);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  React.useEffect(() => {
+    const sid = searchParams.get("subtaskId");
+    if (sid && sid !== selectedSubtaskId) {
+      setSelectedSubtaskId(sid);
+    }
+  }, [searchParams, selectedSubtaskId]);
+
+  const updateSubtaskUrl = React.useCallback((subtaskId: string | null) => {
+    try {
+      if (typeof window === "undefined") return;
+      const currentParams = new URLSearchParams(window.location.search);
+      if (subtaskId) {
+        currentParams.set("subtaskId", subtaskId);
+      } else {
+        currentParams.delete("subtaskId");
+      }
+      const newQuery = currentParams.toString();
+      const targetUrl = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
+      window.history.pushState(null, "", targetUrl);
+    } catch {
+      // Fallback safe
+    }
+  }, []);
+
+  const handleOpenSubtaskDrawer = React.useCallback((st: StaffTask) => {
+    setSelectedSubtaskId((currentId) => {
+      if (currentId && currentId !== st.id) {
+        setSubtaskHistory((prev) => [...prev, currentId]);
+      }
+      return st.id;
+    });
+    updateSubtaskUrl(st.id);
+  }, [updateSubtaskUrl]);
+
+  const handleCloseSubtaskDrawer = React.useCallback(() => {
+    setSelectedSubtaskId(null);
+    setSubtaskHistory([]);
+    updateSubtaskUrl(null);
+  }, [updateSubtaskUrl]);
+
+  const handleNavigateBackSubtaskHistory = React.useCallback(() => {
+    setSubtaskHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const prevId = prev[prev.length - 1];
+      setSelectedSubtaskId(prevId);
+      updateSubtaskUrl(prevId);
+      return prev.slice(0, -1);
+    });
+  }, [updateSubtaskUrl]);
 
   // Handler toggle Inspector dùng chung cho cả nút bấm và phím tắt
   const handleToggleInspector = React.useCallback(() => {
@@ -249,6 +317,39 @@ export function TaskDetailPage({
   }, [setBreadcrumbItems, task.title]);
 
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
+
+  const activeSubtask = React.useMemo(() => {
+    if (!selectedSubtaskId) return null;
+    return subTasks.find((st) => st.id === selectedSubtaskId) || null;
+  }, [selectedSubtaskId, subTasks]);
+
+  const prevSubtaskId = subtaskHistory.length > 0 ? subtaskHistory[subtaskHistory.length - 1] : null;
+  const prevSubtask = React.useMemo(() => {
+    if (!prevSubtaskId) return null;
+    return subTasks.find((st) => st.id === prevSubtaskId) || null;
+  }, [prevSubtaskId, subTasks]);
+
+  const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
+    setTask((prev) => {
+      if (!isSchool || !schoolTask) return prev;
+      const updatedSubtasks = schoolTask.subTasks.map((s) =>
+        s.id === updated.id ? { ...s, ...updated } : s
+      );
+      return {
+        ...prev,
+        subTasks: updatedSubtasks,
+      } as SchoolTask;
+    });
+
+    if (updated.status === "COMPLETED") {
+      const nextSubtasks = subTasks.map((s) => (s.id === updated.id ? updated : s));
+      const nextCompleted = nextSubtasks.filter((s) => s.status === "COMPLETED").length;
+      const nextProgress = Math.round((nextCompleted / nextSubtasks.length) * 100);
+      if (nextProgress === 100 && task.status !== "COMPLETED") {
+        handleStatusChange(task.id, "COMPLETED", `Tự động từ hoàn thành toàn bộ việc thành phần`);
+      }
+    }
+  }, [isSchool, schoolTask, subTasks, task.status, task.id]);
 
   const completedSubtasks = subTasks.filter((subTask) => subTask.status === "COMPLETED").length;
   const currentProgressPercent = subTasks.length > 0
@@ -675,16 +776,6 @@ export function TaskDetailPage({
                   editorClassName="text-sm leading-relaxed text-foreground min-h-[40px] py-1 font-sans placeholder:text-muted-foreground/50 placeholder:italic"
                 />
               </section>
-
-              {/* Subtasks / Issues Section */}
-              <TaskSubtasksSection
-                parentId={task.id}
-                subTasks={subTasks}
-                canEdit={true}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
-                onCreateSubTaskInline={handleCreateSubTaskInline}
-              />
             </>
           )}
 
@@ -696,6 +787,7 @@ export function TaskDetailPage({
                 subTasks={subTasks}
                 canEdit={true}
                 onToggleSubtask={handleToggleSubtask}
+                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
                 onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
                 onCreateSubTaskInline={handleCreateSubTaskInline}
               />
@@ -802,6 +894,8 @@ export function TaskDetailPage({
               onPriorityChange={handlePriorityChange}
               onDueDateChange={handleDueDateChange}
               onNavigateTab={(tab) => handleTabChange(tab)}
+              onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+              onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
               auditEvents={feedActivityEvents}
               isMobileAccordion={true}
               showRelatedSections={true}
@@ -809,6 +903,21 @@ export function TaskDetailPage({
           </m.aside>
         )}
       </div>
+
+      {/* Subtask Detail Peek Drawer (covers right sidebar area on desktop, full-screen on mobile) */}
+      <SubtaskDetailDrawer
+        isOpen={Boolean(activeSubtask)}
+        onClose={handleCloseSubtaskDrawer}
+        subtask={activeSubtask}
+        parentTaskTitle={task.title}
+        parentTaskCode={taskCode}
+        canEdit={true}
+        onSubtaskUpdated={handleSubtaskUpdated}
+        onOpenAnotherSubtask={handleOpenSubtaskDrawer}
+        onNavigateBackHistory={handleNavigateBackSubtaskHistory}
+        hasHistoryPrev={subtaskHistory.length > 0}
+        historyPrevTitle={prevSubtask?.title}
+      />
 
             {/* Modal Cập nhật tiến độ */}
       {isProgressModalOpen && (
