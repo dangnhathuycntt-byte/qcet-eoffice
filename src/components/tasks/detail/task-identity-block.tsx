@@ -181,14 +181,16 @@ export function TaskIdentityBlock({
 
   const leadName = formatAssigneeNameWithTitle(rawLeadName);
 
-  const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
+  const rawStartDate = isSchool
+    ? (schoolTask?.startDate || schoolTask?.assignedDate)
+    : ((task as any).startDate || (task as any).assignedDate);
   const startDateIso = rawStartDate
     ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
       ? rawStartDate.slice(0, 10)
       : new Date(rawStartDate).toISOString().slice(0, 10)
     : "";
 
-  const rawDueDate = task.dueDate;
+  const rawDueDate = task.dueDate || (isSchool ? schoolTask?.dueDate : staffTask?.dueDate);
   const dueDateIso = rawDueDate
     ? typeof rawDueDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawDueDate)
       ? rawDueDate.slice(0, 10)
@@ -398,7 +400,7 @@ export function TaskIdentityBlock({
               canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
             )}
           >
-            <Signal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <Signal className={cn("size-3.5", currentPriorityObj.iconClass)} strokeWidth={1.5} />
             <span>{currentPriorityObj.label}</span>
           </button>
 
@@ -471,14 +473,14 @@ export function TaskIdentityBlock({
               onChange={(newDate) => onDueDateChange(task.id, newDate)}
               placeholder="Chọn hạn chót"
               variant="chip"
-              icon={<LinearInlineTargetDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
+              icon={<LinearInlineTargetDateIcon className="size-3.5 text-rose-500 shrink-0" />}
               showPresets={true}
               align="left"
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
             />
           ) : (
             <div className="inline-flex items-center gap-1 text-muted-foreground">
-              <LinearInlineTargetDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+              <LinearInlineTargetDateIcon className="size-3.5 text-rose-500 shrink-0" />
               <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chọn hạn chót"}</span>
             </div>
           )}

@@ -5,23 +5,7 @@ import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import styles from "./task-detail-page.module.css";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import {
-  Layers,
-  ListTodo,
-  Clock,
-  FileText,
-  Paperclip,
-  Plus,
-  ExternalLink,
-  CheckCircle2,
-  Building2,
-  User,
-  Calendar,
-  Edit2,
-  Check,
-  X,
-  Loader2,
-} from "lucide-react";
+import { X } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
@@ -478,6 +462,7 @@ export function TaskDetailPage({
       ...prev,
       priority: normalizedPriority,
     }));
+    router.refresh();
   };
 
   // Start date change handler
@@ -491,6 +476,7 @@ export function TaskDetailPage({
     setTask((prev) => ({
       ...prev,
       startDate: newStartDate,
+      assignedDate: newStartDate,
     } as any));
 
     setAuditEvents((prev) => [
@@ -503,6 +489,7 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+    router.refresh();
   };
 
   // Due date change handler (REQ-20)
@@ -528,6 +515,7 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+    router.refresh();
   };
 
   // Progress updated handler
@@ -884,34 +872,7 @@ export function TaskDetailPage({
 
           {/* TAB 3: ACTIVITY FEED & PROGRESS REPORTS */}
           {activeTab === "activity" && (
-            <div className="space-y-6">
-              {/* Latest Progress Report Banner */}
-              <div className="rounded-xl border border-border bg-white p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-foreground">Báo cáo tiến độ mới nhất</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsProgressModalOpen(true)}
-                    className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
-                  >
-                    Cập nhật tiến độ
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 text-xs flex-wrap">
-                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", task.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700")}>
-                    <span className="size-1.5 rounded-full bg-current" />
-                    <span>{task.status === "COMPLETED" ? "Hoàn thành" : `${currentProgressPercent}%`}</span>
-                  </span>
-                  <span className="text-muted-foreground/40">•</span>
-                  <span className="font-medium text-foreground">{isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}</span>
-                  <span className="text-muted-foreground/40">•</span>
-                  <span className="text-muted-foreground text-[11px]">Hôm nay</span>
-                </div>
-                <p className="text-xs text-foreground/90 leading-relaxed font-sans pt-1">
-                  {(task as any).latestNote || ((task as any).progressPercent === 100 ? "Nhiệm vụ đã hoàn thành toàn bộ nội dung theo yêu cầu." : "Đang triển khai thực hiện theo kế hoạch phân công.")}
-                </p>
-              </div>
-
+            <div className="space-y-4">
               {/* Chronological Audit Timeline */}
               <section className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-border/40">

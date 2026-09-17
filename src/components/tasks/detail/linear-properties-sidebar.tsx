@@ -500,7 +500,7 @@ export function LinearPropertiesSidebar({
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <Signal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <Signal className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
                 <span>{activePriorityOption.label}</span>
               </div>
 
@@ -1006,3 +1006,5 @@ export function LinearPropertiesSidebar({
     </div>
   );
 }
+
+// QCET linear properties inspector

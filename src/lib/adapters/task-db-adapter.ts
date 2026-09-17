@@ -180,6 +180,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     assigneeAvatar,
     assignedTo: assigneeName,
     status,
+    startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,
     internalDueDate: isoDueDate,
     parentSchoolTaskId: parentSchoolTaskId || '',
@@ -288,6 +289,8 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     leadDepartmentId: raw.department?.id,
     departmentId: raw.departmentId || raw.department?.id || undefined,
     departmentCode: (raw.department as any)?.shortName || raw.department?.id || undefined,
+    // Đồng bộ chính xác ngày bắt đầu và hạn chót cho chi tiết nhiệm vụ
+    startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,
     assignedDate: formatLocalDate(raw.startDate || new Date()),
     status: statusMap[raw.status] || 'in_progress',
