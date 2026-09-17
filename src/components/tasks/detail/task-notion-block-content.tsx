@@ -96,12 +96,18 @@ const SINGLETON_BLOCK_TYPES = new Set<NotionBlockType>([]);
 
 /**
  * Helper tự động co giãn chiều cao textarea theo đúng scrollHeight,
- * loại bỏ hoàn toàn scrollbar riêng trong textarea.
+ * loại bỏ hoàn toàn scrollbar riêng trong textarea và chống layout thrashing.
  */
 function autoResizeTextarea(el: HTMLTextAreaElement | null) {
   if (!el) return;
+  const currentHeight = el.style.height;
   el.style.height = "auto";
-  el.style.height = `${el.scrollHeight}px`;
+  const newHeight = `${el.scrollHeight}px`;
+  if (currentHeight !== newHeight) {
+    el.style.height = newHeight;
+  } else {
+    el.style.height = currentHeight;
+  }
 }
 
 /**
@@ -509,6 +515,7 @@ export function TaskNotionBlockContent({
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const lastSavedContentRef = React.useRef<string | null>(initialDescription || null);
 
   // Gutter drag selection ref (quét chọn nhiều block từ gutter)
   const isGutterSelectingRef = React.useRef(false);
@@ -540,6 +547,7 @@ export function TaskNotionBlockContent({
       debounceTimerRef.current = setTimeout(async () => {
         try {
           const payload = serializeBlocksToContent(newBlocks);
+          lastSavedContentRef.current = payload;
           await onSaveContent(payload);
         } catch {
           // silent autosave fallback
@@ -550,22 +558,17 @@ export function TaskNotionBlockContent({
   );
 
   // Focus tracking cho block đang thao tác (hỗ trợ chèn file đúng vị trí ngữ cảnh)
-  const handleBlockFocus = React.useCallback(
-    (blockId: string) => {
-      lastActiveBlockIdRef.current = blockId;
-      if (selectedBlockIds.size > 0) {
-        setSelectedBlockIds(new Set());
-        setAnchorBlockId(null);
-      }
-    },
-    [selectedBlockIds]
-  );
+  const handleBlockFocus = React.useCallback((blockId: string) => {
+    lastActiveBlockIdRef.current = blockId;
+    setSelectedBlockIds((prev) => (prev.size > 0 ? new Set() : prev));
+    setAnchorBlockId(null);
+  }, []);
 
   // Bỏ selection, context menu và dọn sạch block rỗng khi click ra ngoài editor
   React.useEffect(() => {
     const handleGlobalPointerDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setSelectedBlockIds(new Set());
+        setSelectedBlockIds((prev) => (prev.size > 0 ? new Set() : prev));
         setAnchorBlockId(null);
         setActiveContextMenu(null);
 
@@ -589,19 +592,13 @@ export function TaskNotionBlockContent({
     return () => window.removeEventListener("mousedown", handleGlobalPointerDown);
   }, [triggerAutoSave]);
 
-  // Đồng bộ khi initialDescription từ server đổi
+  // Đồng bộ khi initialDescription từ server đổi (chỉ khi nội dung bên ngoài thực sự khác và không phải do chính editor vừa lưu)
   React.useEffect(() => {
-    setBlocks(parseContentToBlocks(initialDescription));
+    if (initialDescription !== lastSavedContentRef.current) {
+      lastSavedContentRef.current = initialDescription || null;
+      setBlocks(parseContentToBlocks(initialDescription));
+    }
   }, [initialDescription]);
-
-  // Tự động resize toàn bộ textareas khi blocks thay đổi
-  React.useEffect(() => {
-    blockInputRefs.current.forEach((el) => {
-      if (el instanceof HTMLTextAreaElement) {
-        autoResizeTextarea(el);
-      }
-    });
-  }, [blocks]);
 
   // Tự động focus và scroll nhẹ vào view khi block mới được tạo (Enter hoặc Slash select)
   React.useEffect(() => {
@@ -855,11 +852,10 @@ export function TaskNotionBlockContent({
     });
   };
 
-  // Xử lý blur khỏi một block: tự động remove block nếu không có dữ liệu thực tế
+  // Xử lý blur khỏi một block: tự động remove block nếu không có dữ liệu thực tế và focus rời khỏi editor
   const handleBlockBlur = (e: React.FocusEvent, blockId: string) => {
-    // Nếu focus chuyển sang một phần tử khác bên trong CÙNG block wrapper (ví dụ chuyển giữa title và url của link/attachment)
-    const wrapperEl = blockWrapperRefs.current.get(blockId);
-    if (wrapperEl && e.relatedTarget && wrapperEl.contains(e.relatedTarget as Node)) {
+    // Nếu focus vẫn nằm trong container của editor hoặc cùng block wrapper -> giữ nguyên để không giật layout
+    if (e.relatedTarget && containerRef.current && containerRef.current.contains(e.relatedTarget as Node)) {
       return;
     }
 
@@ -1735,8 +1731,10 @@ export function TaskNotionBlockContent({
                 if (el) blockWrapperRefs.current.set(block.id, el);
                 else blockWrapperRefs.current.delete(block.id);
               }}
-              tabIndex={canEdit ? 0 : undefined}
-              onKeyDown={(e) => handleBlockWrapperKeyDown(e, block, index)}
+              tabIndex={isSelected ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (isSelected) handleBlockWrapperKeyDown(e, block, index);
+              }}
               onContextMenu={(e) => handleContextMenu(e, block)}
               onMouseEnter={() => handleBlockMouseEnter(block.id)}
               onDragOver={(e) => handleDragOver(e, index)}
