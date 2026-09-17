@@ -759,14 +759,8 @@ export function TaskNotionBlockContent({
                         autoResizeTextarea(e.target);
                       }}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={
-                        !block.content
-                          ? isOnlyOneEmptyBlock
-                            ? "Nhập nội dung hoặc gõ / để chèn…"
-                            : "/"
-                          : undefined
-                      }
-                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text block"
+                      placeholder={!block.content ? "Gõ / để chèn" : undefined}
+                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 hover:placeholder:text-muted-foreground/60 focus:placeholder:text-muted-foreground/70 focus:outline-hidden py-0.5 cursor-text block transition-colors"
                     />
                   </div>
                 )}
@@ -783,9 +777,9 @@ export function TaskNotionBlockContent({
                     value={block.content}
                     onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                     onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder={!block.content ? "/" : undefined}
+                    placeholder={!block.content ? "Tiêu đề..." : undefined}
                     className={cn(
-                      "w-full bg-transparent text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-1 font-bold tracking-tight cursor-text",
+                      "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden py-1 font-bold tracking-tight cursor-text transition-colors",
                       block.level === 1 && "text-xl sm:text-2xl mt-2 mb-0.5",
                       block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
                       (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
@@ -807,8 +801,8 @@ export function TaskNotionBlockContent({
                       value={block.content}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text"
+                      placeholder={!block.content ? "Danh sách..." : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
                     />
                   </div>
                 )}
@@ -829,8 +823,8 @@ export function TaskNotionBlockContent({
                       value={block.content}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text"
+                      placeholder={!block.content ? "Danh sách..." : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
                     />
                   </div>
                 )}
@@ -861,9 +855,9 @@ export function TaskNotionBlockContent({
                       value={block.content}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
+                      placeholder={!block.content ? "Việc cần làm..." : undefined}
                       className={cn(
-                        "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text",
+                        "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors",
                         block.checked && "line-through text-muted-foreground/70"
                       )}
                     />
@@ -883,8 +877,8 @@ export function TaskNotionBlockContent({
                       value={block.content}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden italic cursor-text"
+                      placeholder={!block.content ? "Trích dẫn..." : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden italic cursor-text transition-colors"
                     />
                   </div>
                 )}
@@ -903,8 +897,8 @@ export function TaskNotionBlockContent({
                       value={block.content}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "/" : undefined}
-                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden font-medium cursor-text"
+                      placeholder={!block.content ? "Ghi chú lưu ý..." : undefined}
+                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden font-medium cursor-text transition-colors"
                     />
                   </div>
                 )}
@@ -1072,10 +1066,10 @@ export function TaskNotionBlockContent({
         })}
       </div>
 
-      {/* 2. Trailing Empty Row (Chỉ render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
+      {/* 2. Trailing Empty Row (Render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
       {canEdit && !lastBlockIsEmptyText && (
         <div
-          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md select-none"
+          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md select-none cursor-text"
           onClick={() => trailingInputRef.current?.focus()}
         >
           {/* Khoảng trống căn chỉnh ngang hàng với text block phía trên */}
@@ -1086,8 +1080,8 @@ export function TaskNotionBlockContent({
               type="text"
               onKeyDown={handleTrailingKeyDown}
               onChange={handleTrailingChange}
-              placeholder="/"
-              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text"
+              placeholder="Gõ / để chèn"
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 group-hover/trailing:placeholder:text-muted-foreground/60 focus:placeholder:text-muted-foreground/70 focus:outline-hidden py-0.5 cursor-text transition-colors"
             />
           </div>
         </div>

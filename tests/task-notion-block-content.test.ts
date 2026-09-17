@@ -51,24 +51,38 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("displays single-line placeholder when task has no content without artificial white canvas", () => {
+    it("displays concise 'Gõ / để chèn' placeholder without standalone '/' or long sentence", () => {
+      // 1. Must use concise 'Gõ / để chèn'
       assert.ok(
-        componentContent.includes("Nhập nội dung hoặc gõ / để chèn…"),
-        "Empty state must show minimal single-line placeholder"
+        componentContent.includes('placeholder="Gõ / để chèn"') ||
+          componentContent.includes('placeholder={!block.content ? "Gõ / để chèn" : undefined}'),
+        "Must provide concise 'Gõ / để chèn' placeholder"
+      );
+
+      // 2. Must NOT use standalone '/' placeholder
+      assert.ok(
+        !componentContent.includes('placeholder="/"'),
+        "Must NOT use standalone '/' as placeholder"
+      );
+
+      // 3. Must NOT use long sentence 'Nhập nội dung hoặc gõ / để chèn…'
+      assert.ok(
+        !componentContent.includes("Nhập nội dung hoặc gõ / để chèn…"),
+        "Must NOT use long sentence 'Nhập nội dung hoặc gõ / để chèn…'"
       );
     });
 
-    it("provides exactly one ~32px trailing empty row with ghost '/' affordance when content exists", () => {
+    it("provides exactly one ~32px trailing empty row with 'Gõ / để chèn' affordance when content exists", () => {
       // 1. Must render trailing empty block row with height around 32px (h-8)
       assert.ok(
         componentContent.includes("group/trailing") && componentContent.includes("h-8"),
         "Must render a ~32px (h-8) trailing empty block"
       );
 
-      // 2. Ghost '/' placeholder
+      // 2. Trailing placeholder
       assert.ok(
-        componentContent.includes('placeholder="/"'),
-        "Trailing empty block must show '/' as ghost affordance placeholder"
+        componentContent.includes('placeholder="Gõ / để chèn"'),
+        "Trailing empty block must show 'Gõ / để chèn' as placeholder"
       );
 
       // 3. Handles direct typing and slash menu trigger in trailing block
