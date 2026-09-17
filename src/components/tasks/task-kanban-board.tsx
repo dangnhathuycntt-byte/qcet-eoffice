@@ -877,15 +877,19 @@ function KanbanCard({
             </div>
           )}
 
-          {/* Category Tag */}
-          {displaySettings.showCategory && item.categoryLabel && (
-            <span
-              className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-normal bg-muted/60 text-muted-foreground/80 truncate max-w-[90px]"
-              title={item.categoryLabel}
-            >
-              {item.categoryLabel}
-            </span>
-          )}
+          {/* Category Tag (chỉ hiển thị nhãn chuyên môn thực tế, lọc bỏ nhãn trùng lặp 'Nhiệm vụ...' hoặc 'Chỉ đạo...') */}
+          {displaySettings.showCategory && item.categoryLabel && (() => {
+            const trimmed = item.categoryLabel.trim();
+            if (/^(nhiệm vụ|chỉ đạo)/i.test(trimmed)) return null;
+            return (
+              <span
+                className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-normal bg-muted/60 text-muted-foreground/80 truncate max-w-[100px]"
+                title={trimmed}
+              >
+                {trimmed}
+              </span>
+            );
+          })()}
 
           {/* Level Tag (Optional toggle) */}
           {displaySettings.showLevel && (
@@ -1037,7 +1041,7 @@ function DroppableColumn({
       data-slot="kanban-column"
       data-status={col.id}
       className={cn(
-        "w-[280px] min-w-[280px] max-w-[300px] shrink-0 flex flex-col h-full group/col select-none transition-colors duration-150 rounded-lg",
+        "w-[280px] xl:w-full flex-1 min-w-[270px] flex flex-col h-full group/col select-none transition-colors duration-150 rounded-lg",
         isOver && "bg-accent/25 ring-1 ring-primary/20"
       )}
     >
@@ -1174,7 +1178,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
         )}
       >
         <SlidersHorizontal strokeWidth={1.5} className="size-3" />
-        <span className="hidden sm:inline text-[11px]">Hiển thị</span>
+        <span className="hidden sm:inline text-[11px]">Hiển thị thẻ</span>
       </button>
 
       {isOpen && (
@@ -1545,11 +1549,11 @@ export function TaskKanbanBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {/* Horizontal Scrolling Board Surface (Linear Style) */}
+        {/* Horizontal Scrolling Board Surface (Linear Style - Full Width Span) */}
         <div
           ref={carouselRef}
           onScroll={handleScroll}
-          className="flex-1 flex gap-3 overflow-x-auto scrollbar-none pb-2 pt-0.5 min-h-[400px]"
+          className="flex-1 flex gap-3.5 overflow-x-auto scrollbar-none pb-2 pt-0.5 min-h-[400px] w-full"
         >
           {KANBAN_COLUMNS.map((col, idx) => {
             const colTasks = groupedTasks[col.id] || [];
@@ -1561,7 +1565,7 @@ export function TaskKanbanBoard({
                 ref={(el) => {
                   columnRefs.current[idx] = el;
                 }}
-                className="h-full flex flex-col"
+                className="h-full flex flex-col flex-1 min-w-[270px]"
               >
                 <DroppableColumn
                   col={col}
