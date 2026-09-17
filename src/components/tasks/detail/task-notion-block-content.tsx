@@ -25,7 +25,6 @@ import {
   CheckCircle2,
   Circle,
   X,
-  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
@@ -96,14 +95,24 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
  * Đóng gói danh sách blocks thành chuỗi JSON lưu vào DB.
  */
 export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
-  // Nếu chỉ có đúng 1 block text không có metadata và rỗng
-  if (blocks.length === 1 && blocks[0].type === "text" && !blocks[0].content.trim()) {
+  // Loại bỏ các trailing text block hoàn toàn rỗng ở cuối khi lưu (nếu có nhiều hơn 1 block)
+  const cleaned = [...blocks];
+  while (
+    cleaned.length > 1 &&
+    cleaned[cleaned.length - 1].type === "text" &&
+    !cleaned[cleaned.length - 1].content.trim()
+  ) {
+    cleaned.pop();
+  }
+
+  // Nếu chỉ có đúng 1 block text và rỗng
+  if (cleaned.length === 1 && cleaned[0].type === "text" && !cleaned[0].content.trim()) {
     return "";
   }
   return JSON.stringify({
     qcetBlocks: true,
     version: 1,
-    blocks,
+    blocks: cleaned,
   });
 }
 
@@ -277,6 +286,7 @@ export function TaskNotionBlockContent({
   // Ref tracking
   const menuInputRef = React.useRef<HTMLInputElement>(null);
   const blockInputRefs = React.useRef<Map<string, HTMLInputElement | HTMLTextAreaElement>>(new Map());
+  const trailingInputRef = React.useRef<HTMLInputElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -289,11 +299,15 @@ export function TaskNotionBlockContent({
   // Tự động focus vào block mới sau khi chèn
   React.useEffect(() => {
     if (pendingFocusBlockIdRef.current) {
-      const el = blockInputRefs.current.get(pendingFocusBlockIdRef.current);
-      if (el) {
-        el.focus();
-        if ("select" in el && el instanceof HTMLInputElement) {
-          el.select();
+      if (pendingFocusBlockIdRef.current === "trailing") {
+        trailingInputRef.current?.focus();
+      } else {
+        const el = blockInputRefs.current.get(pendingFocusBlockIdRef.current);
+        if (el) {
+          el.focus();
+          if ("select" in el && el instanceof HTMLInputElement) {
+            el.select();
+          }
         }
       }
       pendingFocusBlockIdRef.current = null;
@@ -395,6 +409,8 @@ export function TaskNotionBlockContent({
       const currentBlock = next[targetIdx];
       if (currentBlock && !currentBlock.content.trim() && currentBlock.type === "text") {
         next[targetIdx] = newBlock;
+      } else if (targetIdx >= next.length) {
+        next.push(newBlock);
       } else {
         next.splice(targetIdx + 1, 0, newBlock);
       }
@@ -519,6 +535,52 @@ export function TaskNotionBlockContent({
     }
   };
 
+  // Trailing Empty Block KeyDown
+  const handleTrailingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "/") {
+      e.preventDefault();
+      handleOpenSlashMenu(blocks.length, e.currentTarget);
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const val = e.currentTarget.value.trim();
+      const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const nextId = `b-${Date.now() + 1}-${Math.random().toString(36).slice(2, 6)}`;
+
+      setBlocks((prev) => {
+        const next: NotionBlockItem[] = [...prev];
+        if (val) {
+          next.push({ id: newId, type: "text", content: val });
+        }
+        next.push({ id: nextId, type: "text", content: "" });
+        triggerAutoSave(next);
+        return next;
+      });
+      e.currentTarget.value = "";
+      pendingFocusBlockIdRef.current = nextId;
+    }
+  };
+
+  const handleTrailingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "/") {
+      handleOpenSlashMenu(blocks.length, e.target);
+      e.target.value = "";
+      return;
+    }
+    if (val) {
+      const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setBlocks((prev) => {
+        const next: NotionBlockItem[] = [...prev, { id: newId, type: "text", content: val }];
+        triggerAutoSave(next);
+        return next;
+      });
+      e.target.value = "";
+      pendingFocusBlockIdRef.current = newId;
+    }
+  };
+
   // Drag & Drop
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedBlockIndex(index);
@@ -545,428 +607,488 @@ export function TaskNotionBlockContent({
     setDragOverIndex(null);
   };
 
+  // Click vào bất kỳ khoảng trống canvas nào bên dưới -> focus vào trailing empty block
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (e.target === containerRef.current || (e.target as HTMLElement)?.dataset?.slot === "canvas-blank-area") {
+      // Focus vào block cuối cùng nếu rỗng, hoặc focus vào trailing input
+      const lastBlock = blocks[blocks.length - 1];
+      if (lastBlock && !lastBlock.content.trim() && lastBlock.type === "text") {
+        const el = blockInputRefs.current.get(lastBlock.id);
+        if (el) {
+          el.focus();
+          return;
+        }
+      }
+      trailingInputRef.current?.focus();
+    }
+  };
+
   // Tính số thứ tự cho numbered list
   let numberedCounter = 0;
+
+  // Kiểm tra xem block cuối cùng có rỗng không
+  const lastBlock = blocks[blocks.length - 1];
+  const lastBlockIsEmptyText = lastBlock && lastBlock.type === "text" && !lastBlock.content;
 
   return (
     <div
       ref={containerRef}
       data-slot="task-notion-block-content"
-      className={cn("w-full space-y-1 relative font-sans text-sm text-foreground", className)}
+      onClick={handleCanvasClick}
+      className={cn(
+        "w-full min-h-[160px] sm:min-h-[220px] flex flex-col relative font-sans text-sm text-foreground cursor-text",
+        className
+      )}
     >
       {/* 1. Các Blocks Nội Dung (Clean document canvas) */}
-      {blocks.map((block, index) => {
-        const isDragOver = dragOverIndex === index;
+      <div className="space-y-0.5">
+        {blocks.map((block, index) => {
+          const isDragOver = dragOverIndex === index;
 
-        // Reset hoặc tăng bộ đếm numbered list
-        if (block.type === "numbered_list") {
-          numberedCounter += 1;
-        } else {
-          numberedCounter = 0;
-        }
-        const currentNumber = numberedCounter;
+          // Reset hoặc tăng bộ đếm numbered list
+          if (block.type === "numbered_list") {
+            numberedCounter += 1;
+          } else {
+            numberedCounter = 0;
+          }
+          const currentNumber = numberedCounter;
 
-        return (
-          <div
-            key={block.id}
-            onDragOver={(e) => handleDragOver(e, index)}
-            className={cn(
-              "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-lg transition-colors duration-100",
-              isDragOver && "bg-primary/10 ring-1 ring-primary/30",
-              "hover:bg-muted/20"
-            )}
-          >
-            {/* Gutter trái: Handle ⋮⋮ (Chỉ hiện khi hover hoặc focus) */}
-            {canEdit && (
-              <div
-                className={cn(
-                  "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
-                  "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
-                )}
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    draggable={true}
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() =>
-                      setActiveBlockMenuId((prev) => (prev === block.id ? null : block.id))
-                    }
-                    className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing transition-colors"
-                    title="Kéo thả hoặc nhấn để mở thao tác"
-                    aria-label="Thao tác khối"
-                  >
-                    <GripVertical className="size-3.5" />
-                  </button>
-
-                  {/* Menu thao tác khi click ⋮⋮ */}
-                  {activeBlockMenuId === block.id && (
-                    <div
-                      role="menu"
-                      className="absolute left-0 top-full mt-1 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
-                    >
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        onClick={() => handleMoveBlock(index, "up")}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-                      >
-                        <ArrowUp className="size-3.5 text-muted-foreground" />
-                        <span>Di chuyển lên</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === blocks.length - 1}
-                        onClick={() => handleMoveBlock(index, "down")}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-                      >
-                        <ArrowDown className="size-3.5 text-muted-foreground" />
-                        <span>Di chuyển xuống</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDuplicateBlock(block, index)}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
-                      >
-                        <Copy className="size-3.5 text-muted-foreground" />
-                        <span>Nhân đôi block</span>
-                      </button>
-                      <div className="my-1 border-t border-border/40" />
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBlock(block.id)}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
-                      >
-                        <Trash2 className="size-3.5" />
-                        <span>Xóa block</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Nội dung Block */}
-            <div className="flex-1 min-w-0">
-              {/* 1. Text Block */}
-              {block.type === "text" && (
-                <textarea
-                  ref={(el) => {
-                    if (el) blockInputRefs.current.set(block.id, el);
-                    else blockInputRefs.current.delete(block.id);
-                  }}
-                  rows={Math.max(1, (block.content || "").split("\n").length)}
-                  disabled={!canEdit}
-                  value={block.content}
-                  onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                  onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                  placeholder={index === blocks.length - 1 ? "Nhập '/' để chọn lệnh..." : "Gõ văn bản..."}
-                  className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden py-0.5"
-                />
+          return (
+            <div
+              key={block.id}
+              onDragOver={(e) => handleDragOver(e, index)}
+              className={cn(
+                "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-md transition-colors duration-75",
+                isDragOver && "bg-primary/10 ring-1 ring-primary/30"
               )}
-
-              {/* 2. Heading Block (H1, H2, H3) */}
-              {block.type === "heading" && (
-                <input
-                  ref={(el) => {
-                    if (el) blockInputRefs.current.set(block.id, el);
-                    else blockInputRefs.current.delete(block.id);
-                  }}
-                  type="text"
-                  disabled={!canEdit}
-                  value={block.content}
-                  onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                  onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                  placeholder={`Tiêu đề ${block.level || 2}...`}
+            >
+              {/* Gutter trái: Handle ⋮⋮ (Chỉ hiện khi hover hoặc focus block) */}
+              {canEdit && (
+                <div
                   className={cn(
-                    "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden py-1 font-bold tracking-tight",
-                    block.level === 1 && "text-xl sm:text-2xl mt-2 mb-1",
-                    block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
-                    (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
+                    "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
+                    "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
                   )}
-                />
-              )}
-
-              {/* 3. Bulleted List */}
-              {block.type === "bulleted_list" && (
-                <div className="flex items-start gap-2 py-0.5">
-                  <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Nội dung danh sách..."
-                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden"
-                  />
-                </div>
-              )}
-
-              {/* 4. Numbered List */}
-              {block.type === "numbered_list" && (
-                <div className="flex items-start gap-2 py-0.5">
-                  <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right">
-                    {currentNumber}.
-                  </span>
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Nội dung danh sách..."
-                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden"
-                  />
-                </div>
-              )}
-
-              {/* 5. Checklist (To-do) */}
-              {block.type === "checklist" && (
-                <div className="flex items-start gap-2.5 py-0.5">
-                  <button
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
-                    className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
-                    aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
-                  >
-                    {block.checked ? (
-                      <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
-                    ) : (
-                      <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
-                    )}
-                  </button>
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Mục cần thực hiện..."
-                    className={cn(
-                      "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden",
-                      block.checked && "line-through text-muted-foreground/70"
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* 6. Quote (Trích dẫn) */}
-              {block.type === "quote" && (
-                <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Nội dung trích dẫn, chỉ đạo..."
-                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden italic"
-                  />
-                </div>
-              )}
-
-              {/* 7. Callout (Ghi chú nổi bật) */}
-              {block.type === "callout" && (
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/40 my-1 text-sm border border-border/40">
-                  <Info className="size-4 text-primary shrink-0 mt-0.5" />
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Ghi chú quan trọng cần lưu ý..."
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden font-medium"
-                  />
-                </div>
-              )}
-
-              {/* 8. Divider (Đường phân cách) */}
-              {block.type === "divider" && (
-                <div className="py-2">
-                  <hr className="border-border/60" />
-                </div>
-              )}
-
-              {/* 9. Attachment (Tệp đính kèm) */}
-              {block.type === "attachment" && (
-                <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <Paperclip className="size-4 text-primary shrink-0" />
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={block.fileName || block.content}
-                        onChange={(e) =>
-                          handleUpdateBlock(block.id, {
-                            fileName: e.target.value,
-                            content: e.target.value,
-                          })
-                        }
-                        placeholder="Tên tài liệu đính kèm..."
-                        className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
-                      />
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={block.url || ""}
-                        onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                        placeholder="URL liên kết tải xuống (https://...)"
-                        className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
-                      />
-                    </div>
-                  </div>
-                  {block.url && (
-                    <a
-                      href={block.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-muted text-foreground transition-colors shrink-0"
+                >
+                  <div className="relative">
+                    <button
+                      type="button"
+                      draggable={true}
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() =>
+                        setActiveBlockMenuId((prev) => (prev === block.id ? null : block.id))
+                      }
+                      className="p-0.5 rounded text-muted-foreground/35 hover:text-foreground hover:bg-muted/60 cursor-grab active:cursor-grabbing transition-colors"
+                      title="Kéo thả hoặc nhấn để mở thao tác"
+                      aria-label="Thao tác khối"
                     >
-                      <ExternalLink className="size-3" />
-                      <span>Mở</span>
-                    </a>
-                  )}
-                </div>
-              )}
+                      <GripVertical className="size-3.5" />
+                    </button>
 
-              {/* 10. Link (Liên kết) */}
-              {block.type === "link" && (
-                <div className="flex items-center justify-between gap-2.5 p-2 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Link2 className="size-3.5 text-primary shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={block.content}
-                        onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                        placeholder="Tiêu đề liên kết..."
-                        className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
-                      />
-                      <input
-                        type="text"
-                        disabled={!canEdit}
-                        value={block.url || ""}
-                        onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                        placeholder="https://..."
-                        className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
-                      />
-                    </div>
-                  </div>
-                  {block.url && (
-                    <a
-                      href={block.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1 text-muted-foreground hover:text-foreground shrink-0"
-                      title="Mở liên kết"
-                    >
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {/* 11. Subtasks View Block */}
-              {block.type === "subtasks_view" && (
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 my-1.5 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <Layers className="size-3.5 text-primary" />
-                      <span className="font-semibold text-foreground">
-                        Việc thành phần
-                      </span>
-                      <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.2 rounded-full tabular-nums">
-                        {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length}
-                      </span>
-                    </div>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBlock(block.id)}
-                        className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
-                        title="Gỡ bỏ khối này"
+                    {/* Menu thao tác khi click ⋮⋮ */}
+                    {activeBlockMenuId === block.id && (
+                      <div
+                        role="menu"
+                        className="absolute left-0 top-full mt-1 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
                       >
-                        <X className="size-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => handleMoveBlock(index, "up")}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+                        >
+                          <ArrowUp className="size-3.5 text-muted-foreground" />
+                          <span>Di chuyển lên</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === blocks.length - 1}
+                          onClick={() => handleMoveBlock(index, "down")}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+                        >
+                          <ArrowDown className="size-3.5 text-muted-foreground" />
+                          <span>Di chuyển xuống</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateBlock(block, index)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
+                        >
+                          <Copy className="size-3.5 text-muted-foreground" />
+                          <span>Nhân đôi block</span>
+                        </button>
+                        <div className="my-1 border-t border-border/40" />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBlock(block.id)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span>Xóa block</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-
-                  {subTasks.length > 0 ? (
-                    <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-background overflow-hidden text-xs">
-                      {subTasks.map((st) => {
-                        const isDone = st.status === "COMPLETED";
-                        const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
-                        const stStatus = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
-
-                        return (
-                          <div
-                            key={st.id}
-                            onClick={() => onSelectSubtask?.(st)}
-                            className="flex items-center justify-between p-2 hover:bg-muted/30 transition-colors cursor-pointer gap-2"
-                          >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              {isDone ? (
-                                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
-                              ) : (
-                                <Circle className="size-3.5 text-muted-foreground/60 shrink-0" />
-                              )}
-                              <span className={cn("truncate font-medium text-foreground", isDone && "line-through text-muted-foreground")}>
-                                {st.title}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-                              <span className="truncate max-w-[120px]">{assigneeTitle}</span>
-                              {st.dueDate && (
-                                <span className="font-mono tabular-nums">{formatDisplayDate(st.dueDate)}</span>
-                              )}
-                              <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-medium border", stStatus.colorClass)}>
-                                {stStatus.label}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-3 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg">
-                      Chưa có việc thành phần nào.
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
-          </div>
-        );
-      })}
 
-      {/* 2. Slash Command Popover Menu (Tối giản kiểu Notion) */}
+              {/* Nội dung Block */}
+              <div className="flex-1 min-w-0">
+                {/* 1. Text Block */}
+                {block.type === "text" && (
+                  <div className="relative flex items-center min-h-[28px]">
+                    <textarea
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      rows={Math.max(1, (block.content || "").split("\n").length)}
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text"
+                    />
+                  </div>
+                )}
+
+                {/* 2. Heading Block (H1, H2, H3) */}
+                {block.type === "heading" && (
+                  <input
+                    ref={(el) => {
+                      if (el) blockInputRefs.current.set(block.id, el);
+                      else blockInputRefs.current.delete(block.id);
+                    }}
+                    type="text"
+                    disabled={!canEdit}
+                    value={block.content}
+                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                    placeholder={!block.content ? "/" : undefined}
+                    className={cn(
+                      "w-full bg-transparent text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-1 font-bold tracking-tight cursor-text",
+                      block.level === 1 && "text-xl sm:text-2xl mt-2 mb-0.5",
+                      block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
+                      (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
+                    )}
+                  />
+                )}
+
+                {/* 3. Bulleted List */}
+                {block.type === "bulleted_list" && (
+                  <div className="flex items-start gap-2 py-0.5">
+                    <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
+                    <input
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      type="text"
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text"
+                    />
+                  </div>
+                )}
+
+                {/* 4. Numbered List */}
+                {block.type === "numbered_list" && (
+                  <div className="flex items-start gap-2 py-0.5">
+                    <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
+                      {currentNumber}.
+                    </span>
+                    <input
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      type="text"
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text"
+                    />
+                  </div>
+                )}
+
+                {/* 5. Checklist (To-do) */}
+                {block.type === "checklist" && (
+                  <div className="flex items-start gap-2.5 py-0.5">
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
+                      className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
+                      aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
+                    >
+                      {block.checked ? (
+                        <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
+                      ) : (
+                        <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
+                      )}
+                    </button>
+                    <input
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      type="text"
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className={cn(
+                        "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden cursor-text",
+                        block.checked && "line-through text-muted-foreground/70"
+                      )}
+                    />
+                  </div>
+                )}
+
+                {/* 6. Quote (Trích dẫn) */}
+                {block.type === "quote" && (
+                  <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
+                    <input
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      type="text"
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden italic cursor-text"
+                    />
+                  </div>
+                )}
+
+                {/* 7. Callout (Ghi chú nổi bật) */}
+                {block.type === "callout" && (
+                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-muted/40 my-1 text-sm border border-border/40">
+                    <Info className="size-4 text-primary shrink-0 mt-0.5" />
+                    <input
+                      ref={(el) => {
+                        if (el) blockInputRefs.current.set(block.id, el);
+                        else blockInputRefs.current.delete(block.id);
+                      }}
+                      type="text"
+                      disabled={!canEdit}
+                      value={block.content}
+                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                      placeholder={!block.content ? "/" : undefined}
+                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden font-medium cursor-text"
+                    />
+                  </div>
+                )}
+
+                {/* 8. Divider (Đường phân cách) */}
+                {block.type === "divider" && (
+                  <div className="py-2">
+                    <hr className="border-border/60" />
+                  </div>
+                )}
+
+                {/* 9. Attachment (Tệp đính kèm) */}
+                {block.type === "attachment" && (
+                  <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <Paperclip className="size-4 text-primary shrink-0" />
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={block.fileName || block.content}
+                          onChange={(e) =>
+                            handleUpdateBlock(block.id, {
+                              fileName: e.target.value,
+                              content: e.target.value,
+                            })
+                          }
+                          placeholder="Tên tài liệu đính kèm..."
+                          className="w-full bg-transparent font-medium text-foreground focus:outline-hidden cursor-text"
+                        />
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={block.url || ""}
+                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                          placeholder="URL tải xuống (https://...)"
+                          className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
+                        />
+                      </div>
+                    </div>
+                    {block.url && (
+                      <a
+                        href={block.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-muted text-foreground transition-colors shrink-0"
+                      >
+                        <ExternalLink className="size-3" />
+                        <span>Mở</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* 10. Link (Liên kết) */}
+                {block.type === "link" && (
+                  <div className="flex items-center justify-between gap-2.5 p-2 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Link2 className="size-3.5 text-primary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={block.content}
+                          onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                          placeholder="Tiêu đề liên kết..."
+                          className="w-full bg-transparent font-medium text-foreground focus:outline-hidden cursor-text"
+                        />
+                        <input
+                          type="text"
+                          disabled={!canEdit}
+                          value={block.url || ""}
+                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
+                        />
+                      </div>
+                    </div>
+                    {block.url && (
+                      <a
+                        href={block.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                        title="Mở liên kết"
+                      >
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* 11. Subtasks View Block */}
+                {block.type === "subtasks_view" && (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-3 my-1.5 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <Layers className="size-3.5 text-primary" />
+                        <span className="font-semibold text-foreground">
+                          Việc thành phần
+                        </span>
+                        <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.2 rounded-full tabular-nums">
+                          {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length}
+                        </span>
+                      </div>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBlock(block.id)}
+                          className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
+                          title="Gỡ bỏ khối này"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {subTasks.length > 0 ? (
+                      <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-background overflow-hidden text-xs">
+                        {subTasks.map((st) => {
+                          const isDone = st.status === "COMPLETED";
+                          const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
+                          const stStatus = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
+
+                          return (
+                            <div
+                              key={st.id}
+                              onClick={() => onSelectSubtask?.(st)}
+                              className="flex items-center justify-between p-2 hover:bg-muted/30 transition-colors cursor-pointer gap-2"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {isDone ? (
+                                  <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                                ) : (
+                                  <Circle className="size-3.5 text-muted-foreground/60 shrink-0" />
+                                )}
+                                <span className={cn("truncate font-medium text-foreground", isDone && "line-through text-muted-foreground")}>
+                                  {st.title}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+                                <span className="truncate max-w-[120px]">{assigneeTitle}</span>
+                                {st.dueDate && (
+                                  <span className="font-mono tabular-nums">{formatDisplayDate(st.dueDate)}</span>
+                                )}
+                                <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-medium border", stStatus.colorClass)}>
+                                  {stStatus.label}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-3 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg">
+                        Chưa có việc thành phần nào.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Trailing Empty Row (28-32px, ghost affordance '/', gõ được ngay lập tức) */}
+      {canEdit && !lastBlockIsEmptyText && (
+        <div
+          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md cursor-text select-none"
+          onClick={() => trailingInputRef.current?.focus()}
+        >
+          <div className="flex-1 flex items-center min-h-[28px]">
+            <input
+              ref={trailingInputRef}
+              type="text"
+              onKeyDown={handleTrailingKeyDown}
+              onChange={handleTrailingChange}
+              placeholder="/"
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/30 focus:outline-hidden py-0.5 cursor-text"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 3. Vùng trắng usable phía dưới (Click bất kỳ đâu để focus soạn thảo) */}
+      <div
+        data-slot="canvas-blank-area"
+        className="flex-1 min-h-[80px] cursor-text"
+        onClick={() => {
+          if (lastBlockIsEmptyText) {
+            const el = blockInputRefs.current.get(lastBlock.id);
+            el?.focus();
+          } else {
+            trailingInputRef.current?.focus();
+          }
+        }}
+      />
+
+      {/* 4. Slash Command Popover Menu (Tối giản kiểu Notion) */}
       {isMenuOpen && (
         <div
           role="dialog"

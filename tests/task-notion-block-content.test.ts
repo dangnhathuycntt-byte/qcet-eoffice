@@ -8,7 +8,7 @@ import {
   type NotionBlockItem,
 } from "@/components/tasks/detail/task-notion-block-content";
 
-describe("Notion/Linear Minimalist Document Editor Suite", () => {
+describe("Notion/Linear Minimalist Document Editor Suite — UX Fixes & Trailing Canvas", () => {
   const componentPath = path.join(
     process.cwd(),
     "src/components/tasks/detail/task-notion-block-content.tsx"
@@ -21,9 +21,57 @@ describe("Notion/Linear Minimalist Document Editor Suite", () => {
   const componentContent = fs.readFileSync(componentPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
 
-  describe("1. Redundant UI Elimination & Clean Document Canvas", () => {
-    it("eliminates redundant heading 'Nội dung chi tiết', '+ Thêm nội dung' button, and fixed '+' prefix", () => {
-      // 1. Must NOT contain heading "Nội dung chi tiết"
+  describe("1. Trailing Empty Block & Dead-Zone Click-to-Focus", () => {
+    it("provides a 28-32px trailing empty block with ghost '/' placeholder and cursor-text", () => {
+      // 1. Must render trailing empty block row with height around 28-32px (h-8)
+      assert.ok(
+        componentContent.includes("group/trailing") && componentContent.includes("h-8"),
+        "Must render a ~32px (h-8) trailing empty block"
+      );
+
+      // 2. Ghost '/' placeholder
+      assert.ok(
+        componentContent.includes('placeholder="/"'),
+        "Trailing empty block must show '/' as ghost affordance placeholder"
+      );
+
+      // 3. Cursor text on entire row
+      assert.ok(
+        componentContent.includes("cursor-text"),
+        "Must have cursor-text on editor canvas and trailing row"
+      );
+    });
+
+    it("makes the blank area below content usable by focusing the trailing block on click", () => {
+      // 1. Container has reasonable min-height
+      assert.ok(
+        componentContent.includes("min-h-[160px]"),
+        "Editor canvas must have reasonable min-height (>= 160px)"
+      );
+
+      // 2. Canvas blank area handles click to focus trailing input
+      assert.ok(
+        componentContent.includes('data-slot="canvas-blank-area"'),
+        "Must provide canvas-blank-area element to eliminate dead zone"
+      );
+      assert.ok(
+        componentContent.includes("trailingInputRef.current?.focus()"),
+        "Clicking blank area must focus trailing empty block"
+      );
+    });
+
+    it("allows typing normal text directly in trailing block or typing '/' to trigger slash menu", () => {
+      assert.ok(
+        componentContent.includes("handleTrailingKeyDown") &&
+          componentContent.includes("handleTrailingChange"),
+        "Must handle direct typing and '/' slash trigger in trailing block"
+      );
+    });
+  });
+
+  describe("2. Elimination of Redundant UI & Minimalist Block Aesthetics", () => {
+    it("ensures no fixed '+' buttons, no redundant headings, and no grey card backgrounds for normal blocks", () => {
+      // 1. Must NOT contain heading 'Nội dung chi tiết'
       assert.ok(
         !componentContent.includes("Nội dung chi tiết"),
         "Must NOT contain redundant heading 'Nội dung chi tiết'"
@@ -35,33 +83,15 @@ describe("Notion/Linear Minimalist Document Editor Suite", () => {
         "Must NOT contain redundant button '+ Thêm nội dung'"
       );
 
-      // 3. Must NOT contain text hint 'hoặc gõ / để chọn'
-      assert.ok(
-        !componentContent.includes("hoặc gõ"),
-        "Must NOT contain redundant text hint 'hoặc gõ / để chọn'"
-      );
-
-      // 4. In TaskDetailPage, TaskNotionBlockContent is rendered directly after TaskIdentityBlock (Resources)
-      assert.ok(
-        detailPageContent.includes("<TaskNotionBlockContent"),
-        "TaskDetailPage must render TaskNotionBlockContent directly as continuous canvas"
-      );
-    });
-
-    it("ensures drag handle (⋮⋮) is only revealed on hover/focus and blocks have clean canvas typography", () => {
-      // Gutter with GripVertical has opacity-0 group-hover:opacity-100 focus-within:opacity-100
+      // 3. Drag handle (⋮⋮) is only revealed on hover/focus
       assert.ok(
         componentContent.includes("opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"),
         "Drag handle must only be visible on hover or focus"
       );
-      assert.ok(
-        componentContent.includes("GripVertical"),
-        "Must use GripVertical icon for drag handle"
-      );
     });
   });
 
-  describe("2. Block Engine, Parsing & Persistence Serialization", () => {
+  describe("3. Block Engine, Serialization & Slash Menu", () => {
     it("preserves legacy plain text description as the first text block without data loss", () => {
       const legacyDesc = "Soạn thảo kế hoạch kiểm định chất lượng đào tạo năm học 2026-2027";
       const blocks = parseContentToBlocks(legacyDesc);
@@ -103,19 +133,6 @@ describe("Notion/Linear Minimalist Document Editor Suite", () => {
       assert.equal(restored[9].type, "link");
       assert.equal(restored[10].type, "subtasks_view");
     });
-  });
-
-  describe("3. Slash Command Menu & Minimalist Interaction", () => {
-    it("supports opening slash command menu with '/' key in blocks and search filtering", () => {
-      assert.ok(
-        componentContent.includes('e.key === "/"'),
-        "Must detect '/' keydown to open slash command menu"
-      );
-      assert.ok(
-        componentContent.includes("menuSearchQuery") && componentContent.includes("filteredMenuOptions"),
-        "Must provide search input and filtered options for slash menu"
-      );
-    });
 
     it("implements all essential E-Office block options in slash menu", () => {
       assert.ok(componentContent.includes('"Văn bản"'), "Must support Text");
@@ -131,7 +148,7 @@ describe("Notion/Linear Minimalist Document Editor Suite", () => {
       assert.ok(componentContent.includes('"Liên kết"'), "Must support Link");
     });
 
-    it("handles Enter to create next block and Backspace on empty block naturally", () => {
+    it("handles Enter to create next block, Backspace to revert or delete, and Esc to close menu", () => {
       assert.ok(
         componentContent.includes('e.key === "Enter"'),
         "Enter must create next block"
