@@ -326,13 +326,15 @@ export function VietnameseDatePicker({
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           className={cn(
-            "group inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-normal transition-colors cursor-pointer select-none",
+            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-[11px] font-medium transition-colors cursor-pointer select-none",
+            error && "border-rose-300 bg-rose-50 text-rose-700",
             hasValue ? "text-foreground" : "text-muted-foreground",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         >
-          {icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
-          <span className={cn("tabular-nums", hasValue ? "text-foreground" : "text-muted-foreground")}>
+          {icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+          {label && <span className={cn(error ? "text-rose-600" : "text-muted-foreground font-normal")}>{label}</span>}
+          <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
             {hasValue ? displayDate : placeholder}
           </span>
         </button>

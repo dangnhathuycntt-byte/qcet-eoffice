@@ -54,15 +54,17 @@ import { recalculateParentTaskProgress } from "@/server/tasks/task-command-servi
 export const SubmitResultInputSchema = z
   .object({
     summary: z.string().optional(),
+    title: z.string().optional(),
+    note: z.string().optional(),
     reportUrl: z.string().url("Đường dẫn báo cáo không hợp lệ").optional().or(z.literal("")),
     deliverableId: z.string().optional(),
-    title: z.string().optional(),
     fileUrl: z.string().optional(),
     fileType: z.string().optional(),
     fileSize: z.number().optional(),
+    completionRate: z.number().optional(),
     expectedVersion: z.number().int().min(0).optional(),
   })
-  .refine((data) => Boolean(data.summary?.trim() || data.title?.trim()), {
+  .refine((data) => Boolean(data.summary?.trim() || data.title?.trim() || data.note?.trim()), {
     message: "Tóm tắt kết quả (summary) hoặc tiêu đề minh chứng (title) là bắt buộc",
   });
 
@@ -609,7 +611,10 @@ export class TaskDomainActionService {
     }
 
     const summaryText =
-      validated.summary?.trim() || validated.title?.trim() || "Nộp kết quả thực hiện nhiệm vụ";
+      validated.summary?.trim() ||
+      validated.title?.trim() ||
+      validated.note?.trim() ||
+      "Nộp kết quả thực hiện nhiệm vụ";
     const reportUrlText = validated.reportUrl?.trim() || validated.fileUrl?.trim() || null;
 
     return await prisma.$transaction(async (tx) => {

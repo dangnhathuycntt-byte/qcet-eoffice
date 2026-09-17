@@ -1,5 +1,6 @@
 "use client";
 
+// Task progress composer modal component with direct update-progress domain integration
 import * as React from "react";
 import {
   Loader2,
@@ -89,15 +90,6 @@ export function TaskProgressComposer({
 
       if (onProgressUpdated) {
         await onProgressUpdated(progress, note.trim() || undefined);
-      }
-
-      const nextStatus: TaskStatus = progress === 100
-        ? "COMPLETED"
-        : progress > 0
-          ? "IN_PROGRESS"
-          : "NOT_STARTED";
-      if ((taskStatus === "NOT_STARTED" || taskStatus !== nextStatus) && onStatusChange) {
-        await onStatusChange(taskId, nextStatus, note.trim() || undefined);
       }
 
       setFeedback({ type: "success", message: "Đã cập nhật tiến độ thành công." });

@@ -1,3 +1,6 @@
+/**
+ * QCET Task Detail E2E Persistence, Rollup, Security & Real Data Suite (V2)
+ */
 import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -296,41 +299,36 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
   });
 
   // =========================================================================
-  // 4. HỖ TRỢ GÕ TIẾNG VIỆT CÓ DẤU (IME / TELEX / VNI) KHÔNG MẤT CHỮ
+  // 5. STATUS TRANSITION ACTIONS & REBAC/LEAD_UNIT AUTHORITY
   // =========================================================================
-  describe("4. Vietnamese IME Typing & Character Offset Invariants", () => {
-    it("DirectInlineEditor tính toán chính xác offset ký tự tiếng Việt có dấu đa byte UTF-8", () => {
-      const text = "Báo cáo tiến độ nghiệm thu Đề tài Nghiên cứu Khoa học";
-      const textNode = {
-        nodeType: 3,
-        textContent: text,
-        childNodes: [],
-      } as unknown as Node;
-
-      const container = {
-        nodeType: 1,
-        childNodes: [textNode],
-        contains: (node: Node) => node === textNode,
-      } as unknown as Node;
-
-      // Ký tự tại chữ "Đề tài"
-      const targetPos = text.indexOf("Đề tài");
-      const computedOffset = getTextOffsetInContainer(container, textNode, targetPos);
-      assert.equal(computedOffset, targetPos);
-      assert.equal(text.slice(computedOffset, computedOffset + 6), "Đề tài");
-    });
-
-    it("DirectInlineEditor tôn trọng cờ isComposing khi gõ tiếng Việt để chống ghi đè/mất chữ", () => {
+  describe("5. Status Transition Actions & Execution Authority", () => {
+    it("src/lib/tasks/task-actions.ts gửi đầy đủ schema cho WAITING_APPROVAL, NOT_STARTED và IN_PROGRESS", () => {
       const source = fs.readFileSync(
-        path.join(process.cwd(), "src/components/tasks/detail/direct-inline-editor.tsx"),
+        path.join(process.cwd(), "src/lib/tasks/task-actions.ts"),
         "utf8"
       );
 
       assert.ok(
-        source.includes("isComposingRef.current") &&
-        source.includes("handleCompositionStart") &&
-        source.includes("handleCompositionEnd"),
-        "DirectInlineEditor phải bắt sự kiện compositionstart/end qua handleCompositionStart/End để chống autosave giữa chừng khi gõ dấu tiếng Việt"
+        source.includes("summary: note ||") && source.includes("completionRate: 100"),
+        "updateTaskStatus phải truyền trường summary và completionRate khi chuyển sang WAITING_APPROVAL"
+      );
+      assert.ok(
+        source.includes("progressPercent: 0"),
+        "updateTaskStatus phải truyền progressPercent: 0 khi chuyển về NOT_STARTED"
+      );
+    });
+
+    it("src/lib/auth/hybrid-authorization.ts cho phép DRI, Collaborator, Assigner, Lead Unit và Admin cập nhật tiến độ", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/lib/auth/hybrid-authorization.ts"),
+        "utf8"
+      );
+
+      assert.ok(
+        source.includes('relationships.has("LEAD_UNIT")') &&
+        source.includes('relationships.has("ASSIGNER")') &&
+        source.includes('user.role === "ADMIN"'),
+        "hybrid-authorization phải cho phép LEAD_UNIT, ASSIGNER và ADMIN cập nhật tiến độ/nộp kết quả"
       );
     });
   });

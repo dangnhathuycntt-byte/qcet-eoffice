@@ -1,6 +1,6 @@
 /**
  * HYBRID AUTHORIZATION & CAPABILITY ENGINE (RBAC + ReBAC + ABAC)
- * Canonical Reference Implementation for QCET E-Office
+ * Canonical Reference Implementation for QCET E-Office (Task, Document, Meeting & System scopes)
  *
  * Specifications:
  * - docs/domain/authority.md (QCET-AUTH-SPEC-2026-01)
@@ -929,7 +929,11 @@ export async function authorize(
       relationships.has("DRI") ||
       relationships.has("COLLABORATOR") ||
       relationships.has("ASSIGNER") ||
-      isExecutivePosition(user.activePositionCode);
+      relationships.has("LEAD_UNIT") ||
+      isExecutivePosition(user.activePositionCode) ||
+      isUnitLeaderPosition(user.activePositionCode) ||
+      user.role === "ADMIN" ||
+      user.systemRole === "ADMIN";
 
     if (!canExecute) {
       return {

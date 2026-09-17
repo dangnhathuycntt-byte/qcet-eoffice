@@ -1,5 +1,6 @@
 "use client";
 
+// Unified Task Toolbar Component - Linear-inspired unified control toolbar for task views
 import * as React from "react";
 import {
   Search,
@@ -1802,11 +1803,12 @@ export function UnifiedTaskToolbar({
           </div>
         )}
 
-        {/* 8. Hiển thị Menu Trigger (Right side - pinned) */}
+        {/* 8. Hiển thị Menu Trigger (Right side - pinned, compact icon + tooltip) */}
         {onViewModeChange && (
           <div className="ml-auto relative shrink-0" ref={displayMenuRef}>
             <button
               type="button"
+              title="Hiển thị"
               aria-label="Tùy chọn hiển thị"
               aria-expanded={isDisplayOpen}
               onClick={() => {
@@ -1815,12 +1817,12 @@ export function UnifiedTaskToolbar({
                 setIsDisplayOpen(next);
               }}
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                "inline-flex h-8 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
                 isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
               )}
             >
               <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-              <span>Hiển thị</span>
+              <span className="hidden sm:inline">Hiển thị</span>
             </button>
 
             {isDisplayOpen && (

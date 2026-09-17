@@ -7,9 +7,10 @@ export interface TaskActionResult<T = unknown> {
 }
 
 /**
- * Shared Task Action Layer (Plan v2 §13 / REQ-20)
+ * Shared Task Action Layer (Plan v2 §13 / REQ-20 / Task Actions Engine)
  * Consolidates all task mutations into a single authoritative client layer.
  * All surfaces (Table, Context Menu, Detail View, Kanban) must route through this layer.
+ * Canonical status transitions: NOT_STARTED, IN_PROGRESS, WAITING_APPROVAL, COMPLETED, CANCELLED.
  */
 
 export async function updateTaskStatus(
@@ -18,11 +19,14 @@ export async function updateTaskStatus(
   note?: string
 ): Promise<TaskActionResult> {
   let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-  let actionBody: Record<string, unknown> = { note };
+  let actionBody: Record<string, unknown> = {
+    progressPercent: 0,
+    note: note || "Chuyển về trạng thái Mới",
+  };
 
   if (newStatus === "IN_PROGRESS") {
     actionUrl = `/api/tasks/${taskId}/actions/start`;
-    actionBody = { note };
+    actionBody = { note: note || "Bắt đầu thực hiện nhiệm vụ" };
   } else if (newStatus === "COMPLETED") {
     actionUrl = `/api/tasks/${taskId}/actions/approve`;
     actionBody = { note: note || "Phê duyệt hoàn thành nhiệm vụ" };
@@ -31,7 +35,18 @@ export async function updateTaskStatus(
     actionBody = { reason: note || "Hủy nhiệm vụ" };
   } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
     actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-    actionBody = { note: note || "Nộp kết quả chờ phê duyệt", completionRate: 100 };
+    actionBody = {
+      summary: note || "Nộp kết quả thực hiện nhiệm vụ chờ phê duyệt",
+      title: note || "Báo cáo kết quả thực hiện",
+      note: note || "Nộp kết quả chờ phê duyệt",
+      completionRate: 100,
+    };
+  } else if (newStatus === "NOT_STARTED") {
+    actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
+    actionBody = {
+      progressPercent: 0,
+      note: note || "Chuyển về trạng thái Mới",
+    };
   }
 
   try {

@@ -1,5 +1,6 @@
 "use client";
 
+// Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
 import * as React from "react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
@@ -421,6 +422,7 @@ export function TaskDetailPage({
     const res = await updateTaskStatus(taskId, newStatus, note);
     if (!res.ok) {
       console.error("Lỗi cập nhật trạng thái:", res.error);
+      alert(`Lỗi cập nhật trạng thái: "${res.error}"`);
       return;
     }
 
@@ -448,6 +450,8 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+
+    router.refresh();
   };
 
   // Priority change handler (REQ-20)
@@ -566,11 +570,19 @@ export function TaskDetailPage({
 
   // Progress updated handler
   const handleProgressUpdated = async (newProgress: number, note?: string) => {
+    const derivedStatus: TaskStatus =
+      newProgress === 100
+        ? "WAITING_APPROVAL"
+        : newProgress > 0
+        ? "IN_PROGRESS"
+        : "NOT_STARTED";
+
     setTask((prev) => ({
       ...prev,
       progressPercent: newProgress,
-      ...(newProgress === 100 ? { status: "COMPLETED" as TaskStatus } : {}),
-    }));
+      progress: newProgress,
+      status: derivedStatus,
+    } as any));
 
     setAuditEvents((prev) => [
       {
@@ -582,6 +594,8 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+
+    router.refresh();
   };
 
   // Subtask toggle status handler
