@@ -205,4 +205,43 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
   });
+
+  describe("5. Slash Menu Collision Handling & Safe Viewport Auto-Scroll", () => {
+    it("implements smooth auto-scroll on slash menu open with block: 'nearest'", () => {
+      assert.ok(
+        componentContent.includes('block: "nearest"') &&
+          componentContent.includes('behavior: "smooth"'),
+        "Must use scrollIntoView with block: 'nearest' and behavior: 'smooth'"
+      );
+    });
+
+    it("handles collision by flipping top if bottom viewport space is insufficient", () => {
+      assert.ok(
+        componentContent.includes("shouldFlipTop") &&
+          componentContent.includes("spaceBelow") &&
+          componentContent.includes("spaceAbove"),
+        "Must compute viewport space and flip to top when bottom space is inadequate"
+      );
+      assert.ok(
+        componentContent.includes("BOTTOM_SAFETY_MARGIN") || componentContent.includes("COLLISION_PADDING"),
+        "Must enforce safety padding margins from viewport edges"
+      );
+    });
+
+    it("ensures active menu item scrolls into view without scrolling page on ArrowDown/Up", () => {
+      assert.ok(
+        componentContent.includes("menuItemRefs") &&
+          componentContent.includes("activeBtn.scrollIntoView"),
+        "Must auto-scroll active option into menu viewport"
+      );
+    });
+
+    it("auto-scrolls newly created block into view when user presses Enter", () => {
+      assert.ok(
+        componentContent.includes("pendingFocusBlockIdRef.current") &&
+          componentContent.includes("el.scrollIntoView"),
+        "Newly created blocks must auto-scroll smoothly into view"
+      );
+    });
+  });
 });

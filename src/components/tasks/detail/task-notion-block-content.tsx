@@ -302,6 +302,9 @@ export function TaskNotionBlockContent({
 
   // Ref tracking
   const menuInputRef = React.useRef<HTMLInputElement>(null);
+  const menuPopoverRef = React.useRef<HTMLDivElement>(null);
+  const menuListRef = React.useRef<HTMLDivElement>(null);
+  const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
   const blockInputRefs = React.useRef<Map<string, HTMLInputElement | HTMLTextAreaElement>>(new Map());
   const trailingInputRef = React.useRef<HTMLInputElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -322,15 +325,17 @@ export function TaskNotionBlockContent({
     });
   }, [blocks]);
 
-  // Tự động focus vào block mới sau khi chèn
+  // Tự động focus và scroll nhẹ vào view khi block mới được tạo (Enter hoặc Slash select)
   React.useEffect(() => {
     if (pendingFocusBlockIdRef.current) {
       if (pendingFocusBlockIdRef.current === "trailing") {
         trailingInputRef.current?.focus();
+        trailingInputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } else {
         const el = blockInputRefs.current.get(pendingFocusBlockIdRef.current);
         if (el) {
           el.focus();
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
           if (el instanceof HTMLTextAreaElement) {
             autoResizeTextarea(el);
           }
@@ -342,6 +347,16 @@ export function TaskNotionBlockContent({
       pendingFocusBlockIdRef.current = null;
     }
   }, [blocks]);
+
+  // Tự động scroll item đang chọn trong slash menu vào tầm nhìn (không scroll page)
+  React.useEffect(() => {
+    if (isMenuOpen) {
+      const activeBtn = menuItemRefs.current.get(activeMenuIndex);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
+  }, [activeMenuIndex, isMenuOpen]);
 
   // Lọc menu theo ô tìm kiếm
   const filteredMenuOptions = React.useMemo(() => {
@@ -382,18 +397,55 @@ export function TaskNotionBlockContent({
     };
   }, []);
 
-  // Mở Slash Menu
+  // Mở Slash Menu với Collision Handling & Auto-scroll an toàn
   const handleOpenSlashMenu = (index: number, anchorEl?: HTMLElement | null) => {
     setMenuTargetIndex(index);
     setMenuSearchQuery("");
     setActiveMenuIndex(0);
 
     if (anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: Math.max(16, rect.left + window.scrollX),
+      // 1. Cuộn nhẹ block / anchor hiện tại vào viewport nếu đang bị che
+      anchorEl.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
       });
+
+      const rect = anchorEl.getBoundingClientRect();
+      const ESTIMATED_MENU_HEIGHT = 300;
+      const ESTIMATED_MENU_WIDTH = 288;
+      const COLLISION_PADDING = 12;
+      const BOTTOM_SAFETY_MARGIN = 20;
+
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // Flip lên top nếu phía dưới không đủ không gian và phía trên rộng hơn
+      const shouldFlipTop = spaceBelow < 240 && spaceAbove > spaceBelow;
+
+      const top = shouldFlipTop
+        ? Math.max(COLLISION_PADDING + window.scrollY, rect.top + window.scrollY - ESTIMATED_MENU_HEIGHT - 6)
+        : rect.bottom + window.scrollY + 6;
+
+      // Shift ngang để menu không tràn ra ngoài viewport
+      let left = rect.left + window.scrollX;
+      const maxLeft = window.innerWidth - ESTIMATED_MENU_WIDTH - COLLISION_PADDING;
+      left = Math.max(COLLISION_PADDING, Math.min(left, maxLeft));
+
+      setMenuPosition({ top, left });
+
+      // 2. Chờ DOM vẽ menu và tự động scroll PAGE vừa đủ để menu và caret nằm trọn trong viewport
+      setTimeout(() => {
+        const menuEl = menuPopoverRef.current;
+        if (menuEl) {
+          const menuRect = menuEl.getBoundingClientRect();
+          const overflowBottom = menuRect.bottom - (window.innerHeight - BOTTOM_SAFETY_MARGIN);
+          if (overflowBottom > 0) {
+            window.scrollBy({ top: overflowBottom, behavior: "smooth" });
+          } else if (menuRect.top < COLLISION_PADDING) {
+            window.scrollBy({ top: menuRect.top - COLLISION_PADDING, behavior: "smooth" });
+          }
+        }
+      }, 50);
     } else {
       setMenuPosition(null);
     }
@@ -1132,6 +1184,7 @@ export function TaskNotionBlockContent({
           }}
         >
           <div
+            ref={menuPopoverRef}
             style={
               menuPosition
                 ? {
@@ -1180,7 +1233,7 @@ export function TaskNotionBlockContent({
             </div>
 
             {/* Danh sách lựa chọn */}
-            <div className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
+            <div ref={menuListRef} className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
               {(["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Tệp & Liên kết", "Phân cách"] as const).map((groupName) => {
                 const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
                 if (groupOptions.length === 0) return null;
@@ -1198,6 +1251,10 @@ export function TaskNotionBlockContent({
                       return (
                         <button
                           key={opt.id}
+                          ref={(el) => {
+                            if (el) menuItemRefs.current.set(itemGlobalIndex, el);
+                            else menuItemRefs.current.delete(itemGlobalIndex);
+                          }}
                           type="button"
                           onClick={() => handleSelectMenuItem(opt)}
                           onMouseEnter={() => setActiveMenuIndex(itemGlobalIndex)}
