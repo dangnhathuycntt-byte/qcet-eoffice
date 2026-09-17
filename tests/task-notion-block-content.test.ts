@@ -548,4 +548,70 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
   });
+
+  describe("9. Global Window Drag & Drop UX for Media & Files (OS File Drop Anywhere)", () => {
+    it("registers global window drag listeners with cleanup on unmount", () => {
+      assert.ok(
+        componentContent.includes('window.addEventListener("dragenter"') &&
+          componentContent.includes('window.addEventListener("dragover"') &&
+          componentContent.includes('window.addEventListener("dragleave"') &&
+          componentContent.includes('window.addEventListener("drop"') &&
+          componentContent.includes('window.removeEventListener("dragenter"') &&
+          componentContent.includes('window.removeEventListener("drop"'),
+        "Must register and unregister window dragenter, dragover, dragleave, drop listeners"
+      );
+    });
+
+    it("activates global drop overlay only for OS files and ignores internal block drag", () => {
+      assert.ok(
+        componentContent.includes("isGlobalDragging") &&
+          componentContent.includes("dragCounterRef") &&
+          componentContent.includes("hasFiles") &&
+          componentContent.includes("isDraggingRef.current"),
+        "Must track dragCounter, isGlobalDragging and ignore internal handle 6-dot drag"
+      );
+    });
+
+    it("renders global overlay via Portal with clear message and icon", () => {
+      assert.ok(
+        componentContent.includes('data-testid="global-file-drop-overlay"') &&
+          componentContent.includes("Thả để thêm vào nội dung") &&
+          componentContent.includes("Ảnh, PDF, tài liệu và các tệp khác") &&
+          componentContent.includes("UploadCloud"),
+        "Must render full-viewport overlay via portal with user-friendly drop message"
+      );
+    });
+
+    it("handles multiple files and classifies images vs documents with optimistic rendering", () => {
+      assert.ok(
+        componentContent.includes("handleProcessDroppedFiles") &&
+          componentContent.includes("Array.from(files)") &&
+          componentContent.includes("isImageFile") &&
+          componentContent.includes("URL.createObjectURL(file)") &&
+          componentContent.includes('type: "image"') &&
+          componentContent.includes('type: "attachment"'),
+        "Must process multiple files, classify image vs document, and create blocks with optimistic preview"
+      );
+    });
+
+    it("implements 3-tier insertion rules: focused block -> canvas cursor clientY -> end of document", () => {
+      assert.ok(
+        componentContent.includes("lastActiveBlockIdRef.current") &&
+          componentContent.includes("insertIndex") &&
+          componentContent.includes("clientY") &&
+          componentContent.includes("Math.abs(clientY - midY)") &&
+          componentContent.includes("handleBlockFocus"),
+        "Must implement adaptive insertion targeting focused block, nearest canvas block or document end"
+      );
+    });
+
+    it("prevents default browser file open behavior on dragover and drop", () => {
+      assert.ok(
+        componentContent.includes("handleWindowDragOver") &&
+          componentContent.includes("handleWindowDrop") &&
+          componentContent.includes('dropEffect = "copy"'),
+        "Must call preventDefault on dragover and drop to stop browser native file navigation"
+      );
+    });
+  });
 });

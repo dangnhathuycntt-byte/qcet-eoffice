@@ -475,6 +475,13 @@ export function TaskNotionBlockContent({
   const [selectedBlockIds, setSelectedBlockIds] = React.useState<Set<string>>(new Set());
   const [anchorBlockId, setAnchorBlockId] = React.useState<string | null>(null);
 
+  // Vị trí block được focus gần nhất để chèn file vào đúng ngữ cảnh
+  const lastActiveBlockIdRef = React.useRef<string | null>(null);
+
+  // Global window drop overlay state & counter
+  const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
+  const dragCounterRef = React.useRef(0);
+
   // Context Menu State (Chuột phải vào handle hoặc block)
   const [activeContextMenu, setActiveContextMenu] = React.useState<{
     blockId: string;
@@ -540,6 +547,18 @@ export function TaskNotionBlockContent({
       }, 800);
     },
     [onSaveContent]
+  );
+
+  // Focus tracking cho block đang thao tác (hỗ trợ chèn file đúng vị trí ngữ cảnh)
+  const handleBlockFocus = React.useCallback(
+    (blockId: string) => {
+      lastActiveBlockIdRef.current = blockId;
+      if (selectedBlockIds.size > 0) {
+        setSelectedBlockIds(new Set());
+        setAnchorBlockId(null);
+      }
+    },
+    [selectedBlockIds]
   );
 
   // Bỏ selection, context menu và dọn sạch block rỗng khi click ra ngoài editor
@@ -1089,6 +1108,229 @@ export function TaskNotionBlockContent({
     }
   };
 
+  // Xử lý nạp file (hỗ trợ nhiều file, mixed ảnh/tài liệu, optimistic preview, chèn thông minh theo ngữ cảnh)
+  const handleProcessDroppedFiles = React.useCallback(
+    (files: FileList | File[], clientY?: number) => {
+      const fileArray = Array.from(files);
+      if (fileArray.length === 0) return;
+
+      const formatSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+
+      const isImageFile = (file: File): boolean => {
+        if (file.type.startsWith("image/")) return true;
+        const ext = file.name.split(".").pop()?.toLowerCase();
+        return !!ext && ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif"].includes(ext);
+      };
+
+      setBlocks((prev) => {
+        // 1. Xác định vị trí chèn theo 3 quy tắc:
+        // Quy tắc A: Sau block vừa được focus/thao tác
+        let insertIndex = -1;
+        if (lastActiveBlockIdRef.current) {
+          const activeIdx = prev.findIndex((b) => b.id === lastActiveBlockIdRef.current);
+          if (activeIdx !== -1) {
+            insertIndex = activeIdx + 1;
+          }
+        }
+
+        // Quy tắc B: Thả trực tiếp trên editor canvas -> chèn tại block gần tọa độ Y nhất
+        if (insertIndex === -1 && typeof clientY === "number") {
+          let closestIdx = -1;
+          let minDistance = Infinity;
+          prev.forEach((b, idx) => {
+            const el = blockWrapperRefs.current.get(b.id);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              const midY = rect.top + rect.height / 2;
+              const dist = Math.abs(clientY - midY);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closestIdx = idx;
+              }
+            }
+          });
+          if (closestIdx !== -1) {
+            insertIndex = closestIdx + 1;
+          }
+        }
+
+        // Quy tắc C: Chưa focus hoặc thả ngoài canvas (sidebar, header, 2 bên lề) -> chèn vào cuối tài liệu
+        if (insertIndex === -1) {
+          insertIndex = prev.length;
+        }
+
+        // 2. Tạo các block cho từng file, bảo toàn nguyên vẹn thứ tự
+        const newBlocks: NotionBlockItem[] = [];
+        fileArray.forEach((file, idx) => {
+          const blockId = `b-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
+          const ext = file.name.split(".").pop()?.toUpperCase() || "TỆP";
+
+          if (isImageFile(file)) {
+            let objectUrl = "";
+            try {
+              objectUrl = URL.createObjectURL(file);
+            } catch {
+              objectUrl = "";
+            }
+
+            newBlocks.push({
+              id: blockId,
+              type: "image",
+              content: file.name,
+              url: objectUrl,
+              imageWidth: 100,
+            });
+
+            // Đọc ngầm Data URL để lưu trữ bền vững vào DB
+            if (typeof FileReader !== "undefined") {
+              const reader = new FileReader();
+              reader.onload = (loadEv) => {
+                const dataUrl = loadEv.target?.result as string;
+                if (dataUrl) {
+                  setBlocks((currentBlocks) => {
+                    const updated = currentBlocks.map((b) =>
+                      b.id === blockId ? { ...b, url: dataUrl } : b
+                    );
+                    triggerAutoSave(updated);
+                    return updated;
+                  });
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          } else {
+            let objectUrl = "";
+            try {
+              objectUrl = URL.createObjectURL(file);
+            } catch {
+              objectUrl = "";
+            }
+
+            newBlocks.push({
+              id: blockId,
+              type: "attachment",
+              content: file.name,
+              fileName: file.name,
+              fileSize: formatSize(file.size),
+              fileType: ext,
+              url: objectUrl,
+            });
+
+            // Đọc ngầm file nhỏ (< 5MB) lưu bền vững vào DB
+            if (file.size < 5 * 1024 * 1024 && typeof FileReader !== "undefined") {
+              const reader = new FileReader();
+              reader.onload = (loadEv) => {
+                const dataUrl = loadEv.target?.result as string;
+                if (dataUrl) {
+                  setBlocks((currentBlocks) => {
+                    const updated = currentBlocks.map((b) =>
+                      b.id === blockId ? { ...b, url: dataUrl } : b
+                    );
+                    triggerAutoSave(updated);
+                    return updated;
+                  });
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          }
+        });
+
+        const next = [...prev];
+        const last = next[next.length - 1];
+        // Nếu chèn vào cuối và block cuối cùng là text rỗng -> thay thế block rỗng đó
+        if (insertIndex >= next.length && last && last.type === "text" && !last.content.trim()) {
+          next.splice(next.length - 1, 1, ...newBlocks);
+        } else {
+          next.splice(insertIndex, 0, ...newBlocks);
+        }
+
+        triggerAutoSave(next);
+        return next;
+      });
+    },
+    [triggerAutoSave]
+  );
+
+  // Global Window Drag & Drop Listeners (To��n bộ viewport nhận file từ OS mà không cần căn trúng editor)
+  React.useEffect(() => {
+    if (!canEdit) return;
+
+    const hasFiles = (e: DragEvent): boolean => {
+      // Tuyệt đối không can thiệp kéo block nội bộ bằng handle 6 chấm
+      if (isDraggingRef.current) return false;
+      if (!e.dataTransfer) return false;
+
+      const types = Array.from(e.dataTransfer.types || []);
+      if (types.includes("Files")) return true;
+
+      if (e.dataTransfer.items) {
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          if (e.dataTransfer.items[i].kind === "file") return true;
+        }
+      }
+      return false;
+    };
+
+    const handleWindowDragEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragCounterRef.current += 1;
+      if (dragCounterRef.current === 1) {
+        setIsGlobalDragging(true);
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      // Ngăn chặn trình duyệt mở trực tiếp file
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0;
+        setIsGlobalDragging(false);
+      }
+    };
+
+    const handleWindowDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      // Ngăn chặn trình duyệt tự động điều hướng sang file
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsGlobalDragging(false);
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        handleProcessDroppedFiles(files, e.clientY);
+      }
+    };
+
+    window.addEventListener("dragenter", handleWindowDragEnter);
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("dragleave", handleWindowDragLeave);
+    window.addEventListener("drop", handleWindowDrop);
+
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter);
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("dragleave", handleWindowDragLeave);
+      window.removeEventListener("drop", handleWindowDrop);
+    };
+  }, [canEdit, handleProcessDroppedFiles]);
+
   // Hỗ trợ Paste ảnh từ clipboard & Paste URL xuất hiện Popover
   const handleContainerPaste = (e: React.ClipboardEvent) => {
     // 1. Kiểm tra clipboard có file ảnh không
@@ -1100,31 +1342,7 @@ export function TaskNotionBlockContent({
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-              const dataUrl = loadEvent.target?.result as string;
-              if (dataUrl) {
-                const newImageBlock: NotionBlockItem = {
-                  id: `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                  type: "image",
-                  content: file.name || "Hình ảnh",
-                  url: dataUrl,
-                  imageWidth: 100,
-                };
-                setBlocks((prev) => {
-                  const next = [...prev];
-                  const last = next[next.length - 1];
-                  if (last && last.type === "text" && !last.content.trim()) {
-                    next[next.length - 1] = newImageBlock;
-                  } else {
-                    next.push(newImageBlock);
-                  }
-                  triggerAutoSave(next);
-                  return next;
-                });
-              }
-            };
-            reader.readAsDataURL(file);
+            handleProcessDroppedFiles([file]);
             return;
           }
         }
@@ -1165,54 +1383,8 @@ export function TaskNotionBlockContent({
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       e.preventDefault();
-      const file = files[0];
-
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-          const dataUrl = loadEvent.target?.result as string;
-          if (dataUrl) {
-            const newImageBlock: NotionBlockItem = {
-              id: `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-              type: "image",
-              content: file.name,
-              url: dataUrl,
-              imageWidth: 100,
-            };
-            setBlocks((prev) => {
-              const next = [...prev];
-              next.push(newImageBlock);
-              triggerAutoSave(next);
-              return next;
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-        return;
-      }
-
-      const formatSize = (bytes: number) => {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-      };
-      const ext = file.name.split(".").pop()?.toUpperCase() || "TỆP";
-
-      const newFileBlock: NotionBlockItem = {
-        id: `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        type: "attachment",
-        content: file.name,
-        fileName: file.name,
-        fileSize: formatSize(file.size),
-        fileType: ext,
-        url: URL.createObjectURL(file),
-      };
-      setBlocks((prev) => {
-        const next = [...prev];
-        next.push(newFileBlock);
-        triggerAutoSave(next);
-        return next;
-      });
+      e.stopPropagation();
+      handleProcessDroppedFiles(files, e.clientY);
     }
   };
 
@@ -1632,12 +1804,7 @@ export function TaskNotionBlockContent({
                       rows={1}
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onInput={(e) => autoResizeTextarea(e.currentTarget)}
                       onChange={(e) => {
@@ -1660,12 +1827,7 @@ export function TaskNotionBlockContent({
                     type="text"
                     disabled={!canEdit}
                     value={block.content}
-                    onFocus={() => {
-                      if (selectedBlockIds.size > 0) {
-                        setSelectedBlockIds(new Set());
-                        setAnchorBlockId(null);
-                      }
-                    }}
+                    onFocus={() => handleBlockFocus(block.id)}
                     onBlur={(e) => handleBlockBlur(e, block.id)}
                     onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                     onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1691,12 +1853,7 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1720,12 +1877,7 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1759,12 +1911,7 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1788,12 +1935,7 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1815,12 +1957,7 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
-                      onFocus={() => {
-                        if (selectedBlockIds.size > 0) {
-                          setSelectedBlockIds(new Set());
-                          setAnchorBlockId(null);
-                        }
-                      }}
+                      onFocus={() => handleBlockFocus(block.id)}
                       onBlur={(e) => handleBlockBlur(e, block.id)}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
@@ -1877,12 +2014,7 @@ export function TaskNotionBlockContent({
                           disabled={!canEdit}
                           value={block.url || ""}
                           autoFocus
-                          onFocus={() => {
-                            if (selectedBlockIds.size > 0) {
-                              setSelectedBlockIds(new Set());
-                              setAnchorBlockId(null);
-                            }
-                          }}
+                          onFocus={() => handleBlockFocus(block.id)}
                           onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           onKeyDown={(e) => {
@@ -2048,12 +2180,7 @@ export function TaskNotionBlockContent({
                           type="text"
                           disabled={!canEdit}
                           value={block.url || ""}
-                          onFocus={() => {
-                            if (selectedBlockIds.size > 0) {
-                              setSelectedBlockIds(new Set());
-                              setAnchorBlockId(null);
-                            }
-                          }}
+                          onFocus={() => handleBlockFocus(block.id)}
                           onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           onKeyDown={(e) => {
@@ -2134,12 +2261,7 @@ export function TaskNotionBlockContent({
                           disabled={!canEdit}
                           value={block.url || ""}
                           autoFocus
-                          onFocus={() => {
-                            if (selectedBlockIds.size > 0) {
-                              setSelectedBlockIds(new Set());
-                              setAnchorBlockId(null);
-                            }
-                          }}
+                          onFocus={() => handleBlockFocus(block.id)}
                           onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           onKeyDown={(e) => {
@@ -2221,12 +2343,7 @@ export function TaskNotionBlockContent({
                           disabled={!canEdit}
                           value={block.url || ""}
                           autoFocus
-                          onFocus={() => {
-                            if (selectedBlockIds.size > 0) {
-                              setSelectedBlockIds(new Set());
-                              setAnchorBlockId(null);
-                            }
-                          }}
+                          onFocus={() => handleBlockFocus(block.id)}
                           onBlur={(e) => handleBlockBlur(e, block.id)}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           onKeyDown={(e) => {
@@ -2323,6 +2440,7 @@ export function TaskNotionBlockContent({
               type="text"
               value={trailingValue}
               onFocus={() => {
+                lastActiveBlockIdRef.current = null;
                 if (selectedBlockIds.size > 0) {
                   setSelectedBlockIds(new Set());
                   setAnchorBlockId(null);
@@ -2621,6 +2739,30 @@ export function TaskNotionBlockContent({
               <Globe className="size-3 text-primary" />
               <span>Nhúng</span>
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 6. Global File Drop Target Overlay qua Portal ra document.body */}
+      {mounted && isGlobalDragging && typeof document !== "undefined" && createPortal(
+        <div
+          role="presentation"
+          data-testid="global-file-drop-overlay"
+          className="fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs transition-all animate-in fade-in duration-150 p-6"
+        >
+          <div className="flex flex-col items-center gap-3.5 p-8 bg-card/95 shadow-2xl rounded-2xl border-2 border-dashed border-primary/60 max-w-sm text-center transform scale-100 transition-transform">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs animate-bounce">
+              <UploadCloud className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground tracking-tight">
+                Thả để thêm vào nội dung
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Ảnh, PDF, tài liệu và các tệp khác
+              </p>
+            </div>
           </div>
         </div>,
         document.body
