@@ -436,6 +436,10 @@ export interface SidebarLayoutContextType {
   setCurrentModule: (module: NavigationModule) => void;
   isMounted: boolean;
   sidebarWidth: number;
+  breadcrumbItems: Array<{ label: string; href?: string; mono?: boolean }> | null;
+  setBreadcrumbItems: React.Dispatch<
+    React.SetStateAction<Array<{ label: string; href?: string; mono?: boolean }> | null>
+  >;
 }
 
 export interface SidebarBadgeContextType {
@@ -456,6 +460,9 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
   const [isMounted, setIsMounted] = React.useState<boolean>(false);
+  const [breadcrumbItems, setBreadcrumbItems] = React.useState<
+    Array<{ label: string; href?: string; mono?: boolean }> | null
+  >(null);
 
   const currentModule = React.useMemo<NavigationModule>(() => {
     return resolveModuleFromPathname(pathname || "");
@@ -517,6 +524,8 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
       setCurrentModule,
       isMounted,
       sidebarWidth,
+      breadcrumbItems,
+      setBreadcrumbItems,
     }),
     [
       effectiveCollapsed,
@@ -528,6 +537,7 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
       currentModule,
       isMounted,
       sidebarWidth,
+      breadcrumbItems,
     ]
   );
 
@@ -599,4 +609,3 @@ export function useSidebar(): SidebarContextType {
 }
 
 export const useSidebarContext = useSidebar;
-

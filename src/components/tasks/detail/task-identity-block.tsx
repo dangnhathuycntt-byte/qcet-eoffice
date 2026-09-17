@@ -18,15 +18,20 @@ import {
   Plus,
   ExternalLink,
   FolderOpen,
-  Box,
   Trash2,
   Link as LinkIcon,
   FileText,
+  CircleDashed,
+  Signal,
+  UserPlus,
+  ArrowRight,
+  MoreHorizontal,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { DirectInlineEditor } from "./direct-inline-editor";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;
@@ -37,6 +42,7 @@ export interface TaskIdentityBlockProps {
   onTitleChange?: (taskId: string, newTitle: string) => Promise<void> | void;
   onAddDeliverable?: (title: string, fileUrl?: string, notes?: string) => Promise<void> | void;
   onDeleteDeliverable?: (deliverableId: string) => Promise<void> | void;
+  showInlineProperties?: boolean;
   className?: string;
 }
 
@@ -61,7 +67,7 @@ export const STATUS_OPTIONS: Array<{
 }> = [
   {
     value: "NOT_STARTED",
-    label: "Chưa bắt đầu",
+    label: "Mới",
     colorClass: "text-muted-foreground bg-muted/60 border-border/60",
     dotClass: "bg-muted-foreground/60",
   },
@@ -117,6 +123,27 @@ export const PRIORITY_OPTIONS: Array<{
   },
 ];
 
+
+function LinearInlineStartDateIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
+      <path d="M5.5 10h3M7 8.5l1.5 1.5-1.5 1.5" />
+    </svg>
+  );
+}
+
+function LinearInlineTargetDateIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
+      <path d="M8 8.5v3M6.5 10h3" />
+    </svg>
+  );
+}
+
 export function TaskIdentityBlock({
   task,
   canEdit = true,
@@ -126,6 +153,7 @@ export function TaskIdentityBlock({
   onTitleChange,
   onAddDeliverable,
   onDeleteDeliverable,
+  showInlineProperties = true,
   className,
 }: TaskIdentityBlockProps) {
   const isSchool = isSchoolTask(task);
@@ -163,39 +191,6 @@ export function TaskIdentityBlock({
   const [resourceUrl, setResourceUrl] = React.useState("");
   const [isSavingResource, setIsSavingResource] = React.useState(false);
   const resourceMenuRef = React.useRef<HTMLDivElement>(null);
-
-  // Title inline editing state
-  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
-  const [titleDraft, setTitleDraft] = React.useState(task.title);
-  const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
-
-  React.useEffect(() => {
-    setTitleDraft(task.title);
-  }, [task.title]);
-
-  React.useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
-      titleInputRef.current.select();
-    }
-  }, [isEditingTitle]);
-
-  const handleSaveTitle = async () => {
-    if (!titleDraft.trim() || titleDraft.trim() === task.title) {
-      setIsEditingTitle(false);
-      setTitleDraft(task.title);
-      return;
-    }
-    setIsEditingTitle(false);
-    if (onTitleChange) {
-      await onTitleChange(task.id, titleDraft.trim());
-    }
-  };
-
-  const handleCancelTitle = () => {
-    setIsEditingTitle(false);
-    setTitleDraft(task.title);
-  };
 
   const handleAddResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,103 +242,43 @@ export function TaskIdentityBlock({
   }, []);
 
   return (
-    <section data-slot="task-identity-block" className={cn("space-y-4 select-none", className)}>
-      {/* 1. Linear Project Icon + Title Area */}
-      <div className="flex items-start gap-3.5">
-        {/* Project Icon container (like Linear 3D cube) */}
-        <div className="size-10 rounded-xl bg-muted/60 border border-border/50 flex items-center justify-center text-foreground/80 shrink-0 shadow-2xs mt-1">
-          <Box className="size-5 text-foreground/70" strokeWidth={1.5} />
-        </div>
-
-        {/* Title & Scope/Code */}
-        <div className="min-w-0 flex-1 space-y-1">
-          {/* Editable Title */}
-          {isEditingTitle && canEdit ? (
-            <div className="space-y-2">
-              <textarea
-                ref={titleInputRef}
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSaveTitle();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    handleCancelTitle();
-                  }
-                }}
-                rows={2}
-                className="w-full text-2xl sm:text-3xl font-bold tracking-tight text-foreground bg-background p-2 rounded-lg border-2 border-primary focus:outline-hidden resize-none leading-snug"
-                aria-label="Chỉnh sửa tên nhiệm vụ"
-              />
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleSaveTitle}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-2xs"
-                >
-                  <Check className="size-3.5" strokeWidth={1.5} />
-                  <span>Lưu (Enter)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelTitle}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground text-xs font-medium transition-colors cursor-pointer"
-                >
-                  <X className="size-3.5" strokeWidth={1.5} />
-                  <span>Hủy (Esc)</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="group/title flex items-start gap-2">
-              <h1
-                onClick={() => {
-                  if (canEdit) setIsEditingTitle(true);
-                }}
-                className={cn(
-                  "text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-snug break-words",
-                  canEdit && "cursor-pointer hover:text-primary/90 transition-colors"
-                )}
-                title={canEdit ? "Nhấp để đổi tên nhiệm vụ" : undefined}
-              >
-                {task.title}
-              </h1>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingTitle(true)}
-                  className="opacity-0 group-hover/title:opacity-100 p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-all cursor-pointer mt-1.5 shrink-0"
-                  title="Sửa tên nhiệm vụ"
-                  aria-label="Sửa tên nhiệm vụ"
-                >
-                  <Edit2 className="size-3.5" strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Subtitle: Code, Scope & Department */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium flex-wrap pt-0.5">
-            <span className="font-mono text-[11px] font-semibold text-foreground bg-muted/60 px-1.5 py-0.5 rounded">
-              {taskCode}
-            </span>
-            <span className="text-muted-foreground/40 select-none">•</span>
-            <span>{scopeLabel}</span>
-            <span className="text-muted-foreground/40 select-none">•</span>
-            <span>{departmentName}</span>
+    <section data-slot="task-identity-block" className={cn("space-y-4 relative z-30", className)}>
+      {/* 1. Title Area */}
+      <div className="w-full min-w-0 space-y-1">
+          {/* Direct Inline Editable Title with exact caret positioning */}
+          <div className="w-full">
+            <DirectInlineEditor
+              value={task.title}
+              onSave={async (newTitle) => {
+                if (onTitleChange) {
+                  await onTitleChange(task.id, newTitle);
+                }
+              }}
+              canEdit={canEdit}
+              as="h1"
+              multiline={false}
+              submitOnEnter={true}
+              ariaLabel="Tên nhiệm vụ"
+              placeholder="Nhập tên nhiệm vụ..."
+              viewClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug"
+              editorClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug"
+            />
           </div>
-        </div>
-      </div>
 
-      {/* 2. Linear-style Inline Properties Row (Properties: Status · Priority · Lead · Dates · Teams · ···) */}
-      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
-        <span className="text-muted-foreground/80 font-medium mr-1 select-none text-[11px]">
+          {/* Subtitle / Sub-heading (Linear Project Style) */}
+          <p className="text-sm text-muted-foreground font-normal pt-0.5 select-none">
+            {taskCode} · {scopeLabel} · {departmentName}
+          </p>
+        </div>
+
+      {showInlineProperties && (
+      /* 2. Linear-style Minimalist Inline Properties Bar */
+      <div className="flex items-center gap-4 pt-1 flex-wrap text-xs text-foreground font-normal select-none">
+        <span className="text-muted-foreground select-none font-normal text-xs">
           Properties
         </span>
 
-        {/* Status Pill */}
+        {/* Status */}
         <div className="relative" ref={statusMenuRef}>
           <button
             type="button"
@@ -352,21 +287,18 @@ export function TaskIdentityBlock({
             }}
             disabled={!canEdit}
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all",
-              currentStatusObj.colorClass,
-              canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
+              "inline-flex items-center gap-1.5 py-0.5 rounded text-xs font-normal text-foreground transition-colors",
+              canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
             )}
-            aria-label={`Trạng thái: ${currentStatusObj.label}`}
           >
-            <span className={cn("size-2 rounded-full", currentStatusObj.dotClass)} />
+            <CircleDashed className={cn("size-3.5", currentStatusObj.value === "COMPLETED" ? "text-emerald-600" : currentStatusObj.value === "IN_PROGRESS" ? "text-amber-500" : "text-amber-500")} strokeWidth={1.5} />
             <span>{currentStatusObj.label}</span>
-            {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
           </button>
 
           {isStatusDropdownOpen && canEdit && (
             <div
               role="listbox"
-              className="absolute left-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+              className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <button
@@ -379,8 +311,8 @@ export function TaskIdentityBlock({
                   className={cn(
                     "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
                     task.status === opt.value
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-foreground hover:bg-muted font-medium"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -396,7 +328,7 @@ export function TaskIdentityBlock({
           )}
         </div>
 
-        {/* Priority Pill */}
+        {/* Priority */}
         <div className="relative" ref={priorityMenuRef}>
           <button
             type="button"
@@ -405,21 +337,18 @@ export function TaskIdentityBlock({
             }}
             disabled={!canEdit}
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all",
-              currentPriorityObj.colorClass,
-              canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
+              "inline-flex items-center gap-1.5 py-0.5 rounded text-xs font-normal text-foreground transition-colors",
+              canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
             )}
-            aria-label={`Độ ưu tiên: ${currentPriorityObj.label}`}
           >
-            <AlertCircle className={cn("size-3.5", currentPriorityObj.iconClass)} strokeWidth={1.5} />
+            <Signal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
             <span>{currentPriorityObj.label}</span>
-            {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
           </button>
 
           {isPriorityDropdownOpen && canEdit && (
             <div
               role="listbox"
-              className="absolute left-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+              className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {PRIORITY_OPTIONS.map((opt) => (
                 <button
@@ -432,12 +361,12 @@ export function TaskIdentityBlock({
                   className={cn(
                     "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
                     currentPriorityVal === opt.value
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-foreground hover:bg-muted font-medium"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <AlertCircle className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
+                    <Signal className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
                     <span>{opt.label}</span>
                   </div>
                   {currentPriorityVal === opt.value && (
@@ -449,30 +378,44 @@ export function TaskIdentityBlock({
           )}
         </div>
 
-        {/* Lead Assignee Pill */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/60 bg-muted/30 text-xs font-medium text-foreground">
-          <User className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-          <span className="max-w-[150px] truncate">{leadName}</span>
+        {/* Lead */}
+        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
+          <UserPlus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+          <span className="max-w-[150px] truncate">{leadName || "Lead"}</span>
         </div>
 
-        {/* Due Date Pill */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/60 bg-muted/30 text-xs font-medium text-foreground">
-          <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-          <span className={cn(dueInfo.isOverdue ? "text-rose-600 font-semibold" : "")}>
-            {dueInfo.text}
+        {/* Dates Range (Linear style: Start date -> Target date) */}
+        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
+          <LinearInlineStartDateIcon className="size-3.5 text-muted-foreground" />
+          <span className="tabular-nums">
+            {task.createdAt ? new Date(task.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Bắt đầu"}
           </span>
+          <ArrowRight className="size-3 text-muted-foreground/60 mx-0.5" strokeWidth={1.5} />
+          <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Hạn chót"}</span>
         </div>
 
-        {/* Department Pill */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/60 bg-muted/30 text-xs font-medium text-foreground">
-          <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-          <span className="max-w-[150px] truncate">{departmentName}</span>
+        {/* Team / Department */}
+        <div className="inline-flex items-center gap-1.5 text-xs text-foreground">
+          <div className="size-3.5 rounded bg-sky-500/15 text-sky-600 border border-sky-500/30 flex items-center justify-center text-[8px] font-bold">
+            {departmentName.charAt(0)}
+          </div>
+          <span className="max-w-[140px] truncate">{departmentName}</span>
         </div>
+
+        {/* More options dots */}
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground p-0.5 transition-colors cursor-pointer"
+          title="Tùy chọn khác"
+        >
+          <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
+        </button>
       </div>
+      )}
 
       {/* 3. Linear-style Inline Resources Row */}
       <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs" ref={resourceMenuRef}>
-        <span className="text-muted-foreground/80 font-medium mr-1 select-none text-[11px]">
+        <span className="text-muted-foreground select-none font-normal text-xs mr-1">
           Resources
         </span>
 
@@ -524,7 +467,7 @@ export function TaskIdentityBlock({
 
             {/* Compact Add Resource Popover */}
             {isResourcePopoverOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-72 rounded-xl border border-border/80 bg-popover p-3 text-popover-foreground shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+              <div className="absolute left-0 top-full mt-2 w-80 rounded-xl border border-border bg-white p-3 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100">
                 <form onSubmit={handleAddResourceSubmit} className="space-y-2.5">
                   <div className="text-xs font-semibold text-foreground flex items-center justify-between">
                     <span>Đính kèm tài liệu / liên kết</span>
@@ -536,22 +479,28 @@ export function TaskIdentityBlock({
                       <X className="size-3.5" />
                     </button>
                   </div>
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Tên tài liệu</span>
                   <input
                     type="text"
                     required
                     autoFocus
                     value={resourceTitle}
                     onChange={(e) => setResourceTitle(e.target.value)}
-                    placeholder="Tên tài liệu / Minh chứng..."
-                    className="w-full text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+                    placeholder="Ví dụ: Biên bản nghiệm thu"
+                    className="w-full text-xs font-medium text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
                   />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Liên kết <span className="text-muted-foreground/60">(không bắt buộc)</span></span>
                   <input
                     type="url"
                     value={resourceUrl}
                     onChange={(e) => setResourceUrl(e.target.value)}
-                    placeholder="Liên kết URL (Google Drive, v.v.)..."
-                    className="w-full text-xs font-mono text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+                    placeholder="https://drive.google.com/..."
+                    className="w-full text-xs font-mono text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
                   />
+                  </label>
                   <div className="flex items-center justify-end gap-1.5 pt-1">
                     <button
                       type="button"

@@ -23,6 +23,17 @@ import {
   CalendarClock,
   Sparkles,
   ExternalLink,
+  Signal,
+  UserPlus,
+  ArrowRight,
+  CircleDashed,
+  Compass,
+  MessageSquare,
+  Paperclip,
+  ArrowLeftRight,
+  SquareUserRound,
+  PenLine,
+  Box,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -56,6 +67,7 @@ export interface LinearPropertiesSidebarProps {
   auditEvents?: AuditLogItem[];
   isMobileAccordion?: boolean;
   canEdit?: boolean;
+  showRelatedSections?: boolean;
   className?: string;
 }
 
@@ -64,6 +76,43 @@ function getInitials(name?: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+
+function LinearStartDateIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
+      <path d="M5.5 10h3M7 8.5l1.5 1.5-1.5 1.5" />
+    </svg>
+  );
+}
+
+function LinearTargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" className={isOverdue ? "stroke-rose-500" : ""} />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" className={isOverdue ? "stroke-rose-500" : ""} />
+      <path d="M8 8.5v3M6.5 10h3" className={isOverdue ? "stroke-rose-500" : ""} />
+    </svg>
+  );
 }
 
 export function LinearPropertiesSidebar({
@@ -77,6 +126,7 @@ export function LinearPropertiesSidebar({
   auditEvents = [],
   isMobileAccordion = false,
   canEdit = true,
+  showRelatedSections = true,
   className,
 }: LinearPropertiesSidebarProps) {
   const isSchool = isSchoolTask(task);
@@ -87,16 +137,55 @@ export function LinearPropertiesSidebar({
   const [isStatusMenuOpen, setIsStatusMenuOpen] = React.useState(false);
   const [isPriorityMenuOpen, setIsPriorityMenuOpen] = React.useState(false);
 
-  // Keyboard accessibility: Escape closes dropdowns
+  const statusMenuRef = React.useRef<HTMLDivElement>(null);
+  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
+  // Lead popover state
+  const [isLeadMenuOpen, setIsLeadMenuOpen] = React.useState(false);
+  const [personnelList, setPersonnelList] = React.useState<Array<{ id: string; name: string; email?: string; departmentName?: string }>>([]);
+  const leadMenuRef = React.useRef<HTMLDivElement>(null);
+
   React.useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.users)) {
+          setPersonnelList(data.users.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            departmentName: u.department?.name || u.departmentName || "Đơn vị",
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Click outside listener & Keyboard accessibility
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setIsStatusMenuOpen(false);
+      }
+      if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
+        setIsPriorityMenuOpen(false);
+      }
+      if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
+        setIsLeadMenuOpen(false);
+      }
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsStatusMenuOpen(false);
         setIsPriorityMenuOpen(false);
+        setIsLeadMenuOpen(false);
       }
     };
+    document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   // Status mapping
@@ -192,6 +281,23 @@ export function LinearPropertiesSidebar({
     }
   };
 
+  const handleSelectLead = async (personId: string, personName: string) => {
+    setIsLeadMenuOpen(false);
+    try {
+      await fetch(`/api/tasks/${task.id}/actions/reassign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newAssigneeId: personId,
+          newAssigneeName: personName,
+        }),
+      });
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleDueDateChange = async (newDateIso: string) => {
     if (onDueDateChange) {
       await onDueDateChange(task.id, newDateIso);
@@ -211,7 +317,7 @@ export function LinearPropertiesSidebar({
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <span>Properties</span>
+            <span>Thuộc tính</span>
             <ChevronDown className="size-3 text-muted-foreground" />
           </span>
           <button
@@ -224,30 +330,35 @@ export function LinearPropertiesSidebar({
         </div>
 
         {/* 2-Column Key-Value Table */}
-        <div className="space-y-2.5 text-xs">
+        <div className="space-y-1 text-xs">
           {/* Status Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Status</span>
+          <div
+            ref={statusMenuRef}
+            onClick={() => {
+              if (canEdit) {
+                setIsPriorityMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setIsStatusMenuOpen(!isStatusMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal">Trạng thái</span>
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  if (canEdit) setIsStatusMenuOpen(!isStatusMenuOpen);
-                }}
-                disabled={!canEdit}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors",
-                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
-                )}
+              <div
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <span className={cn("size-2 rounded-full", activeStatusOption.dotClass)} />
-                <span className="text-foreground">{activeStatusOption.label}</span>
-              </button>
+                <CircleDashed className={cn("size-3.5", activeStatusOption.value === "COMPLETED" ? "text-emerald-600" : activeStatusOption.value === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground")} strokeWidth={1.5} />
+                <span>{activeStatusOption.label}</span>
+              </div>
 
               {isStatusMenuOpen && canEdit && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
                 >
                   {STATUS_OPTIONS.map((opt) => (
                     <button
@@ -258,8 +369,8 @@ export function LinearPropertiesSidebar({
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
                         normalizedStatus === opt.value
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "text-foreground hover:bg-muted font-medium"
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-foreground hover:bg-muted"
                       )}
                     >
                       <div className="flex items-center gap-2">
@@ -277,28 +388,33 @@ export function LinearPropertiesSidebar({
           </div>
 
           {/* Priority Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Priority</span>
+          <div
+            ref={priorityMenuRef}
+            onClick={() => {
+              if (canEdit) {
+                setIsStatusMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setIsPriorityMenuOpen(!isPriorityMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal">Ưu tiên</span>
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  if (canEdit) setIsPriorityMenuOpen(!isPriorityMenuOpen);
-                }}
-                disabled={!canEdit}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors",
-                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
-                )}
+              <div
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <AlertCircle className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
-                <span className="text-foreground">{activePriorityOption.label}</span>
-              </button>
+                <Signal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <span>{activePriorityOption.label}</span>
+              </div>
 
               {isPriorityMenuOpen && canEdit && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
                 >
                   {PRIORITY_OPTIONS.map((opt) => (
                     <button
@@ -309,12 +425,12 @@ export function LinearPropertiesSidebar({
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
                         normalizedPriority === opt.value
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "text-foreground hover:bg-muted font-medium"
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-foreground hover:bg-muted"
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <AlertCircle className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
+                        <Signal className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
                         <span>{opt.label}</span>
                       </div>
                       {normalizedPriority === opt.value && (
@@ -327,44 +443,98 @@ export function LinearPropertiesSidebar({
             </div>
           </div>
 
-          {/* Lead Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Lead</span>
-            <div className="flex items-center gap-1.5 font-medium text-foreground max-w-[170px] truncate">
-              {leadAvatar ? (
-                <img
-                  src={leadAvatar}
-                  alt={leadName}
-                  className="size-4 rounded-full object-cover ring-1 ring-border shrink-0"
-                />
-              ) : (
-                <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] shrink-0">
-                  {getInitials(leadName)}
+          {/* Lead Row with Reassign Popover */}
+          <div
+            ref={leadMenuRef}
+            onClick={() => {
+              if (canEdit) {
+                setIsStatusMenuOpen(false);
+                setIsPriorityMenuOpen(false);
+                setIsLeadMenuOpen(!isLeadMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal">Phụ trách</span>
+            <div className="relative">
+              <div
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground max-w-[180px] truncate"
+              >
+                {leadName && leadName !== "Chưa phân công" ? (
+                  <>
+                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0">
+                      {getInitials(leadName)}
+                    </div>
+                    <span className="truncate" title={leadName}>
+                      {leadName}
+                    </span>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <UserPlus className="size-3.5" strokeWidth={1.5} />
+                    <span>Thêm phụ trách</span>
+                  </div>
+                )}
+              </div>
+
+              {isLeadMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 select-none">
+                    Chọn người phụ trách
+                  </div>
+                  {personnelList.map((p) => {
+                    const isSelected = p.name === leadName;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectLead(p.id, p.name)}
+                        className={cn(
+                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                          isSelected
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
+                            {getInitials(p.name)}
+                          </div>
+                          <div className="truncate">
+                            <div className="truncate text-foreground font-normal">{p.name}</div>
+                            {p.departmentName && (
+                              <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-              <span className="truncate text-foreground" title={leadName}>
-                {leadName}
-              </span>
             </div>
           </div>
 
           {/* Members / Collaborators Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Members</span>
-            <div className="flex items-center gap-1">
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+            <span className="text-muted-foreground text-xs font-normal">Thành viên</span>
+            <div className="flex items-center gap-1.5">
               {collaborators.length > 0 ? (
                 <div className="flex items-center -space-x-1">
                   {collaborators.slice(0, 3).map((m) => (
                     <span
                       key={m.id}
-                      className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[8px] font-bold text-foreground overflow-hidden"
+                      className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[7px] font-semibold text-foreground overflow-hidden"
                       title={m.name}
                     >
-                      {m.avatarUrl ? (
-                        <img src={m.avatarUrl} alt={m.name} className="size-full object-cover" />
-                      ) : (
-                        getInitials(m.name)
-                      )}
+                      {getInitials(m.name)}
                     </span>
                   ))}
                   {collaborators.length > 3 && (
@@ -374,56 +544,89 @@ export function LinearPropertiesSidebar({
                   )}
                 </div>
               ) : (
-                <span className="text-muted-foreground/70 text-[11px]">Add members</span>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="size-3.5" strokeWidth={1.5} />
+                  <span>Thêm thành viên</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Dates Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Dates</span>
-            {canEdit && onDueDateChange ? (
-              <div className="flex justify-end">
-                <VietnameseDatePicker
-                  value={dueDateIso}
-                  onChange={handleDueDateChange}
-                  placeholder="Target date"
-                  variant="chip"
-                  showPresets={true}
-                  align="right"
-                  className="max-w-[150px]"
-                />
-              </div>
-            ) : (
-              <span className="font-mono text-foreground text-[11px] tabular-nums">
-                {dueDateIso ? formatDisplayDate(dueDateIso) : "Target date"}
-              </span>
-            )}
+          {/* Dates Row (Linear Start -> Target Range style) */}
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+            <span className="text-muted-foreground text-xs font-normal">Thời hạn</span>
+            <div className="flex items-center gap-1.5 text-xs">
+              {/* Start Date */}
+              {startDateIso ? (
+                <div className="flex items-center gap-1 text-foreground" title={`Bắt đầu: ${formatDisplayDate(startDateIso)}`}>
+                  <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+                  <span className="tabular-nums">{formatDisplayDate(startDateIso)}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-muted-foreground/80">
+                  <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+                  <span>Bắt đầu</span>
+                </div>
+              )}
+
+              <ArrowRight className="size-3 text-muted-foreground/60 shrink-0 mx-0.5" strokeWidth={1.5} />
+
+              {/* Due Date / Target Date */}
+              {canEdit && onDueDateChange ? (
+                <div className="flex items-center gap-1">
+                  <VietnameseDatePicker
+                    value={dueDateIso}
+                    onChange={handleDueDateChange}
+                    placeholder="Hạn chót"
+                    variant="chip"
+                    icon={<LinearTargetDateIcon className="size-3.5 text-rose-500/90 shrink-0" />}
+                    showPresets={true}
+                    align="right"
+                    className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-foreground">
+                  <LinearTargetDateIcon className={cn("size-3.5 shrink-0", dueDateIso ? "text-rose-500/90" : "text-muted-foreground")} />
+                  <span className={cn("tabular-nums", !dueDateIso && "text-muted-foreground")}>
+                    {dueDateIso ? formatDisplayDate(dueDateIso) : "Hạn chót"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Teams / Dept Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Teams</span>
-            <span className="font-medium text-foreground max-w-[160px] truncate text-right" title={departmentName}>
-              {departmentName}
-            </span>
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+            <span className="text-muted-foreground text-xs font-normal">Đơn vị</span>
+            <div className="flex items-center gap-1.5 max-w-[160px] truncate text-foreground">
+              <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <span className="truncate text-xs" title={departmentName}>
+                {departmentName}
+              </span>
+            </div>
           </div>
 
           {/* Labels Row */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Labels</span>
-            <span className="px-1.5 py-0.5 rounded bg-muted/60 text-foreground border border-border/50 text-[10px] font-medium truncate max-w-[150px]">
-              {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
-            </span>
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+            <span className="text-muted-foreground text-xs font-normal">Nhãn</span>
+            <div className="flex items-center gap-1.5 text-foreground max-w-[150px] truncate">
+              <Tag className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <span className="text-xs truncate">
+                {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+            </div>
 
+      {showRelatedSections && (
+      <>
       {/* 2. SECTION: MILESTONES / SUBTASKS (Linear Style) */}
       <div className="space-y-2.5 pt-2 border-t border-border/40">
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <span>Milestones</span>
+            <span>Việc thành phần</span>
             <ChevronDown className="size-3 text-muted-foreground" />
           </span>
           <button
@@ -464,7 +667,7 @@ export function LinearPropertiesSidebar({
       <div className="space-y-3 pt-2 border-t border-border/40">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <span>Activity</span>
+            <span>Hoạt động</span>
             <ChevronDown className="size-3 text-muted-foreground" />
           </span>
           {onNavigateTab && (
@@ -473,25 +676,44 @@ export function LinearPropertiesSidebar({
               onClick={() => onNavigateTab("activity")}
               className="text-[11px] text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
             >
-              See all
+              Xem tất cả
             </button>
           )}
         </div>
 
-        {/* Compact Chronological Activity List */}
-        <div className="space-y-2.5">
-          {auditEvents.slice(0, 4).map((evt) => (
-            <div key={evt.id} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-tight">
-              <div className="size-1.5 rounded-full bg-muted-foreground/60 mt-1 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <span className="text-foreground font-medium">{evt.actorName || "Người dùng"}</span>{" "}
-                <span>{evt.description || evt.action}</span>
-                <span className="text-muted-foreground/60 ml-1.5 font-mono text-[10px]">
-                  {formatDisplayDate(evt.timestamp)}
+        {/* Compact Chronological Activity List with Linear-style thin icons */}
+        <div className="space-y-2">
+          {auditEvents.slice(0, 5).map((evt) => {
+            const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
+            const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
+            const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
+            const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
+            
+            return (
+              <div key={evt.id} className="flex items-start gap-2.5 text-[11px] text-muted-foreground leading-snug py-0.5">
+                <span className="mt-0.5 shrink-0 text-muted-foreground/70">
+                  {isNameChange ? (
+                    <PenLine className="size-3.5" strokeWidth={1.5} />
+                  ) : isPriority ? (
+                    <Signal className="size-3.5" strokeWidth={1.5} />
+                  ) : isDate ? (
+                    <Calendar className="size-3.5" strokeWidth={1.5} />
+                  ) : isProgress ? (
+                    <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                  ) : (
+                    <Box className="size-3.5" strokeWidth={1.5} />
+                  )}
                 </span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
+                  <span className="text-foreground/80">{evt.description || evt.action}</span>
+                  <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
+                    · {formatDisplayDate(evt.timestamp)}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {auditEvents.length === 0 && (
             <p className="text-[11px] text-muted-foreground/70 italic">
@@ -500,6 +722,8 @@ export function LinearPropertiesSidebar({
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

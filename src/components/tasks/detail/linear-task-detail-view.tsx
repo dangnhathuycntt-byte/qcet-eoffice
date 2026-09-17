@@ -19,6 +19,7 @@ import { TaskEvidenceSection, type DeliverableItem } from "./task-evidence-secti
 import { TaskActivityTimeline, type ActivityEvent } from "./task-activity-timeline";
 import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-sidebar";
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
+import { DirectInlineEditor } from "./direct-inline-editor";
 
 export interface LinearTaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -112,14 +113,6 @@ export function LinearTaskDetailView({
     ? schoolTask?.description
     : staffTask?.deliverableDescription || (task as any).description;
 
-  // Description inline edit state
-  const [isEditingDescription, setIsEditingDescription] = React.useState(false);
-  const [descriptionDraft, setDescriptionDraft] = React.useState(rawDescription || "");
-
-  React.useEffect(() => {
-    setDescriptionDraft(rawDescription || "");
-  }, [rawDescription]);
-
   // Deliverables / Resources state
   const initialDeliverables = (task as any).deliverables || [];
   const [deliverables, setDeliverables] = React.useState<DeliverableItem[]>(initialDeliverables);
@@ -196,20 +189,23 @@ export function LinearTaskDetailView({
     }));
   };
 
-  const handleSaveDescription = async () => {
-    setIsEditingDescription(false);
+  const handleSaveDescription = async (newDesc: string) => {
+    const trimmed = newDesc.trim();
     if (onDescriptionChange) {
-      await onDescriptionChange(task.id, descriptionDraft);
+      await onDescriptionChange(task.id, trimmed);
     } else {
-      await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: descriptionDraft }),
+        body: JSON.stringify({ description: trimmed }),
       });
+      if (!res.ok) {
+        throw new Error("Không thể lưu mô tả");
+      }
     }
     setTask((prev) => ({
       ...prev,
-      description: descriptionDraft,
+      description: trimmed,
     }));
   };
 
@@ -318,68 +314,23 @@ export function LinearTaskDetailView({
                   Mô tả nhiệm vụ
                 </h2>
               </div>
-              {!isEditingDescription && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingDescription(true)}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  title="Chỉnh sửa mô tả"
-                  aria-label="Chỉnh sửa mô tả"
-                >
-                  <Edit2 className="size-3.5" strokeWidth={1.5} />
-                </button>
-              )}
             </div>
 
-            {isEditingDescription ? (
-              <div className="space-y-2">
-                <textarea
-                  value={descriptionDraft}
-                  onChange={(e) => setDescriptionDraft(e.target.value)}
-                  rows={4}
-                  placeholder="Nhập mô tả chi tiết, hướng dẫn hoặc yêu cầu cụ thể của nhiệm vụ..."
-                  className="w-full text-xs text-foreground bg-background p-3 rounded-xl border border-primary focus:ring-2 focus:ring-primary/40 focus:outline-hidden leading-relaxed resize-y"
-                  aria-label="Soạn thảo mô tả nhiệm vụ"
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveDescription}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-2xs"
-                  >
-                    <Check className="size-3.5" strokeWidth={1.5} />
-                    <span>Lưu mô tả</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditingDescription(false);
-                      setDescriptionDraft(rawDescription || "");
-                    }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  >
-                    <X className="size-3.5" strokeWidth={1.5} />
-                    <span>Hủy</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => setIsEditingDescription(true)}
-                className="text-xs text-foreground leading-relaxed p-3.5 rounded-xl border border-border/60 bg-card/40 cursor-pointer hover:border-border transition-colors group/desc"
-                title="Nhấp để chỉnh sửa mô tả"
-              >
-                {rawDescription ? (
-                  <p className="whitespace-pre-wrap max-w-4xl text-foreground">
-                    {rawDescription}
-                  </p>
-                ) : (
-                  <span className="text-muted-foreground italic">
-                    Chưa có mô tả chi tiết cho nhiệm vụ này. Nhấp vào đây để thêm mô tả...
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="p-3.5 rounded-xl border border-border/60 bg-card/40">
+              <DirectInlineEditor
+                value={rawDescription || ""}
+                onSave={handleSaveDescription}
+                canEdit={true}
+                multiline={true}
+                as="div"
+                submitOnEnter={false}
+                minRows={3}
+                ariaLabel="Mô tả nhiệm vụ"
+                placeholder="Chưa có mô tả chi tiết cho nhiệm vụ này. Nhấp vào đây để thêm mô tả..."
+                viewClassName="text-xs leading-relaxed text-foreground min-h-[48px]"
+                editorClassName="text-xs leading-relaxed text-foreground min-h-[48px]"
+              />
+            </div>
           </section>
 
           {/* D. Subtasks Section */}

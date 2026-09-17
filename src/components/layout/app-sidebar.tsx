@@ -592,8 +592,8 @@ export function AppSidebar() {
                         className={cn(
                           "group relative flex items-center gap-2.5 rounded-[6px] px-2 h-[34px] text-[13px] transition-colors select-none tracking-tight",
                           active
-                            ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-semibold"
-                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
+                            ? "bg-black/[0.06] text-foreground font-medium"
+                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
                         )}
                       >
                         <span className="size-4 shrink-0 flex items-center justify-center">

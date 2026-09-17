@@ -3,7 +3,7 @@
 import * as React from "react";
 import {
   ArrowLeft,
-  Copy,
+  Link2,
   Check,
   PanelRightClose,
   PanelRightOpen,
@@ -20,8 +20,10 @@ export interface TaskDetailHeaderNavProps {
   taskCode: string;
   taskTitle: string;
   onBack: () => void;
+  showBreadcrumbs?: boolean;
   showInspector: boolean;
   onToggleInspector: () => void;
+  onOpenProgressModal?: () => void;
   onRefresh?: () => void;
   className?: string;
 }
@@ -30,8 +32,10 @@ export function TaskDetailHeaderNav({
   taskCode,
   taskTitle,
   onBack,
+  showBreadcrumbs = true,
   showInspector,
   onToggleInspector,
+  onOpenProgressModal,
   onRefresh,
   className,
 }: TaskDetailHeaderNavProps) {
@@ -62,12 +66,14 @@ export function TaskDetailHeaderNav({
   return (
     <header
       data-slot="task-detail-header-nav"
+      data-breadcrumbs={showBreadcrumbs}
       className={cn(
         "h-12 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
         className
       )}
     >
-      {/* Left: Linear-style Breadcrumbs navigation */}
+      {/* The application shell already owns the page breadcrumb on full-page views. */}
+      {showBreadcrumbs && (
       <nav aria-label="Đường dẫn điều hướng" className="flex items-center gap-2 min-w-0">
         <button
           type="button"
@@ -95,9 +101,22 @@ export function TaskDetailHeaderNav({
           </span>
         </div>
       </nav>
+      )}
 
       {/* Right: Sleek Action Icons */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
+        {/* Cập nhật tiến độ Button */}
+        {onOpenProgressModal && (
+          <button
+            type="button"
+            onClick={onOpenProgressModal}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-foreground hover:text-foreground transition-colors cursor-pointer"
+            title="Cập nhật tiến độ nhiệm vụ"
+          >
+            <span className="text-xs">Cập nhật tiến độ</span>
+          </button>
+        )}
+
         {/* Copy Link Button */}
         <button
           type="button"
@@ -113,7 +132,7 @@ export function TaskDetailHeaderNav({
             </>
           ) : (
             <>
-              <Copy className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <Link2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
               <span className="hidden sm:inline text-xs">Sao chép liên kết</span>
             </>
           )}

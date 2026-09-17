@@ -11,7 +11,11 @@ import {
   Menu,
   ChevronRight,
 } from "lucide-react";
-import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
+import {
+  useSidebar,
+  useSidebarLayout,
+  resolveBreadcrumb,
+} from "@/components/layout/sidebar-context";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,6 +36,8 @@ export function getInitials(name?: string | null): string {
 function MobileHeaderTitle({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+  const { breadcrumbItems } = useSidebarLayout();
+  const currentTitle = breadcrumbItems?.at(-1)?.label ?? pageTitle;
 
   return (
     <div className="flex items-center min-w-0 gap-1.5">
@@ -46,7 +52,7 @@ function MobileHeaderTitle({ pathname }: { pathname: string }) {
       </Link>
       <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
       <span className="text-xs font-bold text-foreground truncate max-w-[160px]">
-        {pageTitle}
+        {currentTitle}
       </span>
     </div>
   );
@@ -76,6 +82,37 @@ function MobileHeaderTitleFallback({ pathname }: { pathname: string }) {
 function DesktopHeaderTitle({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+  const { breadcrumbItems } = useSidebarLayout();
+
+  if (breadcrumbItems?.length) {
+    return (
+      <nav aria-label="Đường dẫn trang" className="flex min-w-0 items-center gap-1.5 text-xs font-medium select-none">
+        {breadcrumbItems.map((item, index) => (
+          <React.Fragment key={`${item.label}-${index}`}>
+            {index > 0 && <span className="text-muted-foreground/30">›</span>}
+            {item.href ? (
+              <Link href={item.href} className="text-muted-foreground/70 transition-colors hover:text-foreground">
+                {item.label}
+              </Link>
+            ) : (
+              <span
+                className={cn(
+                  "truncate",
+                  index === breadcrumbItems.length - 1
+                    ? "max-w-[min(52vw,680px)] font-semibold text-foreground"
+                    : "text-muted-foreground/70",
+                  item.mono && "font-mono text-[11px]"
+                )}
+                title={item.label}
+              >
+                {item.label}
+              </span>
+            )}
+          </React.Fragment>
+        ))}
+      </nav>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5 text-xs font-medium select-none">

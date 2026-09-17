@@ -126,10 +126,14 @@ export async function updateTaskDueDate(
   dueDate: string
 ): Promise<TaskActionResult> {
   try {
+    const formattedDueDate = dueDate && dueDate.length === 10
+      ? new Date(`${dueDate}T23:59:59.000+07:00`).toISOString()
+      : dueDate || null;
+
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dueDate }),
+      body: JSON.stringify({ dueDate: formattedDueDate }),
     });
 
     if (!res.ok) {

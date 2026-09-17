@@ -327,6 +327,25 @@ export const TaskRow = React.memo(function TaskRow({
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
   const departmentName = task.department || driInfo.subtext;
 
+  const coAssigneesList: string[] = React.useMemo(() => {
+    const names = new Set<string>();
+    if (Array.isArray((task as any).coAssignees)) {
+      (task as any).coAssignees.forEach((n: any) => {
+        if (typeof n === "string" && n.trim() && n.trim() !== driInfo.primaryName) {
+          names.add(n.trim());
+        }
+      });
+    }
+    if (Array.isArray(task.subTasks)) {
+      task.subTasks.forEach((st) => {
+        if (st.assigneeName && st.assigneeName.trim() && st.assigneeName.trim() !== driInfo.primaryName) {
+          names.add(st.assigneeName.trim());
+        }
+      });
+    }
+    return Array.from(names);
+  }, [task, driInfo.primaryName]);
+
   const isWaitingApproval =
     task.status === "WAITING_APPROVAL" ||
     (task.status as string) === "PENDING_EXECUTIVE_APPROVAL" ||
@@ -456,103 +475,109 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 3. Tình trạng / Trạng thái (Status / Health) */}
-      <td className={cn("w-28 min-w-[100px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      {/* 2. Phụ trách (Lead Assignee) */}
+      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+        <div
+          className="flex items-center gap-2 min-w-0"
+          title={`${driInfo.primaryName || "—"}${departmentName ? ` (${departmentName})` : ""}`}
+        >
+          {driInfo.primaryName ? (
+            <>
+              {task.leadAssigneeAvatar ? (
+                <img
+                  src={task.leadAssigneeAvatar}
+                  alt=""
+                  aria-hidden="true"
+                  width={20}
+                  height={20}
+                  loading="lazy"
+                  className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+                />
+              ) : (
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
+                  {getInitials(driInfo.primaryName)}
+                </span>
+              )}
+              <span className="text-xs font-medium text-foreground truncate">
+                {driInfo.primaryName}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground/50 text-xs">—</span>
+          )}
+        </div>
+      </td>
+
+      {/* 3. Phối hợp (Collaborators / Subtasks Contributors) */}
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+        {coAssigneesList.length > 0 ? (
+          <div className="flex items-center -space-x-1">
+            {coAssigneesList.slice(0, 3).map((name, i) => (
+              <span
+                key={i}
+                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted border border-background text-[9px] font-semibold text-foreground overflow-hidden"
+                title={name}
+              >
+                {getInitials(name)}
+              </span>
+            ))}
+            {coAssigneesList.length > 3 && (
+              <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
+                +{coAssigneesList.length - 3}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground/50 text-xs">—</span>
+        )}
+      </td>
+
+      {/* 4. Thời hạn (Due Date) */}
+      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+        <div className="flex flex-col gap-0.5">
+          {task.dueDate ? (
+            <>
+              <span
+                className={cn(
+                  "font-mono tabular-nums text-xs",
+                  slaStatus.isOverdue
+                    ? "text-rose-600 font-semibold"
+                    : slaStatus.isToday
+                    ? "text-amber-600 font-semibold"
+                    : "text-slate-600 dark:text-zinc-400 font-normal"
+                )}
+                title="Thời hạn"
+              >
+                {formatTableDate(task.dueDate)}
+              </span>
+              {slaStatus.isOverdue && (
+                <span
+                  className="inline-flex items-center text-[10px] font-semibold text-rose-600"
+                  title={slaStatus.label || "Quá hạn"}
+                >
+                  {slaStatus.label || "Quá hạn"}
+                </span>
+              )}
+              {!slaStatus.isOverdue && slaStatus.isToday && (
+                <span className="inline-flex items-center text-[10px] font-semibold text-amber-600">
+                  Hôm nay
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-muted-foreground/50 text-xs">—</span>
+          )}
+        </div>
+      </td>
+
+      {/* 5. Tình trạng (Status) */}
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
         <HealthIndicator
           status={task.status}
           isOverdue={Boolean(slaStatus.isOverdue)}
           isWaitingApproval={isWaitingApproval}
         />
       </td>
-
-      {/* 4. Độ ưu tiên (Priority - Tùy chọn hiển thị) */}
-      {visibleColumns.priority !== false && (
-        <td className={cn("w-20 min-w-[72px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
-          <PriorityIndicator priority={task.priority} />
-        </td>
-      )}
-
-      {/* 5. Chủ trì (Lead Assignee - Clean Single Line Aligned) */}
-      <td className={cn("w-40 lg:w-48 min-w-[140px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
-        <div
-          className="flex items-center gap-2 min-w-0"
-          title={`${driInfo.primaryName}${departmentName ? ` (${departmentName})` : ""}`}
-        >
-          {task.leadAssigneeAvatar ? (
-            <img
-              src={task.leadAssigneeAvatar}
-              alt=""
-              aria-hidden="true"
-              width={20}
-              height={20}
-              loading="lazy"
-              className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-            />
-          ) : (
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
-              {getInitials(driInfo.primaryName)}
-            </span>
-          )}
-          <span className="text-xs font-medium text-foreground truncate">
-            {driInfo.primaryName}
-          </span>
-        </div>
-      </td>
-
-      {/* 6. Hạn hoàn thành & Quá hạn (Target date & SLA Overdue text/badge) */}
-      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
-        <div className="flex flex-col gap-0.5">
-          <span
-            className={cn(
-              "font-mono tabular-nums text-xs",
-              slaStatus.isOverdue
-                ? "text-rose-600 font-semibold"
-                : slaStatus.isToday
-                ? "text-amber-600 font-semibold"
-                : "text-slate-600 dark:text-zinc-400 font-normal"
-            )}
-            title="Hạn hoàn thành"
-          >
-            {formatTableDate(task.dueDate)}
-          </span>
-          {slaStatus.isOverdue && (
-            <span
-              className="inline-flex items-center text-[10px] font-semibold text-rose-600"
-              title={slaStatus.label || "Quá hạn"}
-            >
-              {slaStatus.label || "Quá hạn"}
-            </span>
-          )}
-          {!slaStatus.isOverdue && slaStatus.isToday && (
-            <span className="inline-flex items-center text-[10px] font-semibold text-amber-600">
-              Hôm nay
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* 7. Đầu việc con (Subtasks count - T��y chọn hiển thị) */}
-      {visibleColumns.subtasks !== false && (
-        <td className={cn("w-20 min-w-[70px] align-middle text-center whitespace-nowrap", paddingClass, tdBaseClass)}>
-          {hasSubtasks ? (
-            <span
-              className="rounded bg-muted/80 px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground"
-              title={`Hoàn thành ${completedSubTasks}/${totalSubTasks} đầu việc con`}
-            >
-              {completedSubTasks}/{totalSubTasks}
-            </span>
-          ) : (
-            <span className="text-muted-foreground/40 text-xs">-</span>
-          )}
-        </td>
-      )}
-
-      {/* 8. Tiến độ (Progress % - Tùy chọn hiển thị) */}
-      {visibleColumns.progress !== false && (
-        <td className={cn("w-24 min-w-[92px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
-          <CircularProgressRing percent={task.progressPercent || 0} />
-        </td>
-      )}
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td

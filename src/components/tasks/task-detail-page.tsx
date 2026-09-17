@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
+import styles from "./task-detail-page.module.css";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   Layers,
@@ -22,11 +25,13 @@ import {
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
+import { useSidebarLayout } from "@/components/layout/sidebar-context";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
 import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-header-nav";
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
+import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
@@ -52,11 +57,13 @@ export function TaskDetailPage({
   auditEvents: initialAuditEvents = [],
   currentUser: serverUser,
 }: TaskDetailPageProps) {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user: clientUser } = useAuth();
   const currentUser = clientUser || serverUser;
+  const { setBreadcrumbItems } = useSidebarLayout();
 
   const { restoreScrollAndNavigateBack } = useListScrollRestore();
 
@@ -68,6 +75,7 @@ export function TaskDetailPage({
 
   // Inspector visibility state
   const [showInspector, setShowInspector] = React.useState(true);
+  const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
 
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
@@ -136,14 +144,6 @@ export function TaskDetailPage({
     ? schoolTask?.description || ""
     : staffTask?.deliverableDescription || (task as any).description || "";
 
-  const [descriptionDraft, setDescriptionDraft] = React.useState(currentDescription);
-  const [isEditingDescription, setIsEditingDescription] = React.useState(false);
-  const [isSavingDescription, setIsSavingDescription] = React.useState(false);
-
-  React.useEffect(() => {
-    setDescriptionDraft(currentDescription);
-  }, [currentDescription]);
-
   // Subtask modal state
   const [isCreateSubTaskModalOpen, setIsCreateSubTaskModalOpen] = React.useState(false);
 
@@ -153,10 +153,20 @@ export function TaskDetailPage({
     (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
     task.id.slice(0, 8).toUpperCase();
 
+  React.useEffect(() => {
+    setBreadcrumbItems([
+      { label: "Nhiệm vụ", href: "/tasks" },
+      { label: task.title },
+    ]);
+    return () => setBreadcrumbItems(null);
+  }, [setBreadcrumbItems, task.title]);
+
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
 
-  const currentProgressPercent =
-    typeof (task as any).progressPercent === "number"
+  const completedSubtasks = subTasks.filter((subTask) => subTask.status === "COMPLETED").length;
+  const currentProgressPercent = subTasks.length > 0
+    ? Math.round((completedSubtasks / subTasks.length) * 100)
+    : typeof (task as any).progressPercent === "number"
       ? (task as any).progressPercent
       : isSchool
       ? schoolTask?.progress ?? 0
@@ -176,6 +186,7 @@ export function TaskDetailPage({
         body: JSON.stringify({ title: newTitle }),
       });
 
+      if (!res.ok) throw new Error("Không thể lưu tiêu đề");
       if (res.ok) {
         setTask((prev) => ({ ...prev, title: newTitle }));
         setAuditEvents((prev) => [
@@ -190,35 +201,45 @@ export function TaskDetailPage({
         ]);
         router.refresh();
       }
-    } catch {
-      // safe fallback
+    } catch (error) {
+      throw error;
     }
   };
 
   // Description save handler
-  const handleSaveDescription = async () => {
-    setIsSavingDescription(true);
-    try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: descriptionDraft.trim() }),
-      });
+  const handleSaveDescription = async (newDescription: string) => {
+    const trimmed = newDescription.trim();
+    const res = await fetch(`/api/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: trimmed }),
+    });
 
-      if (res.ok) {
-        setTask((prev) => {
-          if (isSchool && schoolTask) {
-            return { ...prev, description: descriptionDraft.trim() } as SchoolTask;
-          }
-          return { ...prev, deliverableDescription: descriptionDraft.trim(), description: descriptionDraft.trim() } as any;
-        });
-        setIsEditingDescription(false);
-      }
-    } catch {
-      // safe fallback
-    } finally {
-      setIsSavingDescription(false);
+    if (!res.ok) {
+      throw new Error("Không thể lưu mô tả");
     }
+
+    setTask((prev) => {
+      if (isSchool && schoolTask) {
+        return { ...prev, description: trimmed } as SchoolTask;
+      }
+      return {
+        ...prev,
+        deliverableDescription: trimmed,
+        description: trimmed,
+      } as any;
+    });
+
+    setAuditEvents((prev) => [
+      {
+        id: `audit-desc-${Date.now()}`,
+        action: "UPDATE_DESCRIPTION",
+        timestamp: new Date().toISOString(),
+        actorName: currentUser?.name || "Người dùng",
+        description: `Cập nhật mô tả nhiệm vụ`,
+      },
+      ...prev,
+    ]);
   };
 
   // Status change handler (REQ-20)
@@ -320,6 +341,9 @@ export function TaskDetailPage({
     const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
     const res = await updateTaskStatus(st.id, newStatus);
     if (res.ok) {
+      const nextSubtasks = subTasks.map((subTask) =>
+        subTask.id === st.id ? { ...subTask, status: newStatus } : subTask
+      );
       setTask((prev) => {
         if (!isSchool || !schoolTask) return prev;
         const updatedSubtasks = schoolTask.subTasks.map((s) =>
@@ -330,6 +354,17 @@ export function TaskDetailPage({
           subTasks: updatedSubtasks,
         } as SchoolTask;
       });
+
+      const nextCompleted = nextSubtasks.filter((subTask) => subTask.status === "COMPLETED").length;
+      const nextProgress = Math.round((nextCompleted / nextSubtasks.length) * 100);
+      const parentStatus: TaskStatus = nextProgress === 100
+        ? "COMPLETED"
+        : nextProgress > 0
+          ? "IN_PROGRESS"
+          : "NOT_STARTED";
+      if (parentStatus !== task.status) {
+        await handleStatusChange(task.id, parentStatus, `Tự động từ ${nextCompleted}/${nextSubtasks.length} việc thành phần`);
+      }
     }
   };
 
@@ -389,15 +424,17 @@ export function TaskDetailPage({
   return (
     <div
       data-slot="task-workspace"
-      className="w-full min-h-screen flex flex-col bg-background text-foreground"
+      className={styles.workspace}
     >
       {/* 1. Header Navigation Bar (Linear Style) */}
       <TaskDetailHeaderNav
         taskCode={taskCode}
         taskTitle={task.title}
         onBack={handleBackToList}
+        showBreadcrumbs={false}
         showInspector={showInspector}
         onToggleInspector={() => setShowInspector((prev) => !prev)}
+        onOpenProgressModal={() => setIsProgressModalOpen(true)}
         onRefresh={() => router.refresh()}
       />
 
@@ -421,7 +458,7 @@ export function TaskDetailPage({
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <span>Overview</span>
+          <span>Tổng quan</span>
         </button>
 
         <button
@@ -438,7 +475,7 @@ export function TaskDetailPage({
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <span>Activity</span>
+          <span>Hoạt động</span>
           {auditEvents.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
               {auditEvents.length}
@@ -460,7 +497,7 @@ export function TaskDetailPage({
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <span>Issues</span>
+          <span>Việc thành phần</span>
           {subTasks.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
               {subTasks.length}
@@ -470,15 +507,17 @@ export function TaskDetailPage({
       </nav>
 
       {/* 3. Main 2-Column Canvas Layout */}
-      <div className="flex-1 flex flex-col md:flex-row min-w-0">
+      <div className={styles.canvas}>
         {/* Left / Center Main Content Canvas */}
-        <main
+        <m.main
+          layout={reduceMotion ? false : "position"}
+          transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
           role="tabpanel"
           id={`panel-${activeTab}`}
           aria-labelledby={`tab-${activeTab}`}
           className={cn(
-            "flex-1 p-6 sm:p-8 lg:p-10 space-y-8 overflow-y-auto min-w-0 thin-scrollbar",
-            showInspector ? "w-full max-w-4xl" : "w-full max-w-5xl mx-auto"
+            styles.content,
+            !showInspector && styles.expanded
           )}
         >
           {/* TAB 1: OVERVIEW */}
@@ -494,91 +533,32 @@ export function TaskDetailPage({
                 onTitleChange={handleTitleChange}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
+                showInlineProperties={true}
               />
 
-              {/* Task Progress Composer (Linear "Latest update" block) */}
-              <TaskProgressComposer
-                taskId={task.id}
-                initialProgress={currentProgressPercent}
-                taskStatus={task.status}
-                leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
-                canEdit={true}
-                onProgressUpdated={handleProgressUpdated}
-                onStatusChange={handleStatusChange}
-              />
+
 
               {/* Description Section (Linear Minimalist Markdown / Text Style) */}
-              <section className="space-y-2">
+              <section className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
+                  <h2 className="text-xs font-normal text-muted-foreground select-none">
                     Description
                   </h2>
-                  {!isEditingDescription && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingDescription(true)}
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                    >
-                      <Edit2 className="size-3" strokeWidth={1.5} />
-                      <span>Sửa mô tả</span>
-                    </button>
-                  )}
                 </div>
 
-                {isEditingDescription ? (
-                  <div className="space-y-2 pt-1 animate-in fade-in-0 duration-150">
-                    <textarea
-                      value={descriptionDraft}
-                      onChange={(e) => setDescriptionDraft(e.target.value)}
-                      rows={5}
-                      placeholder="Nhập mô tả hoặc hướng dẫn thực hiện nhiệm vụ..."
-                      className="w-full text-sm leading-relaxed text-foreground bg-background p-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden font-sans resize-y"
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDescriptionDraft(currentDescription);
-                          setIsEditingDescription(false);
-                        }}
-                        disabled={isSavingDescription}
-                        className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveDescription}
-                        disabled={isSavingDescription}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingDescription ? (
-                          <>
-                            <Loader2 className="size-3 animate-spin" />
-                            <span>Đang lưu...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Check className="size-3.5" strokeWidth={1.5} />
-                            <span>Lưu mô tả</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => setIsEditingDescription(true)}
-                    className="text-sm leading-relaxed text-foreground/90 font-sans whitespace-pre-wrap rounded-lg hover:bg-muted/20 p-1 -m-1 transition-colors cursor-pointer"
-                    title="Nhấp để sửa mô tả"
-                  >
-                    {currentDescription || (
-                      <p className="text-muted-foreground/70 italic text-xs">
-                        Chưa có mô tả chi tiết. Nhấp để thêm mô tả...
-                      </p>
-                    )}
-                  </div>
-                )}
+                <DirectInlineEditor
+                  value={currentDescription}
+                  onSave={handleSaveDescription}
+                  canEdit={true}
+                  multiline={true}
+                  as="div"
+                  submitOnEnter={false}
+                  minRows={2}
+                  ariaLabel="Mô tả nhiệm vụ"
+                  placeholder="Thêm mô tả nhiệm vụ..."
+                  viewClassName="text-sm leading-relaxed text-foreground min-h-[40px] py-1 font-sans"
+                  editorClassName="text-sm leading-relaxed text-foreground min-h-[40px] py-1 font-sans placeholder:text-muted-foreground/50 placeholder:italic"
+                />
               </section>
 
               {/* Subtasks / Issues Section */}
@@ -607,58 +587,91 @@ export function TaskDetailPage({
             </div>
           )}
 
-          {/* TAB 3: ACTIVITY FEED */}
+          {/* TAB 3: ACTIVITY FEED & PROGRESS REPORTS */}
           {activeTab === "activity" && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border/40">
-                <div>
-                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
-                    Nhật ký xử lý & Lịch sử hoạt động
-                  </h2>
-                  <p className="text-xs text-muted-foreground pt-0.5">
-                    Ghi nhận đầy đủ các mốc giao việc, cập nhật tiến độ, phê duyệt và thay đổi thời hạn.
-                  </p>
+            <div className="space-y-6">
+              {/* Latest Progress Report Banner */}
+              <div className="rounded-xl border border-border bg-white p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground">Báo cáo tiến độ mới nhất</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsProgressModalOpen(true)}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                  >
+                    Cập nhật tiến độ
+                  </button>
                 </div>
-                <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums">
-                  {auditEvents.length} mốc
-                </span>
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", task.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700")}>
+                    <span className="size-1.5 rounded-full bg-current" />
+                    <span>{task.status === "COMPLETED" ? "Hoàn thành" : `${currentProgressPercent}%`}</span>
+                  </span>
+                  <span className="text-muted-foreground/40">•</span>
+                  <span className="font-medium text-foreground">{isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}</span>
+                  <span className="text-muted-foreground/40">•</span>
+                  <span className="text-muted-foreground text-[11px]">Hôm nay</span>
+                </div>
+                <p className="text-xs text-foreground/90 leading-relaxed font-sans pt-1">
+                  {(task as any).latestNote || ((task as any).progressPercent === 100 ? "Nhiệm vụ đã hoàn thành toàn bộ nội dung theo yêu cầu." : "Đang triển khai thực hiện theo kế hoạch phân công.")}
+                </p>
               </div>
 
-              {auditEvents.length > 0 ? (
-                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
-                  {auditEvents.map((evt) => (
-                    <div key={evt.id} className="relative flex flex-col gap-0.5 text-xs">
-                      <span className="absolute -left-5 top-1 flex size-2.5 items-center justify-center rounded-full border border-background bg-primary" />
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="font-medium text-foreground">
-                          {evt.description || evt.action}
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                          {formatDetailDate(evt.timestamp)}
-                        </span>
+              {/* Chronological Audit Timeline */}
+              <section className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                  <div>
+                    <h2 className="text-xs font-semibold text-foreground tracking-tight">
+                      Nhật ký xử lý & Lịch sử hoạt động
+                    </h2>
+                    <p className="text-xs text-muted-foreground pt-0.5">
+                      Ghi nhận đầy đủ các mốc giao việc, cập nhật tiến độ, phê duyệt và thay đổi thời hạn.
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums">
+                    {auditEvents.length} mốc
+                  </span>
+                </div>
+
+                {auditEvents.length > 0 ? (
+                  <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
+                    {auditEvents.map((evt) => (
+                      <div key={evt.id} className="relative flex flex-col gap-0.5 text-xs">
+                        <span className="absolute -left-5 top-1 flex size-2.5 items-center justify-center rounded-full border border-background bg-primary" />
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-medium text-foreground">
+                            {evt.description || evt.action}
+                          </span>
+                          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                            {formatDetailDate(evt.timestamp)}
+                          </span>
+                        </div>
+                        {evt.actorName && (
+                          <span className="text-[11px] text-muted-foreground">
+                            Người thao tác: {evt.actorName}
+                          </span>
+                        )}
                       </div>
-                      {evt.actorName && (
-                        <span className="text-[11px] text-muted-foreground">
-                          Người thao tác: {evt.actorName}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-12 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60">
-                  Chưa có lịch sử xử lý nào được ghi nhận cho nhiệm vụ này.
-                </div>
-              )}
-            </section>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60">
+                    Chưa có lịch sử xử lý nào được ghi nhận cho nhiệm vụ này.
+                  </div>
+                )}
+              </section>
+            </div>
           )}
-        </main>
+                </m.main>
 
         {/* Right Column: Properties Inspector Sidebar (Linear Style) */}
         {showInspector && (
-          <aside
+          <m.aside
+            initial={{ opacity: reduceMotion ? 1 : 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18 }}
             aria-label="Cột thuộc tính nhiệm vụ"
-            className="w-full md:w-[280px] lg:w-[320px] shrink-0 border-t md:border-t-0 md:border-l border-border/40 bg-background overflow-y-auto"
+            className={styles.inspector}
           >
             <LinearPropertiesSidebar
               task={task}
@@ -669,10 +682,47 @@ export function TaskDetailPage({
               onNavigateTab={(tab) => handleTabChange(tab)}
               auditEvents={auditEvents}
               isMobileAccordion={true}
+              showRelatedSections={true}
             />
-          </aside>
+          </m.aside>
         )}
       </div>
+
+            {/* Modal Cập nhật tiến độ */}
+      {isProgressModalOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-border/50 pb-3">
+              <span className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</span>
+              <button
+                type="button"
+                onClick={() => setIsProgressModalOpen(false)}
+                className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="size-4" strokeWidth={1.5} />
+              </button>
+            </div>
+
+            <TaskProgressComposer
+              taskId={task.id}
+              initialProgress={currentProgressPercent}
+              taskStatus={task.status}
+              leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
+              completedSubtasks={completedSubtasks}
+              totalSubtasks={subTasks.length}
+              canEdit={true}
+              onProgressUpdated={async (p, note) => {
+                await handleProgressUpdated(p, note);
+                setIsProgressModalOpen(false);
+              }}
+              onStatusChange={async (id, st, note) => {
+                await handleStatusChange(id, st, note);
+                setIsProgressModalOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Modal Add SubTask */}
       {isCreateSubTaskModalOpen && (

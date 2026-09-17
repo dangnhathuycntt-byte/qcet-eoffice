@@ -15,7 +15,7 @@ interface TaskDetailPageParams {
 export async function generateMetadata({ params }: TaskDetailPageParams): Promise<Metadata> {
   const { id } = await params;
   if (!id) {
-    return { title: "Chi tiết nhiệm vụ | QCET E-Office" };
+    return { title: "Chi tiết nhiệm vụ" };
   }
 
   const task = await prisma.task.findUnique({
@@ -24,12 +24,12 @@ export async function generateMetadata({ params }: TaskDetailPageParams): Promis
   });
 
   if (!task) {
-    return { title: "Không tìm thấy nhiệm vụ | QCET E-Office" };
+    return { title: "Không tìm thấy nhiệm vụ" };
   }
 
   const taskCodePrefix = task.code ? `${task.code} - ` : "";
   return {
-    title: `${taskCodePrefix}${task.title} | QCET E-Office`,
+    title: `${taskCodePrefix}${task.title}`,
   };
 }
 

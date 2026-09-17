@@ -44,12 +44,10 @@ interface ColumnDefinition {
 // Linear Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
 const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
-  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28 min-w-[100px]" },
-  { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20 min-w-[72px]" },
-  { id: "leadAssignee", label: "Chủ trì", sortable: true, widthClass: "w-40 lg:w-48 min-w-[140px]" },
-  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-32 min-w-[110px]" },
-  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20 min-w-[70px]", align: "center" },
-  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-24 min-w-[92px]" },
+  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-48 lg:w-56 min-w-[160px]" },
+  { id: "subtasks", label: "Phối hợp", sortable: false, widthClass: "w-36 min-w-[120px]" },
+  { id: "dueDate", label: "Thời hạn", sortable: true, widthClass: "w-32 min-w-[110px]" },
+  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-36 min-w-[120px]" },
   { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8 min-w-[32px]" },
 ];
 
@@ -77,14 +75,7 @@ export function TaskTableHeader({
     }
   }, [indeterminate]);
 
-  const activeColumns = React.useMemo(() => {
-    return ALL_TABLE_COLUMNS.filter((col) => {
-      if (col.id === "priority" && visibleColumns.priority === false) return false;
-      if (col.id === "subtasks" && visibleColumns.subtasks === false) return false;
-      if (col.id === "progress" && visibleColumns.progress === false) return false;
-      return true;
-    });
-  }, [visibleColumns]);
+  const activeColumns = ALL_TABLE_COLUMNS;
 
   const renderSortIndicator = (colId: TaskSortField) => {
     if (sortField === colId) {

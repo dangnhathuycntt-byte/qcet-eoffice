@@ -2,18 +2,11 @@
 
 import * as React from "react";
 import {
-  TrendingUp,
-  Send,
   Loader2,
   Check,
   Edit2,
-  X,
   MessageSquare,
-  Sparkles,
-  ChevronDown,
-  User,
   Smile,
-  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/dashboard";
@@ -24,6 +17,8 @@ export interface TaskProgressComposerProps {
   taskStatus: TaskStatus;
   leadName?: string;
   latestNote?: string;
+  completedSubtasks?: number;
+  totalSubtasks?: number;
   canEdit?: boolean;
   onProgressUpdated?: (newProgress: number, note?: string) => Promise<void> | void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
@@ -36,6 +31,8 @@ export function TaskProgressComposer({
   taskStatus,
   leadName = "Người phụ trách",
   latestNote,
+  completedSubtasks = 0,
+  totalSubtasks = 0,
   canEdit = true,
   onProgressUpdated,
   onStatusChange,
@@ -46,10 +43,15 @@ export function TaskProgressComposer({
   const [isEditing, setIsEditing] = React.useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; message: string } | null>(null);
+  const isAutoCalculated = totalSubtasks > 0;
 
   React.useEffect(() => {
     setProgress(initialProgress);
   }, [initialProgress]);
+
+  React.useEffect(() => {
+    if (isAutoCalculated) setIsEditing(false);
+  }, [isAutoCalculated]);
 
   const handleApplyPreset = (value: number) => {
     if (!canEdit) return;
@@ -88,8 +90,13 @@ export function TaskProgressComposer({
         await onProgressUpdated(progress, note.trim() || undefined);
       }
 
-      if (progress === 100 && taskStatus !== "COMPLETED" && onStatusChange) {
-        await onStatusChange(taskId, "COMPLETED", note.trim() || "Hoàn thành 100% nhiệm vụ");
+      const nextStatus: TaskStatus = progress === 100
+        ? "COMPLETED"
+        : progress > 0
+          ? "IN_PROGRESS"
+          : "NOT_STARTED";
+      if (taskStatus !== nextStatus && onStatusChange) {
+        await onStatusChange(taskId, nextStatus, note.trim() || undefined);
       }
 
       setFeedback({ type: "success", message: "Đã cập nhật tiến độ." });
@@ -117,7 +124,7 @@ export function TaskProgressComposer({
           Tiến độ mới nhất
         </span>
 
-        {canEdit && !isEditing && (
+        {canEdit && !isEditing && !isAutoCalculated && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}
@@ -140,22 +147,22 @@ export function TaskProgressComposer({
                 progress === 100
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                   : progress > 0
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
                   : "bg-muted text-muted-foreground border border-border/60"
               )}
             >
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  progress > 0 ? "bg-emerald-600" : "bg-muted-foreground"
+                  progress === 100 ? "bg-emerald-600" : progress > 0 ? "bg-blue-600" : "bg-muted-foreground"
                 )}
               />
               <span>
                 {progress === 100
                   ? "Hoàn thành"
                   : progress > 0
-                  ? `Đúng tiến độ (${progress}%)`
-                  : "Chưa cập nhật"}
+                  ? `${progress}% hoàn thành`
+                  : "Chưa bắt đầu"}
               </span>
             </span>
 
@@ -171,12 +178,20 @@ export function TaskProgressComposer({
             <span className="text-muted-foreground text-[11px]">Hôm nay</span>
           </div>
 
+          <p className="text-[11px] text-muted-foreground">
+            {isAutoCalculated
+              ? `Tự động từ ${completedSubtasks}/${totalSubtasks} việc thành phần`
+              : "Cập nhật thủ công"}
+          </p>
+
           {/* Update Note Content */}
           <p className="text-xs text-foreground/90 leading-relaxed font-sans pl-0.5">
             {latestNote ||
               (progress === 100
                 ? "Nhiệm vụ đã hoàn thành toàn bộ nội dung theo yêu cầu."
-                : "Đang triển khai thực hiện theo kế hoạch phân công.")}
+                : progress > 0
+                  ? "Đang triển khai thực hiện theo kế hoạch phân công."
+                  : "Nhiệm vụ chưa bắt đầu thực hiện.")}
           </p>
 
           {/* Reaction & Activity Footer */}
@@ -200,19 +215,13 @@ export function TaskProgressComposer({
       ) : (
         /* 3. Inline Composer Form */
         <form onSubmit={handleSubmit} className="space-y-3 pt-1 animate-in fade-in-0 duration-150">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={progress}
-                disabled={!canEdit || isSubmitting}
-                onChange={(e) => setProgress(Number(e.target.value))}
-                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary focus:outline-hidden disabled:opacity-50"
-                aria-label="Thanh trượt điều chỉnh tỷ lệ phần trăm tiến độ"
-              />
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium text-foreground">Mức độ hoàn thành</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Chọn một mốc hoặc nhập số chính xác.</p>
+              </div>
+              <label className="flex h-9 items-center rounded-md border border-border bg-background px-2 focus-within:border-foreground/40">
               <input
                 type="number"
                 min="0"
@@ -225,46 +234,32 @@ export function TaskProgressComposer({
                     setProgress(Math.min(100, Math.max(0, val)));
                   }
                 }}
-                className="w-16 h-8 text-center text-xs font-mono font-semibold rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/40 focus:outline-hidden disabled:opacity-50"
+                className="w-12 bg-transparent text-right text-sm font-mono font-semibold tabular-nums text-foreground outline-none disabled:opacity-50"
                 aria-label="Nhập số phần trăm tiến độ"
               />
+                <span className="ml-0.5 text-xs text-muted-foreground">%</span>
+              </label>
             </div>
 
             {/* Quick preset buttons */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] text-muted-foreground mr-1">Tăng nhanh:</span>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(progress + 10)}
-                disabled={isSubmitting || progress >= 100}
-                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
-              >
-                +10%
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(progress + 25)}
-                disabled={isSubmitting || progress >= 100}
-                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
-              >
-                +25%
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(50)}
-                disabled={isSubmitting}
-                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
-              >
-                50%
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset(100)}
-                disabled={isSubmitting || progress === 100}
-                className="px-2 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/20 transition-colors cursor-pointer disabled:opacity-40"
-              >
-                100% Hoàn thành
-              </button>
+            <div className="grid grid-cols-5 gap-1.5" aria-label="Các mốc tiến độ">
+              {[0, 25, 50, 75, 100].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleApplyPreset(value)}
+                  disabled={isSubmitting}
+                  aria-pressed={progress === value}
+                  className={cn(
+                    "h-8 rounded-md border text-[11px] font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40",
+                    progress === value
+                      ? "border-foreground/20 bg-foreground text-background"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {value}%
+                </button>
+              ))}
             </div>
           </div>
 
@@ -275,7 +270,7 @@ export function TaskProgressComposer({
             disabled={!canEdit || isSubmitting}
             placeholder="Ghi chú nội dung tiến độ hoặc công việc đã hoàn thành..."
             rows={2}
-            className="w-full text-xs font-sans text-foreground bg-background p-2.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden resize-none disabled:opacity-50"
+            className="w-full text-xs font-sans text-foreground bg-muted/25 p-3 rounded-lg border border-transparent focus:border-border focus:bg-background focus:outline-none resize-none disabled:opacity-50"
             aria-label="Ghi chú cập nhật tiến độ"
           />
 
@@ -296,7 +291,11 @@ export function TaskProgressComposer({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setProgress(initialProgress);
+                  setNote("");
+                  setIsEditing(false);
+                }}
                 disabled={isSubmitting}
                 className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
               >

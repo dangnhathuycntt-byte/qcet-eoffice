@@ -1,0 +1,196 @@
+.workspace {
+  --shell-gutter: 12px;
+  width: calc(100% + (var(--shell-gutter) * 2));
+  margin: calc(var(--shell-gutter) * -1) calc(var(--shell-gutter) * -1) 0;
+  min-height: calc(100dvh - 100px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+.workspace > nav[role='tablist'] {
+  position: static;
+  padding: 8px;
+  border: 0;
+  background: #fff;
+}
+.workspace > nav [role='tab'] {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  font-weight: 400;
+  background: #fff;
+}
+.workspace > nav [aria-selected='true'] {
+  background: var(--muted);
+  border-color: transparent;
+  font-weight: 500;
+}
+.workspace :is(button, a):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.workspace [data-slot='task-detail-header-nav'] {
+  position: relative;
+  background: transparent;
+  backdrop-filter: none;
+  padding-inline: 18px;
+}
+.workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {
+  height: 0;
+  border: 0;
+  padding: 0;
+  z-index: 30;
+}
+.workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] > div {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+}
+.workspace [data-slot='task-detail-header-nav'] > div > button {
+  border-color: transparent;
+  background: transparent;
+  padding: 7px;
+}
+.workspace [data-slot='task-detail-header-nav'] > div > button :is(span, kbd) {
+  display: none;
+}
+.canvas {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: clamp(24px, 4vw, 72px);
+  padding: 0 12px 64px clamp(32px, 7vw, 128px);
+  background: #fff;
+}
+.content {
+  min-width: 0;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding-top: 58px;
+}
+.content > * + * { margin-top: 28px; }
+.expanded { grid-column: 1 / -1; }
+.inspector { min-width: 0; padding-top: 0; }
+.workspace [data-slot='linear-properties-sidebar'] {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.workspace [data-slot='linear-properties-sidebar'] > div {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+}
+.workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
+  min-height: 28px;
+}
+.workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div > :last-child {
+  text-align: left;
+  justify-content: flex-start;
+  max-width: 100%;
+}
+.workspace [data-slot='linear-properties-sidebar'] :is(button, a) {
+  text-align: left;
+}
+.workspace [data-slot='linear-properties-sidebar'] :is(.font-semibold, .font-medium) { font-weight: 400; }
+.workspace [data-slot='task-identity-block'] { margin-bottom: 22px; }
+.workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) {
+  font-size: 24px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -.6px;
+  text-wrap: pretty;
+}
+.workspace [data-slot='task-identity-block'] > div:nth-child(2) {
+  gap: 4px 8px;
+  padding-top: 12px;
+}
+.workspace [data-slot='task-identity-block'] > div:nth-child(2) {
+  gap: 16px;
+  padding-top: 10px;
+}
+.workspace [data-slot='task-identity-block'] > div:nth-child(3) > span {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.workspace [data-slot='task-progress-composer'] {
+  padding: 14px 16px;
+  min-height: 170px;
+  background: #fff;
+  border-radius: 10px;
+}
+.workspace [data-slot='task-progress-composer'] > div:first-child > span,
+.content h2 { color: var(--muted-foreground); font-weight: 400; font-size: 13px; }
+.workspace [data-slot='task-progress-composer'] > div:nth-child(2) > div:first-child > span:first-child {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+}
+.workspace [data-slot='task-progress-composer'] > div:nth-child(2) > p { margin-block: 18px; }
+.content > section { padding-inline: 2px; }
+
+.workspace :is(button, a, input, textarea) {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.content > section,
+.content > [data-slot='task-progress-composer'] {
+  animation: detailReveal 180ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.workspace textarea {
+  animation: editorReveal 140ms ease-out both;
+}
+.workspace button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+@keyframes detailReveal {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes editorReveal {
+  from { opacity: .75; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace *, .workspace *::before, .workspace *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .workspace button:active:not(:disabled) { transform: none; }
+}
+@media (min-width: 1600px) {
+  .canvas { grid-template-columns: minmax(0, 1fr) 360px; }
+}
+@media (min-width: 640px) {
+  .workspace { --shell-gutter: 20px; }
+}
+@media (min-width: 768px) {
+  .workspace { --shell-gutter: 24px; }
+}
+@media (max-width: 1100px) {
+  .canvas { padding-left: 28px; gap: 28px; grid-template-columns: minmax(0, 1fr) 285px; }
+  .content { padding-top: 32px; }
+}
+@media (max-width: 767px) {
+  .canvas { display: flex; flex-direction: column; padding: 0 20px 40px; gap: 32px; }
+  .content { padding-top: 24px; }
+  .inspector { width: 100%; }
+  .workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) { font-size: 21px; }
+  .workspace > nav[role='tablist'] { flex-wrap: wrap; }
+  .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {
+    height: 40px;
+  }
+  .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] > div {
+    top: 6px;
+  }
+}

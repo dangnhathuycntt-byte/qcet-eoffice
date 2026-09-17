@@ -74,14 +74,14 @@ export function TaskSubtasksSection({
 
   return (
     <section data-slot="task-subtasks-section" className={cn("space-y-3 select-none", className)}>
-      {/* Header & Subtask Progress */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Header & Subtask Progress (Linear Style) */}
+      <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-semibold text-foreground tracking-tight">
+          <h2 className="text-xs font-normal text-muted-foreground select-none">
             Việc thành phần
           </h2>
           {totalCount > 0 && (
-            <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded font-medium tabular-nums">
+            <span className="font-mono text-[11px] text-muted-foreground font-normal tabular-nums">
               {completedCount}/{totalCount}
             </span>
           )}
@@ -97,7 +97,7 @@ export function TaskSubtasksSection({
                 onAddSubTask(parentId);
               }
             }}
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             title="Thêm việc thành phần mới"
             aria-label="Thêm việc thành phần mới"
           >
