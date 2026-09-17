@@ -842,24 +842,27 @@ export function LinearPropertiesSidebar({
 
           {/* Dates Row (Linear Start -> Target Range style) */}
           <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none">
-            <span className="text-muted-foreground text-xs font-normal">Thời hạn</span>
-            <div className="flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground text-xs font-normal shrink-0">Thời hạn</span>
+            <div className="flex items-center gap-1 text-xs shrink-0 whitespace-nowrap">
               {/* Start Date */}
               {canEdit && onStartDateChange ? (
                 <VietnameseDatePicker
                   value={startDateIso}
                   onChange={handleStartDateChangeInternal}
                   placeholder="Bắt đầu"
-                  label="Ngày bắt đầu"
+                  title="Ngày bắt đầu"
                   variant="inline"
                   icon={<LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
                   showPresets={false}
                   align="right"
                 />
               ) : (
-                <div className="inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 text-xs text-foreground">
+                <div
+                  title="Ngày bắt đầu"
+                  className="inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
+                >
                   <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
-                  <span className="tabular-nums">
+                  <span className="tabular-nums font-normal">
                     {startDateIso ? formatDisplayDate(startDateIso) : "Bắt đầu"}
                   </span>
                 </div>
@@ -873,7 +876,7 @@ export function LinearPropertiesSidebar({
                   value={dueDateIso}
                   onChange={handleDueDateChangeInternal}
                   placeholder="Hạn chót"
-                  label="Hạn hoàn thành"
+                  title="Hạn hoàn thành"
                   variant="inline"
                   icon={
                     <LinearTargetDateIcon
@@ -885,19 +888,20 @@ export function LinearPropertiesSidebar({
                       )}
                     />
                   }
-                  className={cn(
-                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-medium"
+                  triggerClassName={cn(
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-normal"
                   )}
                   showPresets={true}
                   align="right"
                 />
               ) : (
                 <div
+                  title="Hạn hoàn thành"
                   className={cn(
-                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 text-xs",
+                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs select-none",
                     dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                      ? "text-rose-600 font-medium"
-                      : "text-foreground"
+                      ? "text-rose-600 font-normal"
+                      : "text-foreground font-normal"
                   )}
                 >
                   <LinearTargetDateIcon
@@ -908,7 +912,7 @@ export function LinearPropertiesSidebar({
                         : "text-muted-foreground"
                     )}
                   />
-                  <span className="tabular-nums">
+                  <span className="tabular-nums font-normal">
                     {dueDateIso ? formatDisplayDate(dueDateIso) : "Hạn chót"}
                   </span>
                 </div>

@@ -124,6 +124,19 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       );
     });
 
+    it("eliminates inline label texts to prevent multi-line wrapping and provides tooltips", () => {
+      assert.ok(
+        sidebarContent.includes('title="Ngày bắt đầu"') &&
+          sidebarContent.includes('title="Hạn hoàn thành"'),
+        "Must provide title/tooltip for both dates without multi-line label text"
+      );
+      assert.ok(
+        !sidebarContent.includes('label="Ngày bắt đầu"') &&
+          !sidebarContent.includes('label="Hạn hoàn thành"'),
+        "Must NOT render inline label text 'Ngày bắt đầu' or 'Hạn hoàn thành' causing line wrapping"
+      );
+    });
+
     it("makes both start date and due date directly clickable to open date picker", () => {
       assert.ok(
         sidebarContent.includes("handleStartDateChangeInternal") &&

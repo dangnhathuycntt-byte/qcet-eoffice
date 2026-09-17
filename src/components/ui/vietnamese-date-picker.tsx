@@ -25,6 +25,8 @@ export interface VietnameseDatePickerProps {
   onChange?: (isoDate: string) => void;
   /** Label hiển thị trên chip hoặc form input (ví dụ: "Bắt đầu:", "Hạn chót:") */
   label?: string;
+  /** Tooltip hiển thị khi hover qua trigger button (native HTML title) */
+  title?: string;
   /** Placeholder khi chưa chọn ngày (mặc định: "Target date") */
   placeholder?: string;
   /** Icon hiển thị phía trước */
@@ -47,6 +49,8 @@ export interface VietnameseDatePickerProps {
   align?: "left" | "right" | "auto";
   /** ClassName bổ sung cho container */
   className?: string;
+  /** ClassName bổ sung cho trigger button */
+  triggerClassName?: string;
   /** ID cho input field nếu cần */
   id?: string;
 }
@@ -80,6 +84,7 @@ export function VietnameseDatePicker({
   value,
   onChange,
   label,
+  title,
   placeholder = "Target date",
   icon,
   variant = "chip",
@@ -91,6 +96,7 @@ export function VietnameseDatePicker({
   showPresets = true,
   align = "auto",
   className,
+  triggerClassName,
   id,
 }: VietnameseDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -271,19 +277,20 @@ export function VietnameseDatePicker({
         <button
           type="button"
           id={id}
+          title={title || label || undefined}
           disabled={disabled}
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           className={cn(
-            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent shadow-none",
+            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent shadow-none whitespace-nowrap",
             isOpen ? "bg-muted/60 text-foreground" : "hover:bg-muted/50",
             hasValue ? "text-foreground" : "text-muted-foreground",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
+            triggerClassName
           )}
         >
           {icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
-          {label && <span className="text-muted-foreground font-normal">{label}</span>}
           <span className="tabular-nums font-normal">
             {hasValue ? displayDate : placeholder}
           </span>
@@ -292,19 +299,21 @@ export function VietnameseDatePicker({
         <button
           type="button"
           id={id}
+          title={title || undefined}
           disabled={disabled}
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           className={cn(
-            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none",
+            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap",
             error
               ? "border-rose-300 bg-rose-50 text-rose-700"
               : isOpen
               ? "border-border bg-accent text-foreground shadow-2xs"
               : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground",
             hasValue ? "text-foreground" : "text-muted-foreground",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
+            triggerClassName
           )}
         >
           {icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />}
@@ -317,6 +326,7 @@ export function VietnameseDatePicker({
         <button
           type="button"
           id={id}
+          title={title || undefined}
           disabled={disabled}
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
@@ -324,7 +334,8 @@ export function VietnameseDatePicker({
           className={cn(
             "w-full flex items-center justify-between h-9 px-3 rounded-lg border border-border bg-background text-xs text-foreground font-mono tabular-nums transition-colors cursor-pointer",
             isOpen && "border-foreground/40",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
+            triggerClassName
           )}
         >
           <div className="flex items-center gap-2">
@@ -357,7 +368,7 @@ export function VietnameseDatePicker({
       >
         {/* Header Label */}
         <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
-          {label || placeholder || "Chọn ngày"}
+          {title || label || placeholder || "Chọn ngày"}
         </div>
 
         {/* Top Form Input with Clear Icon */}
