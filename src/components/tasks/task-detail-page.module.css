@@ -58,23 +58,34 @@
 }
 .canvas {
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  align-items: start;
-  gap: clamp(24px, 4vw, 72px);
-  padding: 0 12px 64px clamp(32px, 7vw, 128px);
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: clamp(28px, 3.5vw, 56px);
+  padding: 0 28px 64px clamp(28px, 4.5vw, 64px);
   background: #fff;
+  width: 100%;
+  box-sizing: border-box;
 }
 .content {
   min-width: 0;
   width: 100%;
-  max-width: 860px;
-  margin: 0 auto;
-  padding-top: 58px;
+  max-width: 760px;
+  margin: 0;
+  padding-top: 48px;
+  flex: 0 1 760px;
 }
-.content > * + * { margin-top: 28px; }
-.expanded { grid-column: 1 / -1; }
-.inspector { min-width: 0; padding-top: 0; }
+.content > * + * { margin-top: 24px; }
+.expanded {
+  max-width: 760px;
+  margin: 0;
+}
+.inspector {
+  width: 320px;
+  flex-shrink: 0;
+  min-width: 0;
+  padding-top: 48px;
+}
 .workspace [data-slot='linear-properties-sidebar'] {
   padding: 0;
   display: flex;
@@ -169,7 +180,10 @@
   .workspace button:active:not(:disabled) { transform: none; }
 }
 @media (min-width: 1600px) {
-  .canvas { grid-template-columns: minmax(0, 1fr) 360px; }
+  .canvas { padding-left: 64px; gap: 64px; }
+  .content { max-width: 780px; flex-basis: 780px; }
+  .expanded { max-width: 780px; }
+  .inspector { width: 320px; }
 }
 @media (min-width: 640px) {
   .workspace { --shell-gutter: 20px; }
@@ -177,14 +191,17 @@
 @media (min-width: 768px) {
   .workspace { --shell-gutter: 24px; }
 }
-@media (max-width: 1100px) {
-  .canvas { padding-left: 28px; gap: 28px; grid-template-columns: minmax(0, 1fr) 285px; }
-  .content { padding-top: 32px; }
+@media (max-width: 1200px) {
+  .canvas { padding: 0 24px 48px 24px; gap: 28px; }
+  .content { padding-top: 36px; max-width: 720px; flex-basis: 720px; }
+  .expanded { max-width: 720px; }
+  .inspector { width: 290px; padding-top: 36px; }
 }
-@media (max-width: 767px) {
-  .canvas { display: flex; flex-direction: column; padding: 0 20px 40px; gap: 32px; }
-  .content { padding-top: 24px; }
-  .inspector { width: 100%; }
+@media (max-width: 1023px) {
+  .canvas { display: flex; flex-direction: column; padding: 0 20px 40px; gap: 24px; }
+  .content { padding-top: 24px; max-width: 100%; flex: 1 1 100%; }
+  .expanded { max-width: 100%; }
+  .inspector { width: 100%; padding-top: 0; }
   .workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) { font-size: 21px; }
   .workspace > nav[role='tablist'] { flex-wrap: wrap; }
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {

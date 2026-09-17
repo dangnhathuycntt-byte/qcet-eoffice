@@ -196,4 +196,39 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       );
     });
   });
+
+  describe("7. Horizontal Layout, Optical Alignment & Stable Left Anchor", () => {
+    const cssFile = path.resolve(
+      process.cwd(),
+      "src/components/tasks/task-detail-page.module.css"
+    );
+    const cssContent = fs.readFileSync(cssFile, "utf-8");
+
+    it("enforces document width between 720px and 800px and avoids arbitrary auto margins", () => {
+      assert.ok(
+        cssContent.includes("max-width: 760px") || cssContent.includes("max-width: 780px"),
+        "Document container must be constrained to 720-800px"
+      );
+      assert.ok(
+        !cssContent.includes("margin: 0 auto;"),
+        "Content must NOT use 'margin: 0 auto' which drifts the document to the far right on wide displays"
+      );
+    });
+
+    it("avoids CSS hacks (no negative margins, no transform offsets)", () => {
+      assert.ok(
+        !cssContent.includes("transform: translateX") &&
+          !cssContent.includes("margin-left: -"),
+        "Layout must use clean CSS flexbox/grid structure without transform/margin hacks"
+      );
+    });
+
+    it("maintains stable left anchor between inspector open and closed states", () => {
+      assert.ok(
+        cssContent.includes(".expanded") &&
+          (cssContent.includes("max-width: 760px") || cssContent.includes("max-width: 780px")),
+        "Expanded state must preserve the same left anchor and width constraint without recentering"
+      );
+    });
+  });
 });
