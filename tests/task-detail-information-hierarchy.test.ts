@@ -197,37 +197,52 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     });
   });
 
-  describe("7. Horizontal Layout, Optical Alignment & Stable Left Anchor", () => {
+  describe("7. Unified Horizontal Layout System & Balanced Workspace Centering", () => {
     const cssFile = path.resolve(
       process.cwd(),
       "src/components/tasks/task-detail-page.module.css"
     );
     const cssContent = fs.readFileSync(cssFile, "utf-8");
 
-    it("enforces document width between 720px and 800px and avoids arbitrary auto margins", () => {
+    it("creates a unified page shell with responsive centering via margin-inline: auto", () => {
       assert.ok(
-        cssContent.includes("max-width: 760px") || cssContent.includes("max-width: 780px"),
-        "Document container must be constrained to 720-800px"
+        cssContent.includes(".shell") && cssContent.includes("margin-inline: auto"),
+        "Page shell must be centered in workspace using margin-inline: auto"
       );
       assert.ok(
-        !cssContent.includes("margin: 0 auto;"),
-        "Content must NOT use 'margin: 0 auto' which drifts the document to the far right on wide displays"
+        taskDetailPageContent.includes('data-slot="task-shell"'),
+        "TaskDetailPage must wrap document and sidebar within data-slot='task-shell'"
       );
     });
 
-    it("avoids CSS hacks (no negative margins, no transform offsets)", () => {
+    it("centers single document column constrained between 760px and 820px when sidebar is closed", () => {
+      assert.ok(
+        cssContent.includes(".shellClosed") && cssContent.includes("max-width: 780px"),
+        "Closed shell must constrain document to 780px centered in workspace"
+      );
+    });
+
+    it("centers entire composition (document + gap + inspector) via CSS Grid when sidebar is open", () => {
+      assert.ok(
+        cssContent.includes(".shellOpen") &&
+          cssContent.includes("grid-template-columns: minmax(0, 780px) 290px") &&
+          cssContent.includes("column-gap: 32px"),
+        "Open shell must center the whole composition with 780px document, 32px gap, and 290px inspector"
+      );
+    });
+
+    it("strictly avoids CSS layout hacks (no transform: translateX, no negative margin offset)", () => {
       assert.ok(
         !cssContent.includes("transform: translateX") &&
           !cssContent.includes("margin-left: -"),
-        "Layout must use clean CSS flexbox/grid structure without transform/margin hacks"
+        "Layout must rely on standard CSS Grid/Flexbox without transform or negative margin hacks"
       );
     });
 
-    it("maintains stable left anchor between inspector open and closed states", () => {
+    it("ensures unified internal alignment axis without section padding skew", () => {
       assert.ok(
-        cssContent.includes(".expanded") &&
-          (cssContent.includes("max-width: 760px") || cssContent.includes("max-width: 780px")),
-        "Expanded state must preserve the same left anchor and width constraint without recentering"
+        cssContent.includes(".content > section { padding-inline: 0; }"),
+        "Section must have 0 inline padding to share exact same left edge as blocks and title"
       );
     });
   });

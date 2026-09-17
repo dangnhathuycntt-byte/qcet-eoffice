@@ -902,20 +902,28 @@ export function TaskDetailPage({
         </button>
       </nav>
 
-      {/* 3. Main 2-Column Canvas Layout */}
+      {/* 3. Main Workspace Canvas Layout with Centered Page Shell */}
       <div className={styles.canvas}>
-        {/* Left / Center Main Content Canvas */}
-        <m.main
-          layout={reduceMotion ? false : "position"}
-          transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
-          role="tabpanel"
-          id={`panel-${activeTab}`}
-          aria-labelledby={`tab-${activeTab}`}
+        <div
+          data-slot="task-shell"
+          data-inspector={showInspector ? "open" : "closed"}
           className={cn(
-            styles.content,
-            !showInspector && styles.expanded
+            styles.shell,
+            showInspector ? styles.shellOpen : styles.shellClosed
           )}
         >
+          {/* Left / Center Main Content Canvas */}
+          <m.main
+            layout={reduceMotion ? false : "position"}
+            transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+            role="tabpanel"
+            id={`panel-${activeTab}`}
+            aria-labelledby={`tab-${activeTab}`}
+            className={cn(
+              styles.content,
+              !showInspector && styles.expanded
+            )}
+          >
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <>
@@ -1047,6 +1055,7 @@ export function TaskDetailPage({
             />
           </m.aside>
         )}
+        </div>
       </div>
 
       {/* Subtask Detail Peek Drawer (covers right sidebar area on desktop, full-screen on mobile) */}

@@ -58,31 +58,42 @@
 }
 .canvas {
   flex: 1;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: clamp(28px, 3.5vw, 56px);
-  padding: 0 28px 64px clamp(28px, 4.5vw, 64px);
-  background: #fff;
   width: 100%;
+  padding: 0 32px 64px;
+  background: #fff;
   box-sizing: border-box;
+}
+.shell {
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+.shellClosed {
+  max-width: 780px;
+}
+.shellOpen {
+  max-width: 1180px;
+  display: grid;
+  grid-template-columns: minmax(0, 780px) 290px;
+  column-gap: 32px;
+  justify-content: center;
+  align-items: flex-start;
 }
 .content {
   min-width: 0;
   width: 100%;
-  max-width: 760px;
+  max-width: 100%;
   margin: 0;
   padding-top: 48px;
-  flex: 0 1 760px;
 }
 .content > * + * { margin-top: 24px; }
 .expanded {
-  max-width: 760px;
+  max-width: 100%;
   margin: 0;
 }
 .inspector {
-  width: 320px;
-  flex-shrink: 0;
+  width: 290px;
+  max-width: 100%;
   min-width: 0;
   padding-top: 48px;
 }
@@ -149,7 +160,7 @@
   padding-left: 0;
 }
 .workspace [data-slot='task-progress-composer'] > div:nth-child(2) > p { margin-block: 18px; }
-.content > section { padding-inline: 2px; }
+.content > section { padding-inline: 0; }
 
 .workspace :is(button, a, input, textarea) {
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
@@ -179,27 +190,42 @@
   }
   .workspace button:active:not(:disabled) { transform: none; }
 }
-@media (min-width: 1600px) {
-  .canvas { padding-left: 64px; gap: 64px; }
-  .content { max-width: 780px; flex-basis: 780px; }
-  .expanded { max-width: 780px; }
-  .inspector { width: 320px; }
-}
 @media (min-width: 640px) {
   .workspace { --shell-gutter: 20px; }
 }
 @media (min-width: 768px) {
   .workspace { --shell-gutter: 24px; }
 }
-@media (max-width: 1200px) {
-  .canvas { padding: 0 24px 48px 24px; gap: 28px; }
-  .content { padding-top: 36px; max-width: 720px; flex-basis: 720px; }
-  .expanded { max-width: 720px; }
-  .inspector { width: 290px; padding-top: 36px; }
+@media (min-width: 1440px) {
+  .canvas { padding-inline: 32px; }
+  .shellClosed { max-width: 780px; }
+  .shellOpen {
+    max-width: 1180px;
+    grid-template-columns: minmax(0, 780px) 290px;
+    column-gap: 32px;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .canvas { padding: 0 24px 56px; }
+  .shellClosed { max-width: 780px; }
+  .shellOpen {
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr) 290px;
+    column-gap: 28px;
+  }
+  .content { padding-top: 36px; }
+  .inspector { padding-top: 36px; }
 }
 @media (max-width: 1023px) {
-  .canvas { display: flex; flex-direction: column; padding: 0 20px 40px; gap: 24px; }
-  .content { padding-top: 24px; max-width: 100%; flex: 1 1 100%; }
+  .canvas { padding: 0 16px 40px; }
+  .shellOpen,
+  .shellClosed {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 100%;
+  }
+  .content { padding-top: 24px; max-width: 100%; }
   .expanded { max-width: 100%; }
   .inspector { width: 100%; padding-top: 0; }
   .workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) { font-size: 21px; }
