@@ -28,14 +28,14 @@ export const OFFICIAL_DOMAIN = INSTITUTION_CONFIG.domain || "cdktcnqn.edu.vn";
 export function isAllowedDomain(email?: string | null, hd?: string | null): boolean {
   const officialDomain = OFFICIAL_DOMAIN.trim().toLowerCase();
 
-  // 1. Kiểm tra Google Workspace Hosted Domain (`hd`) claim
+  // 1. If hd is provided, it must strictly match official domain
   if (hd && typeof hd === "string") {
-    if (hd.trim().toLowerCase() === officialDomain) {
-      return true;
+    if (hd.trim().toLowerCase() !== officialDomain) {
+      return false;
     }
   }
 
-  // 2. Xác thực email suffix đối chiếu với tên miền chính thức của nhà trường
+  // 2. Email suffix must strictly match official domain
   if (email && typeof email === "string") {
     const normalized = email.trim().toLowerCase();
     if (normalized.endsWith(`@${officialDomain}`)) {
@@ -46,10 +46,26 @@ export function isAllowedDomain(email?: string | null, hd?: string | null): bool
   return false;
 }
 
+export function isVerifiedGoogleWorkspaceIdentity(profile: {
+  email?: string | null;
+  email_verified?: boolean | string | null;
+  hd?: string | null;
+}): boolean {
+  const isVerified =
+    profile.email_verified === true || profile.email_verified === "true";
+  return Boolean(isVerified && profile.hd && isAllowedDomain(profile.email, profile.hd));
+}
+
 /**
  * Phân giải URL gốc của ứng dụng (Base URL), hỗ trợ Nginx/Docker reverse proxy
  */
 export function getAppBaseUrl(req?: Request): string {
+  // In production, never let client-controlled Host/X-Forwarded-Host headers
+  // override the deployment's canonical OAuth origin.
+  if (serverEnv.NODE_ENV === "production" && serverEnv.NEXTAUTH_URL) {
+    return serverEnv.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+
   if (req) {
     const forwardedHost = req.headers.get("x-forwarded-host");
     const forwardedProto = req.headers.get("x-forwarded-proto") || "https";

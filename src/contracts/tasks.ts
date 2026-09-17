@@ -181,6 +181,7 @@ export const CreateTaskInputSchema = z
       .max(64, 'Department ID cannot exceed 64 characters')
       .optional()
       .nullable(),
+    startDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     assigneeId: z
       .string()
@@ -242,6 +243,7 @@ export const UpdateTaskInputSchema = z
     status: TaskStatusSchema.optional(),
     progressPercent: z.coerce.number().min(0).max(100).optional(),
     progress: z.coerce.number().min(0).max(100).optional(),
+    startDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     departmentId: z
       .string()

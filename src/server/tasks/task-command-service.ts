@@ -39,6 +39,7 @@ import {
   canUserDeleteTask,
   canUserSubmitDeliverable,
   canUserReviewDeliverable,
+  canUserDeleteDeliverable,
   canUserTransitionStatus,
   checkActiveDelegation,
   isPrivilegedUser,
@@ -65,6 +66,7 @@ export interface CreateTaskInput {
   title: string;
   description?: string | null;
   departmentId?: string | null;
+  startDate?: string | Date | null;
   dueDate: string | Date;
   priority?: string | TaskPriority;
   scope?: string | TaskScope;
@@ -84,6 +86,7 @@ export interface UpdateTaskInput {
   progress?: number;
   status?: string | TaskStatus;
   priority?: string | TaskPriority;
+  startDate?: string | Date | null;
   dueDate?: string | Date | null;
   departmentId?: string | null;
   assigneeId?: string | null;
@@ -124,6 +127,111 @@ function resolveUser(
     throw new AuthenticationError('Unauthorized');
   }
   return ctx.user;
+}
+
+/**
+ * Tính toán và đồng bộ lại tiến độ tổng hợp cùng trạng thái của nhiệm vụ cha
+ * khi các việc thành phần (subtasks) hoàn thành, mở lại, tạo mới, hủy hoặc chuyển cha.
+ * Tuân thủ quy chuẩn:
+ * - Không còn việc con active: giữ nguyên tiến độ cha, không can thiệp.
+ * - Có việc con: progressPercent = Math.round((completed / total) * 100).
+ * - Tiến độ 100%: chuyển sang WAITING_APPROVAL (không tự ý bỏ qua bước duyệt).
+ * - Việc con mở lại (tiến độ < 100%): mở lại cha về IN_PROGRESS nếu đang COMPLETED hoặc WAITING_APPROVAL.
+ */
+export async function recalculateParentTaskProgress(
+  tx: Prisma.TransactionClient,
+  parentTaskId: string,
+  actorId?: string | null,
+  requestId?: string
+): Promise<{ updated: boolean; newProgress?: number; newStatus?: TaskStatus }> {
+  const subTasks = await tx.task.findMany({
+    where: {
+      parentTaskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (subTasks.length === 0) {
+    return { updated: false };
+  }
+
+  const completedCount = subTasks.filter((st) => st.status === TaskStatus.COMPLETED).length;
+  const newProgress = Math.round((completedCount / subTasks.length) * 100);
+
+  const parent = await tx.task.findUnique({
+    where: { id: parentTaskId },
+    select: {
+      id: true,
+      status: true,
+      progressPercent: true,
+      version: true,
+    },
+  });
+
+  if (!parent) return { updated: false };
+
+  let nextStatus = parent.status;
+
+  if (newProgress === 100) {
+    if (parent.status === TaskStatus.IN_PROGRESS || parent.status === TaskStatus.NOT_STARTED) {
+      nextStatus = TaskStatus.WAITING_APPROVAL;
+    }
+  } else if (newProgress > 0) {
+    if (
+      parent.status === TaskStatus.NOT_STARTED ||
+      parent.status === TaskStatus.COMPLETED ||
+      parent.status === TaskStatus.WAITING_APPROVAL
+    ) {
+      nextStatus = TaskStatus.IN_PROGRESS;
+    }
+  } else {
+    // newProgress === 0
+    if (parent.status === TaskStatus.COMPLETED || parent.status === TaskStatus.WAITING_APPROVAL) {
+      nextStatus = TaskStatus.IN_PROGRESS;
+    }
+  }
+
+  const isProgressChanged = parent.progressPercent !== newProgress;
+  const isStatusChanged = parent.status !== nextStatus;
+
+  if (!isProgressChanged && !isStatusChanged) {
+    return { updated: false, newProgress, newStatus: parent.status };
+  }
+
+  await tx.task.update({
+    where: { id: parentTaskId },
+    data: {
+      progressPercent: newProgress,
+      status: nextStatus,
+      version: { increment: 1 },
+      updatedAt: new Date(),
+    },
+  });
+
+  await logAuditEvent(tx, {
+    actorId: actorId || null,
+    action: isStatusChanged ? AuditAction.TASK_STATUS_CHANGED : AuditAction.TASK_UPDATED,
+    entityType: AuditEntityType.TASK,
+    entityId: parentTaskId,
+    requestId,
+    beforeData: {
+      progressPercent: parent.progressPercent,
+      status: parent.status,
+    },
+    afterData: {
+      progressPercent: newProgress,
+      status: nextStatus,
+      triggerReason: `Tự động tổng hợp từ ${completedCount}/${subTasks.length} việc thành phần`,
+    },
+    metadata: {
+      trigger: 'SUBTASK_PROGRESS_ROLLUP',
+      completedSubTasks: completedCount,
+      totalSubTasks: subTasks.length,
+    },
+  });
+
+  return { updated: true, newProgress, newStatus: nextStatus };
 }
 
 export class TaskCommandService {
@@ -285,6 +393,7 @@ export class TaskCommandService {
       title,
       description,
       departmentId,
+      startDate,
       dueDate,
       priority,
       scope,
@@ -387,7 +496,7 @@ export class TaskCommandService {
       const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
 
       // Resolve valid department ID against database to guarantee foreign key integrity
-      let validDepartmentId: string = effectiveDepartmentId;
+      let validDepartmentId: string | null = null;
       const dept = await tx.department.findFirst({
         where: {
           OR: [
@@ -402,7 +511,30 @@ export class TaskCommandService {
       });
       if (dept) {
         validDepartmentId = dept.id;
+      } else {
+        const fallbackDept = await tx.department.findFirst({ select: { id: true } });
+        if (fallbackDept) {
+          validDepartmentId = fallbackDept.id;
+        }
       }
+
+      // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
+      const candidateUserIds = [
+        ...(validAssigneeId ? [validAssigneeId] : []),
+        ...validCollaboratorIds,
+      ];
+      const existingUsers =
+        candidateUserIds.length > 0
+          ? await tx.user.findMany({
+              where: { id: { in: candidateUserIds } },
+              select: { id: true },
+            })
+          : [];
+      const existingUserIdSet = new Set(existingUsers.map((u) => u.id));
+
+      const safeAssigneesToCreate = assigneesToCreate.filter((a) =>
+        existingUserIdSet.has(a.userId)
+      );
 
       // Sinh mã tự động atomic O(1)
       const code =
@@ -411,8 +543,22 @@ export class TaskCommandService {
           year: curYear,
           month: monthNum,
           scope: taskScope,
-          departmentCode: validDepartmentId,
+          departmentCode: validDepartmentId || undefined,
         }));
+
+      const parsedDueDate = new Date(dueDate);
+      let validStartDate: Date;
+      if (startDate) {
+        const parsedStart = new Date(startDate);
+        validStartDate = isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
+      } else {
+        validStartDate = new Date();
+      }
+
+      // Enforce database check constraint chk_tasks_due_date_after_start_date: (due_date >= start_date)
+      if (validStartDate > parsedDueDate) {
+        validStartDate = new Date(parsedDueDate);
+      }
 
       const task = await tx.task.create({
         data: {
@@ -420,17 +566,18 @@ export class TaskCommandService {
           title,
           description: description || null,
           departmentId: validDepartmentId,
-          dueDate: new Date(dueDate),
+          startDate: validStartDate,
+          dueDate: parsedDueDate,
           academicMonth: monthNum,
           academicYear: yearStr,
           scope: taskScope,
           priority: taskPriority,
           createdById: effectiveCreatorId,
           parentTaskId: parentTaskId || null,
-          ...(assigneesToCreate.length > 0
+          ...(safeAssigneesToCreate.length > 0
             ? {
                 assignees: {
-                  create: assigneesToCreate,
+                  create: safeAssigneesToCreate,
                 },
               }
             : {}),
@@ -475,7 +622,7 @@ export class TaskCommandService {
       });
       const resolvedUnitId = matchedOrgUnit?.id || null;
 
-      if (validAssigneeId) {
+      if (validAssigneeId && existingUserIdSet.has(validAssigneeId)) {
         await tx.taskActor.create({
           data: {
             taskId: task.id,
@@ -488,7 +635,7 @@ export class TaskCommandService {
         });
       }
       for (const cId of validCollaboratorIds) {
-        if (cId !== validAssigneeId) {
+        if (cId !== validAssigneeId && existingUserIdSet.has(cId)) {
           await tx.taskActor.create({
             data: {
               taskId: task.id,
@@ -541,6 +688,11 @@ export class TaskCommandService {
             collaboratorIds: validCollaboratorIds,
           },
         });
+      }
+
+      // Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha (REQ-4)
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, user.id, requestId);
       }
 
       return task;
@@ -617,6 +769,7 @@ export class TaskCommandService {
       progress,
       status,
       priority,
+      startDate,
       dueDate,
       departmentId,
       assigneeId,
@@ -678,6 +831,28 @@ export class TaskCommandService {
       scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progressPercent));
     } else if (typeof progress === 'number') {
       scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progress));
+    }
+    // Ghép dữ liệu ngày tháng với bản ghi hiện tại để validate nghiêm ngặt (phân biệt undefined với null)
+    let mergedStartDate: Date | null = existing.startDate ? new Date(existing.startDate) : null;
+    if (startDate !== undefined) {
+      mergedStartDate = startDate ? new Date(startDate) : null;
+    }
+
+    let mergedDueDate: Date | null = existing.dueDate ? new Date(existing.dueDate) : null;
+    if (dueDate !== undefined) {
+      mergedDueDate = dueDate ? new Date(dueDate) : null;
+    }
+
+    if (mergedStartDate && mergedDueDate) {
+      if (mergedStartDate.getTime() > mergedDueDate.getTime()) {
+        throw new ValidationError(
+          'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)'
+        );
+      }
+    }
+
+    if (startDate) {
+      scalarUpdateData.startDate = new Date(startDate);
     }
     if (dueDate) {
       scalarUpdateData.dueDate = new Date(dueDate);
@@ -979,10 +1154,10 @@ export class TaskCommandService {
       }
 
       // 2. Audit trail: TASK_DEADLINE_CHANGED if due date changed
-      if (scalarUpdateData.dueDate) {
+      if (scalarUpdateData.dueDate !== undefined) {
         const oldDueTime = existing.dueDate ? new Date(existing.dueDate).getTime() : null;
-        const newDueDate = new Date(scalarUpdateData.dueDate as Date);
-        if (oldDueTime !== newDueDate.getTime()) {
+        const newDueTime = scalarUpdateData.dueDate ? new Date(scalarUpdateData.dueDate as Date).getTime() : null;
+        if (oldDueTime !== newDueTime) {
           auditLogged = true;
           await logAuditEvent(tx, {
             actorId: user.id,
@@ -991,7 +1166,25 @@ export class TaskCommandService {
             entityId: taskId,
             requestId,
             beforeData: { dueDate: existing.dueDate ? existing.dueDate.toISOString() : null },
-            afterData: { dueDate: newDueDate.toISOString() },
+            afterData: { dueDate: scalarUpdateData.dueDate ? new Date(scalarUpdateData.dueDate as Date).toISOString() : null },
+          });
+        }
+      }
+
+      // 2b. Audit trail: TASK_START_DATE_CHANGED if start date changed
+      if (scalarUpdateData.startDate !== undefined) {
+        const oldStartTime = existing.startDate ? new Date(existing.startDate).getTime() : null;
+        const newStartTime = scalarUpdateData.startDate ? new Date(scalarUpdateData.startDate as Date).getTime() : null;
+        if (oldStartTime !== newStartTime) {
+          auditLogged = true;
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: 'TASK_START_DATE_CHANGED',
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { startDate: existing.startDate ? existing.startDate.toISOString() : null },
+            afterData: { startDate: scalarUpdateData.startDate ? new Date(scalarUpdateData.startDate as Date).toISOString() : null },
           });
         }
       }
@@ -1045,6 +1238,14 @@ export class TaskCommandService {
         });
       }
 
+      // 5. Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha (REQ-4)
+      if (updatedTask.parentTaskId) {
+        await recalculateParentTaskProgress(tx, updatedTask.parentTaskId, user.id, requestId);
+      }
+      if (existing.parentTaskId && existing.parentTaskId !== updatedTask.parentTaskId) {
+        await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
+      }
+
       return updatedTask;
     });
 
@@ -1062,7 +1263,7 @@ export class TaskCommandService {
 
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, createdById: true },
+      select: { id: true, createdById: true, parentTaskId: true },
     });
 
     if (!existing) {
@@ -1121,6 +1322,15 @@ export class TaskCommandService {
 
       // 4. Xóa nhiệm vụ chính
       await tx.task.delete({ where: { id: taskId } });
+
+      // Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha nếu xóa việc con (REQ-4)
+      if (existing.parentTaskId) {
+        const requestId =
+          ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+            ? ctx.requestId
+            : undefined;
+        await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
+      }
     });
 
     return {
@@ -1437,6 +1647,90 @@ export class TaskCommandService {
       }
 
       return updatedDeliverable;
+    });
+
+    return result;
+  }
+
+  /**
+   * Xóa minh chứng với kiểm tra phân lập và quan hệ task-deliverable an toàn (ngăn IDOR/BOLA).
+   */
+  async deleteDeliverable(
+    ctx: ApiRequestContext | { user: AuthenticatedUser | null },
+    taskId: string,
+    deliverableId: string
+  ) {
+    const user = resolveUser(ctx);
+
+    if (!deliverableId || typeof deliverableId !== 'string') {
+      throw new ValidationError('Mã minh chứng (deliverableId) là bắt buộc');
+    }
+
+    const deliverable = await prisma.taskDeliverable.findUnique({
+      where: { id: deliverableId },
+      include: {
+        task: {
+          include: {
+            assignees: true,
+          },
+        },
+      },
+    });
+
+    if (!deliverable) {
+      throw new NotFoundError('Không tìm thấy tài liệu minh chứng');
+    }
+
+    // Bảo vệ BOLA/IDOR: Minh chứng phải thuộc đúng taskId yêu cầu
+    if (deliverable.taskId !== taskId) {
+      throw new AuthorizationError('Minh chứng không thuộc về nhiệm vụ được yêu cầu');
+    }
+
+    const deleteCheck = canUserDeleteDeliverable(
+      user,
+      deliverable,
+      deliverable.task
+    );
+
+    if (!deleteCheck.allowed) {
+      throw new AuthorizationError(
+        deleteCheck.reason || 'Bạn không có quyền xóa minh chứng này'
+      );
+    }
+
+    const requestId =
+      ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+        ? ctx.requestId
+        : undefined;
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.taskDeliverable.delete({
+        where: { id: deliverableId },
+      });
+
+      await tx.task.update({
+        where: { id: taskId },
+        data: { version: { increment: 1 } },
+      });
+
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: 'TASK_DELIVERABLE_DELETED',
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        requestId,
+        beforeData: {
+          deliverableId: deliverable.id,
+          title: deliverable.title,
+          fileUrl: deliverable.fileUrl,
+        },
+        afterData: null,
+        metadata: {
+          deletedAt: new Date().toISOString(),
+        },
+      });
+
+      return { success: true, deliverableId };
     });
 
     return result;

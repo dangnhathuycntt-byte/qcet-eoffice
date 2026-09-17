@@ -164,6 +164,7 @@ export interface KeyboardNavHandlerOptions {
   onToggleSelect?: (id: string) => void;
   onToggleExpand?: (id: string, expand: boolean) => void;
   onSelectTask?: (id: string) => void;
+  onSpacePeek?: (id: string) => void;
   onClearSelection?: () => void;
   onFocusSearch?: () => void;
   onEscape?: () => void;
@@ -189,6 +190,7 @@ export function handleKeyboardNavigation(
     onToggleSelect,
     onToggleExpand,
     onSelectTask,
+    onSpacePeek,
     onClearSelection,
     onFocusSearch,
     onEscape,
@@ -268,8 +270,8 @@ export function handleKeyboardNavigation(
     return true;
   }
 
-  // 4. x / Space: Chọn / bỏ chọn dòng hiện tại
-  if (key === "x" || key === "X" || key === " ") {
+  // 4. x / X: Chọn / bỏ chọn dòng hiện tại (Linear standard: x for selection)
+  if (key === "x" || key === "X") {
     if (activeIndex >= 0 && activeIndex < itemCount) {
       if (event.preventDefault) event.preventDefault();
       const targetId = activeId || idList[activeIndex];
@@ -277,6 +279,18 @@ export function handleKeyboardNavigation(
         onToggleSelect(targetId);
       }
       return true;
+    }
+  }
+
+  // 4b. Space: Xem nhanh dòng hiện tại (Linear Peek / macOS Quick Look)
+  if (key === " " || event.code === "Space") {
+    if (activeIndex >= 0 && activeIndex < itemCount) {
+      if (event.preventDefault) event.preventDefault();
+      const targetId = activeId || idList[activeIndex];
+      if (targetId && onSpacePeek) {
+        onSpacePeek(targetId);
+        return true;
+      }
     }
   }
 
@@ -336,6 +350,7 @@ export interface UseKeyboardNavigationOptions<T = { id: string }> {
   enabled?: boolean;
   initialActiveIndex?: number;
   onSelectTask?: (id: string, item?: T) => void;
+  onSpacePeek?: (id: string, item?: T) => void;
   onToggleSelect?: (id: string) => void;
   onToggleExpand?: (id: string, expand: boolean) => void;
   onClearSelection?: () => void;
@@ -377,6 +392,7 @@ export function useKeyboardNavigation<T = { id: string }>(
     enabled = true,
     initialActiveIndex = -1,
     onSelectTask,
+    onSpacePeek,
     onToggleSelect,
     onToggleExpand,
     onClearSelection,
@@ -463,6 +479,12 @@ export function useKeyboardNavigation<T = { id: string }>(
             onSelectTask(id, item);
           }
         },
+        onSpacePeek: (id) => {
+          if (onSpacePeek) {
+            const item = items[navState.activeIndex];
+            onSpacePeek(id, item);
+          }
+        },
         onClearSelection,
         onFocusSearch: focusSearch,
         onEscape,
@@ -479,6 +501,7 @@ export function useKeyboardNavigation<T = { id: string }>(
       onToggleSelect,
       onToggleExpand,
       onSelectTask,
+      onSpacePeek,
       onClearSelection,
       focusSearch,
       onEscape,

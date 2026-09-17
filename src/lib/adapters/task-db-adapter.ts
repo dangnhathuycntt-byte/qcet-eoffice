@@ -1,4 +1,4 @@
-import type { StaffTask, TaskStatus } from '@/types/dashboard';
+import type { StaffTask, TaskStatus, TaskPriority } from '@/types/dashboard';
 import { isTaskOverdue, getSystemReferenceDateStr } from '@/lib/academic-calendar';
 
 export interface SchoolTask {
@@ -180,6 +180,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     assigneeAvatar,
     assignedTo: assigneeName,
     status,
+    startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,
     internalDueDate: isoDueDate,
     parentSchoolTaskId: parentSchoolTaskId || '',
@@ -213,22 +214,35 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     .map(a => a.user?.name || '')
     .filter(Boolean);
 
-  // Ánh xạ trạng thái chuẩn hóa
-  const statusMap: Record<string, SchoolTask['status']> = {
-    NOT_STARTED: 'not_started',
-    IN_PROGRESS: 'in_progress',
-    WAITING_APPROVAL: 'waiting_approval',
-    COMPLETED: 'completed',
-    OVERDUE: 'overdue',
-    CANCELLED: 'cancelled'
+  // Ánh xạ trạng thái chuẩn hóa (chuẩn TaskStatus viết hoa)
+  const statusMap: Record<string, TaskStatus> = {
+    NOT_STARTED: 'NOT_STARTED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    WAITING_APPROVAL: 'WAITING_APPROVAL',
+    COMPLETED: 'COMPLETED',
+    OVERDUE: 'OVERDUE',
+    CANCELLED: 'CANCELLED',
+    not_started: 'NOT_STARTED',
+    in_progress: 'IN_PROGRESS',
+    waiting_approval: 'WAITING_APPROVAL',
+    completed: 'COMPLETED',
+    overdue: 'OVERDUE',
+    cancelled: 'CANCELLED',
+    NEW: 'NOT_STARTED',
+    NEEDS_REVIEW: 'WAITING_APPROVAL',
   };
 
-  // Ánh xạ độ ưu tiên
+  // Ánh xạ độ ưu tiên chuẩn hóa (chuẩn TaskPriority viết hoa)
   const priorityMap: Record<string, SchoolTask['priority']> = {
-    URGENT: 'urgent',
-    HIGH: 'high',
-    NORMAL: 'medium',
-    LOW: 'low'
+    URGENT: 'URGENT',
+    HIGH: 'HIGH',
+    NORMAL: 'NORMAL',
+    LOW: 'LOW',
+    urgent: 'URGENT',
+    high: 'HIGH',
+    medium: 'NORMAL',
+    normal: 'NORMAL',
+    low: 'LOW',
   };
 
   const isoDueDate = formatLocalDate(raw.dueDate);
@@ -288,10 +302,12 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     leadDepartmentId: raw.department?.id,
     departmentId: raw.departmentId || raw.department?.id || undefined,
     departmentCode: (raw.department as any)?.shortName || raw.department?.id || undefined,
+    // Đồng bộ chính xác ngày bắt đầu và hạn chót cho chi tiết nhiệm vụ
+    startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,
     assignedDate: formatLocalDate(raw.startDate || new Date()),
     status: statusMap[raw.status] || 'in_progress',
-    priority: priorityMap[raw.priority] || 'medium',
+    priority: (priorityMap[raw.priority] || (raw.priority as any) || 'NORMAL') as TaskPriority,
     progress,
     progressPercent: progress,
     academicMonth: raw.academicMonth ?? 9,

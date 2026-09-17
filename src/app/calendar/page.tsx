@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  List,
   MoreHorizontal,
   Plus,
   Search,
@@ -23,7 +22,6 @@ import {
   type CalendarScope,
 } from "@/components/calendar/calendar-month-grid";
 import { CalendarWeekView } from "@/components/calendar/calendar-week-view";
-import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import {
   CalendarDaySheet,
   type DayTaskItem,
@@ -42,6 +40,7 @@ import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { useAuth } from "@/lib/auth-context";
 import {
   getSystemReferenceDate,
+  getTodayIctDate,
   getAcademicYear,
   getAvailableAcademicYears,
   getAcademicMonthsForYear,
@@ -51,6 +50,7 @@ import {
   isTaskPastDue,
   type AcademicMonthPeriod,
 } from "@/lib/academic-calendar";
+import { getWeekDays } from "@/lib/calendar/calendar-week";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 
@@ -167,7 +167,7 @@ function CalendarRouteContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const sysDate = useMemo(() => getSystemReferenceDate(), []);
+  const sysDate = useMemo(() => getTodayIctDate(), []);
   const initialDateStr = dateParam || sysDate;
   const availableAcademicYears = useMemo(() => getAvailableAcademicYears(initialDateStr), [initialDateStr]);
   const initialAcademicYear = useMemo(() => getAcademicYear(initialDateStr), [initialDateStr]);
@@ -192,19 +192,10 @@ function CalendarRouteContent() {
     [selectedAcademicYear]
   );
 
-  const [viewMode, setViewMode] = useState<"month" | "week" | "agenda">(() => {
-    if (viewParam === "agenda" || viewParam === "agenda_list") return "agenda";
-    if (viewParam === "week") return "week";
+  const [viewMode, setViewMode] = useState<"month" | "week">(() => {
     if (viewParam === "month") return "month";
-    if (typeof window !== "undefined" && window.innerWidth < 640) return "agenda";
-    return "month";
+    return "week";
   });
-
-  useEffect(() => {
-    if (!viewParam && typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
-      setViewMode("agenda");
-    }
-  }, [viewParam]);
 
   const [activeScope, setActiveScope] = useState<CalendarScope>(() => {
     if (scopeParam === "unit") return "unit";
@@ -224,6 +215,15 @@ function CalendarRouteContent() {
   const activeFilterCount = (levelFilter !== "ALL" ? 1 : 0) + (statusFilter !== "ALL" ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDateStr);
+
+  const weekSpanLabel = useMemo(() => {
+    const activeDate = selectedDate || sysDate;
+    const days = getWeekDays(activeDate);
+    if (days.length === 0) return currentPeriod.label;
+    const first = days[0];
+    const last = days[days.length - 1];
+    return `Tuần ${first.displayDate} - ${last.displayDate}`;
+  }, [selectedDate, sysDate, currentPeriod.label]);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<SchoolTask | StaffTask | null>(null);
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
@@ -279,7 +279,7 @@ function CalendarRouteContent() {
     window.history.replaceState(null, "", url.toString());
   }, []);
 
-  const handleViewChange = useCallback((mode: "month" | "week" | "agenda") => {
+  const handleViewChange = useCallback((mode: "month" | "week") => {
     setViewMode(mode);
     updateUrlParam("view", mode);
   }, [updateUrlParam]);
@@ -490,19 +490,8 @@ function CalendarRouteContent() {
     }
 
     try {
-      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: Record<string, unknown> = {};
-      if (newStatus === "IN_PROGRESS") actionUrl = `/api/tasks/${taskId}/actions/start`;
-      else if (newStatus === "COMPLETED") {
-        actionUrl = `/api/tasks/${taskId}/actions/approve`;
-        actionBody = { note: "Phê duyệt hoàn thành nhiệm vụ" };
-      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: "Nộp kết quả chờ phê duyệt", completionRate: 100 };
-      } else if (newStatus === "CANCELLED") {
-        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-        actionBody = { reason: "Hủy nhiệm vụ" };
-      }
+      const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
+      const actionBody = { status: newStatus };
       await fetch(actionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -694,8 +683,8 @@ function CalendarRouteContent() {
           <ChevronLeft className="size-4" strokeWidth={1.5} />
         </button>
 
-        <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[6rem] text-center">
-          {currentPeriod.label}
+        <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[7.5rem] text-center">
+          {viewMode === "week" ? weekSpanLabel : currentPeriod.label}
         </span>
 
         <button
@@ -720,9 +709,9 @@ function CalendarRouteContent() {
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
-        {/* View mode: Tháng | Tuần | Danh sách — primary toolbar, no secondary needed */}
-        <div role="tablist" aria-label="Chế độ hiển thị lịch" className="hidden sm:inline-flex items-center rounded-lg border border-border/60 bg-secondary/50 p-0.5 gap-0.5">
-          {(["month", "week", "agenda"] as const).map((mode) => (
+        {/* View mode: Tuần | Tháng — primary toolbar */}
+        <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex items-center rounded-lg border border-border/60 bg-secondary/50 p-0.5 gap-0.5">
+          {(["week", "month"] as const).map((mode) => (
             <button
               key={mode}
               type="button"
@@ -730,31 +719,17 @@ function CalendarRouteContent() {
               aria-selected={viewMode === mode}
               onClick={() => handleViewChange(mode)}
               className={cn(
-                "inline-flex items-center justify-center gap-1 min-h-8 px-2.5 rounded text-xs font-semibold transition-all",
+                "inline-flex items-center justify-center gap-1 min-h-8 px-2.5 rounded text-xs font-semibold transition-all cursor-pointer",
                 viewMode === mode ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {mode === "month" ? <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} /> : <List className="size-3.5 shrink-0" strokeWidth={1.5} />}
-              {mode === "month" ? "Tháng" : mode === "week" ? "Tuần" : "Danh sách"}
+              <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
+              {mode === "week" ? "Tuần" : "Tháng"}
             </button>
           ))}
         </div>
-        {/* Mobile: Danh sách quick-switch (agenda is the default mobile view) */}
-        <button
-          type="button"
-          aria-label={viewMode === "agenda" ? "Đang xem Danh sách" : "Xem Danh sách"}
-          aria-pressed={viewMode === "agenda"}
-          onClick={() => handleViewChange("agenda")}
-          className={cn(
-            "sm:hidden inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2.5 text-xs font-semibold transition-colors",
-            viewMode === "agenda" ? "text-primary bg-primary/5" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-          )}
-        >
-          <List className="size-3.5 shrink-0" strokeWidth={1.5} />
-          Danh sách
-        </button>
 
-        <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0 hidden sm:block" aria-hidden="true" />
+        <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* Scope + Filter selector: Bộ lọc ▾ */}
         <div className="relative" ref={filterDropdownRef}>
@@ -1008,7 +983,7 @@ function CalendarRouteContent() {
         </div>
       )}
 
-      {/* Calendar Content: Month Grid or Agenda List */}
+      {/* Calendar Content: Week Grid or Month Grid */}
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">
@@ -1047,27 +1022,6 @@ function CalendarRouteContent() {
           statusFilter={statusFilter}
           levelFilter={levelFilter}
         />
-      ) : viewMode === "agenda" ? (
-        <CalendarAgendaView
-          period={currentPeriod}
-          tasks={tasks}
-          events={meetingDayItems}
-          selectedDate={selectedDate}
-          onSelectDate={handleSelectDate}
-          onOpenDaySheet={handleOpenDaySheet}
-          onSelectTask={handleSelectTask}
-          onAddTaskOnDate={(dateStr) => handleOpenAddTask(dateStr)}
-          onAddEventOnDate={(dateStr) => {
-            setCreateInitialDueDate(dateStr);
-            setIsCreateEventModalOpen(true);
-          }}
-          scope={activeScope}
-          currentUserId={user?.id}
-          currentUserName={user?.name}
-          searchQuery={searchQuery}
-          statusFilter={statusFilter}
-          levelFilter={levelFilter}
-        />
       ) : (
         // meetingDayItems feeds month view with real meeting times
         <CalendarMonthGrid
@@ -1096,6 +1050,11 @@ function CalendarRouteContent() {
         onAddTaskOnDate={(dateStr) => {
           setIsDaySheetOpen(false);
           handleOpenAddTask(dateStr);
+        }}
+        onAddEventOnDate={(dateStr) => {
+          setIsDaySheetOpen(false);
+          setCreateInitialDueDate(dateStr);
+          setIsCreateEventModalOpen(true);
         }}
       />
 

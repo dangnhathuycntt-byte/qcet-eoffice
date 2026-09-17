@@ -155,6 +155,7 @@ export async function POST(req: Request) {
         title: validatedBody.title,
         description: validatedBody.description,
         departmentId: validatedBody.departmentId,
+        startDate: validatedBody.startDate,
         dueDate: validatedBody.dueDate ?? new Date().toISOString(),
         priority: validatedBody.priority,
         scope: validatedBody.scope,

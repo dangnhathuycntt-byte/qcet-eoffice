@@ -12,29 +12,16 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  Layers,
   Flag,
   User,
   Users,
-  Plus,
-  Trash2,
-  Clock,
   Check,
   CalendarClock,
-  ArrowRight,
-  ShieldCheck,
-  Play,
-  Save,
-  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import {
-  LinearTaskAgentPanel,
-  type TaskAgentSuggestion,
-  type TaskMilestoneItem,
-} from "./linear-task-agent-panel";
+import { FloatingPortal } from "@/components/ui/floating-portal";
 import {
   QCET_DEPARTMENT_GROUPS,
   type DepartmentPersonnelGroup,
@@ -43,6 +30,12 @@ import {
   submitCreateTask,
   type CreateTaskLevel,
 } from "@/lib/adapters/create-task-mapper";
+
+/**
+ * Feature Flag: Kích hoạt Trợ lý AI khi hệ thống tích hợp backend AI/LLM.
+ * Mặc định: false (không hiển thị trong production).
+ */
+export const ENABLE_TASK_AGENT_ASSISTANT = false;
 
 export type LinearPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -71,7 +64,6 @@ interface TaskDraftStorage {
   startDate: string;
   dueDate: string;
   category: string;
-  milestones: TaskMilestoneItem[];
   timestamp: number;
 }
 
@@ -95,17 +87,17 @@ const PRIORITY_CONFIG: Record<
   },
   MEDIUM: {
     label: "Bình thường",
-    color: "text-slate-600",
-    bg: "bg-slate-50",
-    border: "border-slate-200",
-    iconColor: "text-slate-400",
+    color: "text-muted-foreground",
+    bg: "bg-muted/40",
+    border: "border-border",
+    iconColor: "text-muted-foreground",
   },
   LOW: {
     label: "Thấp",
-    color: "text-slate-500",
-    bg: "bg-slate-50",
-    border: "border-slate-200",
-    iconColor: "text-slate-400",
+    color: "text-muted-foreground",
+    bg: "bg-muted/40",
+    border: "border-border",
+    iconColor: "text-muted-foreground",
   },
 };
 
@@ -131,7 +123,6 @@ export function LinearCreateTaskModal({
   initialParentTaskId,
 }: LinearCreateTaskModalProps) {
   const [isMounted, setIsMounted] = React.useState(false);
-  const [isAgentOpen, setIsAgentOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showConfirmClose, setShowConfirmClose] = React.useState(false);
@@ -150,10 +141,11 @@ export function LinearCreateTaskModal({
   const [startDate, setStartDate] = React.useState("");
   const [dueDate, setDueDate] = React.useState("");
   const [category, setCategory] = React.useState("CHUYEN_DOI_SO");
-  const [milestones, setMilestones] = React.useState<TaskMilestoneItem[]>([]);
-  const [newMilestoneText, setNewMilestoneText] = React.useState("");
-  const [isMilestonesExpanded, setIsMilestonesExpanded] = React.useState(false);
-  const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
+
+  // Database users for foreign key safety
+  const [dbUsers, setDbUsers] = React.useState<
+    Array<{ id: string; name: string; departmentId?: string | null; role?: string }>
+  >([]);
 
   // Validation field errors for P0 fields
   const [fieldErrors, setFieldErrors] = React.useState<{
@@ -165,13 +157,36 @@ export function LinearCreateTaskModal({
   // Active open popovers
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
 
+  // Trigger Refs for FloatingPortal
+  const deptTriggerRef = React.useRef<HTMLDivElement>(null);
+  const statusTriggerRef = React.useRef<HTMLDivElement>(null);
+  const priorityTriggerRef = React.useRef<HTMLDivElement>(null);
+  const driTriggerRef = React.useRef<HTMLDivElement>(null);
+  const coTriggerRef = React.useRef<HTMLDivElement>(null);
+  const catTriggerRef = React.useRef<HTMLDivElement>(null);
+
   const titleInputRef = React.useRef<HTMLInputElement>(null);
-  const milestoneInputRef = React.useRef<HTMLInputElement>(null);
+  const summaryInputRef = React.useRef<HTMLInputElement>(null);
+  const descriptionTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const modalRef = React.useRef<HTMLDivElement>(null);
   const isSubmittingLockRef = React.useRef(false);
 
   React.useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Fetch real users on mount to ensure real User IDs are used
+  React.useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && Array.isArray(data.users)) {
+          setDbUsers(data.users);
+        }
+      })
+      .catch(() => {
+        // Silently fallback to static department personnel
+      });
   }, []);
 
   // Department & personnel lookup
@@ -208,7 +223,6 @@ export function LinearCreateTaskModal({
           setStartDate(draft.startDate || "");
           setDueDate(draft.dueDate || "");
           setCategory(draft.category || "CHUYEN_DOI_SO");
-          setMilestones(draft.milestones || []);
           if (draft.selectedDeptCode) setSelectedDeptCode(draft.selectedDeptCode);
           if (draft.level) setLevel(draft.level);
           setHasRestoredDraft(true);
@@ -239,7 +253,6 @@ export function LinearCreateTaskModal({
     if (description.trim() !== "") return true;
     if (dueDate !== "") return true;
     if (startDate !== "") return true;
-    if (milestones.length > 0) return true;
     if (coAssignees.length > 0) return true;
     if (priority !== "MEDIUM") return true;
     if (category !== "CHUYEN_DOI_SO") return true;
@@ -251,7 +264,6 @@ export function LinearCreateTaskModal({
     description,
     dueDate,
     startDate,
-    milestones,
     coAssignees,
     priority,
     category,
@@ -276,7 +288,6 @@ export function LinearCreateTaskModal({
           startDate,
           dueDate,
           category,
-          milestones,
           timestamp: Date.now(),
         };
         sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -301,7 +312,6 @@ export function LinearCreateTaskModal({
     startDate,
     dueDate,
     category,
-    milestones,
   ]);
 
   // Clear draft
@@ -316,7 +326,6 @@ export function LinearCreateTaskModal({
     setDescription("");
     setDueDate("");
     setStartDate("");
-    setMilestones([]);
     setCoAssignees([]);
     setPriority("MEDIUM");
     setCategory("CHUYEN_DOI_SO");
@@ -327,13 +336,14 @@ export function LinearCreateTaskModal({
   // Autofocus title input when modal opens
   React.useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         titleInputRef.current?.focus();
-      }, 60);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
-  // Request close with dirty-check
+  // Request close with dirty-check & safe draft preservation
   const handleRequestClose = React.useCallback(() => {
     if (isSubmitting) return;
 
@@ -344,133 +354,11 @@ export function LinearCreateTaskModal({
     }
   }, [isSubmitting, isDirty, onClose]);
 
-  // Close on Escape with layered modal guard
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (showConfirmClose) {
-          e.preventDefault();
-          e.stopPropagation();
-          setShowConfirmClose(false);
-          return;
-        }
-        if (openDropdown) {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpenDropdown(null);
-          return;
-        }
-        if (isAddingMilestone) {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsAddingMilestone(false);
-          setNewMilestoneText("");
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        handleRequestClose();
-      }
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, openDropdown, showConfirmClose, isAddingMilestone, handleRequestClose]);
-
-  // Handle outside click to close dropdowns
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    if (openDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdown]);
-
-  // Apply suggestion from AI Agent with overwrite protection
-  const handleApplyAiSuggestion = (
-    s: TaskAgentSuggestion,
-    options?: { onlyEmptyFields?: boolean }
-  ) => {
-    const onlyEmpty = options?.onlyEmptyFields ?? false;
-
-    if (s.title && (!onlyEmpty || !title.trim())) setTitle(s.title);
-    if (s.summary && (!onlyEmpty || !summary.trim())) setSummary(s.summary);
-    if (s.priority && (!onlyEmpty || priority === "MEDIUM")) setPriority(s.priority);
-    if (s.description && (!onlyEmpty || !description.trim())) setDescription(s.description);
-    if (s.targetDate && (!onlyEmpty || !dueDate)) setDueDate(s.targetDate);
-    if (s.startDate && (!onlyEmpty || !startDate)) setStartDate(s.startDate);
-    if (s.category && (!onlyEmpty || category === "CHUYEN_DOI_SO")) setCategory(s.category);
-
-    if (s.suggestedLeadName && (!onlyEmpty || !leadAssigneeName)) {
-      setLeadAssigneeName(s.suggestedLeadName);
-    }
-
-    if (
-      s.suggestedCoAssignees &&
-      s.suggestedCoAssignees.length > 0 &&
-      (!onlyEmpty || coAssignees.length === 0)
-    ) {
-      setCoAssignees(s.suggestedCoAssignees);
-    }
-
-    if (s.milestones && s.milestones.length > 0) {
-      if (onlyEmpty && milestones.length > 0) {
-        // Append instead of overwrite
-        setMilestones((prev) => [...prev, ...s.milestones]);
-      } else {
-        setMilestones(s.milestones);
-      }
-    }
-
-    // Clear related field errors if resolved
-    setFieldErrors((prev) => {
-      const next = { ...prev };
-      if (s.title) delete next.title;
-      if (s.targetDate) delete next.dueDate;
-      if (s.suggestedLeadName) delete next.lead;
-      return next;
-    });
-  };
-
-  // Milestone management
-  const handleAddMilestone = () => {
-    const trimmed = newMilestoneText.trim();
-    if (!trimmed) return;
-    const newM: TaskMilestoneItem = {
-      id: `ms-${Date.now()}-${milestones.length + 1}`,
-      title: trimmed,
-      dueDate: dueDate || undefined,
-      completed: false,
-    };
-    setMilestones((prev) => [...prev, newM]);
-    setNewMilestoneText("");
-    setTimeout(() => {
-      milestoneInputRef.current?.focus();
-    }, 20);
-  };
-
-  const handleRemoveMilestone = (id: string) => {
-    setMilestones((prev) => prev.filter((m) => m.id !== id));
-  };
-
-  const handleToggleMilestone = (id: string) => {
-    setMilestones((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, completed: !m.completed } : m))
-    );
-  };
-
   // Submit Handler with P0 Field Validation & Double-submit lock
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
+  const handleSubmit = React.useCallback(async () => {
     if (isSubmittingLockRef.current || isSubmitting) return;
 
-    // Validate P0 Fields: Title, Unit, DRI, Due Date
+    // Validate P0 Fields: Title, DRI, Due Date
     const errors: { title?: string; lead?: string; dueDate?: string } = {};
     if (!title.trim()) {
       errors.title = "Vui lòng nhập tên nhiệm vụ.";
@@ -498,28 +386,41 @@ export function LinearCreateTaskModal({
       const fullDescription = [
         summary.trim() ? `[Tóm tắt] ${summary.trim()}` : "",
         description.trim(),
-        milestones.length > 0
-          ? `\n[Các mốc thực hiện]\n` +
-            milestones
-              .map(
-                (m, i) =>
-                  `${i + 1}. ${m.title}${m.dueDate ? ` (Hạn: ${m.dueDate})` : ""}`
-              )
-              .join("\n")
-          : "",
       ]
         .filter(Boolean)
         .join("\n\n");
 
-      const personnelRefs = availablePersonnel.map((p, idx) => ({
-        id: `person-${idx}-${p.name.replace(/\s+/g, "").toLowerCase()}`,
-        name: p.name,
-      }));
+      // Map personnel to real DB users if available
+      const personnelRefs =
+        dbUsers.length > 0
+          ? dbUsers.map((u) => ({
+              id: u.id,
+              name: u.name,
+              departmentId: u.departmentId,
+            }))
+          : availablePersonnel.map((p, idx) => ({
+              id: `person-${idx}-${p.name.replace(/\s+/g, "").toLowerCase()}`,
+              name: p.name,
+            }));
+
+      // Find real user IDs for DRI and collaborators if matched
+      const matchedDri = dbUsers.find(
+        (u) => u.name.trim().toLowerCase() === leadAssigneeName.trim().toLowerCase()
+      );
+      const matchedCoIds = coAssignees
+        .map(
+          (name) =>
+            dbUsers.find(
+              (u) => u.name.trim().toLowerCase() === name.trim().toLowerCase()
+            )?.id
+        )
+        .filter((id): id is string => Boolean(id));
 
       const res = await submitCreateTask(
         {
           level,
           title: title.trim(),
+          startDate: startDate || undefined,
           dueDate,
           description: fullDescription,
           leadAssigneeName: leadAssigneeName || undefined,
@@ -531,6 +432,8 @@ export function LinearCreateTaskModal({
         {
           personnel: personnelRefs,
           departmentId: currentDept.code || currentDept.id,
+          assigneeId: matchedDri?.id,
+          collaboratorIds: matchedCoIds.length > 0 ? matchedCoIds : undefined,
         }
       );
 
@@ -554,123 +457,174 @@ export function LinearCreateTaskModal({
       setIsSubmitting(false);
       isSubmittingLockRef.current = false;
     }
-  };
+  }, [
+    isSubmitting,
+    title,
+    leadAssigneeName,
+    dueDate,
+    summary,
+    description,
+    dbUsers,
+    availablePersonnel,
+    level,
+    coAssignees,
+    initialParentTaskId,
+    priority,
+    category,
+    currentDept,
+    onSubmitSuccess,
+    onClose,
+  ]);
 
-  if (!isOpen || !isMounted) return null;
+  // Global modal keyboard handling: Esc to close & Cmd/Ctrl+Enter to submit
+  React.useEffect(() => {
+    if (!isOpen) return;
 
-  return createPortal(
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Cmd/Ctrl + Enter to submit
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSubmit();
+        return;
+      }
+
+      // 2. Escape handling with layered focus guard
+      if (e.key === "Escape") {
+        if (showConfirmClose) {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowConfirmClose(false);
+          return;
+        }
+        if (openDropdown) {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpenDropdown(null);
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        handleRequestClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, openDropdown, showConfirmClose, handleRequestClose, handleSubmit]);
+
+  if (!isOpen) return null;
+  if (!isMounted && typeof window !== "undefined") return null;
+
+  const modalElement = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-2 sm:p-4 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-2 sm:p-4 md:p-6"
       data-slot="linear-create-task-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-task-modal-title"
+      onMouseDown={(e) => {
+        // Dismiss on clicking backdrop directly (never when clicking inside modal or portal)
+        if (e.target === e.currentTarget) {
+          handleRequestClose();
+        }
+      }}
     >
+      {/* Outer Card: Compact Linear-inspired Composer */}
       <div
         ref={modalRef}
         className={cn(
-          "relative flex flex-col w-full bg-white rounded-xl shadow-2xl border border-slate-200/90 overflow-hidden transition-all duration-200",
-          isAgentOpen
-            ? "max-w-6xl h-[82vh] min-h-[560px] max-h-[88vh]"
-            : "max-w-[840px] max-h-[85vh] h-auto min-h-[440px]",
+          "relative flex flex-col bg-card rounded-xl shadow-2xl border border-border/80 overflow-hidden",
+          "w-full max-w-[680px] h-[540px] max-h-[85vh]",
           "animate-in fade-in zoom-in-95"
         )}
       >
-        {/* Modal Top Header - Linear Context Breadcrumb */}
-        <header className="flex items-center justify-between px-5 sm:px-7 py-3 border-b border-slate-100 bg-white shrink-0">
+        {/* Modal Top Header - Minimal Linear Breadcrumb */}
+        <header className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
           {/* Breadcrumb & Unit Selector */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Building2 className="size-3.5 text-slate-400" strokeWidth={1.5} />
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
 
             {/* Department dropdown selector */}
-            <div className="relative inline-block text-left">
+            <div ref={deptTriggerRef} className="relative inline-block text-left">
               <button
                 type="button"
                 onClick={() =>
                   setOpenDropdown(openDropdown === "dept" ? null : "dept")
                 }
-                className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded px-1 py-0.5"
+                className={cn(
+                  "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
+                  openDropdown === "dept"
+                    ? "text-foreground bg-accent shadow-2xs"
+                    : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
+                )}
               >
                 <span>{currentDept.name}</span>
-                <ChevronDown className="size-3 text-slate-400" />
+                <ChevronDown
+                  className={cn(
+                    "size-3 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "dept" && "rotate-180 text-foreground"
+                  )}
+                />
               </button>
 
-              {openDropdown === "dept" && (
-                <div className="absolute left-0 mt-1 w-64 rounded-md bg-white border border-slate-200/90 shadow-lg py-1 z-30 max-h-60 overflow-y-auto">
-                  {QCET_DEPARTMENT_GROUPS.map((dept) => (
-                    <button
-                      key={dept.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDeptCode(dept.code);
-                        setLeadAssigneeName("");
-                        setCoAssignees([]);
-                        setOpenDropdown(null);
-                      }}
-                      className={cn(
-                        "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors",
-                        selectedDeptCode === dept.code
-                          ? "font-semibold text-slate-900 bg-slate-50"
-                          : "text-slate-700"
-                      )}
-                    >
-                      <span className="truncate">{dept.name}</span>
-                      {selectedDeptCode === dept.code && (
-                        <Check className="size-3.5 text-slate-700 shrink-0" strokeWidth={2} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Department Floating Portal Dropdown */}
+              <FloatingPortal
+                isOpen={openDropdown === "dept"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={deptTriggerRef}
+                className="w-64 p-1 space-y-0.5"
+                ariaLabel="Chọn đơn vị phòng ban"
+              >
+                {QCET_DEPARTMENT_GROUPS.map((dept) => (
+                  <button
+                    key={dept.code}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDeptCode(dept.code);
+                      setLeadAssigneeName("");
+                      setCoAssignees([]);
+                      setOpenDropdown(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
+                      selectedDeptCode === dept.code
+                        ? "font-semibold text-foreground bg-accent"
+                        : "text-foreground hover:bg-accent/70"
+                    )}
+                  >
+                    <span className="truncate">{dept.name}</span>
+                    {selectedDeptCode === dept.code && (
+                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                    )}
+                  </button>
+                ))}
+              </FloatingPortal>
             </div>
 
-            <ChevronRight className="size-3 text-slate-300" />
+            <ChevronRight className="size-3 text-muted-foreground/40" />
             <span
-              className="text-slate-500"
+              className="text-muted-foreground font-medium"
               id="create-task-modal-title"
             >
-              Tạo việc mới
+              Tạo nhiệm vụ
             </span>
           </div>
 
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-1.5">
-            {/* Toggle AI Agent Assistant */}
-            <button
-              type="button"
-              onClick={() => setIsAgentOpen(!isAgentOpen)}
-              className={cn(
-                "h-7 px-2.5 text-xs font-medium rounded transition-colors inline-flex items-center gap-1.5 cursor-pointer",
-                isAgentOpen
-                  ? "bg-slate-100 text-slate-900 font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              )}
-            >
-              <Sparkles
-                className={cn(
-                  "size-3 text-slate-400",
-                  isAgentOpen && "text-slate-700"
-                )}
-                strokeWidth={1.5}
-              />
-              <span>Tạo cùng Agent</span>
-            </button>
-
-            {/* Close Modal Button */}
-            <button
-              type="button"
-              onClick={handleRequestClose}
-              className="size-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              aria-label="Đóng biểu mẫu tạo nhiệm vụ"
-            >
-              <X className="size-4" strokeWidth={1.5} />
-            </button>
-          </div>
+          {/* Header Action: Close Button */}
+          <button
+            type="button"
+            onClick={handleRequestClose}
+            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            aria-label="Đóng biểu mẫu tạo nhiệm vụ"
+          >
+            <X className="size-4" strokeWidth={1.5} />
+          </button>
         </header>
 
         {/* Restored Draft Banner if applicable */}
         {hasRestoredDraft && (
-          <div className="flex items-center justify-between px-6 py-2 bg-slate-50 border-b border-slate-100 text-xs text-slate-700 shrink-0">
+          <div className="flex items-center justify-between px-5 sm:px-6 py-1.5 bg-muted/40 border-b border-border/60 text-[11px] text-muted-foreground shrink-0">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
               <span>Đã tự động khôi phục bản nháp chưa lưu từ phiên làm việc trước.</span>
@@ -678,558 +632,525 @@ export function LinearCreateTaskModal({
             <button
               type="button"
               onClick={handleClearDraft}
-              className="text-xs text-slate-500 hover:text-rose-600 transition-colors underline underline-offset-2"
+              className="text-[11px] text-muted-foreground hover:text-rose-600 transition-colors underline underline-offset-2 cursor-pointer"
             >
               Xóa bản nháp
             </button>
           </div>
         )}
 
-        {/* Modal Main Body: Form + Optional AI Panel */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-0 bg-white">
-          {/* Main Task Form - Document-like Canvas */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex-1 overflow-y-auto px-6 sm:px-8 py-5 flex flex-col space-y-4"
-          >
-            {/* Error banner if any */}
-            {errorMessage && (
-              <div className="flex items-center gap-2 p-2.5 rounded bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0">
-                <AlertCircle className="size-4 shrink-0 text-rose-500" />
-                <span className="flex-1 font-medium">{errorMessage}</span>
-              </div>
-            )}
-
-            {/* Title Section (P0 Field) - Strong Visual Anchor */}
-            <div className="space-y-1 shrink-0">
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (fieldErrors.title) {
-                    setFieldErrors((prev) => ({ ...prev, title: undefined }));
-                  }
-                }}
-                placeholder="Tên nhiệm vụ... *"
-                className={cn(
-                  "w-full text-xl sm:text-2xl font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
-                  fieldErrors.title && "placeholder:text-rose-400"
-                )}
-              />
-              <input
-                type="text"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                placeholder="Thêm tóm tắt ngắn gọn hoặc kết quả kỳ vọng..."
-                className="w-full text-xs text-slate-500 placeholder:text-slate-300 bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
-              />
-              {fieldErrors.title && (
-                <p className="text-[11px] text-rose-600 font-medium">
-                  {fieldErrors.title}
-                </p>
-              )}
+        {/* Modal Scrollable Form Area */}
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
+          {/* Error banner if any */}
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0">
+              <AlertCircle className="size-4 shrink-0 text-rose-500" />
+              <span className="flex-1 font-medium">{errorMessage}</span>
             </div>
+          )}
 
-            {/* Linear Property Chips Bar - Borderless & Interactive */}
-            <div className="flex flex-wrap items-center gap-1 py-1.5 border-y border-slate-100 shrink-0">
-              {/* 1. Status Chip */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === "status" ? null : "status")
-                  }
-                  className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <span
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      status === "IN_PROGRESS" ? "bg-blue-500" : "bg-slate-400"
-                    )}
-                  />
-                  <span>{status === "IN_PROGRESS" ? "Đang thực hiện" : "Mới"}</span>
-                  <ChevronDown className="size-2.5 text-slate-400" />
-                </button>
+          {/* 1. Task Title (P0 Field) */}
+          <div className="space-y-0.5 shrink-0">
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (fieldErrors.title) {
+                  setFieldErrors((prev) => ({ ...prev, title: undefined }));
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  summaryInputRef.current?.focus();
+                }
+              }}
+              placeholder="Tên nhiệm vụ... *"
+              className={cn(
+                "w-full text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
+                fieldErrors.title && "placeholder:text-rose-400 text-rose-900"
+              )}
+            />
+            {fieldErrors.title && (
+              <p className="text-[11px] text-rose-600 font-medium">
+                {fieldErrors.title}
+              </p>
+            )}
+          </div>
 
-                {openDropdown === "status" && (
-                  <div className="absolute left-0 mt-1 w-36 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStatus("IN_PROGRESS");
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700"
-                    >
-                      <span className="size-1.5 rounded-full bg-blue-500" />
-                      <span>Đang thực hiện</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStatus("TODO");
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700"
-                    >
-                      <span className="size-1.5 rounded-full bg-slate-300" />
-                      <span>Mới</span>
-                    </button>
-                  </div>
+          {/* 2. Short Summary */}
+          <div className="shrink-0">
+            <input
+              ref={summaryInputRef}
+              type="text"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  descriptionTextareaRef.current?.focus();
+                }
+              }}
+              placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng..."
+              className="w-full text-xs text-muted-foreground placeholder:text-muted-foreground/70 bg-transparent border-0 p-0 focus:outline-none focus:ring-0"
+            />
+          </div>
+
+          {/* 3. Compact Properties Chips Bar (Wrap max 2 rows) */}
+          <div className="flex flex-wrap items-center gap-1.5 py-2 my-0.5 border-y border-border/60 shrink-0">
+            {/* 3.1 Status Chip */}
+            <div ref={statusTriggerRef} className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "status" ? null : "status")
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "status"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
                 )}
-              </div>
-
-              {/* 2. Priority Chip */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === "priority" ? null : "priority")
-                  }
-                  className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <Flag
-                    className={cn("size-3", PRIORITY_CONFIG[priority].iconColor)}
-                    strokeWidth={1.75}
-                  />
-                  <span>{PRIORITY_CONFIG[priority].label}</span>
-                  <ChevronDown className="size-2.5 text-slate-400" />
-                </button>
-
-                {openDropdown === "priority" && (
-                  <div className="absolute left-0 mt-1 w-36 rounded-lg bg-white border border-slate-200 shadow-md py-1 z-20">
-                    {PRIORITY_KEYS.map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => {
-                          setPriority(p);
-                          setOpenDropdown(null);
-                        }}
-                        className={cn(
-                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50",
-                          priority === p
-                            ? "font-semibold text-slate-900 bg-slate-100"
-                            : "text-slate-700"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Flag
-                            className={cn(
-                              "size-3",
-                              PRIORITY_CONFIG[p].iconColor
-                            )}
-                          />
-                          <span>{PRIORITY_CONFIG[p].label}</span>
-                        </div>
-                        {priority === p && <Check className="size-3 text-slate-800" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 3. Lead Assignee (DRI) Chip (P0 Field) */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === "dri" ? null : "dri")
-                  }
+              >
+                <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal transition-colors cursor-pointer",
-                    fieldErrors.lead
-                      ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    "size-1.5 rounded-full transition-transform duration-150",
+                    status === "IN_PROGRESS" ? "bg-blue-500 scale-110" : "bg-muted-foreground"
+                  )}
+                />
+                <span>{status === "IN_PROGRESS" ? "Đang thực hiện" : "Mới"}</span>
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "status" && "rotate-180 text-foreground"
+                  )}
+                />
+              </button>
+
+              <FloatingPortal
+                isOpen={openDropdown === "status"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={statusTriggerRef}
+                className="w-36 p-1 space-y-0.5"
+                ariaLabel="Chọn trạng thái"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("IN_PROGRESS");
+                    setOpenDropdown(null);
+                  }}
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
+                    status === "IN_PROGRESS" ? "bg-accent font-semibold" : "hover:bg-accent/70"
                   )}
                 >
-                  <User className="size-3 text-slate-400" strokeWidth={1.5} />
-                  <span>
-                    {leadAssigneeName ? `Chủ trì: ${leadAssigneeName}` : "Chủ trì *"}
-                  </span>
-                  <ChevronDown className="size-2.5 text-slate-400" />
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-blue-500" />
+                    <span>Đang thực hiện</span>
+                  </div>
+                  {status === "IN_PROGRESS" && (
+                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                  )}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("TODO");
+                    setOpenDropdown(null);
+                  }}
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
+                    status === "TODO" ? "bg-accent font-semibold" : "hover:bg-accent/70"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                    <span>Mới</span>
+                  </div>
+                  {status === "TODO" && (
+                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                  )}
+                </button>
+              </FloatingPortal>
+            </div>
 
-                {openDropdown === "dri" && (
-                  <div className="absolute left-0 mt-1 w-56 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20 max-h-52 overflow-y-auto">
-                    {availablePersonnel.map((person) => (
+            {/* 3.2 Priority Chip */}
+            <div ref={priorityTriggerRef} className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "priority" ? null : "priority")
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "priority"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
+              >
+                <Flag
+                  className={cn("size-3", PRIORITY_CONFIG[priority].iconColor)}
+                  strokeWidth={1.5}
+                />
+                <span>{PRIORITY_CONFIG[priority].label}</span>
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "priority" && "rotate-180 text-foreground"
+                  )}
+                />
+              </button>
+
+              <FloatingPortal
+                isOpen={openDropdown === "priority"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={priorityTriggerRef}
+                className="w-40 p-1 space-y-0.5"
+                ariaLabel="Chọn mức độ ưu tiên"
+              >
+                {PRIORITY_KEYS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setPriority(p);
+                      setOpenDropdown(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                      priority === p
+                        ? "font-semibold text-foreground bg-accent"
+                        : "text-foreground hover:bg-accent/70"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Flag
+                        className={cn("size-3", PRIORITY_CONFIG[p].iconColor)}
+                        strokeWidth={1.5}
+                      />
+                      <span>{PRIORITY_CONFIG[p].label}</span>
+                    </div>
+                    {priority === p && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
+                  </button>
+                ))}
+              </FloatingPortal>
+            </div>
+
+            {/* 3.3 Lead Assignee (DRI) Chip (P0 Field) */}
+            <div ref={driTriggerRef} className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "dri" ? null : "dri")
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  fieldErrors.lead
+                    ? "bg-rose-50 text-rose-700 border-rose-300"
+                    : openDropdown === "dri"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
+              >
+                <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                <span>
+                  {leadAssigneeName ? `Chủ trì: ${leadAssigneeName}` : "Chủ trì *"}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "dri" && "rotate-180 text-foreground"
+                  )}
+                />
+              </button>
+
+              <FloatingPortal
+                isOpen={openDropdown === "dri"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={driTriggerRef}
+                className="w-60 p-1 space-y-0.5 max-h-56"
+                ariaLabel="Chọn người chủ trì"
+              >
+                {availablePersonnel.map((person) => (
+                  <button
+                    key={person.name}
+                    type="button"
+                    onClick={() => {
+                      setLeadAssigneeName(person.name);
+                      if (fieldErrors.lead) {
+                        setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                      }
+                      setOpenDropdown(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                      leadAssigneeName === person.name
+                        ? "font-semibold text-foreground bg-accent"
+                        : "text-foreground hover:bg-accent/70"
+                    )}
+                  >
+                    <div>
+                      <div className="font-medium">{person.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{person.role}</div>
+                    </div>
+                    {leadAssigneeName === person.name && (
+                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                    )}
+                  </button>
+                ))}
+              </FloatingPortal>
+            </div>
+
+            {/* 3.4 Collaborators Chip */}
+            <div ref={coTriggerRef} className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "co" ? null : "co")
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "co"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
+              >
+                <Users className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                <span>
+                  {coAssignees.length > 0
+                    ? `Phối hợp (${coAssignees.length})`
+                    : "+ Phối hợp"}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "co" && "rotate-180 text-foreground"
+                  )}
+                />
+              </button>
+
+              <FloatingPortal
+                isOpen={openDropdown === "co"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={coTriggerRef}
+                className="w-60 p-1 space-y-0.5 max-h-56"
+                ariaLabel="Chọn nhân sự phối hợp"
+              >
+                {availablePersonnel
+                  .filter((p) => p.name !== leadAssigneeName)
+                  .map((person) => {
+                    const isSelected = coAssignees.includes(person.name);
+                    return (
                       <button
                         key={person.name}
                         type="button"
                         onClick={() => {
-                          setLeadAssigneeName(person.name);
-                          if (fieldErrors.lead) {
-                            setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                          }
-                          setOpenDropdown(null);
+                          setCoAssignees((prev) =>
+                            isSelected
+                              ? prev.filter((n) => n !== person.name)
+                              : [...prev, person.name]
+                          );
                         }}
-                        className={cn(
-                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50",
-                          leadAssigneeName === person.name
-                            ? "font-semibold text-slate-900 bg-slate-100"
-                            : "text-slate-700"
-                        )}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between text-foreground hover:bg-accent/70 active:scale-[0.99] cursor-pointer transition-all duration-150"
                       >
                         <div>
                           <div className="font-medium">{person.name}</div>
-                          <div className="text-[10px] text-slate-400">{person.role}</div>
+                          <div className="text-[10px] text-muted-foreground">{person.role}</div>
                         </div>
-                        {leadAssigneeName === person.name && (
-                          <Check className="size-3.5 text-slate-800" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 4. Collaborators (Co-assignees) Chip */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === "co" ? null : "co")
-                  }
-                  className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <Users className="size-3 text-slate-400" strokeWidth={1.5} />
-                  <span>
-                    {coAssignees.length > 0
-                      ? `Phối hợp (${coAssignees.length})`
-                      : "+ Phối hợp"}
-                  </span>
-                  <ChevronDown className="size-2.5 text-slate-400" />
-                </button>
-
-                {openDropdown === "co" && (
-                  <div className="absolute left-0 mt-1 w-56 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20 max-h-52 overflow-y-auto">
-                    {availablePersonnel
-                      .filter((p) => p.name !== leadAssigneeName)
-                      .map((person) => {
-                        const isSelected = coAssignees.includes(person.name);
-                        return (
-                          <button
-                            key={person.name}
-                            type="button"
-                            onClick={() => {
-                              setCoAssignees((prev) =>
-                                isSelected
-                                  ? prev.filter((n) => n !== person.name)
-                                  : [...prev, person.name]
-                              );
-                            }}
-                            className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 text-slate-700"
-                          >
-                            <div>
-                              <div className="font-medium">{person.name}</div>
-                              <div className="text-[10px] text-slate-400">{person.role}</div>
-                            </div>
-                            <div
-                              className={cn(
-                                "size-4 rounded border flex items-center justify-center text-[10px]",
-                                isSelected
-                                  ? "bg-slate-800 border-slate-800 text-white"
-                                  : "border-slate-300"
-                              )}
-                            >
-                              {isSelected && <Check className="size-3" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-
-              {/* 5. Start Date Chip */}
-              <VietnameseDatePicker
-                value={startDate}
-                onChange={(val) => setStartDate(val)}
-                label="Bắt đầu:"
-                variant="chip"
-                icon={<Calendar className="size-3 text-slate-400" strokeWidth={1.5} />}
-                placeholder="dd/mm/yyyy"
-              />
-
-              {/* 6. Target Due Date Chip (P0 Field) */}
-              <VietnameseDatePicker
-                value={dueDate}
-                required
-                onChange={(val) => {
-                  setDueDate(val);
-                  if (fieldErrors.dueDate) {
-                    setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
-                  }
-                }}
-                label="Hạn chót: *"
-                variant="chip"
-                error={Boolean(fieldErrors.dueDate)}
-                icon={
-                  <CalendarClock
-                    className={cn(
-                      "size-3",
-                      fieldErrors.dueDate ? "text-rose-500" : "text-slate-400"
-                    )}
-                    strokeWidth={1.5}
-                  />
-                }
-                placeholder="dd/mm/yyyy"
-              />
-
-              {/* 7. Category / Domain Chip */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === "cat" ? null : "cat")
-                  }
-                  className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <Tag className="size-3 text-slate-400" strokeWidth={1.5} />
-                  <span>
-                    {CATEGORY_OPTIONS.find((c) => c.id === category)?.label || "Lĩnh vực"}
-                  </span>
-                  <ChevronDown className="size-2.5 text-slate-400" />
-                </button>
-
-                {openDropdown === "cat" && (
-                  <div className="absolute left-0 mt-1 w-48 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20">
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setCategory(opt.id);
-                          setOpenDropdown(null);
-                        }}
-                        className={cn(
-                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50",
-                          category === opt.id
-                            ? "font-semibold text-slate-900 bg-slate-100"
-                            : "text-slate-700"
-                        )}
-                      >
-                        <span>{opt.label}</span>
-                        {category === opt.id && <Check className="size-3 text-slate-800" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Description - Large borderless task composition canvas */}
-            <div className="flex flex-col min-h-[110px] sm:min-h-[130px] pt-1">
-              <label className="text-xs font-semibold text-slate-700 mb-1.5 block select-none">
-                Nội dung chỉ đạo & yêu cầu thực hiện
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Mô tả nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu..."
-                rows={4}
-                className="w-full min-h-[100px] max-h-[220px] resize-y bg-transparent border-0 p-0 text-xs sm:text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-0 leading-relaxed"
-              />
-            </div>
-
-            {/* Milestones / Subtasks Section - Quiet inline insertion */}
-            <div className="pt-2 border-t border-slate-100 shrink-0 space-y-2">
-              <div className="flex items-center justify-between py-0.5 text-xs text-slate-500">
-                <span className="font-medium text-slate-700 select-none">
-                  Mốc thực hiện / Đầu việc con{milestones.length > 0 ? ` (${milestones.length})` : ""}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMilestonesExpanded(true);
-                    setIsAddingMilestone(true);
-                  }}
-                  className="size-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                  title="Thêm đầu việc"
-                  aria-label="Thêm đầu việc"
-                >
-                  <Plus className="size-3.5" strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Milestone items list */}
-              {milestones.length > 0 && (
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {milestones.map((m) => (
-                    <div
-                      key={m.id}
-                      className="flex items-center justify-between gap-2 py-1 px-1.5 rounded hover:bg-slate-50 text-xs group"
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleMilestone(m.id)}
+                        <div
                           className={cn(
-                            "size-3.5 rounded border flex items-center justify-center transition-colors shrink-0 cursor-pointer",
-                            m.completed
-                              ? "bg-emerald-600 border-emerald-600 text-white"
-                              : "border-slate-300 hover:border-slate-400"
+                            "size-4 rounded border flex items-center justify-center text-[10px] transition-colors",
+                            isSelected
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-border"
                           )}
                         >
-                          {m.completed && <Check className="size-2.5" strokeWidth={2} />}
-                        </button>
-                        <span
-                          className={cn(
-                            "truncate",
-                            m.completed
-                              ? "line-through text-slate-400"
-                              : "text-slate-800 font-medium"
-                          )}
-                        >
-                          {m.title}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {m.dueDate && (
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {m.dueDate}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMilestone(m.id)}
-                          className="text-slate-300 hover:text-rose-600 transition-colors p-0.5 cursor-pointer"
-                          aria-label="Xóa mốc này"
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Inline Insertion Row */}
-              {isAddingMilestone ? (
-                <div className="flex items-center gap-2 py-1 px-1 text-xs">
-                  <span className="size-3.5 rounded-full border border-dashed border-slate-300 shrink-0" />
-                  <input
-                    ref={milestoneInputRef}
-                    type="text"
-                    value={newMilestoneText}
-                    onChange={(e) => setNewMilestoneText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        if (newMilestoneText.trim()) {
-                          handleAddMilestone();
-                        }
-                      } else if (e.key === "Escape") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setNewMilestoneText("");
-                        setIsAddingMilestone(false);
-                      }
-                    }}
-                    placeholder="Nhập tên đầu việc..."
-                    className="flex-1 bg-transparent border-0 p-0 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-                    autoFocus
-                  />
-                  <span className="text-[10px] text-slate-400 select-none">
-                    Enter để thêm • Esc để hủy
-                  </span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsAddingMilestone(true)}
-                  className="inline-flex items-center gap-1.5 py-1 px-1 text-xs text-slate-400 hover:text-slate-700 transition-colors cursor-pointer select-none"
-                >
-                  <Plus className="size-3" strokeWidth={1.5} />
-                  <span>Thêm đầu việc</span>
-                </button>
-              )}
+                          {isSelected && <Check className="size-3" strokeWidth={1.5} />}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </FloatingPortal>
             </div>
-          </form>
 
-          {/* Right Sliding AI Agent Panel */}
-          {isAgentOpen && (
-            <LinearTaskAgentPanel
-              isOpen={isAgentOpen}
-              onClose={() => setIsAgentOpen(false)}
-              onCollapse={() => setIsAgentOpen(false)}
-              onApplySuggestion={handleApplyAiSuggestion}
-              currentDraft={{
-                title,
-                summary,
-                description,
-                priority,
-                dueDate,
-                startDate,
-                category,
-                leadAssigneeName,
-                coAssignees,
-                milestones,
-              }}
-              availablePersonnel={availablePersonnel}
+            {/* 3.5 Start Date Chip */}
+            <VietnameseDatePicker
+              value={startDate}
+              onChange={(val) => setStartDate(val)}
+              label="Bắt đầu:"
+              variant="chip"
+              icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+              placeholder="dd/mm/yyyy"
             />
-          )}
+
+            {/* 3.6 Target Due Date Chip (P0 Field) */}
+            <VietnameseDatePicker
+              value={dueDate}
+              required
+              onChange={(val) => {
+                setDueDate(val);
+                if (fieldErrors.dueDate) {
+                  setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
+                }
+              }}
+              label="Hạn: *"
+              variant="chip"
+              error={Boolean(fieldErrors.dueDate)}
+              icon={
+                <CalendarClock
+                  className={cn(
+                    "size-3",
+                    fieldErrors.dueDate ? "text-rose-500" : "text-muted-foreground"
+                  )}
+                  strokeWidth={1.5}
+                />
+              }
+              placeholder="dd/mm/yyyy"
+            />
+
+            {/* 3.7 Category / Domain Chip */}
+            <div ref={catTriggerRef} className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "cat" ? null : "cat")
+                }
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
+                  openDropdown === "cat"
+                    ? "border-border bg-accent text-foreground shadow-2xs"
+                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
+                )}
+              >
+                <Tag className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                <span>
+                  {CATEGORY_OPTIONS.find((c) => c.id === category)?.label || "Lĩnh vực"}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
+                    openDropdown === "cat" && "rotate-180 text-foreground"
+                  )}
+                />
+              </button>
+
+              <FloatingPortal
+                isOpen={openDropdown === "cat"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={catTriggerRef}
+                className="w-52 p-1 space-y-0.5"
+                ariaLabel="Chọn lĩnh vực công việc"
+              >
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setCategory(opt.id);
+                      setOpenDropdown(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                      category === opt.id
+                        ? "font-semibold text-foreground bg-accent"
+                        : "text-foreground hover:bg-accent/70"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {category === opt.id && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
+                  </button>
+                ))}
+              </FloatingPortal>
+            </div>
+          </div>
+
+          {/* 4. Detailed Description / Canvas */}
+          <div className="pt-0.5 flex-1 flex flex-col min-h-[120px]">
+            <textarea
+              ref={descriptionTextareaRef}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mô tả nội dung chỉ đạo, căn cứ pháp lý, yêu cầu kỹ thuật hoặc tiêu chí nghiệm thu..."
+              rows={4}
+              className="w-full flex-1 min-h-[100px] resize-none bg-transparent border-0 p-0 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 leading-relaxed"
+            />
+          </div>
         </div>
 
-        {/* Modal Bottom Footer - Restrained & Clean */}
-        <footer className="flex items-center justify-end gap-2 px-6 py-3 border-t border-slate-100 bg-white shrink-0">
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            disabled={isSubmitting}
-            className="h-7.5 px-3 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded transition-colors cursor-pointer"
-          >
-            Hủy
-          </button>
+        {/* Modal Bottom Footer - Sticky at bottom */}
+        <footer className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-t border-border/60 bg-muted/20 shrink-0">
+          {/* Shortcut Hint */}
+          <div className="text-[11px] text-muted-foreground select-none hidden sm:inline-flex items-center gap-1">
+            <kbd className="font-mono bg-background border border-border px-1 py-0.2 rounded text-[10px] text-foreground shadow-2xs">
+              ⌘ / Ctrl
+            </kbd>
+            <span>+</span>
+            <kbd className="font-mono bg-background border border-border px-1 py-0.2 rounded text-[10px] text-foreground shadow-2xs">
+              Enter
+            </kbd>
+            <span>để tạo</span>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleSubmit()}
-            disabled={isSubmitting || !title.trim()}
-            className="h-7.5 px-3.5 text-xs font-medium rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="size-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5 inline-block" />
-                Đang tạo...
-              </>
-            ) : (
-              "Tạo việc"
-            )}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={handleRequestClose}
+              disabled={isSubmitting}
+              className="h-7.5 px-3 text-xs font-medium text-foreground hover:bg-accent rounded-md transition-colors cursor-pointer"
+            >
+              Hủy
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit()}
+              disabled={isSubmitting || !title.trim()}
+              className="h-7.5 px-3.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="size-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin inline-block" />
+                  <span>Đang tạo...</span>
+                </>
+              ) : (
+                <span>Tạo nhiệm vụ</span>
+              )}
+            </button>
+          </div>
         </footer>
       </div>
 
       {/* Confirmation Dialog on Unsaved Changes */}
       {showConfirmClose && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
         >
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
+          <div className="bg-card rounded-xl shadow-2xl border border-border max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-start gap-3">
               <div className="size-8 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-                <AlertCircle className="size-4" />
+                <AlertCircle className="size-4" strokeWidth={1.5} />
               </div>
               <div className="space-y-1">
                 <h4
                   id="confirm-dialog-title"
-                  className="text-sm font-semibold text-slate-900"
+                  className="text-sm font-semibold text-foreground"
                 >
                   Bản nháp có thay đổi chưa lưu
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Biểu mẫu tạo nhiệm vụ đang có dữ liệu chưa lưu. B���n muốn lưu tạm bản nháp trong phiên làm việc hay hủy bỏ hoàn toàn?
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Biểu mẫu tạo nhiệm vụ đang có dữ liệu chưa lưu. Bạn muốn lưu tạm bản nháp trong phiên làm việc hay hủy bỏ hoàn toàn?
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-border/60">
               <Button
                 type="button"
                 variant="outline"
@@ -1249,29 +1170,22 @@ export function LinearCreateTaskModal({
                   setShowConfirmClose(false);
                   onClose();
                 }}
-                className="w-full sm:w-auto text-xs h-8 text-rose-600 hover:text-rose-700 border-rose-200 hover:bg-rose-50"
+                className="w-full sm:w-auto text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
               >
-                Hủy bỏ bản nháp
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setShowConfirmClose(false);
-                  onClose();
-                }}
-                className="w-full sm:w-auto text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Lưu nháp & Đóng
+                Hủy và xóa nháp
               </Button>
             </div>
           </div>
         </div>
       )}
-    </div>,
-    document.body
+    </div>
   );
+
+  if (typeof document === "undefined") {
+    return modalElement;
+  }
+
+  return createPortal(modalElement, document.body);
 }
 
 export default LinearCreateTaskModal;

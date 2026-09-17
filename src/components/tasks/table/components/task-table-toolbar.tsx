@@ -514,7 +514,7 @@ export function TaskTableToolbar({
               <button
                 type="button"
                 onClick={onAddTask}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs active:scale-95 transition-all touch-manipulation cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs active:scale-95 transition-all touch-manipulation cursor-pointer"
               >
                 <Plus className="size-4" strokeWidth={1.5} />
                 <span>Tạo nhiệm vụ</span>
@@ -1031,10 +1031,10 @@ export function TaskTableToolbar({
               variant="default"
               size="sm"
               onClick={onAddTask}
-              className="h-9 px-3.5 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer"
+              className="h-8 px-3 gap-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 hover:brightness-105 shadow-2xs cursor-pointer"
               aria-label="Tạo nhiệm vụ mới"
             >
-              <Plus className="size-4" strokeWidth={1.5} />
+              <Plus className="size-3.5" strokeWidth={1.5} />
               <span>Tạo nhiệm vụ</span>
             </Button>
           )}

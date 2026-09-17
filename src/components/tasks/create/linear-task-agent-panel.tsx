@@ -2,27 +2,14 @@
 
 import * as React from "react";
 import {
-  Boxes,
   ChevronRight,
   X,
   Send,
   Loader2,
-  CheckCircle2,
   AlertCircle,
-  RefreshCw,
-  Calendar,
-  Flag,
-  ArrowRight,
-  ListTodo,
   Sparkles,
-  User,
-  Users,
-  Info,
-  Check,
-  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 export interface TaskMilestoneItem {
   id: string;
@@ -46,8 +33,8 @@ export interface TaskAgentSuggestion {
 
 export interface LinearTaskAgentPanelProps {
   isOpen: boolean;
-  onClose: () => void;
-  onCollapse: () => void;
+  onClose?: () => void;
+  onCollapse?: () => void;
   onApplySuggestion: (
     suggestion: TaskAgentSuggestion,
     options?: { onlyEmptyFields?: boolean }
@@ -72,7 +59,7 @@ const PROMPT_PILLS = [
     id: "scope",
     label: "Xác định mục tiêu & phạm vi",
     prompt:
-      "Xác định mục tiêu chỉ đạo, căn cứ pháp trị và phạm vi triển khai cho nhiệm vụ.",
+      "Xác định mục tiêu chỉ đạo, căn cứ pháp lý và phạm vi triển khai cho nhiệm vụ.",
   },
   {
     id: "timeline",
@@ -121,25 +108,22 @@ function generateMockAgentResponse(
     .toISOString()
     .split("T")[0];
 
+  // Candidates for DRI & Collaborators
   const candidateLead =
-    personnelList.find((p) =>
-      p.role?.toLowerCase().includes("trưởng") ||
-      p.role?.toLowerCase().includes("phó")
-    )?.name || personnelList[0]?.name;
+    personnelList.length > 0 ? personnelList[0].name : "Trưởng phòng QLĐT";
+  const candidateCo =
+    personnelList.length > 1
+      ? personnelList.slice(1, 3).map((p) => p.name)
+      : [];
 
-  const candidateCo = personnelList
-    .filter((p) => p.name !== candidateLead)
-    .slice(0, 2)
-    .map((p) => p.name);
-
-  if (normalized.includes("timeline") || normalized.includes("mốc thời gian")) {
+  if (normalized.includes("mốc") || normalized.includes("phân rã") || normalized.includes("chia")) {
     return {
       title: baseTitle,
       summary:
-        "Kế hoạch tiến độ thực hiện đồng bộ, kiểm soát chặt chẽ các mốc bàn giao nghiệm thu.",
+        "Phân rã nhiệm vụ thành 4 giai đoạn độc lập có sản phẩm nghiệm thu rõ ràng.",
       priority: "HIGH",
       description:
-        "Căn cứ Kế hoạch năm học và chỉ đạo của Ban Giám hiệu:\n- Đơn vị chủ trì chịu trách nhiệm rà soát tiến độ định kỳ vào thứ Sáu hàng tuần.\n- Mọi điều chỉnh về thời hạn phải có văn bản trình BGH phê duyệt trước 03 ngày làm việc.\n- Bàn giao sản phẩm đúng quy chuẩn kiểm thử và biên bản nghiệm thu kỹ thuật.",
+        "Kế hoạch triển khai chia nhỏ theo các mốc công việc:\n- Giai đoạn 1: Thu thập hồ sơ, căn cứ pháp lý và yêu cầu thực tế.\n- Giai đoạn 2: Xây dựng dự thảo phương án và thẩm định kỹ thuật.\n- Giai đoạn 3: Triển khai thí điểm tại các đơn vị trực thuộc.\n- Giai đoạn 4: Hoàn thiện báo cáo tổng kết và nghiệm thu chính thức.",
       startDate,
       targetDate,
       category: "CHUYEN_DOI_SO",
@@ -148,25 +132,25 @@ function generateMockAgentResponse(
       milestones: [
         {
           id: `ms-${Date.now()}-1`,
-          title: "Khảo sát hiện trạng và thống nhất đề cương chi tiết",
+          title: "Khảo sát hiện trạng và tổng hợp nhu cầu các đơn vị",
           dueDate: m1Date,
           completed: false,
         },
         {
           id: `ms-${Date.now()}-2`,
-          title: "Hoàn tất triển khai thử nghiệm trên môi trường Staging",
+          title: "Xây dựng dự thảo quy trình và thẩm định kỹ thuật",
           dueDate: m2Date,
           completed: false,
         },
         {
           id: `ms-${Date.now()}-3`,
-          title: "Tổ chức kiểm thử chấp nhận (UAT) cùng đại diện các khoa phòng",
+          title: "Triển khai thử nghiệm và tiếp nhận phản hồi hiệu chỉnh",
           dueDate: m3Date,
           completed: false,
         },
         {
           id: `ms-${Date.now()}-4`,
-          title: "Báo cáo tổng kết và ban hành văn bản đưa vào vận hành chính thức",
+          title: "Nghiệm thu chính thức và bàn giao tài liệu hướng dẫn",
           dueDate: targetDate,
           completed: false,
         },
@@ -174,60 +158,14 @@ function generateMockAgentResponse(
     };
   }
 
-  if (
-    normalized.includes("breakdown") ||
-    normalized.includes("đầu việc") ||
-    normalized.includes("phân rã")
-  ) {
+  if (normalized.includes("nhân sự") || normalized.includes("phụ trách") || normalized.includes("dri")) {
     return {
       title: baseTitle,
       summary:
-        "Phân rã 4 đầu việc thành phần then chốt kèm tiêu chí nghiệm thu định lượng.",
-      priority: "HIGH",
+        "Phân công cụ thể vai trò Người chủ trì (DRI) và đầu mối phối hợp các đơn vị.",
+      priority: "URGENT",
       description:
-        "Yêu cầu triển khai chi tiết từng cấu phần:\n1. Thu thập dữ liệu và chuẩn hóa danh mục nghiệp vụ đào tạo.\n2. Phối hợp các phòng ban rà soát giao diện và luồng xử lý thực tế.\n3. Đào tạo chuyển giao tài liệu hướng dẫn sử dụng cho giảng viên và chuyên viên.\n4. Nghiệm thu kỹ thuật kèm biên bản bàn giao đầy đủ chữ ký.",
-      startDate,
-      targetDate,
-      category: "CNTT",
-      suggestedLeadName: candidateLead,
-      suggestedCoAssignees: candidateCo,
-      milestones: [
-        {
-          id: `ms-${Date.now()}-1`,
-          title: "Biên soạn dự thảo quy trình và thông qua phòng QLĐT/TCĐBCL",
-          dueDate: m1Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-2`,
-          title: "Cấu hình phân quyền tài khoản cho lãnh đạo và chuyên viên",
-          dueDate: m2Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-3`,
-          title: "Tập huấn tập trung cho toàn bộ cán bộ đầu mối đơn vị",
-          dueDate: m3Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-4`,
-          title: "Đánh giá mức độ sẵn sàng và ban hành văn bản hướng dẫn",
-          dueDate: targetDate,
-          completed: false,
-        },
-      ],
-    };
-  }
-
-  if (normalized.includes("nhân sự") || normalized.includes("personnel")) {
-    return {
-      title: baseTitle,
-      summary:
-        "Phân định rõ trách nhiệm Người chủ trì (DRI) và đầu mối phối hợp các đơn vị.",
-      priority: "MEDIUM",
-      description:
-        "Chỉ đạo phân công nhân sự:\n- Trưởng đơn vị/Người chủ trì (DRI) chịu trách nhiệm toàn diện trước BGH về chất lượng và tiến độ.\n- Cán bộ kỹ thuật và chuyên viên nghiệp vụ phối hợp thường trực, cập nhật nhật ký công tác trên hệ thống.\n- Đơn vị phối hợp cử đầu mối chuyên môn xử lý phản hồi trong vòng 24 giờ làm việc.",
+        "Yêu cầu về nhân sự thực hiện:\n- Người chủ trì chịu trách nhiệm toàn diện trước BGH về tiến độ và chất lượng.\n- Các nhân sự phối hợp chủ động thực hiện phần việc được giao theo phân công.",
       startDate,
       targetDate,
       category: "CHUYEN_DOI_SO",
@@ -236,13 +174,13 @@ function generateMockAgentResponse(
       milestones: [
         {
           id: `ms-${Date.now()}-1`,
-          title: "Thành lập tổ công tác liên phòng ban và giao nhiệm vụ cụ thể",
+          title: "Họp phân công nhiệm vụ chi tiết cho các thành viên",
           dueDate: m1Date,
           completed: false,
         },
         {
           id: `ms-${Date.now()}-2`,
-          title: "Họp rà soát tiến độ tuần đầu và xử lý các điểm nghẽn",
+          title: "Kiểm tra tiến độ thực hiện định kỳ giữa kỳ",
           dueDate: m2Date,
           completed: false,
         },
@@ -335,7 +273,6 @@ export function LinearTaskAgentPanel({
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    // Simulated network call with resilience (fallback & timeout)
     timerRef.current = setTimeout(() => {
       try {
         const res = generateMockAgentResponse(
@@ -376,45 +313,24 @@ export function LinearTaskAgentPanel({
   return (
     <aside
       className={cn(
-        "w-full md:w-[320px] lg:w-[340px] border-t md:border-t-0 md:border-l border-slate-100 bg-white shrink-0",
-        "flex flex-col h-full overflow-hidden text-slate-900 transition-all duration-200",
+        "w-full md:w-[340px] md:min-w-[340px] md:max-w-[340px] border-t md:border-t-0 md:border-l border-border/60 bg-card shrink-0",
+        "flex flex-col min-h-0 overflow-hidden text-foreground transition-all duration-200",
         "animate-in slide-in-from-right-4"
       )}
       aria-label="Khung trợ lý soạn thảo nhiệm vụ"
     >
-      {/* Panel Top Header */}
-      <header className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white shrink-0">
-        <h3 className="text-xs font-semibold text-slate-700">
+      {/* Panel Top Header - Clean Title Only */}
+      <header className="flex items-center px-4 py-2.5 border-b border-border/60 bg-card shrink-0">
+        <h3 className="text-xs font-semibold text-foreground">
           Trợ lý soạn thảo
         </h3>
-
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={onCollapse}
-            className="size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-label="Thu gọn khung trợ lý"
-            title="Thu gọn"
-          >
-            <ChevronRight className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-label="Đóng khung trợ lý"
-            title="Đóng"
-          >
-            <X className="size-3.5" strokeWidth={1.5} />
-          </button>
-        </div>
       </header>
 
       {/* Main Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {/* Lightweight Prompt Suggestions */}
         <div className="space-y-1">
-          <span className="text-[10px] font-medium text-slate-400 select-none">
+          <span className="text-[10px] font-medium text-muted-foreground select-none">
             Gợi ý cấu trúc
           </span>
           <div className="flex flex-wrap gap-1">
@@ -427,7 +343,7 @@ export function LinearTaskAgentPanel({
                   handleGenerate(pill.prompt);
                 }}
                 disabled={isGenerating}
-                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-left cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none"
+                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-left cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none"
               >
                 <span>{pill.label}</span>
               </button>
@@ -436,7 +352,7 @@ export function LinearTaskAgentPanel({
         </div>
 
         {/* Input Box */}
-        <div className="rounded-md border border-slate-200/80 bg-white p-2.5 space-y-1.5 focus-within:border-slate-400 transition-colors">
+        <div className="rounded-md border border-border/80 bg-background p-2.5 space-y-1.5 focus-within:border-border transition-colors">
           <textarea
             ref={textareaRef}
             value={prompt}
@@ -449,11 +365,11 @@ export function LinearTaskAgentPanel({
             }}
             placeholder="Yêu cầu trợ lý soạn thảo cấu trúc..."
             rows={3}
-            className="w-full resize-none bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none leading-relaxed"
+            className="w-full resize-none bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none leading-relaxed"
           />
 
-          <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-            <span className="text-[10px] text-slate-400">
+          <div className="flex items-center justify-between pt-1 border-t border-border/40">
+            <span className="text-[10px] text-muted-foreground">
               Nhấn Enter để gửi
             </span>
             <button
@@ -487,7 +403,7 @@ export function LinearTaskAgentPanel({
               <button
                 type="button"
                 onClick={() => handleGenerate()}
-                className="h-6 px-2 text-[11px] font-medium rounded border border-rose-200 bg-white text-rose-700 hover:bg-rose-50 cursor-pointer"
+                className="h-6 px-2 text-[11px] font-medium rounded border border-rose-200 bg-background text-rose-700 hover:bg-rose-50 cursor-pointer"
               >
                 Thử lại
               </button>
@@ -497,9 +413,9 @@ export function LinearTaskAgentPanel({
 
         {/* Loading State Animation */}
         {isGenerating && (
-          <div className="flex flex-col items-center justify-center py-8 space-y-1.5 text-center text-slate-500">
-            <Loader2 className="size-5 animate-spin text-slate-600" />
-            <p className="text-xs font-medium text-slate-800">
+          <div className="flex flex-col items-center justify-center py-8 space-y-1.5 text-center text-muted-foreground">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <p className="text-xs font-medium text-foreground">
               Trợ lý đang soạn thảo...
             </p>
           </div>
@@ -507,12 +423,12 @@ export function LinearTaskAgentPanel({
 
         {/* Generated Suggestion Preview (Diff & Approval) */}
         {!isGenerating && suggestion && (
-          <div className="rounded-md border border-slate-200/90 bg-white p-3 space-y-2.5 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-              <span className="text-xs font-semibold text-slate-800">
+          <div className="rounded-md border border-border/80 bg-background p-3 space-y-2.5 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
+              <span className="text-xs font-semibold text-foreground">
                 Đề xuất nội dung
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-muted-foreground font-mono">
                 {suggestion.priority}
               </span>
             </div>
@@ -521,10 +437,10 @@ export function LinearTaskAgentPanel({
             <div className="space-y-2 text-xs">
               {/* Title proposal */}
               <div className="space-y-0.5">
-                <span className="text-[10px] uppercase text-slate-400 font-medium">
+                <span className="text-[10px] uppercase text-muted-foreground font-medium">
                   Tên nhiệm vụ
                 </span>
-                <div className="text-xs font-semibold text-slate-900 leading-snug">
+                <div className="text-xs font-semibold text-foreground leading-snug">
                   {suggestion.title}
                 </div>
               </div>
@@ -532,17 +448,17 @@ export function LinearTaskAgentPanel({
               {/* Summary proposal */}
               {suggestion.summary && (
                 <div className="space-y-0.5">
-                  <span className="text-[10px] uppercase text-slate-400 font-medium">
+                  <span className="text-[10px] uppercase text-muted-foreground font-medium">
                     Tóm tắt
                   </span>
-                  <div className="text-xs text-slate-600 leading-relaxed">
+                  <div className="text-xs text-muted-foreground leading-relaxed">
                     {suggestion.summary}
                   </div>
                 </div>
               )}
 
               {/* Timeline & Metadata */}
-              <div className="text-[11px] text-slate-500 flex items-center gap-2">
+              <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                 <span>Hạn: {suggestion.targetDate}</span>
                 <span>•</span>
                 <span>{suggestion.milestones.length} mốc thực hiện</span>
@@ -550,28 +466,28 @@ export function LinearTaskAgentPanel({
 
               {/* Suggested Personnel (if any) */}
               {suggestion.suggestedLeadName && (
-                <div className="text-[11px] text-slate-600">
-                  Chủ trì dự kiến: <strong>{suggestion.suggestedLeadName}</strong>
+                <div className="text-[11px] text-muted-foreground">
+                  Chủ trì dự kiến: <strong className="text-foreground">{suggestion.suggestedLeadName}</strong>
                 </div>
               )}
 
               {/* Milestones excerpt */}
               {suggestion.milestones.length > 0 && (
                 <div className="space-y-1">
-                  <div className="text-[10px] font-semibold uppercase text-slate-400">
+                  <div className="text-[10px] font-semibold uppercase text-muted-foreground">
                     Các mốc đầu việc dự kiến
                   </div>
                   <ul className="space-y-0.5">
                     {suggestion.milestones.map((m, idx) => (
                       <li
                         key={m.id}
-                        className="text-[11px] text-slate-600 flex items-start justify-between gap-2 py-0.5"
+                        className="text-[11px] text-muted-foreground flex items-start justify-between gap-2 py-0.5"
                       >
                         <span className="truncate">
                           {idx + 1}. {m.title}
                         </span>
                         {m.dueDate && (
-                          <span className="text-[10px] text-slate-400 shrink-0 font-mono">
+                          <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
                             {m.dueDate}
                           </span>
                         )}
@@ -583,17 +499,17 @@ export function LinearTaskAgentPanel({
             </div>
 
             {/* Overwrite Protection Option */}
-            <div className="pt-1.5 border-t border-slate-100 flex items-center gap-1.5">
+            <div className="pt-1.5 border-t border-border/40 flex items-center gap-1.5">
               <input
                 id="only-empty-fields"
                 type="checkbox"
                 checked={onlyEmptyFields}
                 onChange={(e) => setOnlyEmptyFields(e.target.checked)}
-                className="size-3.5 rounded border-slate-300 text-slate-900 focus:ring-primary cursor-pointer"
+                className="size-3.5 rounded border-border text-foreground focus:ring-primary cursor-pointer"
               />
               <label
                 htmlFor="only-empty-fields"
-                className="text-[11px] text-slate-500 cursor-pointer select-none"
+                className="text-[11px] text-muted-foreground cursor-pointer select-none"
               >
                 Chỉ điền các trường còn trống
               </label>
@@ -604,7 +520,7 @@ export function LinearTaskAgentPanel({
               <button
                 type="button"
                 onClick={handleDiscard}
-                className="flex-1 h-7 text-xs text-slate-500 hover:text-slate-800 rounded hover:bg-slate-50 cursor-pointer"
+                className="flex-1 h-7 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-accent cursor-pointer"
               >
                 Hủy bỏ
               </button>

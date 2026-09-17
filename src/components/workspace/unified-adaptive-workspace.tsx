@@ -27,6 +27,7 @@ import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
+  getCurrentAcademicPeriod,
   isTaskPastDue,
 } from "@/lib/academic-calendar";
 import { formatDisplayDate } from "@/lib/format/date";
@@ -47,6 +48,7 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { useLinearTaskShortcuts } from "@/hooks/use-linear-task-shortcuts";
+import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 
 const LinearCreateTaskModal = dynamic(
   () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
@@ -767,8 +769,13 @@ export function UnifiedAdaptiveWorkspace({
 
   const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
 
+  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
+
   // Canonical workspace query state manager
-  const workspaceQuery = useWorkspaceQuery({ defaultScope });
+  const workspaceQuery = useWorkspaceQuery({
+    defaultScope,
+    defaultMonth: currentAcademicMonth,
+  });
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
@@ -900,9 +907,11 @@ export function UnifiedAdaptiveWorkspace({
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
   const router = useRouter();
+  const { saveScrollAndParams } = useListScrollRestore();
 
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
+      saveScrollAndParams();
       if (onSelectTask) {
         onSelectTask(task);
         return;
@@ -914,7 +923,7 @@ export function UnifiedAdaptiveWorkspace({
       workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
       router.push(`/tasks/${task.id}`);
     },
-    [onSelectTask, workspaceQuery, router]
+    [onSelectTask, workspaceQuery, router, saveScrollAndParams]
   );
 
   const handleCloseDetail = React.useCallback(() => {
@@ -935,7 +944,10 @@ export function UnifiedAdaptiveWorkspace({
   const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(activeWorkbox);
   const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
-  const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
+  const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">(() => {
+    if (workspaceQuery?.queryState.month !== undefined) return workspaceQuery.queryState.month;
+    return currentAcademicMonth;
+  });
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
@@ -1009,7 +1021,7 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     } else {
-      setCurrentMonth("ALL");
+      setCurrentMonth(currentAcademicMonth);
     }
     if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
       setInternalOverdue(true);
@@ -1624,7 +1636,7 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    setCurrentMonth("ALL");
+    setCurrentMonth(currentAcademicMonth);
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1642,6 +1654,7 @@ export function UnifiedAdaptiveWorkspace({
     onWorkboxChange,
     onAction,
     workspaceQuery,
+    currentAcademicMonth,
   ]);
 
   const handleRemoveDept = React.useCallback(() => {

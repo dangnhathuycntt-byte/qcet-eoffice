@@ -56,7 +56,7 @@ describe('Authentication and User API Routes Hardening', () => {
   });
 
   describe('1. POST /api/auth/login', () => {
-    test('succeeds with valid credentials, sets session cookie and returns sanitized user', async () => {
+    test('rejects password login for a valid provisioned user without issuing a cookie', async () => {
       const req = new Request('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -70,7 +70,7 @@ describe('Authentication and User API Routes Hardening', () => {
       });
 
       const res = await loginPost(req);
-      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.status, 403);
 
       // Verify headers
       assert.strictEqual(res.headers.get('cache-control'), 'private, no-store');
@@ -79,24 +79,15 @@ describe('Authentication and User API Routes Hardening', () => {
 
       // Verify cookie
       const cookie = res.cookies.get(SESSION_COOKIE_NAME);
-      assert.ok(cookie);
-      assert.ok(cookie.value.length > 20);
-      assert.strictEqual(cookie.httpOnly, true);
-      assert.strictEqual(cookie.sameSite, 'lax');
-      assert.strictEqual(cookie.path, '/');
+      assert.equal(cookie, undefined);
 
       // Verify body
       const json = await res.json();
-      assert.strictEqual(json.success, true);
-      assert.ok(json.user);
-      assert.strictEqual(json.user.id, testUserId);
-      assert.strictEqual(json.user.email, testUserEmail);
-      assert.strictEqual(json.user.role, 'CHUYEN_VIEN');
-      assert.strictEqual(json.user.passwordHash, undefined, 'Must not leak passwordHash');
-      assert.strictEqual(json.user.password, undefined, 'Must not leak password');
+      assert.strictEqual(json.code || json.error?.code, 'FORBIDDEN');
+      assert.match(json.message || json.error?.message || json.error, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
     });
 
-    test('rejects invalid password with 401 AUTH_REQUIRED', async () => {
+    test('rejects invalid password through the same disabled endpoint', async () => {
       const req = new Request('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -110,16 +101,16 @@ describe('Authentication and User API Routes Hardening', () => {
       });
 
       const res = await loginPost(req);
-      assert.strictEqual(res.status, 401);
+      assert.strictEqual(res.status, 403);
       assert.strictEqual(res.headers.get('cache-control'), 'private, no-store');
 
       const json = await res.json();
       assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'AUTH_REQUIRED');
-      assert.strictEqual(json.message || json.error?.message || json.error, 'Email hoặc mật khẩu không chính xác');
+      assert.strictEqual(json.code || json.error?.code, 'FORBIDDEN');
+      assert.match(json.message || json.error?.message || json.error, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
     });
 
-    test('rejects non-existent user with 401 AUTH_REQUIRED', async () => {
+    test('does not disclose whether a password-login user exists', async () => {
       const req = new Request('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -133,14 +124,14 @@ describe('Authentication and User API Routes Hardening', () => {
       });
 
       const res = await loginPost(req);
-      assert.strictEqual(res.status, 401);
+      assert.strictEqual(res.status, 403);
 
       const json = await res.json();
       assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'AUTH_REQUIRED');
+      assert.strictEqual(json.code || json.error?.code, 'FORBIDDEN');
     });
 
-    test('enforces rate limit after exceeding threshold (429 RATE_LIMITED)', async () => {
+    test('disabled password endpoint remains forbidden across repeated requests', async () => {
       const ip = `10.0.0.${testRunId % 200}`;
       const targetEmail = `ratelimit.${testRunId}@qcet.edu.vn`;
 
@@ -158,10 +149,10 @@ describe('Authentication and User API Routes Hardening', () => {
           }),
         });
         const res = await loginPost(req);
-        assert.strictEqual(res.status, 401);
+        assert.strictEqual(res.status, 403);
       }
 
-      // 6th request should hit rate limit
+      // The retired endpoint performs no credential processing or account lookup.
       const blockedReq = new Request('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -174,12 +165,11 @@ describe('Authentication and User API Routes Hardening', () => {
         }),
       });
       const blockedRes = await loginPost(blockedReq);
-      assert.strictEqual(blockedRes.status, 429);
+      assert.strictEqual(blockedRes.status, 403);
 
       const json = await blockedRes.json();
       assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'RATE_LIMITED');
-      assert.match(json.message || json.error?.message || json.error, /Rate limit exceeded|Too many requests/i);
+      assert.strictEqual(json.code || json.error?.code, 'FORBIDDEN');
     });
   });
 

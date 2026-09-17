@@ -44,6 +44,17 @@ const VALID_COOKIE_NAMES = [
  * Extracts raw authentication token or session token from HTTP request.
  */
 export function extractTokenFromRequest(request: RequestLike): string | null {
+  return extractTokensFromRequest(request)[0] ?? null;
+}
+
+/** Returns authentication candidates in canonical priority order. */
+export function extractTokensFromRequest(request: RequestLike): string[] {
+  const tokens: string[] = [];
+  const add = (value: string | null | undefined) => {
+    const token = value?.trim();
+    if (token && !tokens.includes(token)) tokens.push(token);
+  };
+
   // 1. Check Authorization header (Bearer token)
   let authHeader: string | null = null;
   if (request.headers) {
@@ -58,14 +69,14 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7).trim();
-    if (token) return token;
+    if (token) return [token];
   }
 
   // 2. Check NextRequest cookies map
   if (request.cookies && typeof request.cookies.get === 'function') {
     for (const name of VALID_COOKIE_NAMES) {
       const cookie = request.cookies.get(name);
-      if (cookie?.value) return cookie.value;
+      add(cookie?.value);
     }
   }
 
@@ -87,12 +98,12 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
       const [name, ...rest] = cookie.trim().split('=');
       if (VALID_COOKIE_NAMES.includes(name)) {
         const val = rest.join('=').trim();
-        if (val) return val;
+        add(val ? decodeURIComponent(val) : null);
       }
     }
   }
 
-  return null;
+  return tokens;
 }
 
 /**
@@ -104,12 +115,7 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
  * - User exists in DB and user.isActive === true
  * - Fail-closed on invalid token, expired session, disabled account, or DB failure
  */
-export async function resolveCurrentSession(request: RequestLike): Promise<CurrentSession> {
-  const token = extractTokenFromRequest(request);
-  if (!token) {
-    throw new AuthenticationError('Yêu cầu xác thực tài khoản', 'AUTH_REQUIRED');
-  }
-
+async function resolveTokenSession(token: string): Promise<CurrentSession> {
   // 1. Primary path: Query database Session by sessionToken with included User
   try {
     const dbSession = await prisma.session.findUnique({
@@ -122,7 +128,7 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
         throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
       }
       if (
-        dbSession.revokedAt != null ||
+        (dbSession as any).revokedAt != null ||
         isSessionRevoked(dbSession.id, dbSession.userId) ||
         isSessionRevoked(token, dbSession.userId)
       ) {
@@ -163,14 +169,14 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
     }
 
     // Try decoding as NextAuth / Auth.js JWE token
-    try {
-      const secret = getJwtSecret();
-      for (const salt of [
+    const secret = getJwtSecret();
+    for (const salt of [
         SESSION_COOKIE_NAME,
         SECURE_SESSION_COOKIE_NAME,
         'next-auth.session-token',
         '__Secure-next-auth.session-token',
       ]) {
+      try {
         const decodedJwe = await decode({
           token: token.trim(),
           secret,
@@ -192,9 +198,9 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
           isJwt = true;
           break;
         }
+      } catch {
+        // A token is encrypted for one cookie salt; continue trying the others.
       }
-    } catch {
-      // Continue to fail-closed
     }
   }
 
@@ -233,6 +239,27 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
       isActive: user.isActive,
     },
   };
+}
+
+export async function resolveCurrentSession(request: RequestLike): Promise<CurrentSession> {
+  const tokens = extractTokensFromRequest(request);
+  if (tokens.length === 0) {
+    throw new AuthenticationError('Yêu cầu xác thực tài khoản', 'AUTH_REQUIRED');
+  }
+
+  let lastError: AuthenticationError | null = null;
+  for (const token of tokens) {
+    try {
+      return await resolveTokenSession(token);
+    } catch (error) {
+      if (error instanceof AuthenticationError) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError ?? new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
 }
 
 /**

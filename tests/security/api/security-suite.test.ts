@@ -373,12 +373,11 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
   });
 
   describe('7. Rate Limiting Protection (OWASP API4)', () => {
-    test('Enforces rate limits on repeated login attempts (HTTP 429)', async () => {
+    test('Password login stays disabled across repeated attempts', async () => {
       const testIp = `198.51.100.${Math.floor(Math.random() * 200) + 1}`;
       resetRateLimits();
 
       let lastStatus = 200;
-      // AUTH_SENSITIVE limit is 10 requests per minute
       for (let i = 0; i < 15; i++) {
         const req = new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
@@ -394,14 +393,10 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
 
         const res = await loginRoute(req);
         lastStatus = res.status;
-        if (res.status === 429) {
-          const json = await res.json();
-          assert.equal(json.code, 'RATE_LIMITED');
-          break;
-        }
+        assert.equal(res.status, 403);
       }
 
-      assert.equal(lastStatus, 429, 'Repeated sensitive requests should be rate limited with HTTP 429');
+      assert.equal(lastStatus, 403, 'Retired password authentication must remain forbidden');
     });
   });
 });

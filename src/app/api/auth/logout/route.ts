@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  SESSION_COOKIE_NAME,
-  SECURE_SESSION_COOKIE_NAME,
-  LEGACY_SESSION_COOKIE_NAME,
-  getSessionFromRequest,
-} from "@/lib/jwt-session";
+import { SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { revokeSession } from "@/server/auth/session-policy";
-import { extractTokenFromRequest } from "@/server/auth/current-session";
+import { extractTokensFromRequest } from "@/server/auth/current-session";
 
 const COOKIES_TO_CLEAR = [
   SESSION_COOKIE_NAME,
@@ -27,17 +22,19 @@ const COOKIES_TO_CLEAR = [
 ];
 
 export async function POST(req: NextRequest | Request): Promise<NextResponse> {
+  const requestUrl = new URL(req.url);
+  const origin = req.headers.get("origin");
+  const fetchSite = req.headers.get("sec-fetch-site");
+  if ((origin && origin !== requestUrl.origin) || fetchSite === "cross-site") {
+    return NextResponse.json(
+      { success: false, error: "Cross-site logout request rejected" },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   try {
-    const token = extractTokenFromRequest(req as any);
-    if (token) {
+    for (const token of extractTokensFromRequest(req as any)) {
       await revokeSession(token);
-    }
-    const session = await getSessionFromRequest(req as any);
-    if (session) {
-      const sessionId = (session as any).sessionId || (session as any).jti;
-      if (sessionId && sessionId !== session.id && sessionId !== `session_${session.id}`) {
-        await revokeSession(sessionId);
-      }
     }
   } catch {
     // Gracefully continue on error
@@ -72,5 +69,8 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
 }
 
 export async function GET(req: NextRequest | Request): Promise<NextResponse> {
-  return POST(req);
+  return NextResponse.json(
+    { success: false, error: "Method not allowed" },
+    { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } }
+  );
 }

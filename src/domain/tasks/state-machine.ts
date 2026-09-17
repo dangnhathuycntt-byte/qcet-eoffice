@@ -413,6 +413,135 @@ export class TaskStateMachine {
       code: 'INVALID_STATUS',
     };
   }
+
+  /**
+   * Returns validation results for all canonical target statuses.
+   */
+  public getAllowedTransitions(
+    actor: ActorContext,
+    task: TaskContext,
+    fromStatus: TaskStatus | string
+  ): Array<{ status: CanonicalTaskStatus; allowed: boolean; reason?: string; code?: string }> {
+    const canonicalTargets: CanonicalTaskStatus[] = [
+      'NEW',
+      'IN_PROGRESS',
+      'WAITING_APPROVAL',
+      'COMPLETED',
+      'CANCELLED',
+    ];
+
+    return canonicalTargets.map((to) => {
+      const result = this.canTransition(actor, task, fromStatus, to);
+      return {
+        status: to,
+        allowed: result.allowed,
+        reason: result.reason,
+        code: result.code,
+      };
+    });
+  }
 }
 
 export const taskStateMachine = new TaskStateMachine();
+
+/**
+ * Standard status labels in administrative Vietnamese
+ */
+export function getStatusLabel(status: TaskStatus | string): string {
+  const norm = normalizeTaskStatus(status);
+  switch (norm) {
+    case 'NEW':
+      return 'Mới';
+    case 'IN_PROGRESS':
+      return 'Đang thực hiện';
+    case 'WAITING_APPROVAL':
+      return 'Chờ duyệt';
+    case 'COMPLETED':
+      return 'Hoàn thành';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    default:
+      return String(status);
+  }
+}
+
+/**
+ * Construct ActorContext safely from partial user object or session
+ */
+export function buildActorContext(user?: {
+  id?: string;
+  role?: string;
+  departmentId?: string | null;
+  department?: string | null;
+  isDelegated?: boolean;
+  delegatedTaskIds?: string[];
+} | null): ActorContext {
+  if (!user || !user.id) {
+    return {
+      id: '',
+      role: 'STAFF',
+      departmentId: null,
+      isDelegated: false,
+      delegatedTaskIds: [],
+    };
+  }
+  return {
+    id: user.id,
+    role: user.role || 'STAFF',
+    departmentId: user.departmentId || user.department || null,
+    isDelegated: Boolean(user.isDelegated),
+    delegatedTaskIds: user.delegatedTaskIds || [],
+  };
+}
+
+/**
+ * Construct TaskContext safely from any Task DTO or Entity
+ */
+export function buildTaskContext(task: any): TaskContext {
+  if (!task) {
+    return { id: '' };
+  }
+
+  const assigneeIds: string[] = [];
+  const assignees: TaskAssigneeInfo[] = [];
+
+  if (Array.isArray(task.assignees)) {
+    for (const a of task.assignees) {
+      const uId = a.userId || a.id || a.user?.id;
+      if (uId) {
+        assigneeIds.push(uId);
+        assignees.push({
+          userId: uId,
+          roleInTask: a.roleInTask || a.role,
+        });
+      }
+    }
+  }
+
+  const deliverableUploadedByIds: string[] = [];
+  if (Array.isArray(task.deliverables)) {
+    for (const d of task.deliverables) {
+      const uId = d.uploadedById || d.uploadedBy?.id;
+      if (uId) {
+        deliverableUploadedByIds.push(uId);
+      }
+    }
+  }
+
+  return {
+    id: task.id || '',
+    scope: task.scope,
+    createdById: task.createdById,
+    departmentId: task.departmentId || task.department?.id || null,
+    primaryOwnerId:
+      task.primaryOwnerId ||
+      task.driId ||
+      task.leadAssignee?.id ||
+      task.leadAssignee?.userId ||
+      null,
+    driId: task.driId || null,
+    assigneeIds,
+    assignees,
+    deliverableUploadedByIds,
+  };
+}

@@ -140,7 +140,7 @@ describe("Issue #6: OAuth Error Resolution & Error Variants", () => {
     assert.ok(errorInfo.message.includes("personal@gmail.com"));
     assert.ok(errorInfo.message.includes("@cdktcnqn.edu.vn"));
     assert.equal(errorInfo.actionText, "Thử lại bằng tài khoản trường");
-    assert.equal(errorInfo.actionHref, "/api/auth/signin/google");
+    assert.equal(errorInfo.actionHref, "/login?startGoogle=1");
   });
 
   test("account_not_found / AccessDenied: amber alert informing user to contact IT", () => {

@@ -81,6 +81,7 @@ export interface StaffTask {
   assignedToDepartmentName?: string;
   createdAt?: string;
   status: TaskStatus;
+  startDate?: string;
   dueDate: string;
   internalDueDate?: string;
   parentSchoolTaskId?: string;

@@ -8,7 +8,7 @@ import {
   tryResolveCurrentSession,
   extractTokenFromRequest,
 } from '@/server/auth/current-session';
-import { isSessionRevoked, isSessionExpired } from '@/server/auth/session-policy';
+import { isSessionExpired } from '@/server/auth/session-policy';
 import { prisma } from '@/lib/prisma';
 
 export type { CurrentSession };
@@ -163,20 +163,10 @@ export async function getApiContext(
 
   const rawToken = extractTokenFromRequest(request);
   if (rawToken) {
-    const legacySession = await getSessionFromRequest(request as any);
-    const sessionId = (legacySession as any)?.sessionId || (legacySession ? `session_${legacySession.id}` : undefined);
-    const userId = legacySession?.id;
-
-    if (
-      isSessionRevoked(rawToken, userId) ||
-      (sessionId && isSessionRevoked(sessionId, userId))
-    ) {
-      throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
-    }
-
     try {
       currentSession = await resolveCurrentSession(request);
       if (currentSession) {
+        const legacySession = await getSessionFromRequest(request as any);
         let dbRole = legacySession?.role || 'CHUYEN_VIEN';
         let dbDept = legacySession?.departmentId ?? null;
         let dbTitle = legacySession?.title ?? null;

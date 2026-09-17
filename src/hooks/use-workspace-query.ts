@@ -103,6 +103,7 @@ export function useWorkspaceQuery(
   const isCalendar = options?.isCalendar ?? false;
   const defaultView = options?.defaultView;
   const defaultScope = options?.defaultScope;
+  const defaultMonth = options?.defaultMonth;
   const omitDefaultScope = options?.omitDefaultScope;
   const unitParamKey = options?.unitParamKey;
 
@@ -127,8 +128,9 @@ export function useWorkspaceQuery(
       isCalendar,
       defaultView,
       defaultScope,
+      defaultMonth,
     });
-  }, [searchParams, isCalendar, defaultView, defaultScope, popstateCount]);
+  }, [searchParams, isCalendar, defaultView, defaultScope, defaultMonth, popstateCount]);
 
   // Event handlers (including debounced search) must merge into the live URL,
   // not the render snapshot captured before another filter or scope changed.
@@ -138,8 +140,9 @@ export function useWorkspaceQuery(
       isCalendar,
       defaultView,
       defaultScope,
+      defaultMonth,
     });
-  }, [queryState, isCalendar, defaultView, defaultScope]);
+  }, [queryState, isCalendar, defaultView, defaultScope, defaultMonth]);
 
   // Internal navigation dispatcher with unrelated param preservation and shallow routing support
   const dispatchUpdate = React.useCallback(
@@ -157,6 +160,7 @@ export function useWorkspaceQuery(
         omitDefaultScope,
         unitParamKey: unitParamKey ?? nextState._unitParamKey,
         preserveParams: effectiveSearchParams || undefined,
+        defaultMonth,
       });
 
       const queryStr = nextParams.toString();
@@ -268,10 +272,12 @@ export function useWorkspaceQuery(
         trimmed && trimmed !== "ALL" && trimmed !== "all" && trimmed.length > 0
           ? trimmed
           : undefined;
+      // Khi chọn đơn vị cụ thể (clean): chuyển sang 'unit'. Khi xóa đơn vị (clean === undefined): giữ nguyên scope hiện tại
+      const targetScope = clean ? "unit" : queryState.scope;
       dispatchUpdate(
         {
           ...queryState,
-          scope: "unit",
+          scope: targetScope,
           dept: clean,
           unitId: clean,
           unit: clean,
@@ -290,10 +296,12 @@ export function useWorkspaceQuery(
         trimmed && trimmed !== "ALL" && trimmed !== "all" && trimmed.length > 0
           ? trimmed
           : undefined;
+      // Khi chọn đơn vị cụ thể (clean): chuyển sang 'unit'. Khi xóa đơn vị (clean === undefined): giữ nguyên scope hiện tại
+      const targetScope = clean ? "unit" : queryState.scope;
       dispatchUpdate(
         {
           ...queryState,
-          scope: "unit",
+          scope: targetScope,
           dept: clean,
           unitId: clean,
           unit: clean,
@@ -463,7 +471,7 @@ export function useWorkspaceQuery(
         dept: preserveScope ? queryState.dept : undefined,
         unit: preserveScope ? queryState.unit : undefined,
         unitId: preserveScope ? queryState.unitId : undefined,
-        month: preservePeriod ? queryState.month : "ALL",
+        month: preservePeriod ? queryState.month : (defaultMonth ?? "ALL"),
         date: preservePeriod ? queryState.date : undefined,
         status: "ALL",
         priority: undefined,
@@ -481,7 +489,7 @@ export function useWorkspaceQuery(
 
       dispatchUpdate(resetState, navOptions);
     },
-    [readCurrentState, dispatchUpdate, isCalendar, defaultScope, defaultView]
+    [readCurrentState, dispatchUpdate, isCalendar, defaultScope, defaultView, defaultMonth]
   );
 
   const updateWorkspaceQuery = React.useCallback(

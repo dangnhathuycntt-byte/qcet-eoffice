@@ -110,7 +110,7 @@ export function resolveOAuthError(
         variant: "amber",
         email: email || undefined,
         actionText: "Thử lại bằng tài khoản trường",
-        actionHref: "/api/auth/signin/google",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "account_not_found":
@@ -142,11 +142,44 @@ export function resolveOAuthError(
       };
 
     case "oauth_state_invalid":
+    case "OAuthStateError":
       return {
         code: "oauth_state_invalid",
-        title: "Phiên đăng nhập hết hạn",
-        message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.",
+        title: "Lỗi trạng thái xác thực",
+        message: "Yêu cầu xác thực Google không hợp lệ hoặc mã bảo mật (State/PKCE) đã hết hạn. Vui lòng thử đăng nhập lại.",
         variant: "red",
+        actionText: "Thử đăng nhập lại",
+        actionHref: "/login?startGoogle=1",
+      };
+
+    case "session_expired":
+      return {
+        code: "session_expired",
+        title: "Phiên làm việc hết hạn",
+        message: "Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.",
+        variant: "amber",
+        actionText: "Đăng nhập lại",
+        actionHref: "/login?startGoogle=1",
+      };
+
+    case "server_error":
+      return {
+        code: "server_error",
+        title: "Lỗi kết nối máy chủ",
+        message: "Không thể kết nối đến cơ sở dữ liệu hoặc máy chủ xác thực. Vui lòng thử lại sau.",
+        variant: "red",
+      };
+
+    case "CallbackRouteError":
+    case "OAuthCallbackError":
+    case "OAuthAccountNotLinked":
+      return {
+        code: "oauth_callback_error",
+        title: "Lỗi trong quá trình xác thực",
+        message: "Quá trình xác thực với Google gặp sự cố hoặc tài khoản chưa được liên kết. Vui lòng thử lại.",
+        variant: "red",
+        actionText: "Thử lại",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "oauth_not_configured":

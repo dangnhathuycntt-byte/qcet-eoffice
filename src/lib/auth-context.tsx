@@ -432,19 +432,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. Call server logout with keepalive: true to clear session cookies
+    // 2. Remove authenticated UI state immediately; network cleanup must not leave
+    // sensitive screens visible while a slow logout request is pending.
+    setAuthState({ status: "anonymous" });
+    setUser(null);
+    setIsAuthenticated(false);
+    setIsOfflineReadOnly(false);
+    setCanMutate(false);
+
+    // 3. Call server logout with a bounded wait to clear and revoke sessions.
+    const logoutController = new AbortController();
+    const logoutTimeout = window.setTimeout(() => logoutController.abort(), 5000);
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
         keepalive: true,
+        signal: logoutController.signal,
         headers: { "Cache-Control": "no-cache" },
       });
     } catch (err) {
       console.warn("Logout request error:", err);
+    } finally {
+      window.clearTimeout(logoutTimeout);
     }
 
-    // 3. Purge user offline data
+    // 4. Purge user offline data
     if (userIdToPurge) {
       try {
         await purgeUserOfflineData(userIdToPurge);
@@ -453,13 +466,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 4. Reset client auth state
-    setAuthState({ status: "anonymous" });
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsOfflineReadOnly(false);
-    setCanMutate(false);
-
     // 5. Sign out via NextAuth / Auth.js with hard redirect fallback
     try {
       await signOut({ callbackUrl: "/login" });
@@ -467,6 +473,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         window.location.replace("/login");
       }
+    } finally {
+      isLoggingOutRef.current = false;
     }
   }, [user?.id]);
 

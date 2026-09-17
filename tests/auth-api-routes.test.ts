@@ -79,7 +79,7 @@ describe("Auth API Route Handlers Contracts", () => {
     assert.strictEqual(cookie?.maxAge, 0);
   });
 
-  test("POST /api/auth/login rejects empty email or password with status 400", async () => {
+  test("POST /api/auth/login is disabled before processing credentials", async () => {
     const req = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,12 +87,12 @@ describe("Auth API Route Handlers Contracts", () => {
     });
 
     const res = await loginPost(req);
-    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.status, 403);
 
     const json = await res.json();
     assert.ok(json.error);
     const errorMessage = json.error?.message || json.error || json.message;
-    assert.match(errorMessage, /(?:Validation failed|Vui lòng nhập)/);
+    assert.match(errorMessage, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
   });
 
   test("POST /api/auth/register is completely disabled and returns status 403", async () => {
@@ -148,7 +148,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
   const testEmail = "e2e_tester@qcet.edu.vn";
   const testPassword = "Password@123";
 
-  test("POST /api/auth/login rejects incorrect password with status 401", async () => {
+  test("POST /api/auth/login rejects password authentication regardless of password", async () => {
     const req = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -159,14 +159,14 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     });
 
     const res = await loginPost(req);
-    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.status, 403);
     const json = await res.json();
     assert.ok(json.error);
     const errorMessage = json.error?.message || json.error || json.message;
-    assert.match(errorMessage, /Email hoặc mật khẩu không chính xác/);
+    assert.match(errorMessage, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
   });
 
-  test("POST /api/auth/login succeeds for seeded BGH account and issues session cookie", async () => {
+  test("POST /api/auth/login does not issue a cookie for a seeded account", async () => {
     const req = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -177,41 +177,17 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     });
 
     const res = await loginPost(req);
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 403);
 
     const json = await res.json();
-    assert.strictEqual(json.success, true);
-    assert.strictEqual(json.user.email, "bgh@cdktcnqn.edu.vn");
-    assert.strictEqual(json.user.role, "BAN_GIAM_HIEU");
+    const errorMessage = json.error?.message || json.error || json.message;
+    assert.match(errorMessage, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
 
     const cookie = res.cookies.get(SESSION_COOKIE_NAME);
-    assert.ok(cookie);
-    assert.ok(cookie.value.length > 20);
-
-    // Verify GET /api/auth/me accepts this session token
-    const meReq = new NextRequest("http://localhost:3000/api/auth/me", {
-      headers: {
-        cookie: `${SESSION_COOKIE_NAME}=${cookie.value}`,
-      },
-    });
-    const meRes = await meGet(meReq);
-    assert.strictEqual(meRes.status, 200);
-    const meJson = await meRes.json();
-    assert.strictEqual(meJson.authenticated, true);
-    assert.strictEqual(meJson.user.email, "bgh@cdktcnqn.edu.vn");
-    assert.strictEqual(meJson.user.name, "ThS. Phạm Văn Tường");
+    assert.equal(cookie, undefined);
   });
 
-  test("Full lifecycle: register disabled -> create active user -> authenticate -> query me -> logout", async () => {
-    const { prisma } = await import("../src/lib/prisma");
-    const { hashPassword } = await import("../src/lib/password");
-
-    // Clean up if previous run left test user
-    await prisma.user.deleteMany({
-      where: { email: testEmail },
-    });
-
-    // 1. Verify register endpoint is disabled (403)
+  test("Public register and password login stay disabled together", async () => {
     const regReq = new Request("http://localhost:3000/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -226,19 +202,6 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     const regRes = await registerPost(regReq);
     assert.strictEqual(regRes.status, 403);
 
-    // Create user directly in DB (simulating admin provisioned user)
-    const hashedPassword = await hashPassword(testPassword);
-    await prisma.user.create({
-      data: {
-        email: testEmail,
-        name: "Kiểm Thử E2E",
-        passwordHash: hashedPassword,
-        role: "CHUYEN_VIEN",
-        isActive: true,
-      },
-    });
-
-    // 2. Login with the provisioned user's credentials
     const loginReq = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -248,39 +211,11 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       }),
     });
     const loginRes = await loginPost(loginReq);
-    assert.strictEqual(loginRes.status, 200);
+    assert.strictEqual(loginRes.status, 403);
     const loginJson = await loginRes.json();
-    assert.strictEqual(loginJson.success, true);
-    assert.strictEqual(loginJson.user.email, testEmail);
-
-    const loginCookie = loginRes.cookies.get(SESSION_COOKIE_NAME);
-    assert.ok(loginCookie);
-    assert.ok(loginCookie.value.length > 20);
-
-    // 3. Query /api/auth/me with newly issued session cookie
-    const meReq = new NextRequest("http://localhost:3000/api/auth/me", {
-      headers: {
-        cookie: `${SESSION_COOKIE_NAME}=${loginCookie.value}`,
-      },
-    });
-    const meRes = await meGet(meReq);
-    const meJson = await meRes.json();
-    assert.strictEqual(meJson.authenticated, true);
-    assert.strictEqual(meJson.user.email, testEmail);
-    assert.strictEqual(meJson.user.name, "Kiểm Thử E2E");
-
-    // 4. Logout clears session
-    const logoutReq = new NextRequest("http://localhost:3000/api/auth/logout", { method: "POST" });
-    const logoutRes = await logoutPost(logoutReq);
-    assert.strictEqual(logoutRes.status, 200);
-    const logoutCookie = logoutRes.cookies.get(SESSION_COOKIE_NAME);
-    assert.strictEqual(logoutCookie?.value, "");
-
-    // 5. Cleanup test user from database
-    await prisma.user.deleteMany({
-      where: { email: testEmail },
-    });
-    await prisma.$disconnect();
+    const errorMessage = loginJson.error?.message || loginJson.error || loginJson.message;
+    assert.match(errorMessage, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
+    assert.equal(loginRes.cookies.get(SESSION_COOKIE_NAME), undefined);
   });
 
   test("POST /api/auth/register rejects arbitrary role escalation and mass-assignment with status 403", async () => {
@@ -355,7 +290,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       const loginJson = await loginRes.json();
       assert.ok(loginJson.error);
       const errorMessage = loginJson.error?.message || loginJson.error || loginJson.message;
-      assert.match(errorMessage, /Tài khoản đã bị khóa hoặc tạm ngưng/);
+      assert.match(errorMessage, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
 
       // Verify me query also returns unauthenticated for inactive user
       const { signSessionToken } = await import("../src/lib/jwt-session");

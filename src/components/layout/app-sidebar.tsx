@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
+import { FloatingPortal } from "@/components/ui/floating-portal";
 import { cn } from "@/lib/utils";
 
 const UserProfileModal = dynamic(
@@ -184,13 +185,19 @@ export function AppSidebar() {
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+  const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   // Close profile dropdown on outside click
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      // Tránh đóng khi click bên trong FloatingPortal
+      const portalEl = document.querySelector('[data-floating-portal="true"]');
+      if (portalEl && portalEl.contains(target)) return;
+
       if (
         profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(event.target as Node)
+        !profileDropdownRef.current.contains(target)
       ) {
         setIsProfileDropdownOpen(false);
       }
@@ -385,6 +392,7 @@ export function AppSidebar() {
           <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
             <button
+              ref={accountTriggerRef}
               type="button"
               onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
               className={cn(
@@ -448,114 +456,118 @@ export function AppSidebar() {
             </div>
           </div>
 
-          {/* Unified Account Dropdown Popover */}
-          {isProfileDropdownOpen && user && (
-            <div
-              className={cn(
-                "rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 w-60",
-                isCollapsed
-                  ? "absolute left-full top-2 ml-2"
-                  : "absolute left-2 top-full mt-1"
-              )}
-            >
-              {isOfflineReadOnly && (
-                <div className="mb-2 p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 font-medium leading-relaxed">
-                  Chế độ chỉ xem từ bộ nhớ tạm.
-                </div>
-              )}
+          {/* Unified Account Dropdown Popover via FloatingPortal (escapes sidebar stacking context) */}
+          <FloatingPortal
+            isOpen={isProfileDropdownOpen && Boolean(user)}
+            onClose={() => setIsProfileDropdownOpen(false)}
+            triggerRef={accountTriggerRef}
+            offset={6}
+            align="left"
+            className="w-60 p-2 z-[9999] shadow-2xl border border-border/80 bg-popover rounded-xl"
+            role="menu"
+            ariaLabel="Menu tài khoản"
+          >
+            {user && (
+              <div>
+                {isOfflineReadOnly && (
+                  <div className="mb-2 p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 font-medium leading-relaxed">
+                    Chế độ chỉ xem từ bộ nhớ tạm.
+                  </div>
+                )}
 
-              {/* User Identity Card */}
-              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05]">
-                <div className="size-8 rounded-[7px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white text-xs font-semibold shrink-0 shadow-2xs">
-                  {getInitials(user.name)}
+                {/* User Identity Card */}
+                <div className="flex items-center gap-2.5 p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05]">
+                  <div className="size-8 rounded-[7px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white text-xs font-semibold shrink-0 shadow-2xs">
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-foreground truncate" title={formatDisplayName(user.name)}>
+                      {formatDisplayName(user.name)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate" title={user.email}>
+                      {roleDepartmentSubtitle}
+                    </p>
+                    <p className="text-[10px] text-primary/80 font-medium truncate mt-0.5">
+                      QCET E-Office
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <p className="text-[13px] font-medium text-foreground truncate" title={formatDisplayName(user.name)}>
-                    {formatDisplayName(user.name)}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground truncate" title={user.email}>
-                    {roleDepartmentSubtitle}
-                  </p>
-                  <p className="text-[10px] text-primary/80 font-medium truncate mt-0.5">
-                    QCET E-Office
-                  </p>
+
+                {/* Menu Items */}
+                <div className="mt-1.5 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                  >
+                    <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                    <span>Hồ sơ cá nhân</span>
+                  </button>
+
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsProfileDropdownOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                  >
+                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                    <span>Cài đặt hệ thống</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                      }
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                  >
+                    <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
+                    <span>Cài đặt ứng dụng di động</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
+                      }
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
+                  >
+                    <Compass size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                    <span>Hướng dẫn sử dụng</span>
+                  </button>
+                </div>
+
+                {/* Logout */}
+                <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      logout();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+                  >
+                    <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
+                    <span>Đăng xuất</span>
+                  </button>
                 </div>
               </div>
-
-              {/* Menu Items */}
-              <div className="mt-1.5 space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileDropdownOpen(false);
-                    setIsProfileModalOpen(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-                >
-                  <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                  <span>Hồ sơ cá nhân</span>
-                </button>
-
-                <Link
-                  href="/settings"
-                  onClick={() => setIsProfileDropdownOpen(false)}
-                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-                >
-                  <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                  <span>Cài đặt hệ thống</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileDropdownOpen(false);
-                    if (typeof window !== "undefined") {
-                      window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                    }
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-                >
-                  <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
-                  <span>Cài đặt ứng dụng di động</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileDropdownOpen(false);
-                    if (typeof window !== "undefined") {
-                      window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
-                    }
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-                >
-                  <Compass size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                  <span>Hướng dẫn sử dụng</span>
-                </button>
-              </div>
-
-              {/* Logout */}
-              <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-1 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileDropdownOpen(false);
-                    logout();
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
-                >
-                  <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
-                  <span>Đăng xuất</span>
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </FloatingPortal>
         </div>
 
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}
         {/* ========================================================= */}
-        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar">
+        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar mt-2.5">
           {SECTIONS.map((sec) => {
             const items = SINGLE_TIER_NAV_ITEMS.filter(
               (item) => item.section === sec.key
@@ -592,8 +604,8 @@ export function AppSidebar() {
                         className={cn(
                           "group relative flex items-center gap-2.5 rounded-[6px] px-2 h-[34px] text-[13px] transition-colors select-none tracking-tight",
                           active
-                            ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-semibold"
-                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
+                            ? "bg-black/[0.06] text-foreground font-medium"
+                            : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
                         )}
                       >
                         <span className="size-4 shrink-0 flex items-center justify-center">

@@ -9,24 +9,54 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  AlertTriangle,
   ChevronDown,
-  ChevronUp,
+  ChevronRight,
   TrendingUp,
   Tag,
   Activity,
   History,
-  ShieldCheck,
   Check,
   Edit2,
   X,
+  Layers,
+  Plus,
+  CalendarClock,
+  Sparkles,
+  ExternalLink,
+  Signal,
+  UserPlus,
+  CircleDashed,
+  Compass,
+  MessageSquare,
+  Paperclip,
+  ArrowLeftRight,
+  SquareUserRound,
+  PenLine,
+  Box,
+  Loader2,
+  Search,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
-import { formatDetailDate, getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
+import { getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
+import {
+  formatDisplayDate,
+  formatDateTime,
+  formatIsoDate,
+} from "@/lib/format/date";
+import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
+import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { useFeedback } from "@/components/ui/feedback-layer";
+import {
+  taskStateMachine,
+  buildActorContext,
+  buildTaskContext,
+} from "@/domain/tasks/state-machine";
+import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 
 export interface AuditLogItem {
   id: string;
@@ -42,74 +72,105 @@ export interface LinearPropertiesSidebarProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
+  onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
+  onReassignLead?: (personId: string, personName: string) => Promise<void> | void;
+  onNavigateTab?: (tab: "overview" | "subtasks" | "activity") => void;
+  onSelectSubtask?: (subtask: StaffTask) => void;
+  onAddSubTask?: (parentId: string) => void;
   auditEvents?: AuditLogItem[];
   isMobileAccordion?: boolean;
+  canEdit?: boolean;
+  showRelatedSections?: boolean;
   className?: string;
 }
 
-const STATUS_OPTIONS: Array<{
-  value: TaskStatus;
-  label: string;
-  colorClass: string;
-  dotClass: string;
-}> = [
-  {
-    value: "NOT_STARTED",
-    label: "Chưa bắt đầu",
-    colorClass: "text-slate-600 bg-slate-100 border-slate-200",
-    dotClass: "bg-slate-400",
-  },
-  {
-    value: "IN_PROGRESS",
-    label: "Đang thực hiện",
-    colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-    dotClass: "bg-blue-500",
-  },
-  {
-    value: "WAITING_APPROVAL",
-    label: "Chờ duyệt",
-    colorClass: "text-amber-700 bg-amber-50 border-amber-200",
-    dotClass: "bg-amber-500",
-  },
-  {
-    value: "COMPLETED",
-    label: "Hoàn thành",
-    colorClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
-    dotClass: "bg-emerald-500",
-  },
-];
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
-const PRIORITY_OPTIONS: Array<{
-  value: TaskPriority;
-  label: string;
-  colorClass: string;
-  bars: number;
-}> = [
-  {
-    value: "URGENT",
-    label: "Khẩn cấp",
-    colorClass: "text-red-700 bg-red-50 border-red-200",
-    bars: 4,
-  },
-  {
-    value: "HIGH",
-    label: "Cao",
-    colorClass: "text-amber-700 bg-amber-50 border-amber-200",
-    bars: 3,
-  },
-  {
-    value: "NORMAL",
-    label: "Bình thường",
-    colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-    bars: 2,
-  },
-  {
-    value: "LOW",
-    label: "Thấp",
-    colorClass: "text-slate-600 bg-slate-100 border-slate-200",
-    bars: 1,
-  },
-];
+/**
+ * Tách học vị/học hàm và chức danh để hiển thị tên ngắn gọn kèm chức vụ trong tooltip
+ */
+function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: string; role?: string } {
+  if (!rawName) return { name: "Chưa phân công" };
+  const trimmed = rawName.trim();
+  if (!trimmed || trimmed.toLowerCase().includes("chưa phân công")) {
+    return { name: "Chưa phân công" };
+  }
+
+  // 1. Tách học vị / học hàm tiền tố: ThS., TS., PGS.TS., GS.TS., BS., CN., KS., GVC., ...
+  const academicPrefixRegex =
+    /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.|ThS\b|TS\b)\s*/i;
+  const match = trimmed.match(academicPrefixRegex);
+
+  let cleanName = trimmed;
+  let prefix = "";
+  if (match) {
+    prefix = match[1].trim();
+    cleanName = trimmed.slice(match[0].length).trim();
+  }
+
+  // 2. Tách chức vụ trong ngoặc đơn / vuông nếu có
+  let role = "";
+  const roleInParenMatch = cleanName.match(/\s*[\(\[](.*?)[\)\]]/);
+  if (roleInParenMatch) {
+    role = roleInParenMatch[1].trim();
+    cleanName = cleanName.replace(/\s*[\(\[](.*?)[\)\]]/g, "").trim();
+  }
+
+  // 3. Tách chức vụ sau dấu gạch ngang
+  const roleAfterDashMatch = cleanName.match(/\s*-\s*(.*)$/);
+  if (roleAfterDashMatch) {
+    role = role || roleAfterDashMatch[1].trim();
+    cleanName = cleanName.replace(/\s*-\s*(.*)$/, "").trim();
+  }
+
+  return {
+    name: cleanName || trimmed,
+    prefix: prefix || undefined,
+    role: role || undefined,
+  };
+}
+
+
+function LinearStartDateIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
+      <path d="M5.5 10h3M7 8.5l1.5 1.5-1.5 1.5" />
+    </svg>
+  );
+}
+
+function LinearTargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" className={isOverdue ? "stroke-rose-500" : ""} />
+      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" className={isOverdue ? "stroke-rose-500" : ""} />
+      <path d="M8 8.5v3M6.5 10h3" className={isOverdue ? "stroke-rose-500" : ""} />
+    </svg>
+  );
+}
 
 export function LinearPropertiesSidebar({
   task,
@@ -117,56 +178,110 @@ export function LinearPropertiesSidebar({
   onStatusChange,
   onPriorityChange,
   onDueDateChange,
+  onStartDateChange,
+  onReassignLead,
+  onNavigateTab,
+  onSelectSubtask,
+  onAddSubTask,
   auditEvents = [],
   isMobileAccordion = false,
+  canEdit = true,
+  showRelatedSections = true,
   className,
 }: LinearPropertiesSidebarProps) {
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
 
-  // Mobile accordion state (default open on desktop, collapsible on mobile)
-  const [isMobileOpen, setIsMobileOpen] = React.useState(true);
-
   // Dropdown states
   const [isStatusMenuOpen, setIsStatusMenuOpen] = React.useState(false);
   const [isPriorityMenuOpen, setIsPriorityMenuOpen] = React.useState(false);
 
-  // Due Date inline edit state
-  const [isEditingDueDate, setIsEditingDueDate] = React.useState(false);
-  const [dueDateInput, setDueDateInput] = React.useState<string>(() => {
-    if (!task.dueDate) return "";
-    try {
-      const d = new Date(task.dueDate);
-      if (isNaN(d.getTime())) return "";
-      return d.toISOString().split("T")[0];
-    } catch {
-      return "";
-    }
-  });
-  const [isSavingDueDate, setIsSavingDueDate] = React.useState(false);
+  const statusMenuRef = React.useRef<HTMLDivElement>(null);
+  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
+  // Lead popover state
+  const [isLeadMenuOpen, setIsLeadMenuOpen] = React.useState(false);
+  const [isReassigning, setIsReassigning] = React.useState(false);
+  const [reassignError, setReassignError] = React.useState<string | null>(null);
+  const [personnelList, setPersonnelList] = React.useState<Array<{ id: string; name: string; email?: string; departmentName?: string }>>([]);
+  const leadMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Keyboard accessibility: Escape closes dropdowns
+  // Collaborators popover state
+  const [isCollaboratorMenuOpen, setIsCollaboratorMenuOpen] = React.useState(false);
+  const [isUpdatingCollaborators, setIsUpdatingCollaborators] = React.useState(false);
+  const [collaboratorError, setCollaboratorError] = React.useState<string | null>(null);
+  const [collaboratorSearchQuery, setCollaboratorSearchQuery] = React.useState("");
+  const collaboratorMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const initialCollabIds = React.useMemo(() => {
+    const raw = (task as any).collaboratorIds;
+    if (Array.isArray(raw)) return raw;
+    if (staffTask?.collaborators && Array.isArray(staffTask.collaborators)) {
+      return staffTask.collaborators.map((c: any) => c.id).filter(Boolean);
+    }
+    return [];
+  }, [task, staffTask]);
+  const [selectedCollaboratorIds, setSelectedCollaboratorIds] = React.useState<string[]>(initialCollabIds);
+
   React.useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.users)) {
+          setPersonnelList(data.users.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            departmentName: u.department?.name || u.departmentName || "Đơn vị",
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Click outside listener & Keyboard accessibility
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setIsStatusMenuOpen(false);
+      }
+      if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
+        setIsPriorityMenuOpen(false);
+      }
+      if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
+        setIsLeadMenuOpen(false);
+      }
+      if (collaboratorMenuRef.current && !collaboratorMenuRef.current.contains(e.target as Node)) {
+        setIsCollaboratorMenuOpen(false);
+      }
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsStatusMenuOpen(false);
         setIsPriorityMenuOpen(false);
-        setIsEditingDueDate(false);
+        setIsLeadMenuOpen(false);
+        setIsCollaboratorMenuOpen(false);
       }
     };
+    document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   // Status mapping
-  const currentStatus = task.status;
-  const normalizedStatus =
-    currentStatus === "NEW"
-      ? "NOT_STARTED"
-      : currentStatus === "NEEDS_REVIEW" || currentStatus === "PENDING_EXECUTIVE_APPROVAL"
+  const rawStatus = (task.status || "NOT_STARTED") as string;
+  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
+    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
+      ? "COMPLETED"
+      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
+      ? "IN_PROGRESS"
+      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "PENDING_EXECUTIVE_APPROVAL"
       ? "WAITING_APPROVAL"
-      : currentStatus;
+      : "NOT_STARTED"
+    : "NOT_STARTED";
 
   const activeStatusOption =
     STATUS_OPTIONS.find((opt) => opt.value === normalizedStatus) || STATUS_OPTIONS[0];
@@ -184,15 +299,77 @@ export function LinearPropertiesSidebar({
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
 
+  const leadAvatar = isSchool
+    ? schoolTask?.leadAssigneeAvatar
+    : staffTask?.assigneeAvatar;
+
   // Department
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
 
+  // Phụ trách chỉ hiện avatar + tên; chức vụ đưa vào tooltip/popover
+  const leadParsed = React.useMemo(() => {
+    const parsed = extractNameAndTitle(leadName);
+    if (!leadName || leadName === "Chưa phân công") {
+      return {
+        displayName: "Chưa phân công",
+        fullTitle: "Chưa phân công",
+        role: "",
+        tooltip: "Chưa phân công",
+      };
+    }
+
+    let role = parsed.role || "";
+    let academicPrefix = parsed.prefix || "";
+
+    for (const group of QCET_DEPARTMENT_GROUPS) {
+      for (const m of group.members) {
+        if (
+          m.name.toLowerCase() === parsed.name.toLowerCase() ||
+          m.name.toLowerCase() === leadName.toLowerCase()
+        ) {
+          if (!role && m.role) role = m.role;
+          if (!academicPrefix && m.title) {
+            const mMatch = m.title.match(
+              /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.)\s*/i
+            );
+            if (mMatch) academicPrefix = mMatch[1];
+          }
+          break;
+        }
+      }
+      if (role) break;
+    }
+
+    const titleWithPrefix = academicPrefix ? `${academicPrefix} ${parsed.name}` : parsed.name;
+    const tooltipParts: string[] = [];
+    if (titleWithPrefix) tooltipParts.push(titleWithPrefix);
+    if (role) tooltipParts.push(role);
+    if (departmentName && !tooltipParts.includes(departmentName)) tooltipParts.push(departmentName);
+
+    return {
+      displayName: parsed.name,
+      fullTitle: titleWithPrefix,
+      role: role,
+      tooltip: tooltipParts.join(" · ") || leadName,
+    };
+  }, [leadName, departmentName]);
+
   // Members / Collaborators
-  const members: Array<{ id: string; name: string }> = React.useMemo(() => {
+  const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
+    if (selectedCollaboratorIds.length > 0 && personnelList.length > 0) {
+      return selectedCollaboratorIds.map((id) => {
+        const found = personnelList.find((p) => p.id === id);
+        return {
+          id,
+          name: found ? found.name : id,
+        };
+      });
+    }
+
     if (isSchool && schoolTask) {
-      const list: Array<{ id: string; name: string }> = [];
+      const list: Array<{ id: string; name: string; avatarUrl?: string }> = [];
       if (Array.isArray(schoolTask.coAssignees)) {
         schoolTask.coAssignees.forEach((name, idx) => {
           if (name && typeof name === "string") {
@@ -203,36 +380,51 @@ export function LinearPropertiesSidebar({
       if (Array.isArray(schoolTask.subTasks)) {
         schoolTask.subTasks.forEach((st) => {
           if (st.assigneeName && !list.some((m) => m.name === st.assigneeName)) {
-            list.push({ id: st.id || st.assigneeName, name: st.assigneeName });
+            list.push({
+              id: st.id || st.assigneeName,
+              name: st.assigneeName,
+              avatarUrl: st.assigneeAvatar,
+            });
           }
         });
       }
       return list;
     }
     if (staffTask?.collaborators && Array.isArray(staffTask.collaborators)) {
-      return staffTask.collaborators.map((c) => ({ id: c.id, name: c.name }));
+      return staffTask.collaborators.map((c) => ({
+        id: c.id,
+        name: c.name,
+        avatarUrl: c.avatarUrl,
+      }));
     }
     return [];
-  }, [isSchool, schoolTask, staffTask]);
+  }, [selectedCollaboratorIds, personnelList, isSchool, schoolTask, staffTask]);
 
   // Dates
-  const startDateStr = isSchool ? schoolTask?.startDate : undefined;
-  const dueDateStr = task.dueDate;
-  const relativeDue = getRelativeDueTime(dueDateStr);
+  const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
+  const startDateIso = rawStartDate ? formatIsoDate(rawStartDate, "") : "";
+  const dueDateIso = task.dueDate ? formatIsoDate(task.dueDate, "") : "";
+  const dueStatus = computeDueStatus(task.dueDate);
 
-  // Progress
-  const progressVal =
-    typeof (task as any).progressPercent === "number"
-      ? (task as any).progressPercent
-      : isSchool
-      ? schoolTask?.progress ?? 0
-      : 0;
+  // Subtasks completion
+  const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
+  const completedSubTasks = subTasks.filter((s) => s.status === "COMPLETED").length;
 
-  // Category / Label
-  const categoryLabel = isSchool
-    ? schoolTask?.categoryLabel || schoolTask?.category || "Công việc chung"
-    : (task as any).category || "Nhiệm vụ đơn vị";
+  // Allowed transitions validation via domain State Machine
+  const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);
+  const taskContext = React.useMemo(() => buildTaskContext(task), [task]);
+  const allowedTransitions = React.useMemo(() => {
+    return taskStateMachine.getAllowedTransitions(actorContext, taskContext, task.status);
+  }, [actorContext, taskContext, task.status]);
+  const allowedMap = React.useMemo(() => {
+    const map = new Map<string, { allowed: boolean; reason?: string }>();
+    for (const t of allowedTransitions) {
+      map.set(t.status, { allowed: t.allowed, reason: t.reason });
+    }
+    return map;
+  }, [allowedTransitions]);
 
+  // Handlers
   const handleSelectStatus = async (newStatus: TaskStatus) => {
     setIsStatusMenuOpen(false);
     if (onStatusChange && newStatus !== task.status) {
@@ -247,428 +439,848 @@ export function LinearPropertiesSidebar({
     }
   };
 
-  const handleSaveDueDate = async () => {
-    if (!dueDateInput || !onDueDateChange) {
-      setIsEditingDueDate(false);
+  const handleSelectLead = async (personId: string, personName: string) => {
+    setIsReassigning(true);
+    setReassignError(null);
+    try {
+      if (onReassignLead) {
+        await onReassignLead(personId, personName);
+        setIsLeadMenuOpen(false);
+        return;
+      }
+
+      const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newAssigneeId: personId,
+          newAssigneeName: personName,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền chuyển giao người phụ trách (403 Forbidden)"
+            : "Không thể chuyển giao người phụ trách. Vui lòng thử lại");
+        setReassignError(errMsg);
+        return;
+      }
+
+      setIsLeadMenuOpen(false);
+      window.location.reload();
+    } catch (e: any) {
+      setReassignError(e?.message || "Lỗi kết nối khi chuyển giao người phụ trách");
+    } finally {
+      setIsReassigning(false);
+    }
+  };
+
+  const handleToggleCollaborator = async (userId: string) => {
+    if (!canEdit || isUpdatingCollaborators) return;
+    setCollaboratorError(null);
+    const isCurrentlySelected = selectedCollaboratorIds.includes(userId);
+    const nextIds = isCurrentlySelected
+      ? selectedCollaboratorIds.filter((id) => id !== userId)
+      : [...selectedCollaboratorIds, userId];
+
+    setIsUpdatingCollaborators(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collaboratorIds: nextIds }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền cập nhật người phối hợp cho nhiệm vụ này (403 Forbidden)"
+            : "Không thể cập nhật danh sách người phối hợp. Vui lòng thử lại");
+        setCollaboratorError(errMsg);
+        return;
+      }
+
+      setSelectedCollaboratorIds(nextIds);
+    } catch (e: any) {
+      setCollaboratorError(e?.message || "Lỗi kết nối khi cập nhật người phối hợp");
+    } finally {
+      setIsUpdatingCollaborators(false);
+    }
+  };
+
+  const { notifyWarning } = useFeedback();
+
+  const handleStartDateChangeInternal = async (newDateIso: string) => {
+    if (!newDateIso) {
+      if (onStartDateChange) await onStartDateChange(task.id, "");
       return;
     }
-    setIsSavingDueDate(true);
-    try {
-      await onDueDateChange(task.id, dueDateInput);
-      setIsEditingDueDate(false);
-    } finally {
-      setIsSavingDueDate(false);
+    if (dueDateIso && newDateIso > dueDateIso) {
+      notifyWarning("Ngày bắt đầu không được sau hạn chót", "Thời hạn không hợp lệ");
+      return;
+    }
+    if (onStartDateChange) {
+      await onStartDateChange(task.id, newDateIso);
+    }
+  };
+
+  const handleDueDateChangeInternal = async (newDateIso: string) => {
+    if (!newDateIso) {
+      if (onDueDateChange) await onDueDateChange(task.id, "");
+      return;
+    }
+    if (startDateIso && newDateIso < startDateIso) {
+      notifyWarning("Hạn chót không được trước ngày bắt đầu", "Thời hạn không hợp lệ");
+      return;
+    }
+    if (onDueDateChange) {
+      await onDueDateChange(task.id, newDateIso);
     }
   };
 
   return (
-    <aside
+    <div
       data-slot="linear-properties-sidebar"
       className={cn(
-        "w-full bg-slate-50/70 border-l border-border/40 p-4 sm:p-5 flex flex-col space-y-5 text-xs text-slate-800",
+        "w-full space-y-6 text-xs text-foreground select-none p-4 sm:p-5",
         className
       )}
     >
-      {/* 1. Header label with Mobile Accordion Toggle */}
-      <div className="flex items-center justify-between pb-2 border-b border-border/40">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-            Thuộc tính nhiệm vụ
-          </span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-mono font-medium">
-            Linear
+      {/* 1. SECTION: PROPERTIES (Linear Style) */}
+      <div className="space-y-3">
+        {/* Section Header */}
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <span>Thuộc tính</span>
+            <ChevronDown className="size-3 text-muted-foreground" />
           </span>
         </div>
 
-        {/* Mobile toggle button */}
-        <button
-          type="button"
-          onClick={() => setIsMobileOpen((prev) => !prev)}
-          className="md:hidden inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 font-medium cursor-pointer p-1 rounded hover:bg-slate-200/60 transition-colors"
-          aria-expanded={isMobileOpen}
-          aria-label={isMobileOpen ? "Thu gọn thuộc tính" : "Mở rộng thuộc tính"}
-        >
-          <span>{isMobileOpen ? "Thu gọn" : "Xem chi tiết"}</span>
-          {isMobileOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-        </button>
-      </div>
-
-      {/* Accordion Content wrapper for Mobile */}
-      <div className={cn("space-y-5 flex-1", !isMobileOpen && "hidden md:block")}>
-        {/* 2. Key Properties List */}
-        <div className="space-y-4">
-          {/* Status Dropdown */}
-          <div className="flex items-center justify-between gap-2 relative">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-              <Clock className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Trạng thái
-            </span>
-
+        {/* 2-Column Key-Value Table */}
+        <div className="space-y-1 text-xs">
+          {/* Status Row */}
+          <div
+            ref={statusMenuRef}
+            onClick={() => {
+              if (canEdit) {
+                setIsPriorityMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setIsStatusMenuOpen(!isStatusMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Trạng thái</span>
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStatusMenuOpen(!isStatusMenuOpen);
-                  setIsPriorityMenuOpen(false);
-                }}
-                aria-haspopup="menu"
-                aria-expanded={isStatusMenuOpen}
-                aria-label="Thay đổi trạng thái nhiệm vụ"
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
-                  activeStatusOption.colorClass
-                )}
+              <div
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <span className={cn("size-2 rounded-full", activeStatusOption.dotClass)} />
+                <CircleDashed className={cn("size-3.5", activeStatusOption.value === "COMPLETED" ? "text-emerald-600" : activeStatusOption.value === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground")} strokeWidth={1.5} />
                 <span>{activeStatusOption.label}</span>
-                <ChevronDown className="size-3 text-slate-400" strokeWidth={2} />
-              </button>
+              </div>
 
-              {isStatusMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
-                    onClick={() => setIsStatusMenuOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div
-                    role="menu"
-                    aria-label="Danh sách trạng thái"
-                    className="absolute right-0 top-full mt-1 w-44 rounded-lg bg-white border border-border/60 shadow-lg py-1 z-30 divide-y divide-border/30 animate-in fade-in zoom-in-95 duration-100"
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
+              {isStatusMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  {STATUS_OPTIONS.map((opt) => {
+                    const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
+                    const isCurrent = normalizedStatus === opt.value;
+                    const isOptionDisabled = !isCurrent && !check.allowed;
+
+                    return (
                       <button
                         key={opt.value}
-                        role="menuitem"
                         type="button"
-                        onClick={() => handleSelectStatus(opt.value)}
+                        role="menuitem"
+                        disabled={isOptionDisabled}
+                        title={isOptionDisabled ? check.reason : undefined}
+                        onClick={() => {
+                          if (!isOptionDisabled) {
+                            handleSelectStatus(opt.value);
+                          }
+                        }}
                         className={cn(
-                          "w-full text-left px-3 py-1.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer focus-visible:bg-slate-100 focus-visible:outline-none",
-                          opt.value === normalizedStatus ? "font-bold text-slate-900 bg-slate-50" : "text-slate-700"
+                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left",
+                          isOptionDisabled
+                            ? "opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent"
+                            : "cursor-pointer",
+                          isCurrent
+                            ? "bg-primary/10 text-primary font-medium"
+                            : !isOptionDisabled
+                            ? "text-foreground hover:bg-muted"
+                            : ""
                         )}
                       >
                         <div className="flex items-center gap-2">
                           <span className={cn("size-2 rounded-full", opt.dotClass)} />
                           <span>{opt.label}</span>
                         </div>
-                        {opt.value === normalizedStatus && (
-                          <Check className="size-3 text-primary" strokeWidth={2} />
+                        {isCurrent && (
+                          <Check className="size-3.5 text-primary" strokeWidth={1.5} />
                         )}
                       </button>
-                    ))}
-                  </div>
-                </>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Priority Dropdown */}
-          <div className="flex items-center justify-between gap-2 relative">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-              <AlertCircle className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Độ ưu tiên
-            </span>
-
+          {/* Priority Row */}
+          <div
+            ref={priorityMenuRef}
+            onClick={() => {
+              if (canEdit) {
+                setIsStatusMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setIsPriorityMenuOpen(!isPriorityMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ưu tiên</span>
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPriorityMenuOpen(!isPriorityMenuOpen);
-                  setIsStatusMenuOpen(false);
-                }}
-                aria-haspopup="menu"
-                aria-expanded={isPriorityMenuOpen}
-                aria-label="Thay đổi độ ưu tiên nhiệm vụ"
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
-                  activePriorityOption.colorClass
-                )}
+              <div
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <div className="flex items-end gap-0.5 h-3">
-                  {[1, 2, 3, 4].map((b) => (
-                    <span
-                      key={b}
+                <Signal className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
+                <span>{activePriorityOption.label}</span>
+              </div>
+
+              {isPriorityMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  {PRIORITY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleSelectPriority(opt.value)}
                       className={cn(
-                        "w-0.5 rounded-full",
-                        b <= activePriorityOption.bars ? "bg-current" : "bg-slate-300",
-                        b === 1 ? "h-1.5" : b === 2 ? "h-2" : b === 3 ? "h-2.5" : "h-3"
+                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                        normalizedPriority === opt.value
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-foreground hover:bg-muted"
                       )}
-                    />
+                    >
+                      <div className="flex items-center gap-2">
+                        <Signal className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
+                        <span>{opt.label}</span>
+                      </div>
+                      {normalizedPriority === opt.value && (
+                        <Check className="size-3.5 text-primary" strokeWidth={1.5} />
+                      )}
+                    </button>
                   ))}
                 </div>
-                <span>{activePriorityOption.label}</span>
-                <ChevronDown className="size-3 text-slate-400" strokeWidth={2} />
-              </button>
+              )}
+            </div>
+          </div>
 
-              {isPriorityMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
-                    onClick={() => setIsPriorityMenuOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div
-                    role="menu"
-                    aria-label="Danh sách độ ưu tiên"
-                    className="absolute right-0 top-full mt-1 w-40 rounded-lg bg-white border border-border/60 shadow-lg py-1 z-30 divide-y divide-border/30 animate-in fade-in zoom-in-95 duration-100"
-                  >
-                    {PRIORITY_OPTIONS.map((opt) => (
+          {/* Lead Row with Reassign Popover */}
+          <div
+            ref={leadMenuRef}
+            onClick={() => {
+              if (canEdit && !isReassigning) {
+                setIsStatusMenuOpen(false);
+                setIsPriorityMenuOpen(false);
+                setIsCollaboratorMenuOpen(false);
+                setReassignError(null);
+                setIsLeadMenuOpen(!isLeadMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phụ trách</span>
+            <div className="relative min-w-0">
+              <div
+                className="inline-flex items-start gap-1.5 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
+                style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}
+                title={leadParsed.tooltip}
+              >
+                {isReassigning ? (
+                  <div className="flex items-center gap-1.5 text-primary text-xs">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Đang cập nhật...</span>
+                  </div>
+                ) : leadParsed.displayName && leadParsed.displayName !== "Chưa phân công" ? (
+                  <>
+                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0 mt-0.5">
+                      {getInitials(leadParsed.displayName)}
+                    </div>
+                    <span
+                      className="min-w-0 font-normal line-clamp-2 select-text"
+                      title={leadParsed.tooltip}
+                      style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip", wordBreak: "break-word" }}
+                    >
+                      {leadParsed.displayName}
+                    </span>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
+                    <UserPlus className="size-3.5" strokeWidth={1.5} />
+                    <span>Thêm phụ trách</span>
+                  </div>
+                )}
+              </div>
+
+              {isLeadMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-60 max-h-72 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 select-none flex items-center justify-between">
+                    <span>Chọn người phụ trách</span>
+                    {isReassigning && <Loader2 className="size-3 animate-spin text-primary" />}
+                  </div>
+
+                  {reassignError && (
+                    <div className="mx-1 my-1 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{reassignError}</span>
+                    </div>
+                  )}
+
+                  {personnelList.map((p) => {
+                    const isSelected = p.name === leadName || p.name === leadParsed.displayName;
+                    return (
                       <button
-                        key={opt.value}
-                        role="menuitem"
+                        key={p.id}
                         type="button"
-                        onClick={() => handleSelectPriority(opt.value)}
+                        disabled={isReassigning}
+                        onClick={() => handleSelectLead(p.id, p.name)}
                         className={cn(
-                          "w-full text-left px-3 py-1.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer focus-visible:bg-slate-100 focus-visible:outline-none",
-                          opt.value === normalizedPriority ? "font-bold text-slate-900 bg-slate-50" : "text-slate-700"
+                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
+                          isSelected
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-foreground hover:bg-muted"
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-end gap-0.5 h-3">
-                            {[1, 2, 3, 4].map((b) => (
-                              <span
-                                key={b}
-                                className={cn(
-                                  "w-0.5 rounded-full",
-                                  b <= opt.bars ? "bg-slate-800" : "bg-slate-200",
-                                  b === 1 ? "h-1.5" : b === 2 ? "h-2" : b === 3 ? "h-2.5" : "h-3"
-                                )}
-                              />
-                            ))}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
+                            {getInitials(p.name)}
                           </div>
-                          <span>{opt.label}</span>
+                          <div className="truncate">
+                            <div className="truncate text-foreground font-normal">{p.name}</div>
+                            {p.departmentName && (
+                              <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
+                            )}
+                          </div>
                         </div>
-                        {opt.value === normalizedPriority && (
-                          <Check className="size-3 text-primary" strokeWidth={2} />
-                        )}
+                        {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
                       </button>
-                    ))}
-                  </div>
-                </>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Lead Assignee (DRI) */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-              <User className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Người chủ trì (DRI)
-            </span>
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="size-5 rounded-full bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-bold flex items-center justify-center shrink-0">
-                {leadName.charAt(0).toUpperCase()}
-              </div>
-              <span className="font-medium text-slate-900 truncate max-w-[150px]" title={leadName}>
-                {leadName}
-              </span>
-            </div>
-          </div>
-
-          {/* Department */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-              <Building2 className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Đơn vị phụ trách
-            </span>
-            <span className="font-medium text-slate-900 truncate max-w-[160px]" title={departmentName}>
-              {departmentName}
-            </span>
-          </div>
-
-          {/* Collaborators / Co-Assignees */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5">
-              <Users className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Nhân sự phối hợp
-            </span>
-            {members.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {members.slice(0, 5).map((m) => (
+          {/* Members / Collaborators Row with Popover */}
+          <div
+            ref={collaboratorMenuRef}
+            onClick={() => {
+              if (canEdit && !isUpdatingCollaborators) {
+                setIsStatusMenuOpen(false);
+                setIsPriorityMenuOpen(false);
+                setIsLeadMenuOpen(false);
+                setCollaboratorError(null);
+                setCollaboratorSearchQuery("");
+                setIsCollaboratorMenuOpen(!isCollaboratorMenuOpen);
+              }
+            }}
+            className={cn(
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
+              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
+            )}
+          >
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Thành viên</span>
+            <div className="relative">
+              <div className="flex items-center gap-1.5">
+                {isUpdatingCollaborators ? (
+                  <div className="flex items-center gap-1 text-primary text-xs">
+                    <Loader2 className="size-3 animate-spin" />
+                    <span className="text-[11px]">Đang lưu...</span>
+                  </div>
+                ) : collaborators.length > 0 ? (
                   <div
-                    key={m.id}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-border/60 text-[11px] font-medium text-slate-700 shadow-2xs"
-                    title={m.name}
+                    className="flex items-center -space-x-1.5 overflow-visible pt-0.5"
+                    title={collaborators.map((c) => c.name).join(", ")}
                   >
-                    <span className="size-3.5 rounded-full bg-slate-200 text-[9px] flex items-center justify-center font-bold text-slate-700">
-                      {m.name.charAt(0).toUpperCase()}
-                    </span>
-                    <span className="truncate max-w-[90px]">{m.name}</span>
+                    {collaborators.slice(0, 3).map((m) => (
+                      <span
+                        key={m.id}
+                        className="size-5 rounded-full bg-primary/10 text-primary border-2 border-background flex items-center justify-center text-[8px] font-semibold overflow-hidden shrink-0 shadow-xs"
+                        title={m.name}
+                      >
+                        {getInitials(m.name)}
+                      </span>
+                    ))}
+                    {collaborators.length > 3 && (
+                      <span
+                        className="size-5 rounded-full bg-muted text-muted-foreground border-2 border-background flex items-center justify-center text-[9px] font-medium font-mono shrink-0 shadow-xs"
+                        title={`+${collaborators.length - 3} thành viên khác`}
+                      >
+                        +{collaborators.length - 3}
+                      </span>
+                    )}
                   </div>
-                ))}
-                {members.length > 5 && (
-                  <span className="text-[10px] text-slate-500 font-mono self-center">
-                    +{members.length - 5}
-                  </span>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
+                    <Users className="size-3.5" strokeWidth={1.5} />
+                    <span>Thêm thành viên</span>
+                  </div>
                 )}
               </div>
-            ) : (
-              <span className="text-slate-400 italic text-[11px]">Chưa phân công nhân sự phối hợp</span>
-            )}
+
+              {isCollaboratorMenuOpen && canEdit && (
+                <div
+                  role="dialog"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-64 max-h-80 overflow-y-auto rounded-xl border border-border bg-white p-2 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  <div className="text-[11px] font-semibold text-muted-foreground px-1 pb-1.5 select-none flex items-center justify-between">
+                    <span>Người phối hợp</span>
+                    <span className="font-mono text-[10px] text-primary">
+                      {selectedCollaboratorIds.length} đã chọn
+                    </span>
+                  </div>
+
+                  {/* Search box */}
+                  <div className="relative mb-2">
+                    <Search className="size-3.5 text-muted-foreground absolute left-2 top-2" />
+                    <input
+                      type="text"
+                      value={collaboratorSearchQuery}
+                      onChange={(e) => setCollaboratorSearchQuery(e.target.value)}
+                      placeholder="Tìm kiếm cán bộ..."
+                      className="w-full text-xs pl-7 pr-2 py-1 rounded-md bg-muted/30 border border-border/60 focus:outline-none focus:border-primary text-foreground"
+                    />
+                  </div>
+
+                  {collaboratorError && (
+                    <div className="mb-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{collaboratorError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                    {personnelList
+                      .filter((p) => {
+                        if (!collaboratorSearchQuery.trim()) return true;
+                        const query = collaboratorSearchQuery.toLowerCase();
+                        return (
+                          p.name.toLowerCase().includes(query) ||
+                          (p.departmentName && p.departmentName.toLowerCase().includes(query)) ||
+                          (p.email && p.email.toLowerCase().includes(query))
+                        );
+                      })
+                      .map((p) => {
+                        const isSelected = selectedCollaboratorIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={isUpdatingCollaborators}
+                            onClick={() => handleToggleCollaborator(p.id)}
+                            className={cn(
+                              "w-full flex items-center justify-between px-2 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-foreground hover:bg-muted/60"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
+                                {getInitials(p.name)}
+                              </div>
+                              <div className="truncate">
+                                <div className="truncate text-foreground font-normal">{p.name}</div>
+                                {p.departmentName && (
+                                  <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
+                                )}
+                              </div>
+                            </div>
+                            <div className={cn(
+                              "size-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border/80 bg-background"
+                            )}>
+                              {isSelected && <Check className="size-3 text-white" strokeWidth={1.5} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Dates & Due Date Edit */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 font-medium flex items-center gap-1.5">
-                <Calendar className="size-3.5 text-slate-400" strokeWidth={1.5} />
-                Thời hạn thực hiện
+          {/* Row 5: Start Date */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ngày bắt đầu</span>
+            <div className="flex items-center text-xs shrink-0 min-w-0">
+              {canEdit && onStartDateChange ? (
+                <VietnameseDatePicker
+                  value={startDateIso}
+                  onChange={handleStartDateChangeInternal}
+                  placeholder="Chọn ngày"
+                  title="Ngày bắt đầu"
+                  variant="inline"
+                  icon={<Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+                  showPresets={false}
+                  align="right"
+                />
+              ) : (
+                <div
+                  title="Ngày bắt đầu"
+                  className="inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
+                >
+                  <Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                  <span className="tabular-nums font-normal">
+                    {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 6: Due Date / Target Date */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Hạn hoàn thành</span>
+            <div className="flex items-center text-xs shrink-0 min-w-0">
+              {canEdit && onDueDateChange ? (
+                <VietnameseDatePicker
+                  value={dueDateIso}
+                  onChange={handleDueDateChangeInternal}
+                  placeholder="Chọn ngày"
+                  title="Hạn hoàn thành"
+                  variant="inline"
+                  icon={
+                    <Calendar
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                          ? "text-rose-500"
+                          : "text-muted-foreground"
+                      )}
+                      strokeWidth={1.5}
+                    />
+                  }
+                  triggerClassName={cn(
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-normal"
+                  )}
+                  showPresets={true}
+                  align="right"
+                />
+              ) : (
+                <div
+                  title="Hạn hoàn thành"
+                  className={cn(
+                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs select-none",
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                      ? "text-rose-600 font-normal"
+                      : "text-foreground font-normal"
+                  )}
+                >
+                  <Calendar
+                    className={cn(
+                      "size-3.5 shrink-0",
+                      dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                        ? "text-rose-500"
+                        : "text-muted-foreground"
+                    )}
+                    strokeWidth={1.5}
+                  />
+                  <span className="tabular-nums font-normal">
+                    {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 7: Department */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Đơn vị</span>
+            <div
+              className="flex items-start gap-1.5 min-w-0 text-foreground text-xs leading-snug"
+              style={{
+                minWidth: 0,
+                whiteSpace: "normal",
+                overflow: "visible",
+                textOverflow: "clip",
+              }}
+            >
+              <Building2 className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
+              <span
+                className="min-w-0 font-normal select-text line-clamp-2"
+                title={departmentName}
+                style={{
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  overflow: "visible",
+                  textOverflow: "clip",
+                  wordBreak: "break-word",
+                }}
+              >
+                {departmentName}
               </span>
-              {relativeDue && !isEditingDueDate && (
-                <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-mono font-medium", relativeDue.color)}>
-                  {relativeDue.text}
+            </div>
+          </div>
+
+          {/* Row 8: Labels */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Nhãn</span>
+            <div
+              className="flex items-start gap-1.5 text-foreground text-xs leading-snug min-w-0"
+              style={{
+                minWidth: 0,
+                whiteSpace: "normal",
+                overflow: "visible",
+                textOverflow: "clip",
+              }}
+            >
+              <Tag className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
+              <span
+                className="min-w-0 font-normal line-clamp-2 select-text"
+                style={{
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  overflow: "visible",
+                  textOverflow: "clip",
+                  wordBreak: "break-word",
+                }}
+              >
+                {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
+              </span>
+            </div>
+          </div>
+        </div>
+            </div>
+
+      {showRelatedSections && (
+      <>
+      {/* 2. SECTION: MILESTONES / SUBTASKS (Compact Notion-style list) */}
+      <div className="pt-2 border-t border-border/40 select-none">
+        {subTasks.length > 0 ? (
+          <div className="space-y-2">
+            {/* Header với số lượng, nút Thêm, và nút Xem tất cả */}
+            <div className="flex items-center justify-between gap-1.5 text-muted-foreground">
+              <div
+                onClick={() => onNavigateTab?.("subtasks")}
+                className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-foreground transition-colors"
+                title="Xem danh sách việc thành phần"
+              >
+                <span className="text-xs font-semibold text-foreground truncate">
+                  Việc thành phần
                 </span>
+                <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums shrink-0">
+                  {completedSubTasks}/{subTasks.length}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title="Thêm việc thành phần mới"
+                    aria-label="Thêm việc thành phần"
+                  >
+                    <Plus className="size-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab("subtasks")}
+                    className="text-[11px] font-medium text-primary hover:underline cursor-pointer pl-1"
+                    title="Xem tất cả việc thành phần"
+                  >
+                    Xem tất cả
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Danh sách việc con gọn (tối đa 3 việc gần nhất) */}
+            <div className="space-y-1.5 pt-0.5">
+              {subTasks.slice(0, 3).map((st) => {
+                const isCompleted = st.status === "COMPLETED";
+                const statusObj = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
+                const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
+                const formattedDue = st.dueDate ? formatDisplayDate(st.dueDate) : "";
+
+                return (
+                  <div
+                    key={st.id}
+                    onClick={() => onSelectSubtask && onSelectSubtask(st)}
+                    className={cn(
+                      "group p-2 rounded-lg border border-border/40 hover:border-border/80 bg-background/60 hover:bg-muted/30 transition-all cursor-pointer space-y-1",
+                      isCompleted && "opacity-75 bg-muted/10"
+                    )}
+                    title={`Xem việc thành phần: ${st.title}`}
+                  >
+                    <div
+                      className={cn(
+                        "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug",
+                        isCompleted && "line-through text-muted-foreground"
+                      )}
+                    >
+                      {st.title}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1.5 text-[11px] text-muted-foreground pt-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={cn("size-1.5 rounded-full shrink-0", statusObj.dotClass)} />
+                        <span className="truncate text-[11px]" title={assigneeTitle}>
+                          {assigneeTitle}
+                        </span>
+                      </div>
+
+                      {formattedDue && (
+                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80 shrink-0">
+                          {formattedDue}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* Trạng thái 0 việc thành phần: 1 dòng compact duy nhất "Việc thành phần   0   +" */
+          <div className="flex items-center justify-between py-1 text-xs select-none">
+            <span
+              onClick={() => onNavigateTab?.("subtasks")}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Việc thành phần
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                  className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Thêm việc thành phần mới"
+                  aria-label="Thêm việc thành phần"
+                >
+                  <Plus className="size-3.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. SECTION: ACTIVITY (Linear Style - Tối đa 3 hoạt động mới nhất) */}
+      <div className="pt-2 border-t border-border/40 select-none">
+        {auditEvents.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <div
+                onClick={() => onNavigateTab?.("activity")}
+                className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-foreground transition-colors"
+                title="Xem nhật ký hoạt động"
+              >
+                <span className="text-xs font-semibold text-foreground truncate">
+                  Hoạt động
+                </span>
+                <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums shrink-0">
+                  {auditEvents.length}
+                </span>
+              </div>
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab("activity")}
+                  className="text-[11px] font-medium text-primary hover:underline cursor-pointer pl-1"
+                  title="Xem tất cả hoạt động"
+                >
+                  Xem tất cả
+                </button>
               )}
             </div>
 
-            {isEditingDueDate ? (
-              <div className="p-2 rounded-lg border border-primary/40 bg-white space-y-2 animate-in fade-in">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-slate-700">Chọn hạn mới:</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingDueDate(false)}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-                <VietnameseDatePicker
-                  value={dueDateInput}
-                  onChange={(val) => setDueDateInput(val)}
-                  variant="input"
-                  placeholder="Chọn hạn hoàn thành..."
-                  className="w-full"
-                />
-                <div className="flex items-center justify-end gap-1.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingDueDate(false)}
-                    className="px-2 py-0.5 text-[11px] text-slate-500 hover:text-slate-700"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isSavingDueDate || !dueDateInput}
-                    onClick={handleSaveDueDate}
-                    className="px-2.5 py-0.5 text-[11px] font-semibold rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSavingDueDate ? "Đang lưu..." : "Lưu hạn"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between text-slate-800 font-mono text-[11px]">
-                <div className="flex items-center gap-1.5">
-                  {startDateStr ? (
-                    <>
-                      <span>{formatDetailDate(startDateStr)}</span>
-                      <span className="text-slate-400">→</span>
-                    </>
-                  ) : null}
-                  <span className="font-semibold text-slate-900">
-                    {formatDetailDate(dueDateStr)}
-                  </span>
-                </div>
-                {onDueDateChange && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingDueDate(true)}
-                    className="text-slate-400 hover:text-primary transition-colors cursor-pointer p-0.5 rounded hover:bg-slate-100"
-                    title="Thay đổi hạn hoàn thành"
-                    aria-label="Thay đổi hạn hoàn thành"
-                  >
-                    <Edit2 className="size-3" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+            {/* Compact Chronological Activity List (Tối đa 3 hoạt động) */}
+            <div className="space-y-1.5 pt-0.5">
+              {auditEvents.slice(0, 3).map((evt) => {
+                const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
+                const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
+                const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
+                const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
 
-          {/* Progress Bar */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 font-medium flex items-center gap-1.5">
-                <TrendingUp className="size-3.5 text-slate-400" strokeWidth={1.5} />
-                Tiến độ hoàn thành
-              </span>
-              <span className="font-mono font-bold text-slate-900 tabular-nums">
-                {progressVal}%
-              </span>
-            </div>
-            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-              <div
-                className={cn(
-                  "h-full transition-all duration-300 ease-out",
-                  progressVal === 100
-                    ? "bg-emerald-500"
-                    : progressVal > 50
-                    ? "bg-blue-600"
-                    : "bg-amber-500"
-                )}
-                style={{ width: `${Math.min(Math.max(progressVal, 0), 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Label / Category */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-              <Tag className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Lĩnh vực
-            </span>
-            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium truncate max-w-[160px]">
-              {categoryLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* 3. Phân cách */}
-        <hr className="border-border/40" />
-
-        {/* 4. Hoạt động gần đây (Recent Activity Feed) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5">
-              <Activity className="size-3.5 text-slate-400" strokeWidth={1.5} />
-              Hoạt động gần đây
-            </span>
-            {auditEvents.length > 0 && (
-              <span className="text-[10px] font-mono text-slate-400 tabular-nums">
-                {auditEvents.length}
-              </span>
-            )}
-          </div>
-
-          {auditEvents.length > 0 ? (
-            <div className="relative pl-4 space-y-3 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
-              {auditEvents.slice(0, 5).map((evt) => (
-                <div key={evt.id} className="relative flex flex-col gap-0.5 text-[11px]">
-                  <span className="absolute -left-4 top-1 flex size-2.5 items-center justify-center rounded-full border border-white bg-blue-500" />
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-slate-900 truncate">
-                      {evt.description || evt.action}
+                return (
+                  <div key={evt.id} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-snug py-0.5">
+                    <span className="mt-0.5 shrink-0 text-muted-foreground/70">
+                      {isNameChange ? (
+                        <PenLine className="size-3.5" strokeWidth={1.5} />
+                      ) : isPriority ? (
+                        <Signal className="size-3.5" strokeWidth={1.5} />
+                      ) : isDate ? (
+                        <Calendar className="size-3.5" strokeWidth={1.5} />
+                      ) : isProgress ? (
+                        <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                      ) : (
+                        <Box className="size-3.5" strokeWidth={1.5} />
+                      )}
                     </span>
-                    <span className="font-mono text-[10px] text-slate-400 shrink-0 tabular-nums">
-                      {formatDetailDate(evt.timestamp)}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
+                      <span className="text-foreground/80">{evt.description || getAuditActionLabel(evt.action)}</span>
+                      <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
+                        · {formatDisplayDate(evt.timestamp)}
+                      </span>
+                    </div>
                   </div>
-                  {evt.actorName && (
-                    <span className="text-slate-500 text-[10px] truncate">
-                      bởi {evt.actorName}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
-          ) : (
-            <div className="py-3 px-2 text-center text-[11px] text-slate-400 rounded-md border border-dashed border-border/50 bg-white/50">
-              Chưa có ghi nhận nhật ký nào.
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* Trạng thái 0 hoạt động: 1 dòng compact duy nhất "Hoạt động   0", loại bỏ khoảng trắng thừa */
+          <div className="flex items-center justify-between py-1 text-xs select-none">
+            <span
+              onClick={() => onNavigateTab?.("activity")}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Hoạt động
+            </span>
+            <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
+          </div>
+        )}
       </div>
-    </aside>
+      </>
+      )}
+    </div>
   );
 }
+
+// QCET linear properties inspector

@@ -192,12 +192,32 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       throw new ForbiddenError('Bạn không có quyền cập nhật nhiệm vụ này');
     }
 
+    // Validate ngày trên dữ liệu sau khi ghép PATCH với bản ghi DB (phân biệt trường bị bỏ qua và null)
+    let mergedStartDate: Date | null = existingTask.startDate ? new Date(existingTask.startDate) : null;
+    if (validatedBody.startDate !== undefined) {
+      mergedStartDate = validatedBody.startDate ? new Date(validatedBody.startDate) : null;
+    }
+
+    let mergedDueDate: Date | null = existingTask.dueDate ? new Date(existingTask.dueDate) : null;
+    if (validatedBody.dueDate !== undefined) {
+      mergedDueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null;
+    }
+
+    if (mergedStartDate && mergedDueDate) {
+      if (mergedStartDate.getTime() > mergedDueDate.getTime()) {
+        throw new ValidationError(
+          'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)'
+        );
+      }
+    }
+
     // 3. Explicit command mapping (No Mass-Assignment) & Atomic update (Safe metadata only)
     const updated = await taskCommandService.updateTask(context, id, {
       title: validatedBody.title,
       description: validatedBody.description,
       departmentId: validatedBody.departmentId,
-      dueDate: validatedBody.dueDate ?? undefined,
+      startDate: validatedBody.startDate,
+      dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
       assigneeId: validatedBody.assigneeId,
       collaboratorIds: validatedBody.collaboratorIds,

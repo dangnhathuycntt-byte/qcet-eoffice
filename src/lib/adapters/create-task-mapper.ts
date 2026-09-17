@@ -55,6 +55,7 @@ export const TASK_LEVEL_TO_SCOPE = {
 export interface CreateTaskDraft {
   level: CreateTaskLevel;
   title: string;
+  startDate?: string;
   dueDate: string;
   description?: string;
   /** Initial DRI, expressed as a display name. Resolved to a stable ID. */
@@ -205,6 +206,9 @@ export function buildCreateTaskPayload(
     dueDate,
     scope,
   };
+
+  const startDate = trimOrUndefined(draft.startDate);
+  if (startDate) payload.startDate = startDate;
 
   const description = trimOrUndefined(draft.description);
   if (description) payload.description = description;

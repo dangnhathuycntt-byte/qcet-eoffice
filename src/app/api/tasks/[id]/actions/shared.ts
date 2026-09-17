@@ -92,6 +92,21 @@ export function handleActionError(error: any) {
     );
   }
 
+  // State Transition Error -> 409 Conflict with domain details
+  if (error instanceof InvalidTransitionError) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        code: error.code || "INVALID_STATUS_TRANSITION",
+        fromStatus: error.fromStatus,
+        toStatus: error.toStatus,
+        reason: error.reason || error.message,
+      },
+      { status: error.statusCode || 409 }
+    );
+  }
+
   // Standard ApiError subclasses
   if (error instanceof ApiError) {
     return NextResponse.json(
