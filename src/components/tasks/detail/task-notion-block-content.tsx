@@ -15,7 +15,6 @@ import {
   Minus,
   Paperclip,
   Link2,
-  Layers,
   Search,
   Trash2,
   ArrowUp,
@@ -24,13 +23,9 @@ import {
   ExternalLink,
   CheckCircle2,
   Circle,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
-import { formatDisplayDate } from "@/lib/format/date";
-import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { STATUS_OPTIONS } from "./task-identity-block";
 
 export type NotionBlockType =
   | "text"
@@ -42,8 +37,7 @@ export type NotionBlockType =
   | "callout"
   | "divider"
   | "attachment"
-  | "link"
-  | "subtasks_view";
+  | "link";
 
 export interface NotionBlockItem {
   id: string;
@@ -68,6 +62,25 @@ export interface TaskNotionBlockContentProps {
 }
 
 /**
+ * Danh sách block type legacy hoặc business widget bị loại bỏ khỏi content document.
+ * Tuyệt đối không render trong canvas và dọn sạch khi parse.
+ */
+const LEGACY_STRIP_TYPES = new Set([
+  "subtasks_view",
+  "subtasks",
+  "componentTasks",
+  "childTasks",
+  "taskChildren",
+  "activity_view",
+  "properties_view",
+]);
+
+/**
+ * Singleton Block Guard: cấu hình các block chỉ được xuất hiện tối đa 1 lần nếu có trong tương lai.
+ */
+const SINGLETON_BLOCK_TYPES = new Set<NotionBlockType>([]);
+
+/**
  * Helper tự động co giãn chiều cao textarea theo đúng scrollHeight,
  * loại bỏ hoàn toàn scrollbar riêng trong textarea.
  */
@@ -79,7 +92,7 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
 
 /**
  * Phân tích chuỗi mô tả thành danh sách các block Notion.
- * Nếu đã lưu dạng JSON blocks thì parse ra, nếu là văn bản cũ thì đưa vào block text đầu tiên.
+ * Dọn sạch mọi widget legacy (như subtasks_view) khỏi model document.
  */
 export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
   if (!raw || !raw.trim()) {
@@ -90,7 +103,14 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
     if (raw.includes('"qcetBlocks":true')) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-        return parsed.blocks;
+        // Dọn dữ liệu legacy: loại bỏ subtasks widgets khỏi document model
+        const cleanedBlocks = parsed.blocks.filter(
+          (b: any) => b && !LEGACY_STRIP_TYPES.has(b.type)
+        );
+        if (cleanedBlocks.length > 0) {
+          return cleanedBlocks;
+        }
+        return [{ id: `b-${Date.now()}-1`, type: "text", content: "" }];
       }
     }
   } catch {
@@ -105,8 +125,8 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
  * Đóng gói danh sách blocks thành chuỗi JSON lưu vào DB.
  */
 export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
-  // Loại bỏ các trailing text block hoàn toàn rỗng ở cuối khi lưu (nếu có nhiều hơn 1 block)
-  const cleaned = [...blocks];
+  // Dọn các block legacy nếu còn sót và các block text rỗng ở cuối
+  const cleaned = blocks.filter((b) => !LEGACY_STRIP_TYPES.has(b.type));
   while (
     cleaned.length > 1 &&
     cleaned[cleaned.length - 1].type === "text" &&
@@ -128,16 +148,19 @@ export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
 
 interface MenuItemOption {
   id: string;
-  type: NotionBlockType | "create_subtask_action";
+  type: NotionBlockType;
   group: "Soạn thảo" | "Danh sách" | "Tiêu đề" | "Trích dẫn & Ghi chú" | "Tệp & Liên kết" | "Phân cách";
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   shortcut?: string;
   level?: 1 | 2 | 3;
-  badge?: string;
 }
 
+/**
+ * Slash menu CHỈ chứa các repeatable content blocks thuần túy của văn bản,
+ * KHÔNG chứa các domain widget (như Việc thành phần, Hoạt động, Người phụ trách...).
+ */
 const MENU_OPTIONS: MenuItemOption[] = [
   // 1. Soạn thảo văn bản cơ bản
   {
@@ -150,7 +173,7 @@ const MENU_OPTIONS: MenuItemOption[] = [
     shortcut: "text",
   },
 
-  // 2. Danh sách (Ưu tiên E-Office)
+  // 2. Danh sách
   {
     id: "opt-bulleted",
     type: "bulleted_list",
@@ -246,15 +269,6 @@ const MENU_OPTIONS: MenuItemOption[] = [
     title: "Liên kết",
     description: "Đường dẫn website hoặc tài liệu ngoài",
     icon: Link2,
-  },
-  {
-    id: "opt-subtasks-view",
-    type: "subtasks_view",
-    group: "Tệp & Liên kết",
-    title: "Chèn việc thành phần",
-    description: "Hiển thị đồng bộ danh sách việc con",
-    icon: Layers,
-    badge: "Đồng bộ",
   },
 
   // 6. Đường phân cách
@@ -382,18 +396,28 @@ export function TaskNotionBlockContent({
     }
   }, [activeMenuIndex, isMenuOpen]);
 
-  // Lọc menu theo ô tìm kiếm
+  // Lọc menu theo ô tìm kiếm và áp dụng Singleton Guard
   const filteredMenuOptions = React.useMemo(() => {
     const q = menuSearchQuery.trim().toLowerCase();
-    if (!q) return MENU_OPTIONS;
-    return MENU_OPTIONS.filter((opt) => {
+    const existingTypes = new Set(blocks.map((b) => b.type));
+
+    // Singleton Guard: ẩn/disable các block singleton nếu đã tồn tại
+    const available = MENU_OPTIONS.filter((opt) => {
+      if (SINGLETON_BLOCK_TYPES.has(opt.type) && existingTypes.has(opt.type)) {
+        return false;
+      }
+      return true;
+    });
+
+    if (!q) return available;
+    return available.filter((opt) => {
       const matchTitle = opt.title.toLowerCase().includes(q);
       const matchDesc = opt.description.toLowerCase().includes(q);
       const matchGroup = opt.group.toLowerCase().includes(q);
       const matchShortcut = opt.shortcut?.toLowerCase().includes(q);
       return matchTitle || matchDesc || matchGroup || matchShortcut;
     });
-  }, [menuSearchQuery]);
+  }, [menuSearchQuery, blocks]);
 
   // Debounced Autosave
   const triggerAutoSave = React.useCallback(
@@ -487,21 +511,21 @@ export function TaskNotionBlockContent({
     setMenuPosition(null);
   };
 
-  // Chọn loại Block từ Slash Menu
+  /**
+   * Chọn loại Block từ Slash Menu:
+   * - Nếu kích hoạt từ current block đang rỗng -> REPLACE/CONVERT chính block rỗng đó.
+   * - Nếu kích hoạt từ trailing row -> thay thế hoặc append trực tiếp vào cuối.
+   * - Nếu kích hoạt từ block có text -> insert block mới ngay liền kề phía dưới.
+   */
   const handleSelectMenuItem = (option: MenuItemOption) => {
     const targetIdx = menuTargetIndex ?? blocks.length;
     handleCloseSlashMenu();
     setTrailingValue("");
 
-    if (option.type === "create_subtask_action") {
-      onOpenCreateSubtask?.();
-      return;
-    }
-
     const newBlockId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newBlock: NotionBlockItem = {
       id: newBlockId,
-      type: option.type as NotionBlockType,
+      type: option.type,
       content: "",
       checked: option.type === "checklist" ? false : undefined,
       level: option.level || (option.type === "heading" ? 2 : undefined),
@@ -511,15 +535,28 @@ export function TaskNotionBlockContent({
 
     setBlocks((prev) => {
       const next = [...prev];
-      // Nếu target block hiện tại đang rỗng -> thay thế target block bằng block mới
-      const currentBlock = next[targetIdx];
-      if (currentBlock && !currentBlock.content.trim() && currentBlock.type === "text") {
-        next[targetIdx] = newBlock;
-      } else if (targetIdx >= next.length) {
-        next.push(newBlock);
+
+      // Trường hợp 1: Menu mở từ trailing row (cuối tài liệu)
+      if (targetIdx >= next.length) {
+        const last = next[next.length - 1];
+        if (last && last.type === "text" && !last.content.trim()) {
+          // Convert block text rỗng cuối cùng, không sinh thêm block rỗng thừa
+          next[next.length - 1] = newBlock;
+        } else {
+          next.push(newBlock);
+        }
       } else {
-        next.splice(targetIdx + 1, 0, newBlock);
+        // Trường hợp 2: Menu mở từ block hiện tại
+        const currentBlock = next[targetIdx];
+        if (currentBlock && !currentBlock.content.trim()) {
+          // Block hiện tại rỗng -> convert tại chỗ
+          next[targetIdx] = newBlock;
+        } else {
+          // Block hiện tại có nội dung -> insert ngay liền kề phía dưới
+          next.splice(targetIdx + 1, 0, newBlock);
+        }
       }
+
       triggerAutoSave(next);
       return next;
     });
@@ -1402,76 +1439,6 @@ export function TaskNotionBlockContent({
                     )}
                   </div>
                 )}
-
-                {/* 11. Subtasks View Block */}
-                {block.type === "subtasks_view" && (
-                  <div className="rounded-xl border border-border/60 bg-muted/20 p-3 my-1.5 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <Layers className="size-3.5 text-primary" />
-                        <span className="font-semibold text-foreground">
-                          Việc thành phần
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.2 rounded-full tabular-nums">
-                          {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length}
-                        </span>
-                      </div>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBlock(block.id)}
-                          className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
-                          title="Gỡ bỏ khối này"
-                        >
-                          <X className="size-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {subTasks.length > 0 ? (
-                      <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-background overflow-hidden text-xs">
-                        {subTasks.map((st) => {
-                          const isDone = st.status === "COMPLETED";
-                          const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
-                          const stStatus = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
-
-                          return (
-                            <div
-                              key={st.id}
-                              onClick={() => onSelectSubtask?.(st)}
-                              className="flex items-center justify-between p-2 hover:bg-muted/30 transition-colors cursor-pointer gap-2"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {isDone ? (
-                                  <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
-                                ) : (
-                                  <Circle className="size-3.5 text-muted-foreground/60 shrink-0" />
-                                )}
-                                <span className={cn("truncate font-medium text-foreground", isDone && "line-through text-muted-foreground")}>
-                                  {st.title}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-                                <span className="truncate max-w-[120px]">{assigneeTitle}</span>
-                                {st.dueDate && (
-                                  <span className="font-mono tabular-nums">{formatDisplayDate(st.dueDate)}</span>
-                                )}
-                                <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-medium border", stStatus.colorClass)}>
-                                  {stStatus.label}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-3 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg">
-                        Chưa có việc thành phần nào.
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           );
@@ -1613,11 +1580,6 @@ export function TaskNotionBlockContent({
                             <div className="min-w-0">
                               <div className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
                                 <span>{opt.title}</span>
-                                {opt.badge && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-primary/10 text-primary font-normal">
-                                    {opt.badge}
-                                  </span>
-                                )}
                               </div>
                               <div className="text-[11px] text-muted-foreground truncate">
                                 {opt.description}

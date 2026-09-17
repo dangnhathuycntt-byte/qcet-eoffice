@@ -126,7 +126,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       assert.equal(blocks[0].content, legacyDesc);
     });
 
-    it("serializes and deserializes structured blocks (headings, lists, quotes, callouts, divider, links, files) round-trip", () => {
+    it("serializes and deserializes structured blocks round-trip and strips legacy subtasks widgets", () => {
       const initialBlocks: NotionBlockItem[] = [
         { id: "b1", type: "heading", content: "Kế hoạch năm học", level: 1 },
         { id: "b2", type: "text", content: "Nội dung thực hiện chi tiết." },
@@ -138,7 +138,6 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         { id: "b8", type: "divider", content: "" },
         { id: "b9", type: "attachment", content: "Huong_dan_kiem_dinh.pdf", url: "https://qcet.edu.vn/files/1" },
         { id: "b10", type: "link", content: "Cổng thông tin kiểm định", url: "https://kiemdinh.edu.vn" },
-        { id: "b11", type: "subtasks_view", content: "" },
       ];
 
       const serialized = serializeBlocksToContent(initialBlocks);
@@ -156,7 +155,41 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       assert.equal(restored[7].type, "divider");
       assert.equal(restored[8].type, "attachment");
       assert.equal(restored[9].type, "link");
-      assert.equal(restored[10].type, "subtasks_view");
+
+      // Verify legacy subtasks_view is stripped safely without polluting document model
+      const legacyPayloadWithSubtasks = JSON.stringify({
+        qcetBlocks: true,
+        version: 1,
+        blocks: [
+          { id: "leg1", type: "subtasks_view", content: "" },
+          { id: "leg2", type: "subtasks", content: "" },
+          { id: "leg3", type: "text", content: "Nội dung hợp lệ" },
+        ],
+      });
+      const cleaned = parseContentToBlocks(legacyPayloadWithSubtasks);
+      assert.equal(cleaned.length, 1);
+      assert.equal(cleaned[0].type, "text");
+      assert.equal(cleaned[0].content, "Nội dung hợp lệ");
+    });
+
+    it("ensures subtasks is strictly excluded from slash menu and canvas", () => {
+      // 1. Must NOT include 'Chèn việc thành phần' in slash menu
+      assert.ok(
+        !componentContent.includes("Chèn việc thành phần"),
+        "Must NOT include 'Chèn việc thành phần' in slash menu"
+      );
+
+      // 2. Must NOT define subtasks_view as selectable menu option
+      assert.ok(
+        !componentContent.includes('id: "opt-subtasks-view"'),
+        "Must NOT contain opt-subtasks-view in menu options"
+      );
+
+      // 3. Must NOT render subtasks_view canvas widget
+      assert.ok(
+        !componentContent.includes('block.type === "subtasks_view"'),
+        "Must NOT render subtasks_view widget in canvas"
+      );
     });
 
     it("implements all essential E-Office block options in slash menu", () => {
