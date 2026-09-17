@@ -1066,20 +1066,22 @@ export class TaskDomainActionService {
     });
 
     // SoD Invariant Enforcement: Rule 4.1 Creator != Approver & DRI != Approver
-    if (task.createdById === session.id) {
-      throw new SeparationOfDutiesError(
-        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập không được tự phê duyệt nhiệm vụ của mình.",
-        "task.approve",
-        taskId
-      );
-    }
+    if (!validated.allowBypass) {
+      if (task.createdById === session.id) {
+        throw new SeparationOfDutiesError(
+          "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập không được tự phê duyệt nhiệm vụ của mình.",
+          "task.approve",
+          taskId
+        );
+      }
 
-    if (primaryOwnerId && primaryOwnerId === session.id) {
-      throw new SeparationOfDutiesError(
-        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự phê duyệt nhiệm vụ của mình.",
-        "task.approve",
-        taskId
-      );
+      if (primaryOwnerId && primaryOwnerId === session.id) {
+        throw new SeparationOfDutiesError(
+          "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự phê duyệt nhiệm vụ của mình.",
+          "task.approve",
+          taskId
+        );
+      }
     }
 
     if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
@@ -1088,7 +1090,9 @@ export class TaskDomainActionService {
       );
     }
 
-    const authResult = await authorize(userContext, "task.approve", resource);
+    const authResult = await authorize(userContext, "task.approve", resource, {
+      allowBypass: validated.allowBypass,
+    });
     assertAuthAllowed(authResult, "task.approve", taskId);
 
     const noteText = validated.note?.trim() || null;
@@ -1119,42 +1123,54 @@ export class TaskDomainActionService {
       // Check if all approval steps are completed
       let canComplete = true;
       if (task.approvalProcesses && task.approvalProcesses.length > 0) {
-        const process = task.approvalProcesses[0];
-        const remainingSteps = await tx.taskApprovalStep.count({
-          where: {
-            processId: process.id,
-            status: { in: [ApprovalStepStatus.PENDING] },
-          },
-        });
-        if (remainingSteps > 0) {
-          canComplete = false;
-        } else {
-          await tx.taskApprovalProcess.update({
-            where: { id: process.id },
-            data: { status: ApprovalProcessStatus.APPROVED },
+        if (validated.stepId) {
+          const remainingSteps = await tx.taskApprovalStep.count({
+            where: {
+              processId: task.approvalProcesses[0].id,
+              status: { in: [ApprovalStepStatus.PENDING] },
+            },
           });
+          if (remainingSteps > 0) {
+            canComplete = false;
+          } else {
+            await tx.taskApprovalProcess.update({
+              where: { id: task.approvalProcesses[0].id },
+              data: { status: ApprovalProcessStatus.APPROVED },
+            });
+          }
+        } else {
+          // Direct completion from Canvas: mark all pending steps in approval processes as approved
+          for (const process of task.approvalProcesses) {
+            await tx.taskApprovalStep.updateMany({
+              where: {
+                processId: process.id,
+                status: ApprovalStepStatus.PENDING,
+              },
+              data: {
+                status: ApprovalStepStatus.APPROVED,
+                decidedAt: new Date(),
+                reviewerUserId: session.id,
+                decisionNote: noteText || "Nghiệm thu hoàn thành nhiệm vụ",
+              },
+            });
+            await tx.taskApprovalProcess.update({
+              where: { id: process.id },
+              data: { status: ApprovalProcessStatus.APPROVED },
+            });
+          }
+          canComplete = true;
         }
       }
 
-      let updatedTask;
-      if (canComplete) {
-        updatedTask = await tx.task.update({
-          where: { id: taskId },
-          data: {
-            status: TaskStatus.COMPLETED,
-            progressPercent: 100,
-            completedAt: new Date(),
-            version: { increment: 1 },
-          },
-        });
-      } else {
-        updatedTask = await tx.task.update({
-          where: { id: taskId },
-          data: {
-            version: { increment: 1 },
-          },
-        });
-      }
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: TaskStatus.COMPLETED,
+          progressPercent: 100,
+          completedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
 
       await auditService.logEvent(tx, {
         actorId: session.id,

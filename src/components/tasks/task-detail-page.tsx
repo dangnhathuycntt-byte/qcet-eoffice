@@ -429,7 +429,7 @@ export function TaskDetailPage({
     setTask((prev) => ({
       ...prev,
       status: newStatus,
-      ...(newStatus === "COMPLETED" ? { progressPercent: 100 } : {}),
+      ...(newStatus === "COMPLETED" ? { progressPercent: 100, progress: 100 } : {}),
     }));
 
     setAuditEvents((prev) => [

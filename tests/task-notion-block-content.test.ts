@@ -244,4 +244,73 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
   });
+
+  describe("6. Fast Block Handle Refactor — Selection, Keyboard Actions & No Click Dropdown", () => {
+    it("selects entire block on handle click without opening dropdown menu", () => {
+      // 1. Must use selectedBlockId state
+      assert.ok(
+        componentContent.includes("setSelectedBlockId(block.id)"),
+        "Clicking handle must select entire block via setSelectedBlockId"
+      );
+
+      // 2. Must NOT toggle dropdown menu on handle click
+      assert.ok(
+        !componentContent.includes("setActiveBlockMenuId"),
+        "Must NOT toggle dropdown on handle click"
+      );
+
+      // 3. Highlighted selected state
+      assert.ok(
+        componentContent.includes("selectedBlockId === block.id"),
+        "Must support visual selected state"
+      );
+    });
+
+    it("supports fast keyboard actions when block is selected (Delete, Cmd+D, ArrowUp/Down, Enter, Esc)", () => {
+      // 1. Delete / Backspace deletes block immediately
+      assert.ok(
+        componentContent.includes('e.key === "Delete"') &&
+          componentContent.includes('e.key === "Backspace"') &&
+          componentContent.includes("handleDeleteBlock(block.id)"),
+        "Delete and Backspace must delete selected block immediately"
+      );
+
+      // 2. Cmd/Ctrl+D duplicates block
+      assert.ok(
+        componentContent.includes('(e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d"') &&
+          componentContent.includes("handleDuplicateBlock(block, index)"),
+        "Cmd/Ctrl+D must duplicate selected block"
+      );
+
+      // 3. ArrowUp / ArrowDown moves selection
+      assert.ok(
+        componentContent.includes('e.key === "ArrowUp"') &&
+          componentContent.includes('e.key === "ArrowDown"'),
+        "ArrowUp and ArrowDown must navigate selection"
+      );
+
+      // 4. Enter edits text and Esc deselects
+      assert.ok(
+        componentContent.includes("inputEl?.focus()") &&
+          componentContent.includes('e.key === "Escape"'),
+        "Enter must enter text edit mode and Esc must cancel selection"
+      );
+    });
+
+    it("supports drag to reorder and right-click context menu", () => {
+      // 1. Native drag to reorder
+      assert.ok(
+        componentContent.includes("handleDragStart") &&
+          componentContent.includes("handleDragOver") &&
+          componentContent.includes("handleDragEnd"),
+        "Must support drag to reorder"
+      );
+
+      // 2. Context menu on right-click
+      assert.ok(
+        componentContent.includes("onContextMenu"),
+        "Must support right-click context menu"
+      );
+    });
+  });
 });

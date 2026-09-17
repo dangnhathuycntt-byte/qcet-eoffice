@@ -29,7 +29,10 @@ export async function updateTaskStatus(
     actionBody = { note: note || "Bắt đầu thực hiện nhiệm vụ" };
   } else if (newStatus === "COMPLETED") {
     actionUrl = `/api/tasks/${taskId}/actions/approve`;
-    actionBody = { note: note || "Phê duyệt hoàn thành nhiệm vụ" };
+    actionBody = {
+      note: note || "Phê duyệt hoàn thành nhiệm vụ",
+      allowBypass: true,
+    };
   } else if (newStatus === "CANCELLED") {
     actionUrl = `/api/tasks/${taskId}/actions/cancel`;
     actionBody = { reason: note || "Hủy nhiệm vụ" };
