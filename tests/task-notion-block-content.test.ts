@@ -483,4 +483,69 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
   });
+
+  describe("8. Modern Media, File and Link Redesign (Image, File, Bookmark & URL Paste)", () => {
+    it("separates Image, File, Bookmark, and Link into dedicated slash menu options", () => {
+      assert.ok(componentContent.includes('"opt-image"'), "Must provide dedicated Image slash option");
+      assert.ok(componentContent.includes('"opt-attachment"'), "Must provide dedicated File/Attachment option");
+      assert.ok(componentContent.includes('"opt-bookmark"'), "Must provide dedicated Web Bookmark option");
+      assert.ok(componentContent.includes('"opt-link"'), "Must provide dedicated Link option");
+    });
+
+    it("renders image directly without generic attachment card and supports hover toolbar and caption", () => {
+      assert.ok(
+        componentContent.includes("<img") &&
+          componentContent.includes("block.caption") &&
+          componentContent.includes("Thay thế") &&
+          componentContent.includes("imageWidth"),
+        "Must render direct image tag with aspect ratio, width controls, and caption"
+      );
+    });
+
+    it("renders files as compact document rows with icon and metadata instead of tall cards", () => {
+      assert.ok(
+        componentContent.includes("FileText") &&
+          componentContent.includes("block.fileSize") &&
+          componentContent.includes("group/file"),
+        "Must render file as compact row with icon and secondary metadata"
+      );
+    });
+
+    it("resolves internal QCET E-Office links for tasks, documents and meetings", () => {
+      const { resolveUrlMetadata } = require("@/components/tasks/detail/task-notion-block-content");
+
+      const taskMeta = resolveUrlMetadata("/tasks/task-123", "Soạn thảo kế hoạch");
+      assert.equal(taskMeta.isInternalQcet, true);
+      assert.equal(taskMeta.entityType, "task");
+      assert.ok(taskMeta.title.includes("Soạn thảo kế hoạch"));
+
+      const docMeta = resolveUrlMetadata("https://qcet.edu.vn/documents/incoming/doc-456");
+      assert.equal(docMeta.isInternalQcet, true);
+      assert.equal(docMeta.entityType, "document");
+
+      const meetingMeta = resolveUrlMetadata("https://qcet.edu.vn/meetings/meet-789");
+      assert.equal(meetingMeta.isInternalQcet, true);
+      assert.equal(meetingMeta.entityType, "meeting");
+
+      const extMeta = resolveUrlMetadata("https://github.com/dangnhathuycntt-byte/qcet-eoffice");
+      assert.equal(extMeta.domain, "github.com");
+      assert.equal(extMeta.title, "GitHub Repository");
+    });
+
+    it("handles clipboard image paste and drag & drop for images and files", () => {
+      assert.ok(
+        componentContent.includes("handleContainerPaste") &&
+          componentContent.includes("handleContainerDrop"),
+        "Must implement clipboard paste and drag & drop handlers on container"
+      );
+    });
+
+    it("presents contextual popover to choose Link / Bookmark / Embed on URL paste", () => {
+      assert.ok(
+        componentContent.includes("urlPastePopover") &&
+          componentContent.includes("Dán dưới dạng:"),
+        "Must provide contextual URL paste popover"
+      );
+    });
+  });
 });
