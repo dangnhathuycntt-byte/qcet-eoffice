@@ -333,7 +333,7 @@ export function DirectInlineEditor({
             aria-label={ariaLabel}
             placeholder={placeholder}
             className={cn(
-              "block w-full bg-transparent p-0 border-0 outline-none focus:outline-none focus:ring-0 resize-none overflow-hidden cursor-text",
+              "block w-full bg-transparent p-0 m-0 border-0 outline-none focus:outline-none focus:ring-0 resize-none overflow-hidden cursor-text whitespace-pre-wrap break-words",
               editorClassName
             )}
           />
@@ -363,19 +363,19 @@ export function DirectInlineEditor({
           )}
         </div>
       ) : (
-        <div className="w-full relative inline-block">
+        <div className="w-full relative">
           <Tag
             ref={viewContainerRef}
             onClick={handleViewClick}
             className={cn(
-              "block cursor-text select-text transition-colors",
-              canEdit && "hover:bg-muted/30 rounded px-1 -mx-1",
+              "block w-full cursor-text select-text transition-colors p-0 m-0",
+              canEdit && "hover:text-foreground/85",
               viewClassName
             )}
             title={canEdit ? "Nhấp vào vị trí bất kỳ để chỉnh sửa" : undefined}
           >
             {draft ? (
-              <span className="whitespace-pre-wrap">{draft}</span>
+              <span className="whitespace-pre-wrap break-words">{draft}</span>
             ) : (
               <span className="text-muted-foreground/50 italic select-none">
                 {placeholder}

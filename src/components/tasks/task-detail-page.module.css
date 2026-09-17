@@ -59,40 +59,52 @@
 .canvas {
   flex: 1;
   width: 100%;
-  padding: 0 32px 64px;
+  padding: 0 clamp(24px, 2.5vw, 40px) 64px clamp(48px, 4.5vw, 80px);
   background: #fff;
   box-sizing: border-box;
 }
 .shell {
   width: 100%;
-  margin-inline: auto;
   box-sizing: border-box;
 }
 .shellClosed {
   max-width: 780px;
+  margin-inline: auto;
+  display: block;
+}
+.shellClosed .content {
+  grid-column: auto;
+  max-width: 100%;
+  margin: 0 auto;
 }
 .shellOpen {
-  max-width: 1180px;
+  width: 100%;
+  max-width: 1220px;
+  margin-inline: auto;
   display: grid;
-  grid-template-columns: minmax(0, 780px) 290px;
-  column-gap: 32px;
-  justify-content: center;
+  grid-template-columns: minmax(700px, 750px) minmax(48px, 1fr) 300px;
   align-items: flex-start;
+}
+.shellOpen .content {
+  grid-column: 1;
+}
+.shellOpen .inspector {
+  grid-column: 3;
 }
 .content {
   min-width: 0;
   width: 100%;
-  max-width: 100%;
+  max-width: 750px;
   margin: 0;
   padding-top: 48px;
 }
 .content > * + * { margin-top: 24px; }
 .expanded {
   max-width: 100%;
-  margin: 0;
+  margin: 0 auto;
 }
 .inspector {
-  width: 290px;
+  width: 300px;
   max-width: 100%;
   min-width: 0;
   padding-top: 48px;
@@ -101,38 +113,54 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .workspace [data-slot='linear-properties-sidebar'] > div {
   margin: 0;
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 2%);
 }
 .workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: flex-start;
   min-height: 28px;
+  padding-block: 2px;
+}
+.workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div > :first-child {
+  padding-top: 2px;
+  white-space: nowrap;
 }
 .workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div > :last-child {
   text-align: left;
   justify-content: flex-start;
   max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 .workspace [data-slot='linear-properties-sidebar'] :is(button, a) {
   text-align: left;
 }
 .workspace [data-slot='linear-properties-sidebar'] :is(.font-semibold, .font-medium) { font-weight: 400; }
 .workspace [data-slot='task-identity-block'] { margin-bottom: 22px; }
-.workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) {
+.workspace [data-slot='task-identity-block'] :is(h1, textarea) {
+  font-family: inherit;
   font-size: 24px;
   line-height: 1.4;
   font-weight: 600;
   letter-spacing: -.6px;
-  text-wrap: pretty;
+  text-wrap: wrap;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .workspace [data-slot='task-identity-block'] > div:nth-child(2) {
   gap: 4px 8px;
@@ -197,27 +225,41 @@
   .workspace { --shell-gutter: 24px; }
 }
 @media (min-width: 1440px) {
-  .canvas { padding-inline: 32px; }
-  .shellClosed { max-width: 780px; }
+  .canvas {
+    padding: 0 40px 64px 64px;
+  }
   .shellOpen {
-    max-width: 1180px;
-    grid-template-columns: minmax(0, 780px) 290px;
-    column-gap: 32px;
+    max-width: 1240px;
+    grid-template-columns: minmax(700px, 760px) minmax(64px, 1fr) 300px;
+  }
+  .shellClosed {
+    max-width: 780px;
   }
 }
 @media (min-width: 1024px) and (max-width: 1439px) {
-  .canvas { padding: 0 24px 56px; }
-  .shellClosed { max-width: 780px; }
-  .shellOpen {
-    max-width: 100%;
-    grid-template-columns: minmax(0, 1fr) 290px;
-    column-gap: 28px;
+  .canvas {
+    padding: 0 24px 56px 40px;
   }
-  .content { padding-top: 36px; }
-  .inspector { padding-top: 36px; }
+  .shellClosed {
+    max-width: 780px;
+  }
+  .shellOpen {
+    max-width: 1160px;
+    grid-template-columns: minmax(0, 1fr) minmax(32px, 64px) 300px;
+  }
+  .content {
+    padding-top: 36px;
+    max-width: 100%;
+  }
+  .inspector {
+    width: 300px;
+    padding-top: 36px;
+  }
 }
 @media (max-width: 1023px) {
-  .canvas { padding: 0 16px 40px; }
+  .canvas {
+    padding: 0 16px 40px;
+  }
   .shellOpen,
   .shellClosed {
     display: flex;
@@ -225,10 +267,23 @@
     gap: 24px;
     max-width: 100%;
   }
-  .content { padding-top: 24px; max-width: 100%; }
-  .expanded { max-width: 100%; }
-  .inspector { width: 100%; padding-top: 0; }
-  .workspace [data-slot='task-identity-block'] :is(h1, textarea[aria-label='Chỉnh sửa tên nhiệm vụ']) { font-size: 21px; }
+  .shellOpen .content,
+  .shellOpen .inspector {
+    grid-column: auto;
+    width: 100%;
+  }
+  .content {
+    padding-top: 24px;
+    max-width: 100%;
+  }
+  .expanded {
+    max-width: 100%;
+  }
+  .inspector {
+    width: 100%;
+    padding-top: 0;
+  }
+  .workspace [data-slot='task-identity-block'] :is(h1, textarea) { font-size: 21px; }
   .workspace > nav[role='tablist'] { flex-wrap: wrap; }
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {
     height: 40px;

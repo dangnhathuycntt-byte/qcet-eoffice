@@ -25,7 +25,6 @@ import {
   ExternalLink,
   Signal,
   UserPlus,
-  ArrowRight,
   CircleDashed,
   Compass,
   MessageSquare,
@@ -48,6 +47,7 @@ import {
   formatIsoDate,
 } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
+import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -88,6 +88,50 @@ function getInitials(name?: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Tách học vị/học hàm và chức danh để hiển thị tên ngắn gọn kèm chức vụ trong tooltip
+ */
+function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: string; role?: string } {
+  if (!rawName) return { name: "Chưa phân công" };
+  const trimmed = rawName.trim();
+  if (!trimmed || trimmed.toLowerCase().includes("chưa phân công")) {
+    return { name: "Chưa phân công" };
+  }
+
+  // 1. Tách học vị / học hàm tiền tố: ThS., TS., PGS.TS., GS.TS., BS., CN., KS., GVC., ...
+  const academicPrefixRegex =
+    /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.|ThS\b|TS\b)\s*/i;
+  const match = trimmed.match(academicPrefixRegex);
+
+  let cleanName = trimmed;
+  let prefix = "";
+  if (match) {
+    prefix = match[1].trim();
+    cleanName = trimmed.slice(match[0].length).trim();
+  }
+
+  // 2. Tách chức vụ trong ngoặc đơn / vuông nếu có
+  let role = "";
+  const roleInParenMatch = cleanName.match(/\s*[\(\[](.*?)[\)\]]/);
+  if (roleInParenMatch) {
+    role = roleInParenMatch[1].trim();
+    cleanName = cleanName.replace(/\s*[\(\[](.*?)[\)\]]/g, "").trim();
+  }
+
+  // 3. Tách chức vụ sau dấu gạch ngang
+  const roleAfterDashMatch = cleanName.match(/\s*-\s*(.*)$/);
+  if (roleAfterDashMatch) {
+    role = role || roleAfterDashMatch[1].trim();
+    cleanName = cleanName.replace(/\s*-\s*(.*)$/, "").trim();
+  }
+
+  return {
+    name: cleanName || trimmed,
+    prefix: prefix || undefined,
+    role: role || undefined,
+  };
 }
 
 
@@ -262,6 +306,54 @@ export function LinearPropertiesSidebar({
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
+
+  // Phụ trách chỉ hiện avatar + tên; chức vụ đưa vào tooltip/popover
+  const leadParsed = React.useMemo(() => {
+    const parsed = extractNameAndTitle(leadName);
+    if (!leadName || leadName === "Chưa phân công") {
+      return {
+        displayName: "Chưa phân công",
+        fullTitle: "Chưa phân công",
+        role: "",
+        tooltip: "Chưa phân công",
+      };
+    }
+
+    let role = parsed.role || "";
+    let academicPrefix = parsed.prefix || "";
+
+    for (const group of QCET_DEPARTMENT_GROUPS) {
+      for (const m of group.members) {
+        if (
+          m.name.toLowerCase() === parsed.name.toLowerCase() ||
+          m.name.toLowerCase() === leadName.toLowerCase()
+        ) {
+          if (!role && m.role) role = m.role;
+          if (!academicPrefix && m.title) {
+            const mMatch = m.title.match(
+              /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.)\s*/i
+            );
+            if (mMatch) academicPrefix = mMatch[1];
+          }
+          break;
+        }
+      }
+      if (role) break;
+    }
+
+    const titleWithPrefix = academicPrefix ? `${academicPrefix} ${parsed.name}` : parsed.name;
+    const tooltipParts: string[] = [];
+    if (titleWithPrefix) tooltipParts.push(titleWithPrefix);
+    if (role) tooltipParts.push(role);
+    if (departmentName && !tooltipParts.includes(departmentName)) tooltipParts.push(departmentName);
+
+    return {
+      displayName: parsed.name,
+      fullTitle: titleWithPrefix,
+      role: role,
+      tooltip: tooltipParts.join(" · ") || leadName,
+    };
+  }, [leadName, departmentName]);
 
   // Members / Collaborators
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
@@ -490,11 +582,11 @@ export function LinearPropertiesSidebar({
               }
             }}
             className={cn(
-              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
               canEdit ? "cursor-pointer hover:bg-muted/40" : ""
             )}
           >
-            <span className="text-muted-foreground text-xs font-normal">Trạng thái</span>
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Trạng thái</span>
             <div className="relative">
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
@@ -563,11 +655,11 @@ export function LinearPropertiesSidebar({
               }
             }}
             className={cn(
-              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
               canEdit ? "cursor-pointer hover:bg-muted/40" : ""
             )}
           >
-            <span className="text-muted-foreground text-xs font-normal">Ưu tiên</span>
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ưu tiên</span>
             <div className="relative">
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
@@ -621,31 +713,37 @@ export function LinearPropertiesSidebar({
               }
             }}
             className={cn(
-              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
               canEdit ? "cursor-pointer hover:bg-muted/40" : ""
             )}
           >
-            <span className="text-muted-foreground text-xs font-normal">Phụ trách</span>
-            <div className="relative">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phụ trách</span>
+            <div className="relative min-w-0">
               <div
-                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground max-w-[180px] truncate"
+                className="inline-flex items-start gap-1.5 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
+                style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}
+                title={leadParsed.tooltip}
               >
                 {isReassigning ? (
                   <div className="flex items-center gap-1.5 text-primary text-xs">
                     <Loader2 className="size-3.5 animate-spin" />
                     <span>Đang cập nhật...</span>
                   </div>
-                ) : leadName && leadName !== "Chưa phân công" ? (
+                ) : leadParsed.displayName && leadParsed.displayName !== "Chưa phân công" ? (
                   <>
-                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0">
-                      {getInitials(leadName)}
+                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0 mt-0.5">
+                      {getInitials(leadParsed.displayName)}
                     </div>
-                    <span className="truncate" title={leadName}>
-                      {leadName}
+                    <span
+                      className="min-w-0 font-normal line-clamp-2 select-text"
+                      title={leadParsed.tooltip}
+                      style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip", wordBreak: "break-word" }}
+                    >
+                      {leadParsed.displayName}
                     </span>
                   </>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
                     <UserPlus className="size-3.5" strokeWidth={1.5} />
                     <span>Thêm phụ trách</span>
                   </div>
@@ -671,7 +769,7 @@ export function LinearPropertiesSidebar({
                   )}
 
                   {personnelList.map((p) => {
-                    const isSelected = p.name === leadName;
+                    const isSelected = p.name === leadName || p.name === leadParsed.displayName;
                     return (
                       <button
                         key={p.id}
@@ -719,11 +817,11 @@ export function LinearPropertiesSidebar({
               }
             }}
             className={cn(
-              "group relative flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none",
+              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
               canEdit ? "cursor-pointer hover:bg-muted/40" : ""
             )}
           >
-            <span className="text-muted-foreground text-xs font-normal">Thành viên</span>
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Thành viên</span>
             <div className="relative">
               <div className="flex items-center gap-1.5">
                 {isUpdatingCollaborators ? (
@@ -732,24 +830,30 @@ export function LinearPropertiesSidebar({
                     <span className="text-[11px]">Đang lưu...</span>
                   </div>
                 ) : collaborators.length > 0 ? (
-                  <div className="flex items-center -space-x-1">
+                  <div
+                    className="flex items-center -space-x-1.5 overflow-visible pt-0.5"
+                    title={collaborators.map((c) => c.name).join(", ")}
+                  >
                     {collaborators.slice(0, 3).map((m) => (
                       <span
                         key={m.id}
-                        className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[7px] font-semibold text-foreground overflow-hidden"
+                        className="size-5 rounded-full bg-primary/10 text-primary border-2 border-background flex items-center justify-center text-[8px] font-semibold overflow-hidden shrink-0 shadow-xs"
                         title={m.name}
                       >
                         {getInitials(m.name)}
                       </span>
                     ))}
                     {collaborators.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
+                      <span
+                        className="size-5 rounded-full bg-muted text-muted-foreground border-2 border-background flex items-center justify-center text-[9px] font-medium font-mono shrink-0 shadow-xs"
+                        title={`+${collaborators.length - 3} thành viên khác`}
+                      >
                         +{collaborators.length - 3}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
                     <Users className="size-3.5" strokeWidth={1.5} />
                     <span>Thêm thành viên</span>
                   </div>
@@ -840,19 +944,18 @@ export function LinearPropertiesSidebar({
             </div>
           </div>
 
-          {/* Dates Row (Linear Start -> Target Range style) */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none">
-            <span className="text-muted-foreground text-xs font-normal shrink-0">Thời hạn</span>
-            <div className="flex items-center gap-1 text-xs shrink-0 whitespace-nowrap">
-              {/* Start Date */}
+          {/* Row 5: Start Date */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ngày bắt đầu</span>
+            <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && onStartDateChange ? (
                 <VietnameseDatePicker
                   value={startDateIso}
                   onChange={handleStartDateChangeInternal}
-                  placeholder="Bắt đầu"
+                  placeholder="Chọn ngày"
                   title="Ngày bắt đầu"
                   variant="inline"
-                  icon={<LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
+                  icon={<Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
                   showPresets={false}
                   align="right"
                 />
@@ -861,31 +964,35 @@ export function LinearPropertiesSidebar({
                   title="Ngày bắt đầu"
                   className="inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
                 >
-                  <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
+                  <Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                   <span className="tabular-nums font-normal">
-                    {startDateIso ? formatDisplayDate(startDateIso) : "Bắt đầu"}
+                    {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
                   </span>
                 </div>
               )}
+            </div>
+          </div>
 
-              <ArrowRight className="size-3 text-muted-foreground/50 shrink-0 mx-0.5" strokeWidth={1.5} />
-
-              {/* Due Date / Target Date */}
+          {/* Row 6: Due Date / Target Date */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Hạn hoàn thành</span>
+            <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && onDueDateChange ? (
                 <VietnameseDatePicker
                   value={dueDateIso}
                   onChange={handleDueDateChangeInternal}
-                  placeholder="Hạn chót"
+                  placeholder="Chọn ngày"
                   title="Hạn hoàn thành"
                   variant="inline"
                   icon={
-                    <LinearTargetDateIcon
+                    <Calendar
                       className={cn(
                         "size-3.5 shrink-0",
                         dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
                           ? "text-rose-500"
                           : "text-muted-foreground"
                       )}
+                      strokeWidth={1.5}
                     />
                   }
                   triggerClassName={cn(
@@ -904,39 +1011,75 @@ export function LinearPropertiesSidebar({
                       : "text-foreground font-normal"
                   )}
                 >
-                  <LinearTargetDateIcon
+                  <Calendar
                     className={cn(
                       "size-3.5 shrink-0",
                       dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
                         ? "text-rose-500"
                         : "text-muted-foreground"
                     )}
+                    strokeWidth={1.5}
                   />
                   <span className="tabular-nums font-normal">
-                    {dueDateIso ? formatDisplayDate(dueDateIso) : "Hạn chót"}
+                    {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Teams / Dept Row */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
-            <span className="text-muted-foreground text-xs font-normal">Đơn vị</span>
-            <div className="flex items-center gap-1.5 max-w-[160px] truncate text-foreground">
-              <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-              <span className="truncate text-xs" title={departmentName}>
+          {/* Row 7: Department */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Đơn vị</span>
+            <div
+              className="flex items-start gap-1.5 min-w-0 text-foreground text-xs leading-snug"
+              style={{
+                minWidth: 0,
+                whiteSpace: "normal",
+                overflow: "visible",
+                textOverflow: "clip",
+              }}
+            >
+              <Building2 className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
+              <span
+                className="min-w-0 font-normal select-text line-clamp-2"
+                title={departmentName}
+                style={{
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  overflow: "visible",
+                  textOverflow: "clip",
+                  wordBreak: "break-word",
+                }}
+              >
                 {departmentName}
               </span>
             </div>
           </div>
 
-          {/* Labels Row */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
-            <span className="text-muted-foreground text-xs font-normal">Nhãn</span>
-            <div className="flex items-center gap-1.5 text-foreground max-w-[150px] truncate">
-              <Tag className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-              <span className="text-xs truncate">
+          {/* Row 8: Labels */}
+          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Nhãn</span>
+            <div
+              className="flex items-start gap-1.5 text-foreground text-xs leading-snug min-w-0"
+              style={{
+                minWidth: 0,
+                whiteSpace: "normal",
+                overflow: "visible",
+                textOverflow: "clip",
+              }}
+            >
+              <Tag className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
+              <span
+                className="min-w-0 font-normal line-clamp-2 select-text"
+                style={{
+                  minWidth: 0,
+                  whiteSpace: "normal",
+                  overflow: "visible",
+                  textOverflow: "clip",
+                  wordBreak: "break-word",
+                }}
+              >
                 {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
               </span>
             </div>
@@ -1064,66 +1207,81 @@ export function LinearPropertiesSidebar({
       </div>
 
       {/* 3. SECTION: ACTIVITY (Linear Style - Tối đa 3 hoạt động mới nhất) */}
-      <div className="space-y-2.5 pt-2 border-t border-border/40">
-        <div className="flex items-center justify-between">
-          <span
-            onClick={() => onNavigateTab?.("activity")}
-            className="text-xs font-semibold text-foreground flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors"
-          >
-            <span>Hoạt động</span>
-            <ChevronDown className="size-3 text-muted-foreground" />
-          </span>
-          {onNavigateTab && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab("activity")}
-              className="text-[11px] text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
-            >
-              Xem tất cả
-            </button>
-          )}
-        </div>
-
-        {/* Compact Chronological Activity List (Tối đa 3 hoạt động) */}
-        <div className="space-y-1.5">
-          {auditEvents.slice(0, 3).map((evt) => {
-            const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
-            const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
-            const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
-            const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
-
-            return (
-              <div key={evt.id} className="flex items-start gap-2.5 text-[11px] text-muted-foreground leading-snug py-0.5">
-                <span className="mt-0.5 shrink-0 text-muted-foreground/70">
-                  {isNameChange ? (
-                    <PenLine className="size-3.5" strokeWidth={1.5} />
-                  ) : isPriority ? (
-                    <Signal className="size-3.5" strokeWidth={1.5} />
-                  ) : isDate ? (
-                    <Calendar className="size-3.5" strokeWidth={1.5} />
-                  ) : isProgress ? (
-                    <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
-                  ) : (
-                    <Box className="size-3.5" strokeWidth={1.5} />
-                  )}
+      <div className="pt-2 border-t border-border/40 select-none">
+        {auditEvents.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <div
+                onClick={() => onNavigateTab?.("activity")}
+                className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-foreground transition-colors"
+                title="Xem nhật ký hoạt động"
+              >
+                <span className="text-xs font-semibold text-foreground truncate">
+                  Hoạt động
                 </span>
-                <div className="min-w-0 flex-1">
-                  <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
-                  <span className="text-foreground/80">{evt.description || evt.action}</span>
-                  <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
-                    · {formatDisplayDate(evt.timestamp)}
-                  </span>
-                </div>
+                <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums shrink-0">
+                  {auditEvents.length}
+                </span>
               </div>
-            );
-          })}
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab("activity")}
+                  className="text-[11px] font-medium text-primary hover:underline cursor-pointer pl-1"
+                  title="Xem tất cả hoạt động"
+                >
+                  Xem tất cả
+                </button>
+              )}
+            </div>
 
-          {auditEvents.length === 0 && (
-            <p className="text-[11px] text-muted-foreground/70 italic py-0.5">
-              Chưa có hoạt động mới nào.
-            </p>
-          )}
-        </div>
+            {/* Compact Chronological Activity List (Tối đa 3 hoạt động) */}
+            <div className="space-y-1.5 pt-0.5">
+              {auditEvents.slice(0, 3).map((evt) => {
+                const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
+                const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
+                const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
+                const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
+
+                return (
+                  <div key={evt.id} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-snug py-0.5">
+                    <span className="mt-0.5 shrink-0 text-muted-foreground/70">
+                      {isNameChange ? (
+                        <PenLine className="size-3.5" strokeWidth={1.5} />
+                      ) : isPriority ? (
+                        <Signal className="size-3.5" strokeWidth={1.5} />
+                      ) : isDate ? (
+                        <Calendar className="size-3.5" strokeWidth={1.5} />
+                      ) : isProgress ? (
+                        <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                      ) : (
+                        <Box className="size-3.5" strokeWidth={1.5} />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
+                      <span className="text-foreground/80">{evt.description || evt.action}</span>
+                      <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
+                        · {formatDisplayDate(evt.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* Trạng thái 0 hoạt động: 1 dòng compact duy nhất "Hoạt động   0", loại bỏ khoảng trắng thừa */
+          <div className="flex items-center justify-between py-1 text-xs select-none">
+            <span
+              onClick={() => onNavigateTab?.("activity")}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Hoạt động
+            </span>
+            <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
+          </div>
+        )}
       </div>
       </>
       )}

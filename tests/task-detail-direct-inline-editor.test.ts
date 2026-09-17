@@ -236,9 +236,10 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Properties line must eliminate more options dots (...)"
     );
 
-    // Must have start date picker support with 'Chọn ngày bắt đầu' placeholder
+    // Must have start date picker support with date picker title
     assert.ok(
-      propertiesSidebarContent.includes('placeholder="Bắt đầu"') &&
+      (propertiesSidebarContent.includes('placeholder="Bắt đầu"') ||
+        propertiesSidebarContent.includes('placeholder="Chọn ngày"')) &&
         propertiesSidebarContent.includes('title="Ngày bắt đầu"'),
       "Canonical properties sidebar must expose the start-date picker"
     );
