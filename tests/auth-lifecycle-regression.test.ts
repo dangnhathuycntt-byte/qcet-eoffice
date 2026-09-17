@@ -50,13 +50,11 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
       assert.equal(edgeVerified.role, "BAN_GIAM_HIEU");
     });
 
-    test("1.2 Authenticated user accessing /login is redirected to /tasks (307)", async () => {
+    test("1.2 JWT at /login waits for database session truth", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/login", sessionToken);
       const res = await middleware(req);
-      assert.equal(res?.status, 307);
-      const location = res?.headers.get("location");
-      assert.ok(location);
-      assert.equal(new URL(location).pathname, "/tasks");
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
     });
 
     test("1.3 Authenticated user accessing / is redirected to /tasks (307)", async () => {
@@ -106,12 +104,12 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
       assert.ok(cacheControl?.includes("no-cache"));
     });
 
-    test("2.2 GET /api/auth/logout also gracefully clears session", async () => {
+    test("2.2 GET /api/auth/logout is rejected without mutating session", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/api/auth/logout");
       const res = await logoutGet(req);
-      assert.equal(res.status, 200);
-      const setCookie = res.headers.get("set-cookie");
-      assert.ok(setCookie?.includes("Max-Age=0"));
+      assert.equal(res.status, 405);
+      assert.equal(res.headers.get("allow"), "POST");
+      assert.equal(res.headers.get("set-cookie"), null);
     });
   });
 
@@ -172,13 +170,11 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
       assert.equal(verified?.email, userPayload.email);
     });
 
-    test("4.2 Re-authenticated user accessing /login is immediately bounced to /tasks", async () => {
+    test("4.2 Re-authenticated user at /login waits for database session truth", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/login", newSessionToken);
       const res = await middleware(req);
-      assert.equal(res?.status, 307);
-      const location = res?.headers.get("location");
-      assert.ok(location);
-      assert.equal(new URL(location).pathname, "/tasks");
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
     });
 
     test("4.3 Re-authenticated user accessing /tasks is allowed full access", async () => {

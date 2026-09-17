@@ -110,7 +110,7 @@ export function resolveOAuthError(
         variant: "amber",
         email: email || undefined,
         actionText: "Thử lại bằng tài khoản trường",
-        actionHref: "/api/auth/signin/google",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "account_not_found":
@@ -149,7 +149,7 @@ export function resolveOAuthError(
         message: "Yêu cầu xác thực Google không hợp lệ hoặc mã bảo mật (State/PKCE) đã hết hạn. Vui lòng thử đăng nhập lại.",
         variant: "red",
         actionText: "Thử đăng nhập lại",
-        actionHref: "/api/auth/signin/google",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "session_expired":
@@ -159,7 +159,7 @@ export function resolveOAuthError(
         message: "Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.",
         variant: "amber",
         actionText: "Đăng nhập lại",
-        actionHref: "/api/auth/signin/google",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "server_error":
@@ -179,7 +179,7 @@ export function resolveOAuthError(
         message: "Quá trình xác thực với Google gặp sự cố hoặc tài khoản chưa được liên kết. Vui lòng thử lại.",
         variant: "red",
         actionText: "Thử lại",
-        actionHref: "/api/auth/signin/google",
+        actionHref: "/login?startGoogle=1",
       };
 
     case "oauth_not_configured":

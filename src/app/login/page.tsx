@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import * as m from "motion/react-m";
 import { AlertCircle, X } from "lucide-react";
+import { signIn } from "next-auth/react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import {
@@ -50,6 +51,7 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const hasStartedGoogleRef = React.useRef(false);
 
   const targetUrl = React.useMemo(() => {
     return sanitizeRedirectUrl(
@@ -67,6 +69,21 @@ function LoginFormContent() {
       router.replace(targetUrl);
     }
   }, [isLoading, isAuthenticated, user, targetUrl, router]);
+
+  React.useEffect(() => {
+    if (
+      !isLoading &&
+      !isAuthenticated &&
+      searchParams.get("startGoogle") === "1" &&
+      !hasStartedGoogleRef.current
+    ) {
+      hasStartedGoogleRef.current = true;
+      void signIn("google", { callbackUrl: targetUrl }).catch(() => {
+        hasStartedGoogleRef.current = false;
+        setErrorMessage("Không thể kết nối đến máy chủ xác thực");
+      });
+    }
+  }, [isLoading, isAuthenticated, searchParams, targetUrl]);
 
   // OAuth Error handling from URL query parameters
   const errorParam = searchParams.get("error");

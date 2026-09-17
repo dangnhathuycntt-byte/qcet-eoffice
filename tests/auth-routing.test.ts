@@ -146,14 +146,12 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
   });
 
   describe("3. Authenticated users opening /login", () => {
-    test("authenticated user accessing /login redirects directly to /tasks", async () => {
+    test("JWT at /login waits for server session truth instead of redirecting in middleware", async () => {
       const req = createRequest("https://eoffice.qcet.edu.vn/login", validToken);
       const res = await middleware(req);
 
-      assert.equal(res?.status, 307);
-      const location = res?.headers.get("location");
-      assert.ok(location);
-      assert.equal(new URL(location).pathname, "/tasks");
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
     });
 
     test("unauthenticated user accessing /login is allowed through", async () => {

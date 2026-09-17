@@ -117,7 +117,7 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       assert.equal(res.headers.get("location"), "http://localhost:3000/tasks");
     });
 
-    test("2.2 Authenticated user accessing /login is redirected to /tasks", async () => {
+    test("2.2 JWT at /login waits for database session truth", async () => {
       const req = new NextRequest("http://localhost:3000/login", {
         headers: {
           cookie: `${SESSION_COOKIE_NAME}=${activeUserToken}`,
@@ -125,8 +125,8 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       });
 
       const res = await middleware(req);
-      assert.equal(res.status, 307);
-      assert.equal(res.headers.get("location"), "http://localhost:3000/tasks");
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("location"), null);
     });
 
     test("2.3 Authenticated user accessing /tasks is allowed through (200)", async () => {
@@ -239,13 +239,15 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       assert.ok(hasLegacyCleared, "qcet_session must be cleared");
     });
 
-    test("4.2 GET /api/auth/logout also clears cookies gracefully", async () => {
+    test("4.2 GET /api/auth/logout is rejected without clearing cookies", async () => {
       const req = new Request("http://localhost:3000/api/auth/logout", {
         method: "GET",
       });
 
       const res = await logoutGet(req);
-      assert.equal(res.status, 200);
+      assert.equal(res.status, 405);
+      assert.equal(res.headers.get("allow"), "POST");
+      assert.equal(res.headers.get("set-cookie"), null);
     });
   });
 

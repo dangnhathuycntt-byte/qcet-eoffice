@@ -9,8 +9,8 @@ import { prisma } from "../src/lib/prisma";
 import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
-  describe("2. POST /api/auth/login strict Prisma + bcrypt authentication", () => {
-    test("rejects non-existent user with 401 and does NOT generate a virtual user", async () => {
+  describe("2. POST /api/auth/login is retired", () => {
+    test("rejects non-existent user without generating a virtual user", async () => {
       const nonExistentEmail = `test-nonexistent-${Date.now()}@cdktcnqn.edu.vn`;
       const req = new NextRequest("http://localhost:3000/api/auth/login", {
         method: "POST",
@@ -22,13 +22,13 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
       });
 
       const res = await loginRoute(req);
-      assert.equal(res.status, 401);
+      assert.equal(res.status, 403);
       const json = await res.json();
-      assert.equal(json.error, "Email hoặc mật khẩu không chính xác");
+      assert.match(json.error?.message || json.error, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
       assert.equal(json.user, undefined, "Must not return any fake or virtual user object");
     });
 
-    test("rejects incorrect password with 401 without falling back to demo bypass", async () => {
+    test("rejects incorrect password without falling back to demo bypass", async () => {
       const req = new NextRequest("http://localhost:3000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,9 +39,9 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
       });
 
       const res = await loginRoute(req);
-      assert.equal(res.status, 401);
+      assert.equal(res.status, 403);
       const json = await res.json();
-      assert.equal(json.error, "Email hoặc mật khẩu không chính xác");
+      assert.match(json.error?.message || json.error, /Đăng nhập bằng mật khẩu đã bị vô hiệu hóa/);
     });
   });
 

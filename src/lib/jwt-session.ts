@@ -97,10 +97,41 @@ export async function verifySessionTokenAsync(token: string): Promise<SessionPay
   // 2. Try standard HMAC-SHA256 JWT
   const syncVerified = verifySessionToken(trimmed);
   if (syncVerified) {
-    if (isSessionRevoked(trimmed, syncVerified.id)) {
+    if (
+      isSessionRevoked(trimmed, syncVerified.id, (syncVerified as any).iat) ||
+      (syncVerified.sessionId &&
+        isSessionRevoked(syncVerified.sessionId, syncVerified.id, (syncVerified as any).iat))
+    ) {
       return null;
     }
-    return syncVerified;
+    try {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: syncVerified.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          departmentId: true,
+          title: true,
+          isActive: true,
+        },
+      });
+      if (!currentUser?.isActive) return null;
+      return {
+        ...syncVerified,
+        id: currentUser.id,
+        email: currentUser.email,
+        name: currentUser.name,
+        role: currentUser.role,
+        departmentId: currentUser.departmentId ?? null,
+        title: currentUser.title ?? null,
+        isActive: true,
+      };
+    } catch {
+      // Server session truth is unavailable, so fail closed instead of trusting stale claims.
+      return null;
+    }
   }
 
   // 3. Try NextAuth / Auth.js JWE token
@@ -125,17 +156,30 @@ export async function verifySessionTokenAsync(token: string): Promise<SessionPay
             return null;
           }
           const userId = (decodedJwe.id || decodedJwe.sub) as string;
-          if (isSessionRevoked(trimmed, userId)) {
+          if (isSessionRevoked(trimmed, userId, decodedJwe.iat as number | undefined)) {
             return null;
           }
+          const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              departmentId: true,
+              title: true,
+              isActive: true,
+            },
+          });
+          if (!currentUser?.isActive) return null;
           return {
-            id: userId,
-            email: decodedJwe.email as string,
-            name: (decodedJwe.name as string) || "",
-            role: (decodedJwe.role as string) || "CHUYEN_VIEN",
-            departmentId: (decodedJwe.departmentId as string) || null,
-            title: (decodedJwe.title as string) || null,
-            isActive: decodedJwe.isActive !== false,
+            id: currentUser.id,
+            email: currentUser.email,
+            name: currentUser.name,
+            role: currentUser.role,
+            departmentId: currentUser.departmentId ?? null,
+            title: currentUser.title ?? null,
+            isActive: true,
           };
         }
       } catch {

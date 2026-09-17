@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
     req.nextUrl.searchParams.get("callbackUrl");
   const returnTo = sanitizeRedirectUrl(rawReturnTo);
 
-  const signinUrl = new URL(`/api/auth/signin/google?callbackUrl=${encodeURIComponent(returnTo)}`, baseUrl);
-  return NextResponse.redirect(signinUrl);
+  const loginUrl = new URL("/login", baseUrl);
+  loginUrl.searchParams.set("startGoogle", "1");
+  if (returnTo !== "/tasks") loginUrl.searchParams.set("returnTo", returnTo);
+  return NextResponse.redirect(loginUrl);
 }

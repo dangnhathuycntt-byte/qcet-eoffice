@@ -104,6 +104,31 @@ export function getSystemReferenceDate(): string {
   return "2026-09-09";
 }
 
+/**
+ * Trả về chuỗi ngày hôm nay thực tế theo múi giờ Việt Nam (Asia/Ho_Chi_Minh).
+ * Ưu tiên biến môi trường NEXT_PUBLIC_REFERENCE_DATE nếu có,
+ * ngược lại trả về ngày thực tế của hệ thống hiện tại.
+ */
+export function getTodayIctDate(): string {
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_REFERENCE_DATE) {
+    return process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  }
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+}
+
 export const getSystemReferenceDateStr = getSystemReferenceDate;
 
 /**
@@ -340,8 +365,11 @@ export interface CalendarDayCell {
  * Lưới bắt đầu từ Thứ Hai (T2) và kết thúc ở Chủ Nhật (CN).
  * Đảm bảo số ô là b��i số của 7 (35 hoặc 42 ô).
  */
-export function generateAcademicMonthGrid(period: AcademicMonthPeriod): CalendarDayCell[] {
-  const sysDate = getSystemReferenceDate();
+export function generateAcademicMonthGrid(
+  period: AcademicMonthPeriod,
+  referenceDateInput?: string
+): CalendarDayCell[] {
+  const sysDate = referenceDateInput || getTodayIctDate();
   const [startYear, startMonth, startDay] = period.startDate
     .split("-")
     .map((s) => parseInt(s, 10));

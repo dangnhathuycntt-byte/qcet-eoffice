@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
 import { isFeatureEnabled } from "@/features/flags";
-import { isAllowedDomain } from "@/lib/google-oauth";
+import { isVerifiedGoogleWorkspaceIdentity } from "@/lib/google-oauth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -19,16 +19,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = user.email?.toLowerCase().trim();
         if (!email) return false;
 
-        // 1. Dual-layer domain & email verification check
-        if (
-          (profile as any)?.email_verified === false ||
-          (profile as any)?.email_verified === "false"
-        ) {
-          return "/login?error=oauth_failed";
-        }
-
-        const hd = (profile as any)?.hd || (account as any)?.hd;
-        if (!isAllowedDomain(email, hd)) {
+        // 1. Require Google's verified-email and hosted-domain claims. An email
+        // suffix alone does not prove Workspace membership.
+        if (!isVerifiedGoogleWorkspaceIdentity({
+          email,
+          email_verified: (profile as any)?.email_verified,
+          hd: (profile as any)?.hd,
+        })) {
           return `/login?error=domain_not_allowed&email=${encodeURIComponent(email)}`;
         }
 

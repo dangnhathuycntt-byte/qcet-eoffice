@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { getSystemReferenceDate } from "@/lib/academic-calendar";
+import { getSystemReferenceDate, getTodayIctDate } from "@/lib/academic-calendar";
 import {
   type CalendarAttentionState,
   getCalendarAttentionState,
@@ -126,11 +126,11 @@ export function CalendarWeekView({
   levelFilter = "ALL",
   className,
 }: CalendarWeekViewProps) {
-  const referenceDate = getSystemReferenceDate();
+  const referenceDate = getTodayIctDate();
   const deferredQuery = React.useDeferredValue(searchQuery.trim().toLowerCase());
 
   const weekDays = React.useMemo(() => {
-    return getWeekDays(currentDate, { showWeekends, referenceDate });
+    return getWeekDays(currentDate, { showWeekends, today: referenceDate, referenceDate });
   }, [currentDate, showWeekends, referenceDate]);
 
   // Tasks & Events mapped by date
@@ -405,7 +405,8 @@ export function CalendarWeekView({
                             <StatusIcon state={state} className="size-2.5" />
                             <span className="truncate">{getStatusLabel(state)}</span>
                           </span>
-                          <span className="text-xs font-semibold px-1 rounded-xs bg-muted/40 text-foreground border border-border/40">
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold px-1 rounded-xs bg-muted/40 text-foreground border border-border/40">
+                            <CheckSquare className="size-2.5 shrink-0" strokeWidth={1.5} />
                             {task.level === "Trường" ? "Trường" : "ĐV"}
                           </span>
                         </div>
@@ -418,6 +419,12 @@ export function CalendarWeekView({
                         >
                           {task.title}
                         </p>
+                        {!compactMode && task.assigneeName && (
+                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                            <User className="size-2.5 shrink-0" strokeWidth={1.5} />
+                            {task.assigneeName}
+                          </p>
+                        )}
                       </button>
                     );
                   })

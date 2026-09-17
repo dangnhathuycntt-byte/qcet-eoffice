@@ -85,17 +85,8 @@ export async function middleware(request: NextRequest) {
 
   // 5. Handle /login route
   if (pathname === '/login') {
-    if (isVerifiedJwt) {
-      // Only redirect to /tasks if the token is a verified, active JWT
-      const url = request.nextUrl.clone();
-      url.pathname = '/tasks';
-      url.search = '';
-      return NextResponse.redirect(url);
-    }
-    // For unauthenticated users or opaque DB session tokens (which require DB verification):
-    // Let the request reach /login. The client-side AuthProvider checks /api/auth/me.
-    // If active session is confirmed by /api/auth/me, LoginPage redirects to returnTo / /tasks.
-    // If session is expired / invalid, LoginPage safely stays on /login.
+    // Middleware cannot check DB revocation or account status. Always let the login page
+    // ask /api/auth/me for server truth; an active session is redirected client-side.
     return NextResponse.next();
   }
 

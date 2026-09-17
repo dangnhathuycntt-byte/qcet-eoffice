@@ -1,4 +1,4 @@
-import { getSystemReferenceDate } from "@/lib/academic-calendar";
+import { getSystemReferenceDate, getTodayIctDate } from "@/lib/academic-calendar";
 
 export interface WeekDayItem {
   date: string;
@@ -51,7 +51,7 @@ export function getWeekDays(
 
   const mondayDate = new Date(year, month - 1, day - diffToMonday, 12, 0, 0);
 
-  const todayStr = cleanDateString(options?.today || getSystemReferenceDate());
+  const todayStr = cleanDateString(options?.today || getTodayIctDate());
   const totalDays = options?.showWeekends === false ? 5 : 7;
 
   const result: WeekDayItem[] = [];

@@ -72,15 +72,16 @@ describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", 
       assert.ok(data.google.type === "oauth" || data.google.type === "oidc");
     });
 
-    test("GET /api/auth/google forwards safely to /api/auth/signin/google with returnTo", async () => {
+    test("GET /api/auth/google returns to login and requests client-side Google sign-in", async () => {
       const req = new NextRequest("http://localhost:3000/api/auth/google?returnTo=/documents/doc-123");
       const res = await googleInitGet(req);
       assert.strictEqual(res.status, 307);
       const location = res.headers.get("location");
       assert.ok(location);
       const targetUrl = new URL(location);
-      assert.strictEqual(targetUrl.pathname, "/api/auth/signin/google");
-      assert.strictEqual(targetUrl.searchParams.get("callbackUrl"), "/documents/doc-123");
+      assert.strictEqual(targetUrl.pathname, "/login");
+      assert.strictEqual(targetUrl.searchParams.get("startGoogle"), "1");
+      assert.strictEqual(targetUrl.searchParams.get("returnTo"), "/documents/doc-123");
     });
 
     test("GET /api/auth/google redirects with error when externalGoogleLogin is disabled", async () => {
@@ -279,7 +280,7 @@ describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", 
       assert.strictEqual(res.status, 200, "Must stay on /login without redirecting to /tasks");
     });
 
-    test("Valid cryptographic JWT at /login DOES redirect to /tasks", async () => {
+    test("Valid cryptographic JWT at /login still waits for database session truth", async () => {
       const validJwt = signSessionToken({
         id: "user-valid-1",
         email: "valid@cdktcnqn.edu.vn",
@@ -291,9 +292,8 @@ describe("Regression Suite: Google Auth Consolidation & Login Loop Prevention", 
         headers: { cookie: `${SESSION_COOKIE_NAME}=${validJwt}` },
       });
       const res = await middleware(req);
-      assert.strictEqual(res.status, 307);
-      const location = res.headers.get("location");
-      assert.ok(location?.includes("/tasks"));
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.headers.get("location"), null);
     });
 
     test("Logout clears all session cookies across both HTTPS and standard cookie names", async () => {
