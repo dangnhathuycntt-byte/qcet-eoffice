@@ -19,6 +19,7 @@ import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-edit
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
+import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
@@ -518,6 +519,51 @@ export function TaskDetailPage({
     router.refresh();
   };
 
+  // Reassign Lead / DRI handler
+  const handleReassignLead = async (personId: string, personName: string) => {
+    const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        newAssigneeId: personId,
+        newAssigneeName: personName,
+      }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      const errMsg =
+        errJson?.error?.message ||
+        errJson?.message ||
+        (res.status === 403
+          ? "Bạn không có quyền chuyển giao người phụ trách (403 Forbidden)"
+          : "Không thể chuyển giao người phụ trách. Vui lòng thử lại");
+      throw new Error(errMsg);
+    }
+
+    setTask((prev) => ({
+      ...prev,
+      assignedTo: personName,
+      leadAssigneeName: personName,
+      leadAssigneeId: personId,
+      assigneeName: personName,
+      assigneeId: personId,
+    } as any));
+
+    setAuditEvents((prev) => [
+      {
+        id: `audit-reassign-${Date.now()}`,
+        action: "REASSIGN_LEAD",
+        timestamp: new Date().toISOString(),
+        actorName: currentUser?.name || "Người điều hành",
+        description: `Chuyển giao người phụ trách cho: ${personName}`,
+      },
+      ...prev,
+    ]);
+
+    router.refresh();
+  };
+
   // Progress updated handler
   const handleProgressUpdated = async (newProgress: number, note?: string) => {
     setTask((prev) => ({
@@ -823,6 +869,7 @@ export function TaskDetailPage({
                 onTitleChange={handleTitleChange}
                 onStartDateChange={handleStartDateChange}
                 onDueDateChange={handleDueDateChange}
+                onReassignLead={handleReassignLead}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
                 showInlineProperties={true}
@@ -830,28 +877,18 @@ export function TaskDetailPage({
 
 
 
-              {/* Description Section (Linear Minimalist Markdown / Text Style) */}
-              <section className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-normal text-muted-foreground select-none">
-                    Description
-                  </h2>
-                </div>
-
-                <DirectInlineEditor
-                  value={currentDescription}
-                  onSave={handleSaveDescription}
+              {/* Vùng nội dung dạng Block (Notion style) thay thế khối việc thành phần cũ */}
+              <div className="pt-2">
+                <TaskNotionBlockContent
+                  taskId={task.id}
+                  initialDescription={currentDescription}
+                  subTasks={subTasks}
                   canEdit={true}
-                  multiline={true}
-                  as="div"
-                  submitOnEnter={false}
-                  minRows={2}
-                  ariaLabel="Mô tả nhiệm vụ"
-                  placeholder="Thêm mô tả nhiệm vụ..."
-                  viewClassName="text-sm leading-relaxed text-foreground min-h-[40px] py-1 font-sans"
-                  editorClassName="text-sm leading-relaxed text-foreground min-h-[40px] py-1 font-sans placeholder:text-muted-foreground/50 placeholder:italic"
+                  onSaveContent={handleSaveDescription}
+                  onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+                  onOpenCreateSubtask={() => setIsCreateSubTaskModalOpen(true)}
                 />
-              </section>
+              </div>
             </>
           )}
 
@@ -942,6 +979,8 @@ export function TaskDetailPage({
               onStatusChange={handleStatusChange}
               onPriorityChange={handlePriorityChange}
               onDueDateChange={handleDueDateChange}
+              onStartDateChange={handleStartDateChange}
+              onReassignLead={handleReassignLead}
               onNavigateTab={(tab) => handleTabChange(tab)}
               onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
               onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}

@@ -1,4 +1,4 @@
-import type { StaffTask, TaskStatus } from '@/types/dashboard';
+import type { StaffTask, TaskStatus, TaskPriority } from '@/types/dashboard';
 import { isTaskOverdue, getSystemReferenceDateStr } from '@/lib/academic-calendar';
 
 export interface SchoolTask {
@@ -224,12 +224,17 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     CANCELLED: 'cancelled'
   };
 
-  // Ánh xạ độ ưu tiên
+  // Ánh xạ độ ưu tiên chuẩn hóa (chuẩn TaskPriority viết hoa)
   const priorityMap: Record<string, SchoolTask['priority']> = {
-    URGENT: 'urgent',
-    HIGH: 'high',
-    NORMAL: 'medium',
-    LOW: 'low'
+    URGENT: 'URGENT',
+    HIGH: 'HIGH',
+    NORMAL: 'NORMAL',
+    LOW: 'LOW',
+    urgent: 'URGENT',
+    high: 'HIGH',
+    medium: 'NORMAL',
+    normal: 'NORMAL',
+    low: 'LOW',
   };
 
   const isoDueDate = formatLocalDate(raw.dueDate);
@@ -294,7 +299,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     dueDate: isoDueDate,
     assignedDate: formatLocalDate(raw.startDate || new Date()),
     status: statusMap[raw.status] || 'in_progress',
-    priority: priorityMap[raw.priority] || 'medium',
+    priority: (priorityMap[raw.priority] || (raw.priority as any) || 'NORMAL') as TaskPriority,
     progress,
     progressPercent: progress,
     academicMonth: raw.academicMonth ?? 9,

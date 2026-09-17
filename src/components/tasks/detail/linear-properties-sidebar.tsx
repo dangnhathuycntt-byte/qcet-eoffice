@@ -66,6 +66,7 @@ export interface LinearPropertiesSidebarProps {
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
   onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
+  onReassignLead?: (personId: string, personName: string) => Promise<void> | void;
   onNavigateTab?: (tab: "overview" | "subtasks" | "activity") => void;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onAddSubTask?: (parentId: string) => void;
@@ -127,6 +128,7 @@ export function LinearPropertiesSidebar({
   onPriorityChange,
   onDueDateChange,
   onStartDateChange,
+  onReassignLead,
   onNavigateTab,
   onSelectSubtask,
   onAddSubTask,
@@ -325,6 +327,12 @@ export function LinearPropertiesSidebar({
     setIsReassigning(true);
     setReassignError(null);
     try {
+      if (onReassignLead) {
+        await onReassignLead(personId, personName);
+        setIsLeadMenuOpen(false);
+        return;
+      }
+
       const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
