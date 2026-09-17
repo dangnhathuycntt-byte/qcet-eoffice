@@ -957,10 +957,11 @@ function SortableKanbanCard({ id, ...cardProps }: SortableKanbanCardProps) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.35 : 1,
+    touchAction: "pan-y",
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-pan-y">
       <KanbanCard {...cardProps} />
     </div>
   );
@@ -1012,7 +1013,7 @@ function DroppableColumn({
       data-slot="kanban-column"
       data-status={col.id}
       className={cn(
-        "w-[280px] xl:w-full flex-1 min-w-[270px] flex flex-col h-full group/col select-none transition-colors duration-150 rounded-lg",
+        "w-[280px] xl:w-full flex-1 min-w-[270px] flex flex-col h-full min-h-0 group/col select-none transition-colors duration-150 rounded-lg",
         isOver && "bg-accent/25 ring-1 ring-primary/20"
       )}
     >
@@ -1046,8 +1047,8 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Scrollable Column Cards Container */}
-      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 thin-scrollbar min-h-[140px] pb-6">
+      {/* Scrollable Column Cards Container (Independent Smooth Vertical Scroll) */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1.5 thin-scrollbar overscroll-contain pb-6">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {displayedTasks.map((item) => (
             <SortableKanbanCard
@@ -1462,7 +1463,10 @@ export function TaskKanbanBoard({
 
   return (
     <div
-      className={cn("w-full flex flex-col min-h-0", className)}
+      className={cn(
+        "w-full flex flex-col h-[calc(100vh-215px)] max-h-[calc(100vh-215px)] min-h-[460px] overflow-hidden",
+        className
+      )}
       data-slot="task-kanban-board"
     >
       {/* Board Utility Strip: Minimal Count Notice + Display Settings Button */}
@@ -1522,7 +1526,7 @@ export function TaskKanbanBoard({
         <div
           ref={carouselRef}
           onScroll={handleScroll}
-          className="flex-1 flex gap-3.5 overflow-x-auto scrollbar-none pb-2 pt-0.5 min-h-[400px] w-full"
+          className="flex-1 min-h-0 flex gap-3.5 overflow-x-auto scrollbar-none pb-1 pt-0.5 w-full"
         >
           {KANBAN_COLUMNS.map((col, idx) => {
             const colTasks = groupedTasks[col.id] || [];
@@ -1534,7 +1538,7 @@ export function TaskKanbanBoard({
                 ref={(el) => {
                   columnRefs.current[idx] = el;
                 }}
-                className="h-full flex flex-col flex-1 min-w-[270px]"
+                className="h-full min-h-0 flex flex-col flex-1 min-w-[270px]"
               >
                 <DroppableColumn
                   col={col}
