@@ -26,6 +26,7 @@ import {
   UserPlus,
   ArrowRight,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -212,26 +213,59 @@ export function TaskIdentityBlock({
   const [isResourcePopoverOpen, setIsResourcePopoverOpen] = React.useState(false);
   const [resourceTitle, setResourceTitle] = React.useState("");
   const [resourceUrl, setResourceUrl] = React.useState("");
+  const [resourceError, setResourceError] = React.useState<string | null>(null);
   const [isSavingResource, setIsSavingResource] = React.useState(false);
   const resourceMenuRef = React.useRef<HTMLDivElement>(null);
 
+  const isValidHttpUrl = (str: string): boolean => {
+    const trimmed = str.trim();
+    if (!trimmed) return false;
+    try {
+      const url = new URL(trimmed);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  const handleOpenResourcePopover = () => {
+    setResourceError(null);
+    setIsResourcePopoverOpen((prev) => !prev);
+  };
+
   const handleAddResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resourceTitle.trim() && !resourceUrl.trim()) return;
+    setResourceError(null);
+
+    const trimmedTitle = resourceTitle.trim();
+    const trimmedUrl = resourceUrl.trim();
+
+    if (!trimmedTitle) {
+      setResourceError("Vui lòng nhập tên tài liệu hoặc văn bản minh chứng");
+      return;
+    }
+
+    if (!trimmedUrl) {
+      setResourceError("Đường dẫn liên kết (URL) là bắt buộc");
+      return;
+    }
+
+    if (!isValidHttpUrl(trimmedUrl)) {
+      setResourceError("Đường dẫn không hợp lệ. Vui lòng nhập URL bắt đầu bằng http:// hoặc https://");
+      return;
+    }
 
     setIsSavingResource(true);
     try {
       if (onAddDeliverable) {
-        await onAddDeliverable(
-          resourceTitle.trim() || "Tài liệu minh chứng",
-          resourceUrl.trim() || undefined
-        );
+        await onAddDeliverable(trimmedTitle, trimmedUrl);
       }
       setResourceTitle("");
       setResourceUrl("");
+      setResourceError(null);
       setIsResourcePopoverOpen(false);
-    } catch {
-      // safe fallback
+    } catch (err: any) {
+      setResourceError(err?.message || "Không thể lưu tài liệu minh chứng. Vui lòng thử lại");
     } finally {
       setIsSavingResource(false);
     }
@@ -497,7 +531,7 @@ export function TaskIdentityBlock({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setIsResourcePopoverOpen((prev) => !prev)}
+              onClick={handleOpenResourcePopover}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
@@ -513,33 +547,54 @@ export function TaskIdentityBlock({
                     <button
                       type="button"
                       onClick={() => setIsResourcePopoverOpen(false)}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       <X className="size-3.5" />
                     </button>
                   </div>
+
+                  {resourceError && (
+                    <div className="p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{resourceError}</span>
+                    </div>
+                  )}
+
                   <label className="block space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Tên tài liệu</span>
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    value={resourceTitle}
-                    onChange={(e) => setResourceTitle(e.target.value)}
-                    placeholder="Ví dụ: Biên bản nghiệm thu"
-                    className="w-full text-xs font-medium text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
-                  />
+                    <span className="text-[11px] text-muted-foreground">
+                      Tên tài liệu <span className="text-rose-500">*</span>
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      value={resourceTitle}
+                      onChange={(e) => {
+                        setResourceTitle(e.target.value);
+                        if (resourceError) setResourceError(null);
+                      }}
+                      placeholder="Ví dụ: Kế hoạch triển khai năm học"
+                      className="w-full text-xs font-medium text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
+                    />
                   </label>
+
                   <label className="block space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Liên kết <span className="text-muted-foreground/60">(không bắt buộc)</span></span>
-                  <input
-                    type="url"
-                    value={resourceUrl}
-                    onChange={(e) => setResourceUrl(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="w-full text-xs font-mono text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
-                  />
+                    <span className="text-[11px] text-muted-foreground">
+                      Đường dẫn liên kết (URL) <span className="text-rose-500">*</span>
+                    </span>
+                    <input
+                      type="url"
+                      required
+                      value={resourceUrl}
+                      onChange={(e) => {
+                        setResourceUrl(e.target.value);
+                        if (resourceError) setResourceError(null);
+                      }}
+                      placeholder="https://drive.google.com/..."
+                      className="w-full text-xs font-mono text-foreground bg-muted/25 px-2.5 py-2 rounded-md border border-transparent focus:border-border focus:bg-background focus:outline-none"
+                    />
                   </label>
+
                   <div className="flex items-center justify-end gap-1.5 pt-1">
                     <button
                       type="button"
@@ -551,9 +606,16 @@ export function TaskIdentityBlock({
                     <button
                       type="submit"
                       disabled={isSavingResource}
-                      className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
                     >
-                      {isSavingResource ? "Đang lưu..." : "Thêm"}
+                      {isSavingResource ? (
+                        <>
+                          <Loader2 className="size-3 animate-spin" />
+                          <span>Đang lưu...</span>
+                        </>
+                      ) : (
+                        <span>Thêm tài liệu</span>
+                      )}
                     </button>
                   </div>
                 </form>

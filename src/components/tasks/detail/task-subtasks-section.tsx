@@ -49,24 +49,58 @@ export function TaskSubtasksSection({
   const [isAddingInline, setIsAddingInline] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
   const [newDueDate, setNewDueDate] = React.useState("");
+  const [inlineError, setInlineError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleOpenInline = () => {
+    setInlineError(null);
+    setIsAddingInline(true);
+  };
 
   const handleSaveInline = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || isSaving) return;
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle || isSaving) return;
 
     setIsSaving(true);
+    setInlineError(null);
     try {
       if (onCreateSubTaskInline) {
-        await onCreateSubTaskInline(newTitle.trim(), undefined, newDueDate || undefined);
-      } else if (onAddSubTask) {
-        onAddSubTask(parentId);
+        await onCreateSubTaskInline(trimmedTitle, undefined, newDueDate || undefined);
+      } else {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: trimmedTitle,
+            parentTaskId: parentId,
+            dueDate: newDueDate || undefined,
+            scope: "DEPARTMENT",
+            priority: "NORMAL",
+          }),
+        });
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          const errMsg =
+            errJson?.error?.message ||
+            errJson?.message ||
+            (res.status === 403
+              ? "Bạn không có quyền tạo việc thành phần cho nhiệm vụ này (403 Forbidden)"
+              : "Không thể tạo việc thành phần. Vui lòng thử lại");
+          throw new Error(errMsg);
+        }
+
+        if (onAddSubTask) {
+          onAddSubTask(parentId);
+        }
       }
       setNewTitle("");
       setNewDueDate("");
+      setInlineError(null);
       setIsAddingInline(false);
-    } catch {
-      // transient
+    } catch (err: any) {
+      setInlineError(err?.message || "Không thể tạo việc thành phần. Vui lòng thử lại");
     } finally {
       setIsSaving(false);
     }
@@ -92,7 +126,7 @@ export function TaskSubtasksSection({
             type="button"
             onClick={() => {
               if (onCreateSubTaskInline) {
-                setIsAddingInline(true);
+                handleOpenInline();
               } else if (onAddSubTask) {
                 onAddSubTask(parentId);
               }
@@ -211,7 +245,7 @@ export function TaskSubtasksSection({
             {canEdit && (
               <button
                 type="button"
-                onClick={() => setIsAddingInline(true)}
+                onClick={handleOpenInline}
                 className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
               >
                 <Plus className="size-3" />
@@ -225,38 +259,59 @@ export function TaskSubtasksSection({
         {isAddingInline && (
           <form
             onSubmit={handleSaveInline}
-            className="p-3 bg-muted/20 border-t border-border/40 flex items-center gap-2 flex-wrap"
+            className="p-3 bg-muted/20 border-t border-border/40 space-y-2"
           >
-            <input
-              type="text"
-              required
-              autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Tên việc thành phần mới..."
-              className="flex-1 min-w-[200px] text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
-            />
-            <input
-              type="date"
-              value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              className="text-xs font-mono text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
-            />
-            <div className="flex items-center gap-1">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-              >
-                {isSaving ? "Đang lưu..." : "Thêm"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAddingInline(false)}
-                className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                Hủy
-              </button>
+            {inlineError && (
+              <div className="p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
+                <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
+                <span>{inlineError}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="text"
+                required
+                autoFocus
+                value={newTitle}
+                onChange={(e) => {
+                  setNewTitle(e.target.value);
+                  if (inlineError) setInlineError(null);
+                }}
+                placeholder="Tên việc thành phần mới..."
+                className="flex-1 min-w-[200px] text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+              />
+              <input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => {
+                  setNewDueDate(e.target.value);
+                  if (inlineError) setInlineError(null);
+                }}
+                className="text-xs font-mono text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
+              />
+              <div className="flex items-center gap-1">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="size-3 animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <span>Thêm</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingInline(false)}
+                  className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Hủy
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -266,7 +321,7 @@ export function TaskSubtasksSection({
       {subTasks.length > 0 && !isAddingInline && canEdit && (
         <button
           type="button"
-          onClick={() => setIsAddingInline(true)}
+          onClick={handleOpenInline}
           className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 px-2 py-1 rounded-md transition-colors cursor-pointer"
         >
           <Plus className="size-3.5" strokeWidth={1.5} />

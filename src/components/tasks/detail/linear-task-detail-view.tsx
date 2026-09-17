@@ -252,23 +252,85 @@ export function LinearTaskDetailView({
   };
 
   const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
-    const newDeliv: DeliverableItem = {
-      id: `deliv-${Date.now()}`,
-      title,
-      fileUrl,
-      notes,
-      uploadedBy: currentUser ? { id: currentUser.id, name: currentUser.name || "Người dùng" } : undefined,
-      createdAt: new Date().toISOString(),
-      status: "PENDING",
-    };
+    const trimmedTitle = title.trim();
+    const trimmedUrl = fileUrl?.trim();
 
-    await fetch(`/api/tasks/${task.id}/deliverables`, {
+    if (!trimmedTitle) {
+      throw new Error("Tên tài liệu minh chứng không được để trống");
+    }
+    if (!trimmedUrl) {
+      throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
+    }
+
+    const res = await fetch(`/api/tasks/${task.id}/deliverables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDeliv),
+      body: JSON.stringify({
+        title: trimmedTitle,
+        fileUrl: trimmedUrl,
+        notes: notes?.trim() || undefined,
+      }),
     });
 
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      const errMsg =
+        errJson?.error?.message ||
+        errJson?.message ||
+        (res.status === 403
+          ? "Bạn không có quyền nộp tài liệu minh chứng cho nhiệm vụ này (403 Forbidden)"
+          : "Không thể thêm tài liệu minh chứng. Vui lòng thử lại");
+      throw new Error(errMsg);
+    }
+
+    const data = await res.json();
+    const created = data?.deliverable || data?.data;
+
+    if (!created || !created.id) {
+      throw new Error("Dữ liệu tài liệu phản hồi từ máy chủ không hợp lệ");
+    }
+
+    const newDeliv: DeliverableItem = {
+      id: created.id,
+      title: created.title || trimmedTitle,
+      fileUrl: created.fileUrl || trimmedUrl,
+      notes: created.notes || notes,
+      uploadedBy: currentUser ? { id: currentUser.id, name: currentUser.name || "Người dùng" } : undefined,
+      createdAt: created.createdAt || new Date().toISOString(),
+      status: created.reviewStatus || "PENDING",
+    };
+
     setDeliverables((prev) => [newDeliv, ...prev]);
+  };
+
+  const handleDeleteDeliverable = async (deliverableId: string) => {
+    const previousDeliverables = deliverables;
+    setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
+
+    try {
+      const res = await fetch(
+        `/api/tasks/${task.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền xóa tài liệu minh chứng này (403 Forbidden)"
+            : res.status === 404
+            ? "Không tìm thấy tài liệu minh chứng cần xóa"
+            : "Không thể xóa tài liệu minh chứng. Vui lòng thử lại");
+        throw new Error(errMsg);
+      }
+    } catch (error: any) {
+      setDeliverables(previousDeliverables);
+      alert(error?.message || "Không thể xóa tài liệu minh chứng");
+    }
   };
 
   return (
@@ -297,6 +359,7 @@ export function LinearTaskDetailView({
           <TaskIdentityBlock
             task={task}
             canEdit={true}
+            deliverables={deliverables}
             onStatusChange={handleStatusChangeInternal}
             onPriorityChange={handlePriorityChangeInternal}
             onTitleChange={handleTitleChangeInternal}
@@ -305,6 +368,8 @@ export function LinearTaskDetailView({
               setTask((prev) => ({ ...prev, startDate: newStartDate } as any));
             }}
             onDueDateChange={handleDueDateChangeInternal}
+            onAddDeliverable={handleAddDeliverable}
+            onDeleteDeliverable={handleDeleteDeliverable}
           />
 
           {/* B. Progress Composer */}
@@ -361,6 +426,7 @@ export function LinearTaskDetailView({
             deliverables={deliverables}
             canEdit={true}
             onAddDeliverable={handleAddDeliverable}
+            onDeleteDeliverable={handleDeleteDeliverable}
           />
 
           {/* F. Activity & Governance Timeline */}

@@ -77,13 +77,14 @@ export function TaskProgressComposer({
       });
 
       if (!res.ok) {
-        await fetch(`/api/tasks/${taskId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            progressPercent: progress,
-          }),
-        });
+        const errJson = await res.json().catch(() => null);
+        const errMsg =
+          errJson?.error?.message ||
+          errJson?.message ||
+          (res.status === 403
+            ? "Bạn không có quyền cập nhật tiến độ cho nhiệm vụ này (403 Forbidden)"
+            : "Có lỗi xảy ra khi cập nhật tiến độ");
+        throw new Error(errMsg);
       }
 
       if (onProgressUpdated) {
@@ -95,16 +96,16 @@ export function TaskProgressComposer({
         : progress > 0
           ? "IN_PROGRESS"
           : "NOT_STARTED";
-      if (taskStatus !== nextStatus && onStatusChange) {
+      if ((taskStatus === "NOT_STARTED" || taskStatus !== nextStatus) && onStatusChange) {
         await onStatusChange(taskId, nextStatus, note.trim() || undefined);
       }
 
-      setFeedback({ type: "success", message: "Đã cập nhật tiến độ." });
+      setFeedback({ type: "success", message: "Đã cập nhật tiến độ thành công." });
       setNote("");
       setIsEditing(false);
       setTimeout(() => setFeedback(null), 3000);
-    } catch {
-      setFeedback({ type: "error", message: "Có lỗi xảy ra. Vui lòng thử lại." });
+    } catch (err: any) {
+      setFeedback({ type: "error", message: err?.message || "Có lỗi xảy ra. Vui lòng thử lại." });
     } finally {
       setIsSubmitting(false);
     }
