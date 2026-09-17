@@ -448,6 +448,10 @@ export class TaskDomainActionService {
         },
       });
 
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
       return {
         taskId,
         status: TaskStatus.IN_PROGRESS,
@@ -476,18 +480,6 @@ export class TaskDomainActionService {
     const authResult = await authorize(userContext, "task.update_execution", resource);
     assertAuthAllowed(authResult, "task.update_execution", taskId);
 
-    if (task.status === TaskStatus.NOT_STARTED) {
-      throw new InvalidTransitionError(
-        "Nhiệm vụ chưa bắt đầu. Vui lòng bắt đầu nhiệm vụ trước khi cập nhật tiến độ",
-        "TASK_NOT_STARTED"
-      );
-    }
-    if (task.status === TaskStatus.WAITING_APPROVAL) {
-      throw new InvalidTransitionError(
-        "Nhiệm vụ đang chờ duyệt kết quả. Không thể cập nhật tiến độ",
-        "TASK_WAITING_APPROVAL"
-      );
-    }
     if (task.status === TaskStatus.COMPLETED) {
       throw new InvalidTransitionError(
         "Nhiệm vụ đã hoàn thành, không thể cập nhật tiến độ",
@@ -501,29 +493,64 @@ export class TaskDomainActionService {
       );
     }
 
+    // Tự động xác định trạng thái theo tiến độ (REQ-1 & REQ-4):
+    // - NOT_STARTED & progressPercent > 0 -> IN_PROGRESS
+    // - progressPercent === 100 -> WAITING_APPROVAL
+    // - WAITING_APPROVAL & progressPercent < 100 -> IN_PROGRESS
+    let targetStatus = task.status;
+    if (validated.progressPercent === 100) {
+      targetStatus = TaskStatus.WAITING_APPROVAL;
+    } else if (validated.progressPercent > 0) {
+      if (task.status === TaskStatus.NOT_STARTED || task.status === TaskStatus.WAITING_APPROVAL) {
+        targetStatus = TaskStatus.IN_PROGRESS;
+      }
+    } else {
+      // validated.progressPercent === 0
+      if (task.status === TaskStatus.WAITING_APPROVAL) {
+        targetStatus = TaskStatus.IN_PROGRESS;
+      }
+    }
+
     const noteText = validated.note?.trim() || null;
+    const isStatusChanged = targetStatus !== task.status;
 
     return await prisma.$transaction(async (tx) => {
       const updatedTask = await tx.task.update({
         where: { id: taskId },
         data: {
           progressPercent: validated.progressPercent,
+          status: targetStatus,
           version: { increment: 1 },
           updatedAt: new Date(),
         },
       });
 
-      await auditService.logEvent(tx, {
-        actorId: session.id,
-        action: AuditAction.TASK_UPDATED,
-        entityType: AuditEntityType.TASK,
-        entityId: taskId,
-        beforeData: { progressPercent: task.progressPercent },
-        afterData: {
-          progressPercent: validated.progressPercent,
-          note: noteText,
-        },
-      });
+      if (isStatusChanged) {
+        await auditService.logEvent(tx, {
+          actorId: session.id,
+          action: AuditAction.TASK_STATUS_CHANGED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          beforeData: { status: task.status, progressPercent: task.progressPercent },
+          afterData: {
+            status: targetStatus,
+            progressPercent: validated.progressPercent,
+            note: noteText,
+          },
+        });
+      } else {
+        await auditService.logEvent(tx, {
+          actorId: session.id,
+          action: AuditAction.TASK_UPDATED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          beforeData: { progressPercent: task.progressPercent },
+          afterData: {
+            progressPercent: validated.progressPercent,
+            note: noteText,
+          },
+        });
+      }
 
       await publishOutboxEvent(tx, {
         eventType: OutboxEventType.TASK_STATUS_NOTIFICATION,
@@ -531,15 +558,20 @@ export class TaskDomainActionService {
         aggregateId: taskId,
         payload: {
           taskId,
+          status: targetStatus,
           progressPercent: validated.progressPercent,
           actorId: session.id,
           note: noteText,
         },
       });
 
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
       return {
         taskId,
-        status: task.status,
+        status: targetStatus,
         progressPercent: validated.progressPercent,
         version: updatedTask.version,
       };
@@ -660,6 +692,10 @@ export class TaskDomainActionService {
           summary: summaryText,
         },
       });
+
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
 
       return {
         taskResult,
@@ -838,6 +874,10 @@ export class TaskDomainActionService {
         },
       });
 
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
       return {
         decision: effectiveDecision,
         reviewStatus: effectiveReviewStatus,
@@ -993,6 +1033,10 @@ export class TaskDomainActionService {
         },
       });
 
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
       return {
         taskId,
         status: TaskStatus.IN_PROGRESS,
@@ -1132,6 +1176,10 @@ export class TaskDomainActionService {
         },
       });
 
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
       return {
         taskId,
         status: canComplete ? TaskStatus.COMPLETED : task.status,
@@ -1212,6 +1260,10 @@ export class TaskDomainActionService {
           actorId: session.id,
         },
       });
+
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
 
       return {
         taskId,
