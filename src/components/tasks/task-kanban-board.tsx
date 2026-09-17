@@ -59,20 +59,19 @@ export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
 export interface KanbanDisplaySettings {
   showAssignee: boolean;     // Avatar + Tên phụ trách (mặc định: bật)
   showDueDate: boolean;      // Hạn hoàn thành (mặc định: bật)
-  showCategory: boolean;     // Danh mục (mặc định: bật)
   showParentTask: boolean;   // Nhiệm vụ cha (mặc định: bật)
   showProgress: boolean;     // Tiến độ % (mặc định: tắt, theo yêu cầu Linear)
-  showLevel: boolean;        // Cấp Trường / Đơn vị (mặc định: tắt, theo yêu cầu Linear)
   showSubtaskCount: boolean; // Số nhiệm vụ con (mặc định: tắt)
+  // Các tùy chọn cũ giữ optional để tương thích ngược interface
+  showCategory?: boolean;
+  showLevel?: boolean;
 }
 
 export const DEFAULT_DISPLAY_SETTINGS: KanbanDisplaySettings = {
   showAssignee: true,
   showDueDate: true,
-  showCategory: true,
   showParentTask: true,
   showProgress: false,
-  showLevel: false,
   showSubtaskCount: false,
 };
 
@@ -876,34 +875,6 @@ function KanbanCard({
               </span>
             </div>
           )}
-
-          {/* Category Tag (chỉ hiển thị nhãn chuyên môn thực tế, lọc bỏ nhãn trùng lặp 'Nhiệm vụ...' hoặc 'Chỉ đạo...') */}
-          {displaySettings.showCategory && item.categoryLabel && (() => {
-            const trimmed = item.categoryLabel.trim();
-            if (/^(nhiệm vụ|chỉ đạo)/i.test(trimmed)) return null;
-            return (
-              <span
-                className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-normal bg-muted/60 text-muted-foreground/80 truncate max-w-[100px]"
-                title={trimmed}
-              >
-                {trimmed}
-              </span>
-            );
-          })()}
-
-          {/* Level Tag (Optional toggle) */}
-          {displaySettings.showLevel && (
-            <span
-              className={cn(
-                "inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium shrink-0",
-                item.level === "TRUONG"
-                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                  : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-              )}
-            >
-              {item.level === "TRUONG" ? "Trường" : "Đơn vị"}
-            </span>
-          )}
         </div>
 
         {/* Due Date & Subtasks Count */}
@@ -1155,10 +1126,8 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
   const toggleOptions: { key: keyof KanbanDisplaySettings; label: string }[] = [
     { key: "showAssignee", label: "Người phụ trách" },
     { key: "showDueDate", label: "Thời hạn" },
-    { key: "showCategory", label: "Danh mục" },
     { key: "showParentTask", label: "Nhiệm vụ cha" },
     { key: "showProgress", label: "Thanh tiến độ %" },
-    { key: "showLevel", label: "Cấp nhiệm vụ (Trường / Đơn vị)" },
     { key: "showSubtaskCount", label: "Số lượng nhiệm vụ con" },
   ];
 

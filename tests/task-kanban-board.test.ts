@@ -920,10 +920,8 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
   test("DEFAULT_DISPLAY_SETTINGS configures minimal defaults per Linear design", () => {
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showAssignee, true);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showDueDate, true);
-    assert.equal(DEFAULT_DISPLAY_SETTINGS.showCategory, true);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showParentTask, true);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showProgress, false);
-    assert.equal(DEFAULT_DISPLAY_SETTINGS.showLevel, false);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showSubtaskCount, false);
   });
 
@@ -944,20 +942,18 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
       progressPercent: 50,
     };
 
-    // 1. With progress enabled via displaySettings
+    // 1. With progress and subtasks enabled via displaySettings
     const htmlWithProgress = renderToStaticMarkup(
       React.createElement(TaskKanbanBoard, {
         tasks: [task],
         displaySettings: {
           ...DEFAULT_DISPLAY_SETTINGS,
           showProgress: true,
-          showLevel: true,
           showSubtaskCount: true,
         },
       })
     );
     assert.ok(htmlWithProgress.includes("Tiến độ"), "Must show progress when enabled");
-    assert.ok(htmlWithProgress.includes("Trường"), "Must show level when enabled");
     assert.ok(htmlWithProgress.includes("1/2"), "Must show subtask count when enabled");
 
     // 2. With all optional properties disabled
@@ -967,10 +963,8 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
         displaySettings: {
           showAssignee: false,
           showDueDate: false,
-          showCategory: false,
           showParentTask: false,
           showProgress: false,
-          showLevel: false,
           showSubtaskCount: false,
         },
       })
