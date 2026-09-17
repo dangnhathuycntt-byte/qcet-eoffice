@@ -332,6 +332,31 @@ export function canDeleteTask(user: AuthenticatedUser, task: TaskEntity): boolea
   return false;
 }
 
+export function canDeleteDeliverable(
+  user: AuthenticatedUser,
+  deliverable: { uploadedById: string; taskId: string },
+  task: TaskEntity
+): boolean {
+  if (!user || !deliverable || !task) return false;
+  if (deliverable.taskId !== task.id) return false;
+  if (task.status && task.status.trim().toUpperCase() === 'CANCELLED') return false;
+  if (isAdmin(user)) return true;
+  if (deliverable.uploadedById === user.id) return true;
+
+  const assigneeId = getAssigneeId(task);
+  if (assigneeId && assigneeId === user.id) return true;
+
+  const creatorId = getCreatorId(task);
+  if (creatorId && creatorId === user.id) return true;
+
+  const deptId = task.departmentId || (task as any).department?.id;
+  if (isManager(user) && user.departmentId && deptId && user.departmentId === deptId) {
+    return true;
+  }
+
+  return false;
+}
+
 export const taskPolicy = {
   canReadTask,
   canCreateTask,
@@ -339,5 +364,6 @@ export const taskPolicy = {
   canApproveTask,
   canChangeTaskStatus,
   canSubmitDeliverable,
+  canDeleteDeliverable,
   canDeleteTask,
 };

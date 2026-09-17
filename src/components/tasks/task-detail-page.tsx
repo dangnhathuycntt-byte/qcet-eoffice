@@ -37,6 +37,7 @@ import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-sec
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 
 export type DetailTab = "overview" | "subtasks" | "activity";
 
@@ -118,11 +119,16 @@ export function TaskDetailPage({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Audit events state
+  // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
   React.useEffect(() => {
     setAuditEvents(initialAuditEvents);
   }, [initialAuditEvents]);
+
+  // Consolidated activity feed: gộp các lần autosave/sửa đổi văn bản liên tiếp trong 60s
+  const feedActivityEvents = React.useMemo(() => {
+    return consolidateActivityFeed(auditEvents, 60000);
+  }, [auditEvents]);
 
   // Deliverables / Resources state
   const initialDeliverables = (task as any).deliverables || [];
@@ -236,6 +242,7 @@ export function TaskDetailPage({
         action: "UPDATE_DESCRIPTION",
         timestamp: new Date().toISOString(),
         actorName: currentUser?.name || "Người dùng",
+        actorId: currentUser?.id,
         description: `Cập nhật mô tả nhiệm vụ`,
       },
       ...prev,
@@ -501,9 +508,9 @@ export function TaskDetailPage({
           )}
         >
           <span>Hoạt động</span>
-          {auditEvents.length > 0 && (
+          {feedActivityEvents.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
-              {auditEvents.length}
+              {feedActivityEvents.length}
             </span>
           )}
         </button>
@@ -656,19 +663,26 @@ export function TaskDetailPage({
                     </p>
                   </div>
                   <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums">
-                    {auditEvents.length} mốc
+                    {feedActivityEvents.length} mốc
                   </span>
                 </div>
 
-                {auditEvents.length > 0 ? (
+                {feedActivityEvents.length > 0 ? (
                   <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
-                    {auditEvents.map((evt) => (
+                    {feedActivityEvents.map((evt) => (
                       <div key={evt.id} className="relative flex flex-col gap-0.5 text-xs">
                         <span className="absolute -left-5 top-1 flex size-2.5 items-center justify-center rounded-full border border-background bg-primary" />
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="font-medium text-foreground">
-                            {evt.description || evt.action}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-foreground">
+                              {evt.description || evt.action}
+                            </span>
+                            {evt.count > 1 && (
+                              <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono text-muted-foreground">
+                                {evt.count} lần lưu
+                              </span>
+                            )}
+                          </div>
                           <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
                             {formatDetailDate(evt.timestamp)}
                           </span>
@@ -707,7 +721,7 @@ export function TaskDetailPage({
               onPriorityChange={handlePriorityChange}
               onDueDateChange={handleDueDateChange}
               onNavigateTab={(tab) => handleTabChange(tab)}
-              auditEvents={auditEvents}
+              auditEvents={feedActivityEvents}
               isMobileAccordion={true}
               showRelatedSections={true}
             />

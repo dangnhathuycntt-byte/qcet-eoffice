@@ -329,6 +329,62 @@ export function canUserTransitionStatus(
   return { allowed: true };
 }
 
+export function canUserDeleteDeliverable(
+  user: AuthenticatedUser,
+  deliverable: { uploadedById: string; taskId: string },
+  task: {
+    id: string;
+    createdById: string;
+    departmentId?: string | null;
+    status: TaskStatus | string;
+    assignees?: Array<{ userId: string }>;
+  }
+): { allowed: boolean; reason?: string } {
+  if (deliverable.taskId !== task.id) {
+    return {
+      allowed: false,
+      reason: 'Minh chứng không thuộc nhiệm vụ được chỉ định.',
+    };
+  }
+
+  if (task.status === TaskStatus.CANCELLED) {
+    return {
+      allowed: false,
+      reason: 'Không thể xóa minh chứng của nhiệm vụ đã bị hủy.',
+    };
+  }
+
+  if (isPrivilegedUser(user)) {
+    return { allowed: true };
+  }
+
+  // Người tải lên có quyền xóa minh chứng của chính mình
+  if (deliverable.uploadedById === user.id) {
+    return { allowed: true };
+  }
+
+  // Người tạo nhiệm vụ
+  if (task.createdById === user.id) {
+    return { allowed: true };
+  }
+
+  // Người phụ trách / thành viên được phân công nhiệm vụ
+  const isAssignee = Boolean(task.assignees?.some((a) => a.userId === user.id));
+  if (isAssignee) {
+    return { allowed: true };
+  }
+
+  // Trưởng đơn vị của nhiệm vụ
+  if (isDepartmentLeader(user, task.departmentId)) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: 'Bạn không có quyền xóa minh chứng này.',
+  };
+}
+
 export const taskPolicy = {
   isPrivilegedUser,
   isDepartmentLeader,
@@ -339,6 +395,7 @@ export const taskPolicy = {
   canUserDeleteTask,
   canUserSubmitDeliverable,
   canUserReviewDeliverable,
+  canUserDeleteDeliverable,
   canUserTransitionStatus,
 };
 

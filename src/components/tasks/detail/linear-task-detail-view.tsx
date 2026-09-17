@@ -21,6 +21,7 @@ import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 
 export interface LinearTaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -74,6 +75,11 @@ export function LinearTaskDetailView({
   React.useEffect(() => {
     setAuditEvents(initialAuditEvents as ActivityEvent[]);
   }, [initialAuditEvents]);
+
+  // Consolidated activity events for clean feed without autosave duplicates
+  const feedActivityEvents = React.useMemo(() => {
+    return consolidateActivityFeed(auditEvents as any[], 60000);
+  }, [auditEvents]);
 
   // Keyboard shortcut: Ctrl/Cmd + I toggles inspector
   React.useEffect(() => {
@@ -358,7 +364,7 @@ export function LinearTaskDetailView({
           />
 
           {/* F. Activity & Governance Timeline */}
-          <TaskActivityTimeline events={auditEvents} />
+          <TaskActivityTimeline events={feedActivityEvents as any[]} />
         </main>
 
         {/* Desktop Right Rail Properties Inspector (280-320px) */}
@@ -370,7 +376,7 @@ export function LinearTaskDetailView({
               onStatusChange={handleStatusChangeInternal}
               onPriorityChange={handlePriorityChangeInternal}
               onDueDateChange={handleDueDateChangeInternal}
-              auditEvents={auditEvents as AuditLogItem[]}
+              auditEvents={feedActivityEvents as AuditLogItem[]}
               canEdit={true}
             />
           </div>
@@ -386,7 +392,7 @@ export function LinearTaskDetailView({
         onStatusChange={handleStatusChangeInternal}
         onPriorityChange={handlePriorityChangeInternal}
         onDueDateChange={handleDueDateChangeInternal}
-        auditEvents={auditEvents as AuditLogItem[]}
+        auditEvents={feedActivityEvents as AuditLogItem[]}
       />
     </div>
   );

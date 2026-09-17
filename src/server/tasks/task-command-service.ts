@@ -39,6 +39,7 @@ import {
   canUserDeleteTask,
   canUserSubmitDeliverable,
   canUserReviewDeliverable,
+  canUserDeleteDeliverable,
   canUserTransitionStatus,
   checkActiveDelegation,
   isPrivilegedUser,
@@ -125,6 +126,111 @@ function resolveUser(
     throw new AuthenticationError('Unauthorized');
   }
   return ctx.user;
+}
+
+/**
+ * Tính toán và đồng bộ lại tiến độ tổng hợp cùng trạng thái của nhiệm vụ cha
+ * khi các việc thành phần (subtasks) hoàn thành, mở lại, tạo mới, hủy hoặc chuyển cha.
+ * Tuân thủ quy chuẩn:
+ * - Không còn việc con active: giữ nguyên tiến độ cha, không can thiệp.
+ * - Có việc con: progressPercent = Math.round((completed / total) * 100).
+ * - Tiến độ 100%: chuyển sang WAITING_APPROVAL (không tự ý bỏ qua bước duyệt).
+ * - Việc con mở lại (tiến độ < 100%): mở lại cha về IN_PROGRESS nếu đang COMPLETED hoặc WAITING_APPROVAL.
+ */
+export async function recalculateParentTaskProgress(
+  tx: Prisma.TransactionClient,
+  parentTaskId: string,
+  actorId?: string | null,
+  requestId?: string
+): Promise<{ updated: boolean; newProgress?: number; newStatus?: TaskStatus }> {
+  const subTasks = await tx.task.findMany({
+    where: {
+      parentTaskId,
+      status: { not: TaskStatus.CANCELLED },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (subTasks.length === 0) {
+    return { updated: false };
+  }
+
+  const completedCount = subTasks.filter((st) => st.status === TaskStatus.COMPLETED).length;
+  const newProgress = Math.round((completedCount / subTasks.length) * 100);
+
+  const parent = await tx.task.findUnique({
+    where: { id: parentTaskId },
+    select: {
+      id: true,
+      status: true,
+      progressPercent: true,
+      version: true,
+    },
+  });
+
+  if (!parent) return { updated: false };
+
+  let nextStatus = parent.status;
+
+  if (newProgress === 100) {
+    if (parent.status === TaskStatus.IN_PROGRESS || parent.status === TaskStatus.NOT_STARTED) {
+      nextStatus = TaskStatus.WAITING_APPROVAL;
+    }
+  } else if (newProgress > 0) {
+    if (
+      parent.status === TaskStatus.NOT_STARTED ||
+      parent.status === TaskStatus.COMPLETED ||
+      parent.status === TaskStatus.WAITING_APPROVAL
+    ) {
+      nextStatus = TaskStatus.IN_PROGRESS;
+    }
+  } else {
+    // newProgress === 0
+    if (parent.status === TaskStatus.COMPLETED || parent.status === TaskStatus.WAITING_APPROVAL) {
+      nextStatus = TaskStatus.IN_PROGRESS;
+    }
+  }
+
+  const isProgressChanged = parent.progressPercent !== newProgress;
+  const isStatusChanged = parent.status !== nextStatus;
+
+  if (!isProgressChanged && !isStatusChanged) {
+    return { updated: false, newProgress, newStatus: parent.status };
+  }
+
+  await tx.task.update({
+    where: { id: parentTaskId },
+    data: {
+      progressPercent: newProgress,
+      status: nextStatus,
+      version: { increment: 1 },
+      updatedAt: new Date(),
+    },
+  });
+
+  await logAuditEvent(tx, {
+    actorId: actorId || null,
+    action: isStatusChanged ? AuditAction.TASK_STATUS_CHANGED : AuditAction.TASK_UPDATED,
+    entityType: AuditEntityType.TASK,
+    entityId: parentTaskId,
+    requestId,
+    beforeData: {
+      progressPercent: parent.progressPercent,
+      status: parent.status,
+    },
+    afterData: {
+      progressPercent: newProgress,
+      status: nextStatus,
+      triggerReason: `Tự động tổng hợp từ ${completedCount}/${subTasks.length} việc thành phần`,
+    },
+    metadata: {
+      trigger: 'SUBTASK_PROGRESS_ROLLUP',
+      completedSubTasks: completedCount,
+      totalSubTasks: subTasks.length,
+    },
+  });
+
+  return { updated: true, newProgress, newStatus: nextStatus };
 }
 
 export class TaskCommandService {
