@@ -23,7 +23,7 @@ import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-dr
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
-import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
@@ -39,12 +39,14 @@ export interface TaskDetailPageProps {
     description?: string;
   }>;
   currentUser?: any;
+  canEdit?: boolean;
 }
 
 export function TaskDetailPage({
   task: initialTask,
   auditEvents: initialAuditEvents = [],
   currentUser: serverUser,
+  canEdit = false,
 }: TaskDetailPageProps) {
   const reduceMotion = useReducedMotion();
   const router = useRouter();
@@ -330,14 +332,6 @@ export function TaskDetailPage({
       } as SchoolTask;
     });
 
-    if (updated.status === "COMPLETED") {
-      const nextSubtasks = subTasks.map((s) => (s.id === updated.id ? updated : s));
-      const nextCompleted = nextSubtasks.filter((s) => s.status === "COMPLETED").length;
-      const nextProgress = Math.round((nextCompleted / nextSubtasks.length) * 100);
-      if (nextProgress === 100 && task.status !== "COMPLETED") {
-        handleStatusChange(task.id, "COMPLETED", `Tự động từ hoàn thành toàn bộ việc thành phần`);
-      }
-    }
   }, [isSchool, schoolTask, subTasks, task.status, task.id]);
 
   const completedSubtasks = subTasks.filter((subTask) => subTask.status === "COMPLETED").length;
@@ -360,12 +354,19 @@ export function TaskDetailPage({
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
+        body: JSON.stringify({ title: newTitle, expectedVersion: (task as any).version }),
       });
 
       if (!res.ok) throw new Error("Không thể lưu tiêu đề");
       if (res.ok) {
+        const payload = await res.json().catch(() => null);
         setTask((prev) => ({ ...prev, title: newTitle }));
+        if (payload?.data?.version ?? payload?.task?.version) {
+          setTask((prev) => ({
+            ...prev,
+            version: payload?.data?.version ?? payload?.task?.version,
+          } as any));
+        }
         setAuditEvents((prev) => [
           {
             id: `audit-title-${Date.now()}`,
@@ -389,21 +390,23 @@ export function TaskDetailPage({
     const res = await fetch(`/api/tasks/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: trimmed }),
+      body: JSON.stringify({ description: trimmed, expectedVersion: (task as any).version }),
     });
 
     if (!res.ok) {
       throw new Error("Không thể lưu mô tả");
     }
 
+    const payload = await res.json().catch(() => null);
     setTask((prev) => {
       if (isSchool && schoolTask) {
-        return { ...prev, description: trimmed } as SchoolTask;
+        return { ...prev, description: trimmed, version: payload?.data?.version ?? payload?.task?.version ?? (prev as any).version } as any;
       }
       return {
         ...prev,
         deliverableDescription: trimmed,
         description: trimmed,
+        version: payload?.data?.version ?? payload?.task?.version ?? (prev as any).version,
       } as any;
     });
 
@@ -497,7 +500,7 @@ export function TaskDetailPage({
 
   // Priority change handler (REQ-20)
   const handlePriorityChange = async (taskId: string, newPriority: TaskPriority) => {
-    const res = await updateTaskPriority(taskId, newPriority);
+    const res = await updateTaskPriority(taskId, newPriority, (task as any).version);
     if (!res.ok) {
       console.error("Lỗi cập nhật độ ưu tiên:", res.error);
       return;
@@ -507,13 +510,14 @@ export function TaskDetailPage({
     setTask((prev) => ({
       ...prev,
       priority: normalizedPriority,
+      version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
     }));
     router.refresh();
   };
 
   // Start date change handler
   const handleStartDateChange = async (taskId: string, newStartDate: string) => {
-    const res = await updateTaskStartDate(taskId, newStartDate);
+    const res = await updateTaskStartDate(taskId, newStartDate, (task as any).version);
     if (!res.ok) {
       console.error("Lỗi cập nhật ngày bắt đầu:", res.error);
       return;
@@ -523,6 +527,7 @@ export function TaskDetailPage({
       ...prev,
       startDate: newStartDate,
       assignedDate: newStartDate,
+      version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
     } as any));
 
     setAuditEvents((prev) => [
@@ -540,7 +545,7 @@ export function TaskDetailPage({
 
   // Due date change handler (REQ-20)
   const handleDueDateChange = async (taskId: string, newDueDate: string) => {
-    const res = await updateTaskDueDate(taskId, newDueDate);
+    const res = await updateTaskDueDate(taskId, newDueDate, (task as any).version);
     if (!res.ok) {
       console.error("Lỗi cập nhật hạn hoàn thành:", res.error);
       return;
@@ -549,6 +554,7 @@ export function TaskDetailPage({
     setTask((prev) => ({
       ...prev,
       dueDate: newDueDate,
+      version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
     }));
 
     setAuditEvents((prev) => [
@@ -641,16 +647,22 @@ export function TaskDetailPage({
 
   // Subtask toggle status handler
   const handleToggleSubtask = async (st: StaffTask) => {
-    const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
-    const res = await updateTaskStatus(st.id, newStatus);
+    const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "WAITING_APPROVAL";
+    const res = st.status === "COMPLETED"
+      ? await updateTaskStatus(st.id, newStatus, undefined, (st as any).version)
+      : await updateTaskProgress(st.id, 100, "Hoàn tất việc thành phần và gửi duyệt", (st as any).version);
     if (res.ok) {
-      const nextSubtasks = subTasks.map((subTask) =>
-        subTask.id === st.id ? { ...subTask, status: newStatus } : subTask
-      );
       setTask((prev) => {
         if (!isSchool || !schoolTask) return prev;
         const updatedSubtasks = schoolTask.subTasks.map((s) =>
-          s.id === st.id ? { ...s, status: newStatus } : s
+          s.id === st.id
+            ? {
+                ...s,
+                status: ((res.data as any)?.status ?? newStatus) as TaskStatus,
+                progressPercent: st.status === "COMPLETED" ? (s as any).progressPercent : 100,
+                version: (res.data as any)?.version ?? (s as any).version,
+              }
+            : s
         );
         return {
           ...prev,
@@ -658,16 +670,9 @@ export function TaskDetailPage({
         } as SchoolTask;
       });
 
-      const nextCompleted = nextSubtasks.filter((subTask) => subTask.status === "COMPLETED").length;
-      const nextProgress = Math.round((nextCompleted / nextSubtasks.length) * 100);
-      const parentStatus: TaskStatus = nextProgress === 100
-        ? "COMPLETED"
-        : nextProgress > 0
-          ? "IN_PROGRESS"
-          : "NOT_STARTED";
-      if (parentStatus !== task.status) {
-        await handleStatusChange(task.id, parentStatus, `Tự động từ ${nextCompleted}/${nextSubtasks.length} việc thành phần`);
-      }
+      router.refresh();
+    } else {
+      notifyError(res.reason || res.error || "Không thể cập nhật việc thành phần", "Lỗi thao tác");
     }
   };
 
@@ -825,7 +830,7 @@ export function TaskDetailPage({
         showBreadcrumbs={false}
         showInspector={showInspector}
         onToggleInspector={handleToggleInspector}
-        onOpenProgressModal={() => setIsProgressModalOpen(true)}
+        onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
         onRefresh={() => router.refresh()}
       />
 
@@ -918,7 +923,7 @@ export function TaskDetailPage({
               <TaskIdentityBlock
                 task={task}
                 currentUser={currentUser}
-                canEdit={true}
+                canEdit={canEdit}
                 deliverables={deliverables}
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
@@ -939,7 +944,7 @@ export function TaskDetailPage({
                   taskId={task.id}
                   initialDescription={currentDescription}
                   subTasks={subTasks}
-                  canEdit={true}
+                  canEdit={canEdit}
                   onSaveContent={handleSaveDescription}
                   onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
                   onOpenCreateSubtask={() => setIsCreateSubTaskModalOpen(true)}
@@ -954,7 +959,7 @@ export function TaskDetailPage({
               <TaskSubtasksSection
                 parentId={task.id}
                 subTasks={subTasks}
-                canEdit={true}
+                canEdit={canEdit}
                 onToggleSubtask={handleToggleSubtask}
                 onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
                 onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
@@ -1027,6 +1032,7 @@ export function TaskDetailPage({
             <LinearPropertiesSidebar
               task={task}
               currentUser={currentUser}
+              canEdit={canEdit}
               onStatusChange={handleStatusChange}
               onPriorityChange={handlePriorityChange}
               onDueDateChange={handleDueDateChange}
@@ -1050,7 +1056,7 @@ export function TaskDetailPage({
         subtask={activeSubtask}
         parentTaskTitle={task.title}
         parentTaskCode={taskCode}
-        canEdit={true}
+        canEdit={canEdit}
         onSubtaskUpdated={handleSubtaskUpdated}
         onOpenAnotherSubtask={handleOpenSubtaskDrawer}
         onNavigateBackHistory={handleNavigateBackSubtaskHistory}
@@ -1080,7 +1086,7 @@ export function TaskDetailPage({
               leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
               completedSubtasks={completedSubtasks}
               totalSubtasks={subTasks.length}
-              canEdit={true}
+              canEdit={canEdit}
               onProgressUpdated={async (p, note) => {
                 await handleProgressUpdated(p, note);
                 setIsProgressModalOpen(false);

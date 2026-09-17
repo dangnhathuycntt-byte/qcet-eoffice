@@ -218,6 +218,11 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "src/components/tasks/detail/task-identity-block.tsx"
     );
     const content = fs.readFileSync(identityBlockPath, "utf-8");
+    const propertiesSidebarPath = path.join(
+      process.cwd(),
+      "src/components/tasks/detail/linear-properties-sidebar.tsx"
+    );
+    const propertiesSidebarContent = fs.readFileSync(propertiesSidebarPath, "utf-8");
 
     // Must NOT contain department name pill in Properties line
     assert.ok(
@@ -233,8 +238,9 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
 
     // Must have start date picker support with 'Chọn ngày bắt đầu' placeholder
     assert.ok(
-      content.includes('placeholder="Chọn ngày bắt đầu"'),
-      "Properties line must allow picking start date with 'Chọn ngày bắt đầu'"
+      propertiesSidebarContent.includes('placeholder="Bắt đầu"') &&
+        propertiesSidebarContent.includes('title="Ngày bắt đầu"'),
+      "Canonical properties sidebar must expose the start-date picker"
     );
 
     // Must have due date picker support with 'Chọn hạn chót' placeholder

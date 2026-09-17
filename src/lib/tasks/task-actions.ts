@@ -258,13 +258,14 @@ export async function updateTaskProgress(
 
 export async function updateTaskPriority(
   taskId: string,
-  priority: TaskPriority
+  priority: TaskPriority,
+  expectedVersion?: number
 ): Promise<TaskActionResult> {
   try {
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority }),
+      body: JSON.stringify({ priority, expectedVersion }),
     });
 
     if (!res.ok) {
@@ -320,7 +321,8 @@ export async function updateTaskAssignee(
 
 export async function updateTaskStartDate(
   taskId: string,
-  startDate: string | null
+  startDate: string | null,
+  expectedVersion?: number
 ): Promise<TaskActionResult> {
   try {
     const formattedStartDate = startDate && startDate.length === 10
@@ -330,7 +332,7 @@ export async function updateTaskStartDate(
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startDate: formattedStartDate }),
+      body: JSON.stringify({ startDate: formattedStartDate, expectedVersion }),
     });
 
     if (!res.ok) {
@@ -353,7 +355,8 @@ export async function updateTaskStartDate(
 
 export async function updateTaskDueDate(
   taskId: string,
-  dueDate: string
+  dueDate: string,
+  expectedVersion?: number
 ): Promise<TaskActionResult> {
   try {
     const formattedDueDate = dueDate && dueDate.length === 10
@@ -363,7 +366,7 @@ export async function updateTaskDueDate(
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dueDate: formattedDueDate }),
+      body: JSON.stringify({ dueDate: formattedDueDate, expectedVersion }),
     });
 
     if (!res.ok) {

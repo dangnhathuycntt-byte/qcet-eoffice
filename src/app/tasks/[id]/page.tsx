@@ -1,36 +1,23 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/jwt-session";
 import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@/lib/adapters/task-db-adapter";
 import { TaskDetailPage } from "@/components/tasks/task-detail-page";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import { canReadTask, canUpdateTask } from "@/server/policies/task-policy";
 
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: TaskDetailPageParams): Promise<Metadata> {
-  const { id } = await params;
-  if (!id) {
-    return { title: "Chi tiết nhiệm vụ" };
-  }
-
-  const task = await prisma.task.findUnique({
-    where: { id },
-    select: { code: true, title: true },
-  });
-
-  if (!task) {
-    return { title: "Không tìm thấy nhiệm vụ" };
-  }
-
-  const taskCodePrefix = task.code ? `${task.code} - ` : "";
-  return {
-    title: `${taskCodePrefix}${task.title}`,
-  };
+  await params;
+  // Do not query protected task data from metadata before authentication and
+  // object-level authorization have run in the page request.
+  return { title: "Chi tiết nhiệm vụ" };
 }
 
 function formatAuditDescription(event: {
@@ -106,6 +93,9 @@ export default async function Page({ params }: TaskDetailPageParams) {
 
   const cookieStore = await cookies();
   const session = await getSessionFromRequest({ cookies: cookieStore });
+  if (!session) {
+    redirect(`/login?returnTo=${encodeURIComponent(`/tasks/${id}`)}`);
+  }
 
   const currentUser =
     session && session.id
@@ -166,6 +156,13 @@ export default async function Page({ params }: TaskDetailPageParams) {
   if (!rawTask) {
     notFound();
   }
+
+  // Keep the server-rendered page on the same BOLA boundary as GET /api/tasks/[id].
+  // Return 404 for unauthorized objects so task IDs cannot be enumerated.
+  if (!canReadTask(session as any, rawTask)) {
+    notFound();
+  }
+  const canEdit = canUpdateTask(session as any, rawTask);
 
   // Format task according to scope
   const isSchoolScope = rawTask.scope === "SCHOOL";
@@ -234,6 +231,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
       task={mappedTask}
       auditEvents={combinedAuditEvents}
       currentUser={currentUser}
+      canEdit={canEdit}
     />
   );
 }

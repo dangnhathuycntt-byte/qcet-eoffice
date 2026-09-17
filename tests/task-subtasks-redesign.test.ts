@@ -72,10 +72,12 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Sidebar subtask items must display due date"
       );
 
-      // 5. Empty state is a single line with an add button
+      // 5. Empty state is a compact single line with label, zero count, and add button
       assert.ok(
-        sidebarContent.includes("Chưa có việc thành phần"),
-        "Sidebar must have single-line empty state when no subtasks exist"
+        sidebarContent.includes("Việc thành phần") &&
+          sidebarContent.includes('className="font-mono text-muted-foreground text-xs font-medium">0</span>') &&
+          sidebarContent.includes('aria-label="Thêm việc thành phần"'),
+        "Sidebar must render the canonical compact empty row"
       );
     });
   });

@@ -1010,7 +1010,7 @@ export function LinearPropertiesSidebar({
                   >
                     <div
                       className={cn(
-                        "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-1 leading-snug",
+                        "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug",
                         isCompleted && "line-through text-muted-foreground"
                       )}
                     >
