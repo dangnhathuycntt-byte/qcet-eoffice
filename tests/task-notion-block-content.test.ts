@@ -245,71 +245,91 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
   });
 
-  describe("6. Fast Block Handle Refactor — Selection, Keyboard Actions & No Click Dropdown", () => {
-    it("selects entire block on handle click without opening dropdown menu", () => {
-      // 1. Must use selectedBlockId state
+  describe("6. Fast Block Handle & Multi-Select Notion Interaction Suite", () => {
+    it("strictly separates hover state from selected state without accidental selection", () => {
+      // 1. Hover has neutral subtle background when not selected
       assert.ok(
-        componentContent.includes("setSelectedBlockId(block.id)"),
-        "Clicking handle must select entire block via setSelectedBlockId"
+        componentContent.includes('!isSelected && "hover:bg-muted/30"'),
+        "Hover must apply subtle neutral background only when not selected"
       );
 
-      // 2. Must NOT toggle dropdown menu on handle click
+      // 2. Selected state uses persistent blueish background and ring
       assert.ok(
-        !componentContent.includes("setActiveBlockMenuId"),
-        "Must NOT toggle dropdown on handle click"
-      );
-
-      // 3. Highlighted selected state
-      assert.ok(
-        componentContent.includes("selectedBlockId === block.id"),
-        "Must support visual selected state"
+        componentContent.includes('isSelected && "bg-primary/10 ring-1 ring-primary/30 shadow-2xs"'),
+        "Selected state must have dedicated persistent visual highlight"
       );
     });
 
-    it("supports fast keyboard actions when block is selected (Delete, Cmd+D, ArrowUp/Down, Enter, Esc)", () => {
-      // 1. Delete / Backspace deletes block immediately
+    it("supports multi-selection via Shift+click range and Cmd/Ctrl+click toggle", () => {
+      // 1. Shift+click range selection
       assert.ok(
-        componentContent.includes('e.key === "Delete"') &&
-          componentContent.includes('e.key === "Backspace"') &&
-          componentContent.includes("handleDeleteBlock(block.id)"),
-        "Delete and Backspace must delete selected block immediately"
+        componentContent.includes("e.shiftKey && anchorBlockId") &&
+          componentContent.includes("rangeIds.add"),
+        "Must support Shift+click range selection"
       );
 
-      // 2. Cmd/Ctrl+D duplicates block
+      // 2. Cmd/Ctrl+click toggle selection
       assert.ok(
-        componentContent.includes('(e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d"') &&
-          componentContent.includes("handleDuplicateBlock(block, index)"),
-        "Cmd/Ctrl+D must duplicate selected block"
+        componentContent.includes("(e.metaKey || e.ctrlKey)") &&
+          componentContent.includes("next.delete(block.id)") &&
+          componentContent.includes("next.add(block.id)"),
+        "Must support Cmd/Ctrl+click toggle selection"
       );
 
-      // 3. ArrowUp / ArrowDown moves selection
+      // 3. Shift + ArrowUp / ArrowDown selection expansion
       assert.ok(
-        componentContent.includes('e.key === "ArrowUp"') &&
-          componentContent.includes('e.key === "ArrowDown"'),
-        "ArrowUp and ArrowDown must navigate selection"
-      );
-
-      // 4. Enter edits text and Esc deselects
-      assert.ok(
-        componentContent.includes("inputEl?.focus()") &&
-          componentContent.includes('e.key === "Escape"'),
-        "Enter must enter text edit mode and Esc must cancel selection"
+        componentContent.includes("e.shiftKey && (e.key === \"ArrowUp\" || e.key === \"ArrowDown\")"),
+        "Must support Shift + ArrowUp/ArrowDown selection expansion"
       );
     });
 
-    it("supports drag to reorder and right-click context menu", () => {
-      // 1. Native drag to reorder
+    it("supports instant multi-delete, multi-duplicate (Cmd+D), and Esc transitions", () => {
+      // 1. Delete / Backspace deletes all selected blocks
       assert.ok(
-        componentContent.includes("handleDragStart") &&
-          componentContent.includes("handleDragOver") &&
-          componentContent.includes("handleDragEnd"),
-        "Must support drag to reorder"
+        componentContent.includes("handleDeleteSelectedBlocks()"),
+        "Delete and Backspace must invoke handleDeleteSelectedBlocks"
       );
 
-      // 2. Context menu on right-click
+      // 2. Cmd/Ctrl+D duplicates all selected blocks
+      assert.ok(
+        componentContent.includes("handleDuplicateSelectedBlocks()"),
+        "Cmd/Ctrl+D must invoke handleDuplicateSelectedBlocks"
+      );
+
+      // 3. Esc in text mode enters block selection, Esc in selection mode clears
+      assert.ok(
+        componentContent.includes("setSelectedBlockIds(new Set([block.id]))") &&
+          componentContent.includes("setSelectedBlockIds(new Set())"),
+        "Esc must smoothly toggle between text edit and selection mode"
+      );
+    });
+
+    it("supports dragging multiple selected blocks as a group with proper insertion indicator", () => {
+      // 1. Multi-drag group support
+      assert.ok(
+        componentContent.includes("draggedGroupBlockIds") &&
+          componentContent.includes("setDraggedGroupBlockIds"),
+        "Must track group of dragged block IDs"
+      );
+
+      // 2. Insertion indicator
+      assert.ok(
+        componentContent.includes('isDragOver && "ring-2 ring-primary/70 bg-primary/5"'),
+        "Must render clean insertion line indicator on drag over"
+      );
+
+      // 3. Right-click context menu
       assert.ok(
         componentContent.includes("onContextMenu"),
         "Must support right-click context menu"
+      );
+    });
+
+    it("clears block selection when clicking or focusing inside text fields", () => {
+      assert.ok(
+        componentContent.includes("onFocus={() => {") &&
+          componentContent.includes("setSelectedBlockIds(new Set())"),
+        "Focusing text input must clear block selection"
       );
     });
   });

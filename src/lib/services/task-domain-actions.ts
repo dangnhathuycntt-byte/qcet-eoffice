@@ -81,6 +81,7 @@ export const UpdateProgressInputSchema = z.object({
   progressPercent: z.number().min(0, "Tiến độ phải từ 0% đến 100%").max(100, "Tiến độ không được vượt quá 100%"),
   note: z.string().trim().max(1000).optional(),
   expectedVersion: z.number().int().min(0).optional(),
+  targetStatus: z.nativeEnum(TaskStatus).optional(),
 });
 
 export type UpdateProgressInput = z.infer<typeof UpdateProgressInputSchema>;
@@ -400,26 +401,47 @@ export class TaskDomainActionService {
     assertAuthAllowed(authResult, "task.update_execution", taskId);
 
     if (task.status === TaskStatus.IN_PROGRESS) {
-      throw new InvalidTransitionError("Nhiệm vụ đã ở trạng thái đang thực hiện", "ALREADY_IN_PROGRESS");
-    }
-    if (task.status === TaskStatus.WAITING_APPROVAL) {
-      throw new InvalidTransitionError("Nhiệm vụ đang chờ duyệt kết quả", "TASK_WAITING_APPROVAL");
-    }
-    if (task.status === TaskStatus.COMPLETED) {
-      throw new InvalidTransitionError("Nhiệm vụ đã hoàn thành, không thể bắt đầu lại", "TASK_ALREADY_COMPLETED");
-    }
-    if (task.status === TaskStatus.CANCELLED) {
-      throw new InvalidTransitionError("Nhiệm vụ đã bị hủy, không thể bắt đầu", "TASK_CANCELLED");
+      return {
+        taskId,
+        status: TaskStatus.IN_PROGRESS,
+        progressPercent: task.progressPercent ?? 0,
+        version: task.version,
+      };
     }
 
     const noteText = validated?.note?.trim() || null;
 
     return await prisma.$transaction(async (tx) => {
+      // Nếu nhiệm vụ đang chờ duyệt mà chuyển về đang thực hiện: hủy các pending step để tiếp tục chỉnh sửa
+      if (task.status === TaskStatus.WAITING_APPROVAL && task.approvalProcesses && task.approvalProcesses.length > 0) {
+        for (const process of task.approvalProcesses) {
+          await tx.taskApprovalStep.updateMany({
+            where: {
+              processId: process.id,
+              status: ApprovalStepStatus.PENDING,
+            },
+            data: {
+              decisionNote: noteText || "Chuyển về trạng thái đang thực hiện",
+            },
+          });
+          await tx.taskApprovalProcess.update({
+            where: { id: process.id },
+            data: { status: ApprovalProcessStatus.CANCELLED },
+          });
+        }
+      }
+
+      const newProgress =
+        task.status === TaskStatus.WAITING_APPROVAL && (task.progressPercent ?? 0) === 100
+          ? 90
+          : task.progressPercent ?? 0;
+
       const updatedTask = await tx.task.update({
         where: { id: taskId },
         data: {
           status: TaskStatus.IN_PROGRESS,
-          progressPercent: task.progressPercent ?? 0,
+          progressPercent: newProgress,
+          completedAt: null,
           version: { increment: 1 },
           updatedAt: new Date(),
         },
@@ -482,34 +504,36 @@ export class TaskDomainActionService {
     const authResult = await authorize(userContext, "task.update_execution", resource);
     assertAuthAllowed(authResult, "task.update_execution", taskId);
 
-    if (task.status === TaskStatus.COMPLETED) {
+    if (task.status === TaskStatus.COMPLETED && !validated.targetStatus) {
       throw new InvalidTransitionError(
         "Nhiệm vụ đã hoàn thành, không thể cập nhật tiến độ",
         "TASK_ALREADY_COMPLETED"
       );
     }
-    if (task.status === TaskStatus.CANCELLED) {
+    if (task.status === TaskStatus.CANCELLED && !validated.targetStatus) {
       throw new InvalidTransitionError(
         "Nhiệm vụ đã bị hủy, không thể cập nhật tiến độ",
         "TASK_CANCELLED"
       );
     }
 
-    // Tự động xác định trạng thái theo tiến độ (REQ-1 & REQ-4):
+    // Tự động xác định trạng thái theo tiến độ (REQ-1 & REQ-4) nếu không chỉ định targetStatus:
     // - NOT_STARTED & progressPercent > 0 -> IN_PROGRESS
     // - progressPercent === 100 -> WAITING_APPROVAL
     // - WAITING_APPROVAL & progressPercent < 100 -> IN_PROGRESS
-    let targetStatus = task.status;
-    if (validated.progressPercent === 100) {
-      targetStatus = TaskStatus.WAITING_APPROVAL;
-    } else if (validated.progressPercent > 0) {
-      if (task.status === TaskStatus.NOT_STARTED || task.status === TaskStatus.WAITING_APPROVAL) {
-        targetStatus = TaskStatus.IN_PROGRESS;
-      }
-    } else {
-      // validated.progressPercent === 0
-      if (task.status === TaskStatus.WAITING_APPROVAL) {
-        targetStatus = TaskStatus.IN_PROGRESS;
+    let targetStatus = validated.targetStatus || task.status;
+    if (!validated.targetStatus) {
+      if (validated.progressPercent === 100) {
+        targetStatus = TaskStatus.WAITING_APPROVAL;
+      } else if (validated.progressPercent > 0) {
+        if (task.status === TaskStatus.NOT_STARTED || task.status === TaskStatus.WAITING_APPROVAL) {
+          targetStatus = TaskStatus.IN_PROGRESS;
+        }
+      } else {
+        // validated.progressPercent === 0
+        if (task.status === TaskStatus.WAITING_APPROVAL) {
+          targetStatus = TaskStatus.IN_PROGRESS;
+        }
       }
     }
 
@@ -522,6 +546,7 @@ export class TaskDomainActionService {
         data: {
           progressPercent: validated.progressPercent,
           status: targetStatus,
+          completedAt: targetStatus === TaskStatus.COMPLETED ? new Date() : null,
           version: { increment: 1 },
           updatedAt: new Date(),
         },

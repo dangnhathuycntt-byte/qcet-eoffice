@@ -331,5 +331,23 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
         "hybrid-authorization phải cho phép LEAD_UNIT, ASSIGNER và ADMIN cập nhật tiến độ/nộp kết quả"
       );
     });
+    it("src/lib/services/task-domain-actions.ts cho phép chuyển từ WAITING_APPROVAL về IN_PROGRESS", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/lib/services/task-domain-actions.ts"),
+        "utf8"
+      );
+
+      // Không còn chặn WAITING_APPROVAL trong hàm start
+      assert.ok(
+        !source.includes('throw new InvalidTransitionError("Nhiệm vụ đang chờ duyệt kết quả"'),
+        "Hàm start không được chặn nhiệm vụ đang ở WAITING_APPROVAL chuyển về IN_PROGRESS"
+      );
+
+      // Cho phép hủy bỏ pending steps khi rút lại duyệt
+      assert.ok(
+        source.includes("ApprovalStepStatus.PENDING") && source.includes("ApprovalProcessStatus.CANCELLED"),
+        "Hàm start phải cập nhật các approval step pending và process khi chuyển từ WAITING_APPROVAL về IN_PROGRESS"
+      );
+    });
   });
 });

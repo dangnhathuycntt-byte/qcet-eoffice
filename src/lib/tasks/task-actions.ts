@@ -48,6 +48,7 @@ export async function updateTaskStatus(
     actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
     actionBody = {
       progressPercent: 0,
+      targetStatus: "NOT_STARTED",
       note: note || "Chuyển về trạng thái Mới",
     };
   }

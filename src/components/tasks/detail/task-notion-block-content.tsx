@@ -290,8 +290,9 @@ export function TaskNotionBlockContent({
   const [activeMenuIndex, setActiveMenuIndex] = React.useState(0);
   const [menuPosition, setMenuPosition] = React.useState<{ top: number; left: number } | null>(null);
 
-  // Block Selection State (Click nhanh handle 6 chấm để chọn toàn bộ block)
-  const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
+  // Multi-Selection State theo convention Notion (Set các block ID được chọn)
+  const [selectedBlockIds, setSelectedBlockIds] = React.useState<Set<string>>(new Set());
+  const [anchorBlockId, setAnchorBlockId] = React.useState<string | null>(null);
 
   // Context Menu State (Chuột phải vào handle hoặc block)
   const [activeContextMenu, setActiveContextMenu] = React.useState<{
@@ -300,9 +301,10 @@ export function TaskNotionBlockContent({
     left: number;
   } | null>(null);
 
-  // Drag and drop state
+  // Drag and drop state (Hỗ trợ kéo đơn hoặc kéo cả group multi-selected)
   const [draggedBlockIndex, setDraggedBlockIndex] = React.useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+  const [draggedGroupBlockIds, setDraggedGroupBlockIds] = React.useState<string[]>([]);
   const isDraggingRef = React.useRef(false);
 
   // Trailing input state (controlled để quản lý hiển thị keycap hint)
@@ -324,7 +326,8 @@ export function TaskNotionBlockContent({
   React.useEffect(() => {
     const handleGlobalPointerDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setSelectedBlockId(null);
+        setSelectedBlockIds(new Set());
+        setAnchorBlockId(null);
         setActiveContextMenu(null);
       }
     };
@@ -533,8 +536,48 @@ export function TaskNotionBlockContent({
     });
   };
 
-  // Xóa một block (Khi xóa: focus/select block kế tiếp; nếu không có thì block trước; nếu rỗng tạo trailing)
+  // Xóa toàn bộ các block đang được chọn (Multi-selection Delete)
+  const handleDeleteSelectedBlocks = () => {
+    if (selectedBlockIds.size === 0) return;
+
+    setBlocks((prev) => {
+      const deletedIndices = prev
+        .map((b, idx) => (selectedBlockIds.has(b.id) ? idx : -1))
+        .filter((idx) => idx !== -1);
+      if (deletedIndices.length === 0) return prev;
+
+      const minIndex = Math.min(...deletedIndices);
+      const next = prev.filter((b) => !selectedBlockIds.has(b.id));
+
+      if (next.length === 0) {
+        const newId = `b-${Date.now()}`;
+        pendingFocusBlockIdRef.current = newId;
+        setSelectedBlockIds(new Set());
+        setAnchorBlockId(null);
+        return [{ id: newId, type: "text", content: "" }];
+      }
+
+      // Chọn block kế tiếp (nếu còn), hoặc block ngay trước đó
+      const nextTargetIndex = minIndex < next.length ? minIndex : next.length - 1;
+      const nextTargetBlock = next[nextTargetIndex];
+      if (nextTargetBlock) {
+        setSelectedBlockIds(new Set([nextTargetBlock.id]));
+        setAnchorBlockId(nextTargetBlock.id);
+        setTimeout(() => {
+          blockWrapperRefs.current.get(nextTargetBlock.id)?.focus();
+        }, 20);
+      }
+
+      triggerAutoSave(next);
+      return next;
+    });
+    setActiveContextMenu(null);
+  };
+
+  // Xóa một block đơn lẻ
   const handleDeleteBlock = (blockId: string) => {
+    setSelectedBlockIds(new Set([blockId]));
+    setAnchorBlockId(blockId);
     setBlocks((prev) => {
       const index = prev.findIndex((b) => b.id === blockId);
       if (index === -1) return prev;
@@ -543,15 +586,16 @@ export function TaskNotionBlockContent({
       if (next.length === 0) {
         const newId = `b-${Date.now()}`;
         pendingFocusBlockIdRef.current = newId;
-        setSelectedBlockId(null);
+        setSelectedBlockIds(new Set());
+        setAnchorBlockId(null);
         return [{ id: newId, type: "text", content: "" }];
       }
 
-      // Chọn block kế tiếp; nếu xóa block cuối thì chọn block trước đó
-      const nextSelectedIndex = index < next.length ? index : next.length - 1;
-      const nextTargetBlock = next[nextSelectedIndex];
+      const nextTargetIndex = index < next.length ? index : next.length - 1;
+      const nextTargetBlock = next[nextTargetIndex];
       if (nextTargetBlock) {
-        setSelectedBlockId(nextTargetBlock.id);
+        setSelectedBlockIds(new Set([nextTargetBlock.id]));
+        setAnchorBlockId(nextTargetBlock.id);
         setTimeout(() => {
           blockWrapperRefs.current.get(nextTargetBlock.id)?.focus();
         }, 20);
@@ -578,7 +622,46 @@ export function TaskNotionBlockContent({
     setActiveContextMenu(null);
   };
 
-  // Nhân đôi block
+  // Nhân đôi toàn bộ các block đang được chọn (Multi-selection Duplicate)
+  const handleDuplicateSelectedBlocks = () => {
+    if (selectedBlockIds.size === 0) return;
+
+    setBlocks((prev) => {
+      const selectedItems = prev.filter((b) => selectedBlockIds.has(b.id));
+      if (selectedItems.length === 0) return prev;
+
+      let lastSelectedIndex = -1;
+      prev.forEach((b, idx) => {
+        if (selectedBlockIds.has(b.id)) lastSelectedIndex = idx;
+      });
+
+      const newClonedIds = new Set<string>();
+      const clonedBlocks: NotionBlockItem[] = selectedItems.map((b, i) => {
+        const newId = `b-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`;
+        newClonedIds.add(newId);
+        return {
+          ...b,
+          id: newId,
+        };
+      });
+
+      const next = [...prev];
+      next.splice(lastSelectedIndex + 1, 0, ...clonedBlocks);
+
+      setSelectedBlockIds(newClonedIds);
+      const firstClonedId = Array.from(newClonedIds)[0];
+      setAnchorBlockId(firstClonedId);
+      setTimeout(() => {
+        blockWrapperRefs.current.get(firstClonedId)?.focus();
+      }, 20);
+
+      triggerAutoSave(next);
+      return next;
+    });
+    setActiveContextMenu(null);
+  };
+
+  // Nhân đôi block đơn
   const handleDuplicateBlock = (block: NotionBlockItem, index: number) => {
     const cloneId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const cloned: NotionBlockItem = {
@@ -591,18 +674,65 @@ export function TaskNotionBlockContent({
       triggerAutoSave(next);
       return next;
     });
-    setSelectedBlockId(cloneId);
+    setSelectedBlockIds(new Set([cloneId]));
+    setAnchorBlockId(cloneId);
     setTimeout(() => {
       blockWrapperRefs.current.get(cloneId)?.focus();
     }, 20);
     setActiveContextMenu(null);
   };
 
+  // Click vào Drag Handle (Hỗ trợ Single click, Shift + click range, Cmd/Ctrl + click toggle)
+  const handleBlockHandleClick = (e: React.MouseEvent, block: NotionBlockItem, index: number) => {
+    e.stopPropagation();
+    if (isDraggingRef.current) return;
+
+    // Shift + click: Chọn liên tục từ anchor block đến block hiện tại
+    if (e.shiftKey && anchorBlockId) {
+      const anchorIdx = blocks.findIndex((b) => b.id === anchorBlockId);
+      if (anchorIdx !== -1) {
+        const start = Math.min(anchorIdx, index);
+        const end = Math.max(anchorIdx, index);
+        const rangeIds = new Set<string>();
+        for (let i = start; i <= end; i++) {
+          rangeIds.add(blocks[i].id);
+        }
+        setSelectedBlockIds(rangeIds);
+        blockWrapperRefs.current.get(block.id)?.focus();
+        return;
+      }
+    }
+
+    // Cmd/Ctrl + click: Toggle block vào/ra khỏi selection mà không bỏ các block khác
+    if (e.metaKey || e.ctrlKey) {
+      setSelectedBlockIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(block.id)) {
+          next.delete(block.id);
+        } else {
+          next.add(block.id);
+        }
+        return next;
+      });
+      setAnchorBlockId(block.id);
+      blockWrapperRefs.current.get(block.id)?.focus();
+      return;
+    }
+
+    // Click nhanh thông thường: Chọn duy nhất block này
+    setSelectedBlockIds(new Set([block.id]));
+    setAnchorBlockId(block.id);
+    blockWrapperRefs.current.get(block.id)?.focus();
+  };
+
   // Context Menu khi chuột phải vào block hoặc handle
   const handleContextMenu = (e: React.MouseEvent, block: NotionBlockItem) => {
     e.preventDefault();
     e.stopPropagation();
-    setSelectedBlockId(block.id);
+    if (!selectedBlockIds.has(block.id)) {
+      setSelectedBlockIds(new Set([block.id]));
+      setAnchorBlockId(block.id);
+    }
     setActiveContextMenu({
       blockId: block.id,
       top: e.clientY + window.scrollY,
@@ -616,53 +746,72 @@ export function TaskNotionBlockContent({
     block: NotionBlockItem,
     index: number
   ) => {
-    if (selectedBlockId !== block.id) return;
+    if (!selectedBlockIds.has(block.id)) return;
 
-    // 1. Delete hoặc Backspace -> xóa block ngay lập tức (không modal confirmation)
+    // 1. Delete hoặc Backspace -> xóa toàn bộ selected blocks ngay lập tức
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       e.stopPropagation();
-      handleDeleteBlock(block.id);
+      handleDeleteSelectedBlocks();
       return;
     }
 
-    // 2. Cmd/Ctrl + D -> nhân đôi block
+    // 2. Cmd/Ctrl + D -> duplicate toàn bộ selected blocks
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
       e.preventDefault();
       e.stopPropagation();
-      handleDuplicateBlock(block, index);
+      handleDuplicateSelectedBlocks();
       return;
     }
 
-    // 3. Arrow Up -> chuyển selection sang block trước
-    if (e.key === "ArrowUp") {
+    // 3. Shift + ArrowUp / ArrowDown -> Mở rộng selection lên/xuống
+    if (e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetIndex = e.key === "ArrowUp" ? index - 1 : index + 1;
+      if (targetIndex >= 0 && targetIndex < blocks.length) {
+        const targetBlock = blocks[targetIndex];
+        setSelectedBlockIds((prev) => {
+          const next = new Set(prev);
+          next.add(targetBlock.id);
+          return next;
+        });
+        blockWrapperRefs.current.get(targetBlock.id)?.focus();
+      }
+      return;
+    }
+
+    // 4. Arrow Up / Down (khi chỉ có 1 block selected): chuyển selection
+    if (e.key === "ArrowUp" && selectedBlockIds.size === 1) {
       e.preventDefault();
       e.stopPropagation();
       if (index > 0) {
         const prevBlock = blocks[index - 1];
-        setSelectedBlockId(prevBlock.id);
+        setSelectedBlockIds(new Set([prevBlock.id]));
+        setAnchorBlockId(prevBlock.id);
         blockWrapperRefs.current.get(prevBlock.id)?.focus();
       }
       return;
     }
 
-    // 4. Arrow Down -> chuyển selection sang block sau
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" && selectedBlockIds.size === 1) {
       e.preventDefault();
       e.stopPropagation();
       if (index < blocks.length - 1) {
         const nextBlock = blocks[index + 1];
-        setSelectedBlockId(nextBlock.id);
+        setSelectedBlockIds(new Set([nextBlock.id]));
+        setAnchorBlockId(nextBlock.id);
         blockWrapperRefs.current.get(nextBlock.id)?.focus();
       }
       return;
     }
 
-    // 5. Enter -> thoát selection mode và edit text của block
-    if (e.key === "Enter" && !e.shiftKey) {
+    // 5. Enter -> nếu chỉ chọn 1 block, thoát selection mode và edit text
+    if (e.key === "Enter" && !e.shiftKey && selectedBlockIds.size === 1) {
       e.preventDefault();
       e.stopPropagation();
-      setSelectedBlockId(null);
+      setSelectedBlockIds(new Set());
+      setAnchorBlockId(null);
       const inputEl = blockInputRefs.current.get(block.id);
       inputEl?.focus();
       return;
@@ -672,13 +821,14 @@ export function TaskNotionBlockContent({
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
-      setSelectedBlockId(null);
+      setSelectedBlockIds(new Set());
+      setAnchorBlockId(null);
       setActiveContextMenu(null);
       return;
     }
   };
 
-  // Xử lý phím Enter / Backspace / Slash trong block
+  // Xử lý phím Enter / Backspace / Slash trong text input của block
   const handleBlockKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
     block: NotionBlockItem,
@@ -692,12 +842,20 @@ export function TaskNotionBlockContent({
       return;
     }
 
-    // 2. Phím Enter -> tạo block tiếp theo tự nhiên (Notion style)
+    // 2. Phím Esc khi đang edit text: chuyển current block sang selected
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setSelectedBlockIds(new Set([block.id]));
+      setAnchorBlockId(block.id);
+      blockWrapperRefs.current.get(block.id)?.focus();
+      return;
+    }
+
+    // 3. Phím Enter -> tạo block tiếp theo tự nhiên (Notion style)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const nextId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-      // Nếu đang ở checklist / bullet / numbered list -> tiếp tục loại danh sách đó
       const isList = ["checklist", "bulleted_list", "numbered_list"].includes(block.type);
       const nextType = isList ? block.type : "text";
 
@@ -718,16 +876,14 @@ export function TaskNotionBlockContent({
       return;
     }
 
-    // 3. Phím Backspace khi ô rỗng
+    // 4. Phím Backspace khi ô rỗng
     if (e.key === "Backspace" && !block.content) {
-      // Nếu là checklist / list / quote / callout / heading -> chuyển về text thường trước
       if (block.type !== "text") {
         e.preventDefault();
         handleUpdateBlock(block.id, { type: "text", level: undefined, checked: undefined });
         return;
       }
 
-      // Nếu đã là text rỗng và có nhiều hơn 1 block -> xóa block và lùi focus về block trước
       if (blocks.length > 1) {
         e.preventDefault();
         const prevBlock = blocks[index - 1];
@@ -791,30 +947,53 @@ export function TaskNotionBlockContent({
     }
   };
 
-  // Drag & Drop
-  const handleDragStart = (e: React.DragEvent, index: number) => {
+  // Drag & Drop (Hỗ trợ kéo cả group multi-selected)
+  const handleDragStart = (e: React.DragEvent, index: number, block: NotionBlockItem) => {
+    isDraggingRef.current = true;
+    let groupIds: string[];
+
+    if (selectedBlockIds.has(block.id) && selectedBlockIds.size > 1) {
+      groupIds = blocks.filter((b) => selectedBlockIds.has(b.id)).map((b) => b.id);
+    } else {
+      groupIds = [block.id];
+      setSelectedBlockIds(new Set([block.id]));
+      setAnchorBlockId(block.id);
+    }
+
+    setDraggedGroupBlockIds(groupIds);
     setDraggedBlockIndex(index);
     e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (draggedBlockIndex === null || draggedBlockIndex === index) return;
-    setDragOverIndex(index);
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
   };
 
   const handleDragEnd = () => {
-    if (draggedBlockIndex !== null && dragOverIndex !== null && draggedBlockIndex !== dragOverIndex) {
+    if (draggedGroupBlockIds.length > 0 && dragOverIndex !== null && draggedBlockIndex !== null) {
       setBlocks((prev) => {
-        const next = [...prev];
-        const [moved] = next.splice(draggedBlockIndex, 1);
-        next.splice(dragOverIndex, 0, moved);
+        const groupItems = prev.filter((b) => draggedGroupBlockIds.includes(b.id));
+        if (groupItems.length === 0) return prev;
+
+        const remaining = prev.filter((b) => !draggedGroupBlockIds.includes(b.id));
+        const targetBlock = prev[dragOverIndex];
+        let insertAt = targetBlock ? remaining.findIndex((b) => b.id === targetBlock.id) : remaining.length;
+        if (insertAt === -1) insertAt = remaining.length;
+
+        const next = [...remaining];
+        next.splice(insertAt, 0, ...groupItems);
         triggerAutoSave(next);
         return next;
       });
     }
+
+    isDraggingRef.current = false;
     setDraggedBlockIndex(null);
     setDragOverIndex(null);
+    setDraggedGroupBlockIds([]);
   };
 
   // Tính số thứ tự cho numbered list
@@ -835,7 +1014,7 @@ export function TaskNotionBlockContent({
       <div className="space-y-0.5">
         {blocks.map((block, index) => {
           const isDragOver = dragOverIndex === index;
-          const isSelected = selectedBlockId === block.id;
+          const isSelected = selectedBlockIds.has(block.id);
 
           // Reset hoặc tăng bộ đếm numbered list
           if (block.type === "numbered_list") {
@@ -858,12 +1037,12 @@ export function TaskNotionBlockContent({
               onDragOver={(e) => handleDragOver(e, index)}
               className={cn(
                 "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-md transition-colors duration-75 outline-hidden",
-                "hover:bg-muted/30",
-                isDragOver && "bg-primary/10 ring-1 ring-primary/30",
-                isSelected && "bg-primary/10 ring-1 ring-primary/40 shadow-2xs"
+                !isSelected && "hover:bg-muted/30",
+                isDragOver && "ring-2 ring-primary/70 bg-primary/5",
+                isSelected && "bg-primary/10 ring-1 ring-primary/30 shadow-2xs"
               )}
             >
-              {/* Gutter trái: Handle ⋮⋮ (Hover hiện icon, click nhanh để chọn block, drag để sắp xếp) */}
+              {/* Gutter trái: Handle ⋮⋮ (Hover hiện icon, click/shift/cmd để chọn block, drag để sắp xếp) */}
               {canEdit && (
                 <div
                   className={cn(
@@ -877,29 +1056,15 @@ export function TaskNotionBlockContent({
                     <button
                       type="button"
                       draggable={true}
-                      onDragStart={(e) => {
-                        isDraggingRef.current = true;
-                        setSelectedBlockId(null);
-                        handleDragStart(e, index);
-                      }}
-                      onDragEnd={(e) => {
-                        isDraggingRef.current = false;
-                        handleDragEnd();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Click nhanh icon 6 chấm: chọn toàn bộ block, KHÔNG mở dropdown
-                        if (!isDraggingRef.current) {
-                          setSelectedBlockId(block.id);
-                          blockWrapperRefs.current.get(block.id)?.focus();
-                        }
-                      }}
+                      onDragStart={(e) => handleDragStart(e, index, block)}
+                      onDragEnd={handleDragEnd}
+                      onClick={(e) => handleBlockHandleClick(e, block, index)}
                       onContextMenu={(e) => handleContextMenu(e, block)}
                       className={cn(
                         "p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 cursor-grab active:cursor-grabbing transition-colors",
                         isSelected && "text-primary hover:text-primary bg-primary/15"
                       )}
-                      title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi) hoặc kéo để di chuyển"
+                      title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi, kéo để di chuyển)"
                       aria-label="Chọn hoặc kéo khối"
                     >
                       <GripVertical className="size-3.5" />
@@ -935,6 +1100,12 @@ export function TaskNotionBlockContent({
                       rows={1}
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onInput={(e) => autoResizeTextarea(e.currentTarget)}
                       onChange={(e) => {
                         handleUpdateBlock(block.id, { content: e.target.value });
@@ -956,6 +1127,12 @@ export function TaskNotionBlockContent({
                     type="text"
                     disabled={!canEdit}
                     value={block.content}
+                    onFocus={() => {
+                      if (selectedBlockIds.size > 0) {
+                        setSelectedBlockIds(new Set());
+                        setAnchorBlockId(null);
+                      }
+                    }}
                     onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                     onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                     placeholder={!block.content ? "Tiêu đề..." : undefined}
@@ -980,6 +1157,12 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Danh sách..." : undefined}
@@ -1002,6 +1185,12 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Danh sách..." : undefined}
@@ -1034,6 +1223,12 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Việc cần làm..." : undefined}
@@ -1056,6 +1251,12 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Trích dẫn..." : undefined}
@@ -1076,6 +1277,12 @@ export function TaskNotionBlockContent({
                       type="text"
                       disabled={!canEdit}
                       value={block.content}
+                      onFocus={() => {
+                        if (selectedBlockIds.size > 0) {
+                          setSelectedBlockIds(new Set());
+                          setAnchorBlockId(null);
+                        }
+                      }}
                       onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                       onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
                       placeholder={!block.content ? "Ghi chú lưu ý..." : undefined}
@@ -1101,6 +1308,12 @@ export function TaskNotionBlockContent({
                           type="text"
                           disabled={!canEdit}
                           value={block.fileName || block.content}
+                          onFocus={() => {
+                            if (selectedBlockIds.size > 0) {
+                              setSelectedBlockIds(new Set());
+                              setAnchorBlockId(null);
+                            }
+                          }}
                           onChange={(e) =>
                             handleUpdateBlock(block.id, {
                               fileName: e.target.value,
@@ -1114,6 +1327,12 @@ export function TaskNotionBlockContent({
                           type="text"
                           disabled={!canEdit}
                           value={block.url || ""}
+                          onFocus={() => {
+                            if (selectedBlockIds.size > 0) {
+                              setSelectedBlockIds(new Set());
+                              setAnchorBlockId(null);
+                            }
+                          }}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           placeholder="URL tải xuống (https://...)"
                           className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
@@ -1144,6 +1363,12 @@ export function TaskNotionBlockContent({
                           type="text"
                           disabled={!canEdit}
                           value={block.content}
+                          onFocus={() => {
+                            if (selectedBlockIds.size > 0) {
+                              setSelectedBlockIds(new Set());
+                              setAnchorBlockId(null);
+                            }
+                          }}
                           onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                           placeholder="Tiêu đề liên kết..."
                           className="w-full bg-transparent font-medium text-foreground focus:outline-hidden cursor-text"
@@ -1152,6 +1377,12 @@ export function TaskNotionBlockContent({
                           type="text"
                           disabled={!canEdit}
                           value={block.url || ""}
+                          onFocus={() => {
+                            if (selectedBlockIds.size > 0) {
+                              setSelectedBlockIds(new Set());
+                              setAnchorBlockId(null);
+                            }
+                          }}
                           onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
                           placeholder="https://..."
                           className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono cursor-text"
@@ -1270,6 +1501,12 @@ export function TaskNotionBlockContent({
               ref={trailingInputRef}
               type="text"
               value={trailingValue}
+              onFocus={() => {
+                if (selectedBlockIds.size > 0) {
+                  setSelectedBlockIds(new Set());
+                  setAnchorBlockId(null);
+                }
+              }}
               onKeyDown={handleTrailingKeyDown}
               onChange={handleTrailingChange}
               onBlur={handleTrailingBlur}
@@ -1421,44 +1658,52 @@ export function TaskNotionBlockContent({
           className="w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
           onClick={(e) => e.stopPropagation()}
         >
+          {selectedBlockIds.size <= 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                  if (idx > 0) handleMoveBlock(idx, "up");
+                  setActiveContextMenu(null);
+                }}
+                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === 0}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <ArrowUp className="size-3.5 text-muted-foreground" />
+                <span>Di chuyển lên</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                  if (idx >= 0 && idx < blocks.length - 1) handleMoveBlock(idx, "down");
+                  setActiveContextMenu(null);
+                }}
+                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === blocks.length - 1}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <ArrowDown className="size-3.5 text-muted-foreground" />
+                <span>Di chuyển xuống</span>
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => {
-              const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-              if (idx > 0) handleMoveBlock(idx, "up");
-              setActiveContextMenu(null);
-            }}
-            disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === 0}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-          >
-            <ArrowUp className="size-3.5 text-muted-foreground" />
-            <span>Di chuyển lên</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-              if (idx >= 0 && idx < blocks.length - 1) handleMoveBlock(idx, "down");
-              setActiveContextMenu(null);
-            }}
-            disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === blocks.length - 1}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-          >
-            <ArrowDown className="size-3.5 text-muted-foreground" />
-            <span>Di chuyển xuống</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-              if (idx >= 0) handleDuplicateBlock(blocks[idx], idx);
+              if (selectedBlockIds.size > 1) {
+                handleDuplicateSelectedBlocks();
+              } else {
+                const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                if (idx >= 0) handleDuplicateBlock(blocks[idx], idx);
+              }
               setActiveContextMenu(null);
             }}
             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Copy className="size-3.5 text-muted-foreground" />
-              <span>Nhân đôi block</span>
+              <span>{selectedBlockIds.size > 1 ? `Nhân đôi (${selectedBlockIds.size})` : "Nhân đôi block"}</span>
             </div>
             <span className="text-[10px] font-mono text-muted-foreground/60">⌘D</span>
           </button>
@@ -1466,13 +1711,17 @@ export function TaskNotionBlockContent({
           <button
             type="button"
             onClick={() => {
-              handleDeleteBlock(activeContextMenu.blockId);
+              if (selectedBlockIds.size > 1) {
+                handleDeleteSelectedBlocks();
+              } else {
+                handleDeleteBlock(activeContextMenu.blockId);
+              }
             }}
             className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
           >
             <div className="flex items-center gap-2">
               <Trash2 className="size-3.5" />
-              <span>Xóa block</span>
+              <span>{selectedBlockIds.size > 1 ? `Xóa (${selectedBlockIds.size}) khối` : "Xóa block"}</span>
             </div>
             <span className="text-[10px] font-mono text-rose-500/70">Del</span>
           </button>
