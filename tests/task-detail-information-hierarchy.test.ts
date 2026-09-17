@@ -101,7 +101,7 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     });
   });
 
-  describe("5. Activities in Sidebar", () => {
+  describe("5. Activities in Sidebar & Activity Tab Header", () => {
     it("limits activity preview to at most 3 latest events with 'Xem tất cả' navigation", () => {
       assert.ok(
         sidebarContent.includes("auditEvents.slice(0, 3)"),
@@ -111,6 +111,23 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
         sidebarContent.includes('onNavigateTab("activity")') &&
           sidebarContent.includes("Xem tất cả"),
         "Must provide 'Xem tất cả' linking to full Activity tab"
+      );
+    });
+
+    it("verifies Activity tab header removes redundant badge and uses standard description", () => {
+      assert.ok(
+        taskDetailPageContent.includes("Nhật ký xử lý & Lịch sử hoạt động"),
+        "Activity tab must have title 'Nhật ký xử lý & Lịch sử hoạt động'"
+      );
+      assert.ok(
+        taskDetailPageContent.includes("Ghi nhận đầy đủ các thay đổi, cập nhật và thao tác trên nhiệm vụ."),
+        "Activity tab description must follow standard administrative phrasing"
+      );
+      assert.ok(
+        !taskDetailPageContent.includes("mốc</span>") &&
+          !taskDetailPageContent.includes("mốc\n") &&
+          !taskDetailPageContent.includes("{feedActivityEvents.length} mốc"),
+        "Activity tab header must NOT contain redundant 'mốc' count badge"
       );
     });
   });

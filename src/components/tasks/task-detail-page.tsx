@@ -968,18 +968,13 @@ export function TaskDetailPage({
             <div className="space-y-4">
               {/* Chronological Audit Timeline */}
               <section className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-border/40">
-                  <div>
-                    <h2 className="text-xs font-semibold text-foreground tracking-tight">
-                      Nhật ký xử lý & Lịch sử hoạt động
-                    </h2>
-                    <p className="text-xs text-muted-foreground pt-0.5">
-                      Ghi nhận đầy đủ các mốc giao việc, cập nhật tiến độ, phê duyệt và thay đổi thời hạn.
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums">
-                    {feedActivityEvents.length} mốc
-                  </span>
+                <div className="pb-3 border-b border-border/40">
+                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
+                    Nhật ký xử lý & Lịch sử hoạt động
+                  </h2>
+                  <p className="text-xs text-muted-foreground pt-0.5">
+                    Ghi nhận đầy đủ các thay đổi, cập nhật và thao tác trên nhiệm vụ.
+                  </p>
                 </div>
 
                 {feedActivityEvents.length > 0 ? (
