@@ -53,6 +53,7 @@ export interface ParseWorkspaceQueryOptions {
   isCalendar?: boolean;
   defaultView?: TaskViewMode | CalendarViewMode;
   defaultScope?: WorkspaceScopeType;
+  defaultMonth?: number | "ALL";
 }
 
 export interface SerializeWorkspaceQueryOptions {
@@ -60,6 +61,7 @@ export interface SerializeWorkspaceQueryOptions {
   omitDefaultScope?: boolean;
   preserveParams?: URLSearchParams | string | Record<string, unknown>;
   unitParamKey?: "dept" | "unit";
+  defaultMonth?: number | "ALL";
 }
 
 export const DEFAULT_WORKSPACE_FILTER_STATE: Readonly<WorkspaceFilterState> = Object.freeze({
@@ -249,8 +251,11 @@ export function parseWorkspaceQuery(
     extractParam(params, "m") ||
     rawPeriod;
 
-  let month: number | "ALL" = "ALL";
-  if (rawMonth && rawMonth !== "ALL" && rawMonth !== "all") {
+  const fallbackMonth = options?.defaultMonth !== undefined ? options.defaultMonth : "ALL";
+  let month: number | "ALL" = fallbackMonth;
+  if (rawMonth && (rawMonth === "ALL" || rawMonth === "all")) {
+    month = "ALL";
+  } else if (rawMonth) {
     // Check YYYY-MM format (e.g. 2026-09)
     const ymMatch = rawMonth.match(/^\d{4}-(\d{1,2})$/);
     if (ymMatch) {
@@ -477,9 +482,16 @@ export function serializeWorkspaceQuery(
     }
   }
 
-  // 3. Academic Month (omit 'ALL')
-  if (state.month !== undefined && state.month !== "ALL" && state.month !== null) {
-    params.set("month", String(state.month));
+  // 3. Academic Month (omit default or serialize)
+  if (state.month !== undefined && state.month !== null) {
+    if (state.month === "ALL") {
+      // Khi defaultMonth là tháng cụ thể (khác "ALL"), người dùng chọn "ALL" cần được ghi rõ vào URL
+      if (options?.defaultMonth !== undefined && options.defaultMonth !== "ALL") {
+        params.set("month", "ALL");
+      }
+    } else {
+      params.set("month", String(state.month));
+    }
   }
 
   // 4. Date (YYYY-MM-DD)

@@ -27,6 +27,7 @@ import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
   getSystemReferenceDate,
+  getCurrentAcademicPeriod,
   isTaskPastDue,
 } from "@/lib/academic-calendar";
 import { formatDisplayDate } from "@/lib/format/date";
@@ -768,8 +769,13 @@ export function UnifiedAdaptiveWorkspace({
 
   const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
 
+  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
+
   // Canonical workspace query state manager
-  const workspaceQuery = useWorkspaceQuery({ defaultScope });
+  const workspaceQuery = useWorkspaceQuery({
+    defaultScope,
+    defaultMonth: currentAcademicMonth,
+  });
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
@@ -938,7 +944,10 @@ export function UnifiedAdaptiveWorkspace({
   const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(activeWorkbox);
   const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
-  const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
+  const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">(() => {
+    if (workspaceQuery?.queryState.month !== undefined) return workspaceQuery.queryState.month;
+    return currentAcademicMonth;
+  });
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
@@ -1012,7 +1021,7 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     } else {
-      setCurrentMonth("ALL");
+      setCurrentMonth(currentAcademicMonth);
     }
     if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
       setInternalOverdue(true);
@@ -1627,7 +1636,7 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    setCurrentMonth("ALL");
+    setCurrentMonth(currentAcademicMonth);
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1645,6 +1654,7 @@ export function UnifiedAdaptiveWorkspace({
     onWorkboxChange,
     onAction,
     workspaceQuery,
+    currentAcademicMonth,
   ]);
 
   const handleRemoveDept = React.useCallback(() => {

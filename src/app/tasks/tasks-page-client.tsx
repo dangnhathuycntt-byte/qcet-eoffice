@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
+import { getCurrentAcademicPeriod } from "@/lib/academic-calendar";
 import {
   TaskManagementWorkspace,
   type ViewMode,
@@ -28,10 +29,13 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
   const isHead = user ? isUserUnitHead(user as any) : false;
   const isUnassigned = isUserUnassignedDepartment(user);
 
+  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
+
   const defaultRoleScope: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
   const { queryState, setScope, setDept, setView } = useWorkspaceQuery({
     defaultView: initialView,
     defaultScope: initialScope || defaultRoleScope,
+    defaultMonth: currentAcademicMonth,
   });
 
   const activeScope: WorkspaceScope =
