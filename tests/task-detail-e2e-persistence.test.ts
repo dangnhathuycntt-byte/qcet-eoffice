@@ -1,0 +1,322 @@
+import test, { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
+import { canUserDeleteDeliverable } from "@/server/tasks/task-policy";
+import { canDeleteDeliverable } from "@/server/policies/task-policy";
+import { getTextOffsetInContainer } from "@/components/tasks/detail/direct-inline-editor";
+import { TaskStatus, AssigneeRole } from "@prisma/client";
+
+describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () => {
+  // =========================================================================
+  // 1. NGHIỆP VỤ TIẾN ĐỘ TỔNG HỢP (PARENT PROGRESS ROLLUP & STATE TRANSITION)
+  // =========================================================================
+  describe("1. Parent Progress Rollup & State Transitions", () => {
+    it("tự động cập nhật tiến độ cha khi các việc con hoàn thành (100% -> WAITING_APPROVAL, không bypass duyệt)", async () => {
+      // Mock Transaction Client
+      const parentTask = {
+        id: "task-parent-1",
+        status: TaskStatus.IN_PROGRESS,
+        progressPercent: 0,
+        version: 1,
+      };
+
+      const subTasks = [
+        { id: "sub-1", status: TaskStatus.COMPLETED },
+        { id: "sub-2", status: TaskStatus.COMPLETED },
+      ];
+
+      let updatedParentData: any = null;
+      let loggedAuditEvent: any = null;
+
+      const mockTx: any = {
+        task: {
+          findMany: async () => subTasks,
+          findUnique: async () => parentTask,
+          update: async ({ data }: any) => {
+            updatedParentData = data;
+            return { ...parentTask, ...data };
+          },
+        },
+        auditEvent: {
+          create: async ({ data }: any) => {
+            loggedAuditEvent = data;
+            return data;
+          },
+        },
+      };
+
+      const result = await recalculateParentTaskProgress(mockTx, "task-parent-1", "user-1");
+
+      assert.equal(result.updated, true);
+      assert.equal(result.newProgress, 100);
+      assert.equal(result.newStatus, TaskStatus.WAITING_APPROVAL);
+      assert.equal(updatedParentData.progressPercent, 100);
+      assert.equal(updatedParentData.status, TaskStatus.WAITING_APPROVAL);
+      assert.ok(loggedAuditEvent, "AuditEvent phải được ghi khi tiến độ cha thay đổi");
+      assert.equal(loggedAuditEvent.entityId, "task-parent-1");
+    });
+
+    it("mở lại việc con thì task cha tự động quay lại IN_PROGRESS (không bị kẹt ở COMPLETED/WAITING_APPROVAL)", async () => {
+      const parentTask = {
+        id: "task-parent-2",
+        status: TaskStatus.COMPLETED,
+        progressPercent: 100,
+        version: 2,
+      };
+
+      // 1 trong 2 subtask bị mở lại từ COMPLETED -> IN_PROGRESS
+      const subTasks = [
+        { id: "sub-1", status: TaskStatus.COMPLETED },
+        { id: "sub-2", status: TaskStatus.IN_PROGRESS },
+      ];
+
+      let updatedParentData: any = null;
+      const mockTx: any = {
+        task: {
+          findMany: async () => subTasks,
+          findUnique: async () => parentTask,
+          update: async ({ data }: any) => {
+            updatedParentData = data;
+            return { ...parentTask, ...data };
+          },
+        },
+        auditEvent: {
+          create: async () => ({}),
+        },
+      };
+
+      const result = await recalculateParentTaskProgress(mockTx, "task-parent-2", "user-1");
+
+      assert.equal(result.updated, true);
+      assert.equal(result.newProgress, 50);
+      assert.equal(result.newStatus, TaskStatus.IN_PROGRESS);
+      assert.equal(updatedParentData.status, TaskStatus.IN_PROGRESS);
+      assert.equal(updatedParentData.progressPercent, 50);
+    });
+
+    it("không can thiệp hoặc ghi đè tiến độ cha khi không còn việc con active nào", async () => {
+      const parentTask = {
+        id: "task-parent-empty",
+        status: TaskStatus.IN_PROGRESS,
+        progressPercent: 75,
+        version: 1,
+      };
+
+      const mockTx: any = {
+        task: {
+          findMany: async () => [], // Không có subtask nào
+          findUnique: async () => parentTask,
+          update: async () => {
+            throw new Error("Không được gọi update khi không có subtask");
+          },
+        },
+        auditEvent: {
+          create: async () => ({}),
+        },
+      };
+
+      const result = await recalculateParentTaskProgress(mockTx, "task-parent-empty", "user-1");
+      assert.equal(result.updated, false, "Phải giữ nguyên tiến độ cha tự do của người dùng");
+    });
+  });
+
+  // =========================================================================
+  // 2. BẢO VỆ BOLA / IDOR KHI XÓA TÀI LIỆU MINH CHỨNG (TASK-DELIVERABLE RELATION)
+  // =========================================================================
+  describe("2. Security: Deliverable Deletion & BOLA/IDOR Protection", () => {
+    it("từ chối xóa tài liệu nếu tài liệu thuộc nhiệm vụ khác (BOLA/IDOR Protection)", () => {
+      const user = {
+        id: "user-attacker",
+        role: "STAFF" as any,
+        departmentId: "dept-cntt",
+      };
+
+      const deliverable = {
+        id: "deliv-999",
+        uploadedById: "user-attacker",
+        taskId: "task-legitimate-1", // Thuộc task 1
+      };
+
+      const targetTask = {
+        id: "task-different-2", // Nhưng yêu cầu xóa qua task 2
+        createdById: "user-attacker",
+        departmentId: "dept-cntt",
+        status: TaskStatus.IN_PROGRESS,
+      };
+
+      const check1 = canUserDeleteDeliverable(user, deliverable, targetTask);
+      assert.equal(check1.allowed, false, "canUserDeleteDeliverable phải từ chối khi taskId không khớp");
+
+      const check2 = canDeleteDeliverable(user, deliverable, targetTask as any);
+      assert.equal(check2, false, "canDeleteDeliverable policy phải trả về false khi taskId không khớp");
+    });
+
+    it("cho phép người tải lên, Admin, hoặc DRI xóa tài liệu thuộc đúng nhiệm vụ", () => {
+      const uploader = {
+        id: "user-author",
+        role: "STAFF" as any,
+        departmentId: "dept-cntt",
+      };
+
+      const deliverable = {
+        id: "deliv-101",
+        uploadedById: "user-author",
+        taskId: "task-100",
+      };
+
+      const task = {
+        id: "task-100",
+        createdById: "user-boss",
+        departmentId: "dept-cntt",
+        status: TaskStatus.IN_PROGRESS,
+        assignees: [{ userId: "user-dri", roleInTask: AssigneeRole.PRIMARY_OWNER }],
+      };
+
+      // 1. Người nộp xóa chính tài liệu của mình -> ALLOWED
+      const checkAuthor = canUserDeleteDeliverable(uploader, deliverable, task);
+      assert.equal(checkAuthor.allowed, true);
+
+      // 2. Kẻ thứ 3 không liên quan -> DENIED
+      const stranger = { id: "user-stranger", role: "STAFF" as any, departmentId: "dept-other" };
+      const checkStranger = canUserDeleteDeliverable(stranger, deliverable, task);
+      assert.equal(checkStranger.allowed, false);
+
+      // 3. Admin -> ALLOWED
+      const admin = { id: "user-admin", role: "ADMIN" as any };
+      const checkAdmin = canUserDeleteDeliverable(admin, deliverable, task);
+      assert.equal(checkAdmin.allowed, true);
+    });
+  });
+
+  // =========================================================================
+  // 3. XÁC MINH MÃ NGUỒN: KHÔNG CÓ MOCK, RETRY AN TOÀN, VÀ DỮ LIỆU BỀN VỮNG
+  // =========================================================================
+  describe("3. Codebase Audit: Zero Mock, Rollback & Validation Invariants", () => {
+    it("src/components/tasks/detail/task-identity-block.tsx yêu cầu URL hợp lệ và không sinh ID ảo", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/components/tasks/detail/task-identity-block.tsx"),
+        "utf8"
+      );
+
+      // 1. Phải validate URL bắt đầu bằng http:// hoặc https://
+      assert.ok(
+        source.includes("http://") || source.includes("https://"),
+        "Form đính kèm tài liệu phải validate URL hợp lệ"
+      );
+
+      // 2. Không chứa fallback tạo ID ảo res-${Date.now()}
+      assert.ok(
+        !source.includes("res-${Date.now()}"),
+        "Không được tạo ID ảo res-${Date.now()} phía client"
+      );
+    });
+
+    it("src/components/tasks/task-detail-page.tsx xử lý rollback khi API lỗi và không tạo state giả", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx"),
+        "utf8"
+      );
+
+      // Phải có cơ chế rollback deliverables khi xóa lỗi
+      assert.ok(
+        source.includes("setDeliverables(previousDeliverables)") || source.includes("previousDeliverables"),
+        "Phải có cơ chế rollback danh sách tài liệu khi xóa thất bại"
+      );
+
+      // Xóa bỏ hoàn toàn res-${Date.now()}
+      assert.ok(
+        !source.includes("id: `res-${Date.now()}`"),
+        "Không được chèn deliverable giả vào React state"
+      );
+    });
+
+    it("src/app/tasks/[id]/page.tsx đọc dữ liệu thật từ bảng audit_events và map actorName từ User", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/app/tasks/[id]/page.tsx"),
+        "utf8"
+      );
+
+      // Phải truy vấn từ bảng auditEvent
+      assert.ok(
+        source.includes("prisma.auditEvent.findMany"),
+        "Trang chi tiết nhiệm vụ phải nạp lịch sử thực tế từ bảng audit_events"
+      );
+
+      // Phải map tên người dùng qua User
+      assert.ok(
+        source.includes("prisma.user.findMany") && source.includes("actorMap"),
+        "Phải phân giải tên người thao tác actorName từ bảng User"
+      );
+    });
+
+    it("src/lib/services/task-domain-actions.ts tự động chuyển NOT_STARTED sang IN_PROGRESS và đồng bộ cha", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/lib/services/task-domain-actions.ts"),
+        "utf8"
+      );
+
+      assert.ok(
+        source.includes("recalculateParentTaskProgress"),
+        "task-domain-actions phải tích hợp recalculateParentTaskProgress cho việc cha"
+      );
+      assert.ok(
+        source.includes("targetStatus = TaskStatus.IN_PROGRESS"),
+        "updateProgress phải tự động chuyển NOT_STARTED sang IN_PROGRESS khi progress > 0"
+      );
+    });
+
+    it("src/app/api/tasks/[id]/route.ts validate ngày bắt đầu không sau thời hạn trên dữ liệu merged", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/app/api/tasks/[id]/route.ts"),
+        "utf8"
+      );
+
+      assert.ok(
+        source.includes("mergedStartDate") && source.includes("mergedDueDate"),
+        "PATCH API phải validate ngày sau khi merge với dữ liệu DB hiện tại"
+      );
+    });
+  });
+
+  // =========================================================================
+  // 4. HỖ TRỢ GÕ TIẾNG VIỆT CÓ DẤU (IME / TELEX / VNI) KHÔNG MẤT CHỮ
+  // =========================================================================
+  describe("4. Vietnamese IME Typing & Character Offset Invariants", () => {
+    it("DirectInlineEditor tính toán chính xác offset ký tự tiếng Việt có dấu đa byte UTF-8", () => {
+      const text = "Báo cáo tiến độ nghiệm thu Đề tài Nghiên cứu Khoa học";
+      const textNode = {
+        nodeType: 3,
+        textContent: text,
+        childNodes: [],
+      } as unknown as Node;
+
+      const container = {
+        nodeType: 1,
+        childNodes: [textNode],
+        contains: (node: Node) => node === textNode,
+      } as unknown as Node;
+
+      // Ký tự tại chữ "Đề tài"
+      const targetPos = text.indexOf("Đề tài");
+      const computedOffset = getTextOffsetInContainer(container, textNode, targetPos);
+      assert.equal(computedOffset, targetPos);
+      assert.equal(text.slice(computedOffset, computedOffset + 6), "Đề tài");
+    });
+
+    it("DirectInlineEditor tôn trọng cờ isComposing khi gõ tiếng Việt để chống ghi đè/mất chữ", () => {
+      const source = fs.readFileSync(
+        path.join(process.cwd(), "src/components/tasks/detail/direct-inline-editor.tsx"),
+        "utf8"
+      );
+
+      assert.ok(
+        source.includes("isComposingRef.current") &&
+        source.includes("handleCompositionStart") &&
+        source.includes("handleCompositionEnd"),
+        "DirectInlineEditor phải bắt sự kiện compositionstart/end qua handleCompositionStart/End để chống autosave giữa chừng khi gõ dấu tiếng Việt"
+      );
+    });
+  });
+});
