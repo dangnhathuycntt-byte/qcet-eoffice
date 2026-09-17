@@ -29,8 +29,8 @@ export interface VietnameseDatePickerProps {
   placeholder?: string;
   /** Icon hiển thị phía trước */
   icon?: React.ReactNode;
-  /** Chế độ hiển thị: "chip" (Linear style) hoặc "input" (Standard form style) */
-  variant?: "chip" | "input";
+  /** Chế độ hiển thị: "chip" (Linear style), "input" (Standard form style) hoặc "inline" (Minimalist text link) */
+  variant?: "chip" | "input" | "inline";
   /** Bắt buộc chọn hay không */
   required?: boolean;
   /** Vô hiệu hóa component */
@@ -267,7 +267,28 @@ export function VietnameseDatePicker({
       className={cn("relative inline-block text-left select-none", className)}
     >
       {/* 1. Trigger Area */}
-      {variant === "chip" ? (
+      {variant === "inline" ? (
+        <button
+          type="button"
+          id={id}
+          disabled={disabled}
+          onClick={() => !disabled && setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          className={cn(
+            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent shadow-none",
+            isOpen ? "bg-muted/60 text-foreground" : "hover:bg-muted/50",
+            hasValue ? "text-foreground" : "text-muted-foreground",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          {icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+          {label && <span className="text-muted-foreground font-normal">{label}</span>}
+          <span className="tabular-nums font-normal">
+            {hasValue ? displayDate : placeholder}
+          </span>
+        </button>
+      ) : variant === "chip" ? (
         <button
           type="button"
           id={id}
@@ -336,7 +357,7 @@ export function VietnameseDatePicker({
       >
         {/* Header Label */}
         <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
-          Target date
+          {label || placeholder || "Chọn ngày"}
         </div>
 
         {/* Top Form Input with Clear Icon */}

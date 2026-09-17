@@ -49,7 +49,8 @@ import {
 } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "./task-identity-block";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   taskStateMachine,
   buildActorContext,
@@ -310,7 +311,7 @@ export function LinearPropertiesSidebar({
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
   const startDateIso = rawStartDate ? formatIsoDate(rawStartDate, "") : "";
   const dueDateIso = task.dueDate ? formatIsoDate(task.dueDate, "") : "";
-  const relativeDue = getRelativeDueTime(task.dueDate);
+  const dueStatus = computeDueStatus(task.dueDate);
 
   // Subtasks completion
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
@@ -421,7 +422,31 @@ export function LinearPropertiesSidebar({
     }
   };
 
-  const handleDueDateChange = async (newDateIso: string) => {
+  const { notifyWarning } = useFeedback();
+
+  const handleStartDateChangeInternal = async (newDateIso: string) => {
+    if (!newDateIso) {
+      if (onStartDateChange) await onStartDateChange(task.id, "");
+      return;
+    }
+    if (dueDateIso && newDateIso > dueDateIso) {
+      notifyWarning("Ngày bắt đầu không được sau hạn chót", "Thời hạn không hợp lệ");
+      return;
+    }
+    if (onStartDateChange) {
+      await onStartDateChange(task.id, newDateIso);
+    }
+  };
+
+  const handleDueDateChangeInternal = async (newDateIso: string) => {
+    if (!newDateIso) {
+      if (onDueDateChange) await onDueDateChange(task.id, "");
+      return;
+    }
+    if (startDateIso && newDateIso < startDateIso) {
+      notifyWarning("Hạn chót không được trước ngày bắt đầu", "Thời hạn không hợp lệ");
+      return;
+    }
     if (onDueDateChange) {
       await onDueDateChange(task.id, newDateIso);
     }
@@ -816,42 +841,74 @@ export function LinearPropertiesSidebar({
           </div>
 
           {/* Dates Row (Linear Start -> Target Range style) */}
-          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors">
+          <div className="group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none">
             <span className="text-muted-foreground text-xs font-normal">Thời hạn</span>
-            <div className="flex items-center gap-1.5 text-xs">
+            <div className="flex items-center gap-1 text-xs">
               {/* Start Date */}
-              {startDateIso ? (
-                <div className="flex items-center gap-1 text-foreground" title={`Bắt đầu: ${formatDisplayDate(startDateIso)}`}>
-                  <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
-                  <span className="tabular-nums">{formatDisplayDate(startDateIso)}</span>
-                </div>
+              {canEdit && onStartDateChange ? (
+                <VietnameseDatePicker
+                  value={startDateIso}
+                  onChange={handleStartDateChangeInternal}
+                  placeholder="Bắt đầu"
+                  label="Ngày bắt đầu"
+                  variant="inline"
+                  icon={<LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />}
+                  showPresets={false}
+                  align="right"
+                />
               ) : (
-                <div className="flex items-center gap-1 text-muted-foreground/80">
+                <div className="inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 text-xs text-foreground">
                   <LinearStartDateIcon className="size-3.5 text-muted-foreground shrink-0" />
-                  <span>Bắt đầu</span>
+                  <span className="tabular-nums">
+                    {startDateIso ? formatDisplayDate(startDateIso) : "Bắt đầu"}
+                  </span>
                 </div>
               )}
 
-              <ArrowRight className="size-3 text-muted-foreground/60 shrink-0 mx-0.5" strokeWidth={1.5} />
+              <ArrowRight className="size-3 text-muted-foreground/50 shrink-0 mx-0.5" strokeWidth={1.5} />
 
               {/* Due Date / Target Date */}
               {canEdit && onDueDateChange ? (
-                <div className="flex items-center gap-1">
-                  <VietnameseDatePicker
-                    value={dueDateIso}
-                    onChange={handleDueDateChange}
-                    placeholder="Hạn chót"
-                    variant="chip"
-                    icon={<LinearTargetDateIcon className="size-3.5 text-rose-500/90 shrink-0" />}
-                    showPresets={true}
-                    align="right"
-                    className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
-                  />
-                </div>
+                <VietnameseDatePicker
+                  value={dueDateIso}
+                  onChange={handleDueDateChangeInternal}
+                  placeholder="Hạn chót"
+                  label="Hạn hoàn thành"
+                  variant="inline"
+                  icon={
+                    <LinearTargetDateIcon
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                          ? "text-rose-500"
+                          : "text-muted-foreground"
+                      )}
+                    />
+                  }
+                  className={cn(
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-medium"
+                  )}
+                  showPresets={true}
+                  align="right"
+                />
               ) : (
-                <div className="flex items-center gap-1 text-foreground">
-                  <LinearTargetDateIcon className={cn("size-3.5 shrink-0", dueDateIso ? "text-rose-500/90" : "text-muted-foreground")} />
-                  <span className={cn("tabular-nums", !dueDateIso && "text-muted-foreground")}>
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 text-xs",
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                      ? "text-rose-600 font-medium"
+                      : "text-foreground"
+                  )}
+                >
+                  <LinearTargetDateIcon
+                    className={cn(
+                      "size-3.5 shrink-0",
+                      dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                        ? "text-rose-500"
+                        : "text-muted-foreground"
+                    )}
+                  />
+                  <span className="tabular-nums">
                     {dueDateIso ? formatDisplayDate(dueDateIso) : "Hạn chót"}
                   </span>
                 </div>

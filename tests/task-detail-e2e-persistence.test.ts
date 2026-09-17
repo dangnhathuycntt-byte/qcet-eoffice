@@ -212,22 +212,22 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
   // 3. XÁC MINH MÃ NGUỒN: KHÔNG CÓ MOCK, RETRY AN TOÀN, VÀ DỮ LIỆU BỀN VỮNG
   // =========================================================================
   describe("3. Codebase Audit: Zero Mock, Rollback & Validation Invariants", () => {
-    it("src/components/tasks/detail/task-identity-block.tsx yêu cầu URL hợp lệ và không sinh ID ảo", () => {
+    it("src/components/tasks/detail/task-identity-block.tsx loại bỏ hoàn toàn ID ảo và form đính kèm trùng lặp", () => {
       const source = fs.readFileSync(
         path.join(process.cwd(), "src/components/tasks/detail/task-identity-block.tsx"),
         "utf8"
       );
 
-      // 1. Phải validate URL bắt đầu bằng http:// hoặc https://
-      assert.ok(
-        source.includes("http://") || source.includes("https://"),
-        "Form đính kèm tài liệu phải validate URL hợp lệ"
-      );
-
-      // 2. Không chứa fallback tạo ID ảo res-${Date.now()}
+      // 1. Không chứa fallback tạo ID ảo res-${Date.now()}
       assert.ok(
         !source.includes("res-${Date.now()}"),
         "Không được tạo ID ảo res-${Date.now()} phía client"
+      );
+
+      // 2. Không chứa Resources popover trùng lặp với native editor
+      assert.ok(
+        !source.includes("isResourcePopoverOpen"),
+        "Không còn popover tài liệu trùng lặp trong identity block"
       );
     });
 
@@ -302,19 +302,19 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
   // 5. STATUS TRANSITION ACTIONS & REBAC/LEAD_UNIT AUTHORITY
   // =========================================================================
   describe("5. Status Transition Actions & Execution Authority", () => {
-    it("src/lib/tasks/task-actions.ts gửi đầy đủ schema cho WAITING_APPROVAL, NOT_STARTED và IN_PROGRESS", () => {
+    it("src/lib/tasks/task-actions.ts phân tách command updateTaskStatus và submitTaskResult chuẩn domain", () => {
       const source = fs.readFileSync(
         path.join(process.cwd(), "src/lib/tasks/task-actions.ts"),
         "utf8"
       );
 
       assert.ok(
-        source.includes("summary: note ||") && source.includes("completionRate: 100"),
-        "updateTaskStatus phải truyền trường summary và completionRate khi chuyển sang WAITING_APPROVAL"
+        source.includes("/api/tasks/${taskId}/actions/update-status"),
+        "updateTaskStatus phải gọi canonical endpoint /api/tasks/[id]/actions/update-status"
       );
       assert.ok(
-        source.includes("progressPercent: 0"),
-        "updateTaskStatus phải truyền progressPercent: 0 khi chuyển về NOT_STARTED"
+        source.includes("export async function submitTaskResult"),
+        "submitTaskResult phải là command riêng biệt cho nộp kết quả"
       );
     });
 

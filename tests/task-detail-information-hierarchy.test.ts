@@ -114,4 +114,39 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       );
     });
   });
+
+  describe("6. Unified Date Range Visual & Interaction Polish in Sidebar", () => {
+    it("renders both start date and due date with unified inline typography without pills/borders", () => {
+      assert.ok(
+        sidebarContent.includes('variant="inline"') &&
+          !sidebarContent.includes('variant="chip"'),
+        "Both dates must use unified inline variant without border/pill"
+      );
+    });
+
+    it("makes both start date and due date directly clickable to open date picker", () => {
+      assert.ok(
+        sidebarContent.includes("handleStartDateChangeInternal") &&
+          sidebarContent.includes("handleDueDateChangeInternal"),
+        "Both start date and due date must be interactive and update dates directly"
+      );
+    });
+
+    it("enforces start date <= due date validation without silent invalid persistence", () => {
+      assert.ok(
+        sidebarContent.includes("newDateIso > dueDateIso") &&
+          sidebarContent.includes("newDateIso < startDateIso") &&
+          sidebarContent.includes("notifyWarning"),
+        "Must validate that start date cannot be after due date"
+      );
+    });
+
+    it("renders muted arrow separator between start date and due date", () => {
+      assert.ok(
+        sidebarContent.includes("ArrowRight") &&
+          sidebarContent.includes("text-muted-foreground"),
+        "Arrow separator between dates must use muted styling"
+      );
+    });
+  });
 });
