@@ -82,33 +82,47 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
     });
   });
 
-  describe("2. Standard 5-Column Synchronized Subtasks Table", () => {
-    it("TaskSubtasksSection renders exactly 5 columns: Nhiệm vụ → Phụ trách → Phối hợp → Thời hạn → Tình trạng", () => {
+  describe("2. Linear Compact Sub-Issues List Redesign", () => {
+    it("eliminates heavy table/card and horizontal scrollbar in favor of compact div rows", () => {
+      // Must NOT contain <table>, <thead>, <tbody>, or overflow-x-auto
       assert.ok(
-        tableContent.includes("Nhiệm vụ"),
-        "Table header must include 'Nhiệm vụ'"
-      );
-      assert.ok(
-        tableContent.includes("Phụ trách"),
-        "Table header must include 'Phụ trách'"
-      );
-      assert.ok(
-        tableContent.includes("Phối hợp"),
-        "Table header must include 'Phối hợp'"
-      );
-      assert.ok(
-        tableContent.includes("Thời hạn"),
-        "Table header must include 'Thời hạn'"
-      );
-      assert.ok(
-        tableContent.includes("Tình trạng"),
-        "Table header must include 'Tình trạng'"
+        !tableContent.includes("<table") && !tableContent.includes("overflow-x-auto"),
+        "Subtasks section must not use heavy table container or horizontal scrollbar"
       );
 
-      // Clicking subtask title calls onSelectSubtask
+      // Header contains title, progress '0/0', and add subtask button
+      assert.ok(
+        tableContent.includes("Việc thành phần") &&
+          tableContent.includes("{completedCount}/{totalCount}") &&
+          tableContent.includes("Thêm việc con"),
+        "Header must only contain 'Việc thành phần', progress '0/0', and '+ Thêm việc con' button"
+      );
+
+      // Minimal empty state without duplicate add button or card box
+      assert.ok(
+        tableContent.includes("Chưa có việc thành phần") &&
+          tableContent.includes("Tạo việc con để phân rã nhiệm vụ này."),
+        "Empty state must display minimal text without heavy box"
+      );
+
+      // Row height and structure: status icon | title | assignee | due date | status badge + action '...'
+      assert.ok(
+        tableContent.includes("h-10 sm:h-11") || tableContent.includes("min-h-[40px]"),
+        "Subtask row height must be compact (40-44px)"
+      );
+      assert.ok(
+        tableContent.includes("st.title") &&
+          tableContent.includes("assigneeTitle") &&
+          tableContent.includes("formatDisplayDate(st.dueDate)") &&
+          tableContent.includes("statusObj.label") &&
+          tableContent.includes("MoreHorizontal"),
+        "Subtask row must contain status icon, title, assignee, due date, status badge, and hover action '...'"
+      );
+
+      // Clicking subtask row calls onSelectSubtask
       assert.ok(
         tableContent.includes("onSelectSubtask && onSelectSubtask(st)"),
-        "Clicking subtask title must trigger onSelectSubtask to open drawer"
+        "Clicking subtask row must trigger onSelectSubtask to open drawer"
       );
     });
   });
