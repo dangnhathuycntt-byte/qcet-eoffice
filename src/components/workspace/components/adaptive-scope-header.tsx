@@ -294,7 +294,7 @@ export function AdaptiveScopeHeader({
             size="sm"
             onClick={onCreateTask}
             aria-label="Tạo nhiệm vụ mới"
-            className="hidden sm:inline-flex h-8 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer"
+            className="hidden sm:inline-flex h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs hover:bg-primary/90 hover:brightness-105 active:scale-[0.98] cursor-pointer"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ</span>

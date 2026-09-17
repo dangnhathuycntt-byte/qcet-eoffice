@@ -46,10 +46,25 @@ import {
   PreconditionFailedError,
 } from "@/server/api/errors";
 import { recalculateParentTaskProgress } from "@/server/tasks/task-command-service";
+import {
+  taskStateMachine,
+  buildActorContext,
+  buildTaskContext,
+  getStatusLabel,
+} from "@/domain/tasks/state-machine";
+import { canUserTransitionStatus, type AuthenticatedUser } from "@/server/tasks/task-policy";
 
 // ============================================================================
 // Input Validation Schemas
 // ============================================================================
+
+export const UpdateStatusInputSchema = z.object({
+  status: z.nativeEnum(TaskStatus),
+  note: z.string().trim().max(1000).optional(),
+  expectedVersion: z.number().int().min(0).optional(),
+});
+
+export type UpdateStatusInput = z.infer<typeof UpdateStatusInputSchema>;
 
 export const SubmitResultInputSchema = z
   .object({
@@ -381,6 +396,204 @@ function assertAuthAllowed(
 // ============================================================================
 
 export class TaskDomainActionService {
+  /**
+   * Action: update-status
+   * POST /api/tasks/[id]/actions/update-status
+   * Dedicated domain command for task status transitions.
+   * Enforces State Machine rules, Maker-Checker / SoD invariants, OCC, and single activity log.
+   */
+  async updateStatus(session: SessionPayload, taskId: string, input: UpdateStatusInput) {
+    const validated = UpdateStatusInputSchema.parse(input);
+    const userContext = await buildUserContext(session);
+    const { task, resource, primaryOwnerId } = await loadTaskAndBuildResource(taskId);
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    if (task.status === validated.status) {
+      return {
+        taskId,
+        status: task.status,
+        progressPercent: task.progressPercent ?? 0,
+        version: task.version,
+      };
+    }
+
+    // 1. Domain State Machine Validation
+    const actorContext = buildActorContext({
+      id: session.id,
+      role: session.role || "STAFF",
+      departmentId: session.departmentId,
+    });
+    const taskContext = buildTaskContext({
+      id: task.id,
+      scope: task.scope,
+      createdById: task.createdById,
+      departmentId: task.departmentId,
+      primaryOwnerId,
+      assignees: task.assignees,
+      deliverables: task.deliverables,
+    });
+
+    const fsmResult = taskStateMachine.canTransition(actorContext, taskContext, task.status, validated.status);
+    if (!fsmResult.allowed) {
+      throw new InvalidTransitionError(
+        fsmResult.reason || "Chuyển đổi trạng thái không hợp lệ",
+        fsmResult.code || "INVALID_STATUS_TRANSITION",
+        {
+          fromStatus: task.status,
+          toStatus: validated.status,
+          reason: fsmResult.reason,
+        }
+      );
+    }
+
+    // 2. Policy Authority Validation
+    const authUser: AuthenticatedUser = {
+      id: session.id,
+      email: (session as any).email || "",
+      name: (session as any).name || "",
+      role: session.role as any,
+      departmentId: session.departmentId ?? undefined,
+    };
+    const policyResult = canUserTransitionStatus(authUser, task, validated.status);
+    if (!policyResult.allowed) {
+      throw new AuthorizationError(
+        policyResult.reason || "Bạn không có quyền thực hiện chuyển đổi trạng thái này"
+      );
+    }
+
+    const noteText = validated.note?.trim() || null;
+    const targetStatus = validated.status;
+
+    return await prisma.$transaction(async (tx) => {
+      // Clean up approval processes if moving away from WAITING_APPROVAL
+      if (
+        task.status === TaskStatus.WAITING_APPROVAL &&
+        targetStatus === TaskStatus.IN_PROGRESS &&
+        task.approvalProcesses &&
+        task.approvalProcesses.length > 0
+      ) {
+        for (const process of task.approvalProcesses) {
+          await tx.taskApprovalStep.updateMany({
+            where: {
+              processId: process.id,
+              status: ApprovalStepStatus.PENDING,
+            },
+            data: {
+              decisionNote: noteText || "Chuyển về trạng thái đang thực hiện",
+            },
+          });
+          await tx.taskApprovalProcess.update({
+            where: { id: process.id },
+            data: { status: ApprovalProcessStatus.CANCELLED },
+          });
+        }
+      }
+
+      // Auto-approve approval processes if transitioning to COMPLETED
+      if (
+        targetStatus === TaskStatus.COMPLETED &&
+        task.approvalProcesses &&
+        task.approvalProcesses.length > 0
+      ) {
+        for (const process of task.approvalProcesses) {
+          await tx.taskApprovalStep.updateMany({
+            where: {
+              processId: process.id,
+              status: ApprovalStepStatus.PENDING,
+            },
+            data: {
+              status: ApprovalStepStatus.APPROVED,
+              decidedAt: new Date(),
+              reviewerUserId: session.id,
+              decisionNote: noteText || "Nghiệm thu hoàn thành nhiệm vụ",
+            },
+          });
+          await tx.taskApprovalProcess.update({
+            where: { id: process.id },
+            data: { status: ApprovalProcessStatus.APPROVED },
+          });
+        }
+      }
+
+      // Determine progress percent
+      let targetProgress = task.progressPercent ?? 0;
+      if (targetStatus === TaskStatus.COMPLETED) {
+        targetProgress = 100;
+      } else if (targetStatus === TaskStatus.NOT_STARTED) {
+        targetProgress = 0;
+      } else if (targetStatus === TaskStatus.IN_PROGRESS) {
+        if (task.status === TaskStatus.COMPLETED) {
+          targetProgress = 50;
+        } else if (task.status === TaskStatus.WAITING_APPROVAL && targetProgress === 100) {
+          targetProgress = 90;
+        }
+      } else if (targetStatus === TaskStatus.WAITING_APPROVAL) {
+        if (targetProgress < 100) {
+          targetProgress = 100;
+        }
+      }
+
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: targetStatus,
+          progressPercent: targetProgress,
+          completedAt: targetStatus === TaskStatus.COMPLETED ? new Date() : null,
+          version: { increment: 1 },
+          updatedAt: new Date(),
+        },
+      });
+
+      const fromLabel = getStatusLabel(task.status);
+      const toLabel = getStatusLabel(targetStatus);
+      const triggerReason = `Chuyển trạng thái từ "${fromLabel}" sang "${toLabel}"${noteText ? ` (${noteText})` : ""}`;
+
+      // Log EXACTLY ONE audit event for status change (no duplicate TASK_UPDATED)
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_STATUS_CHANGED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { status: task.status, progressPercent: task.progressPercent },
+        afterData: {
+          status: targetStatus,
+          progressPercent: targetProgress,
+          note: noteText,
+          triggerReason,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_STATUS_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          status: targetStatus,
+          progressPercent: targetProgress,
+          actorId: session.id,
+          note: noteText,
+        },
+      });
+
+      if (task.parentTaskId) {
+        await recalculateParentTaskProgress(tx, task.parentTaskId, session.id);
+      }
+
+      return {
+        taskId,
+        status: targetStatus,
+        progressPercent: targetProgress,
+        version: updatedTask.version,
+      };
+    });
+  }
+
   /**
    * Action: start
    * POST /api/tasks/[id]/actions/start

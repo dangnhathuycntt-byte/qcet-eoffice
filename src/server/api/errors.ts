@@ -76,8 +76,22 @@ export class PreconditionFailedError extends ApiError {
 }
 
 export class InvalidTransitionError extends ApiError {
-  constructor(message = 'Invalid state transition', code = 'INVALID_TRANSITION') {
+  public fromStatus?: string;
+  public toStatus?: string;
+  public reason?: string;
+
+  constructor(
+    message = 'Invalid state transition',
+    code = 'INVALID_TRANSITION',
+    details?: { fromStatus?: string; toStatus?: string; reason?: string }
+  ) {
     super(409, code, message);
+    if (details) {
+      this.fromStatus = details.fromStatus;
+      this.toStatus = details.toStatus;
+      this.reason = details.reason;
+      (this as any).details = details;
+    }
   }
 }
 

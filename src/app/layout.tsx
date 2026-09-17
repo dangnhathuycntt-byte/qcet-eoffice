@@ -4,6 +4,7 @@ import "./globals.css";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
+import { FeedbackProvider } from "@/components/ui/feedback-layer";
 import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
@@ -81,15 +82,17 @@ export default function RootLayout({
         <MotionProvider>
           <AuthProvider>
             <DisplayDensityProvider>
-              <a
-                href="#main-content"
-                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
-              >
-                Chuyển đến nội dung chính
-              </a>
-              <AppShell>{children}</AppShell>
-              <PWAServiceWorkerManager />
-              <WebVitalsReporter />
+              <FeedbackProvider>
+                <a
+                  href="#main-content"
+                  className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
+                >
+                  Chuyển đến nội dung chính
+                </a>
+                <AppShell>{children}</AppShell>
+                <PWAServiceWorkerManager />
+                <WebVitalsReporter />
+              </FeedbackProvider>
             </DisplayDensityProvider>
           </AuthProvider>
         </MotionProvider>

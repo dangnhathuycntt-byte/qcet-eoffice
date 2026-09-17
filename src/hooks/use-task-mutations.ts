@@ -192,24 +192,10 @@ export function useTaskMutations(
         };
       });
 
-      // Determine canonical domain action endpoint and payload
-      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: any = { note };
-      const actionDesc = `Cập nhật nhiệm vụ ${taskId} (${newStatus})`;
-
-      if (newStatus === "IN_PROGRESS") {
-        actionUrl = `/api/tasks/${taskId}/actions/start`;
-        actionBody = { note };
-      } else if (newStatus === "COMPLETED") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: note || "Hoàn thành nhiệm vụ", completionRate: 100 };
-      } else if (newStatus === "CANCELLED") {
-        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-        actionBody = { reason: note || "Hủy nhiệm vụ" };
-      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: note || "Nộp kết quả chờ phê duyệt" };
-      }
+      // Dedicated domain action endpoint and payload for status update
+      const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
+      const actionBody: any = { status: newStatus, note };
+      const actionDesc = `Cập nhật trạng thái nhiệm vụ ${taskId} (${newStatus})`;
 
       // API call or offline enqueue
       if (!isOnline()) {

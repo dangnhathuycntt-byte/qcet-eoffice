@@ -1159,18 +1159,18 @@ export function UnifiedTaskToolbar({
           )}
         </div>
 
-        {/* Right: Primary Page Action Button (Quiet/Flat Neutral Style) */}
+        {/* Right: Primary Page Action Button (Compact Neutral Style) */}
         {canCreateTask && handlePrimaryAction && (
           <button
             type="button"
             onClick={() => handlePrimaryAction()}
             title="Tạo nhiệm vụ (C)"
             aria-label="Tạo nhiệm vụ mới (Phím C)"
-            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent hover:border-border text-xs font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer shrink-0 shadow-2xs"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 sm:px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
           >
-            <Plus className="size-3.5 sm:size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ</span>
-            <kbd className="hidden sm:inline-flex items-center px-1 py-0.2 text-[10px] font-mono text-muted-foreground/70 bg-muted/60 border border-border/40 rounded select-none pointer-events-none ml-0.5">
+            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-muted/60 border border-border/50 rounded select-none pointer-events-none ml-1">
               C
             </kbd>
           </button>

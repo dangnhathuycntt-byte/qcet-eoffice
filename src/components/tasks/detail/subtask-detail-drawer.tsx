@@ -24,6 +24,7 @@ import { formatDisplayDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { useFeedback } from "@/components/ui/feedback-layer";
 import Link from "next/link";
 
 export interface SubtaskDetailDrawerProps {
@@ -53,6 +54,7 @@ export function SubtaskDetailDrawer({
   hasHistoryPrev = false,
   historyPrevTitle,
 }: SubtaskDetailDrawerProps) {
+  const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
 
   React.useEffect(() => {
@@ -124,12 +126,17 @@ export function SubtaskDetailDrawer({
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!subtask) return;
     setIsStatusDropdownOpen(false);
+    const previousStatus = subtask.status;
     const res = await updateTaskStatus(subtask.id, newStatus);
-    if (!res.ok) return;
+    if (!res.ok) {
+      notifyError(res.reason || res.error || "Không thể cập nhật trạng thái nhiệm vụ thành phần", "Lỗi đổi trạng thái");
+      return;
+    }
 
     const updated = { ...subtask, status: newStatus };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
+    notifySuccess("Đã cập nhật trạng thái việc thành phần");
   };
 
   const handlePriorityChange = async (newPriority: TaskPriority) => {

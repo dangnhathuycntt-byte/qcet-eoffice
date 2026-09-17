@@ -490,19 +490,8 @@ function CalendarRouteContent() {
     }
 
     try {
-      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: Record<string, unknown> = {};
-      if (newStatus === "IN_PROGRESS") actionUrl = `/api/tasks/${taskId}/actions/start`;
-      else if (newStatus === "COMPLETED") {
-        actionUrl = `/api/tasks/${taskId}/actions/approve`;
-        actionBody = { note: "Phê duyệt hoàn thành nhiệm vụ" };
-      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: "Nộp kết quả chờ phê duyệt", completionRate: 100 };
-      } else if (newStatus === "CANCELLED") {
-        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-        actionBody = { reason: "Hủy nhiệm vụ" };
-      }
+      const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
+      const actionBody = { status: newStatus };
       await fetch(actionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

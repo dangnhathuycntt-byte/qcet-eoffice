@@ -4,67 +4,245 @@ export interface TaskActionResult<T = unknown> {
   ok: boolean;
   data?: T;
   error?: string;
+  code?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  reason?: string;
 }
 
 /**
  * Shared Task Action Layer (Plan v2 §13 / REQ-20 / Task Actions Engine)
- * Consolidates all task mutations into a single authoritative client layer.
- * All surfaces (Table, Context Menu, Detail View, Kanban) must route through this layer.
+ * Consolidates all task mutations into dedicated, typed domain commands.
+ * All surfaces (Table, Context Menu, Detail View, Kanban) route through this layer.
  * Canonical status transitions: NOT_STARTED, IN_PROGRESS, WAITING_APPROVAL, COMPLETED, CANCELLED.
  */
 
+/**
+ * 1. Dedicated Command: updateTaskStatus
+ * POST /api/tasks/[id]/actions/update-status
+ * Transitions task lifecycle state according to domain State Machine rules.
+ */
 export async function updateTaskStatus(
   taskId: string,
   newStatus: TaskStatus,
-  note?: string
-): Promise<TaskActionResult> {
-  let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-  let actionBody: Record<string, unknown> = {
-    progressPercent: 0,
-    note: note || "Chuyển về trạng thái Mới",
-  };
-
-  if (newStatus === "IN_PROGRESS") {
-    actionUrl = `/api/tasks/${taskId}/actions/start`;
-    actionBody = { note: note || "Bắt đầu thực hiện nhiệm vụ" };
-  } else if (newStatus === "COMPLETED") {
-    actionUrl = `/api/tasks/${taskId}/actions/approve`;
-    actionBody = {
-      note: note || "Phê duyệt hoàn thành nhiệm vụ",
-      allowBypass: true,
-    };
-  } else if (newStatus === "CANCELLED") {
-    actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-    actionBody = { reason: note || "Hủy nhiệm vụ" };
-  } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-    actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-    actionBody = {
-      summary: note || "Nộp kết quả thực hiện nhiệm vụ chờ phê duyệt",
-      title: note || "Báo cáo kết quả thực hiện",
-      note: note || "Nộp kết quả chờ phê duyệt",
-      completionRate: 100,
-    };
-  } else if (newStatus === "NOT_STARTED") {
-    actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-    actionBody = {
-      progressPercent: 0,
-      targetStatus: "NOT_STARTED",
-      note: note || "Chuyển về trạng thái Mới",
-    };
-  }
-
+  note?: string,
+  expectedVersion?: number
+): Promise<TaskActionResult<{ taskId: string; status: TaskStatus; version: number; progressPercent?: number }>> {
   try {
-    const res = await fetch(actionUrl, {
+    const res = await fetch(`/api/tasks/${taskId}/actions/update-status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(actionBody),
+      body: JSON.stringify({
+        status: newStatus,
+        note: note || undefined,
+        expectedVersion,
+      }),
     });
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi cập nhật trạng thái (${res.status})`,
+        error: errJson.error || errJson.reason || errJson.message || `Lỗi cập nhật trạng thái (${res.status})`,
+        code: errJson.code,
+        fromStatus: errJson.fromStatus,
+        toStatus: errJson.toStatus,
+        reason: errJson.reason,
+      };
+    }
+
+    const json = await res.json().catch(() => ({}));
+    return { ok: true, data: json.data || json };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/**
+ * 2. Dedicated Command: submitTaskResult
+ * POST /api/tasks/[id]/actions/submit-result
+ * Submits work results / deliverables for Maker-Checker review.
+ */
+export async function submitTaskResult(
+  taskId: string,
+  payload: {
+    summary?: string;
+    title?: string;
+    note?: string;
+    reportUrl?: string;
+    deliverableId?: string;
+    fileUrl?: string;
+    fileType?: string;
+    fileSize?: number;
+    completionRate?: number;
+    expectedVersion?: number;
+  }
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/submit-result`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi nộp kết quả (${res.status})`,
+        code: errJson.code,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/**
+ * 3. Dedicated Command: approveTask
+ * POST /api/tasks/[id]/actions/approve
+ * Formal institutional approval of task results.
+ */
+export async function approveTask(
+  taskId: string,
+  options?: {
+    stepId?: string;
+    note?: string;
+    allowBypass?: boolean;
+    expectedVersion?: number;
+  }
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(options || {}),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi phê duyệt nhiệm vụ (${res.status})`,
+        code: errJson.code,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/**
+ * 4. Dedicated Command: cancelTask
+ * POST /api/tasks/[id]/actions/cancel
+ * Explicit cancellation with required reason.
+ */
+export async function cancelTask(
+  taskId: string,
+  reason: string,
+  expectedVersion?: number
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason, expectedVersion }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi hủy nhiệm vụ (${res.status})`,
+        code: errJson.code,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/**
+ * 5. Dedicated Command: startTask
+ * POST /api/tasks/[id]/actions/start
+ * Explicit start of a NOT_STARTED task.
+ */
+export async function startTask(
+  taskId: string,
+  note?: string,
+  expectedVersion?: number
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note, expectedVersion }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi bắt đầu nhiệm vụ (${res.status})`,
+        code: errJson.code,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Lỗi mạng hoặc máy chủ không phản hồi",
+    };
+  }
+}
+
+/**
+ * 6. Dedicated Command: updateTaskProgress
+ * POST /api/tasks/[id]/actions/update-progress
+ * Updates execution progress percentage (0-100%).
+ */
+export async function updateTaskProgress(
+  taskId: string,
+  progressPercent: number,
+  note?: string,
+  expectedVersion?: number
+): Promise<TaskActionResult> {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/actions/update-progress`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progressPercent, note, expectedVersion }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        error: errJson.error || errJson.message || `Lỗi cập nhật tiến độ (${res.status})`,
+        code: errJson.code,
       };
     }
 

@@ -13,6 +13,8 @@
 import { TaskScope, TaskStatus } from '@prisma/client';
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 
+export type { AuthenticatedUser };
+
 export function isPrivilegedUser(user: { role: string }): boolean {
   const norm = normalizeRole(user.role);
   return norm === 'ADMIN';

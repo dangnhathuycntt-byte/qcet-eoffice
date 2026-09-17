@@ -22,6 +22,7 @@ import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
+import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface LinearTaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -62,6 +63,7 @@ export function LinearTaskDetailView({
   onReview,
   className,
 }: LinearTaskDetailViewProps) {
+  const { notifyError } = useFeedback();
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
   React.useEffect(() => {
     setTask(initialTask);
@@ -361,7 +363,7 @@ export function LinearTaskDetailView({
       }
     } catch (error: any) {
       setDeliverables(previousDeliverables);
-      alert(error?.message || "Không thể xóa tài liệu minh chứng");
+      notifyError(error?.message || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
   };
 
@@ -390,6 +392,7 @@ export function LinearTaskDetailView({
           {/* A. Task Identity Block */}
           <TaskIdentityBlock
             task={task}
+            currentUser={currentUser}
             canEdit={true}
             deliverables={deliverables}
             onStatusChange={handleStatusChangeInternal}
