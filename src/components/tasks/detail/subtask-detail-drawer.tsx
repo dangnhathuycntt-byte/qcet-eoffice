@@ -77,10 +77,11 @@ export function SubtaskDetailDrawer({
   const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
   // Dates
-  const startDateIso = subtask?.startDate
-    ? typeof subtask.startDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(subtask.startDate)
-      ? subtask.startDate.slice(0, 10)
-      : new Date(subtask.startDate).toISOString().slice(0, 10)
+  const rawStartDate = (subtask as any)?.startDate;
+  const startDateIso = rawStartDate
+    ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
+      ? rawStartDate.slice(0, 10)
+      : new Date(rawStartDate).toISOString().slice(0, 10)
     : "";
 
   const dueDateIso = subtask?.dueDate
@@ -115,7 +116,7 @@ export function SubtaskDetailDrawer({
     });
     if (!res.ok) throw new Error("Không thể lưu mô tả việc thành phần");
 
-    const updated = { ...subtask, description: newDesc, deliverableDescription: newDesc };
+    const updated = { ...subtask, deliverableDescription: newDesc } as StaffTask;
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
   };
@@ -148,7 +149,7 @@ export function SubtaskDetailDrawer({
     const res = await updateTaskStartDate(subtask.id, newStartDate);
     if (!res.ok) return;
 
-    const updated = { ...subtask, startDate: newStartDate };
+    const updated = { ...subtask, startDate: newStartDate } as StaffTask;
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
   };
@@ -427,7 +428,7 @@ export function SubtaskDetailDrawer({
             </div>
             <div className="p-3 rounded-xl border border-border/60 bg-card/40">
               <DirectInlineEditor
-                value={subtask.description || (subtask as any).deliverableDescription || ""}
+                value={(subtask as any)?.description || subtask.deliverableDescription || ""}
                 onSave={handleDescriptionChange}
                 canEdit={canEdit}
                 multiline={true}

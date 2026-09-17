@@ -129,6 +129,8 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
     it("từ chối xóa tài liệu nếu tài liệu thuộc nhiệm vụ khác (BOLA/IDOR Protection)", () => {
       const user = {
         id: "user-attacker",
+        name: "Attacker User",
+        email: "attacker@qcet.edu.vn",
         role: "STAFF" as any,
         departmentId: "dept-cntt",
       };
@@ -156,6 +158,8 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
     it("cho phép người tải lên, Admin, hoặc DRI xóa tài liệu thuộc đúng nhiệm vụ", () => {
       const uploader = {
         id: "user-author",
+        name: "Author User",
+        email: "author@qcet.edu.vn",
         role: "STAFF" as any,
         departmentId: "dept-cntt",
       };
@@ -179,12 +183,23 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
       assert.equal(checkAuthor.allowed, true);
 
       // 2. Kẻ thứ 3 không liên quan -> DENIED
-      const stranger = { id: "user-stranger", role: "STAFF" as any, departmentId: "dept-other" };
+      const stranger = {
+        id: "user-stranger",
+        name: "Stranger User",
+        email: "stranger@qcet.edu.vn",
+        role: "STAFF" as any,
+        departmentId: "dept-other",
+      };
       const checkStranger = canUserDeleteDeliverable(stranger, deliverable, task);
       assert.equal(checkStranger.allowed, false);
 
       // 3. Admin -> ALLOWED
-      const admin = { id: "user-admin", role: "ADMIN" as any };
+      const admin = {
+        id: "user-admin",
+        name: "Admin User",
+        email: "admin@qcet.edu.vn",
+        role: "ADMIN" as any,
+      };
       const checkAdmin = canUserDeleteDeliverable(admin, deliverable, task);
       assert.equal(checkAdmin.allowed, true);
     });
