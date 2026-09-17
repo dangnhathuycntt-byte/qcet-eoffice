@@ -382,6 +382,19 @@ export function TaskNotionBlockContent({
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  // Gutter drag selection ref (quét chọn nhiều block từ gutter)
+  const isGutterSelectingRef = React.useRef(false);
+  const gutterAnchorIdRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      isGutterSelectingRef.current = false;
+      gutterAnchorIdRef.current = null;
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, []);
+
   // Debounced Autosave
   const triggerAutoSave = React.useCallback(
     (newBlocks: NotionBlockItem[]) => {
@@ -919,6 +932,33 @@ export function TaskNotionBlockContent({
     blockWrapperRefs.current.get(block.id)?.focus();
   };
 
+  // Kéo chuột từ gutter để quét chọn nhiều block (Notion marquee drag selection)
+  const handleGutterMouseDown = (e: React.MouseEvent, block: NotionBlockItem) => {
+    if (e.button !== 0) return;
+    if (e.shiftKey || e.metaKey || e.ctrlKey) return;
+
+    isGutterSelectingRef.current = true;
+    gutterAnchorIdRef.current = block.id;
+    setAnchorBlockId(block.id);
+    setSelectedBlockIds(new Set([block.id]));
+  };
+
+  const handleBlockMouseEnter = (blockId: string) => {
+    if (isGutterSelectingRef.current && gutterAnchorIdRef.current) {
+      const anchorIdx = blocks.findIndex((b) => b.id === gutterAnchorIdRef.current);
+      const currentIdx = blocks.findIndex((b) => b.id === blockId);
+      if (anchorIdx !== -1 && currentIdx !== -1) {
+        const start = Math.min(anchorIdx, currentIdx);
+        const end = Math.max(anchorIdx, currentIdx);
+        const rangeIds = new Set<string>();
+        for (let i = start; i <= end; i++) {
+          rangeIds.add(blocks[i].id);
+        }
+        setSelectedBlockIds(rangeIds);
+      }
+    }
+  };
+
   // Context Menu khi chuột phải vào block hoặc handle
   const handleContextMenu = (e: React.MouseEvent, block: NotionBlockItem) => {
     e.preventDefault();
@@ -1223,11 +1263,28 @@ export function TaskNotionBlockContent({
       data-slot="task-notion-block-content"
       className={cn("w-full relative font-sans text-sm text-foreground", className)}
     >
-      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar) */}
-      <div className="space-y-0.5">
+      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar, continuous selection group) */}
+      <div className="flex flex-col">
         {blocks.map((block, index) => {
           const isDragOver = dragOverIndex === index;
           const isSelected = selectedBlockIds.has(block.id);
+          const prevIsSelected = isSelected && index > 0 && selectedBlockIds.has(blocks[index - 1].id);
+          const nextIsSelected = isSelected && index < blocks.length - 1 && selectedBlockIds.has(blocks[index + 1].id);
+
+          // Radius thống nhất theo Notion continuous selection group:
+          // - Single block: bo 4 góc
+          // - Block đầu tiên của dải: bo 2 góc trên
+          // - Block cuối cùng của dải: bo 2 góc dưới
+          // - Block ở giữa: phẳng hoàn toàn cả trên lẫn dưới
+          const selectionRadiusClass = isSelected
+            ? !prevIsSelected && !nextIsSelected
+              ? "rounded-md"
+              : !prevIsSelected && nextIsSelected
+              ? "rounded-t-md rounded-b-none"
+              : prevIsSelected && !nextIsSelected
+              ? "rounded-b-md rounded-t-none"
+              : "rounded-none"
+            : "rounded-md";
 
           // Reset hoặc tăng bộ đếm numbered list
           if (block.type === "numbered_list") {
@@ -1247,17 +1304,20 @@ export function TaskNotionBlockContent({
               tabIndex={canEdit ? 0 : undefined}
               onKeyDown={(e) => handleBlockWrapperKeyDown(e, block, index)}
               onContextMenu={(e) => handleContextMenu(e, block)}
+              onMouseEnter={() => handleBlockMouseEnter(block.id)}
               onDragOver={(e) => handleDragOver(e, index)}
               className={cn(
-                "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-md transition-colors duration-75 outline-hidden",
+                "group/block relative flex items-start -mx-2 px-2 py-0.5 transition-colors duration-75 outline-hidden",
+                selectionRadiusClass,
                 !isSelected && "hover:bg-muted/30",
                 isDragOver && "bg-primary/10",
                 isSelected && "bg-primary/[0.08]"
               )}
             >
-              {/* Gutter trái: Handle ⋮⋮ (Hover hiện icon, click/shift/cmd để chọn block, drag để sắp xếp) */}
+              {/* Gutter trái: Handle ⋮⋮ (Nằm ngoài selection, không background riêng, không border) */}
               {canEdit && (
                 <div
+                  onMouseDown={(e) => handleGutterMouseDown(e, block)}
                   className={cn(
                     "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
                     isSelected
@@ -1273,10 +1333,7 @@ export function TaskNotionBlockContent({
                       onDragEnd={handleDragEnd}
                       onClick={(e) => handleBlockHandleClick(e, block, index)}
                       onContextMenu={(e) => handleContextMenu(e, block)}
-                      className={cn(
-                        "p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 cursor-grab active:cursor-grabbing transition-colors",
-                        isSelected && "text-primary hover:text-primary bg-primary/15"
-                      )}
+                      className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden"
                       title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi, kéo để di chuyển)"
                       aria-label="Chọn hoặc kéo khối"
                     >

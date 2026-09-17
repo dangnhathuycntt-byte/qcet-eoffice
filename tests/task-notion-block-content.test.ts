@@ -326,6 +326,27 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         !componentContent.includes("ring-1 ring-primary/30"),
         "Selected state must NOT contain heavy ring border"
       );
+
+      // 3. Handle has no standalone blue background or button chip
+      assert.ok(
+        !componentContent.includes("text-primary hover:text-primary bg-primary/15"),
+        "Handle must NOT have standalone blue background or button chip"
+      );
+    });
+
+    it("renders contiguous selected blocks as a unified continuous group with adaptive radius", () => {
+      assert.ok(
+        componentContent.includes("selectionRadiusClass") &&
+          componentContent.includes("rounded-t-md rounded-b-none") &&
+          componentContent.includes("rounded-b-md rounded-t-none") &&
+          componentContent.includes('"rounded-none"'),
+        "Must adaptively adjust border-radius so contiguous blocks look like one continuous selection"
+      );
+      assert.ok(
+        componentContent.includes("handleGutterMouseDown") &&
+          componentContent.includes("handleBlockMouseEnter"),
+        "Must support dragging from gutter to marquee-select multiple blocks"
+      );
     });
 
     it("supports multi-selection via Shift+click range and Cmd/Ctrl+click toggle", () => {
