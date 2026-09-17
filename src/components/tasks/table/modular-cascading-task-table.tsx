@@ -52,7 +52,7 @@ import { TaskTableHeader } from "./components/task-table-header";
 import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
 import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
-import { shouldIgnoreSpaceKey } from "@/lib/shortcuts/guards";
+import { shouldIgnoreSpaceKey, isInteractiveInput } from "@/lib/shortcuts/guards";
 import { SubtaskRowGroup } from "./components/subtask-row-group";
 import { TaskPaginationBar } from "./components/task-pagination-bar";
 import { TaskEmptyState, type TaskEmptyStateProps } from "./components/task-empty-state";
@@ -758,6 +758,16 @@ export function ModularCascadingTaskTable({
         handleEffectiveSelectTask(task);
       }
     },
+    onSpacePeek: (id) => {
+      const task = findTaskById(id);
+      if (task) {
+        if (document.activeElement && document.activeElement !== document.body) {
+          (document.activeElement as HTMLElement).blur?.();
+        }
+        setPreviewTask(task);
+        setPreviewTriggerEl(document.activeElement as HTMLElement | null);
+      }
+    },
     onToggleSelect: (id) => tableState.toggleSelect(id),
     onToggleExpand: (id, expand) => tableState.toggleExpand(id, expand),
     onClearSelection: () => tableState.clearSelection(),
@@ -799,15 +809,28 @@ export function ModularCascadingTaskTable({
   // 11b. Linear Mouse-Hover & Keyboard Space Peek Preview (REQ-09 / REQ-10)
   const hoveredTaskIdRef = React.useRef<string | null>(null);
 
-  const handlePointerOver = React.useCallback((e: React.PointerEvent) => {
-    const rowEl = (e.target as HTMLElement)?.closest?.("[data-task-id]");
+  const updateHoveredTaskFromEvent = React.useCallback((target: EventTarget | null) => {
+    const rowEl = (target as HTMLElement)?.closest?.("[data-task-id]");
     if (rowEl) {
       const id = rowEl.getAttribute("data-task-id");
       if (id) {
         hoveredTaskIdRef.current = id;
       }
+      // Tránh lỗi Space kích hoạt lại button/tab bên ngoài (ví dụ menu sidebar vừa bấm)
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && !containerRef.current?.contains(activeEl) && !isInteractiveInput(activeEl)) {
+        activeEl.blur?.();
+      }
     }
   }, []);
+
+  const handlePointerOver = React.useCallback((e: React.PointerEvent) => {
+    updateHoveredTaskFromEvent(e.target);
+  }, [updateHoveredTaskFromEvent]);
+
+  const handleMouseMove = React.useCallback((e: React.MouseEvent) => {
+    updateHoveredTaskFromEvent(e.target);
+  }, [updateHoveredTaskFromEvent]);
 
   const handlePointerLeave = React.useCallback(() => {
     hoveredTaskIdRef.current = null;
@@ -834,7 +857,8 @@ export function ModularCascadingTaskTable({
           return;
         }
 
-        if (!shouldIgnoreSpaceKey(e.nativeEvent)) {
+        // Chỉ bỏ qua nếu đang nhập văn bản trong input/textarea
+        if (!isInteractiveInput(e.target as HTMLElement | null)) {
           let targetTask: SchoolTask | undefined = undefined;
 
           // 1. Ưu tiên 1: Nhiệm vụ đang được con trỏ chuột rê/hover vào (Linear hover peek)
@@ -868,6 +892,9 @@ export function ModularCascadingTaskTable({
           if (targetTask) {
             e.preventDefault();
             e.stopPropagation();
+            if (document.activeElement && document.activeElement !== document.body) {
+              (document.activeElement as HTMLElement).blur?.();
+            }
             setPreviewTask(targetTask);
             setPreviewTriggerEl(document.activeElement as HTMLElement | null);
             return;
@@ -880,37 +907,58 @@ export function ModularCascadingTaskTable({
     [keyboardNav, paginatedResult.items, findTaskById, previewTask]
   );
 
-  // Global listener: Nhấn Space để mở Peek Preview, thả Space (keyup) để đóng ngay lập tức
+  // Global listener: Nhấn Space để mở Peek Preview (Linear / macOS Quick Look style)
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === " " && !e.repeat && hoveredTaskIdRef.current && !previewTask) {
-        if (!shouldIgnoreSpaceKey(e)) {
-          const targetTask = findTaskById(hoveredTaskIdRef.current);
-          if (targetTask) {
-            e.preventDefault();
-            e.stopPropagation();
-            setPreviewTask(targetTask);
-            setPreviewTriggerEl(document.activeElement as HTMLElement | null);
+      if (e.key === " " && !e.repeat && !previewTask) {
+        // Chỉ bỏ qua nếu đang nhập liệu trong input/textarea
+        if (isInteractiveInput(e.target as HTMLElement | null)) {
+          return;
+        }
+
+        let targetTask: SchoolTask | undefined = undefined;
+        if (hoveredTaskIdRef.current) {
+          targetTask = findTaskById(hoveredTaskIdRef.current);
+        }
+        if (!targetTask) {
+          // Kiểm tra xem activeElement có nằm trong một task row không
+          const activeEl = document.activeElement as HTMLElement | null;
+          const activeTaskId = activeEl?.closest?.("[data-task-id]")?.getAttribute("data-task-id");
+          if (activeTaskId) {
+            targetTask = findTaskById(activeTaskId);
           }
+        }
+        if (!targetTask && keyboardNav.activeId) {
+          targetTask = findTaskById(keyboardNav.activeId);
+        }
+        if (!targetTask && typeof document !== "undefined") {
+          // Fallback: tìm row đang :hover trong DOM
+          const hoveredEl = document.querySelector("[data-task-id]:hover");
+          const hoveredId = hoveredEl?.getAttribute("data-task-id");
+          if (hoveredId) {
+            targetTask = findTaskById(hoveredId);
+          }
+        }
+
+        if (targetTask) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          // Nếu focus đang ở button/tab bên ngoài (như menu sidebar vừa click), blur ngay để tránh active menu
+          if (document.activeElement && document.activeElement !== document.body) {
+            (document.activeElement as HTMLElement).blur?.();
+          }
+          setPreviewTask(targetTask);
+          setPreviewTriggerEl(document.activeElement as HTMLElement | null);
         }
       }
     };
 
-    const handleGlobalKeyUp = (e: KeyboardEvent) => {
-      if ((e.key === " " || e.code === "Space") && previewTask) {
-        e.preventDefault();
-        e.stopPropagation();
-        setPreviewTask(null);
-      }
-    };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    window.addEventListener("keyup", handleGlobalKeyUp);
+    window.addEventListener("keydown", handleGlobalKeyDown, { capture: true });
     return () => {
-      window.removeEventListener("keydown", handleGlobalKeyDown);
-      window.removeEventListener("keyup", handleGlobalKeyUp);
+      window.removeEventListener("keydown", handleGlobalKeyDown, { capture: true });
     };
-  }, [findTaskById, previewTask]);
+  }, [findTaskById, previewTask, keyboardNav.activeId]);
 
   // 12. Month Period & Indicator
   const monthPeriod = React.useMemo(() => {
@@ -937,6 +985,7 @@ export function ModularCascadingTaskTable({
       data-slot="cascading-task-table"
       onKeyDown={handleTableKeyDown}
       onPointerOver={handlePointerOver}
+      onMouseMove={handleMouseMove}
       onPointerLeave={handlePointerLeave}
       className={cn(
         "flex flex-col gap-2.5 outline-hidden select-text transition-colors",

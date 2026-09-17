@@ -108,7 +108,8 @@ export function LinearPeekPreviewModal({
       }
 
       if (e.key === " ") {
-        if (Date.now() - openedAtRef.current < 200) {
+        // Debounce chống kích hoạt lại ngay khi vừa mở (trong 250ms đầu)
+        if (Date.now() - openedAtRef.current < 250) {
           e.preventDefault(); e.stopPropagation();
           return;
         }
@@ -142,16 +143,21 @@ export function LinearPeekPreviewModal({
     };
   }, [isOpen, task, onClose, onOpenDetail, onNavigateNext, onNavigatePrev]);
 
-  // Linear Hold-to-Peek: Releasing Space immediately closes preview
+  // Linear Hold-to-Peek & Quick Look:
+  // Nếu người dùng đè giữ phím Space (> 400ms) rồi thả ra -> tự động đóng (hold-to-peek).
+  // Nếu chỉ bấm nhả nhanh (< 400ms) -> xem như toggle, giữ modal mở để điều hướng.
   React.useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === " " || e.code === "Space") {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        onClose();
+        const heldDuration = Date.now() - openedAtRef.current;
+        if (heldDuration > 400) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          onClose();
+        }
       }
     };
 
@@ -163,7 +169,7 @@ export function LinearPeekPreviewModal({
 
   if (!isOpen || !task) return null;
 
-  // --- Data extraction (unchanged) ---
+  // --- Data extraction ---
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
@@ -182,13 +188,6 @@ export function LinearPeekPreviewModal({
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
-
-  const progressPercent =
-    typeof (task as any).progressPercent === "number"
-      ? (task as any).progressPercent
-      : isSchool
-      ? schoolTask?.progress ?? 0
-      : 0;
 
   const subTasks = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
 
@@ -213,17 +212,8 @@ export function LinearPeekPreviewModal({
       : task.status === "IN_PROGRESS"
       ? "bg-blue-500"
       : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "bg-muted-foreground/60"
+      ? "bg-amber-500"
       : "bg-muted-foreground/40";
-
-  const statusBadgeStyle =
-    task.status === "COMPLETED"
-      ? "text-emerald-700 bg-emerald-500/10 border-emerald-500/25"
-      : task.status === "IN_PROGRESS"
-      ? "text-blue-700 bg-blue-500/10 border-blue-500/25"
-      : task.status === "WAITING_APPROVAL" || task.status === "NEEDS_REVIEW"
-      ? "text-amber-700 bg-amber-500/10 border-amber-500/25"
-      : "text-muted-foreground bg-muted border-border";
 
   const priorityVal = (task as any).priority || "NORMAL";
   const priorityLabel =
@@ -235,16 +225,15 @@ export function LinearPeekPreviewModal({
       ? "Thấp"
       : "Bình thường";
 
-  const priorityStyle =
+  const priorityColorClass =
     priorityVal === "URGENT"
-      ? "text-rose-700 bg-rose-500/10 border-rose-500/25"
+      ? "text-rose-600 font-medium"
       : priorityVal === "HIGH"
-      ? "text-amber-700 bg-amber-500/10 border-amber-500/25"
-      : "text-muted-foreground bg-muted/60 border-border/80";
+      ? "text-amber-600 font-medium"
+      : "text-muted-foreground/75";
 
   const completedSubtasks = subTasks.filter((s) => s.status === "COMPLETED").length;
 
-  // --- Render ---
   return (
     <div
       role="dialog"
@@ -252,42 +241,42 @@ export function LinearPeekPreviewModal({
       aria-label="Xem nhanh nhiệm vụ"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
     >
-      {/* Backdrop */}
+      {/* Backdrop: cực nhẹ, không blur đục mù mịt, giữ bối cảnh trang */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
+        className="fixed inset-0 bg-black/15 backdrop-blur-[1px] transition-opacity animate-in fade-in duration-100"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Surface */}
+      {/* Surface: Linear Peek Card gọn, nhẹ, không viền nặng */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-[640px] bg-card rounded-xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150 text-foreground"
+        className="relative w-full max-w-[560px] bg-card rounded-xl border border-border/70 shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-120 text-foreground p-5 space-y-3.5"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header: ID · Đơn vị | Nav ↑↓ | ✕ */}
-        <div className="flex items-center justify-between px-5 py-2.5 border-b border-border/60 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-xs font-semibold text-muted-foreground uppercase bg-muted px-2 py-0.5 rounded border border-border/60">
+        {/* Header cực gọn: ID · Đơn vị bên trái, controls tối thiểu bên phải */}
+        <div className="flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-muted-foreground/70">
+            <span className="font-mono font-medium text-muted-foreground/90 select-all tracking-wider">
               {taskCode}
             </span>
-            <span className="text-border select-none">/</span>
-            <span className="text-xs font-medium text-muted-foreground truncate" title={departmentName}>
+            <span className="text-muted-foreground/30 select-none">/</span>
+            <span className="truncate max-w-[280px] font-normal" title={departmentName}>
               {departmentName}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0 text-muted-foreground/50">
             {onNavigatePrev && (
               <button
                 type="button"
                 onClick={onNavigatePrev}
                 disabled={!hasPrev}
                 title="Nhiệm vụ trước (↑)"
-                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
                 aria-label="Nhiệm vụ trước"
               >
-                <ChevronUp className="size-4" strokeWidth={1.5} />
+                <ChevronUp className="size-3.5" strokeWidth={1.5} />
               </button>
             )}
             {onNavigateNext && (
@@ -296,179 +285,139 @@ export function LinearPeekPreviewModal({
                 onClick={onNavigateNext}
                 disabled={!hasNext}
                 title="Nhiệm vụ kế tiếp (↓)"
-                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
                 aria-label="Nhiệm vụ kế tiếp"
               >
-                <ChevronDown className="size-4" strokeWidth={1.5} />
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </button>
             )}
-
-            <div className="w-px h-4 bg-border/80 mx-1 select-none" aria-hidden="true" />
-
             <button
               type="button"
               onClick={onClose}
               title="Đóng (Esc)"
-              className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="size-6 rounded flex items-center justify-center hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer ml-1"
               aria-label="Đóng"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-3.5" strokeWidth={1.5} />
             </button>
           </div>
         </div>
 
-        {/* Body: compact read-first content */}
-        <div className="px-5 py-4 overflow-y-auto space-y-3 flex-1">
-          {/* Title — large, max 3 lines */}
-          <h2 className="text-lg font-semibold text-foreground leading-snug tracking-tight line-clamp-3">
-            {task.title}
-          </h2>
+        {/* Title — trọng tâm chính, leading thoáng, 2-3 dòng */}
+        <h2 className="text-[17px] sm:text-[18px] font-semibold text-foreground leading-snug tracking-tight line-clamp-3">
+          {task.title}
+        </h2>
 
-          {/* Inline metadata row: Status · Priority · Phụ trách · Hạn */}
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-            {/* Status badge */}
-            <span className={cn(
-              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
-              statusBadgeStyle
-            )}>
-              <span className={cn("size-1.5 rounded-full", statusDotColor)} />
-              {statusLabel}
-            </span>
+        {/* Metadata inline nhẹ: trạng thái · ưu tiên · phụ trách · hạn (không pill/card) */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground/80">
+          {/* Status */}
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
+            <span className={cn("size-1.5 rounded-full shrink-0", statusDotColor)} />
+            <span>{statusLabel}</span>
+          </span>
 
-            <span className="text-border select-none" aria-hidden="true">·</span>
+          <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
 
-            {/* Priority badge */}
-            <span className={cn(
-              "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border",
-              priorityStyle
-            )}>
-              {priorityLabel}
-            </span>
+          {/* Priority */}
+          <span className={priorityColorClass}>
+            {priorityLabel}
+          </span>
 
-            <span className="text-border select-none" aria-hidden="true">·</span>
+          <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
 
-            {/* Lead assignee */}
-            <span className="inline-flex items-center gap-1.5">
-              {leadAvatar ? (
-                <img
-                  src={leadAvatar}
-                  alt=""
-                  className="size-4 rounded-full object-cover ring-1 ring-border/60"
-                />
-              ) : (
-                <span className="size-4 rounded-full bg-muted text-[8px] font-semibold text-muted-foreground flex items-center justify-center">
-                  {getInitials(leadName)}
-                </span>
-              )}
-              <span className="text-foreground font-medium truncate max-w-[140px]">{leadName}</span>
-            </span>
-
-            {task.dueDate && (
-              <>
-                <span className="text-border select-none" aria-hidden="true">·</span>
-                <span className="inline-flex items-center gap-1 text-foreground/80">
-                  <span>{formatDetailDate(task.dueDate)}</span>
-                  {relativeDue && (
-                    <span className={cn(
-                      "text-[11px]",
-                      relativeDue.text.includes("Quá hạn") ? "text-rose-600 font-medium" : "text-muted-foreground"
-                    )}>
-                      {relativeDue.text}
-                    </span>
-                  )}
-                </span>
-              </>
+          {/* Lead assignee */}
+          <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
+            {leadAvatar ? (
+              <img
+                src={leadAvatar}
+                alt=""
+                className="size-4 rounded-full object-cover ring-1 ring-border/60"
+              />
+            ) : (
+              <span className="size-4 rounded-full bg-muted text-[8px] font-semibold text-muted-foreground flex items-center justify-center">
+                {getInitials(leadName)}
+              </span>
             )}
-          </div>
+            <span className="truncate max-w-[130px]">{leadName}</span>
+          </span>
 
-          {/* Description — flat text, no card */}
-          {taskDescription ? (
-            <p className="text-sm text-foreground/80 leading-relaxed line-clamp-4 whitespace-pre-line">
-              {taskDescription}
-            </p>
-          ) : (
-            <p className="text-sm italic text-muted-foreground/60">Chưa có mô tả.</p>
-          )}
-
-          {/* Progress — thin bar, only when > 0% */}
-          {progressPercent > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Tiến độ</span>
-                <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {progressPercent}%
-                </span>
-              </div>
-              <div className="relative h-1 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn(
-                    "h-full transition-all duration-300 ease-out rounded-full",
-                    progressPercent === 100
-                      ? "bg-emerald-500"
-                      : progressPercent > 50
-                      ? "bg-primary"
-                      : "bg-amber-500"
-                  )}
-                  style={{ width: `${Math.min(Math.max(progressPercent, 0), 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Subtasks — flat list, no card border */}
-          {subTasks.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Việc thành phần</span>
-                <span className="font-mono text-[11px] tabular-nums">
-                  {completedSubtasks}/{subTasks.length}
-                </span>
-              </div>
-              <div className="space-y-0.5">
-                {subTasks.slice(0, 3).map((st) => (
-                  <div key={st.id} className="flex items-center gap-2 py-0.5 text-xs">
-                    <CheckCircle2
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/40"
-                      )}
-                      strokeWidth={2}
-                    />
-                    <span className={cn(
-                      "truncate",
-                      st.status === "COMPLETED" && "line-through text-muted-foreground"
-                    )}>
-                      {st.title}
-                    </span>
-                  </div>
-                ))}
-                {subTasks.length > 3 && (
-                  <span className="text-[11px] text-muted-foreground pl-5.5">
-                    +{subTasks.length - 3} khác
+          {task.dueDate && (
+            <>
+              <span className="text-muted-foreground/30 select-none" aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1.5 text-foreground/75">
+                <span>{formatDetailDate(task.dueDate)}</span>
+                {relativeDue && (
+                  <span className={cn(
+                    "text-[11px]",
+                    relativeDue.text.includes("Quá hạn")
+                      ? "text-rose-600 font-medium"
+                      : "text-muted-foreground/60"
+                  )}>
+                    {relativeDue.text}
                   </span>
                 )}
-              </div>
-            </div>
+              </span>
+            </>
           )}
         </div>
 
-        {/* Footer: plain text hints + CTA */}
-        <div className="flex items-center justify-between gap-3 px-5 py-2.5 border-t border-border/60 text-xs shrink-0">
-          <div className="text-[11px] text-muted-foreground/70 select-none">
+        {/* Description: phẳng, trực tiếp, không bọc box */}
+        {taskDescription ? (
+          <p className="text-[13px] text-foreground/75 leading-relaxed line-clamp-4 whitespace-pre-line">
+            {taskDescription}
+          </p>
+        ) : (
+          <p className="text-[12px] italic text-muted-foreground/40">Chưa có mô tả chi tiết.</p>
+        )}
+
+        {/* Subtasks (nếu có): danh sách phẳng tối giản */}
+        {subTasks.length > 0 && (
+          <div className="space-y-1 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground/60 font-medium">
+              <span>Việc thành phần</span>
+              <span className="font-mono tabular-nums">{completedSubtasks}/{subTasks.length}</span>
+            </div>
+            <div className="space-y-0.5">
+              {subTasks.slice(0, 3).map((st) => (
+                <div key={st.id} className="flex items-center gap-2 py-0.5 text-xs text-foreground/80">
+                  <CheckCircle2
+                    className={cn(
+                      "size-3 shrink-0",
+                      st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/30"
+                    )}
+                    strokeWidth={2}
+                  />
+                  <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-muted-foreground/50")}>
+                    {st.title}
+                  </span>
+                </div>
+              ))}
+              {subTasks.length > 3 && (
+                <span className="text-[11px] text-muted-foreground/50 pl-5">
+                  +{subTasks.length - 3} việc khác
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Footer: phím tắt cực mờ/gọn, không CTA đen nặng nề */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground/45 select-none shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span>Space Đóng</span>
+            <span className="text-muted-foreground/30">·</span>
             <span>↑↓ Chuyển</span>
-            <span className="mx-1.5">·</span>
-            <span>Space/Esc Đóng</span>
-            <span className="mx-1.5">·</span>
+            <span className="text-muted-foreground/30">·</span>
             <span>Enter Mở chi tiết</span>
           </div>
 
           <button
             type="button"
             onClick={() => onOpenDetail(task)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-foreground text-background hover:opacity-90 font-medium text-xs transition-opacity cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer font-normal"
           >
-            Mở chi tiết
-            <ArrowRight className="size-3.5" strokeWidth={1.5} />
+            <span>Mở chi tiết</span>
+            <ArrowRight className="size-3" strokeWidth={1.5} />
           </button>
         </div>
       </div>
