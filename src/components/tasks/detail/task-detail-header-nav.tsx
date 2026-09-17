@@ -7,10 +7,6 @@ import {
   Check,
   PanelRightClose,
   PanelRightOpen,
-  MoreHorizontal,
-  Share2,
-  RefreshCw,
-  Printer,
   Box,
   ChevronRight,
 } from "lucide-react";
@@ -40,8 +36,6 @@ export function TaskDetailHeaderNav({
   className,
 }: TaskDetailHeaderNavProps) {
   const [copiedLink, setCopiedLink] = React.useState(false);
-  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
-  const moreMenuRef = React.useRef<HTMLDivElement>(null);
 
   const handleCopyLink = React.useCallback(() => {
     if (typeof window === "undefined") return;
@@ -50,18 +44,6 @@ export function TaskDetailHeaderNav({
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   }, []);
-
-  // Close more menu on click outside
-  React.useEffect(() => {
-    if (!showMoreMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMoreMenu]);
 
   return (
     <header
@@ -148,9 +130,9 @@ export function TaskDetailHeaderNav({
               ? "bg-muted/80 border-border/80 text-foreground font-semibold"
               : "bg-background border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}
-          title="Ẩn / Hiện cột thuộc tính (⌘I / Ctrl+I)"
+          title="Ẩn/Hiện thuộc tính (Space)"
           aria-label="Ẩn hoặc hiện cột thuộc tính"
-          aria-pressed={showInspector}
+          aria-expanded={showInspector}
         >
           {showInspector ? (
             <PanelRightClose className="size-3.5 shrink-0" strokeWidth={1.5} />
@@ -158,70 +140,10 @@ export function TaskDetailHeaderNav({
             <PanelRightOpen className="size-3.5 shrink-0" strokeWidth={1.5} />
           )}
           <span className="hidden sm:inline">Thuộc tính</span>
-          <kbd className="hidden lg:inline-block px-1 py-0.2 rounded bg-muted text-[10px] font-mono text-muted-foreground">
-            ⌘I
+          <kbd className="hidden lg:inline-block px-1.5 py-0.2 rounded bg-muted text-[10px] font-mono text-muted-foreground">
+            Space
           </kbd>
         </button>
-
-        {/* More Actions Dropdown */}
-        <div className="relative" ref={moreMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowMoreMenu((prev) => !prev)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
-            title="Thao tác khác"
-            aria-label="Thao tác khác"
-            aria-expanded={showMoreMenu}
-          >
-            <MoreHorizontal className="size-4" strokeWidth={1.5} />
-          </button>
-
-          {showMoreMenu && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
-            >
-              {onRefresh && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    onRefresh();
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-foreground hover:bg-muted transition-colors text-left cursor-pointer"
-                >
-                  <RefreshCw className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                  <span>Làm mới dữ liệu</span>
-                </button>
-              )}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setShowMoreMenu(false);
-                  handleCopyLink();
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-foreground hover:bg-muted transition-colors text-left cursor-pointer"
-              >
-                <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                <span>Chia sẻ nhiệm vụ</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setShowMoreMenu(false);
-                  if (typeof window !== "undefined") window.print();
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-foreground hover:bg-muted transition-colors text-left cursor-pointer"
-              >
-                <Printer className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                <span>In thông tin</span>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );

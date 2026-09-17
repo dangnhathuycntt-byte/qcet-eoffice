@@ -81,17 +81,49 @@ export function LinearTaskDetailView({
     return consolidateActivityFeed(auditEvents as any[], 60000);
   }, [auditEvents]);
 
-  // Keyboard shortcut: Ctrl/Cmd + I toggles inspector
+  // Keyboard shortcut: Space hoặc Ctrl/Cmd + I toggles inspector
   React.useEffect(() => {
+    const isEditable = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      const tagName = el.tagName?.toLowerCase();
+      if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
+      if (el.isContentEditable) return true;
+      return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
+    };
+
+    const isInteractiveControl = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      const tagName = el.tagName?.toLowerCase();
+      if (tagName === "button" || tagName === "a" || tagName === "summary" || tagName === "details") return true;
+      const role = el.getAttribute?.("role");
+      if (role && ["button", "tab", "menuitem", "checkbox", "switch", "slider", "combobox"].includes(role)) return true;
+      return Boolean(el.closest?.('button, a, summary, [role="button"], [role="tab"], [role="menuitem"]'));
+    };
+
+    const isDialogOpen = (): boolean => {
+      if (typeof document === "undefined") return false;
+      return Boolean(document.querySelector('[role="dialog"], [role="alertdialog"], [data-state="open"][role="menu"]'));
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+      if (e.code === "Space" || e.key === " ") {
+        if (e.repeat) return;
+        if (e.isComposing || (e as any).nativeEvent?.isComposing || e.keyCode === 229) return;
+        if (isDialogOpen()) return;
+
+        const target = (e.target || document.activeElement) as HTMLElement | null;
+        if (isEditable(target)) return;
+        if (isInteractiveControl(target)) return;
+
         e.preventDefault();
-        // On desktop toggle sidebar; on mobile toggle drawer
-        if (typeof window !== "undefined" && window.innerWidth < 1024) {
-          setIsMobileDrawerOpen((prev) => !prev);
-        } else {
-          setShowInspector((prev) => !prev);
-        }
+        handleToggleInspector();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+        if (e.repeat) return;
+        e.preventDefault();
+        handleToggleInspector();
       }
     };
     window.addEventListener("keydown", handleKeyDown);

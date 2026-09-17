@@ -249,4 +249,78 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "TaskIdentityBlock must support onStartDateChange callback"
     );
   });
+
+  it("TaskDetailHeaderNav eliminates trailing '...' dropdown and correctly exposes Space shortcut on inspector toggle", () => {
+    const headerPath = path.join(
+      process.cwd(),
+      "src/components/tasks/detail/task-detail-header-nav.tsx"
+    );
+    const detailPagePath = path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx");
+
+    const headerContent = fs.readFileSync(headerPath, "utf-8");
+    const detailContent = fs.readFileSync(detailPagePath, "utf-8");
+
+    // 1. Elimination of '...' more actions button and its dropdown
+    assert.ok(
+      !headerContent.includes("MoreHorizontal"),
+      "Header must eliminate MoreHorizontal icon"
+    );
+    assert.ok(
+      !headerContent.includes("showMoreMenu"),
+      "Header must eliminate showMoreMenu dropdown state"
+    );
+    assert.ok(
+      !headerContent.includes("Làm mới dữ liệu"),
+      "Header must eliminate 'Làm mới dữ liệu' menu item"
+    );
+    assert.ok(
+      !headerContent.includes("Chia sẻ nhiệm vụ"),
+      "Header must eliminate 'Chia sẻ nhiệm vụ' menu item"
+    );
+    assert.ok(
+      !headerContent.includes("In thông tin"),
+      "Header must eliminate 'In thông tin' menu item"
+    );
+
+    // 2. Inspector toggle button tooltip and accessibility
+    assert.ok(
+      headerContent.includes('title="Ẩn/Hiện thuộc tính (Space)"'),
+      "Inspector toggle button must have tooltip 'Ẩn/Hiện thuộc tính (Space)'"
+    );
+    assert.ok(
+      headerContent.includes("aria-expanded={showInspector}"),
+      "Inspector toggle button must bind aria-expanded accurately"
+    );
+    assert.match(
+      headerContent,
+      />\s*Space\s*</,
+      "Inspector toggle button must display Space kbd hint"
+    );
+
+    // 3. TaskDetailPage Space keyboard shortcut logic
+    assert.ok(
+      detailContent.includes('e.code === "Space" || e.key === " "'),
+      "TaskDetailPage must listen to Space key"
+    );
+    assert.ok(
+      detailContent.includes("if (e.repeat) return;"),
+      "TaskDetailPage must ignore key repeat on Space"
+    );
+    assert.ok(
+      detailContent.includes("isEditable(target)"),
+      "TaskDetailPage must ignore Space when editing text/inputs"
+    );
+    assert.ok(
+      detailContent.includes("isInteractiveControl(target)"),
+      "TaskDetailPage must ignore Space when focus is on another interactive control"
+    );
+    assert.ok(
+      detailContent.includes("isDialogOpen()"),
+      "TaskDetailPage must ignore Space when dialog/popover is open"
+    );
+    assert.ok(
+      detailContent.includes("e.preventDefault();\n        handleToggleInspector();"),
+      "TaskDetailPage must only call preventDefault when actively handling the Space shortcut"
+    );
+  });
 });

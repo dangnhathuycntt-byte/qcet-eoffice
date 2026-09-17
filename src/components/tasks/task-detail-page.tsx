@@ -77,6 +77,7 @@ export function TaskDetailPage({
   // Inspector visibility state
   const [showInspector, setShowInspector] = React.useState(true);
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
+  const [isCreateSubTaskModalOpen, setIsCreateSubTaskModalOpen] = React.useState(false);
 
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
@@ -107,17 +108,100 @@ export function TaskDetailPage({
     }
   };
 
-  // Keyboard shortcut: Cmd/Ctrl + I toggle Inspector
+  // Handler toggle Inspector dùng chung cho cả nút bấm và phím tắt
+  const handleToggleInspector = React.useCallback(() => {
+    setShowInspector((prev) => !prev);
+  }, []);
+
+  // Keyboard shortcut: Space hoặc Cmd/Ctrl + I để thu gọn/mở Inspector sidebar
   React.useEffect(() => {
+    const isEditable = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      const tagName = el.tagName?.toLowerCase();
+      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
+        return true;
+      }
+      if (el.isContentEditable) {
+        return true;
+      }
+      return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
+    };
+
+    const isInteractiveControl = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      const tagName = el.tagName?.toLowerCase();
+      if (
+        tagName === "button" ||
+        tagName === "a" ||
+        tagName === "summary" ||
+        tagName === "details"
+      ) {
+        return true;
+      }
+      const role = el.getAttribute?.("role");
+      if (
+        role === "button" ||
+        role === "tab" ||
+        role === "menuitem" ||
+        role === "checkbox" ||
+        role === "radio" ||
+        role === "switch" ||
+        role === "slider" ||
+        role === "combobox" ||
+        role === "listbox" ||
+        role === "option"
+      ) {
+        return true;
+      }
+      return Boolean(
+        el.closest?.(
+          'button, a, summary, [role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="switch"], [role="slider"]'
+        )
+      );
+    };
+
+    const isDialogOpen = (): boolean => {
+      if (typeof document === "undefined") return false;
+      return Boolean(
+        document.querySelector(
+          '[role="dialog"], [role="alertdialog"], [data-state="open"][role="menu"], [data-state="open"][role="listbox"]'
+        )
+      );
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+      // 1. Phím Space
+      if (e.code === "Space" || e.key === " ") {
+        // Bỏ qua key repeat
+        if (e.repeat) return;
+        // Bỏ qua khi đang dùng IME tiếng Việt
+        if (e.isComposing || (e as any).nativeEvent?.isComposing || e.keyCode === 229) return;
+        // Bỏ qua khi mở dialog/popover
+        if (isProgressModalOpen || isCreateSubTaskModalOpen || isDialogOpen()) return;
+
+        const target = (e.target || document.activeElement) as HTMLElement | null;
+        // Bỏ qua khi đang nhập liệu
+        if (isEditable(target)) return;
+        // Bỏ qua khi focus vào control tương tác khác
+        if (isInteractiveControl(target)) return;
+
+        // Chỉ preventDefault khi xử lý shortcut
         e.preventDefault();
-        setShowInspector((prev) => !prev);
+        handleToggleInspector();
+        return;
+      }
+
+      // 2. Phím Cmd/Ctrl + I
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+        if (e.repeat) return;
+        e.preventDefault();
+        handleToggleInspector();
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [handleToggleInspector, isProgressModalOpen, isCreateSubTaskModalOpen]);
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
@@ -149,9 +233,6 @@ export function TaskDetailPage({
   const currentDescription = isSchool
     ? schoolTask?.description || ""
     : staffTask?.deliverableDescription || (task as any).description || "";
-
-  // Subtask modal state
-  const [isCreateSubTaskModalOpen, setIsCreateSubTaskModalOpen] = React.useState(false);
 
   // Computed fields
   const taskCode =
@@ -465,7 +546,7 @@ export function TaskDetailPage({
         onBack={handleBackToList}
         showBreadcrumbs={false}
         showInspector={showInspector}
-        onToggleInspector={() => setShowInspector((prev) => !prev)}
+        onToggleInspector={handleToggleInspector}
         onOpenProgressModal={() => setIsProgressModalOpen(true)}
         onRefresh={() => router.refresh()}
       />
