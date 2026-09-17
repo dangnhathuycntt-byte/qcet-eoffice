@@ -244,9 +244,9 @@ export async function loadTaskAndBuildResource(
   const primaryOwnerActor =
     task.actors.find((a) => a.role === TaskActorRole.DRI && a.isPrimaryDRI) ||
     task.actors.find((a) => a.role === TaskActorRole.DRI);
-  const primaryOwnerAssignee = task.assignees.find(
-    (a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER
-  );
+  const primaryOwnerAssignee =
+    task.assignees.find((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER) ||
+    task.assignees[0];
   const primaryOwnerId = primaryOwnerActor?.userId || primaryOwnerAssignee?.userId || undefined;
 
   const collaboratorIds = Array.from(

@@ -1,6 +1,5 @@
 "use client";
 
-// Linear Create Task Modal - Full featured creation modal with AI agent assistance
 import * as React from "react";
 import { createPortal } from "react-dom";
 import {
@@ -24,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { FloatingPortal } from "@/components/ui/floating-portal";
 import {
   LinearTaskAgentPanel,
   type TaskAgentSuggestion,
@@ -157,6 +157,14 @@ export function LinearCreateTaskModal({
 
   // Active open popovers
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
+
+  // Trigger Refs for FloatingPortal
+  const deptTriggerRef = React.useRef<HTMLDivElement>(null);
+  const statusTriggerRef = React.useRef<HTMLDivElement>(null);
+  const priorityTriggerRef = React.useRef<HTMLDivElement>(null);
+  const driTriggerRef = React.useRef<HTMLDivElement>(null);
+  const coTriggerRef = React.useRef<HTMLDivElement>(null);
+  const catTriggerRef = React.useRef<HTMLDivElement>(null);
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const summaryInputRef = React.useRef<HTMLInputElement>(null);
@@ -329,7 +337,7 @@ export function LinearCreateTaskModal({
     }
   }, [isOpen]);
 
-  // Request close with dirty-check
+  // Request close with dirty-check & safe draft preservation
   const handleRequestClose = React.useCallback(() => {
     if (isSubmitting) return;
 
@@ -491,19 +499,6 @@ export function LinearCreateTaskModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, openDropdown, showConfirmClose, isAddingMilestone, handleRequestClose, handleSubmit]);
 
-  // Handle outside click to close dropdowns
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    if (openDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdown]);
-
   // Apply suggestion from AI Agent with overwrite protection
   const handleApplyAiSuggestion = (
     s: TaskAgentSuggestion,
@@ -586,12 +581,18 @@ export function LinearCreateTaskModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-task-modal-title"
+      onMouseDown={(e) => {
+        // Dismiss on clicking backdrop directly (never when clicking inside modal or portal)
+        if (e.target === e.currentTarget) {
+          handleRequestClose();
+        }
+      }}
     >
       {/* Outer Card: Rigid Left Editor + Seamless Right Agent Drawer */}
       <div
         ref={modalRef}
         className={cn(
-          "relative flex flex-col bg-card rounded-xl shadow-2xl border border-border/80 overflow-hidden transition-all duration-200 max-h-[85vh] h-auto",
+          "relative flex flex-col bg-card rounded-xl shadow-2xl border border-border/80 overflow-hidden transition-all duration-200 h-[560px] max-h-[85vh]",
           isAgentOpen ? "w-full max-w-[1020px]" : "w-full max-w-[680px]",
           "animate-in fade-in zoom-in-95"
         )}
@@ -603,45 +604,50 @@ export function LinearCreateTaskModal({
             <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
 
             {/* Department dropdown selector */}
-            <div className="relative inline-block text-left">
+            <div ref={deptTriggerRef} className="relative inline-block text-left">
               <button
                 type="button"
                 onClick={() =>
                   setOpenDropdown(openDropdown === "dept" ? null : "dept")
                 }
-                className="inline-flex items-center gap-1 font-medium text-foreground hover:text-foreground/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5"
+                className="inline-flex items-center gap-1 font-medium text-foreground hover:text-foreground/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 py-0.5 cursor-pointer"
               >
                 <span>{currentDept.name}</span>
                 <ChevronDown className="size-3 text-muted-foreground" />
               </button>
 
-              {openDropdown === "dept" && (
-                <div className="absolute left-0 mt-1 w-64 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 max-h-60 overflow-y-auto animate-in fade-in-50 zoom-in-95">
-                  {QCET_DEPARTMENT_GROUPS.map((dept) => (
-                    <button
-                      key={dept.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDeptCode(dept.code);
-                        setLeadAssigneeName("");
-                        setCoAssignees([]);
-                        setOpenDropdown(null);
-                      }}
-                      className={cn(
-                        "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent transition-colors cursor-pointer",
-                        selectedDeptCode === dept.code
-                          ? "font-semibold text-foreground bg-accent"
-                          : "text-foreground"
-                      )}
-                    >
-                      <span className="truncate">{dept.name}</span>
-                      {selectedDeptCode === dept.code && (
-                        <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Department Floating Portal Dropdown */}
+              <FloatingPortal
+                isOpen={openDropdown === "dept"}
+                onClose={() => setOpenDropdown(null)}
+                triggerRef={deptTriggerRef}
+                className="w-64 py-1"
+                ariaLabel="Chọn đơn vị phòng ban"
+              >
+                {QCET_DEPARTMENT_GROUPS.map((dept) => (
+                  <button
+                    key={dept.code}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDeptCode(dept.code);
+                      setLeadAssigneeName("");
+                      setCoAssignees([]);
+                      setOpenDropdown(null);
+                    }}
+                    className={cn(
+                      "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent transition-colors cursor-pointer",
+                      selectedDeptCode === dept.code
+                        ? "font-semibold text-foreground bg-accent"
+                        : "text-foreground"
+                    )}
+                  >
+                    <span className="truncate">{dept.name}</span>
+                    {selectedDeptCode === dept.code && (
+                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                    )}
+                  </button>
+                ))}
+              </FloatingPortal>
             </div>
 
             <ChevronRight className="size-3 text-muted-foreground/40" />
@@ -709,9 +715,9 @@ export function LinearCreateTaskModal({
         {/* Modal Main Body: Fixed-Width Left Composer + Right Sliding Agent Panel */}
         <div className="flex flex-row flex-1 min-h-0 bg-card overflow-hidden items-stretch">
           {/* Left Main Task Composer - Zero Layout Shift on Agent Toggle */}
-          <div className="w-full md:w-[680px] md:min-w-[680px] md:max-w-[680px] shrink-0 flex flex-col min-h-0">
+          <div className="w-full md:w-[680px] md:min-w-[680px] md:max-w-[680px] shrink-0 h-full flex flex-col min-h-0">
             {/* Scrollable Form Area */}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5">
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
               {/* Error banner if any */}
               {errorMessage && (
                 <div className="flex items-center gap-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0">
@@ -772,7 +778,7 @@ export function LinearCreateTaskModal({
               {/* 3. Compact Properties Chips Bar (Wrap max 2 rows) */}
               <div className="flex flex-wrap items-center gap-1.5 py-2 my-0.5 border-y border-border/60 shrink-0">
                 {/* 3.1 Status Chip */}
-                <div className="relative">
+                <div ref={statusTriggerRef} className="relative">
                   <button
                     type="button"
                     onClick={() =>
@@ -790,36 +796,40 @@ export function LinearCreateTaskModal({
                     <ChevronDown className="size-2.5 text-muted-foreground" />
                   </button>
 
-                  {openDropdown === "status" && (
-                    <div className="absolute left-0 mt-1 w-36 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 animate-in fade-in-50 zoom-in-95">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatus("IN_PROGRESS");
-                          setOpenDropdown(null);
-                        }}
-                        className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
-                      >
-                        <span className="size-1.5 rounded-full bg-blue-500" />
-                        <span>Đang thực hiện</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatus("TODO");
-                          setOpenDropdown(null);
-                        }}
-                        className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
-                      >
-                        <span className="size-1.5 rounded-full bg-muted-foreground/60" />
-                        <span>Mới</span>
-                      </button>
-                    </div>
-                  )}
+                  <FloatingPortal
+                    isOpen={openDropdown === "status"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={statusTriggerRef}
+                    className="w-36 py-1"
+                    ariaLabel="Chọn trạng thái"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus("IN_PROGRESS");
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
+                    >
+                      <span className="size-1.5 rounded-full bg-blue-500" />
+                      <span>Đang thực hiện</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus("TODO");
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-accent text-foreground cursor-pointer"
+                    >
+                      <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                      <span>Mới</span>
+                    </button>
+                  </FloatingPortal>
                 </div>
 
                 {/* 3.2 Priority Chip */}
-                <div className="relative">
+                <div ref={priorityTriggerRef} className="relative">
                   <button
                     type="button"
                     onClick={() =>
@@ -829,47 +839,52 @@ export function LinearCreateTaskModal({
                   >
                     <Flag
                       className={cn("size-3", PRIORITY_CONFIG[priority].iconColor)}
-                      strokeWidth={1.75}
+                      strokeWidth={1.5}
                     />
                     <span>{PRIORITY_CONFIG[priority].label}</span>
                     <ChevronDown className="size-2.5 text-muted-foreground" />
                   </button>
 
-                  {openDropdown === "priority" && (
-                    <div className="absolute left-0 mt-1 w-36 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 animate-in fade-in-50 zoom-in-95">
-                      {PRIORITY_KEYS.map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            setPriority(p);
-                            setOpenDropdown(null);
-                          }}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
-                            priority === p
-                              ? "font-semibold text-foreground bg-accent"
-                              : "text-foreground"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Flag
-                              className={cn(
-                                "size-3",
-                                PRIORITY_CONFIG[p].iconColor
-                              )}
-                            />
-                            <span>{PRIORITY_CONFIG[p].label}</span>
-                          </div>
-                          {priority === p && <Check className="size-3 text-foreground" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <FloatingPortal
+                    isOpen={openDropdown === "priority"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={priorityTriggerRef}
+                    className="w-36 py-1"
+                    ariaLabel="Chọn mức độ ưu tiên"
+                  >
+                    {PRIORITY_KEYS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => {
+                          setPriority(p);
+                          setOpenDropdown(null);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                          priority === p
+                            ? "font-semibold text-foreground bg-accent"
+                            : "text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Flag
+                            className={cn(
+                              "size-3",
+                              PRIORITY_CONFIG[p].iconColor
+                            )}
+                            strokeWidth={1.5}
+                          />
+                          <span>{PRIORITY_CONFIG[p].label}</span>
+                        </div>
+                        {priority === p && <Check className="size-3 text-foreground" strokeWidth={1.5} />}
+                      </button>
+                    ))}
+                  </FloatingPortal>
                 </div>
 
                 {/* 3.3 Lead Assignee (DRI) Chip (P0 Field) */}
-                <div className="relative">
+                <div ref={driTriggerRef} className="relative">
                   <button
                     type="button"
                     onClick={() =>
@@ -889,41 +904,45 @@ export function LinearCreateTaskModal({
                     <ChevronDown className="size-2.5 text-muted-foreground" />
                   </button>
 
-                  {openDropdown === "dri" && (
-                    <div className="absolute left-0 mt-1 w-56 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 max-h-52 overflow-y-auto animate-in fade-in-50 zoom-in-95">
-                      {availablePersonnel.map((person) => (
-                        <button
-                          key={person.name}
-                          type="button"
-                          onClick={() => {
-                            setLeadAssigneeName(person.name);
-                            if (fieldErrors.lead) {
-                              setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                            }
-                            setOpenDropdown(null);
-                          }}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
-                            leadAssigneeName === person.name
-                              ? "font-semibold text-foreground bg-accent"
-                              : "text-foreground"
-                          )}
-                        >
-                          <div>
-                            <div className="font-medium">{person.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{person.role}</div>
-                          </div>
-                          {leadAssigneeName === person.name && (
-                            <Check className="size-3.5 text-foreground" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <FloatingPortal
+                    isOpen={openDropdown === "dri"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={driTriggerRef}
+                    className="w-56 py-1 max-h-52"
+                    ariaLabel="Chọn người chủ trì"
+                  >
+                    {availablePersonnel.map((person) => (
+                      <button
+                        key={person.name}
+                        type="button"
+                        onClick={() => {
+                          setLeadAssigneeName(person.name);
+                          if (fieldErrors.lead) {
+                            setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                          }
+                          setOpenDropdown(null);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                          leadAssigneeName === person.name
+                            ? "font-semibold text-foreground bg-accent"
+                            : "text-foreground"
+                        )}
+                      >
+                        <div>
+                          <div className="font-medium">{person.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{person.role}</div>
+                        </div>
+                        {leadAssigneeName === person.name && (
+                          <Check className="size-3.5 text-foreground" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    ))}
+                  </FloatingPortal>
                 </div>
 
                 {/* 3.4 Collaborators (Co-assignees) Chip */}
-                <div className="relative">
+                <div ref={coTriggerRef} className="relative">
                   <button
                     type="button"
                     onClick={() =>
@@ -940,44 +959,48 @@ export function LinearCreateTaskModal({
                     <ChevronDown className="size-2.5 text-muted-foreground" />
                   </button>
 
-                  {openDropdown === "co" && (
-                    <div className="absolute left-0 mt-1 w-56 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 max-h-52 overflow-y-auto animate-in fade-in-50 zoom-in-95">
-                      {availablePersonnel
-                        .filter((p) => p.name !== leadAssigneeName)
-                        .map((person) => {
-                          const isSelected = coAssignees.includes(person.name);
-                          return (
-                            <button
-                              key={person.name}
-                              type="button"
-                              onClick={() => {
-                                setCoAssignees((prev) =>
-                                  isSelected
-                                    ? prev.filter((n) => n !== person.name)
-                                    : [...prev, person.name]
-                                );
-                              }}
-                              className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent text-foreground cursor-pointer transition-colors"
+                  <FloatingPortal
+                    isOpen={openDropdown === "co"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={coTriggerRef}
+                    className="w-56 py-1 max-h-52"
+                    ariaLabel="Chọn nhân sự phối hợp"
+                  >
+                    {availablePersonnel
+                      .filter((p) => p.name !== leadAssigneeName)
+                      .map((person) => {
+                        const isSelected = coAssignees.includes(person.name);
+                        return (
+                          <button
+                            key={person.name}
+                            type="button"
+                            onClick={() => {
+                              setCoAssignees((prev) =>
+                                isSelected
+                                  ? prev.filter((n) => n !== person.name)
+                                  : [...prev, person.name]
+                              );
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent text-foreground cursor-pointer transition-colors"
+                          >
+                            <div>
+                              <div className="font-medium">{person.name}</div>
+                              <div className="text-[10px] text-muted-foreground">{person.role}</div>
+                            </div>
+                            <div
+                              className={cn(
+                                "size-4 rounded border flex items-center justify-center text-[10px]",
+                                isSelected
+                                  ? "bg-primary border-primary text-primary-foreground"
+                                  : "border-border"
+                              )}
                             >
-                              <div>
-                                <div className="font-medium">{person.name}</div>
-                                <div className="text-[10px] text-muted-foreground">{person.role}</div>
-                              </div>
-                              <div
-                                className={cn(
-                                  "size-4 rounded border flex items-center justify-center text-[10px]",
-                                  isSelected
-                                    ? "bg-primary border-primary text-primary-foreground"
-                                    : "border-border"
-                                )}
-                              >
-                                {isSelected && <Check className="size-3" />}
-                              </div>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  )}
+                              {isSelected && <Check className="size-3" strokeWidth={1.5} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </FloatingPortal>
                 </div>
 
                 {/* 3.5 Start Date Chip */}
@@ -1016,7 +1039,7 @@ export function LinearCreateTaskModal({
                 />
 
                 {/* 3.7 Category / Domain Chip */}
-                <div className="relative">
+                <div ref={catTriggerRef} className="relative">
                   <button
                     type="button"
                     onClick={() =>
@@ -1031,29 +1054,33 @@ export function LinearCreateTaskModal({
                     <ChevronDown className="size-2.5 text-muted-foreground" />
                   </button>
 
-                  {openDropdown === "cat" && (
-                    <div className="absolute left-0 mt-1 w-48 rounded-lg bg-popover border border-border shadow-xl py-1 z-30 animate-in fade-in-50 zoom-in-95">
-                      {CATEGORY_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => {
-                            setCategory(opt.id);
-                            setOpenDropdown(null);
-                          }}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
-                            category === opt.id
-                              ? "font-semibold text-foreground bg-accent"
-                              : "text-foreground"
-                          )}
-                        >
-                          <span>{opt.label}</span>
-                          {category === opt.id && <Check className="size-3 text-foreground" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <FloatingPortal
+                    isOpen={openDropdown === "cat"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={catTriggerRef}
+                    className="w-48 py-1"
+                    ariaLabel="Chọn lĩnh vực công việc"
+                  >
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setCategory(opt.id);
+                          setOpenDropdown(null);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-accent cursor-pointer transition-colors",
+                          category === opt.id
+                            ? "font-semibold text-foreground bg-accent"
+                            : "text-foreground"
+                        )}
+                      >
+                        <span>{opt.label}</span>
+                        {category === opt.id && <Check className="size-3 text-foreground" strokeWidth={1.5} />}
+                      </button>
+                    ))}
+                  </FloatingPortal>
                 </div>
               </div>
 
@@ -1130,7 +1157,7 @@ export function LinearCreateTaskModal({
                                 className="text-muted-foreground/60 hover:text-rose-600 transition-colors p-0.5 cursor-pointer"
                                 aria-label="Xóa mốc này"
                               >
-                                <Trash2 className="size-3" />
+                                <Trash2 className="size-3" strokeWidth={1.5} />
                               </button>
                             </div>
                           </div>
@@ -1266,7 +1293,7 @@ export function LinearCreateTaskModal({
           <div className="bg-card rounded-xl shadow-2xl border border-border max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-start gap-3">
               <div className="size-8 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-                <AlertCircle className="size-4" />
+                <AlertCircle className="size-4" strokeWidth={1.5} />
               </div>
               <div className="space-y-1">
                 <h4

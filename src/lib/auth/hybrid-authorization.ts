@@ -426,7 +426,10 @@ export function isExecutivePosition(positionCode?: string): boolean {
     code === "BAN_GIAM_HIEU" ||
     code === "BGH_HT" ||
     code === "BGH_PHT_DT" ||
-    code === "BGH_PHT_CSVC"
+    code === "BGH_PHT_CSVC" ||
+    code === "RECTOR" ||
+    code === "VICE_RECTOR" ||
+    code === "EXECUTIVE"
   );
 }
 
@@ -440,7 +443,12 @@ export function isUnitLeaderPosition(positionCode?: string): boolean {
     code === "TRUONG_DON_VI_CANONICAL" ||
     code === "TRUONG_PHONG" ||
     code === "TRUONG_KHOA" ||
-    code === "GIAM_DOC_TRUNG_TAM"
+    code === "GIAM_DOC_TRUNG_TAM" ||
+    code === "MANAGER" ||
+    code === "DEPT_HEAD" ||
+    code === "DEPT_MANAGER" ||
+    code === "UNIT_HEAD" ||
+    code === "LEADER"
   );
 }
 
@@ -925,15 +933,43 @@ export async function authorize(
 
   // Execution actions require DRI or Collaborator relationship
   if (action === "task.update_execution" || action === "task.submit_result") {
-    const canExecute =
-      relationships.has("DRI") ||
-      relationships.has("COLLABORATOR") ||
-      relationships.has("ASSIGNER") ||
-      relationships.has("LEAD_UNIT") ||
+    const userId = user.id;
+    const isDri = relationships.has("DRI");
+    const isCollaborator = relationships.has("COLLABORATOR");
+    const isAssigner = relationships.has("ASSIGNER");
+    const isLeadUnit = relationships.has("LEAD_UNIT");
+    const isAssignee = Boolean(
+      (userId && resource.assigneeIds?.includes(userId)) ||
+      (userId && resource.primaryOwnerId === userId)
+    );
+    const isExecutive =
       isExecutivePosition(user.activePositionCode) ||
+      isExecutivePosition(user.role) ||
+      isExecutivePosition(user.systemRole);
+    const isUnitLeader =
       isUnitLeaderPosition(user.activePositionCode) ||
-      user.role === "ADMIN" ||
-      user.systemRole === "ADMIN";
+      isUnitLeaderPosition(user.role);
+    const isAdmin =
+      isSystemAdminUser(user) ||
+      (user.role && user.role.toUpperCase() === "ADMIN") ||
+      (user.systemRole && user.systemRole.toUpperCase() === "ADMIN");
+    const isSameDept = Boolean(
+      (user.departmentId && resource.departmentId && user.departmentId === resource.departmentId) ||
+      (user.departmentId && resource.leadDepartmentId && user.departmentId === resource.leadDepartmentId)
+    );
+
+    const canExecute =
+      isDri ||
+      isCollaborator ||
+      isAssigner ||
+      isAssignee ||
+      isLeadUnit ||
+      isExecutive ||
+      isUnitLeader ||
+      isAdmin ||
+      isSameDept ||
+      resource.scope === "school" ||
+      resource.scope === "SCHOOL";
 
     if (!canExecute) {
       return {
@@ -942,7 +978,7 @@ export async function authorize(
         rejectionCode: "INSUFFICIENT_RELATIONSHIP",
         statusCode: "INSUFFICIENT_RELATIONSHIP",
         reason:
-          "Chỉ người chủ trì (DRI) hoặc thành viên phối hợp mới có quyền cập nhật tiến độ hoặc nộp sản phẩm minh chứng.",
+          "Chỉ người chủ trì (DRI), thành viên phối hợp, người giao việc hoặc lãnh đạo đơn vị mới có quyền cập nhật tiến độ hoặc nộp sản phẩm minh chứng.",
         auditRecord: {
           ...baseAuditRecord,
           decision: "DENY",

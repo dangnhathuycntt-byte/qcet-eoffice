@@ -14,6 +14,7 @@ import {
   formatIsoDate,
   toIctDateTimeParts,
 } from "@/lib/format/date";
+import { FloatingPortal } from "./floating-portal";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
 
@@ -95,7 +96,6 @@ export function VietnameseDatePicker({
   const [isOpen, setIsOpen] = React.useState(false);
   const [mode, setMode] = React.useState<DateGranularity>("day");
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const popoverRef = React.useRef<HTMLDivElement>(null);
 
   // Parse ngày hiện tại
   const selectedParts = React.useMemo(() => {
@@ -127,36 +127,6 @@ export function VietnameseDatePicker({
     }
   }, [selectedParts]);
 
-  // Click outside & Escape listener
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside, true);
-    document.addEventListener("touchstart", handleClickOutside, true);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside, true);
-      document.removeEventListener("touchstart", handleClickOutside, true);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
   const handlePrevMonth = () => {
     if (viewMonth === 1) {
       setViewMonth(12);
@@ -176,75 +146,58 @@ export function VietnameseDatePicker({
   };
 
   const handleSelectDate = (year: number, month: number, day: number) => {
-    const isoString = `${year}-${pad2(month)}-${pad2(day)}`;
-    onChange?.(isoString);
+    const iso = `${year}-${pad2(month)}-${pad2(day)}`;
+    onChange?.(iso);
     setIsOpen(false);
   };
 
-  const handleClearDate = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleClearDate = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onChange?.("");
     setIsOpen(false);
   };
 
-  // Tính chuỗi hiển thị trên input ô đầu tiên của Linear popup
-  const headerInputValue = React.useMemo(() => {
-    if (!selectedParts) return "";
-    const m = selectedParts.month;
-    const d = selectedParts.day;
-    const y = selectedParts.year;
-
-    if (mode === "day") {
-      return `${pad2(m)}/${pad2(d)}/${y}`;
-    }
-    if (mode === "month") {
-      return `${MONTH_SHORT[m - 1]} ${y}`;
-    }
-    if (mode === "quarter") {
-      const q = Math.ceil(m / 3);
-      return `Q${q} ${y}`;
-    }
-    if (mode === "half-year") {
-      const h = m <= 6 ? 1 : 2;
-      return `H${h} ${y}`;
-    }
-    if (mode === "year") {
-      return `${y}`;
-    }
-    return formatDisplayDate(value || "");
-  }, [selectedParts, mode, value]);
-
-  // Tính toán các ô lịch cho chế độ Day (Sunday-first như Linear)
+  // Calendar cells generation (Full 35 hoặc 42 ô chuẩn Linear/Apple)
   const calendarCells = React.useMemo(() => {
     const totalDaysInMonth = getDaysInMonth(viewYear, viewMonth);
     const firstDayOffset = getFirstDayOfWeekIndexSunday(viewYear, viewMonth);
 
+    const prevMonthYear = viewMonth === 1 ? viewYear - 1 : viewYear;
     const prevMonth = viewMonth === 1 ? 12 : viewMonth - 1;
-    const prevYear = viewMonth === 1 ? viewYear - 1 : viewYear;
-    const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
+    const daysInPrevMonth = getDaysInMonth(prevMonthYear, prevMonth);
 
+    const nextMonthYear = viewMonth === 12 ? viewYear + 1 : viewYear;
     const nextMonth = viewMonth === 12 ? 1 : viewMonth + 1;
-    const nextYear = viewMonth === 12 ? viewYear + 1 : viewYear;
 
-    const cells = [];
+    const cells: Array<{
+      year: number;
+      month: number;
+      day: number;
+      iso: string;
+      isCurrentMonth: boolean;
+      isWeekend: boolean;
+      isToday: boolean;
+      isSelected: boolean;
+    }> = [];
 
     // Tháng trước
     for (let i = firstDayOffset - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
-      const iso = `${prevYear}-${pad2(prevMonth)}-${pad2(dayNum)}`;
+      const iso = `${prevMonthYear}-${pad2(prevMonth)}-${pad2(dayNum)}`;
+      const colIndex = cells.length % 7;
       cells.push({
-        year: prevYear,
+        year: prevMonthYear,
         month: prevMonth,
         day: dayNum,
         iso,
         isCurrentMonth: false,
-        isWeekend: (cells.length % 7 === 0) || (cells.length % 7 === 6),
+        isWeekend: colIndex === 0 || colIndex === 6,
         isToday:
-          todayParts.year === prevYear &&
+          todayParts.year === prevMonthYear &&
           todayParts.month === prevMonth &&
           todayParts.day === dayNum,
         isSelected:
-          selectedParts?.year === prevYear &&
+          selectedParts?.year === prevMonthYear &&
           selectedParts?.month === prevMonth &&
           selectedParts?.day === dayNum,
       });
@@ -277,21 +230,21 @@ export function VietnameseDatePicker({
     const nextMonthDaysToAdd = targetTotal - cells.length;
 
     for (let dayNum = 1; dayNum <= nextMonthDaysToAdd; dayNum++) {
-      const iso = `${nextYear}-${pad2(nextMonth)}-${pad2(dayNum)}`;
+      const iso = `${nextMonthYear}-${pad2(nextMonth)}-${pad2(dayNum)}`;
       const colIndex: number = cells.length % 7;
       cells.push({
-        year: nextYear,
+        year: nextMonthYear,
         month: nextMonth,
         day: dayNum,
         iso,
         isCurrentMonth: false,
         isWeekend: colIndex === 0 || colIndex === 6,
         isToday:
-          todayParts.year === nextYear &&
+          todayParts.year === nextMonthYear &&
           todayParts.month === nextMonth &&
           todayParts.day === dayNum,
         isSelected:
-          selectedParts?.year === nextYear &&
+          selectedParts?.year === nextMonthYear &&
           selectedParts?.month === nextMonth &&
           selectedParts?.day === dayNum,
       });
@@ -300,16 +253,13 @@ export function VietnameseDatePicker({
     return cells;
   }, [viewYear, viewMonth, todayParts, selectedParts]);
 
-  const displayDate = React.useMemo(() => {
-    if (!value) return "";
-    return formatDisplayDate(value);
-  }, [value]);
+  // Options cho Mode Month / Quarter / Half-Year / Year
+  const yearOptions = [viewYear, viewYear + 1];
+  const fullYearOptions = [viewYear, viewYear + 1, viewYear + 2];
 
-  const hasValue = Boolean(value && value.trim().length > 0);
-
-  // Years range for Month / Quarter / Half-year / Year picker
-  const yearOptions = [2025, 2026, 2027];
-  const fullYearOptions = [2025, 2026, 2027, 2028, 2029, 2030];
+  const hasValue = Boolean(value);
+  const displayDate = hasValue ? formatDisplayDate(value!) : "";
+  const headerInputValue = hasValue ? `${displayDate}` : "";
 
   return (
     <div
@@ -369,292 +319,293 @@ export function VietnameseDatePicker({
         </button>
       )}
 
-      {/* 2. Linear-Style Date Picker Popover */}
-      {isOpen && (
-        <div
-          ref={popoverRef}
-          role="dialog"
-          aria-label="Chọn ngày trên lịch"
-          className={cn(
-            "absolute z-100 mt-2 w-[290px] rounded-xl border border-border bg-white p-3 text-foreground shadow-2xl animate-in fade-in-0 zoom-in-95 duration-100",
-            align === "right" ? "right-0" : "left-0"
-          )}
-        >
-          {/* Header Label */}
-          <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
-            Target date
-          </div>
+      {/* 2. Linear-Style Date Picker Popover Portal */}
+      <FloatingPortal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        triggerRef={containerRef}
+        align={align}
+        offset={4}
+        collisionPadding={12}
+        ariaLabel="Chọn ngày trên lịch"
+        className="w-[290px] p-3 text-foreground"
+      >
+        {/* Header Label */}
+        <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
+          Target date
+        </div>
 
-          {/* Top Form Input with Clear Icon */}
-          <div className="relative mb-2.5">
-            <input
-              type="text"
-              readOnly
-              value={headerInputValue}
-              placeholder="Select date..."
-              className="w-full h-8 px-2.5 text-[13px] font-sans text-foreground bg-white rounded-lg border border-border outline-none focus:border-foreground/40"
-            />
-            {hasValue && (
-              <button
-                type="button"
-                onClick={handleClearDate}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 transition-colors cursor-pointer"
-                title="Xóa ngày"
-              >
-                <div className="size-3.5 rounded-full bg-muted-foreground/20 flex items-center justify-center">
-                  <X className="size-2 text-foreground" strokeWidth={1.5} />
-                </div>
-              </button>
-            )}
-          </div>
-
-          {/* Granularity Segmented Control (Linear / Apple Style Capsule) */}
-          <div className="flex items-center p-0.5 bg-black/[0.04] rounded-full mb-3 border border-black/[0.06] select-none text-[11px]">
-            {(
-              [
-                { key: "day", label: "Day" },
-                { key: "month", label: "Month" },
-                { key: "quarter", label: "Quarter" },
-                { key: "half-year", label: "Half-year" },
-                { key: "year", label: "Year" },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setMode(item.key)}
-                className={cn(
-                  "py-1 rounded-full font-medium transition-all text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none",
-                  item.key === "half-year" ? "px-2.5" : "flex-1 px-1.5",
-                  mode === item.key
-                    ? "bg-white text-foreground font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.08)] border border-black/[0.04]"
-                    : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.03]"
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {/* MODE 1: DAY CALENDAR (Linear Style) */}
-          {mode === "day" && (
-            <div className="space-y-2">
-              {/* Month Navigator Header */}
-              <div className="flex items-center justify-between px-1 text-xs">
-                <span className="font-semibold text-foreground">
-                  {MONTH_NAMES[viewMonth - 1]} {viewYear}
-                </span>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewYear(todayParts.year);
-                      setViewMonth(todayParts.month);
-                    }}
-                    title="Về tháng này"
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer mr-0.5"
-                  >
-                    <ArrowRight className="size-3.5 -rotate-45" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePrevMonth}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNextMonth}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                  >
-                    <ChevronRight className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                </div>
+        {/* Top Form Input with Clear Icon */}
+        <div className="relative mb-2.5">
+          <input
+            type="text"
+            readOnly
+            value={headerInputValue}
+            placeholder="Select date..."
+            className="w-full h-8 px-2.5 text-[13px] font-sans text-foreground bg-background rounded-lg border border-border outline-none focus:border-foreground/40"
+          />
+          {hasValue && (
+            <button
+              type="button"
+              onClick={handleClearDate}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 transition-colors cursor-pointer"
+              title="Xóa ngày"
+            >
+              <div className="size-3.5 rounded-full bg-muted-foreground/20 flex items-center justify-center">
+                <X className="size-2 text-foreground" strokeWidth={1.5} />
               </div>
+            </button>
+          )}
+        </div>
 
-              {/* Weekday Grid (Su Mo Tu We Th Fr Sa) */}
-              <div className="grid grid-cols-7 text-center">
-                {LINEAR_WEEKDAYS.map((w) => (
-                  <div
-                    key={w}
-                    className="text-[11px] font-medium text-muted-foreground py-1 select-none"
-                  >
-                    {w}
+        {/* Granularity Segmented Control (Linear / Apple Style Capsule) */}
+        <div className="flex items-center p-0.5 bg-muted/40 rounded-full mb-3 border border-border/40 select-none text-[11px]">
+          {(
+            [
+              { key: "day", label: "Day" },
+              { key: "month", label: "Month" },
+              { key: "quarter", label: "Quarter" },
+              { key: "half-year", label: "Half-year" },
+              { key: "year", label: "Year" },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setMode(item.key)}
+              className={cn(
+                "py-1 rounded-full font-medium transition-all text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none",
+                item.key === "half-year" ? "px-2.5" : "flex-1 px-1.5",
+                mode === item.key
+                  ? "bg-background text-foreground font-semibold shadow-2xs border border-border/40"
+                  : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* MODE 1: DAY CALENDAR (Linear Style) */}
+        {mode === "day" && (
+          <div className="space-y-2">
+            {/* Month Navigator Header */}
+            <div className="flex items-center justify-between px-1 text-xs">
+              <span className="font-semibold text-foreground">
+                {MONTH_NAMES[viewMonth - 1]} {viewYear}
+              </span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewYear(todayParts.year);
+                    setViewMonth(todayParts.month);
+                  }}
+                  title="Về tháng này"
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer mr-0.5"
+                >
+                  <ArrowRight className="size-3.5 -rotate-45" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+
+            {/* Weekday Grid (Su Mo Tu We Th Fr Sa) */}
+            <div className="grid grid-cols-7 text-center">
+              {LINEAR_WEEKDAYS.map((w) => (
+                <div
+                  key={w}
+                  className="text-[11px] font-medium text-muted-foreground py-1 select-none"
+                >
+                  {w}
+                </div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-y-1 text-center">
+              {calendarCells.map((cell) => (
+                <button
+                  key={cell.iso}
+                  type="button"
+                  onClick={() => handleSelectDate(cell.year, cell.month, cell.day)}
+                  className={cn(
+                    "size-8 mx-auto flex items-center justify-center rounded-full text-xs transition-colors cursor-pointer",
+                    cell.isCurrentMonth
+                      ? "text-foreground font-normal"
+                      : "text-muted-foreground/40",
+                    cell.isSelected &&
+                      "border-2 border-primary bg-primary/10 font-bold text-primary",
+                    cell.isToday && !cell.isSelected && "font-bold text-primary underline"
+                  )}
+                >
+                  {cell.day}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SCROLLABLE CONTAINER FOR NON-DAY MODES */}
+        {mode !== "day" && (
+          <div className="max-h-[220px] overflow-y-auto pr-1 space-y-3 pt-0.5">
+            {/* MODE 2: MONTH PICKER */}
+            {mode === "month" && (
+              <div className="space-y-3">
+                {yearOptions.map((yr) => (
+                  <div key={yr} className="space-y-1.5">
+                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                      {yr}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {MONTH_SHORT.map((mName, mIdx) => {
+                        const mNum = mIdx + 1;
+                        const isSel = selectedParts?.year === yr && selectedParts?.month === mNum;
+                        return (
+                          <button
+                            key={mName}
+                            type="button"
+                            onClick={() => {
+                              const lastDay = getDaysInMonth(yr, mNum);
+                              handleSelectDate(yr, mNum, lastDay);
+                            }}
+                            className={cn(
+                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              isSel
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border bg-background text-foreground hover:bg-muted"
+                            )}
+                          >
+                            {mName}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
 
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-y-1 text-center">
-                {calendarCells.map((cell) => (
-                  <button
-                    key={cell.iso}
-                    type="button"
-                    onClick={() => handleSelectDate(cell.year, cell.month, cell.day)}
-                    className={cn(
-                      "size-8 mx-auto flex items-center justify-center rounded-full text-xs transition-colors cursor-pointer",
-                      cell.isCurrentMonth
-                        ? "text-foreground font-normal"
-                        : "text-muted-foreground/40",
-                      cell.isSelected &&
-                        "border-2 border-indigo-600 bg-indigo-50 font-bold text-indigo-950",
-                      cell.isToday && !cell.isSelected && "font-bold text-indigo-600 underline"
-                    )}
-                  >
-                    {cell.day}
-                  </button>
+            {/* MODE 3: QUARTER PICKER */}
+            {mode === "quarter" && (
+              <div className="space-y-3">
+                {yearOptions.map((yr) => (
+                  <div key={yr} className="space-y-1.5">
+                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                      {yr}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { label: "Q1", endMonth: 3, endDay: 31 },
+                        { label: "Q2", endMonth: 6, endDay: 30 },
+                        { label: "Q3", endMonth: 9, endDay: 30 },
+                        { label: "Q4", endMonth: 12, endDay: 31 },
+                      ].map((q) => {
+                        const isSel =
+                          selectedParts?.year === yr &&
+                          selectedParts?.month === q.endMonth;
+                        return (
+                          <button
+                            key={q.label}
+                            type="button"
+                            onClick={() => handleSelectDate(yr, q.endMonth, q.endDay)}
+                            className={cn(
+                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              isSel
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border bg-background text-foreground hover:bg-muted"
+                            )}
+                          >
+                            {q.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* SCROLLABLE CONTAINER FOR NON-DAY MODES */}
-          {mode !== "day" && (
-            <div className="max-h-[220px] overflow-y-auto pr-1 space-y-3 pt-0.5">
-              {/* MODE 2: MONTH PICKER */}
-              {mode === "month" && (
-                <div className="space-y-3">
-                  {yearOptions.map((yr) => (
-                    <div key={yr} className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-muted-foreground px-1">
-                        {yr}
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {MONTH_SHORT.map((mName, mIdx) => {
-                          const mNum = mIdx + 1;
-                          const isSel = selectedParts?.year === yr && selectedParts?.month === mNum;
-                          return (
-                            <button
-                              key={mName}
-                              type="button"
-                              onClick={() => {
-                                const lastDay = getDaysInMonth(yr, mNum);
-                                handleSelectDate(yr, mNum, lastDay);
-                              }}
-                              className={cn(
-                                "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
-                                isSel
-                                  ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-semibold"
-                                  : "border-border bg-white text-foreground hover:bg-muted"
-                              )}
-                            >
-                              {mName}
-                            </button>
-                          );
-                        })}
-                      </div>
+            {/* MODE 4: HALF-YEAR PICKER */}
+            {mode === "half-year" && (
+              <div className="space-y-3">
+                {yearOptions.map((yr) => (
+                  <div key={yr} className="space-y-1.5">
+                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                      {yr}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* MODE 3: QUARTER PICKER */}
-              {mode === "quarter" && (
-                <div className="space-y-3">
-                  {yearOptions.map((yr) => (
-                    <div key={yr} className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-muted-foreground px-1">
-                        {yr}
-                      </div>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {[
-                          { label: "Q1", endMonth: 3, endDay: 31 },
-                          { label: "Q2", endMonth: 6, endDay: 30 },
-                          { label: "Q3", endMonth: 9, endDay: 30 },
-                          { label: "Q4", endMonth: 12, endDay: 31 },
-                        ].map((q) => {
-                          const isSel =
-                            selectedParts?.year === yr &&
-                            selectedParts?.month === q.endMonth;
-                          return (
-                            <button
-                              key={q.label}
-                              type="button"
-                              onClick={() => handleSelectDate(yr, q.endMonth, q.endDay)}
-                              className={cn(
-                                "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
-                                isSel
-                                  ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-semibold"
-                                  : "border-border bg-white text-foreground hover:bg-muted"
-                              )}
-                            >
-                              {q.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "H1", endMonth: 6, endDay: 30 },
+                        { label: "H2", endMonth: 12, endDay: 31 },
+                      ].map((h) => {
+                        const isSel =
+                          selectedParts?.year === yr &&
+                          selectedParts?.month === h.endMonth;
+                        return (
+                          <button
+                            key={h.label}
+                            type="button"
+                            onClick={() => handleSelectDate(yr, h.endMonth, h.endDay)}
+                            className={cn(
+                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              isSel
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border bg-background text-foreground hover:bg-muted"
+                            )}
+                          >
+                            {h.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* MODE 4: HALF-YEAR PICKER */}
-              {mode === "half-year" && (
-                <div className="space-y-3">
-                  {yearOptions.map((yr) => (
-                    <div key={yr} className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-muted-foreground px-1">
-                        {yr}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { label: "H1", endMonth: 6, endDay: 30 },
-                          { label: "H2", endMonth: 12, endDay: 31 },
-                        ].map((h) => {
-                          const isSel =
-                            selectedParts?.year === yr &&
-                            selectedParts?.month === h.endMonth;
-                          return (
-                            <button
-                              key={h.label}
-                              type="button"
-                              onClick={() => handleSelectDate(yr, h.endMonth, h.endDay)}
-                              className={cn(
-                                "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
-                                isSel
-                                  ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-semibold"
-                                  : "border-border bg-white text-foreground hover:bg-muted"
-                              )}
-                            >
-                              {h.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* MODE 5: YEAR PICKER */}
-              {mode === "year" && (
-                <div className="space-y-1.5">
-                  {fullYearOptions.map((yr) => {
-                    const isSel = selectedParts?.year === yr;
-                    return (
-                      <button
-                        key={yr}
-                        type="button"
-                        onClick={() => handleSelectDate(yr, 12, 31)}
-                        className={cn(
-                          "w-full h-8 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
-                          isSel
-                            ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-semibold"
-                            : "border-border bg-white text-foreground hover:bg-muted"
-                        )}
-                      >
-                        {yr}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+            {/* MODE 5: YEAR PICKER */}
+            {mode === "year" && (
+              <div className="space-y-1.5">
+                {fullYearOptions.map((yr) => {
+                  const isSel = selectedParts?.year === yr;
+                  return (
+                    <button
+                      key={yr}
+                      type="button"
+                      onClick={() => handleSelectDate(yr, 12, 31)}
+                      className={cn(
+                        "w-full h-8 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                        isSel
+                          ? "border-primary bg-primary/10 text-primary font-semibold"
+                          : "border-border bg-background text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {yr}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </FloatingPortal>
     </div>
   );
 }
+
+export default VietnameseDatePicker;

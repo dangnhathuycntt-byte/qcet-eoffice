@@ -33,8 +33,8 @@ export interface TaskAgentSuggestion {
 
 export interface LinearTaskAgentPanelProps {
   isOpen: boolean;
-  onClose: () => void;
-  onCollapse: () => void;
+  onClose?: () => void;
+  onCollapse?: () => void;
   onApplySuggestion: (
     suggestion: TaskAgentSuggestion,
     options?: { onlyEmptyFields?: boolean }
@@ -319,32 +319,11 @@ export function LinearTaskAgentPanel({
       )}
       aria-label="Khung trợ lý soạn thảo nhiệm vụ"
     >
-      {/* Panel Top Header */}
-      <header className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-card shrink-0">
+      {/* Panel Top Header - Clean Title Only */}
+      <header className="flex items-center px-4 py-2.5 border-b border-border/60 bg-card shrink-0">
         <h3 className="text-xs font-semibold text-foreground">
           Trợ lý soạn thảo
         </h3>
-
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={onCollapse}
-            className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-            aria-label="Thu gọn khung trợ lý"
-            title="Thu gọn"
-          >
-            <ChevronRight className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
-            aria-label="Đóng khung trợ lý"
-            title="Đóng"
-          >
-            <X className="size-3.5" strokeWidth={1.5} />
-          </button>
-        </div>
       </header>
 
       {/* Main Scrollable Content */}

@@ -1,13 +1,16 @@
 /**
  * tests/linear-create-task-modal-composer.test.ts
  *
- * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI Redesign (v2):
+ * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI Redesign:
  * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description -> Subtasks -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
  * 3. Progressive disclosure: Subtasks section only displays "+ Thêm đầu việc" when empty
  * 4. Header action: "Tạo cùng Agent" auxiliary action in top right
  * 5. Footer contract: Sticky footer with Cancel + "Tạo nhiệm vụ" action & shortcut hint
  * 6. Shortcut contract: 'C' key opens create modal when not typing in interactive input
+ * 7. Dismiss & Backdrop: Backdrop click dismisses modal, portal clicks are protected
+ * 8. Agent panel: Header contains only "Trợ lý soạn thảo" without redundant collapse/close buttons
+ * 9. FloatingPortal: Floating content renders outside scroll container with z-index 9999
  */
 
 import { test, describe } from "node:test";
@@ -15,6 +18,9 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LinearCreateTaskModal } from "../src/components/tasks/create/linear-create-task-modal";
+import { LinearTaskAgentPanel } from "../src/components/tasks/create/linear-task-agent-panel";
+import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
+import { FloatingPortal } from "../src/components/ui/floating-portal";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
 
@@ -65,6 +71,9 @@ describe("Linear Compact Composer Modal - Layout & Structure", () => {
     assert.ok(html.includes("Hủy"), "Must render Cancel button");
     assert.ok(html.includes("Tạo nhiệm vụ"), "Must render primary submit button labeled 'Tạo nhiệm vụ'");
     assert.ok(html.includes("Enter"), "Must render shortcut hint in footer");
+
+    // 8. Dimensions: Fixed desktop height (h-[560px]) and layout classes
+    assert.ok(html.includes("h-[560px]"), "Modal must have 560px fixed desktop height");
   });
 
   test("When closed (isOpen=false), modal renders nothing (null)", () => {
@@ -76,6 +85,57 @@ describe("Linear Compact Composer Modal - Layout & Structure", () => {
     );
 
     assert.equal(html, "", "Closed modal must render empty output");
+  });
+});
+
+describe("Agent Panel UX & Controls", () => {
+  test("Agent Panel header contains only 'Trợ lý soạn thảo' text without chevron or close buttons", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(LinearTaskAgentPanel, {
+        isOpen: true,
+        onApplySuggestion: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Trợ lý soạn thảo"), "Must render 'Trợ lý soạn thảo' title");
+    assert.ok(!html.includes("Thu gọn khung trợ lý"), "Must NOT have redundant chevron collapse button");
+    assert.ok(!html.includes("Đóng khung trợ lý"), "Must NOT have redundant close button in panel header");
+  });
+});
+
+describe("FloatingPortal & DatePicker Portal Integration", () => {
+  test("FloatingPortal renders dialog role and data-floating-portal marker", () => {
+    const dummyRef = { current: null };
+    const html = renderToStaticMarkup(
+      React.createElement(
+        FloatingPortal,
+        {
+          isOpen: true,
+          onClose: () => {},
+          triggerRef: dummyRef,
+          ariaLabel: "Test Portal Dialog",
+          children: React.createElement("div", null, "Portal Content"),
+        }
+      )
+    );
+
+    assert.ok(html.includes('data-floating-portal="true"'), "Must render data-floating-portal marker");
+    assert.ok(html.includes('role="dialog"'), "Must render role='dialog'");
+    assert.ok(html.includes("Portal Content"), "Must render portal children");
+  });
+
+  test("VietnameseDatePicker variant='chip' integrates FloatingPortal without inline clipping", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(VietnameseDatePicker, {
+        variant: "chip",
+        label: "Hạn:",
+        value: "2026-09-30",
+        onChange: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Hạn:"), "Must render chip label");
+    assert.ok(html.includes("30/09/2026"), "Must render formatted display date");
   });
 });
 

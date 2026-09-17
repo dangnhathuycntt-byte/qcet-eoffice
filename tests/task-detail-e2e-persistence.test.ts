@@ -327,7 +327,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
       assert.ok(
         source.includes('relationships.has("LEAD_UNIT")') &&
         source.includes('relationships.has("ASSIGNER")') &&
-        source.includes('user.role === "ADMIN"'),
+        (source.includes('user.role === "ADMIN"') || source.includes('user.role.toUpperCase() === "ADMIN"')),
         "hybrid-authorization phải cho phép LEAD_UNIT, ASSIGNER và ADMIN cập nhật tiến độ/nộp kết quả"
       );
     });
