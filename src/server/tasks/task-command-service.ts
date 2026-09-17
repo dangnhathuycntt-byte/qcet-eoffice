@@ -66,6 +66,7 @@ export interface CreateTaskInput {
   title: string;
   description?: string | null;
   departmentId?: string | null;
+  startDate?: string | Date | null;
   dueDate: string | Date;
   priority?: string | TaskPriority;
   scope?: string | TaskScope;
@@ -392,6 +393,7 @@ export class TaskCommandService {
       title,
       description,
       departmentId,
+      startDate,
       dueDate,
       priority,
       scope,
@@ -544,13 +546,28 @@ export class TaskCommandService {
           departmentCode: validDepartmentId || undefined,
         }));
 
+      const parsedDueDate = new Date(dueDate);
+      let validStartDate: Date;
+      if (startDate) {
+        const parsedStart = new Date(startDate);
+        validStartDate = isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
+      } else {
+        validStartDate = new Date();
+      }
+
+      // Enforce database check constraint chk_tasks_due_date_after_start_date: (due_date >= start_date)
+      if (validStartDate > parsedDueDate) {
+        validStartDate = new Date(parsedDueDate);
+      }
+
       const task = await tx.task.create({
         data: {
           code,
           title,
           description: description || null,
           departmentId: validDepartmentId,
-          dueDate: new Date(dueDate),
+          startDate: validStartDate,
+          dueDate: parsedDueDate,
           academicMonth: monthNum,
           academicYear: yearStr,
           scope: taskScope,

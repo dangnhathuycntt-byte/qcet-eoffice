@@ -420,6 +420,7 @@ export function LinearCreateTaskModal({
         {
           level,
           title: title.trim(),
+          startDate: startDate || undefined,
           dueDate,
           description: fullDescription,
           leadAssigneeName: leadAssigneeName || undefined,

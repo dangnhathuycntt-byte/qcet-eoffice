@@ -181,6 +181,7 @@ export const CreateTaskInputSchema = z
       .max(64, 'Department ID cannot exceed 64 characters')
       .optional()
       .nullable(),
+    startDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     assigneeId: z
       .string()
