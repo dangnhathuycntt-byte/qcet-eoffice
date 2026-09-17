@@ -261,6 +261,37 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
+    it("portals menu to document.body and applies dynamic max-height with internal scroll", () => {
+      // 1. Must use createPortal to document.body
+      assert.ok(
+        componentContent.includes("createPortal") && componentContent.includes("document.body"),
+        "Must portal slash menu to document.body to prevent clipping from parent overflow"
+      );
+
+      // 2. Must dynamically compute menuMaxHeight based on available viewport height
+      assert.ok(
+        componentContent.includes("menuMaxHeight") &&
+          componentContent.includes("availableHeight"),
+        "Must compute dynamic max-height based on available viewport space"
+      );
+
+      // 3. Menu list must scroll internally with flex-1 min-h-0 and overscroll-contain
+      assert.ok(
+        componentContent.includes("overflow-y-auto") &&
+          componentContent.includes("overscroll-contain"),
+        "Menu list must scroll internally when options exceed available height"
+      );
+    });
+
+    it("shifts menu horizontally so it never exceeds left or right viewport edges", () => {
+      assert.ok(
+        componentContent.includes("maxLeft") &&
+          componentContent.includes("window.innerWidth - menuWidth") &&
+          componentContent.includes("left < COLLISION_PADDING"),
+        "Must clamp horizontal position with shift so menu is always fully visible"
+      );
+    });
+
     it("ensures active menu item scrolls into view without scrolling page on ArrowDown/Up", () => {
       assert.ok(
         componentContent.includes("menuItemRefs") &&

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   GripVertical,
   Type,
@@ -297,12 +298,22 @@ export function TaskNotionBlockContent({
     parseContentToBlocks(initialDescription)
   );
 
+  // Client mounted state for document.body Portal
+  const [mounted, setMounted] = React.useState(false);
+
   // Slash Menu State
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [menuSearchQuery, setMenuSearchQuery] = React.useState("");
   const [menuTargetIndex, setMenuTargetIndex] = React.useState<number | null>(null);
   const [activeMenuIndex, setActiveMenuIndex] = React.useState(0);
-  const [menuPosition, setMenuPosition] = React.useState<{ top: number; left: number } | null>(null);
+  const [menuPlacement, setMenuPlacement] = React.useState<"bottom" | "top">("bottom");
+  const [menuMaxHeight, setMenuMaxHeight] = React.useState<number>(320);
+  const [menuPosition, setMenuPosition] = React.useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+  } | null>(null);
+  const menuAnchorElRef = React.useRef<HTMLElement | null>(null);
 
   // Multi-Selection State theo convention Notion (Set các block ID được chọn)
   const [selectedBlockIds, setSelectedBlockIds] = React.useState<Set<string>>(new Set());
@@ -438,6 +449,10 @@ export function TaskNotionBlockContent({
   );
 
   React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -445,56 +460,110 @@ export function TaskNotionBlockContent({
     };
   }, []);
 
-  // Mở Slash Menu với Collision Handling & Auto-scroll an toàn
+  // Tính toán vị trí và chiều cao tối đa khả dụng cho Slash Menu (Flip + Shift + Dynamic Max-Height)
+  const updateSlashMenuPosition = React.useCallback((anchorEl: HTMLElement) => {
+    const rect = anchorEl.getBoundingClientRect();
+    const COLLISION_PADDING = 14; // Padding an toàn 12-16px với viewport
+    const BOTTOM_SAFETY_MARGIN = 16;
+    const GAP = 6;
+    const ESTIMATED_MENU_WIDTH = 288;
+    const PREFERRED_MENU_HEIGHT = 320;
+    const MIN_ACCEPTABLE_HEIGHT = 160;
+
+    // Không gian khả dụng phía dưới và phía trên anchor trong viewport
+    const spaceBelow = window.innerHeight - rect.bottom - GAP - BOTTOM_SAFETY_MARGIN;
+    const spaceAbove = rect.top - GAP - COLLISION_PADDING;
+
+    // 1. Collision-aware positioning:
+    // Preferred placement: bottom-start. Nếu không đủ chỗ phía dưới (<250px) và phía trên rộng hơn -> tự động flip sang top-start
+    const shouldFlipTop = spaceBelow < 250 && spaceAbove > spaceBelow;
+    const placement: "bottom" | "top" = shouldFlipTop ? "top" : "bottom";
+
+    // 2. Dynamic max-height: tính từ không gian thực tế còn lại trong viewport
+    let availableHeight: number;
+    let top: number | undefined;
+    let bottom: number | undefined;
+
+    if (placement === "bottom") {
+      availableHeight = Math.max(MIN_ACCEPTABLE_HEIGHT, Math.min(PREFERRED_MENU_HEIGHT, spaceBelow));
+      top = rect.bottom + GAP;
+    } else {
+      availableHeight = Math.max(MIN_ACCEPTABLE_HEIGHT, Math.min(PREFERRED_MENU_HEIGHT, spaceAbove));
+      bottom = window.innerHeight - rect.top + GAP;
+    }
+
+    // 3. Shift ngang để menu luôn nằm trọn trong viewport (không vượt mép trái hoặc mép phải)
+    const menuWidth = Math.min(ESTIMATED_MENU_WIDTH, window.innerWidth - COLLISION_PADDING * 2);
+    let left = rect.left;
+    const maxLeft = window.innerWidth - menuWidth - COLLISION_PADDING;
+    if (left > maxLeft) {
+      left = maxLeft;
+    }
+    if (left < COLLISION_PADDING) {
+      left = COLLISION_PADDING;
+    }
+
+    setMenuPlacement(placement);
+    setMenuMaxHeight(availableHeight);
+    setMenuPosition({ top, bottom, left });
+  }, []);
+
+  // Lắng nghe scroll và resize để định vị lại menu tức thì khi viewport thay đổi
+  React.useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleViewportChange = () => {
+      if (menuAnchorElRef.current) {
+        updateSlashMenuPosition(menuAnchorElRef.current);
+      }
+    };
+
+    window.addEventListener("scroll", handleViewportChange, { passive: true, capture: true });
+    window.addEventListener("resize", handleViewportChange, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, [isMenuOpen, updateSlashMenuPosition]);
+
+  // Mở Slash Menu với Collision Handling, Flip, Shift & Auto-scroll an toàn
   const handleOpenSlashMenu = (index: number, anchorEl?: HTMLElement | null) => {
     setMenuTargetIndex(index);
     setMenuSearchQuery("");
     setActiveMenuIndex(0);
 
     if (anchorEl) {
-      // 1. Cuộn nhẹ block / anchor hiện tại vào viewport nếu đang bị che
-      anchorEl.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-
+      menuAnchorElRef.current = anchorEl;
       const rect = anchorEl.getBoundingClientRect();
-      const ESTIMATED_MENU_HEIGHT = 300;
-      const ESTIMATED_MENU_WIDTH = 288;
-      const COLLISION_PADDING = 12;
-      const BOTTOM_SAFETY_MARGIN = 20;
+      const COLLISION_PADDING = 14;
+      const BOTTOM_SAFETY_MARGIN = 16;
+      const GAP = 6;
 
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom - GAP - BOTTOM_SAFETY_MARGIN;
+      const spaceAbove = rect.top - GAP - COLLISION_PADDING;
 
-      // Flip lên top nếu phía dưới không đủ không gian và phía trên rộng hơn
-      const shouldFlipTop = spaceBelow < 240 && spaceAbove > spaceBelow;
+      // Ưu tiên flip menu lên trên trước nếu phía dưới thiếu chỗ
+      const shouldFlipTop = spaceBelow < 250 && spaceAbove > spaceBelow;
 
-      const top = shouldFlipTop
-        ? Math.max(COLLISION_PADDING + window.scrollY, rect.top + window.scrollY - ESTIMATED_MENU_HEIGHT - 6)
-        : rect.bottom + window.scrollY + 6;
+      // Auto-scroll page chỉ khi thực sự cần:
+      // - Nếu mở xuống nhưng caret nằm quá sát đáy viewport
+      // - Nếu mở lên nhưng caret nằm sát mép trên viewport
+      if (!shouldFlipTop && rect.bottom > window.innerHeight - 60) {
+        anchorEl.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      } else if (shouldFlipTop && rect.top < 40) {
+        anchorEl.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }
 
-      // Shift ngang để menu không tràn ra ngoài viewport
-      let left = rect.left + window.scrollX;
-      const maxLeft = window.innerWidth - ESTIMATED_MENU_WIDTH - COLLISION_PADDING;
-      left = Math.max(COLLISION_PADDING, Math.min(left, maxLeft));
-
-      setMenuPosition({ top, left });
-
-      // 2. Chờ DOM vẽ menu và tự động scroll PAGE vừa đủ để menu và caret nằm trọn trong viewport
-      setTimeout(() => {
-        const menuEl = menuPopoverRef.current;
-        if (menuEl) {
-          const menuRect = menuEl.getBoundingClientRect();
-          const overflowBottom = menuRect.bottom - (window.innerHeight - BOTTOM_SAFETY_MARGIN);
-          if (overflowBottom > 0) {
-            window.scrollBy({ top: overflowBottom, behavior: "smooth" });
-          } else if (menuRect.top < COLLISION_PADDING) {
-            window.scrollBy({ top: menuRect.top - COLLISION_PADDING, behavior: "smooth" });
-          }
-        }
-      }, 50);
+      updateSlashMenuPosition(anchorEl);
     } else {
+      menuAnchorElRef.current = null;
       setMenuPosition(null);
     }
 
@@ -509,6 +578,7 @@ export function TaskNotionBlockContent({
     setMenuSearchQuery("");
     setMenuTargetIndex(null);
     setMenuPosition(null);
+    menuAnchorElRef.current = null;
   };
 
   /**
@@ -772,8 +842,8 @@ export function TaskNotionBlockContent({
     }
     setActiveContextMenu({
       blockId: block.id,
-      top: e.clientY + window.scrollY,
-      left: Math.min(e.clientX + window.scrollX, window.innerWidth - 200),
+      top: Math.min(e.clientY, window.innerHeight - 180),
+      left: Math.min(e.clientX, window.innerWidth - 200),
     });
   };
 
@@ -1483,32 +1553,35 @@ export function TaskNotionBlockContent({
         </div>
       )}
 
-      {/* 3. Slash Command Popover Menu (Tối giản kiểu Notion, ưu tiên nghiệp vụ E-Office) */}
-      {isMenuOpen && (
+      {/* 3. Slash Command Popover Menu qua Portal ra document.body */}
+      {isMenuOpen && mounted && typeof document !== "undefined" && createPortal(
         <div
           role="dialog"
           aria-label="Menu lệnh"
-          className="fixed inset-0 z-50 flex items-center justify-center sm:items-start sm:justify-start bg-black/10 sm:bg-transparent p-4 sm:p-0"
+          className="fixed inset-0 z-50 pointer-events-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleCloseSlashMenu();
           }}
         >
           <div
             ref={menuPopoverRef}
-            style={
-              menuPosition
-                ? {
-                    position: "absolute",
-                    top: `${menuPosition.top}px`,
-                    left: `${menuPosition.left}px`,
-                  }
-                : undefined
-            }
-            className="w-full max-w-sm sm:w-72 rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 select-none"
+            style={{
+              position: "fixed",
+              top: menuPosition?.top !== undefined ? `${menuPosition.top}px` : undefined,
+              bottom: menuPosition?.bottom !== undefined ? `${menuPosition.bottom}px` : undefined,
+              left: menuPosition ? `${menuPosition.left}px` : undefined,
+              maxHeight: `${menuMaxHeight}px`,
+            }}
+            className={cn(
+              "w-72 max-w-[calc(100vw-28px)] rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 select-none flex flex-col",
+              menuPlacement === "top"
+                ? "animate-in fade-in-0 slide-in-from-bottom-2 duration-100"
+                : "animate-in fade-in-0 slide-in-from-top-2 duration-100"
+            )}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Ô tìm kiếm lệnh */}
-            <div className="relative mb-1.5">
+            {/* Ô tìm kiếm lệnh (Header cố định) */}
+            <div className="relative mb-1.5 shrink-0">
               <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
               <input
                 ref={menuInputRef}
@@ -1542,8 +1615,8 @@ export function TaskNotionBlockContent({
               />
             </div>
 
-            {/* Danh sách lựa chọn */}
-            <div ref={menuListRef} className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
+            {/* Danh sách lựa chọn - Cuộn nội bộ nếu dài hơn availableHeight */}
+            <div ref={menuListRef} className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-0.5 overscroll-contain">
               {(["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Tệp & Liên kết", "Phân cách"] as const).map((groupName) => {
                 const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
                 if (groupOptions.length === 0) return null;
@@ -1605,21 +1678,26 @@ export function TaskNotionBlockContent({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* 4. Context Menu Nâng cao (Chuột phải vào Block hoặc Handle) */}
-      {activeContextMenu && (
+      {/* 4. Context Menu Nâng cao qua Portal ra document.body */}
+      {activeContextMenu && mounted && typeof document !== "undefined" && createPortal(
         <div
-          role="menu"
-          style={{
-            position: "absolute",
-            top: `${activeContextMenu.top}px`,
-            left: `${activeContextMenu.left}px`,
-          }}
-          className="w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 pointer-events-auto"
+          onClick={() => setActiveContextMenu(null)}
         >
+          <div
+            role="menu"
+            style={{
+              position: "fixed",
+              top: `${activeContextMenu.top}px`,
+              left: `${activeContextMenu.left}px`,
+            }}
+            className="w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
           {selectedBlockIds.size <= 1 && (
             <>
               <button
@@ -1688,7 +1766,9 @@ export function TaskNotionBlockContent({
             <span className="text-[10px] font-mono text-rose-500/70">Del</span>
           </button>
         </div>
-      )}
+      </div>,
+      document.body
+    )}
     </div>
   );
 }
