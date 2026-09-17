@@ -2,12 +2,17 @@
 
 import * as React from "react";
 import {
-  Plus,
   GripVertical,
   Type,
+  Heading1,
   Heading2,
+  Heading3,
   List,
+  ListOrdered,
   CheckSquare,
+  Quote,
+  Info,
+  Minus,
   Paperclip,
   Link2,
   Layers,
@@ -19,12 +24,8 @@ import {
   ExternalLink,
   CheckCircle2,
   Circle,
-  MoreHorizontal,
   X,
-  Loader2,
-  AlertCircle,
-  Calendar,
-  UserPlus,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
@@ -36,7 +37,11 @@ export type NotionBlockType =
   | "text"
   | "heading"
   | "bulleted_list"
+  | "numbered_list"
   | "checklist"
+  | "quote"
+  | "callout"
+  | "divider"
   | "attachment"
   | "link"
   | "subtasks_view";
@@ -91,7 +96,7 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
  * Đóng gói danh sách blocks thành chuỗi JSON lưu vào DB.
  */
 export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
-  // Nếu chỉ có đúng 1 block text không có metadata khác và rỗng, có thể lưu rỗng
+  // Nếu chỉ có đúng 1 block text không có metadata và rỗng
   if (blocks.length === 1 && blocks[0].type === "text" && !blocks[0].content.trim()) {
     return "";
   }
@@ -105,87 +110,137 @@ export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
 interface MenuItemOption {
   id: string;
   type: NotionBlockType | "create_subtask_action";
-  group: "Nội dung" | "Tài liệu" | "Công việc";
+  group: "Cơ bản" | "Danh sách" | "Nâng cao" | "Tài liệu & Việc";
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   shortcut?: string;
+  level?: 1 | 2 | 3;
   badge?: string;
 }
 
 const MENU_OPTIONS: MenuItemOption[] = [
-  // 1. Nhóm Nội dung
+  // 1. Nhóm Cơ bản
   {
     id: "opt-text",
     type: "text",
-    group: "Nội dung",
+    group: "Cơ bản",
     title: "Văn bản",
-    description: "Văn bản thuần túy, tự do ghi chú",
+    description: "Văn bản thuần túy, tự do định dạng",
     icon: Type,
     shortcut: "text",
   },
   {
-    id: "opt-heading",
+    id: "opt-h1",
     type: "heading",
-    group: "Nội dung",
-    title: "Tiêu đề",
-    description: "Tiêu đề phân mục nội dung rõ ràng",
-    icon: Heading2,
+    level: 1,
+    group: "Cơ bản",
+    title: "Tiêu đề 1",
+    description: "Tiêu đề lớn phân mục",
+    icon: Heading1,
     shortcut: "#",
   },
   {
+    id: "opt-h2",
+    type: "heading",
+    level: 2,
+    group: "Cơ bản",
+    title: "Tiêu đề 2",
+    description: "Tiêu đề vừa",
+    icon: Heading2,
+    shortcut: "##",
+  },
+  {
+    id: "opt-h3",
+    type: "heading",
+    level: 3,
+    group: "Cơ bản",
+    title: "Tiêu đề 3",
+    description: "Tiêu đề nhỏ",
+    icon: Heading3,
+    shortcut: "###",
+  },
+
+  // 2. Nhóm Danh sách
+  {
     id: "opt-bulleted",
     type: "bulleted_list",
-    group: "Nội dung",
-    title: "Danh sách",
+    group: "Danh sách",
+    title: "Danh sách chấm",
     description: "Danh sách dấu chấm đầu dòng",
     icon: List,
     shortcut: "-",
   },
   {
+    id: "opt-numbered",
+    type: "numbered_list",
+    group: "Danh sách",
+    title: "Danh sách số",
+    description: "Danh sách đánh số thứ tự",
+    icon: ListOrdered,
+    shortcut: "1.",
+  },
+  {
     id: "opt-checklist",
     type: "checklist",
-    group: "Nội dung",
+    group: "Danh sách",
     title: "Checklist",
-    description: "Nội dung đánh dấu hoàn thành (To-do)",
+    description: "Danh sách việc cần làm có ô đánh dấu",
     icon: CheckSquare,
     shortcut: "[]",
   },
 
-  // 2. Nhóm Tài liệu
+  // 3. Nhóm Nâng cao
+  {
+    id: "opt-quote",
+    type: "quote",
+    group: "Nâng cao",
+    title: "Trích dẫn",
+    description: "Trích dẫn ý kiến hoặc chỉ đạo",
+    icon: Quote,
+    shortcut: ">",
+  },
+  {
+    id: "opt-callout",
+    type: "callout",
+    group: "Nâng cao",
+    title: "Ghi chú nổi bật",
+    description: "Hộp lưu ý hoặc thông điệp quan trọng",
+    icon: Info,
+  },
+  {
+    id: "opt-divider",
+    type: "divider",
+    group: "Nâng cao",
+    title: "Đường phân cách",
+    description: "Đường kẻ chia tách phân đoạn",
+    icon: Minus,
+    shortcut: "---",
+  },
+
+  // 4. Nhóm Tài liệu & Việc
   {
     id: "opt-attachment",
     type: "attachment",
-    group: "Tài liệu",
+    group: "Tài liệu & Việc",
     title: "Tệp đính kèm",
-    description: "Đính kèm tệp tài liệu, minh chứng",
+    description: "Đính kèm tệp tài liệu, văn bản",
     icon: Paperclip,
   },
   {
     id: "opt-link",
     type: "link",
-    group: "Tài liệu",
+    group: "Tài liệu & Việc",
     title: "Liên kết",
     description: "Đường dẫn website hoặc tài liệu ngoài",
     icon: Link2,
   },
-
-  // 3. Nhóm Công việc
-  {
-    id: "opt-create-subtask",
-    type: "create_subtask_action",
-    group: "Công việc",
-    title: "Tạo việc con",
-    description: "Giao nhiệm vụ thành phần có người và hạn",
-    icon: Plus,
-    badge: "Nhiệm vụ",
-  },
   {
     id: "opt-subtasks-view",
     type: "subtasks_view",
-    group: "Công việc",
-    title: "Chèn danh sách việc con",
-    description: "Hiển thị đồng bộ dữ liệu việc con hiện có",
+    group: "Tài liệu & Việc",
+    title: "Chèn việc thành phần",
+    description: "Hiển thị đồng bộ danh sách việc con",
     icon: Layers,
     badge: "Đồng bộ",
   },
@@ -204,14 +259,13 @@ export function TaskNotionBlockContent({
   const [blocks, setBlocks] = React.useState<NotionBlockItem[]>(() =>
     parseContentToBlocks(initialDescription)
   );
-  const [saveStatus, setSaveStatus] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [saveError, setSaveError] = React.useState<string | null>(null);
 
-  // Slash Menu & Quick Add State
+  // Slash Menu State
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [menuSearchQuery, setMenuSearchQuery] = React.useState("");
-  const [menuInsertIndex, setMenuInsertIndex] = React.useState<number | null>(null);
+  const [menuTargetIndex, setMenuTargetIndex] = React.useState<number | null>(null);
   const [activeMenuIndex, setActiveMenuIndex] = React.useState(0);
+  const [menuPosition, setMenuPosition] = React.useState<{ top: number; left: number } | null>(null);
 
   // Block Action Popover State (nhấn ⋮⋮)
   const [activeBlockMenuId, setActiveBlockMenuId] = React.useState<string | null>(null);
@@ -225,6 +279,7 @@ export function TaskNotionBlockContent({
   const blockInputRefs = React.useRef<Map<string, HTMLInputElement | HTMLTextAreaElement>>(new Map());
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Đồng bộ khi initialDescription từ server đổi
   React.useEffect(() => {
@@ -264,25 +319,18 @@ export function TaskNotionBlockContent({
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      setSaveStatus("saving");
-      setSaveError(null);
-
       debounceTimerRef.current = setTimeout(async () => {
         try {
           const payload = serializeBlocksToContent(newBlocks);
           await onSaveContent(payload);
-          setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
-        } catch (err: any) {
-          setSaveStatus("error");
-          setSaveError(err?.message || "Lỗi tự động lưu nội dung");
+        } catch {
+          // silent autosave fallback
         }
       }, 800);
     },
     [onSaveContent]
   );
 
-  // Cleanup timer
   React.useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -292,31 +340,41 @@ export function TaskNotionBlockContent({
   }, []);
 
   // Mở Slash Menu
-  const handleOpenMenu = (insertIndex: number | null = null, defaultQuery = "") => {
-    setMenuInsertIndex(insertIndex);
-    setMenuSearchQuery(defaultQuery);
+  const handleOpenSlashMenu = (index: number, anchorEl?: HTMLElement | null) => {
+    setMenuTargetIndex(index);
+    setMenuSearchQuery("");
     setActiveMenuIndex(0);
+
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: Math.max(16, rect.left + window.scrollX),
+      });
+    } else {
+      setMenuPosition(null);
+    }
+
     setIsMenuOpen(true);
     setTimeout(() => {
       menuInputRef.current?.focus();
-    }, 50);
+    }, 40);
   };
 
-  const handleCloseMenu = () => {
+  const handleCloseSlashMenu = () => {
     setIsMenuOpen(false);
     setMenuSearchQuery("");
-    setMenuInsertIndex(null);
+    setMenuTargetIndex(null);
+    setMenuPosition(null);
   };
 
-  // Thêm Block mới từ Menu
+  // Chọn loại Block từ Slash Menu
   const handleSelectMenuItem = (option: MenuItemOption) => {
-    handleCloseMenu();
+    const targetIdx = menuTargetIndex ?? blocks.length;
+    handleCloseSlashMenu();
 
-    // Nếu chọn "Tạo việc con" -> gọi modal tạo việc con thật
     if (option.type === "create_subtask_action") {
-      if (onOpenCreateSubtask) {
-        onOpenCreateSubtask();
-      }
+      onOpenCreateSubtask?.();
       return;
     }
 
@@ -326,17 +384,19 @@ export function TaskNotionBlockContent({
       type: option.type as NotionBlockType,
       content: "",
       checked: option.type === "checklist" ? false : undefined,
-      level: option.type === "heading" ? 2 : undefined,
+      level: option.level || (option.type === "heading" ? 2 : undefined),
       url: option.type === "link" ? "https://" : undefined,
       fileName: option.type === "attachment" ? "Tài liệu đính kèm" : undefined,
     };
 
     setBlocks((prev) => {
       const next = [...prev];
-      if (menuInsertIndex !== null && menuInsertIndex >= 0 && menuInsertIndex <= next.length) {
-        next.splice(menuInsertIndex, 0, newBlock);
+      // Nếu target block hiện tại đang rỗng -> thay thế target block bằng block mới
+      const currentBlock = next[targetIdx];
+      if (currentBlock && !currentBlock.content.trim() && currentBlock.type === "text") {
+        next[targetIdx] = newBlock;
       } else {
-        next.push(newBlock);
+        next.splice(targetIdx + 1, 0, newBlock);
       }
       triggerAutoSave(next);
       return next;
@@ -358,7 +418,6 @@ export function TaskNotionBlockContent({
   const handleDeleteBlock = (blockId: string) => {
     setBlocks((prev) => {
       const next = prev.filter((b) => b.id !== blockId);
-      // Giữ tối thiểu 1 block
       if (next.length === 0) {
         next.push({ id: `b-${Date.now()}`, type: "text", content: "" });
       }
@@ -368,7 +427,7 @@ export function TaskNotionBlockContent({
     setActiveBlockMenuId(null);
   };
 
-  // Di chuyển block lên/xuống
+  // Di chuyển block
   const handleMoveBlock = (index: number, direction: "up" | "down") => {
     setBlocks((prev) => {
       const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -399,43 +458,56 @@ export function TaskNotionBlockContent({
     setActiveBlockMenuId(null);
   };
 
-  // Xử lý phím Enter / Slash trong block
+  // Xử lý phím Enter / Backspace / Slash trong block
   const handleBlockKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
     block: NotionBlockItem,
     index: number
   ) => {
-    // 1. Phím "/" mở Slash Menu khi ô trống hoặc vừa gõ /
+    // 1. Phím "/" mở Slash Menu khi bắt đầu gõ hoặc ô trống
     if (e.key === "/" && (!block.content || block.content.trim() === "")) {
       e.preventDefault();
-      handleOpenMenu(index + 1);
+      const target = e.currentTarget as HTMLElement;
+      handleOpenSlashMenu(index, target);
       return;
     }
 
-    // 2. Phím Enter trong Checklist -> tự động tạo checklist item tiếp theo bên dưới
+    // 2. Phím Enter -> tạo block tiếp theo tự nhiên (Notion style)
     if (e.key === "Enter" && !e.shiftKey) {
-      if (block.type === "checklist" || block.type === "bulleted_list") {
-        e.preventDefault();
-        const nextId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        const nextBlock: NotionBlockItem = {
-          id: nextId,
-          type: block.type,
-          content: "",
-          checked: block.type === "checklist" ? false : undefined,
-        };
-        setBlocks((prev) => {
-          const next = [...prev];
-          next.splice(index + 1, 0, nextBlock);
-          triggerAutoSave(next);
-          return next;
-        });
-        pendingFocusBlockIdRef.current = nextId;
-        return;
-      }
+      e.preventDefault();
+      const nextId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+      // Nếu đang ở checklist / bullet / numbered list -> tiếp tục loại danh sách đó
+      const isList = ["checklist", "bulleted_list", "numbered_list"].includes(block.type);
+      const nextType = isList ? block.type : "text";
+
+      const nextBlock: NotionBlockItem = {
+        id: nextId,
+        type: nextType,
+        content: "",
+        checked: nextType === "checklist" ? false : undefined,
+      };
+
+      setBlocks((prev) => {
+        const next = [...prev];
+        next.splice(index + 1, 0, nextBlock);
+        triggerAutoSave(next);
+        return next;
+      });
+      pendingFocusBlockIdRef.current = nextId;
+      return;
     }
 
-    // 3. Phím Backspace khi ô trống -> xóa block nếu có nhiều hơn 1 block
+    // 3. Phím Backspace khi ô rỗng
     if (e.key === "Backspace" && !block.content) {
+      // Nếu là checklist / list / quote / callout / heading -> chuyển về text thường trước
+      if (block.type !== "text") {
+        e.preventDefault();
+        handleUpdateBlock(block.id, { type: "text", level: undefined, checked: undefined });
+        return;
+      }
+
+      // Nếu đã là text rỗng và có nhiều hơn 1 block -> xóa block và lùi focus về block trước
       if (blocks.length > 1) {
         e.preventDefault();
         const prevBlock = blocks[index - 1];
@@ -447,7 +519,7 @@ export function TaskNotionBlockContent({
     }
   };
 
-  // Drag & Drop handlers
+  // Drag & Drop
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedBlockIndex(index);
     e.dataTransfer.effectAllowed = "move";
@@ -473,157 +545,153 @@ export function TaskNotionBlockContent({
     setDragOverIndex(null);
   };
 
+  // Tính số thứ tự cho numbered list
+  let numberedCounter = 0;
+
   return (
-    <section
+    <div
+      ref={containerRef}
       data-slot="task-notion-block-content"
-      className={cn("space-y-3 relative group/container", className)}
-      aria-label="Vùng nội dung chi tiết dạng block"
+      className={cn("w-full space-y-1 relative font-sans text-sm text-foreground", className)}
     >
-      {/* Header nhỏ & Trạng thái lưu */}
-      <div className="flex items-center justify-between gap-2 text-xs select-none">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-foreground tracking-tight">
-            Nội dung chi tiết
-          </span>
-          {saveStatus === "saving" && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-medium animate-pulse">
-              <Loader2 className="size-3 animate-spin" />
-              <span>Đang lưu...</span>
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-              <span>Đã lưu</span>
-            </span>
-          )}
-          {saveStatus === "error" && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-medium">
-              <AlertCircle className="size-3" />
-              <span>{saveError || "Lưu thất bại"}</span>
-            </span>
-          )}
-        </div>
-      </div>
+      {/* 1. Các Blocks Nội Dung (Clean document canvas) */}
+      {blocks.map((block, index) => {
+        const isDragOver = dragOverIndex === index;
 
-      {/* Danh sách các Block */}
-      <div className="space-y-2">
-        {blocks.map((block, index) => {
-          const isDragOver = dragOverIndex === index;
+        // Reset hoặc tăng bộ đếm numbered list
+        if (block.type === "numbered_list") {
+          numberedCounter += 1;
+        } else {
+          numberedCounter = 0;
+        }
+        const currentNumber = numberedCounter;
 
-          return (
-            <div
-              key={block.id}
-              onDragOver={(e) => handleDragOver(e, index)}
-              className={cn(
-                "group/block relative flex items-start gap-1 rounded-xl transition-all duration-150 p-1 -mx-1",
-                isDragOver && "bg-primary/10 ring-1 ring-primary/40 rounded-xl",
-                "hover:bg-muted/30"
-              )}
-            >
-              {/* Tay nắm kéo thả & Nút thêm nhanh bên trái (Notion style) */}
-              {canEdit && (
-                <div
-                  className={cn(
-                    "flex items-center gap-0.5 pt-1.5 shrink-0 transition-opacity duration-150 select-none",
-                    "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
-                  )}
-                >
-                  {/* Nút + (Thêm block ngay dưới) */}
+        return (
+          <div
+            key={block.id}
+            onDragOver={(e) => handleDragOver(e, index)}
+            className={cn(
+              "group/block relative flex items-start -mx-2 px-2 py-0.5 rounded-lg transition-colors duration-100",
+              isDragOver && "bg-primary/10 ring-1 ring-primary/30",
+              "hover:bg-muted/20"
+            )}
+          >
+            {/* Gutter trái: Handle ⋮⋮ (Chỉ hiện khi hover hoặc focus) */}
+            {canEdit && (
+              <div
+                className={cn(
+                  "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
+                  "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
+                )}
+              >
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => handleOpenMenu(index + 1)}
-                    className="size-5 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer transition-colors"
-                    title="Thêm block bên dưới"
-                    aria-label="Thêm block bên dưới"
+                    draggable={true}
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onClick={() =>
+                      setActiveBlockMenuId((prev) => (prev === block.id ? null : block.id))
+                    }
+                    className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing transition-colors"
+                    title="Kéo thả hoặc nhấn để mở thao tác"
+                    aria-label="Thao tác khối"
                   >
-                    <Plus className="size-3.5" />
+                    <GripVertical className="size-3.5" />
                   </button>
 
-                  {/* Tay nắm kéo thả ⋮⋮ */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() =>
-                        setActiveBlockMenuId((prev) => (prev === block.id ? null : block.id))
-                      }
-                      className="size-5 rounded hover:bg-muted/80 text-muted-foreground/70 hover:text-foreground flex items-center justify-center cursor-grab active:cursor-grabbing transition-colors"
-                      title="Kéo để di chuyển hoặc nhấn để mở thao tác"
-                      aria-label="Thao tác block"
+                  {/* Menu thao tác khi click ⋮⋮ */}
+                  {activeBlockMenuId === block.id && (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-full mt-1 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
                     >
-                      <GripVertical className="size-3.5" />
-                    </button>
-
-                    {/* Menu thao tác block khi click ⋮⋮ */}
-                    {activeBlockMenuId === block.id && (
-                      <div
-                        role="menu"
-                        className="absolute left-0 top-full mt-1 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-30 animate-in fade-in-0 zoom-in-95 duration-100 text-xs"
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => handleMoveBlock(index, "up")}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
                       >
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => handleMoveBlock(index, "up")}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-                        >
-                          <ArrowUp className="size-3.5 text-muted-foreground" />
-                          <span>Di chuyển lên</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === blocks.length - 1}
-                          onClick={() => handleMoveBlock(index, "down")}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-                        >
-                          <ArrowDown className="size-3.5 text-muted-foreground" />
-                          <span>Di chuyển xuống</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDuplicateBlock(block, index)}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
-                        >
-                          <Copy className="size-3.5 text-muted-foreground" />
-                          <span>Nhân đôi block</span>
-                        </button>
-                        <div className="my-1 border-t border-border/40" />
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBlock(block.id)}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
-                        >
-                          <Trash2 className="size-3.5" />
-                          <span>Xóa block</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                        <ArrowUp className="size-3.5 text-muted-foreground" />
+                        <span>Di chuyển lên</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === blocks.length - 1}
+                        onClick={() => handleMoveBlock(index, "down")}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+                      >
+                        <ArrowDown className="size-3.5 text-muted-foreground" />
+                        <span>Di chuyển xuống</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateBlock(block, index)}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
+                      >
+                        <Copy className="size-3.5 text-muted-foreground" />
+                        <span>Nhân đôi block</span>
+                      </button>
+                      <div className="my-1 border-t border-border/40" />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlock(block.id)}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span>Xóa block</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Nội dung Block */}
+            <div className="flex-1 min-w-0">
+              {/* 1. Text Block */}
+              {block.type === "text" && (
+                <textarea
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  rows={Math.max(1, (block.content || "").split("\n").length)}
+                  disabled={!canEdit}
+                  value={block.content}
+                  onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                  onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                  placeholder={index === blocks.length - 1 ? "Nhập '/' để chọn lệnh..." : "Gõ văn bản..."}
+                  className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden py-0.5"
+                />
               )}
 
-              {/* Thân Block theo từng loại */}
-              <div className="flex-1 min-w-0">
-                {/* 1. Block: Text (Văn bản) */}
-                {block.type === "text" && (
-                  <textarea
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    rows={Math.max(1, block.content.split("\n").length)}
-                    disabled={!canEdit}
-                    value={block.content}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Gõ văn bản hoặc '/' để chọn lệnh..."
-                    className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-hidden py-1"
-                  />
-                )}
+              {/* 2. Heading Block (H1, H2, H3) */}
+              {block.type === "heading" && (
+                <input
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  type="text"
+                  disabled={!canEdit}
+                  value={block.content}
+                  onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                  onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                  placeholder={`Tiêu đề ${block.level || 2}...`}
+                  className={cn(
+                    "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden py-1 font-bold tracking-tight",
+                    block.level === 1 && "text-xl sm:text-2xl mt-2 mb-1",
+                    block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
+                    (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
+                  )}
+                />
+              )}
 
-                {/* 2. Block: Heading (Tiêu đề) */}
-                {block.type === "heading" && (
+              {/* 3. Bulleted List */}
+              {block.type === "bulleted_list" && (
+                <div className="flex items-start gap-2 py-0.5">
+                  <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
                   <input
                     ref={(el) => {
                       if (el) blockInputRefs.current.set(block.id, el);
@@ -634,266 +702,295 @@ export function TaskNotionBlockContent({
                     value={block.content}
                     onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
                     onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder="Tiêu đề mục..."
-                    className="w-full bg-transparent text-base sm:text-lg font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:outline-hidden py-1 border-b border-border/30"
+                    placeholder="Nội dung danh sách..."
+                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden"
                   />
-                )}
+                </div>
+              )}
 
-                {/* 3. Block: Bulleted List (Danh sách chấm) */}
-                {block.type === "bulleted_list" && (
-                  <div className="flex items-start gap-2 py-1">
-                    <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder="Nội dung danh sách..."
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-hidden"
-                    />
-                  </div>
-                )}
+              {/* 4. Numbered List */}
+              {block.type === "numbered_list" && (
+                <div className="flex items-start gap-2 py-0.5">
+                  <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right">
+                    {currentNumber}.
+                  </span>
+                  <input
+                    ref={(el) => {
+                      if (el) blockInputRefs.current.set(block.id, el);
+                      else blockInputRefs.current.delete(block.id);
+                    }}
+                    type="text"
+                    disabled={!canEdit}
+                    value={block.content}
+                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                    placeholder="Nội dung danh sách..."
+                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden"
+                  />
+                </div>
+              )}
 
-                {/* 4. Block: Checklist (To-do list tương tác) */}
-                {block.type === "checklist" && (
-                  <div className="flex items-start gap-2.5 py-1">
-                    <button
-                      type="button"
-                      disabled={!canEdit}
-                      onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
-                      className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
-                      aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
-                    >
-                      {block.checked ? (
-                        <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
-                      ) : (
-                        <Circle className="size-4 text-muted-foreground/70 hover:text-foreground" />
-                      )}
-                    </button>
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder="Mục cần làm..."
-                      className={cn(
-                        "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-hidden",
-                        block.checked && "line-through text-muted-foreground"
-                      )}
-                    />
-                  </div>
-                )}
-
-                {/* 5. Block: Attachment (Tệp đính kèm) */}
-                {block.type === "attachment" && (
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/70 bg-card/60 text-xs">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <Paperclip className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <input
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.fileName || block.content}
-                          onChange={(e) =>
-                            handleUpdateBlock(block.id, {
-                              fileName: e.target.value,
-                              content: e.target.value,
-                            })
-                          }
-                          placeholder="Tên tài liệu đính kèm..."
-                          className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
-                        />
-                        <input
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          placeholder="URL liên kết tải xuống (https://...)"
-                          className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    </div>
-                    {block.url && (
-                      <a
-                        href={block.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-muted text-foreground transition-colors shrink-0"
-                      >
-                        <ExternalLink className="size-3" />
-                        <span>Mở</span>
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* 6. Block: Link (Liên kết) */}
-                {block.type === "link" && (
-                  <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/70 bg-card/40 text-xs">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Link2 className="size-4 text-primary shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <input
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.content}
-                          onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                          placeholder="Tiêu đề liên kết..."
-                          className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
-                        />
-                        <input
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    </div>
-                    {block.url && (
-                      <a
-                        href={block.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 text-muted-foreground hover:text-foreground shrink-0"
-                        title="Mở liên kết"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* 7. Block: Subtasks View (Chèn danh sách việc con nhúng đồng bộ) */}
-                {block.type === "subtasks_view" && (
-                  <div className="rounded-xl border border-border/70 bg-card/40 p-3 space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <Layers className="size-4 text-primary" />
-                        <span className="font-semibold text-foreground">
-                          Việc thành phần (Dữ liệu đồng bộ)
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.2 rounded-full tabular-nums">
-                          {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length}
-                        </span>
-                      </div>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBlock(block.id)}
-                          className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
-                          title="Gỡ bỏ khối hiển thị này"
-                        >
-                          <X className="size-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {subTasks.length > 0 ? (
-                      <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-background overflow-hidden text-xs">
-                        {subTasks.map((st) => {
-                          const isDone = st.status === "COMPLETED";
-                          const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
-                          const stStatus = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
-
-                          return (
-                            <div
-                              key={st.id}
-                              onClick={() => onSelectSubtask?.(st)}
-                              className="flex items-center justify-between p-2.5 hover:bg-muted/30 transition-colors cursor-pointer gap-2"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {isDone ? (
-                                  <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
-                                ) : (
-                                  <Circle className="size-3.5 text-muted-foreground/60 shrink-0" />
-                                )}
-                                <span className={cn("truncate font-medium text-foreground", isDone && "line-through text-muted-foreground")}>
-                                  {st.title}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-                                <span className="truncate max-w-[120px]">{assigneeTitle}</span>
-                                {st.dueDate && (
-                                  <span className="font-mono tabular-nums">{formatDisplayDate(st.dueDate)}</span>
-                                )}
-                                <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-medium border", stStatus.colorClass)}>
-                                  {stStatus.label}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+              {/* 5. Checklist (To-do) */}
+              {block.type === "checklist" && (
+                <div className="flex items-start gap-2.5 py-0.5">
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
+                    className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
+                    aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
+                  >
+                    {block.checked ? (
+                      <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
                     ) : (
-                      <div className="text-center py-4 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg">
-                        Chưa có việc thành phần nào.{" "}
-                        {canEdit && onOpenCreateSubtask && (
-                          <button
-                            type="button"
-                            onClick={onOpenCreateSubtask}
-                            className="text-primary font-medium hover:underline cursor-pointer ml-1"
-                          >
-                            + Tạo việc con
-                          </button>
-                        )}
-                      </div>
+                      <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
+                    )}
+                  </button>
+                  <input
+                    ref={(el) => {
+                      if (el) blockInputRefs.current.set(block.id, el);
+                      else blockInputRefs.current.delete(block.id);
+                    }}
+                    type="text"
+                    disabled={!canEdit}
+                    value={block.content}
+                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                    placeholder="Mục cần thực hiện..."
+                    className={cn(
+                      "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden",
+                      block.checked && "line-through text-muted-foreground/70"
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* 6. Quote (Trích dẫn) */}
+              {block.type === "quote" && (
+                <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
+                  <input
+                    ref={(el) => {
+                      if (el) blockInputRefs.current.set(block.id, el);
+                      else blockInputRefs.current.delete(block.id);
+                    }}
+                    type="text"
+                    disabled={!canEdit}
+                    value={block.content}
+                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                    placeholder="Nội dung trích dẫn, chỉ đạo..."
+                    className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden italic"
+                  />
+                </div>
+              )}
+
+              {/* 7. Callout (Ghi chú nổi bật) */}
+              {block.type === "callout" && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/40 my-1 text-sm border border-border/40">
+                  <Info className="size-4 text-primary shrink-0 mt-0.5" />
+                  <input
+                    ref={(el) => {
+                      if (el) blockInputRefs.current.set(block.id, el);
+                      else blockInputRefs.current.delete(block.id);
+                    }}
+                    type="text"
+                    disabled={!canEdit}
+                    value={block.content}
+                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+                    placeholder="Ghi chú quan trọng cần lưu ý..."
+                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/35 focus:outline-hidden font-medium"
+                  />
+                </div>
+              )}
+
+              {/* 8. Divider (Đường phân cách) */}
+              {block.type === "divider" && (
+                <div className="py-2">
+                  <hr className="border-border/60" />
+                </div>
+              )}
+
+              {/* 9. Attachment (Tệp đính kèm) */}
+              {block.type === "attachment" && (
+                <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <Paperclip className="size-4 text-primary shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={block.fileName || block.content}
+                        onChange={(e) =>
+                          handleUpdateBlock(block.id, {
+                            fileName: e.target.value,
+                            content: e.target.value,
+                          })
+                        }
+                        placeholder="Tên tài liệu đính kèm..."
+                        className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
+                      />
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={block.url || ""}
+                        onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                        placeholder="URL liên kết tải xuống (https://...)"
+                        className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
+                      />
+                    </div>
+                  </div>
+                  {block.url && (
+                    <a
+                      href={block.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-muted text-foreground transition-colors shrink-0"
+                    >
+                      <ExternalLink className="size-3" />
+                      <span>Mở</span>
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* 10. Link (Liên kết) */}
+              {block.type === "link" && (
+                <div className="flex items-center justify-between gap-2.5 p-2 rounded-xl border border-border/60 bg-muted/20 my-1 text-xs">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Link2 className="size-3.5 text-primary shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={block.content}
+                        onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+                        placeholder="Tiêu đề liên kết..."
+                        className="w-full bg-transparent font-medium text-foreground focus:outline-hidden"
+                      />
+                      <input
+                        type="text"
+                        disabled={!canEdit}
+                        value={block.url || ""}
+                        onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full bg-transparent text-[11px] text-muted-foreground focus:outline-hidden font-mono"
+                      />
+                    </div>
+                  </div>
+                  {block.url && (
+                    <a
+                      href={block.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                      title="Mở liên kết"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* 11. Subtasks View Block */}
+              {block.type === "subtasks_view" && (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 my-1.5 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Layers className="size-3.5 text-primary" />
+                      <span className="font-semibold text-foreground">
+                        Việc thành phần
+                      </span>
+                      <span className="font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.2 rounded-full tabular-nums">
+                        {subTasks.filter((s) => s.status === "COMPLETED").length}/{subTasks.length}
+                      </span>
+                    </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlock(block.id)}
+                        className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
+                        title="Gỡ bỏ khối này"
+                      >
+                        <X className="size-3.5" />
+                      </button>
                     )}
                   </div>
-                )}
-              </div>
+
+                  {subTasks.length > 0 ? (
+                    <div className="divide-y divide-border/40 rounded-lg border border-border/50 bg-background overflow-hidden text-xs">
+                      {subTasks.map((st) => {
+                        const isDone = st.status === "COMPLETED";
+                        const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
+                        const stStatus = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
+
+                        return (
+                          <div
+                            key={st.id}
+                            onClick={() => onSelectSubtask?.(st)}
+                            className="flex items-center justify-between p-2 hover:bg-muted/30 transition-colors cursor-pointer gap-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {isDone ? (
+                                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                              ) : (
+                                <Circle className="size-3.5 text-muted-foreground/60 shrink-0" />
+                              )}
+                              <span className={cn("truncate font-medium text-foreground", isDone && "line-through text-muted-foreground")}>
+                                {st.title}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+                              <span className="truncate max-w-[120px]">{assigneeTitle}</span>
+                              {st.dueDate && (
+                                <span className="font-mono tabular-nums">{formatDisplayDate(st.dueDate)}</span>
+                              )}
+                              <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-medium border", stStatus.colorClass)}>
+                                {stStatus.label}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-3 text-xs text-muted-foreground border border-dashed border-border/60 rounded-lg">
+                      Chưa có việc thành phần nào.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
 
-      {/* Dòng nhẹ Notion ở cuối vùng nội dung: "+ Thêm nội dung — hoặc gõ / để chọn" */}
-      {canEdit && (
-        <div className="pt-2 flex items-center gap-2 text-xs select-none">
-          <button
-            type="button"
-            onClick={() => handleOpenMenu(blocks.length)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 bg-background hover:bg-muted/60 text-foreground font-medium transition-colors cursor-pointer text-xs"
-          >
-            <Plus className="size-3.5" />
-            <span>Thêm nội dung</span>
-          </button>
-          <span className="text-muted-foreground/60 text-xs italic">
-            — hoặc gõ <kbd className="px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono not-italic text-foreground border border-border/60">/</kbd> để chọn
-          </span>
-        </div>
-      )}
-
-      {/* Slash Command & Quick Add Popover Menu có tìm kiếm */}
+      {/* 2. Slash Command Popover Menu (Tối giản kiểu Notion) */}
       {isMenuOpen && (
         <div
           role="dialog"
-          aria-label="Menu thêm khối nội dung"
-          className="fixed inset-0 z-50 flex items-center justify-center sm:items-start sm:justify-start bg-black/20 sm:bg-transparent backdrop-blur-2xs sm:backdrop-blur-none p-4 sm:p-0"
+          aria-label="Menu lệnh"
+          className="fixed inset-0 z-50 flex items-center justify-center sm:items-start sm:justify-start bg-black/10 sm:bg-transparent p-4 sm:p-0"
           onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseMenu();
+            if (e.target === e.currentTarget) handleCloseSlashMenu();
           }}
         >
           <div
-            className="w-full max-w-sm sm:w-80 rounded-2xl border border-border bg-white p-2 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-150 sm:mt-12 sm:ml-20"
+            style={
+              menuPosition
+                ? {
+                    position: "absolute",
+                    top: `${menuPosition.top}px`,
+                    left: `${menuPosition.left}px`,
+                  }
+                : undefined
+            }
+            className="w-full max-w-sm sm:w-72 rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 select-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Ô tìm kiếm lệnh */}
-            <div className="relative mb-2">
+            <div className="relative mb-1.5">
               <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
               <input
                 ref={menuInputRef}
@@ -905,7 +1002,7 @@ export function TaskNotionBlockContent({
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
-                    handleCloseMenu();
+                    handleCloseSlashMenu();
                   } else if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setActiveMenuIndex((prev) =>
@@ -922,20 +1019,20 @@ export function TaskNotionBlockContent({
                     if (opt) handleSelectMenuItem(opt);
                   }
                 }}
-                placeholder="Tìm nội dung hoặc lệnh..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-muted/40 rounded-xl border border-border/60 focus:outline-hidden focus:ring-2 focus:ring-primary/40 font-medium"
+                placeholder="Tìm lệnh..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-muted/40 rounded-xl border border-border/60 focus:outline-hidden focus:ring-1 focus:ring-primary/40 font-medium"
               />
             </div>
 
-            {/* Danh sách lựa chọn nhóm */}
-            <div className="max-h-72 overflow-y-auto space-y-2 p-0.5">
-              {["Nội dung", "Tài liệu", "Công việc"].map((groupName) => {
+            {/* Danh sách lựa chọn */}
+            <div className="max-h-64 overflow-y-auto space-y-1.5 p-0.5">
+              {["Cơ bản", "Danh sách", "Nâng cao", "Tài liệu & Việc"].map((groupName) => {
                 const groupItems = filteredMenuOptions.filter((o) => o.group === groupName);
                 if (groupItems.length === 0) return null;
 
                 return (
-                  <div key={groupName} className="space-y-1">
-                    <div className="text-[11px] font-semibold text-muted-foreground/80 px-2 pt-1 select-none">
+                  <div key={groupName} className="space-y-0.5">
+                    <div className="text-[10px] font-semibold text-muted-foreground/70 px-2 pt-1">
                       {groupName}
                     </div>
                     {groupItems.map((opt) => {
@@ -950,30 +1047,22 @@ export function TaskNotionBlockContent({
                           onClick={() => handleSelectMenuItem(opt)}
                           onMouseEnter={() => setActiveMenuIndex(itemGlobalIndex)}
                           className={cn(
-                            "w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-colors cursor-pointer",
+                            "w-full flex items-center justify-between px-2 py-1.5 rounded-xl text-left text-xs transition-colors cursor-pointer",
                             isSelected
                               ? "bg-primary/10 text-primary font-medium"
                               : "text-foreground hover:bg-muted/60"
                           )}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="size-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="size-6 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <IconComp className="size-3.5" />
                             </div>
                             <div className="min-w-0">
                               <div className="text-xs font-medium truncate">{opt.title}</div>
-                              <div className="text-[11px] text-muted-foreground truncate leading-tight">
-                                {opt.description}
-                              </div>
                             </div>
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0 ml-2">
-                            {opt.badge && (
-                              <span className="px-1.5 py-0.2 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                                {opt.badge}
-                              </span>
-                            )}
                             {opt.shortcut && (
                               <span className="font-mono text-[10px] text-muted-foreground/60">
                                 {opt.shortcut}
@@ -988,20 +1077,19 @@ export function TaskNotionBlockContent({
               })}
 
               {filteredMenuOptions.length === 0 && (
-                <div className="py-4 text-center text-xs text-muted-foreground">
-                  Không tìm thấy lựa chọn phù hợp.
+                <div className="py-3 text-center text-xs text-muted-foreground">
+                  Không có lệnh nào phù hợp.
                 </div>
               )}
             </div>
 
-            {/* Footer đóng menu */}
-            <div className="pt-2 mt-1 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground px-2 select-none">
+            <div className="pt-1.5 mt-1 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground px-2">
               <span>Đóng menu</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Esc</kbd>
+              <kbd className="px-1 py-0.2 rounded bg-muted text-[10px] font-mono">Esc</kbd>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
