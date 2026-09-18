@@ -14,6 +14,7 @@ import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
+import { buildTaskResource, computeAvailableActions } from '@/server/authorization/available-actions';
 import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
 import { withIdempotency } from '@/lib/db/idempotency';
 
@@ -78,7 +79,8 @@ export async function GET(req: Request) {
       validatedQuery.limit === 'all' ||
       rawParams.limit === 'all';
 
-    const result = await taskQueryService.queryTasks(context, {
+    const authorizationContext = await loadAuthorizationContext(authUser.id);
+    const result = await taskQueryService.queryTasks(authorizationContext, {
       all: isAll,
       page: validatedQuery.page,
       limit: isAll ? undefined : effectiveLimit,
@@ -98,7 +100,13 @@ export async function GET(req: Request) {
       parentTaskId: validatedQuery.parentTaskId,
     });
 
-    const taskList = toTaskListDTOArray(result.tasks || result.data);
+    const taskList = toTaskListDTOArray(result.tasks || result.data).map((task) => ({
+      ...task,
+      availableActions: computeAvailableActions(
+        authorizationContext,
+        buildTaskResource(task)
+      ),
+    }));
 
     const pagination = {
       ...result.pagination,

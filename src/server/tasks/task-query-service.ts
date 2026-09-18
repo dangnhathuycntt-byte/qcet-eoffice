@@ -182,7 +182,8 @@ function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: D
 /**
  * Canonical task read authorization filter builder (Phase 2 Cutover / F02).
  * Constructs Prisma.TaskWhereInput enforcing server-side authorization:
- * - Institutional Leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, BGH, school oversight) or System Admin: {} (school-wide oversight)
+ * - Institutional Leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, BGH, school oversight): school-wide
+ * - Technical SYSTEM_ADMIN: denied operational Task data by default
  * - Unit Manager / Head (TRUONG_PHONG, TRUONG_KHOA): sees tasks in assigned units + direct participant tasks
  * - Staff / Individual: sees tasks in own unit + direct participant tasks; never cross-department or unassigned school tasks
  * - Expired assignments drop back to active scopes
@@ -214,7 +215,7 @@ export function buildTaskReadWhere(
   }
 
   if (isSystemAdmin) {
-    return {};
+    return { id: '__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__' };
   }
 
   // 2. Institutional Leadership Evaluation (School-wide oversight)
@@ -323,7 +324,7 @@ export class TaskQueryService {
     const assignedTo = filters.assignedTo;
     const parentTaskId = filters.parentTaskId;
 
-    const where: Prisma.TaskWhereInput = {};
+    const where: Prisma.TaskWhereInput = { archivedAt: null };
 
     if (month !== undefined && String(month) !== 'all') {
       where.academicMonth = parseInt(String(month), 10);
@@ -598,7 +599,7 @@ export class TaskQueryService {
    */
   async getTaskEntityForInternalUse(taskId: string) {
     return prisma.task.findUnique({
-      where: { id: taskId },
+      where: { id: taskId, archivedAt: null },
       include: {
         department: true,
         assignees: {
