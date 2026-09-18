@@ -269,8 +269,8 @@ export function TaskSubtasksSection({
                 title={newAssigneeName ? `Phụ trách: ${newAssigneeName}` : "Chọn người phụ trách"}
               >
                 <option value="">Phụ trách: Chưa giao</option>
-                {personnelList.map((p) => (
-                  <option key={p.id || p.name} value={p.name}>
+                {personnelList.map((p, idx) => (
+                  <option key={p.id || `person-${idx}-${p.name}`} value={p.name}>
                     {p.name}
                   </option>
                 ))}
@@ -336,7 +336,7 @@ export function TaskSubtasksSection({
           )}
 
           {/* Subtask rows */}
-          {subTasks.map((st) => {
+          {subTasks.map((st, idx) => {
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
             const statusObj =
@@ -345,7 +345,7 @@ export function TaskSubtasksSection({
 
             return (
               <div
-                key={st.id}
+                key={st.id || `subtask-row-${idx}-${st.title}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelectSubtask && onSelectSubtask(st)}

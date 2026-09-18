@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { Reorder, useDragControls } from "motion/react";
 import {
   GripVertical,
   Type,
@@ -1638,6 +1639,765 @@ export function TaskNotionBlockContent({
     setTrailingValue(val);
   };
 
+interface NotionBlockRowProps {
+  block: NotionBlockItem;
+  index: number;
+  blocks: NotionBlockItem[];
+  canEdit: boolean;
+  isSelected: boolean;
+  isDragOver?: boolean;
+  selectionRadiusClass: string;
+  currentNumber: number;
+  isOnlyOneEmptyBlock: boolean;
+  handleUpdateBlock: (blockId: string, updates: Partial<NotionBlockItem>) => void;
+  handleDeleteBlock: (blockId: string) => void;
+  handleBlockKeyDown: (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    block: NotionBlockItem,
+    index: number
+  ) => void;
+  handleBlockWrapperKeyDown: (
+    e: React.KeyboardEvent,
+    block: NotionBlockItem,
+    index: number
+  ) => void;
+  handleContextMenu: (e: React.MouseEvent, block: NotionBlockItem) => void;
+  handleGutterMouseDown: (e: React.MouseEvent, block: NotionBlockItem) => void;
+  handleBlockMouseEnter: (blockId: string) => void;
+  handleBlockHandleClick: (e: React.MouseEvent, block: NotionBlockItem, index: number) => void;
+  handleBlockFocus: (blockId: string) => void;
+  handleBlockBlur: (e: React.FocusEvent, blockId: string) => void;
+  blockWrapperRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  blockInputRefs: React.MutableRefObject<Map<string, HTMLInputElement | HTMLTextAreaElement>>;
+}
+
+function NotionBlockRow({
+  block,
+  index,
+  blocks,
+  canEdit,
+  isSelected,
+  isDragOver,
+  selectionRadiusClass,
+  currentNumber,
+  isOnlyOneEmptyBlock,
+  handleUpdateBlock,
+  handleDeleteBlock,
+  handleBlockKeyDown,
+  handleBlockWrapperKeyDown,
+  handleContextMenu,
+  handleGutterMouseDown,
+  handleBlockMouseEnter,
+  handleBlockHandleClick,
+  handleBlockFocus,
+  handleBlockBlur,
+  blockWrapperRefs,
+  blockInputRefs,
+}: NotionBlockRowProps) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      as="div"
+      key={block.id}
+      value={block}
+      dragListener={false}
+      dragControls={dragControls}
+      layout
+      initial={false}
+      transition={{
+        type: "spring",
+        stiffness: 450,
+        damping: 35,
+        mass: 0.6,
+      }}
+      whileDrag={{
+        scale: 1.015,
+        boxShadow: "0 10px 25px -4px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        zIndex: 50,
+        opacity: 0.96,
+      }}
+      ref={(el: HTMLDivElement | null) => {
+        if (el) blockWrapperRefs.current.set(block.id, el);
+        else blockWrapperRefs.current.delete(block.id);
+      }}
+      tabIndex={isSelected ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (isSelected) handleBlockWrapperKeyDown(e, block, index);
+      }}
+      onContextMenu={(e) => handleContextMenu(e, block)}
+      onMouseEnter={() => handleBlockMouseEnter(block.id)}
+      className={cn(
+        "group/block relative flex items-start -mx-2 px-2 py-0.5 transition-colors duration-75 outline-hidden select-none",
+        selectionRadiusClass,
+        !isSelected && "hover:bg-muted/30",
+        isDragOver && "bg-primary/10",
+        isSelected && "bg-primary/[0.08]"
+      )}
+    >
+      {/* Gutter trái: Handle ⋮⋮ (Nằm ngoài selection, không background riêng, không border) */}
+      {canEdit && (
+        <div
+          onMouseDown={(e) => handleGutterMouseDown(e, block)}
+          className={cn(
+            "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
+            isSelected
+              ? "opacity-100"
+              : "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
+          )}
+        >
+          <div className="relative flex items-center">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                if (canEdit) {
+                  dragControls.start(e);
+                }
+              }}
+              onClick={(e) => handleBlockHandleClick(e, block, index)}
+              onContextMenu={(e) => handleContextMenu(e, block)}
+              style={{ touchAction: "none" }}
+              className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden select-none"
+              title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi, kéo để di chuyển)"
+              aria-label="Chọn hoặc kéo khối"
+            >
+              <GripVertical className="size-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Nội dung Block */}
+      <div className="flex-1 min-w-0">
+        {/* 1. Text Block */}
+        {block.type === "text" && (
+          <div className="relative flex items-center min-h-[28px]">
+            {/* Placeholder Hint Layer với kbd '/' keycap khi block rỗng duy nhất */}
+            {isOnlyOneEmptyBlock && !block.content && (
+              <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/block:text-muted-foreground/80 font-normal">
+                <span>Nhập nội dung hoặc gõ</span>
+                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
+                  /
+                </kbd>
+                <span>để chọn</span>
+              </div>
+            )}
+            <textarea
+              ref={(el) => {
+                if (el) {
+                  blockInputRefs.current.set(block.id, el);
+                  autoResizeTextarea(el);
+                } else {
+                  blockInputRefs.current.delete(block.id);
+                }
+              }}
+              rows={1}
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onInput={(e) => autoResizeTextarea(e.currentTarget)}
+              onChange={(e) => {
+                handleUpdateBlock(block.id, { content: e.target.value });
+                autoResizeTextarea(e.target);
+              }}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text block relative z-10"
+            />
+          </div>
+        )}
+
+        {/* 2. Heading Block (H1, H2, H3) */}
+        {block.type === "heading" && (
+          <input
+            ref={(el) => {
+              if (el) blockInputRefs.current.set(block.id, el);
+              else blockInputRefs.current.delete(block.id);
+            }}
+            type="text"
+            disabled={!canEdit}
+            value={block.content}
+            onFocus={() => handleBlockFocus(block.id)}
+            onBlur={(e) => handleBlockBlur(e, block.id)}
+            onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+            onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+            placeholder={!block.content ? "Tiêu đề..." : undefined}
+            className={cn(
+              "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden py-1 font-bold tracking-tight cursor-text transition-colors",
+              block.level === 1 && "text-xl sm:text-2xl mt-2 mb-0.5",
+              block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
+              (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
+            )}
+          />
+        )}
+
+        {/* 3. Bulleted List */}
+        {block.type === "bulleted_list" && (
+          <div className="flex items-start gap-2 py-0.5">
+            <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
+            <input
+              ref={(el) => {
+                if (el) blockInputRefs.current.set(block.id, el);
+                else blockInputRefs.current.delete(block.id);
+              }}
+              type="text"
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              placeholder={!block.content ? "Danh sách..." : undefined}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
+            />
+          </div>
+        )}
+
+        {/* 4. Numbered List */}
+        {block.type === "numbered_list" && (
+          <div className="flex items-start gap-2 py-0.5">
+            <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
+              {currentNumber}.
+            </span>
+            <input
+              ref={(el) => {
+                if (el) blockInputRefs.current.set(block.id, el);
+                else blockInputRefs.current.delete(block.id);
+              }}
+              type="text"
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              placeholder={!block.content ? "Danh sách..." : undefined}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
+            />
+          </div>
+        )}
+
+        {/* 5. Checklist (To-do) */}
+        {block.type === "checklist" && (
+          <div className="flex items-start gap-2.5 py-0.5">
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
+              className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
+              aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
+            >
+              {block.checked ? (
+                <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
+              ) : (
+                <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
+              )}
+            </button>
+            <input
+              ref={(el) => {
+                if (el) blockInputRefs.current.set(block.id, el);
+                else blockInputRefs.current.delete(block.id);
+              }}
+              type="text"
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              placeholder={!block.content ? "Việc cần làm..." : undefined}
+              className={cn(
+                "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors",
+                block.checked && "line-through text-muted-foreground/70"
+              )}
+            />
+          </div>
+        )}
+
+        {/* 6. Quote (Trích dẫn) */}
+        {block.type === "quote" && (
+          <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
+            <input
+              ref={(el) => {
+                if (el) blockInputRefs.current.set(block.id, el);
+                else blockInputRefs.current.delete(block.id);
+              }}
+              type="text"
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              placeholder={!block.content ? "Trích dẫn..." : undefined}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden italic cursor-text transition-colors"
+            />
+          </div>
+        )}
+
+        {/* 7. Callout (Ghi chú nổi bật) */}
+        {block.type === "callout" && (
+          <div className="flex items-start gap-2.5 p-2.5 my-1 rounded-xl bg-primary/5 border border-primary/20 text-foreground">
+            <Info className="size-4 text-primary shrink-0 mt-0.5" />
+            <input
+              ref={(el) => {
+                if (el) blockInputRefs.current.set(block.id, el);
+                else blockInputRefs.current.delete(block.id);
+              }}
+              type="text"
+              disabled={!canEdit}
+              value={block.content}
+              onFocus={() => handleBlockFocus(block.id)}
+              onBlur={(e) => handleBlockBlur(e, block.id)}
+              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              placeholder={!block.content ? "Ghi chú thông tin..." : undefined}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
+            />
+          </div>
+        )}
+
+        {/* 8. Divider (Đường phân cách) */}
+        {block.type === "divider" && (
+          <div className="py-2 my-0.5 flex items-center">
+            <div className="w-full h-px bg-border/80" />
+          </div>
+        )}
+
+        {/* 9. Image Block (Hiển thị ảnh trực quan Notion) */}
+        {block.type === "image" && (
+          <div className="py-1">
+            {!block.url ? (
+              /* Draft upload input */
+              <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
+                <ImageIcon className="size-4 text-primary shrink-0" />
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
+                  <UploadCloud className="size-3.5" />
+                  <span>Tải ảnh lên</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        const reader = new FileReader();
+                        reader.onload = (loadEv) => {
+                          handleUpdateBlock(block.id, {
+                            url: loadEv.target?.result as string,
+                            content: f.name,
+                            imageWidth: 100,
+                          });
+                        };
+                        reader.readAsDataURL(f);
+                      }
+                    }}
+                  />
+                </label>
+                <span className="text-muted-foreground/50 text-[11px]">hoặc</span>
+                <input
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  type="text"
+                  disabled={!canEdit}
+                  value={block.url || ""}
+                  autoFocus
+                  onFocus={() => handleBlockFocus(block.id)}
+                  onBlur={(e) => handleBlockBlur(e, block.id)}
+                  onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && block.url?.trim()) {
+                      e.preventDefault();
+                      handleUpdateBlock(block.id, {
+                        url: block.url.trim(),
+                        content: "Hình ảnh",
+                        imageWidth: 100,
+                      });
+                    }
+                    handleBlockKeyDown(e, block, index);
+                  }}
+                  placeholder="Dán liên kết ảnh và nhấn Enter..."
+                  className="flex-1 min-w-[180px] bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
+                />
+              </div>
+            ) : (
+              /* Direct Image Display */
+              <div className="relative group/image my-2 max-w-full">
+                <div
+                  style={{ width: `${block.imageWidth || 100}%` }}
+                  className="relative mx-auto transition-all duration-150"
+                >
+                  <img
+                    src={block.url}
+                    alt={block.caption || block.content || "Hình ảnh"}
+                    className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
+                    loading="lazy"
+                  />
+
+                  {/* Action Toolbar chỉ hiện khi hover/focus */}
+                  {canEdit && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/90 backdrop-blur-xs border border-border/80 shadow-md opacity-0 group-hover/image:opacity-100 focus-within:opacity-100 transition-opacity duration-150 z-20">
+                      <button
+                        type="button"
+                        onClick={() => window.open(block.url, "_blank")}
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        title="Mở ảnh"
+                      >
+                        <ExternalLink className="size-3.5" />
+                      </button>
+                      <label
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-[11px] font-medium px-1.5 cursor-pointer"
+                        title="Thay thế ảnh"
+                      >
+                        Thay thế
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                              const reader = new FileReader();
+                              reader.onload = (loadEv) => {
+                                handleUpdateBlock(block.id, {
+                                  url: loadEv.target?.result as string,
+                                  content: f.name,
+                                });
+                              };
+                              reader.readAsDataURL(f);
+                            }
+                          }}
+                        />
+                      </label>
+                      <div className="flex items-center gap-0.5 border-l border-r border-border/60 px-1 mx-0.5 text-[10px] font-mono text-muted-foreground">
+                        {([25, 50, 75, 100] as const).map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => handleUpdateBlock(block.id, { imageWidth: w })}
+                            className={cn(
+                              "px-1 py-0.5 rounded hover:bg-muted transition-colors cursor-pointer",
+                              (block.imageWidth || 100) === w && "text-primary font-bold bg-primary/10"
+                            )}
+                          >
+                            {w}%
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlock(block.id)}
+                        className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Xóa ảnh"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption input dưới ảnh */}
+                {canEdit ? (
+                  <input
+                    type="text"
+                    value={block.caption || ""}
+                    onChange={(e) => handleUpdateBlock(block.id, { caption: e.target.value })}
+                    placeholder="Thêm chú thích ảnh..."
+                    className="w-full text-center mt-1 text-[11px] text-muted-foreground/70 bg-transparent border-0 focus:outline-hidden hover:text-foreground transition-colors"
+                  />
+                ) : (
+                  block.caption && (
+                    <p className="text-center mt-1 text-[11px] text-muted-foreground italic">
+                      {block.caption}
+                    </p>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 10. Attachment / File Block (Thẻ tài liệu nhỏ gọn Notion) */}
+        {block.type === "attachment" && (
+          <div className="py-1">
+            {!block.url ? (
+              /* Draft file input */
+              <div className="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
+                <Paperclip className="size-4 text-primary shrink-0" />
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
+                  <UploadCloud className="size-3.5" />
+                  <span>Chọn tệp</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        const ext = f.name.split(".").pop()?.toUpperCase() || "FILE";
+                        const formatSize = (bytes: number) => {
+                          if (bytes < 1024) return `${bytes} B`;
+                          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                          return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                        };
+                        const reader = new FileReader();
+                        reader.onload = (loadEv) => {
+                          handleUpdateBlock(block.id, {
+                            fileName: f.name,
+                            content: f.name,
+                            fileSize: formatSize(f.size),
+                            fileType: ext,
+                            url: loadEv.target?.result as string,
+                          });
+                        };
+                        reader.readAsDataURL(f);
+                      }
+                    }}
+                  />
+                </label>
+                <span className="text-muted-foreground/50 text-[11px]">hoặc</span>
+                <input
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  type="text"
+                  disabled={!canEdit}
+                  value={block.url || ""}
+                  onFocus={() => handleBlockFocus(block.id)}
+                  onBlur={(e) => handleBlockBlur(e, block.id)}
+                  onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && block.url?.trim()) {
+                      e.preventDefault();
+                      const name = block.url.split("/").pop() || "Tệp tài liệu";
+                      const ext = name.split(".").pop()?.toUpperCase() || "FILE";
+                      handleUpdateBlock(block.id, {
+                        fileName: name,
+                        content: name,
+                        fileType: ext,
+                        url: block.url.trim(),
+                      });
+                    }
+                    handleBlockKeyDown(e, block, index);
+                  }}
+                  placeholder="nhập URL tệp..."
+                  className="flex-1 min-w-[150px] bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
+                />
+              </div>
+            ) : (
+              /* Compact Document Row */
+              <div className="group/file flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-lg hover:bg-muted/40 transition-colors my-0.5">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="size-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <FileText className="size-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-foreground truncate">
+                      {block.fileName || block.content || "Tệp tài liệu"}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground/70 font-mono">
+                      {block.fileType || "TỆP"} {block.fileSize ? `· ${block.fileSize}` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0">
+                  {block.url && (
+                    <a
+                      href={block.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      title="Mở tệp"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBlock(block.id)}
+                      className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
+                      title="Xóa tệp"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 11. Link Mention Block (Gọn gàng 1-2 dòng) */}
+        {block.type === "link" && (
+          <div className="py-1">
+            {!block.url ? (
+              /* Draft link input */
+              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
+                <Link2 className="size-3.5 text-primary shrink-0" />
+                <input
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  type="text"
+                  disabled={!canEdit}
+                  value={block.url || ""}
+                  autoFocus
+                  onFocus={() => handleBlockFocus(block.id)}
+                  onBlur={(e) => handleBlockBlur(e, block.id)}
+                  onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && block.url?.trim()) {
+                      e.preventDefault();
+                      const meta = resolveUrlMetadata(block.url);
+                      handleUpdateBlock(block.id, {
+                        url: meta.url,
+                        content: meta.title,
+                      });
+                    }
+                    handleBlockKeyDown(e, block, index);
+                  }}
+                  placeholder="Dán hoặc nhập URL liên kết (nhấn Enter để tạo)..."
+                  className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
+                />
+              </div>
+            ) : (
+              /* Mention Pill / Link Card */
+              <div className="group/link flex items-center justify-between gap-2 p-2 rounded-xl border border-border/60 hover:border-border hover:bg-muted/20 transition-colors my-0.5 text-xs">
+                <a
+                  href={block.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 min-w-0 flex-1 hover:text-primary transition-colors"
+                >
+                  <div className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Globe className="size-3" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-foreground hover:underline truncate block">
+                      {block.content || block.url}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono truncate block">
+                      {resolveUrlMetadata(block.url).domain}
+                    </span>
+                  </div>
+                </a>
+                {canEdit && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => window.open(block.url, "_blank")}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Mở liên kết"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBlock(block.id)}
+                      className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer"
+                      title="Xóa"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 12. Bookmark Block (Thẻ xem trước web kiểu Notion) */}
+        {block.type === "bookmark" && (
+          <div className="py-1">
+            {!block.url ? (
+              /* Draft bookmark input */
+              <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
+                <Bookmark className="size-3.5 text-primary shrink-0" />
+                <input
+                  ref={(el) => {
+                    if (el) blockInputRefs.current.set(block.id, el);
+                    else blockInputRefs.current.delete(block.id);
+                  }}
+                  type="text"
+                  disabled={!canEdit}
+                  value={block.url || ""}
+                  autoFocus
+                  onFocus={() => handleBlockFocus(block.id)}
+                  onBlur={(e) => handleBlockBlur(e, block.id)}
+                  onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && block.url?.trim()) {
+                      e.preventDefault();
+                      const meta = resolveUrlMetadata(block.url);
+                      handleUpdateBlock(block.id, {
+                        url: meta.url,
+                        content: meta.title,
+                        description: meta.description,
+                      });
+                    }
+                    handleBlockKeyDown(e, block, index);
+                  }}
+                  placeholder="Dán URL trang web để tạo dấu trang (nhấn Enter)..."
+                  className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
+                />
+              </div>
+            ) : (
+              /* Visual Bookmark Card */
+              <div className="group/bookmark my-1.5 flex items-stretch justify-between rounded-xl border border-border/60 hover:border-border hover:bg-muted/20 transition-all overflow-hidden text-xs">
+                <a
+                  href={block.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 p-3 flex flex-col justify-between min-w-0"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-sm text-foreground hover:text-primary transition-colors line-clamp-1">
+                      {block.content || resolveUrlMetadata(block.url).title}
+                    </div>
+                    {block.description && (
+                      <p className="text-muted-foreground text-[11px] line-clamp-2 leading-relaxed">
+                        {block.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground/70 text-[11px] font-mono mt-2">
+                    <Globe className="size-3 text-primary/70 shrink-0" />
+                    <span className="truncate">{resolveUrlMetadata(block.url).domain}</span>
+                  </div>
+                </a>
+                {canEdit && (
+                  <div className="flex flex-col items-center justify-center p-2 opacity-0 group-hover/bookmark:opacity-100 transition-opacity border-l border-border/40 gap-1 bg-background/60 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => window.open(block.url, "_blank")}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Mở liên kết"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBlock(block.id)}
+                      className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer"
+                      title="Xóa"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Reorder.Item>
+  );
+}
+
   // Khi blur khỏi trailing input nếu có text thì commit thành block
   const handleTrailingBlur = () => {
     const val = trailingValue.trim();
@@ -1650,55 +2410,6 @@ export function TaskNotionBlockContent({
       });
       setTrailingValue("");
     }
-  };
-
-  // Drag & Drop (Hỗ trợ kéo cả group multi-selected)
-  const handleDragStart = (e: React.DragEvent, index: number, block: NotionBlockItem) => {
-    isDraggingRef.current = true;
-    let groupIds: string[];
-
-    if (selectedBlockIds.has(block.id) && selectedBlockIds.size > 1) {
-      groupIds = blocks.filter((b) => selectedBlockIds.has(b.id)).map((b) => b.id);
-    } else {
-      groupIds = [block.id];
-      setSelectedBlockIds(new Set([block.id]));
-      setAnchorBlockId(block.id);
-    }
-
-    setDraggedGroupBlockIds(groupIds);
-    setDraggedBlockIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (dragOverIndex !== index) {
-      setDragOverIndex(index);
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (draggedGroupBlockIds.length > 0 && dragOverIndex !== null && draggedBlockIndex !== null) {
-      setBlocks((prev) => {
-        const groupItems = prev.filter((b) => draggedGroupBlockIds.includes(b.id));
-        if (groupItems.length === 0) return prev;
-
-        const remaining = prev.filter((b) => !draggedGroupBlockIds.includes(b.id));
-        const targetBlock = prev[dragOverIndex];
-        let insertAt = targetBlock ? remaining.findIndex((b) => b.id === targetBlock.id) : remaining.length;
-        if (insertAt === -1) insertAt = remaining.length;
-
-        const next = [...remaining];
-        next.splice(insertAt, 0, ...groupItems);
-        triggerAutoSave(next);
-        return next;
-      });
-    }
-
-    isDraggingRef.current = false;
-    setDraggedBlockIndex(null);
-    setDragOverIndex(null);
-    setDraggedGroupBlockIds([]);
   };
 
   // Tính số thứ tự cho numbered list
@@ -1720,8 +2431,17 @@ export function TaskNotionBlockContent({
       }}
       className={cn("w-full relative font-sans text-sm text-foreground flex flex-col", className)}
     >
-      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar, continuous selection group) */}
-      <div className="flex flex-col">
+      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar, continuous selection group, Framer Motion Reorder) */}
+      <Reorder.Group
+        as="div"
+        axis="y"
+        values={blocks}
+        onReorder={(newOrder) => {
+          setBlocks(newOrder);
+          triggerAutoSave(newOrder);
+        }}
+        className="flex flex-col"
+      >
         {blocks.map((block, index) => {
           const isDragOver = dragOverIndex === index;
           const isSelected = selectedBlockIds.has(block.id);
@@ -1752,694 +2472,33 @@ export function TaskNotionBlockContent({
           const currentNumber = numberedCounter;
 
           return (
-            <div
+            <NotionBlockRow
               key={block.id}
-              ref={(el) => {
-                if (el) blockWrapperRefs.current.set(block.id, el);
-                else blockWrapperRefs.current.delete(block.id);
-              }}
-              tabIndex={isSelected ? 0 : undefined}
-              onKeyDown={(e) => {
-                if (isSelected) handleBlockWrapperKeyDown(e, block, index);
-              }}
-              onContextMenu={(e) => handleContextMenu(e, block)}
-              onMouseEnter={() => handleBlockMouseEnter(block.id)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              className={cn(
-                "group/block relative flex items-start -mx-2 px-2 py-0.5 transition-colors duration-75 outline-hidden",
-                selectionRadiusClass,
-                !isSelected && "hover:bg-muted/30",
-                isDragOver && "bg-primary/10",
-                isSelected && "bg-primary/[0.08]"
-              )}
-            >
-              {/* Gutter trái: Handle ⋮⋮ (Nằm ngoài selection, không background riêng, không border) */}
-              {canEdit && (
-                <div
-                  onMouseDown={(e) => handleGutterMouseDown(e, block)}
-                  className={cn(
-                    "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
-                    isSelected
-                      ? "opacity-100"
-                      : "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
-                  )}
-                >
-                  <div className="relative flex items-center">
-                    <button
-                      type="button"
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e, index, block)}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => handleBlockHandleClick(e, block, index)}
-                      onContextMenu={(e) => handleContextMenu(e, block)}
-                      className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden"
-                      title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi, kéo để di chuyển)"
-                      aria-label="Chọn hoặc kéo khối"
-                    >
-                      <GripVertical className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Nội dung Block */}
-              <div className="flex-1 min-w-0">
-                {/* 1. Text Block */}
-                {block.type === "text" && (
-                  <div className="relative flex items-center min-h-[28px]">
-                    {/* Placeholder Hint Layer với kbd '/' keycap khi block rỗng duy nhất */}
-                    {isOnlyOneEmptyBlock && !block.content && (
-                      <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/block:text-muted-foreground/80 font-normal">
-                        <span>Nhập nội dung hoặc gõ</span>
-                        <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
-                          /
-                        </kbd>
-                        <span>để chọn</span>
-                      </div>
-                    )}
-                    <textarea
-                      ref={(el) => {
-                        if (el) {
-                          blockInputRefs.current.set(block.id, el);
-                          autoResizeTextarea(el);
-                        } else {
-                          blockInputRefs.current.delete(block.id);
-                        }
-                      }}
-                      rows={1}
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onInput={(e) => autoResizeTextarea(e.currentTarget)}
-                      onChange={(e) => {
-                        handleUpdateBlock(block.id, { content: e.target.value });
-                        autoResizeTextarea(e.target);
-                      }}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text block relative z-10"
-                    />
-                  </div>
-                )}
-
-                {/* 2. Heading Block (H1, H2, H3) */}
-                {block.type === "heading" && (
-                  <input
-                    ref={(el) => {
-                      if (el) blockInputRefs.current.set(block.id, el);
-                      else blockInputRefs.current.delete(block.id);
-                    }}
-                    type="text"
-                    disabled={!canEdit}
-                    value={block.content}
-                    onFocus={() => handleBlockFocus(block.id)}
-                    onBlur={(e) => handleBlockBlur(e, block.id)}
-                    onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                    onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                    placeholder={!block.content ? "Tiêu đề..." : undefined}
-                    className={cn(
-                      "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden py-1 font-bold tracking-tight cursor-text transition-colors",
-                      block.level === 1 && "text-xl sm:text-2xl mt-2 mb-0.5",
-                      block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
-                      (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
-                    )}
-                  />
-                )}
-
-                {/* 3. Bulleted List */}
-                {block.type === "bulleted_list" && (
-                  <div className="flex items-start gap-2 py-0.5">
-                    <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Danh sách..." : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
-                    />
-                  </div>
-                )}
-
-                {/* 4. Numbered List */}
-                {block.type === "numbered_list" && (
-                  <div className="flex items-start gap-2 py-0.5">
-                    <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
-                      {currentNumber}.
-                    </span>
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Danh sách..." : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
-                    />
-                  </div>
-                )}
-
-                {/* 5. Checklist (To-do) */}
-                {block.type === "checklist" && (
-                  <div className="flex items-start gap-2.5 py-0.5">
-                    <button
-                      type="button"
-                      disabled={!canEdit}
-                      onClick={() => handleUpdateBlock(block.id, { checked: !block.checked })}
-                      className="mt-0.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer shrink-0"
-                      aria-label={block.checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
-                    >
-                      {block.checked ? (
-                        <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
-                      ) : (
-                        <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
-                      )}
-                    </button>
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Việc cần làm..." : undefined}
-                      className={cn(
-                        "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors",
-                        block.checked && "line-through text-muted-foreground/70"
-                      )}
-                    />
-                  </div>
-                )}
-
-                {/* 6. Quote (Trích dẫn) */}
-                {block.type === "quote" && (
-                  <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Trích dẫn..." : undefined}
-                      className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden italic cursor-text transition-colors"
-                    />
-                  </div>
-                )}
-
-                {/* 7. Callout (Ghi chú nổi bật) */}
-                {block.type === "callout" && (
-                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-muted/40 my-1 text-sm border border-border/40">
-                    <Info className="size-4 text-primary shrink-0 mt-0.5" />
-                    <input
-                      ref={(el) => {
-                        if (el) blockInputRefs.current.set(block.id, el);
-                        else blockInputRefs.current.delete(block.id);
-                      }}
-                      type="text"
-                      disabled={!canEdit}
-                      value={block.content}
-                      onFocus={() => handleBlockFocus(block.id)}
-                      onBlur={(e) => handleBlockBlur(e, block.id)}
-                      onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
-                      onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-                      placeholder={!block.content ? "Ghi chú lưu ý..." : undefined}
-                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden font-medium cursor-text transition-colors"
-                    />
-                  </div>
-                )}
-
-                {/* 8. Divider (Đường phân cách) */}
-                {block.type === "divider" && (
-                  <div className="py-2">
-                    <hr className="border-border/60" />
-                  </div>
-                )}
-
-                {/* 9. Image Block (Render trực tiếp hình ảnh, không card, có toolbar & caption) */}
-                {block.type === "image" && (
-                  <div className="py-1">
-                    {!block.url ? (
-                      /* Draft Image Upload UI */
-                      <div className="flex flex-wrap items-center gap-2 p-2 rounded-xl border border-dashed border-border/80 bg-muted/20 text-xs">
-                        <ImageIcon className="size-4 text-primary shrink-0" />
-                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors cursor-pointer">
-                          <UploadCloud className="size-3.5" />
-                          <span>Tải ảnh lên</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) {
-                                const reader = new FileReader();
-                                reader.onload = (loadEv) => {
-                                  handleUpdateBlock(block.id, {
-                                    url: loadEv.target?.result as string,
-                                    content: f.name,
-                                    imageWidth: 100,
-                                  });
-                                };
-                                reader.readAsDataURL(f);
-                              }
-                            }}
-                          />
-                        </label>
-                        <span className="text-muted-foreground/50 text-[11px]">hoặc</span>
-                        <input
-                          ref={(el) => {
-                            if (el) blockInputRefs.current.set(block.id, el);
-                            else blockInputRefs.current.delete(block.id);
-                          }}
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          autoFocus
-                          onFocus={() => handleBlockFocus(block.id)}
-                          onBlur={(e) => handleBlockBlur(e, block.id)}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && block.url?.trim()) {
-                              e.preventDefault();
-                              handleUpdateBlock(block.id, {
-                                url: block.url.trim(),
-                                content: "Hình ảnh",
-                                imageWidth: 100,
-                              });
-                            }
-                            handleBlockKeyDown(e, block, index);
-                          }}
-                          placeholder="Dán liên kết ảnh và nhấn Enter..."
-                          className="flex-1 min-w-[180px] bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    ) : (
-                      /* Direct Image Display */
-                      <div className="relative group/image my-2 max-w-full">
-                        <div
-                          style={{ width: `${block.imageWidth || 100}%` }}
-                          className="relative mx-auto transition-all duration-150"
-                        >
-                          <img
-                            src={block.url}
-                            alt={block.caption || block.content || "Hình ảnh"}
-                            className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
-                            loading="lazy"
-                          />
-
-                          {/* Action Toolbar chỉ hiện khi hover/focus */}
-                          {canEdit && (
-                            <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/90 backdrop-blur-xs border border-border/80 shadow-md opacity-0 group-hover/image:opacity-100 focus-within:opacity-100 transition-opacity duration-150 z-20">
-                              <button
-                                type="button"
-                                onClick={() => window.open(block.url, "_blank")}
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                                title="Mở ảnh"
-                              >
-                                <ExternalLink className="size-3.5" />
-                              </button>
-                              <label
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-[11px] font-medium px-1.5 cursor-pointer"
-                                title="Thay thế ảnh"
-                              >
-                                Thay thế
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) {
-                                      const reader = new FileReader();
-                                      reader.onload = (loadEv) => {
-                                        handleUpdateBlock(block.id, {
-                                          url: loadEv.target?.result as string,
-                                          content: f.name,
-                                        });
-                                      };
-                                      reader.readAsDataURL(f);
-                                    }
-                                  }}
-                                />
-                              </label>
-                              <div className="flex items-center gap-0.5 border-l border-r border-border/60 px-1 mx-0.5 text-[10px] font-mono text-muted-foreground">
-                                {([25, 50, 75, 100] as const).map((w) => (
-                                  <button
-                                    key={w}
-                                    type="button"
-                                    onClick={() => handleUpdateBlock(block.id, { imageWidth: w })}
-                                    className={cn(
-                                      "px-1 py-0.5 rounded hover:bg-muted transition-colors cursor-pointer",
-                                      (block.imageWidth || 100) === w && "text-primary font-bold bg-primary/10"
-                                    )}
-                                  >
-                                    {w}%
-                                  </button>
-                                ))}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteBlock(block.id)}
-                                className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
-                                title="Xóa ảnh"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Caption dưới ảnh */}
-                        <div style={{ width: `${block.imageWidth || 100}%` }} className="mx-auto mt-1">
-                          <input
-                            type="text"
-                            disabled={!canEdit}
-                            value={block.caption || ""}
-                            onChange={(e) => handleUpdateBlock(block.id, { caption: e.target.value })}
-                            placeholder={canEdit ? "Thêm chú thích ảnh..." : undefined}
-                            className={cn(
-                              "w-full text-center text-xs text-muted-foreground placeholder:text-muted-foreground/30 focus:placeholder:text-muted-foreground/60 bg-transparent focus:outline-hidden py-0.5 transition-colors",
-                              !block.caption && !canEdit && "hidden"
-                            )}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 10. Attachment Block (Compact File Row: Filename.ext, TYPE · size) */}
-                {block.type === "attachment" && (
-                  <div className="py-0.5">
-                    {!block.fileName && !block.url ? (
-                      /* Draft File Input */
-                      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
-                        <Paperclip className="size-3.5 text-primary shrink-0" />
-                        <label className="cursor-pointer font-medium text-primary hover:underline">
-                          Chọn tệp từ máy
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) {
-                                if (f.type.startsWith("image/")) {
-                                  const reader = new FileReader();
-                                  reader.onload = (loadEv) => {
-                                    handleUpdateBlock(block.id, {
-                                      type: "image",
-                                      url: loadEv.target?.result as string,
-                                      content: f.name,
-                                      imageWidth: 100,
-                                    });
-                                  };
-                                  reader.readAsDataURL(f);
-                                  return;
-                                }
-
-                                const ext = f.name.split(".").pop()?.toUpperCase() || "TỆP";
-                                const sizeStr = f.size < 1024 * 1024
-                                  ? `${(f.size / 1024).toFixed(1)} KB`
-                                  : `${(f.size / (1024 * 1024)).toFixed(1)} MB`;
-                                handleUpdateBlock(block.id, {
-                                  fileName: f.name,
-                                  content: f.name,
-                                  fileSize: sizeStr,
-                                  fileType: ext,
-                                  url: URL.createObjectURL(f),
-                                });
-                              }
-                            }}
-                          />
-                        </label>
-                        <span className="text-muted-foreground/40 text-[11px]">hoặc</span>
-                        <input
-                          ref={(el) => {
-                            if (el) blockInputRefs.current.set(block.id, el);
-                            else blockInputRefs.current.delete(block.id);
-                          }}
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          onFocus={() => handleBlockFocus(block.id)}
-                          onBlur={(e) => handleBlockBlur(e, block.id)}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && block.url?.trim()) {
-                              e.preventDefault();
-                              const name = block.url.split("/").pop() || "Tệp tài liệu";
-                              const ext = name.split(".").pop()?.toUpperCase() || "FILE";
-                              handleUpdateBlock(block.id, {
-                                fileName: name,
-                                content: name,
-                                fileType: ext,
-                                url: block.url.trim(),
-                              });
-                            }
-                            handleBlockKeyDown(e, block, index);
-                          }}
-                          placeholder="nhập URL tệp..."
-                          className="flex-1 min-w-[150px] bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    ) : (
-                      /* Compact Document Row */
-                      <div className="group/file flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-lg hover:bg-muted/40 transition-colors my-0.5">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="size-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                            <FileText className="size-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-foreground truncate">
-                              {block.fileName || block.content || "Tệp tài liệu"}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground/70 font-mono">
-                              {block.fileType || "TỆP"} {block.fileSize ? `· ${block.fileSize}` : ""}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0">
-                          {block.url && (
-                            <a
-                              href={block.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                              title="Mở tệp"
-                            >
-                              <ExternalLink className="size-3.5" />
-                            </a>
-                          )}
-                          {canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteBlock(block.id)}
-                              className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Xóa tệp"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 11. Link Mention Block (Gọn gàng 1-2 dòng) */}
-                {block.type === "link" && (
-                  <div className="py-1">
-                    {!block.url ? (
-                      /* Draft link input */
-                      <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
-                        <Link2 className="size-3.5 text-primary shrink-0" />
-                        <input
-                          ref={(el) => {
-                            if (el) blockInputRefs.current.set(block.id, el);
-                            else blockInputRefs.current.delete(block.id);
-                          }}
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          autoFocus
-                          onFocus={() => handleBlockFocus(block.id)}
-                          onBlur={(e) => handleBlockBlur(e, block.id)}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && block.url?.trim()) {
-                              e.preventDefault();
-                              const meta = resolveUrlMetadata(block.url);
-                              handleUpdateBlock(block.id, {
-                                url: meta.url,
-                                content: meta.title,
-                              });
-                            }
-                            handleBlockKeyDown(e, block, index);
-                          }}
-                          placeholder="Dán hoặc nhập URL liên kết (nhấn Enter để tạo)..."
-                          className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    ) : (
-                      /* Compact Mention Row */
-                      <div className="group/link flex items-center justify-between gap-2 py-1 px-2 rounded-md hover:bg-muted/40 transition-colors text-xs">
-                        <a
-                          href={block.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-2 min-w-0 text-foreground hover:text-primary transition-colors font-medium truncate"
-                        >
-                          <Globe className="size-3.5 text-primary/70 shrink-0" />
-                          <span className="truncate">{block.content || block.url}</span>
-                          <span className="text-[11px] text-muted-foreground/60 font-mono shrink-0">
-                            ({resolveUrlMetadata(block.url).domain})
-                          </span>
-                        </a>
-                        {canEdit && (
-                          <div className="flex items-center gap-1 opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => window.open(block.url, "_blank")}
-                              className="p-1 text-muted-foreground hover:text-foreground rounded cursor-pointer"
-                              title="Mở liên kết"
-                            >
-                              <ExternalLink className="size-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateBlock(block.id, { url: "" })}
-                              className="p-1 text-muted-foreground hover:text-foreground rounded text-[10px] cursor-pointer"
-                              title="Đổi URL"
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteBlock(block.id)}
-                              className="p-1 text-muted-foreground hover:text-rose-600 rounded cursor-pointer"
-                              title="Xóa"
-                            >
-                              <Trash2 className="size-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 12. Bookmark Block (Thẻ xem trước web kiểu Notion) */}
-                {block.type === "bookmark" && (
-                  <div className="py-1">
-                    {!block.url ? (
-                      /* Draft bookmark input */
-                      <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
-                        <Bookmark className="size-3.5 text-primary shrink-0" />
-                        <input
-                          ref={(el) => {
-                            if (el) blockInputRefs.current.set(block.id, el);
-                            else blockInputRefs.current.delete(block.id);
-                          }}
-                          type="text"
-                          disabled={!canEdit}
-                          value={block.url || ""}
-                          autoFocus
-                          onFocus={() => handleBlockFocus(block.id)}
-                          onBlur={(e) => handleBlockBlur(e, block.id)}
-                          onChange={(e) => handleUpdateBlock(block.id, { url: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && block.url?.trim()) {
-                              e.preventDefault();
-                              const meta = resolveUrlMetadata(block.url);
-                              handleUpdateBlock(block.id, {
-                                url: meta.url,
-                                content: meta.title,
-                                description: meta.description,
-                              });
-                            }
-                            handleBlockKeyDown(e, block, index);
-                          }}
-                          placeholder="Dán URL trang web để tạo dấu trang (nhấn Enter)..."
-                          className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono"
-                        />
-                      </div>
-                    ) : (
-                      /* Visual Bookmark Card */
-                      <div className="group/bookmark my-1.5 flex items-stretch justify-between rounded-xl border border-border/60 hover:border-border hover:bg-muted/20 transition-all overflow-hidden text-xs">
-                        <a
-                          href={block.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 p-3 flex flex-col justify-between min-w-0"
-                        >
-                          <div className="space-y-1">
-                            <div className="font-semibold text-sm text-foreground hover:text-primary transition-colors line-clamp-1">
-                              {block.content || resolveUrlMetadata(block.url).title}
-                            </div>
-                            {block.description && (
-                              <p className="text-muted-foreground text-[11px] line-clamp-2 leading-relaxed">
-                                {block.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-muted-foreground/70 text-[11px] font-mono mt-2">
-                            <Globe className="size-3 text-primary/70 shrink-0" />
-                            <span className="truncate">{resolveUrlMetadata(block.url).domain}</span>
-                          </div>
-                        </a>
-                        {canEdit && (
-                          <div className="flex flex-col items-center justify-center p-2 opacity-0 group-hover/bookmark:opacity-100 transition-opacity border-l border-border/40 gap-1 bg-background/60 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => window.open(block.url, "_blank")}
-                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-                              title="Mở liên kết"
-                            >
-                              <ExternalLink className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteBlock(block.id)}
-                              className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer"
-                              title="Xóa"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+              block={block}
+              index={index}
+              blocks={blocks}
+              canEdit={canEdit}
+              isSelected={isSelected}
+              isDragOver={isDragOver}
+              selectionRadiusClass={selectionRadiusClass}
+              currentNumber={currentNumber}
+              isOnlyOneEmptyBlock={isOnlyOneEmptyBlock}
+              handleUpdateBlock={handleUpdateBlock}
+              handleDeleteBlock={handleDeleteBlock}
+              handleBlockKeyDown={handleBlockKeyDown}
+              handleBlockWrapperKeyDown={handleBlockWrapperKeyDown}
+              handleContextMenu={handleContextMenu}
+              handleGutterMouseDown={handleGutterMouseDown}
+              handleBlockMouseEnter={handleBlockMouseEnter}
+              handleBlockHandleClick={handleBlockHandleClick}
+              handleBlockFocus={handleBlockFocus}
+              handleBlockBlur={handleBlockBlur}
+              blockWrapperRefs={blockWrapperRefs}
+              blockInputRefs={blockInputRefs}
+            />
           );
         })}
-      </div>
+      </Reorder.Group>
 
       {/* 2. Trailing Empty Row (Render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
       {canEdit && !lastBlockIsEmptyText && (

@@ -704,11 +704,11 @@ export function LinearPropertiesSidebar({
                     </div>
                   )}
 
-                  {personnelList.map((p) => {
+                  {personnelList.map((p, idx) => {
                     const isSelected = p.name === leadName || p.name === leadParsed.displayName;
                     return (
                       <button
-                        key={p.id}
+                        key={p.id || `lead-${idx}-${p.name}`}
                         type="button"
                         disabled={isReassigning}
                         onClick={() => handleSelectLead(p.id, p.name)}
@@ -748,9 +748,9 @@ export function LinearPropertiesSidebar({
                   className="inline-flex items-center px-1.5 py-0.5 -space-x-1.5 overflow-visible"
                   title={collaborators.map((c) => c.name).join(", ")}
                 >
-                  {collaborators.slice(0, 3).map((m) => (
+                  {collaborators.slice(0, 3).map((m, idx) => (
                     <span
-                      key={m.id}
+                      key={m.id || `collab-${idx}-${m.name}`}
                       className="size-5 rounded-full bg-primary/10 text-primary border-2 border-background flex items-center justify-center text-[8px] font-semibold overflow-hidden shrink-0 shadow-xs"
                       title={m.name}
                     >
@@ -949,7 +949,7 @@ export function LinearPropertiesSidebar({
 
             {/* Danh sách việc con gọn (Linear / Notion Style) */}
             <div className="space-y-1 pt-0.5">
-              {subTasks.slice(0, 3).map((st) => {
+              {subTasks.slice(0, 3).map((st, idx) => {
                 const isCompleted = st.status === "COMPLETED";
                 const statusObj = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
                 const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
@@ -957,7 +957,7 @@ export function LinearPropertiesSidebar({
 
                 return (
                   <div
-                    key={st.id}
+                    key={st.id || `sidebar-st-${idx}-${st.title}`}
                     onClick={() => onSelectSubtask && onSelectSubtask(st)}
                     className={cn(
                       "group p-2 rounded-lg border border-border/30 hover:border-border/80 bg-card/60 hover:bg-accent/40 transition-all cursor-pointer space-y-1 shadow-2xs hover:shadow-xs",
@@ -1054,14 +1054,14 @@ export function LinearPropertiesSidebar({
 
             {/* Compact Chronological Activity List (Tối đa 3 hoạt động) */}
             <div className="space-y-1.5 pt-0.5">
-              {auditEvents.slice(0, 3).map((evt) => {
+              {auditEvents.slice(0, 3).map((evt, idx) => {
                 const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
                 const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
                 const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
                 const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
 
                 return (
-                  <div key={evt.id} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-snug py-0.5">
+                  <div key={evt.id || `audit-${idx}-${evt.timestamp}`} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-snug py-0.5">
                     <span className="mt-0.5 shrink-0 text-muted-foreground/70">
                       {isNameChange ? (
                         <PenLine className="size-3.5" strokeWidth={1.5} />
