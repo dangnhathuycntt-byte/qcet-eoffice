@@ -85,45 +85,9 @@ export function LinearTaskDetailView({
     return consolidateActivityFeed(auditEvents as any[], 60000);
   }, [auditEvents]);
 
-  // Keyboard shortcut: Space hoặc Ctrl/Cmd + I toggles inspector
+  // Keyboard shortcut: Ctrl/Cmd + I toggles inspector
   React.useEffect(() => {
-    const isEditable = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      const tagName = el.tagName?.toLowerCase();
-      if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
-      if (el.isContentEditable) return true;
-      return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
-    };
-
-    const isInteractiveControl = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      const tagName = el.tagName?.toLowerCase();
-      if (tagName === "button" || tagName === "a" || tagName === "summary" || tagName === "details") return true;
-      const role = el.getAttribute?.("role");
-      if (role && ["button", "tab", "menuitem", "checkbox", "switch", "slider", "combobox"].includes(role)) return true;
-      return Boolean(el.closest?.('button, a, summary, [role="button"], [role="tab"], [role="menuitem"]'));
-    };
-
-    const isDialogOpen = (): boolean => {
-      if (typeof document === "undefined") return false;
-      return Boolean(document.querySelector('[role="dialog"], [role="alertdialog"], [data-state="open"][role="menu"]'));
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" || e.key === " ") {
-        if (e.repeat) return;
-        if (e.isComposing || (e as any).nativeEvent?.isComposing || e.keyCode === 229) return;
-        if (isDialogOpen()) return;
-
-        const target = (e.target || document.activeElement) as HTMLElement | null;
-        if (isEditable(target)) return;
-        if (isInteractiveControl(target)) return;
-
-        e.preventDefault();
-        handleToggleInspector();
-        return;
-      }
-
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
         if (e.repeat) return;
         e.preventDefault();
@@ -506,9 +470,9 @@ export function LinearTaskDetailView({
       />
 
       {/* 2. Workspace Body: Main Content + Right Properties Inspector */}
-      <div className="flex-1 w-full flex flex-col lg:flex-row min-h-0">
+      <div className="flex-1 w-full flex flex-col lg:flex-row min-h-0 overflow-hidden lg:gap-0">
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-5xl">
+        <main className="flex-1 min-w-0 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 space-y-7 max-w-4xl">
           {/* A. Task Identity Block */}
           <TaskIdentityBlock
             task={task}
@@ -586,22 +550,33 @@ export function LinearTaskDetailView({
         </main>
 
         {/* Desktop Right Rail Properties Inspector (280-320px) */}
-        {showInspector && (
-          <div className="hidden lg:block w-[280px] xl:w-[320px] shrink-0 border-l border-border/60 bg-muted/20 p-5 overflow-y-auto">
-            <LinearPropertiesSidebar
-              task={task}
-              currentUser={currentUser}
-              onStatusChange={handleStatusChangeInternal}
-              onPriorityChange={handlePriorityChangeInternal}
-              onStartDateChange={handleStartDateChangeInternal}
-              onDueDateChange={handleDueDateChangeInternal}
-              onSelectSubtask={onSelectSubTask}
-              onAddSubTask={onAddSubTask}
-              auditEvents={feedActivityEvents as AuditLogItem[]}
-              canEdit={true}
-            />
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {showInspector && (
+            <m.div
+              key="inspector-panel"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 300, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="hidden lg:block shrink-0 border-l border-border/50 bg-muted/30 overflow-y-auto overflow-x-hidden self-start sticky top-0 max-h-screen"
+            >
+              <div className="w-[300px] px-5 py-6">
+                <LinearPropertiesSidebar
+                  task={task}
+                  currentUser={currentUser}
+                  onStatusChange={handleStatusChangeInternal}
+                  onPriorityChange={handlePriorityChangeInternal}
+                  onStartDateChange={handleStartDateChangeInternal}
+                  onDueDateChange={handleDueDateChangeInternal}
+                  onSelectSubtask={onSelectSubTask}
+                  onAddSubTask={onAddSubTask}
+                  auditEvents={feedActivityEvents as AuditLogItem[]}
+                  canEdit={true}
+                />
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Mobile / Tablet Drawer (< 1024px) */}
@@ -619,3 +594,4 @@ export function LinearTaskDetailView({
     </div>
   );
 }
+import { AnimatePresence, m } from "motion/react";

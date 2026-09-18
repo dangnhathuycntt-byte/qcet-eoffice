@@ -2,8 +2,6 @@
 
 // Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
 import * as React from "react";
-import { useReducedMotion } from "motion/react";
-import * as m from "motion/react-m";
 import styles from "./task-detail-page.module.css";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
@@ -47,7 +45,6 @@ export function TaskDetailPage({
   currentUser: serverUser,
   canEdit = false,
 }: TaskDetailPageProps) {
-  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -66,7 +63,7 @@ export function TaskDetailPage({
   }, [initialTask]);
 
   // Inspector visibility state
-  const [showInspector, setShowInspector] = React.useState(true);
+  const [inspectorExpanded, setShowInspector] = React.useState(true);
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
 
   // Sub-Tabs URL sync (REQ-14)
@@ -75,6 +72,10 @@ export function TaskDetailPage({
     tabParam === "subtasks" || tabParam === "activity" ? tabParam : "overview";
 
   const [activeTab, setActiveTab] = React.useState<DetailTab>(validTab);
+  const canvasRef = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    if (canvasRef.current) canvasRef.current.scrollTop = 0;
+  }, [activeTab]);
   React.useEffect(() => {
     if (tabParam === "subtasks" || tabParam === "activity" || tabParam === "overview") {
       setActiveTab(tabParam as DetailTab);
@@ -102,6 +103,7 @@ export function TaskDetailPage({
   const initialSubtaskId = searchParams.get("subtaskId");
   const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
   const [subtaskHistory, setSubtaskHistory] = React.useState<string[]>([]);
+  const lastPeekSubtaskIdRef = React.useRef<string | null>(initialSubtaskId);
 
   // Sync with URL search params changes (e.g. reload or back/forward)
   React.useEffect(() => {
@@ -109,18 +111,12 @@ export function TaskDetailPage({
       if (typeof window === "undefined") return;
       const params = new URLSearchParams(window.location.search);
       const sid = params.get("subtaskId");
+      if (sid) lastPeekSubtaskIdRef.current = sid;
       setSelectedSubtaskId(sid || null);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
-  React.useEffect(() => {
-    const sid = searchParams.get("subtaskId");
-    if (sid && sid !== selectedSubtaskId) {
-      setSelectedSubtaskId(sid);
-    }
-  }, [searchParams, selectedSubtaskId]);
 
   const updateSubtaskUrl = React.useCallback((subtaskId: string | null) => {
     try {
@@ -140,6 +136,7 @@ export function TaskDetailPage({
   }, []);
 
   const handleOpenSubtaskDrawer = React.useCallback((st: StaffTask) => {
+    lastPeekSubtaskIdRef.current = st.id;
     setSelectedSubtaskId((currentId) => {
       if (currentId && currentId !== st.id) {
         setSubtaskHistory((prev) => [...prev, currentId]);
@@ -170,7 +167,7 @@ export function TaskDetailPage({
     setShowInspector((prev) => !prev);
   }, []);
 
-  // Keyboard shortcut: Space hoặc Cmd/Ctrl + I để thu gọn/mở Inspector sidebar
+  // Keyboard shortcut: Cmd/Ctrl + I để thu gọn/mở Inspector sidebar
   React.useEffect(() => {
     const isEditable = (el: HTMLElement | null): boolean => {
       if (!el) return false;
@@ -184,71 +181,18 @@ export function TaskDetailPage({
       return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
     };
 
-    const isInteractiveControl = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      const tagName = el.tagName?.toLowerCase();
-      if (
-        tagName === "button" ||
-        tagName === "a" ||
-        tagName === "summary" ||
-        tagName === "details"
-      ) {
-        return true;
-      }
-      const role = el.getAttribute?.("role");
-      if (
-        role === "button" ||
-        role === "tab" ||
-        role === "menuitem" ||
-        role === "checkbox" ||
-        role === "radio" ||
-        role === "switch" ||
-        role === "slider" ||
-        role === "combobox" ||
-        role === "listbox" ||
-        role === "option"
-      ) {
-        return true;
-      }
-      return Boolean(
-        el.closest?.(
-          'button, a, summary, [role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="switch"], [role="slider"]'
-        )
-      );
-    };
 
-    const isDialogOpen = (): boolean => {
-      if (typeof document === "undefined") return false;
-      return Boolean(
-        document.querySelector(
-          '[role="dialog"], [role="alertdialog"], [data-state="open"][role="menu"], [data-state="open"][role="listbox"]'
-        )
-      );
-    };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Phím Space
-      if (e.code === "Space" || e.key === " ") {
-        // Bỏ qua key repeat
-        if (e.repeat) return;
-        // Bỏ qua khi đang dùng IME tiếng Việt
-        if (e.isComposing || (e as any).nativeEvent?.isComposing || e.keyCode === 229) return;
-        // Bỏ qua khi mở dialog/popover
-        if (isProgressModalOpen || isDialogOpen()) return;
+      const focused = document.activeElement as HTMLElement | null;
+      const eventTarget = e.target as HTMLElement | null;
+      if (
+        e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
+        isEditable(eventTarget) || isEditable(focused) ||
+        eventTarget?.closest?.('[data-slot="task-notion-block-content"]')
+      ) return;
 
-        const target = (e.target || document.activeElement) as HTMLElement | null;
-        // Bỏ qua khi đang nhập liệu
-        if (isEditable(target)) return;
-        // Bỏ qua khi focus vào control tương tác khác
-        if (isInteractiveControl(target)) return;
-
-        // Chỉ preventDefault khi xử lý shortcut
-        e.preventDefault();
-        handleToggleInspector();
-        return;
-      }
-
-      // 2. Phím Cmd/Ctrl + I
+      // Phím Cmd/Ctrl + I
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
         if (e.repeat) return;
         e.preventDefault();
@@ -258,7 +202,7 @@ export function TaskDetailPage({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleToggleInspector, isProgressModalOpen]);
+  }, [handleToggleInspector]);
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
@@ -311,6 +255,19 @@ export function TaskDetailPage({
     if (!selectedSubtaskId) return null;
     return subTasks.find((st) => st.id === selectedSubtaskId) || null;
   }, [selectedSubtaskId, subTasks]);
+
+  const showInspector = inspectorExpanded && !activeSubtask;
+
+  const handleNavigateSubtaskSibling = React.useCallback((direction: -1 | 1) => {
+    if (!selectedSubtaskId || subTasks.length < 2) return;
+    const currentIndex = subTasks.findIndex((st) => st.id === selectedSubtaskId);
+    if (currentIndex === -1) return;
+    const nextIndex = (currentIndex + direction + subTasks.length) % subTasks.length;
+    const nextId = subTasks[nextIndex].id;
+    lastPeekSubtaskIdRef.current = nextId;
+    setSelectedSubtaskId(nextId);
+    updateSubtaskUrl(nextId);
+  }, [selectedSubtaskId, subTasks, updateSubtaskUrl]);
 
   const prevSubtaskId = subtaskHistory.length > 0 ? subtaskHistory[subtaskHistory.length - 1] : null;
   const prevSubtask = React.useMemo(() => {
@@ -888,6 +845,7 @@ export function TaskDetailPage({
   };
 
   return (
+    <div className={styles.splitWorkspace} data-peek-open={Boolean(activeSubtask)}>
     <div
       data-slot="task-workspace"
       className={styles.workspace}
@@ -973,19 +931,17 @@ export function TaskDetailPage({
       </nav>
 
       {/* 3. Main Workspace Canvas Layout with Centered Page Shell */}
-      <div className={styles.canvas}>
+      <div ref={canvasRef} className={styles.canvas}>
         <div
           data-slot="task-shell"
           data-inspector={showInspector ? "open" : "closed"}
           className={cn(
             styles.shell,
-            showInspector ? styles.shellOpen : styles.shellClosed
+            styles.shellOpen
           )}
         >
           {/* Left / Center Main Content Canvas */}
-          <m.main
-            layout={reduceMotion ? false : "position"}
-            transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+          <main
             role="tabpanel"
             id={`panel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
@@ -1011,14 +967,24 @@ export function TaskDetailPage({
                 onReassignLead={handleReassignLead}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
-                showInlineProperties={!showInspector}
+                showInlineProperties={!showInspector && !activeSubtask}
               />
 
 
 
               {/* Vùng nội dung dạng Block (Notion style) thay thế khối việc thành phần cũ */}
               <div className="pt-2 flex-1 flex flex-col">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setIsProgressModalOpen(true)}
+                    className="mb-4 self-start rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                  >
+                    Viết báo cáo tiến độ
+                  </button>
+                )}
                 <TaskNotionBlockContent
+                  globalFileDrop={!activeSubtask}
                   taskId={task.id}
                   initialDescription={currentDescription}
                   subTasks={subTasks}
@@ -1033,7 +999,9 @@ export function TaskDetailPage({
 
           {/* TAB 2: ISSUES / SUBTASKS */}
           {activeTab === "subtasks" && (
-            <div className="space-y-4">
+            <div
+              className="space-y-4"
+            >
               <TaskSubtasksSection
                 parentId={task.id}
                 subTasks={subTasks}
@@ -1095,39 +1063,40 @@ export function TaskDetailPage({
               </section>
             </div>
           )}
-                </m.main>
+                </main>
 
         {/* Right Column: Properties Inspector Sidebar (Linear Style) */}
-        {showInspector && (
-          <m.aside
-            initial={{ opacity: reduceMotion ? 1 : 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: reduceMotion ? 0 : 0.18 }}
-            aria-label="Cột thuộc tính nhiệm vụ"
-            className={styles.inspector}
-          >
-            <LinearPropertiesSidebar
-              task={task}
-              currentUser={currentUser}
-              canEdit={canEdit}
-              onStatusChange={handleStatusChange}
-              onPriorityChange={handlePriorityChange}
-              onDueDateChange={handleDueDateChange}
-              onStartDateChange={handleStartDateChange}
-              onReassignLead={handleReassignLead}
-              onNavigateTab={(tab) => handleTabChange(tab)}
-              onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-              onAddSubTask={() => handleTabChange("subtasks")}
-              auditEvents={feedActivityEvents}
-              isMobileAccordion={true}
-              showRelatedSections={true}
-            />
-          </m.aside>
-        )}
+          {showInspector && (
+            <aside
+              aria-label="Cột thuộc tính nhiệm vụ"
+              className={styles.inspector}
+              style={{ overflow: "hidden", minWidth: 0 }}
+            >
+              <div style={{ width: 300 }}>
+                <LinearPropertiesSidebar
+                  task={task}
+                  currentUser={currentUser}
+                  canEdit={canEdit}
+                  onStatusChange={handleStatusChange}
+                  onPriorityChange={handlePriorityChange}
+                  onDueDateChange={handleDueDateChange}
+                  onStartDateChange={handleStartDateChange}
+                  onReassignLead={handleReassignLead}
+                  onNavigateTab={(tab) => handleTabChange(tab)}
+                  onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+                  onAddSubTask={() => handleTabChange("subtasks")}
+                  auditEvents={feedActivityEvents}
+                  isMobileAccordion={true}
+                  showRelatedSections={true}
+                />
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
-      {/* Subtask Detail Peek Drawer (covers right sidebar area on desktop, full-screen on mobile) */}
+    </div>
+      {/* Sibling inspector surface; compact screens use a sheet. */}
       <SubtaskDetailDrawer
         isOpen={Boolean(activeSubtask)}
         onClose={handleCloseSubtaskDrawer}
@@ -1137,6 +1106,7 @@ export function TaskDetailPage({
         canEdit={canEdit}
         onSubtaskUpdated={handleSubtaskUpdated}
         onOpenAnotherSubtask={handleOpenSubtaskDrawer}
+        onNavigateSibling={handleNavigateSubtaskSibling}
         onNavigateBackHistory={handleNavigateBackSubtaskHistory}
         hasHistoryPrev={subtaskHistory.length > 0}
         historyPrevTitle={prevSubtask?.title}

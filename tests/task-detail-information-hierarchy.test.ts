@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import postcss, { type AnyNode } from "postcss";
 
 describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
   const identityBlockFile = path.resolve(
@@ -250,11 +251,18 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     });
 
     it("strictly avoids CSS layout hacks (no transform: translateX, no negative margin offset)", () => {
-      assert.ok(
-        !cssContent.includes("transform: translateX") &&
-          !cssContent.includes("margin-left: -"),
-        "Layout must rely on standard CSS Grid/Flexbox without transform or negative margin hacks"
-      );
+      postcss.parse(cssContent).walkDecls((declaration) => {
+        let parent: AnyNode | undefined = declaration.parent;
+        while (parent) {
+          if (parent.type === "atrule" && parent.name === "keyframes") return;
+          parent = parent.parent;
+        }
+        assert.ok(
+          !(declaration.prop === "transform" && declaration.value.includes("translateX")) &&
+            !(declaration.prop === "margin-left" && declaration.value.startsWith("-")),
+          "Layout must use Grid/Flexbox; visual keyframes may use transforms"
+        );
+      });
     });
 
     it("ensures unified internal alignment axis without section padding skew", () => {

@@ -1,26 +1,60 @@
-.workspace {
-  --shell-gutter: 12px;
-  width: calc(100% + (var(--shell-gutter) * 2));
-  margin: calc(var(--shell-gutter) * -1) calc(var(--shell-gutter) * -1) 0;
-  min-height: calc(100dvh - 100px);
+.splitWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2);
+}
+.workspace,
+.peekSurface {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+.peekSurface {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .splitWorkspace[data-peek-open='true'] {
+    grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px);
+  }
+  .peekSurface {
+    position: relative;
+    inset: auto;
+    z-index: 20;
+  }
+}
+.workspace {
+  container-type: inline-size;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
 }
 .workspace > nav[role='tablist'] {
+  flex-shrink: 0;
   position: static;
   padding: 8px;
   border: 0;
-  background: #fff;
+  background: var(--card);
 }
 .workspace > nav [role='tab'] {
   padding: 5px 12px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  font-weight: 400;
-  background: #fff;
+  font-weight: 500;
+  background: var(--card);
 }
 .workspace > nav [aria-selected='true'] {
   background: var(--muted);
@@ -58,11 +92,16 @@
 }
 .canvas {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 0 clamp(24px, 2.5vw, 40px) 64px clamp(48px, 4.5vw, 80px);
-  background: #fff;
+  padding: 0 clamp(24px, 3vw, 48px) 64px;
+  background: var(--card);
   box-sizing: border-box;
 }
 .shell {
@@ -70,31 +109,21 @@
   box-sizing: border-box;
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
 }
 .shellClosed {
   max-width: 780px;
   margin-inline: auto;
-  display: block;
 }
 .shellClosed .content {
-  grid-column: auto;
-  max-width: 100%;
-  margin: 0 auto;
+  max-width: 780px;
 }
 .shellOpen {
-  width: 100%;
   max-width: 1220px;
   margin-inline: auto;
-  display: grid;
-  grid-template-columns: minmax(700px, 750px) minmax(48px, 1fr) 300px;
-  align-items: flex-start;
-}
-.shellOpen .content {
-  grid-column: 1;
-}
-.shellOpen .inspector {
-  grid-column: 3;
+  column-gap: clamp(48px, 4vw, 72px);
 }
 .content {
   min-width: 0;
@@ -116,20 +145,23 @@
   max-width: 100%;
   min-width: 0;
   padding-top: 48px;
+  flex-shrink: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .workspace [data-slot='linear-properties-sidebar'] {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 20px;
 }
 .workspace [data-slot='linear-properties-sidebar'] > div {
   margin: 0;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 2%);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: none;
 }
 .workspace [data-slot='linear-properties-sidebar'] > div:first-child > div:nth-child(2) > div {
   display: grid;
@@ -185,7 +217,7 @@
 .workspace [data-slot='task-progress-composer'] {
   padding: 14px 16px;
   min-height: 170px;
-  background: #fff;
+  background: var(--card);
   border-radius: 10px;
 }
 .workspace [data-slot='task-progress-composer'] > div:first-child > span,
@@ -201,44 +233,30 @@
 .workspace :is(button, a, input, textarea) {
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
-.content > section,
-.content > [data-slot='task-progress-composer'] {
-  animation: detailReveal 180ms cubic-bezier(.22, 1, .36, 1) both;
-}
-.workspace textarea {
-  animation: editorReveal 140ms ease-out both;
-}
 .workspace button:active:not(:disabled) {
   transform: translateY(1px);
 }
-@keyframes detailReveal {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.inspector,
+.peekSurface {
+  animation: panelReveal 180ms ease-out;
 }
-@keyframes editorReveal {
-  from { opacity: .75; }
-  to { opacity: 1; }
+@keyframes panelReveal {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .workspace *, .workspace *::before, .workspace *::after {
+  .splitWorkspace, .splitWorkspace *, .splitWorkspace *::before, .splitWorkspace *::after {
     animation: none !important;
     transition: none !important;
   }
   .workspace button:active:not(:disabled) { transform: none; }
 }
-@media (min-width: 640px) {
-  .workspace { --shell-gutter: 20px; }
-}
-@media (min-width: 768px) {
-  .workspace { --shell-gutter: 24px; }
-}
 @media (min-width: 1440px) {
   .canvas {
-    padding: 0 40px 64px 64px;
+    padding: 0 48px 64px;
   }
   .shellOpen {
     max-width: 1240px;
-    grid-template-columns: minmax(700px, 760px) minmax(64px, 1fr) 300px;
   }
   .shellClosed {
     max-width: 780px;
@@ -246,22 +264,21 @@
 }
 @media (min-width: 1024px) and (max-width: 1439px) {
   .canvas {
-    padding: 0 24px 56px 40px;
+    padding: 0 32px 56px;
   }
   .shellClosed {
     max-width: 780px;
   }
   .shellOpen {
-    max-width: 1160px;
-    grid-template-columns: minmax(0, 1fr) minmax(32px, 64px) 300px;
+    max-width: 1180px;
   }
   .content {
-    padding-top: 36px;
+    padding-top: 40px;
     max-width: 100%;
   }
   .inspector {
     width: 300px;
-    padding-top: 36px;
+    padding-top: 40px;
   }
 }
 @media (max-width: 1023px) {
@@ -299,4 +316,19 @@
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] > div {
     top: 6px;
   }
+}
+
+@container (max-width: 1100px) {
+  .canvas { padding-inline: 24px; }
+  .shellOpen {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .shellOpen .content,
+  .shellOpen .inspector { width: 100%; max-width: 100%; }
+  .inspector { padding-top: 0; }
+}
+@container (max-width: 480px) {
+  .canvas { padding-inline: 12px; }
 }

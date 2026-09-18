@@ -1,19 +1,18 @@
 "use client";
 
 import * as React from "react";
+import styles from "../task-detail-page.module.css";
 import {
   X,
   ArrowLeft,
-  CircleDashed,
   Signal,
   UserPlus,
-  Calendar,
   Check,
-  CheckCircle2,
-  Circle,
-  FileText,
+  ChevronDown,
+  Clock3,
+  MoreHorizontal,
+  Link2,
   Users,
-  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -22,6 +21,7 @@ import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { formatDisplayDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
+import { TaskNotionBlockContent } from "./task-notion-block-content";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
@@ -34,6 +34,7 @@ export interface SubtaskDetailDrawerProps {
   canEdit?: boolean;
   onSubtaskUpdated?: (updated: StaffTask) => void;
   onOpenAnotherSubtask?: (subtask: StaffTask) => void;
+  onNavigateSibling?: (direction: -1 | 1) => void;
   onNavigateBackHistory?: () => void;
   hasHistoryPrev?: boolean;
   historyPrevTitle?: string;
@@ -48,6 +49,7 @@ export function SubtaskDetailDrawer({
   canEdit = true,
   onSubtaskUpdated,
   onOpenAnotherSubtask,
+  onNavigateSibling,
   onNavigateBackHistory,
   hasHistoryPrev = false,
   historyPrevTitle,
@@ -57,11 +59,17 @@ export function SubtaskDetailDrawer({
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
+    setIsStatusDropdownOpen(false);
+    setIsPriorityDropdownOpen(false);
+    setIsDeadlineEditorOpen(false);
+    setIsMoreMenuOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = React.useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = React.useState(false);
+  const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
 
   // Status & Priority objects
   const currentStatusObj =
@@ -198,80 +206,108 @@ export function SubtaskDetailDrawer({
     notifySuccess("Đã cập nhật hạn hoàn thành việc con");
   };
 
-  // Keyboard shortcut: Escape để đóng drawer (khi không sửa text)
+  // Peek keyboard navigation: Esc closes; arrows keep the pane open while moving siblings.
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditing =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable;
+      if (isEditing) return;
+
       if (e.key === "Escape") {
-        const target = e.target as HTMLElement | null;
-        const isEditing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
-        if (!isEditing) {
-          onClose();
-        }
+        onClose();
+        return;
+      }
+
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && onNavigateSibling) {
+        e.preventDefault();
+        onNavigateSibling(e.key === "ArrowUp" ? -1 : 1);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onNavigateSibling]);
+
+  const handleCopyLink = React.useCallback(async () => {
+    if (typeof window === "undefined" || !subtask) return;
+    const url = `${window.location.origin}/tasks/${subtask.id}`;
+    await navigator.clipboard.writeText(url);
+    setIsMoreMenuOpen(false);
+    notifySuccess("Đã sao chép liên kết việc thành phần");
+  }, [notifySuccess, subtask]);
 
   if (!isOpen || !subtask) return null;
 
+  const subtaskCode =
+    (subtask as any).code ||
+    (subtask as any).taskId ||
+    subtask.id.slice(0, 12).toUpperCase();
+  const description = (subtask as any).description || subtask.deliverableDescription || "";
+  const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
+  const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
+
   return (
     <>
-      {/* Backdrop (chỉ trên mobile hoặc mờ nhẹ) */}
       <div
         onClick={onClose}
         aria-hidden="true"
-        className="fixed inset-0 bg-black/20 backdrop-blur-2xs z-40 lg:bg-transparent lg:pointer-events-none transition-opacity"
+        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs animate-in fade-in duration-200 motion-reduce:animate-none lg:hidden"
       />
 
-      {/* Drawer Container: Chiếm 440px trên desktop, toàn màn hình trên mobile */}
       <aside
         role="dialog"
-        aria-modal="true"
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
-        className={cn(
-          "fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-background border-l border-border shadow-2xl transition-transform duration-200 ease-out",
-          "w-full sm:w-[480px] lg:w-[460px] xl:w-[500px]"
-        )}
+        className={styles.peekSurface}
       >
-        {/* 1. Header: Back to parent, Stack history, Full page CTA, Close CTA */}
-        <div className="h-13 px-4 border-b border-border/60 flex items-center justify-between gap-2 shrink-0 bg-background/95 backdrop-blur-md select-none">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {/* Nếu có lịch sử việc trước đó trong cùng drawer */}
-            {hasHistoryPrev && onNavigateBackHistory ? (
-              <button
-                type="button"
-                onClick={onNavigateBackHistory}
-                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-1 rounded-md transition-colors cursor-pointer"
-                title={`Quay lại: ${historyPrevTitle || "Việc trước"}`}
-              >
-                <ArrowLeft className="size-3.5" />
-                <span className="truncate max-w-[140px]">{historyPrevTitle || "Quay lại"}</span>
-              </button>
-            ) : (
-              /* Link / Quay về nhiệm vụ cha */
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors truncate max-w-[240px] cursor-pointer"
-                title={`Thuộc nhiệm vụ: ${parentTaskTitle}`}
-              >
-                <ArrowLeft className="size-3.5 shrink-0" />
-                <span className="truncate">
-                  {parentTaskCode ? `${parentTaskCode} · ` : ""}
-                  {parentTaskTitle}
-                </span>
-              </button>
-            )}
+        <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-card/95 px-3 backdrop-blur-md select-none">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={hasHistoryPrev && onNavigateBackHistory ? onNavigateBackHistory : onClose}
+              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={hasHistoryPrev ? `Quay lại: ${historyPrevTitle || "Việc trước"}` : "Quay về nhiệm vụ cha"}
+              aria-label="Quay lại"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+            <span className="truncate font-mono text-[11px] text-muted-foreground">
+              {subtaskCode}
+            </span>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Nút Đóng */}
+          <div className="flex shrink-0 items-center gap-0.5">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen((open) => !open)}
+                className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title="Thêm thao tác"
+                aria-label="Thêm thao tác"
+                aria-expanded={isMoreMenuOpen}
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+              {isMoreMenuOpen && (
+                <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg ">
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs hover:bg-muted cursor-pointer"
+                  >
+                    <Link2 className="size-3.5 text-muted-foreground" />
+                    Sao chép liên kết
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title="Đóng (Esc)"
               aria-label="Đóng chi tiết việc con"
             >
@@ -280,10 +316,8 @@ export function SubtaskDetailDrawer({
           </div>
         </div>
 
-        {/* 2. Scrollable Body Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {/* A. Title with DirectInlineEditor */}
-          <div className="space-y-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words px-5 py-5 sm:px-6 overscroll-contain">
+          <div className="space-y-1.5">
             <DirectInlineEditor
               value={subtask.title}
               onSave={handleTitleChange}
@@ -293,38 +327,47 @@ export function SubtaskDetailDrawer({
               submitOnEnter={true}
               ariaLabel="Tên việc thành phần"
               placeholder="Nhập tên việc thành phần..."
-              viewClassName="text-lg sm:text-xl font-semibold tracking-tight text-foreground leading-snug"
-              editorClassName="text-lg sm:text-xl font-semibold tracking-tight text-foreground leading-snug"
+              viewClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
+              editorClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
             />
-            <p className="text-xs text-muted-foreground">
-              Việc thành phần thuộc{" "}
-              <span className="font-medium text-foreground">{parentTaskTitle}</span>
-            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="group flex max-w-full items-start gap-1.5 text-left text-xs leading-relaxed text-muted-foreground transition-colors hover:text-foreground"
+              title="Quay về nhiệm vụ cha"
+            >
+              <span aria-hidden="true" className="shrink-0">↳</span>
+              <span className="line-clamp-2">
+                {parentTaskTitle}
+              </span>
+            </button>
           </div>
 
-          {/* B. Compact Properties Grid */}
-          <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-2.5 text-xs">
-            {/* Status */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Trạng thái</span>
-              <div className="relative">
+          <section aria-label="Thuộc tính việc thành phần" className="mt-4 space-y-0.5 text-xs select-none">
+            <div className="relative">
                 <button
                   type="button"
-                  onClick={() => canEdit && setIsStatusDropdownOpen((prev) => !prev)}
+                  onClick={() => {
+                    if (!canEdit) return;
+                    setIsPriorityDropdownOpen(false);
+                    setIsStatusDropdownOpen((prev) => !prev);
+                  }}
                   disabled={!canEdit}
+                  aria-expanded={isStatusDropdownOpen}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-colors",
-                    canEdit ? "cursor-pointer hover:bg-muted/50" : "cursor-default"
+                    "group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors",
+                    canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
                   )}
                 >
-                  <span className={cn("size-2 rounded-full", currentStatusObj.dotClass)} />
-                  <span className="font-medium text-foreground">{currentStatusObj.label}</span>
+                  <span className={cn("size-2 rounded-full shrink-0", currentStatusObj.dotClass)} />
+                  <span className="text-foreground font-normal">{currentStatusObj.label}</span>
+                  {canEdit && <ChevronDown className="ml-auto size-3 text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100" />}
                 </button>
 
                 {isStatusDropdownOpen && (
                   <div
                     role="listbox"
-                    className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-30"
+                    className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg z-30 "
                   >
                     {STATUS_OPTIONS.map((opt) => (
                       <button
@@ -332,14 +375,14 @@ export function SubtaskDetailDrawer({
                         type="button"
                         onClick={() => handleStatusChange(opt.value)}
                         className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                          "w-full flex items-center justify-between px-2 py-1 text-xs rounded-md transition-colors text-left cursor-pointer",
                           subtask.status === opt.value
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className={cn("size-2 rounded-full", opt.dotClass)} />
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn("size-1.5 rounded-full", opt.dotClass)} />
                           <span>{opt.label}</span>
                         </div>
                         {subtask.status === opt.value && (
@@ -349,30 +392,32 @@ export function SubtaskDetailDrawer({
                     ))}
                   </div>
                 )}
-              </div>
             </div>
 
-            {/* Priority */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Độ ưu tiên</span>
-              <div className="relative">
+            <div className="relative">
                 <button
                   type="button"
-                  onClick={() => canEdit && setIsPriorityDropdownOpen((prev) => !prev)}
+                  onClick={() => {
+                    if (!canEdit) return;
+                    setIsStatusDropdownOpen(false);
+                    setIsPriorityDropdownOpen((prev) => !prev);
+                  }}
                   disabled={!canEdit}
+                  aria-expanded={isPriorityDropdownOpen}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-colors",
-                    canEdit ? "cursor-pointer hover:bg-muted/50" : "cursor-default"
+                    "group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors",
+                    canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
                   )}
                 >
-                  <Signal className={cn("size-3.5", currentPriorityObj.iconClass)} />
-                  <span className="font-medium text-foreground">{currentPriorityObj.label}</span>
+                  <Signal className={cn("size-3.5 shrink-0", currentPriorityObj.iconClass)} />
+                  <span className="text-foreground font-normal">{currentPriorityObj.label}</span>
+                  {canEdit && <ChevronDown className="ml-auto size-3 text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100" />}
                 </button>
 
                 {isPriorityDropdownOpen && (
                   <div
                     role="listbox"
-                    className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border bg-white p-1 text-foreground shadow-xl z-30"
+                    className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg z-30 "
                   >
                     {PRIORITY_OPTIONS.map((opt) => (
                       <button
@@ -380,14 +425,14 @@ export function SubtaskDetailDrawer({
                         type="button"
                         onClick={() => handlePriorityChange(opt.value)}
                         className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                          "w-full flex items-center justify-between px-2 py-1 text-xs rounded-md transition-colors text-left cursor-pointer",
                           currentPriorityVal === opt.value
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <Signal className={cn("size-3.5", opt.iconClass)} />
+                        <div className="flex items-center gap-1.5">
+                          <Signal className={cn("size-3", opt.iconClass)} />
                           <span>{opt.label}</span>
                         </div>
                         {currentPriorityVal === opt.value && (
@@ -397,95 +442,81 @@ export function SubtaskDetailDrawer({
                     ))}
                   </div>
                 )}
-              </div>
             </div>
 
-            {/* Assignee */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Người phụ trách</span>
-              <div className="inline-flex items-center gap-1.5 text-foreground font-normal">
-                <UserPlus className="size-3.5 text-muted-foreground" />
-                <span>{assigneeDisplay}</span>
-              </div>
+            <div className="flex min-h-7 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+                <UserPlus className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate text-foreground font-normal">{assigneeDisplay}</span>
             </div>
 
-            {/* Dates: Start -> Due Date */}
-            <div className="flex items-center justify-between gap-2 pt-0.5 border-t border-border/40">
-              <span className="text-muted-foreground">Thời hạn</span>
-              <div className="flex items-center gap-1">
-                {canEdit ? (
-                  <VietnameseDatePicker
-                    value={startDateIso}
-                    onChange={handleStartDateChange}
-                    placeholder="Bắt đầu"
-                    variant="chip"
-                    align="right"
-                    className="p-0 border-0 text-xs shadow-none hover:bg-transparent"
-                  />
-                ) : (
-                  <span>{startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}</span>
+            {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
+              <div className="flex min-h-7 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+                <Users className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate text-muted-foreground">
+                  {subtask.coAssignees.map((co: any) => co.name).join(", ")}
+                </span>
+              </div>
+            )}
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
+                disabled={!canEdit}
+                aria-expanded={isDeadlineEditorOpen}
+                className={cn(
+                  "flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors",
+                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default",
+                  dueInfo.isOverdue && "text-rose-700"
                 )}
-                <span className="text-muted-foreground/60">→</span>
-                {canEdit ? (
-                  <VietnameseDatePicker
-                    value={dueDateIso}
-                    onChange={handleDueDateChange}
-                    placeholder="Hạn chót"
-                    variant="chip"
-                    align="right"
-                    className="p-0 border-0 text-xs shadow-none hover:bg-transparent"
-                  />
-                ) : (
-                  <span className={cn(dueInfo.isOverdue && "text-rose-600 font-semibold")}>
-                    {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+              >
+                <Clock3 className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="tabular-nums text-foreground font-normal">
+                  {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
+                </span>
+              </button>
 
-          {/* C. Description Section with DirectInlineEditor */}
-          <section className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <FileText className="size-3.5 text-primary" />
-              <span>Nội dung & Yêu cầu thực hiện</span>
-            </div>
-            <div className="p-3 rounded-xl border border-border/60 bg-card/40">
-              <DirectInlineEditor
-                value={(subtask as any)?.description || subtask.deliverableDescription || ""}
-                onSave={handleDescriptionChange}
-                canEdit={canEdit}
-                multiline={true}
-                as="div"
-                submitOnEnter={false}
-                minRows={3}
-                ariaLabel="Mô tả việc thành phần"
-                placeholder="Thêm mô tả chi tiết, hướng dẫn hoặc yêu cầu cụ thể..."
-                viewClassName="text-xs leading-relaxed text-foreground min-h-[48px]"
-                editorClassName="text-xs leading-relaxed text-foreground min-h-[48px]"
-              />
+              {isDeadlineEditorOpen && canEdit && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Bắt đầu</span>
+                    <VietnameseDatePicker
+                      value={startDateIso}
+                      onChange={handleStartDateChange}
+                      placeholder="Bắt đầu"
+                      variant="chip"
+                      align="left"
+                      className="w-full"
+                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Hạn chót</span>
+                    <VietnameseDatePicker
+                      value={dueDateIso}
+                      onChange={handleDueDateChange}
+                      placeholder="Hạn chót"
+                      variant="chip"
+                      align="right"
+                      className="w-full"
+                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
-          {/* D. Co-assignees / Phối hợp nếu có */}
-          {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
-            <section className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Users className="size-3.5 text-primary" />
-                <span>Người phối hợp ({subtask.coAssignees.length})</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {subtask.coAssignees.map((co: any) => (
-                  <span
-                    key={co.id || co.name}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted/60 text-xs text-foreground"
-                  >
-                    {co.name}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
+          <section className="mt-6">
+            <TaskNotionBlockContent
+              key={subtask.id}
+              taskId={subtask.id}
+              initialDescription={description}
+              onSaveContent={handleDescriptionChange}
+              canEdit={canEdit}
+              globalFileDrop={false}
+            />
+          </section>
         </div>
       </aside>
     </>

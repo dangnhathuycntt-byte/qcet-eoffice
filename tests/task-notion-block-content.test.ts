@@ -23,10 +23,12 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
   describe("1. Auto-Height Canvas & Elimination of Internal Scrollbar", () => {
     it("strictly eliminates internal scroll, large min-height, and fake blank area containers", () => {
-      // 1. Must NOT contain min-h-[160px] or min-h-[220px] on editor canvas
+      // 1. Must NOT contain an artificial large min-height on editor canvas
       assert.ok(
-        !componentContent.includes("min-h-[160px]") && !componentContent.includes("min-h-[220px]"),
-        "Editor canvas must NOT have artificial large min-height (min-h-[160px] / min-h-[220px])"
+        !componentContent.includes("min-h-[160px]") &&
+          !componentContent.includes("min-h-[200px]") &&
+          !componentContent.includes("min-h-[220px]"),
+        "Editor canvas must NOT have artificial large min-height"
       );
 
       // 2. Must NOT contain data-slot='canvas-blank-area' or min-h-[80px] filler
@@ -51,12 +53,13 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("displays 'Nhập nội dung hoặc gõ / để chọn' with keycap hint without standalone '/' line", () => {
-      // 1. Must use 'Nhập nội dung hoặc gõ' and 'để chọn'
+        it("displays 'Nhập nội dung hoặc gõ / để chèn' with keycap hint without standalone '/' line", () => {
+      // 1. Must use 'Nhập nội dung hoặc gõ' and 'để chèn'
       assert.ok(
         componentContent.includes("Nhập nội dung hoặc gõ") &&
-          componentContent.includes("để chọn"),
-        "Must provide 'Nhập nội dung hoặc gõ ... để chọn' affordance"
+          componentContent.includes("để chèn") &&
+          !componentContent.includes("<span>để chọn</span>"),
+        "Must provide a consistent 'Nhập nội dung hoặc gõ ... để chèn' affordance"
       );
 
       // 2. Must render '/' as keycap/kbd hint
@@ -239,12 +242,12 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "TaskNotionBlockContent must connect to handleSaveDescription for real persistence"
       );
       assert.ok(
-        detailPageContent.includes("isEditable(target)"),
-        "Space shortcut handler must ignore text editing in inputs/textareas"
+        detailPageContent.includes("isEditable(eventTarget) || isEditable(focused)"),
+        "Panel shortcuts must ignore both editable event targets and focused inputs"
       );
       assert.ok(
-        detailPageContent.includes("isDialogOpen()"),
-        "Space shortcut handler must ignore when dialog/menu is active"
+        !detailPageContent.includes('e.code === "Space"') && !detailPageContent.includes('e.key === " "'),
+        "Space must never toggle task panels, including outside inputs or inside dialogs"
       );
     });
   });
@@ -344,7 +347,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("renders contiguous selected blocks as a unified continuous group with adaptive radius", () => {
+    it("renders contiguous selected blocks as a unified continuous group without competing gutter selection", () => {
       assert.ok(
         componentContent.includes("selectionRadiusClass") &&
           componentContent.includes("rounded-t-md rounded-b-none") &&
@@ -353,9 +356,9 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "Must adaptively adjust border-radius so contiguous blocks look like one continuous selection"
       );
       assert.ok(
-        componentContent.includes("handleGutterMouseDown") &&
-          componentContent.includes("handleBlockMouseEnter"),
-        "Must support dragging from gutter to marquee-select multiple blocks"
+        !componentContent.includes("handleGutterMouseDown") &&
+          !componentContent.includes("handleBlockMouseEnter"),
+        "Gutter must reserve pointer input for dragging; Shift/Cmd click handles multi-selection"
       );
     });
 
@@ -403,21 +406,20 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
       );
     });
 
-    it("supports dragging multiple selected blocks as a group with proper insertion indicator", () => {
-      // 1. Multi-drag group support
+    it("uses a dedicated, activation-gated drag sensor without reordering on pointer movement", () => {
       assert.ok(
-        componentContent.includes("draggedGroupBlockIds") &&
-          componentContent.includes("setDraggedGroupBlockIds"),
-        "Must track group of dragged block IDs"
+        componentContent.includes("DndContext") &&
+          componentContent.includes("PointerSensor") &&
+          componentContent.includes("distance: 5"),
+        "Must use an activation-gated pointer sensor"
+      );
+      assert.ok(
+        componentContent.includes("onDragEnd={handleBlockDragEnd}") &&
+          !componentContent.includes("onReorder="),
+        "Must commit the order only after the drop completes"
       );
 
-      // 2. Insertion indicator
-      assert.ok(
-        componentContent.includes('isDragOver && "bg-primary/10"'),
-        "Must render clean insertion line indicator on drag over"
-      );
-
-      // 3. Right-click context menu
+      // Right-click context menu remains available while dragging is isolated to the handle.
       assert.ok(
         componentContent.includes("onContextMenu"),
         "Must support right-click context menu"

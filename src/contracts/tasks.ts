@@ -169,9 +169,7 @@ export const CreateTaskInputSchema = z
       .trim()
       .min(3, 'Title must be at least 3 characters')
       .max(255, 'Title cannot exceed 255 characters'),
-    description: z
-      .string()
-      .max(5000, 'Description cannot exceed 5000 characters')
+    description: z.string().max(10 * 1024 * 1024, 'Description cannot exceed 10MB').refine((s) => Buffer.byteLength(s, 'utf8') <= 10 * 1024 * 1024, 'Description cannot exceed 10MB')
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.default('MEDIUM'),
@@ -234,9 +232,7 @@ export const UpdateTaskInputSchema = z
       .min(1, 'Title cannot be empty')
       .max(255, 'Title cannot exceed 255 characters')
       .optional(),
-    description: z
-      .string()
-      .max(5000, 'Description cannot exceed 5000 characters')
+    description: z.string().max(10 * 1024 * 1024, 'Description cannot exceed 10MB').refine((s) => Buffer.byteLength(s, 'utf8') <= 10 * 1024 * 1024, 'Description cannot exceed 10MB')
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.optional(),
@@ -308,9 +304,7 @@ export const UpdateTaskMetadataSchema = z
       .min(3, 'Title must be at least 3 characters')
       .max(255, 'Title cannot exceed 255 characters')
       .optional(),
-    description: z
-      .string()
-      .max(5000, 'Description cannot exceed 5000 characters')
+    description: z.string().max(10 * 1024 * 1024, 'Description cannot exceed 10MB').refine((s) => Buffer.byteLength(s, 'utf8') <= 10 * 1024 * 1024, 'Description cannot exceed 10MB')
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.optional(),

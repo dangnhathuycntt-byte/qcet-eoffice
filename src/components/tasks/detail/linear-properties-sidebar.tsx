@@ -18,7 +18,6 @@ import {
   Edit2,
   X,
   Layers,
-  Plus,
   CalendarClock,
   Sparkles,
   ExternalLink,
@@ -482,12 +481,12 @@ export function LinearPropertiesSidebar({
     <div
       data-slot="linear-properties-sidebar"
       className={cn(
-        "w-full space-y-6 text-xs text-foreground select-none p-4 sm:p-5",
+        "w-full space-y-0 text-xs text-foreground select-none",
         className
       )}
     >
       {/* 1. SECTION: PROPERTIES (Linear Style) */}
-      <div className="space-y-3">
+      <div className="space-y-3 pb-5">
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -904,7 +903,7 @@ export function LinearPropertiesSidebar({
       {showRelatedSections && (
       <>
       {/* 2. SECTION: MILESTONES / SUBTASKS (Compact Notion-style list) */}
-      <div className="pt-2 border-t border-border/40 select-none">
+      <div className="mt-1 pt-5 border-t border-border/40 select-none">
         {subTasks.length > 0 ? (
           <div className="space-y-2">
             {/* Header với số lượng, nút Thêm, và nút Xem tất cả */}
@@ -923,17 +922,6 @@ export function LinearPropertiesSidebar({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab?.("subtasks")}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Thêm hoặc xem việc thành phần"
-                    aria-label="Thêm việc thành phần"
-                  >
-                    <Plus className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                )}
                 {onNavigateTab && (
                   <button
                     type="button"
@@ -1005,26 +993,13 @@ export function LinearPropertiesSidebar({
             >
               Việc thành phần
             </span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab?.("subtasks")}
-                  className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Thêm hoặc xem việc thành phần"
-                  aria-label="Thêm việc thành phần"
-                >
-                  <Plus className="size-3.5" strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
+            <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
           </div>
         )}
       </div>
 
       {/* 3. SECTION: ACTIVITY (Linear Style - Tối đa 3 hoạt động mới nhất) */}
-      <div className="pt-2 border-t border-border/40 select-none">
+      <div className="pt-5 border-t border-border/40 select-none">
         {auditEvents.length > 0 ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-muted-foreground">

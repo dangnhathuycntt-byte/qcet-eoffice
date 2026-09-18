@@ -177,6 +177,7 @@ function MobileAppInstallModalContainer() {
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
+  const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -257,9 +258,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-black/[0.08] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden"
+          className={isTaskDetail
+            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:h-[calc(100dvh-44px)] outline-none overflow-hidden"
+            : "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden"}
         >
-          <div className="w-full flex-1 p-3 sm:p-5 md:p-6 max-w-[1600px] mx-auto flex flex-col">
+          <div className={isTaskDetail ? "flex min-h-0 min-w-0 flex-1 flex-col" : "w-full flex-1 p-3 sm:p-5 md:p-6 max-w-[1600px] mx-auto flex flex-col"}>
             {children}
           </div>
         </main>

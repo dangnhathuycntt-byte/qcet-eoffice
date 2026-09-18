@@ -128,7 +128,7 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
   });
 
   describe("3. Right Subtask Peek Drawer & Non-Stacking Navigation", () => {
-    it("SubtaskDetailDrawer renders parent link, full-page CTA, mobile full-width, and direct inline editor", () => {
+    it("SubtaskDetailDrawer renders a flat quick-preview surface with compact editing", () => {
       // 1. Back link / parent task reference
       assert.ok(
         drawerContent.includes("parentTaskTitle"),
@@ -139,22 +139,28 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Drawer must display parent task code when present"
       );
 
-      // 2. Streamlined header without heavy full-page CTA
+      // 2. Utility toolbar keeps more actions without the open-page link
       assert.ok(
-        !drawerContent.includes("Mở toàn trang"),
-        "Drawer header must be streamlined without redundant 'Mở toàn trang' CTA"
+        !drawerContent.includes("Mở trang") && drawerContent.includes("MoreHorizontal"),
+        "Drawer toolbar must omit open-page navigation and retain more actions"
       );
       assert.ok(
         drawerContent.includes("onClose") && drawerContent.includes("Đóng chi tiết việc con"),
         "Drawer header must contain close CTA"
       );
 
-      // 3. Responsive styling: full width on mobile, covers sidebar on desktop
+      // 3. Desktop uses sibling surfaces; only compact screens use an overlay.
+      const layout = fs.readFileSync(path.join(process.cwd(), "src/components/tasks/task-detail-page.module.css"), "utf-8");
       assert.ok(
-        drawerContent.includes("w-full") &&
-          drawerContent.includes("lg:w-[460px]") &&
-          drawerContent.includes("fixed top-0 right-0 bottom-0"),
-        "Drawer must be full-screen on mobile and cover right sidebar on desktop"
+        drawerContent.includes("styles.peekSurface") &&
+          layout.includes("grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px)") &&
+          layout.includes("gap: calc(var(--spacing) * 2)") &&
+          layout.includes("padding: calc(var(--spacing) * 2)") &&
+          layout.includes("border-radius: var(--radius-xl)") &&
+          layout.includes("position: relative") &&
+          drawerContent.includes("lg:hidden") &&
+          !drawerContent.includes('aria-modal="true"'),
+        "Peek must reflow the main surface with inset, matching corners, and a compact-only backdrop"
       );
 
       // 4. Non-stacking navigation: uses in-drawer history stack rather than nested drawers
@@ -170,7 +176,15 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Drawer must share DirectInlineEditor for title and description editing"
       );
 
-      // 6. Real API mutations
+      // 6. Flat hierarchy: no persistent metadata or empty description card
+      assert.ok(
+        !drawerContent.includes('aria-label="Thuộc tính việc thành phần" className="divide-y') &&
+          drawerContent.includes("<TaskNotionBlockContent") &&
+          drawerContent.includes("isDeadlineEditorOpen"),
+        "Peek must render flat metadata, the shared document editor, and a collapsed deadline row"
+      );
+
+      // 7. Real API mutations
       assert.ok(
         drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"),
         "Drawer must execute real API PATCH mutations"
@@ -208,6 +222,12 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
       assert.ok(
         detailPageContent.includes("handleSubtaskUpdated"),
         "TaskDetailPage must synchronize subtask edits back to parent state"
+      );
+
+      assert.ok(
+        detailPageContent.includes("lastPeekSubtaskIdRef") &&
+          detailPageContent.includes("handleNavigateSubtaskSibling"),
+        "TaskDetailPage must support Space toggling and arrow sibling navigation for Peek"
       );
     });
   });

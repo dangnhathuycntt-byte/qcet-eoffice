@@ -2,7 +2,20 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { Reorder, useDragControls } from "motion/react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical,
   Type,
@@ -65,11 +78,22 @@ export interface NotionBlockItem {
   thumbnailUrl?: string;
 }
 
+export function moveBlock(blocks: NotionBlockItem[], activeId: string, overId: string) {
+  const from = blocks.findIndex((block) => block.id === activeId);
+  const to = blocks.findIndex((block) => block.id === overId);
+  if (from < 0 || to < 0 || from === to) return blocks;
+  const next = [...blocks];
+  const [block] = next.splice(from, 1);
+  next.splice(to, 0, block);
+  return next;
+}
+
 export interface TaskNotionBlockContentProps {
   taskId: string;
   initialDescription?: string | null;
   subTasks?: StaffTask[];
   canEdit?: boolean;
+  globalFileDrop?: boolean;
   onSaveContent: (newContent: string) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onOpenCreateSubtask?: () => void;
@@ -452,6 +476,7 @@ export function TaskNotionBlockContent({
   initialDescription,
   subTasks = [],
   canEdit = true,
+  globalFileDrop = true,
   onSaveContent,
   onSelectSubtask,
   onOpenCreateSubtask,
@@ -488,6 +513,10 @@ export function TaskNotionBlockContent({
   // Global window drop overlay state & counter
   const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
   const dragCounterRef = React.useRef(0);
+  const resetGlobalDrag = React.useCallback(() => {
+    dragCounterRef.current = 0;
+    setIsGlobalDragging(false);
+  }, []);
 
   // Context Menu State (Chuột phải vào handle hoặc block)
   const [activeContextMenu, setActiveContextMenu] = React.useState<{
@@ -496,10 +525,6 @@ export function TaskNotionBlockContent({
     left: number;
   } | null>(null);
 
-  // Drag and drop state (Hỗ trợ kéo đơn hoặc kéo cả group multi-selected)
-  const [draggedBlockIndex, setDraggedBlockIndex] = React.useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
-  const [draggedGroupBlockIds, setDraggedGroupBlockIds] = React.useState<string[]>([]);
   const isDraggingRef = React.useRef(false);
 
   // Trailing input state (controlled để quản lý hiển thị keycap hint)
@@ -515,12 +540,9 @@ export function TaskNotionBlockContent({
   const trailingInputRef = React.useRef<HTMLInputElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
+  const pendingFocusAtEndRef = React.useRef<boolean>(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const lastSavedContentRef = React.useRef<string | null>(initialDescription || null);
-
-  // Gutter drag selection ref (quét chọn nhiều block từ gutter)
-  const isGutterSelectingRef = React.useRef(false);
-  const gutterAnchorIdRef = React.useRef<string | null>(null);
 
   // Contextual URL Paste Popover
   const [urlPastePopover, setUrlPastePopover] = React.useState<{
@@ -530,18 +552,12 @@ export function TaskNotionBlockContent({
     left: number;
   } | null>(null);
 
-  React.useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      isGutterSelectingRef.current = false;
-      gutterAnchorIdRef.current = null;
-    };
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, []);
-
   // Debounced Autosave
   const triggerAutoSave = React.useCallback(
     (newBlocks: NotionBlockItem[]) => {
+      if (newBlocks.some((b) => b.url?.startsWith("blob:"))) {
+        return;
+      }
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -595,6 +611,10 @@ export function TaskNotionBlockContent({
 
   // Đồng bộ khi initialDescription từ server đổi (chỉ khi nội dung bên ngoài thực sự khác và không phải do chính editor vừa lưu)
   React.useEffect(() => {
+    // Không ghi đè state khi người dùng đang active focus soạn thảo trong editor
+    if (containerRef.current && containerRef.current.contains(document.activeElement)) {
+      return;
+    }
     if (initialDescription !== lastSavedContentRef.current) {
       lastSavedContentRef.current = initialDescription || null;
       setBlocks(parseContentToBlocks(initialDescription));
@@ -614,13 +634,23 @@ export function TaskNotionBlockContent({
           el.scrollIntoView({ behavior: "smooth", block: "nearest" });
           if (el instanceof HTMLTextAreaElement) {
             autoResizeTextarea(el);
+            if (pendingFocusAtEndRef.current) {
+              const len = el.value.length;
+              el.setSelectionRange(len, len);
+            }
           }
           if ("select" in el && el instanceof HTMLInputElement) {
-            el.select();
+            if (pendingFocusAtEndRef.current) {
+              const len = el.value.length;
+              el.setSelectionRange(len, len);
+            } else {
+              el.select();
+            }
           }
         }
       }
       pendingFocusBlockIdRef.current = null;
+      pendingFocusAtEndRef.current = false;
     }
   }, [blocks]);
 
@@ -845,16 +875,16 @@ export function TaskNotionBlockContent({
   };
 
   // Cập nhật nội dung một block
-  const handleUpdateBlock = (blockId: string, updates: Partial<NotionBlockItem>) => {
+  const handleUpdateBlock = React.useCallback((blockId: string, updates: Partial<NotionBlockItem>) => {
     setBlocks((prev) => {
       const next = prev.map((b) => (b.id === blockId ? { ...b, ...updates } : b));
       triggerAutoSave(next);
       return next;
     });
-  };
+  }, [triggerAutoSave]);
 
   // Xử lý blur khỏi một block: tự động remove block nếu không có dữ liệu thực tế và focus rời khỏi editor
-  const handleBlockBlur = (e: React.FocusEvent, blockId: string) => {
+  const handleBlockBlur = React.useCallback((e: React.FocusEvent, blockId: string) => {
     // Nếu focus vẫn nằm trong container của editor hoặc cùng block wrapper -> giữ nguyên để không giật layout
     if (e.relatedTarget && containerRef.current && containerRef.current.contains(e.relatedTarget as Node)) {
       return;
@@ -887,7 +917,7 @@ export function TaskNotionBlockContent({
 
       return prev;
     });
-  };
+  }, [triggerAutoSave]);
 
   // Xóa toàn bộ các block đang được chọn (Multi-selection Delete)
   const handleDeleteSelectedBlocks = () => {
@@ -928,9 +958,14 @@ export function TaskNotionBlockContent({
   };
 
   // Xóa một block đơn lẻ
-  const handleDeleteBlock = (blockId: string) => {
-    setSelectedBlockIds(new Set([blockId]));
-    setAnchorBlockId(blockId);
+  const handleDeleteBlock = React.useCallback((blockId: string) => {
+    if (!pendingFocusBlockIdRef.current) {
+      setSelectedBlockIds(new Set([blockId]));
+      setAnchorBlockId(blockId);
+    } else {
+      setSelectedBlockIds(new Set());
+      setAnchorBlockId(null);
+    }
     setBlocks((prev) => {
       const index = prev.findIndex((b) => b.id === blockId);
       if (index === -1) return prev;
@@ -941,24 +976,28 @@ export function TaskNotionBlockContent({
         pendingFocusBlockIdRef.current = newId;
         setSelectedBlockIds(new Set());
         setAnchorBlockId(null);
-        return [{ id: newId, type: "text", content: "" }];
+        const emptyDoc = [{ id: newId, type: "text" as const, content: "" }];
+        triggerAutoSave(emptyDoc);
+        return emptyDoc;
       }
 
-      const nextTargetIndex = index < next.length ? index : next.length - 1;
-      const nextTargetBlock = next[nextTargetIndex];
-      if (nextTargetBlock) {
-        setSelectedBlockIds(new Set([nextTargetBlock.id]));
-        setAnchorBlockId(nextTargetBlock.id);
-        setTimeout(() => {
-          blockWrapperRefs.current.get(nextTargetBlock.id)?.focus();
-        }, 20);
+      if (!pendingFocusBlockIdRef.current) {
+        const nextTargetIndex = index < next.length ? index : next.length - 1;
+        const nextTargetBlock = next[nextTargetIndex];
+        if (nextTargetBlock) {
+          setSelectedBlockIds(new Set([nextTargetBlock.id]));
+          setAnchorBlockId(nextTargetBlock.id);
+          setTimeout(() => {
+            blockWrapperRefs.current.get(nextTargetBlock.id)?.focus();
+          }, 20);
+        }
       }
 
       triggerAutoSave(next);
       return next;
     });
     setActiveContextMenu(null);
-  };
+  }, [triggerAutoSave]);
 
   // Di chuyển block
   const handleMoveBlock = (index: number, direction: "up" | "down") => {
@@ -1076,33 +1115,6 @@ export function TaskNotionBlockContent({
     setSelectedBlockIds(new Set([block.id]));
     setAnchorBlockId(block.id);
     blockWrapperRefs.current.get(block.id)?.focus();
-  };
-
-  // Kéo chuột từ gutter để quét chọn nhiều block (Notion marquee drag selection)
-  const handleGutterMouseDown = (e: React.MouseEvent, block: NotionBlockItem) => {
-    if (e.button !== 0) return;
-    if (e.shiftKey || e.metaKey || e.ctrlKey) return;
-
-    isGutterSelectingRef.current = true;
-    gutterAnchorIdRef.current = block.id;
-    setAnchorBlockId(block.id);
-    setSelectedBlockIds(new Set([block.id]));
-  };
-
-  const handleBlockMouseEnter = (blockId: string) => {
-    if (isGutterSelectingRef.current && gutterAnchorIdRef.current) {
-      const anchorIdx = blocks.findIndex((b) => b.id === gutterAnchorIdRef.current);
-      const currentIdx = blocks.findIndex((b) => b.id === blockId);
-      if (anchorIdx !== -1 && currentIdx !== -1) {
-        const start = Math.min(anchorIdx, currentIdx);
-        const end = Math.max(anchorIdx, currentIdx);
-        const rangeIds = new Set<string>();
-        for (let i = start; i <= end; i++) {
-          rangeIds.add(blocks[i].id);
-        }
-        setSelectedBlockIds(rangeIds);
-      }
-    }
   };
 
   // Xử lý nạp file (hỗ trợ nhiều file, mixed ảnh/tài liệu, optimistic preview, chèn thông minh theo ngữ cảnh)
@@ -1255,7 +1267,10 @@ export function TaskNotionBlockContent({
 
   // Global Window Drag & Drop Listeners (To��n bộ viewport nhận file từ OS mà không cần căn trúng editor)
   React.useEffect(() => {
-    if (!canEdit) return;
+    if (!canEdit || !globalFileDrop) {
+      resetGlobalDrag();
+      return;
+    }
 
     const hasFiles = (e: DragEvent): boolean => {
       // Tuyệt đối không can thiệp kéo block nội bộ bằng handle 6 chấm
@@ -1294,10 +1309,13 @@ export function TaskNotionBlockContent({
     const handleWindowDragLeave = (e: DragEvent) => {
       if (!hasFiles(e)) return;
       e.preventDefault();
+      if (!e.relatedTarget || !(e.relatedTarget instanceof Node) || !document.documentElement.contains(e.relatedTarget)) {
+        resetGlobalDrag();
+        return;
+      }
       dragCounterRef.current -= 1;
       if (dragCounterRef.current <= 0) {
-        dragCounterRef.current = 0;
-        setIsGlobalDragging(false);
+        resetGlobalDrag();
       }
     };
 
@@ -1306,8 +1324,7 @@ export function TaskNotionBlockContent({
       // Ngăn chặn trình duyệt tự động điều hướng sang file
       e.preventDefault();
       e.stopPropagation();
-      dragCounterRef.current = 0;
-      setIsGlobalDragging(false);
+      resetGlobalDrag();
 
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
@@ -1319,14 +1336,18 @@ export function TaskNotionBlockContent({
     window.addEventListener("dragover", handleWindowDragOver);
     window.addEventListener("dragleave", handleWindowDragLeave);
     window.addEventListener("drop", handleWindowDrop);
+    window.addEventListener("dragend", resetGlobalDrag);
+    window.addEventListener("blur", resetGlobalDrag);
 
     return () => {
       window.removeEventListener("dragenter", handleWindowDragEnter);
       window.removeEventListener("dragover", handleWindowDragOver);
       window.removeEventListener("dragleave", handleWindowDragLeave);
       window.removeEventListener("drop", handleWindowDrop);
+      window.removeEventListener("dragend", resetGlobalDrag);
+      window.removeEventListener("blur", resetGlobalDrag);
     };
-  }, [canEdit, handleProcessDroppedFiles]);
+  }, [canEdit, globalFileDrop, handleProcessDroppedFiles, resetGlobalDrag]);
 
   // Hỗ trợ Paste ảnh từ clipboard & Paste URL xuất hiện Popover
   const handleContainerPaste = (e: React.ClipboardEvent) => {
@@ -1589,9 +1610,12 @@ export function TaskNotionBlockContent({
 
       if (blocks.length > 1) {
         e.preventDefault();
+        setSelectedBlockIds(new Set());
+        setAnchorBlockId(null);
         const prevBlock = blocks[index - 1];
         if (prevBlock) {
           pendingFocusBlockIdRef.current = prevBlock.id;
+          pendingFocusAtEndRef.current = true;
         }
         handleDeleteBlock(block.id);
       }
@@ -1601,6 +1625,19 @@ export function TaskNotionBlockContent({
   // Trailing Empty Block KeyDown
   const handleTrailingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+      return;
+    }
+    if (e.key === "Backspace" && !trailingValue && blocks.length > 0) {
+      e.preventDefault();
+      const last = blocks[blocks.length - 1];
+      if (last) {
+        const input = blockInputRefs.current.get(last.id);
+        if (input) {
+          input.focus();
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
+      }
       return;
     }
     if (e.key === "/") {
@@ -1639,13 +1676,486 @@ export function TaskNotionBlockContent({
     setTrailingValue(val);
   };
 
+
+  // Khi blur khỏi trailing input nếu có text thì commit thành block
+  const handleTrailingBlur = () => {
+    const val = trailingValue.trim();
+    if (val) {
+      const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setBlocks((prev) => {
+        const next: NotionBlockItem[] = [...prev, { id: newId, type: "text", content: val }];
+        triggerAutoSave(next);
+        return next;
+      });
+      setTrailingValue("");
+    }
+  };
+
+  // Tính số thứ tự cho numbered list
+  let numberedCounter = 0;
+
+  // Kiểm tra xem block cuối cùng có rỗng không
+  const lastBlock = blocks[blocks.length - 1];
+  const lastBlockIsEmptyText = lastBlock && lastBlock.type === "text" && !lastBlock.content;
+  const isOnlyOneEmptyBlock = blocks.length === 1 && blocks[0].type === "text" && !blocks[0].content;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleBlockDragEnd = ({ active, over }: DragEndEvent) => {
+    window.setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 0);
+    if (!over) return;
+    setBlocks((prev) => {
+      const next = moveBlock(prev, String(active.id), String(over.id));
+      if (next !== prev) triggerAutoSave(next);
+      return next;
+    });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      data-slot="task-notion-block-content"
+      onPaste={handleContainerPaste}
+      onDrop={handleContainerDrop}
+      onDragOver={(e) => {
+        if (!isDraggingRef.current) e.preventDefault();
+      }}
+      className={cn("w-full relative font-sans text-sm text-foreground flex flex-col", className)}
+    >
+      {/* Only commit document order after a completed drop to keep editing responsive. */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={() => {
+          isDraggingRef.current = true;
+        }}
+        onDragCancel={() => {
+          isDraggingRef.current = false;
+        }}
+        onDragEnd={handleBlockDragEnd}
+      >
+        <SortableContext items={blocks.map((block) => block.id)} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col">
+        {blocks.map((block, index) => {
+          const isSelected = selectedBlockIds.has(block.id);
+          const prevIsSelected = isSelected && index > 0 && selectedBlockIds.has(blocks[index - 1].id);
+          const nextIsSelected = isSelected && index < blocks.length - 1 && selectedBlockIds.has(blocks[index + 1].id);
+
+          // Radius thống nhất theo Notion continuous selection group:
+          // - Single block: bo 4 góc
+          // - Block đầu tiên của dải: bo 2 góc trên
+          // - Block cuối cùng của dải: bo 2 góc dưới
+          // - Block ở giữa: phẳng hoàn toàn cả trên lẫn dưới
+          const selectionRadiusClass = isSelected
+            ? !prevIsSelected && !nextIsSelected
+              ? "rounded-md"
+              : !prevIsSelected && nextIsSelected
+              ? "rounded-t-md rounded-b-none"
+              : prevIsSelected && !nextIsSelected
+              ? "rounded-b-md rounded-t-none"
+              : "rounded-none"
+            : "rounded-md";
+
+          // Reset hoặc tăng bộ đếm numbered list
+          if (block.type === "numbered_list") {
+            numberedCounter += 1;
+          } else {
+            numberedCounter = 0;
+          }
+          const currentNumber = numberedCounter;
+
+          return (
+            <NotionBlockRow
+              key={block.id}
+              block={block}
+              index={index}
+              canEdit={canEdit}
+              isSelected={isSelected}
+              selectionRadiusClass={selectionRadiusClass}
+              currentNumber={currentNumber}
+              isOnlyOneEmptyBlock={isOnlyOneEmptyBlock}
+              handleUpdateBlock={handleUpdateBlock}
+              handleDeleteBlock={handleDeleteBlock}
+              handleBlockKeyDown={handleBlockKeyDown}
+              handleBlockWrapperKeyDown={handleBlockWrapperKeyDown}
+              handleContextMenu={handleContextMenu}
+              handleBlockHandleClick={handleBlockHandleClick}
+              handleBlockFocus={handleBlockFocus}
+              handleBlockBlur={handleBlockBlur}
+              blockWrapperRefs={blockWrapperRefs}
+              blockInputRefs={blockInputRefs}
+            />
+          );
+        })}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* 2. Trailing Empty Row (Render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
+      {canEdit && !lastBlockIsEmptyText && (
+        <div
+          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md select-none cursor-text"
+          onClick={() => trailingInputRef.current?.focus()}
+        >
+          {/* Khoảng trống căn chỉnh ngang hàng với text block phía trên */}
+          <div className="w-5 shrink-0 -ml-6 mr-1 pointer-events-none" />
+          <div className="relative flex-1 min-w-0 flex items-center min-h-[28px]">
+            {/* Visual Hint Layer với keyboard keycap '/' */}
+            {!trailingValue && (
+              <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/trailing:text-muted-foreground/80 font-normal">
+                <span>Nhập nội dung hoặc gõ</span>
+                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
+                  /
+                </kbd>
+                <span>để chèn</span>
+              </div>
+            )}
+            <input
+              ref={trailingInputRef}
+              type="text"
+              value={trailingValue}
+              onFocus={() => {
+                lastActiveBlockIdRef.current = null;
+                if (selectedBlockIds.size > 0) {
+                  setSelectedBlockIds(new Set());
+                  setAnchorBlockId(null);
+                }
+              }}
+              onKeyDown={handleTrailingKeyDown}
+              onChange={handleTrailingChange}
+              onBlur={handleTrailingBlur}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text relative z-10"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 3. Slash Command Popover Menu qua Portal ra document.body */}
+      {isMenuOpen && mounted && typeof document !== "undefined" && createPortal(
+        <div
+          role="dialog"
+          aria-label="Menu lệnh"
+          className="fixed inset-0 z-50 pointer-events-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseSlashMenu();
+          }}
+        >
+          <div
+            ref={menuPopoverRef}
+            style={{
+              position: "fixed",
+              top: menuPosition?.top !== undefined ? `${menuPosition.top}px` : undefined,
+              bottom: menuPosition?.bottom !== undefined ? `${menuPosition.bottom}px` : undefined,
+              left: menuPosition ? `${menuPosition.left}px` : undefined,
+              maxHeight: `${menuMaxHeight}px`,
+            }}
+            className={cn(
+              "w-72 max-w-[calc(100vw-28px)] rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 select-none flex flex-col",
+              menuPlacement === "top"
+                ? "animate-in fade-in-0 slide-in-from-bottom-2 duration-100"
+                : "animate-in fade-in-0 slide-in-from-top-2 duration-100"
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Ô tìm kiếm lệnh (Header cố định) */}
+            <div className="relative mb-1.5 shrink-0">
+              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+              <input
+                ref={menuInputRef}
+                type="text"
+                value={menuSearchQuery}
+                onChange={(e) => {
+                  setMenuSearchQuery(e.target.value);
+                  setActiveMenuIndex(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
+                  if (e.key === "Escape") {
+                    handleCloseSlashMenu();
+                  } else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setActiveMenuIndex((prev) =>
+                      prev < filteredMenuOptions.length - 1 ? prev + 1 : 0
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveMenuIndex((prev) =>
+                      prev > 0 ? prev - 1 : filteredMenuOptions.length - 1
+                    );
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    const opt = filteredMenuOptions[activeMenuIndex];
+                    if (opt) handleSelectMenuItem(opt);
+                  }
+                }}
+                placeholder="Tìm lệnh..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-muted/40 rounded-xl border border-border/60 focus:outline-hidden focus:ring-1 focus:ring-primary/40 font-medium"
+              />
+            </div>
+
+            {/* Danh sách lựa chọn - Cuộn nội bộ nếu dài hơn availableHeight */}
+            <div ref={menuListRef} className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-0.5 overscroll-contain">
+              {(["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Phương tiện & Tệp", "Liên kết", "Phân cách"] as const).map((groupName) => {
+                const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
+                if (groupOptions.length === 0) return null;
+
+                return (
+                  <div key={groupName} className="space-y-0.5">
+                    <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground/80">
+                      {groupName}
+                    </div>
+                    {groupOptions.map((opt) => {
+                      const itemGlobalIndex = filteredMenuOptions.indexOf(opt);
+                      const isSelected = itemGlobalIndex === activeMenuIndex;
+                      const IconComponent = opt.icon;
+
+                      return (
+                        <button
+                          key={opt.id}
+                          ref={(el) => {
+                            if (el) menuItemRefs.current.set(itemGlobalIndex, el);
+                            else menuItemRefs.current.delete(itemGlobalIndex);
+                          }}
+                          type="button"
+                          onClick={() => handleSelectMenuItem(opt)}
+                          onMouseEnter={() => setActiveMenuIndex(itemGlobalIndex)}
+                          className={cn(
+                            "w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer",
+                            isSelected ? "bg-muted text-foreground font-medium" : "hover:bg-muted/60 text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="p-1 rounded-lg border border-border/60 bg-white shrink-0">
+                              <IconComponent className="size-3.5 text-foreground" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
+                                <span>{opt.title}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground truncate">
+                                {opt.description}
+                              </div>
+                            </div>
+                          </div>
+                          {opt.shortcut && (
+                            <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0">
+                              {opt.shortcut}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+
+              {filteredMenuOptions.length === 0 && (
+                <div className="p-4 text-center text-xs text-muted-foreground">
+                  Không tìm thấy lệnh phù hợp
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 4. Context Menu Nâng cao qua Portal ra document.body */}
+      {activeContextMenu && mounted && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 pointer-events-auto"
+          onClick={() => setActiveContextMenu(null)}
+        >
+          <div
+            role="menu"
+            style={{
+              position: "fixed",
+              top: `${activeContextMenu.top}px`,
+              left: `${activeContextMenu.left}px`,
+            }}
+            className="w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+          {selectedBlockIds.size <= 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                  if (idx > 0) handleMoveBlock(idx, "up");
+                  setActiveContextMenu(null);
+                }}
+                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === 0}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <ArrowUp className="size-3.5 text-muted-foreground" />
+                <span>Di chuyển lên</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                  if (idx >= 0 && idx < blocks.length - 1) handleMoveBlock(idx, "down");
+                  setActiveContextMenu(null);
+                }}
+                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === blocks.length - 1}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
+              >
+                <ArrowDown className="size-3.5 text-muted-foreground" />
+                <span>Di chuyển xuống</span>
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedBlockIds.size > 1) {
+                handleDuplicateSelectedBlocks();
+              } else {
+                const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
+                if (idx >= 0) handleDuplicateBlock(blocks[idx], idx);
+              }
+              setActiveContextMenu(null);
+            }}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Copy className="size-3.5 text-muted-foreground" />
+              <span>{selectedBlockIds.size > 1 ? `Nhân đôi (${selectedBlockIds.size})` : "Nhân đôi block"}</span>
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground/60">⌘D</span>
+          </button>
+          <div className="my-1 border-t border-border/40" />
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedBlockIds.size > 1) {
+                handleDeleteSelectedBlocks();
+              } else {
+                handleDeleteBlock(activeContextMenu.blockId);
+              }
+            }}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
+          >
+            <div className="flex items-center gap-2">
+              <Trash2 className="size-3.5" />
+              <span>{selectedBlockIds.size > 1 ? `Xóa (${selectedBlockIds.size}) khối` : "Xóa block"}</span>
+            </div>
+            <span className="text-[10px] font-mono text-rose-500/70">Del</span>
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+
+      {/* 5. Contextual URL Paste Popover: Dán dưới dạng [Liên kết] [Dấu trang] [Nhúng] */}
+      {urlPastePopover && mounted && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 pointer-events-auto"
+          onClick={() => setUrlPastePopover(null)}
+        >
+          <div
+            style={{
+              position: "fixed",
+              top: `${urlPastePopover.top}px`,
+              left: `${urlPastePopover.left}px`,
+            }}
+            className="rounded-xl border border-border bg-white p-1.5 text-foreground shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none flex items-center gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-muted-foreground px-1 font-medium">Dán dưới dạng:</span>
+            <button
+              type="button"
+              onClick={() => {
+                const meta = resolveUrlMetadata(urlPastePopover.url);
+                handleUpdateBlock(urlPastePopover.blockId, {
+                  type: "link",
+                  content: meta.title,
+                  url: meta.url,
+                });
+                setUrlPastePopover(null);
+              }}
+              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Link2 className="size-3 text-primary" />
+              <span>Liên kết</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const meta = resolveUrlMetadata(urlPastePopover.url);
+                handleUpdateBlock(urlPastePopover.blockId, {
+                  type: "bookmark",
+                  content: meta.title,
+                  url: meta.url,
+                  description: meta.description,
+                  favicon: meta.favicon,
+                });
+                setUrlPastePopover(null);
+              }}
+              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Bookmark className="size-3 text-primary" />
+              <span>Dấu trang</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const meta = resolveUrlMetadata(urlPastePopover.url);
+                handleUpdateBlock(urlPastePopover.blockId, {
+                  type: "bookmark",
+                  content: meta.title,
+                  url: meta.url,
+                  description: meta.description,
+                });
+                setUrlPastePopover(null);
+              }}
+              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Globe className="size-3 text-primary" />
+              <span>Nhúng</span>
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 6. Global File Drop Target Overlay qua Portal ra document.body */}
+      {mounted && isGlobalDragging && typeof document !== "undefined" && createPortal(
+        <div
+          role="presentation"
+          data-testid="global-file-drop-overlay"
+          onClick={resetGlobalDrag}
+          className="fixed inset-0 z-50 pointer-events-auto flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs transition-all animate-in fade-in duration-150 p-6"
+        >
+          <div className="flex flex-col items-center gap-3.5 p-8 bg-card/95 shadow-2xl rounded-2xl border-2 border-dashed border-primary/60 max-w-sm text-center transform scale-100 transition-transform">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs animate-bounce">
+              <UploadCloud className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground tracking-tight">
+                Thả để thêm vào nội dung
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Ảnh, PDF, tài liệu và các tệp khác
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 interface NotionBlockRowProps {
   block: NotionBlockItem;
   index: number;
-  blocks: NotionBlockItem[];
   canEdit: boolean;
   isSelected: boolean;
-  isDragOver?: boolean;
   selectionRadiusClass: string;
   currentNumber: number;
   isOnlyOneEmptyBlock: boolean;
@@ -1662,8 +2172,6 @@ interface NotionBlockRowProps {
     index: number
   ) => void;
   handleContextMenu: (e: React.MouseEvent, block: NotionBlockItem) => void;
-  handleGutterMouseDown: (e: React.MouseEvent, block: NotionBlockItem) => void;
-  handleBlockMouseEnter: (blockId: string) => void;
   handleBlockHandleClick: (e: React.MouseEvent, block: NotionBlockItem, index: number) => void;
   handleBlockFocus: (blockId: string) => void;
   handleBlockBlur: (e: React.FocusEvent, blockId: string) => void;
@@ -1671,13 +2179,11 @@ interface NotionBlockRowProps {
   blockInputRefs: React.MutableRefObject<Map<string, HTMLInputElement | HTMLTextAreaElement>>;
 }
 
-function NotionBlockRow({
+const NotionBlockRow = React.memo(function NotionBlockRow({
   block,
   index,
-  blocks,
   canEdit,
   isSelected,
-  isDragOver,
   selectionRadiusClass,
   currentNumber,
   isOnlyOneEmptyBlock,
@@ -1686,59 +2192,43 @@ function NotionBlockRow({
   handleBlockKeyDown,
   handleBlockWrapperKeyDown,
   handleContextMenu,
-  handleGutterMouseDown,
-  handleBlockMouseEnter,
   handleBlockHandleClick,
   handleBlockFocus,
   handleBlockBlur,
   blockWrapperRefs,
   blockInputRefs,
 }: NotionBlockRowProps) {
-  const dragControls = useDragControls();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  };
 
   return (
-    <Reorder.Item
-      as="div"
-      key={block.id}
-      value={block}
-      dragListener={false}
-      dragControls={dragControls}
-      layout
-      initial={false}
-      transition={{
-        type: "spring",
-        stiffness: 450,
-        damping: 35,
-        mass: 0.6,
-      }}
-      whileDrag={{
-        scale: 1.015,
-        boxShadow: "0 10px 25px -4px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-        zIndex: 50,
-        opacity: 0.96,
-      }}
-      ref={(el: HTMLDivElement | null) => {
+    <div
+      ref={(el) => {
+        setNodeRef(el);
         if (el) blockWrapperRefs.current.set(block.id, el);
         else blockWrapperRefs.current.delete(block.id);
       }}
+      style={style}
+      {...attributes}
       tabIndex={isSelected ? 0 : undefined}
       onKeyDown={(e) => {
         if (isSelected) handleBlockWrapperKeyDown(e, block, index);
       }}
       onContextMenu={(e) => handleContextMenu(e, block)}
-      onMouseEnter={() => handleBlockMouseEnter(block.id)}
       className={cn(
         "group/block relative flex items-start -mx-2 px-2 py-0.5 transition-colors duration-75 outline-hidden select-none",
         selectionRadiusClass,
         !isSelected && "hover:bg-muted/30",
-        isDragOver && "bg-primary/10",
         isSelected && "bg-primary/[0.08]"
       )}
     >
       {/* Gutter trái: Handle ⋮⋮ (Nằm ngoài selection, không background riêng, không border) */}
       {canEdit && (
         <div
-          onMouseDown={(e) => handleGutterMouseDown(e, block)}
           className={cn(
             "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
             isSelected
@@ -1749,16 +2239,11 @@ function NotionBlockRow({
           <div className="relative flex items-center">
             <button
               type="button"
-              onPointerDown={(e) => {
-                if (canEdit) {
-                  dragControls.start(e);
-                }
-              }}
+              {...listeners}
               onClick={(e) => handleBlockHandleClick(e, block, index)}
               onContextMenu={(e) => handleContextMenu(e, block)}
               style={{ touchAction: "none" }}
-              className="p-0.5 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden select-none"
-              title="Nhấn để chọn block (Delete để xóa, ⌘D để nhân đôi, kéo để di chuyển)"
+              className="size-6 p-1 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden select-none"
               aria-label="Chọn hoặc kéo khối"
             >
               <GripVertical className="size-3.5" />
@@ -1772,21 +2257,11 @@ function NotionBlockRow({
         {/* 1. Text Block */}
         {block.type === "text" && (
           <div className="relative flex items-center min-h-[28px]">
-            {/* Placeholder Hint Layer với kbd '/' keycap khi block rỗng duy nhất */}
-            {isOnlyOneEmptyBlock && !block.content && (
-              <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/block:text-muted-foreground/80 font-normal">
-                <span>Nhập nội dung hoặc gõ</span>
-                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
-                  /
-                </kbd>
-                <span>để chọn</span>
-              </div>
-            )}
             <textarea
+              key={`block-input-${block.id}`}
               ref={(el) => {
                 if (el) {
                   blockInputRefs.current.set(block.id, el);
-                  autoResizeTextarea(el);
                 } else {
                   blockInputRefs.current.delete(block.id);
                 }
@@ -1804,6 +2279,19 @@ function NotionBlockRow({
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
               className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text block relative z-10"
             />
+            {/* Placeholder Hint Layer với kbd '/' keycap: luôn ở sau textarea và ẩn/hiện bằng CSS để không remount textarea */}
+            <div
+              className={cn(
+                "absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-opacity duration-75 group-hover/block:text-muted-foreground/80 font-normal z-0",
+                (!isOnlyOneEmptyBlock || Boolean(block.content)) ? "opacity-0 pointer-events-none hidden" : "opacity-100"
+              )}
+            >
+              <span>Nhập nội dung hoặc gõ</span>
+              <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
+                /
+              </kbd>
+              <span>để chèn</span>
+            </div>
           </div>
         )}
 
@@ -2394,490 +2882,6 @@ function NotionBlockRow({
           </div>
         )}
       </div>
-    </Reorder.Item>
-  );
-}
-
-  // Khi blur khỏi trailing input nếu có text thì commit thành block
-  const handleTrailingBlur = () => {
-    const val = trailingValue.trim();
-    if (val) {
-      const newId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      setBlocks((prev) => {
-        const next: NotionBlockItem[] = [...prev, { id: newId, type: "text", content: val }];
-        triggerAutoSave(next);
-        return next;
-      });
-      setTrailingValue("");
-    }
-  };
-
-  // Tính số thứ tự cho numbered list
-  let numberedCounter = 0;
-
-  // Kiểm tra xem block cuối cùng có rỗng không
-  const lastBlock = blocks[blocks.length - 1];
-  const lastBlockIsEmptyText = lastBlock && lastBlock.type === "text" && !lastBlock.content;
-  const isOnlyOneEmptyBlock = blocks.length === 1 && blocks[0].type === "text" && !blocks[0].content;
-
-  return (
-    <div
-      ref={containerRef}
-      data-slot="task-notion-block-content"
-      onPaste={handleContainerPaste}
-      onDrop={handleContainerDrop}
-      onDragOver={(e) => {
-        if (!isDraggingRef.current) e.preventDefault();
-      }}
-      className={cn("w-full relative font-sans text-sm text-foreground flex flex-col", className)}
-    >
-      {/* 1. Các Blocks Nội Dung (Auto-height, no internal scrollbar, continuous selection group, Framer Motion Reorder) */}
-      <Reorder.Group
-        as="div"
-        axis="y"
-        values={blocks}
-        onReorder={(newOrder) => {
-          setBlocks(newOrder);
-          triggerAutoSave(newOrder);
-        }}
-        className="flex flex-col"
-      >
-        {blocks.map((block, index) => {
-          const isDragOver = dragOverIndex === index;
-          const isSelected = selectedBlockIds.has(block.id);
-          const prevIsSelected = isSelected && index > 0 && selectedBlockIds.has(blocks[index - 1].id);
-          const nextIsSelected = isSelected && index < blocks.length - 1 && selectedBlockIds.has(blocks[index + 1].id);
-
-          // Radius thống nhất theo Notion continuous selection group:
-          // - Single block: bo 4 góc
-          // - Block đầu tiên của dải: bo 2 góc trên
-          // - Block cuối cùng của dải: bo 2 góc dưới
-          // - Block ở giữa: phẳng hoàn toàn cả trên lẫn dưới
-          const selectionRadiusClass = isSelected
-            ? !prevIsSelected && !nextIsSelected
-              ? "rounded-md"
-              : !prevIsSelected && nextIsSelected
-              ? "rounded-t-md rounded-b-none"
-              : prevIsSelected && !nextIsSelected
-              ? "rounded-b-md rounded-t-none"
-              : "rounded-none"
-            : "rounded-md";
-
-          // Reset hoặc tăng bộ đếm numbered list
-          if (block.type === "numbered_list") {
-            numberedCounter += 1;
-          } else {
-            numberedCounter = 0;
-          }
-          const currentNumber = numberedCounter;
-
-          return (
-            <NotionBlockRow
-              key={block.id}
-              block={block}
-              index={index}
-              blocks={blocks}
-              canEdit={canEdit}
-              isSelected={isSelected}
-              isDragOver={isDragOver}
-              selectionRadiusClass={selectionRadiusClass}
-              currentNumber={currentNumber}
-              isOnlyOneEmptyBlock={isOnlyOneEmptyBlock}
-              handleUpdateBlock={handleUpdateBlock}
-              handleDeleteBlock={handleDeleteBlock}
-              handleBlockKeyDown={handleBlockKeyDown}
-              handleBlockWrapperKeyDown={handleBlockWrapperKeyDown}
-              handleContextMenu={handleContextMenu}
-              handleGutterMouseDown={handleGutterMouseDown}
-              handleBlockMouseEnter={handleBlockMouseEnter}
-              handleBlockHandleClick={handleBlockHandleClick}
-              handleBlockFocus={handleBlockFocus}
-              handleBlockBlur={handleBlockBlur}
-              blockWrapperRefs={blockWrapperRefs}
-              blockInputRefs={blockInputRefs}
-            />
-          );
-        })}
-      </Reorder.Group>
-
-      {/* 2. Trailing Empty Row (Render 1 dòng duy nhất ~32px sau block cuối, không border, không background) */}
-      {canEdit && !lastBlockIsEmptyText && (
-        <div
-          className="group/trailing flex items-center h-8 -mx-2 px-2 py-0.5 rounded-md select-none cursor-text"
-          onClick={() => trailingInputRef.current?.focus()}
-        >
-          {/* Khoảng trống căn chỉnh ngang hàng với text block phía trên */}
-          <div className="w-5 shrink-0 -ml-6 mr-1 pointer-events-none" />
-          <div className="relative flex-1 min-w-0 flex items-center min-h-[28px]">
-            {/* Visual Hint Layer với keyboard keycap '/' */}
-            {!trailingValue && (
-              <div className="absolute inset-0 flex items-center text-sm text-muted-foreground/60 select-none pointer-events-none transition-colors group-hover/trailing:text-muted-foreground/80 font-normal">
-                <span>Nhập nội dung hoặc gõ</span>
-                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1.5 rounded text-[11px] font-mono font-medium bg-muted text-muted-foreground border border-border/70 shadow-2xs leading-none">
-                  /
-                </kbd>
-                <span>để chọn</span>
-              </div>
-            )}
-            <input
-              ref={trailingInputRef}
-              type="text"
-              value={trailingValue}
-              onFocus={() => {
-                lastActiveBlockIdRef.current = null;
-                if (selectedBlockIds.size > 0) {
-                  setSelectedBlockIds(new Set());
-                  setAnchorBlockId(null);
-                }
-              }}
-              onKeyDown={handleTrailingKeyDown}
-              onChange={handleTrailingChange}
-              onBlur={handleTrailingBlur}
-              className="w-full bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text relative z-10"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 2b. Click-to-focus: toàn bộ vùng trống phía dưới block editor trở thành vùng clickable */}
-      {canEdit && (
-        <div
-          className="flex-1 min-h-[200px] cursor-text"
-          onClick={() => {
-            // Focus vào block cuối cùng hoặc trailing input
-            if (trailingInputRef.current) {
-              trailingInputRef.current.focus();
-            } else {
-              const lastBlockId = blocks[blocks.length - 1]?.id;
-              if (lastBlockId) {
-                const el = blockInputRefs.current.get(lastBlockId);
-                if (el) {
-                  el.focus();
-                  // Di chuyển cursor về cuối nội dung
-                  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-                    const len = el.value?.length || 0;
-                    el.setSelectionRange(len, len);
-                  }
-                }
-              }
-            }
-          }}
-        />
-      )}
-
-      {/* 3. Slash Command Popover Menu qua Portal ra document.body */}
-      {isMenuOpen && mounted && typeof document !== "undefined" && createPortal(
-        <div
-          role="dialog"
-          aria-label="Menu lệnh"
-          className="fixed inset-0 z-50 pointer-events-auto"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseSlashMenu();
-          }}
-        >
-          <div
-            ref={menuPopoverRef}
-            style={{
-              position: "fixed",
-              top: menuPosition?.top !== undefined ? `${menuPosition.top}px` : undefined,
-              bottom: menuPosition?.bottom !== undefined ? `${menuPosition.bottom}px` : undefined,
-              left: menuPosition ? `${menuPosition.left}px` : undefined,
-              maxHeight: `${menuMaxHeight}px`,
-            }}
-            className={cn(
-              "w-72 max-w-[calc(100vw-28px)] rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 select-none flex flex-col",
-              menuPlacement === "top"
-                ? "animate-in fade-in-0 slide-in-from-bottom-2 duration-100"
-                : "animate-in fade-in-0 slide-in-from-top-2 duration-100"
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Ô tìm kiếm lệnh (Header cố định) */}
-            <div className="relative mb-1.5 shrink-0">
-              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
-              <input
-                ref={menuInputRef}
-                type="text"
-                value={menuSearchQuery}
-                onChange={(e) => {
-                  setMenuSearchQuery(e.target.value);
-                  setActiveMenuIndex(0);
-                }}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
-                  if (e.key === "Escape") {
-                    handleCloseSlashMenu();
-                  } else if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setActiveMenuIndex((prev) =>
-                      prev < filteredMenuOptions.length - 1 ? prev + 1 : 0
-                    );
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setActiveMenuIndex((prev) =>
-                      prev > 0 ? prev - 1 : filteredMenuOptions.length - 1
-                    );
-                  } else if (e.key === "Enter") {
-                    e.preventDefault();
-                    const opt = filteredMenuOptions[activeMenuIndex];
-                    if (opt) handleSelectMenuItem(opt);
-                  }
-                }}
-                placeholder="Tìm lệnh..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-muted/40 rounded-xl border border-border/60 focus:outline-hidden focus:ring-1 focus:ring-primary/40 font-medium"
-              />
-            </div>
-
-            {/* Danh sách lựa chọn - Cuộn nội bộ nếu dài hơn availableHeight */}
-            <div ref={menuListRef} className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-0.5 overscroll-contain">
-              {(["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Phương tiện & Tệp", "Liên kết", "Phân cách"] as const).map((groupName) => {
-                const groupOptions = filteredMenuOptions.filter((opt) => opt.group === groupName);
-                if (groupOptions.length === 0) return null;
-
-                return (
-                  <div key={groupName} className="space-y-0.5">
-                    <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground/80">
-                      {groupName}
-                    </div>
-                    {groupOptions.map((opt) => {
-                      const itemGlobalIndex = filteredMenuOptions.indexOf(opt);
-                      const isSelected = itemGlobalIndex === activeMenuIndex;
-                      const IconComponent = opt.icon;
-
-                      return (
-                        <button
-                          key={opt.id}
-                          ref={(el) => {
-                            if (el) menuItemRefs.current.set(itemGlobalIndex, el);
-                            else menuItemRefs.current.delete(itemGlobalIndex);
-                          }}
-                          type="button"
-                          onClick={() => handleSelectMenuItem(opt)}
-                          onMouseEnter={() => setActiveMenuIndex(itemGlobalIndex)}
-                          className={cn(
-                            "w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer",
-                            isSelected ? "bg-muted text-foreground font-medium" : "hover:bg-muted/60 text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="p-1 rounded-lg border border-border/60 bg-white shrink-0">
-                              <IconComponent className="size-3.5 text-foreground" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-medium text-foreground truncate flex items-center gap-1.5">
-                                <span>{opt.title}</span>
-                              </div>
-                              <div className="text-[11px] text-muted-foreground truncate">
-                                {opt.description}
-                              </div>
-                            </div>
-                          </div>
-                          {opt.shortcut && (
-                            <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0">
-                              {opt.shortcut}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-
-              {filteredMenuOptions.length === 0 && (
-                <div className="p-4 text-center text-xs text-muted-foreground">
-                  Không tìm thấy lệnh phù hợp
-                </div>
-              )}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* 4. Context Menu Nâng cao qua Portal ra document.body */}
-      {activeContextMenu && mounted && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-50 pointer-events-auto"
-          onClick={() => setActiveContextMenu(null)}
-        >
-          <div
-            role="menu"
-            style={{
-              position: "fixed",
-              top: `${activeContextMenu.top}px`,
-              left: `${activeContextMenu.left}px`,
-            }}
-            className="w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-          {selectedBlockIds.size <= 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-                  if (idx > 0) handleMoveBlock(idx, "up");
-                  setActiveContextMenu(null);
-                }}
-                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === 0}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-              >
-                <ArrowUp className="size-3.5 text-muted-foreground" />
-                <span>Di chuyển lên</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-                  if (idx >= 0 && idx < blocks.length - 1) handleMoveBlock(idx, "down");
-                  setActiveContextMenu(null);
-                }}
-                disabled={blocks.findIndex((b) => b.id === activeContextMenu.blockId) === blocks.length - 1}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left hover:bg-muted disabled:opacity-40 cursor-pointer"
-              >
-                <ArrowDown className="size-3.5 text-muted-foreground" />
-                <span>Di chuyển xuống</span>
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedBlockIds.size > 1) {
-                handleDuplicateSelectedBlocks();
-              } else {
-                const idx = blocks.findIndex((b) => b.id === activeContextMenu.blockId);
-                if (idx >= 0) handleDuplicateBlock(blocks[idx], idx);
-              }
-              setActiveContextMenu(null);
-            }}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left hover:bg-muted cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Copy className="size-3.5 text-muted-foreground" />
-              <span>{selectedBlockIds.size > 1 ? `Nhân đôi (${selectedBlockIds.size})` : "Nhân đôi block"}</span>
-            </div>
-            <span className="text-[10px] font-mono text-muted-foreground/60">⌘D</span>
-          </button>
-          <div className="my-1 border-t border-border/40" />
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedBlockIds.size > 1) {
-                handleDeleteSelectedBlocks();
-              } else {
-                handleDeleteBlock(activeContextMenu.blockId);
-              }
-            }}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
-          >
-            <div className="flex items-center gap-2">
-              <Trash2 className="size-3.5" />
-              <span>{selectedBlockIds.size > 1 ? `Xóa (${selectedBlockIds.size}) khối` : "Xóa block"}</span>
-            </div>
-            <span className="text-[10px] font-mono text-rose-500/70">Del</span>
-          </button>
-        </div>
-      </div>,
-      document.body
-    )}
-
-      {/* 5. Contextual URL Paste Popover: Dán dưới dạng [Liên kết] [Dấu trang] [Nhúng] */}
-      {urlPastePopover && mounted && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-50 pointer-events-auto"
-          onClick={() => setUrlPastePopover(null)}
-        >
-          <div
-            style={{
-              position: "fixed",
-              top: `${urlPastePopover.top}px`,
-              left: `${urlPastePopover.left}px`,
-            }}
-            className="rounded-xl border border-border bg-white p-1.5 text-foreground shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs select-none flex items-center gap-1.5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="text-muted-foreground px-1 font-medium">Dán dưới dạng:</span>
-            <button
-              type="button"
-              onClick={() => {
-                const meta = resolveUrlMetadata(urlPastePopover.url);
-                handleUpdateBlock(urlPastePopover.blockId, {
-                  type: "link",
-                  content: meta.title,
-                  url: meta.url,
-                });
-                setUrlPastePopover(null);
-              }}
-              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Link2 className="size-3 text-primary" />
-              <span>Liên kết</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const meta = resolveUrlMetadata(urlPastePopover.url);
-                handleUpdateBlock(urlPastePopover.blockId, {
-                  type: "bookmark",
-                  content: meta.title,
-                  url: meta.url,
-                  description: meta.description,
-                  favicon: meta.favicon,
-                });
-                setUrlPastePopover(null);
-              }}
-              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Bookmark className="size-3 text-primary" />
-              <span>Dấu trang</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const meta = resolveUrlMetadata(urlPastePopover.url);
-                handleUpdateBlock(urlPastePopover.blockId, {
-                  type: "bookmark",
-                  content: meta.title,
-                  url: meta.url,
-                  description: meta.description,
-                });
-                setUrlPastePopover(null);
-              }}
-              className="px-2.5 py-1 rounded-lg hover:bg-muted font-medium text-foreground transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Globe className="size-3 text-primary" />
-              <span>Nhúng</span>
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* 6. Global File Drop Target Overlay qua Portal ra document.body */}
-      {mounted && isGlobalDragging && typeof document !== "undefined" && createPortal(
-        <div
-          role="presentation"
-          data-testid="global-file-drop-overlay"
-          className="fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs transition-all animate-in fade-in duration-150 p-6"
-        >
-          <div className="flex flex-col items-center gap-3.5 p-8 bg-card/95 shadow-2xl rounded-2xl border-2 border-dashed border-primary/60 max-w-sm text-center transform scale-100 transition-transform">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs animate-bounce">
-              <UploadCloud className="w-8 h-8" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-semibold text-foreground tracking-tight">
-                Thả để thêm vào nội dung
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Ảnh, PDF, tài liệu và các tệp khác
-              </p>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
-}
+});

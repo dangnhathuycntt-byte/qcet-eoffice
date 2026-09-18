@@ -85,7 +85,8 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
   try {
     assertCsrf(req);
     assertJsonContentType(req);
-    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
+    const MAX_TASK_CONTENT_BYTES = 10 * 1024 * 1024;
+    assertRequestBodySize(req, MAX_TASK_CONTENT_BYTES);
 
     const context = await getApiContext(req);
     requestId = context.requestId;
@@ -96,7 +97,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id } = await Promise.resolve(routeContext.params);
 
-    const validatedBody = await parseAndValidateJson(req, UpdateTaskMetadataSchema);
+    const validatedBody = await parseAndValidateJson(req, UpdateTaskMetadataSchema, { maxBytes: MAX_TASK_CONTENT_BYTES });
 
     // Fetch existing task to check existence, OCC, and authorization
     const taskResult = await taskQueryService.getTaskById(id);

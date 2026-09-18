@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { m } from "motion/react";
 
 export interface TaskDetailHeaderNavProps {
   taskCode: string;
@@ -135,9 +136,9 @@ export function TaskDetailHeaderNav({
           aria-expanded={showInspector}
         >
           {showInspector ? (
-            <PanelRightClose className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <PanelRightClose className="size-3.5 shrink-0 transition-all duration-200 hover:scale-110 active:scale-95" strokeWidth={1.5} />
           ) : (
-            <PanelRightOpen className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <PanelRightOpen className="size-3.5 shrink-0 transition-all duration-200 hover:scale-110 active:scale-95" strokeWidth={1.5} />
           )}
           <span className="hidden sm:inline">Thuộc tính</span>
           <kbd className="hidden lg:inline-block px-1.5 py-0.2 rounded bg-muted text-[10px] font-mono text-muted-foreground">
