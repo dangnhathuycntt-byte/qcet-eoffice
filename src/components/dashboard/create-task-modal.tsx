@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Search,
   Check,
+  Flag,
 } from "lucide-react";
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
 import type { UserRole, AuthUser } from "@/types/auth";
@@ -37,12 +38,24 @@ import {
 } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { FloatingPortal } from "@/components/ui/floating-portal";
 import { cn } from "@/lib/utils";
 import type { TaskPriorityInput } from "@/contracts/tasks";
 import {
   submitCreateTask,
   type CreateTaskSubmitResult,
 } from "@/lib/adapters/create-task-mapper";
+
+export const PRIORITY_OPTIONS: {
+  value: TaskPriorityInput;
+  label: string;
+  iconColor: string;
+}[] = [
+  { value: "LOW", label: "Thấp", iconColor: "text-muted-foreground" },
+  { value: "MEDIUM", label: "Bình thường", iconColor: "text-blue-500" },
+  { value: "HIGH", label: "Cao", iconColor: "text-amber-500" },
+  { value: "URGENT", label: "Khẩn cấp", iconColor: "text-rose-500" },
+];
 
 export type TaskLevel = "TRUONG" | "DON_VI" | "STAFF";
 
@@ -619,6 +632,10 @@ export function CreateTaskModal({
   const comboboxRef = React.useRef<HTMLDivElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Custom Priority dropdown state
+  const [isPriorityOpen, setIsPriorityOpen] = React.useState(false);
+  const priorityTriggerRef = React.useRef<HTMLButtonElement>(null);
+
   const [personnelList, setPersonnelList] = React.useState<ApiPersonnel[]>([]);
 
   // Submission lifecycle (T26 / T27 / T73): the form never closes or clears on a
@@ -864,6 +881,7 @@ export function CreateTaskModal({
 
   const forceClose = React.useCallback(() => {
     setIsComboboxOpen(false);
+    setIsPriorityOpen(false);
     setShowDiscardConfirm(false);
     onClose();
   }, [onClose]);
@@ -873,6 +891,11 @@ export function CreateTaskModal({
     if (isComboboxOpen) {
       setIsComboboxOpen(false);
       comboboxTriggerRef.current?.focus();
+      return;
+    }
+    if (isPriorityOpen) {
+      setIsPriorityOpen(false);
+      priorityTriggerRef.current?.focus();
       return;
     }
     if (showDiscardConfirm) {
@@ -906,6 +929,7 @@ export function CreateTaskModal({
       setErrors({});
       setDeptFilter("ALL");
       setIsComboboxOpen(false);
+      setIsPriorityOpen(false);
       setAssigneeSearchQuery("");
       setIsSubmitting(false);
       setSubmissionStatus("idle");
@@ -1324,14 +1348,16 @@ export function CreateTaskModal({
                   />
                 </div>
 
-                {/* 3. Core Properties Grid (2 columns, compact, no cards) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 pt-3 border-t border-border/50">
-                  {/* Property: Cán bộ phụ trách (Single DRI) */}
-                  <div className="space-y-1" ref={comboboxRef}>
+                {/* 3. Core Properties Grid (Single DRI, Due Date, Priority aligned harmoniously in 1 row) */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-3 border-t border-border/50">
+                  {/* Property: Cán bộ phụ trách (Single DRI) - 5 cols */}
+                  <div className="sm:col-span-5 space-y-1" ref={comboboxRef}>
                     <label id="task-assignee-label" htmlFor="task-assignee-field" className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                       <span>Phụ trách <span className="text-destructive">*</span></span>
                       {selectedAssigneeDept && (
-                        <span className="text-xs text-muted-foreground/70">{selectedAssigneeDept.department}</span>
+                        <span className="text-[11px] text-muted-foreground/70 truncate max-w-[140px]" title={selectedAssigneeDept.department}>
+                          {selectedAssigneeDept.department}
+                        </span>
                       )}
                     </label>
 
@@ -1376,166 +1402,170 @@ export function CreateTaskModal({
                           <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                         </button>
 
-                        {/* Combobox Dropdown Popover */}
-                        {isComboboxOpen && (
-                          <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-border/80 bg-card shadow-lg overflow-hidden">
-                            <div className="p-2 border-b border-border/50 bg-muted/30">
-                              <div className="relative flex items-center">
-                                <Search className="size-3.5 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
-                                <input
-                                  ref={searchInputRef}
-                                  type="text"
-                                  role="searchbox"
-                                  aria-label="Tìm kiếm nhân sự"
-                                  placeholder="Tìm họ tên, chức danh..."
-                                  value={assigneeSearchQuery}
-                                  onChange={(e) => setAssigneeSearchQuery(e.target.value)}
-                                  onFocus={() => scrollActiveInputIntoView()}
-                                  onKeyDown={(e) => {
-                                    const isComposing = Boolean(e.nativeEvent.isComposing);
-                                    if (isComposing) return;
-                                    if (e.key === "ArrowDown") {
-                                      e.preventDefault();
-                                      const next = resolveComboboxNavigation(
-                                        "ArrowDown",
-                                        activeOptionIndex,
-                                        flatSearchedMembers.length
-                                      );
-                                      if (next !== null) setActiveOptionIndex(next);
-                                    } else if (e.key === "ArrowUp") {
-                                      e.preventDefault();
-                                      const next = resolveComboboxNavigation(
-                                        "ArrowUp",
-                                        activeOptionIndex,
-                                        flatSearchedMembers.length
-                                      );
-                                      if (next !== null) setActiveOptionIndex(next);
-                                    } else if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (canSelectOnEnter(isComposing, flatSearchedMembers.length, activeOptionIndex)) {
-                                        handleAssigneeSelect(flatSearchedMembers[activeOptionIndex].name);
-                                        comboboxTriggerRef.current?.focus();
-                                      }
-                                    } else if (e.key === "Escape") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setIsComboboxOpen(false);
+                        {/* Combobox Dropdown Popover via FloatingPortal (Overlays outside modal scroll container) */}
+                        <FloatingPortal
+                          isOpen={isComboboxOpen}
+                          onClose={() => setIsComboboxOpen(false)}
+                          triggerRef={comboboxTriggerRef}
+                          className="w-[340px] sm:w-[420px] p-0 overflow-hidden shadow-2xl rounded-xl border border-border/80 bg-card z-[9999]"
+                          ariaLabel="Danh sách cán bộ phụ trách"
+                        >
+                          <div className="p-2 border-b border-border/50 bg-muted/30">
+                            <div className="relative flex items-center">
+                              <Search className="size-3.5 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
+                              <input
+                                ref={searchInputRef}
+                                type="text"
+                                role="searchbox"
+                                aria-label="Tìm kiếm nhân sự"
+                                placeholder="Tìm họ tên, chức danh..."
+                                value={assigneeSearchQuery}
+                                onChange={(e) => setAssigneeSearchQuery(e.target.value)}
+                                onFocus={() => scrollActiveInputIntoView()}
+                                onKeyDown={(e) => {
+                                  const isComposing = Boolean(e.nativeEvent.isComposing);
+                                  if (isComposing) return;
+                                  if (e.key === "ArrowDown") {
+                                    e.preventDefault();
+                                    const next = resolveComboboxNavigation(
+                                      "ArrowDown",
+                                      activeOptionIndex,
+                                      flatSearchedMembers.length
+                                    );
+                                    if (next !== null) setActiveOptionIndex(next);
+                                  } else if (e.key === "ArrowUp") {
+                                    e.preventDefault();
+                                    const next = resolveComboboxNavigation(
+                                      "ArrowUp",
+                                      activeOptionIndex,
+                                      flatSearchedMembers.length
+                                    );
+                                    if (next !== null) setActiveOptionIndex(next);
+                                  } else if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (canSelectOnEnter(isComposing, flatSearchedMembers.length, activeOptionIndex)) {
+                                      handleAssigneeSelect(flatSearchedMembers[activeOptionIndex].name);
                                       comboboxTriggerRef.current?.focus();
                                     }
-                                  }}
-                                  aria-autocomplete="list"
-                                  aria-controls="task-assignee-listbox"
-                                  aria-activedescendant={
-                                    flatSearchedMembers[activeOptionIndex]
-                                      ? `assignee-option-${flatSearchedMembers[activeOptionIndex].code}-${flatSearchedMembers[activeOptionIndex].name.replace(/\s+/g, "-")}`
-                                      : undefined
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsComboboxOpen(false);
+                                    comboboxTriggerRef.current?.focus();
                                   }
-                                  className="w-full h-8 pl-7 pr-2.5 rounded-md border border-border/60 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-                                />
-                              </div>
+                                }}
+                                aria-autocomplete="list"
+                                aria-controls="task-assignee-listbox"
+                                aria-activedescendant={
+                                  flatSearchedMembers[activeOptionIndex]
+                                    ? `assignee-option-${flatSearchedMembers[activeOptionIndex].code}-${flatSearchedMembers[activeOptionIndex].name.replace(/\s+/g, "-")}`
+                                    : undefined
+                                }
+                                className="w-full h-8 pl-7 pr-2.5 rounded-md border border-border/60 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
 
-                              {/* Department Filter Chips */}
-                              <div className="flex items-center gap-1 mt-1.5 overflow-x-auto thin-scrollbar pb-0.5">
+                            {/* Department Filter Chips */}
+                            <div className="flex items-center gap-1 mt-1.5 overflow-x-auto thin-scrollbar pb-0.5">
+                              <button
+                                type="button"
+                                onClick={() => setDeptFilter("ALL")}
+                                className={cn(
+                                  "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
+                                  deptFilter === "ALL"
+                                    ? "bg-primary text-primary-foreground font-semibold"
+                                    : "bg-background text-muted-foreground hover:text-foreground border border-border/50"
+                                )}
+                              >
+                                Tất cả
+                              </button>
+                              {departmentGroups.map((g, idx) => (
                                 <button
+                                  key={`chip-${g.code}-${idx}`}
                                   type="button"
-                                  onClick={() => setDeptFilter("ALL")}
+                                  onClick={() => setDeptFilter(g.code)}
                                   className={cn(
                                     "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
-                                    deptFilter === "ALL"
+                                    deptFilter === g.code
                                       ? "bg-primary text-primary-foreground font-semibold"
                                       : "bg-background text-muted-foreground hover:text-foreground border border-border/50"
                                   )}
                                 >
-                                  Tất cả
+                                  {g.code}
                                 </button>
-                                {departmentGroups.map((g, idx) => (
-                                  <button
-                                    key={`chip-${g.code}-${idx}`}
-                                    type="button"
-                                    onClick={() => setDeptFilter(g.code)}
-                                    className={cn(
-                                      "rounded px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
-                                      deptFilter === g.code
-                                        ? "bg-primary text-primary-foreground font-semibold"
-                                        : "bg-background text-muted-foreground hover:text-foreground border border-border/50"
-                                    )}
-                                  >
-                                    {g.code}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Personnel Listbox */}
-                            <div
-                              id="task-assignee-listbox"
-                              role="listbox"
-                              aria-labelledby="task-assignee-label"
-                              className="max-h-52 overflow-y-auto thin-scrollbar p-1 divide-y divide-border/20"
-                            >
-                              {searchedPersonnel.length > 0 ? (
-                                searchedPersonnel.map((group, gIdx) => (
-                                  <div key={`pop-grp-${group.code}-${gIdx}`} className="py-0.5">
-                                    <div className="px-2 py-0.5 text-xs font-bold text-muted-foreground sticky top-0 bg-card/95">
-                                      {group.department}
-                                    </div>
-                                    <div className="space-y-0.5">
-                                      {group.members.map((member, idx) => {
-                                        const isSelected =
-                                          formData.leadAssigneeName.trim().toLowerCase() ===
-                                          member.name.trim().toLowerCase();
-                                        const flatIndex = flatSearchedMembers.findIndex(
-                                          (m) => m.name === member.name && m.department === group.department
-                                        );
-                                        const isActive = flatIndex === activeOptionIndex;
-                                        return (
-                                          <button
-                                            key={`pop-opt-${group.code}-${member.name}-${idx}`}
-                                            type="button"
-                                            role="option"
-                                            id={`assignee-option-${group.code}-${member.name.replace(/\s+/g, "-")}`}
-                                            aria-selected={isSelected}
-                                            onClick={() => {
-                                              handleAssigneeSelect(member.name);
-                                              comboboxTriggerRef.current?.focus();
-                                            }}
-                                            onMouseEnter={() => {
-                                              if (flatIndex >= 0) setActiveOptionIndex(flatIndex);
-                                            }}
-                                            className={cn(
-                                              "w-full px-2 py-1.5 rounded-md text-left flex items-center justify-between gap-2 transition-colors cursor-pointer text-xs",
-                                              isSelected
-                                                ? "bg-primary/10 text-primary font-semibold"
-                                                : isActive
-                                                ? "bg-muted text-foreground"
-                                                : "hover:bg-muted text-foreground"
-                                            )}
-                                          >
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <span className="size-5 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground shrink-0">
-                                                {getAssigneeInitials(member.name)}
-                                              </span>
-                                              <div className="min-w-0">
-                                                <p className="truncate font-medium">{member.title}</p>
-                                                <p className="text-muted-foreground truncate text-xs">{member.role}</p>
-                                              </div>
-                                            </div>
-                                            {isSelected && <Check className="size-3 text-primary shrink-0" strokeWidth={1.5} />}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="p-3 text-center text-xs text-muted-foreground">
-                                  Không tìm thấy nhân sự phù hợp
-                                </div>
-                              )}
+                              ))}
                             </div>
                           </div>
-                        )}
+
+                          {/* Personnel Listbox */}
+                          <div
+                            id="task-assignee-listbox"
+                            role="listbox"
+                            aria-labelledby="task-assignee-label"
+                            className="max-h-56 overflow-y-auto thin-scrollbar p-1 divide-y divide-border/20"
+                          >
+                            {searchedPersonnel.length > 0 ? (
+                              searchedPersonnel.map((group, gIdx) => (
+                                <div key={`pop-grp-${group.code}-${gIdx}`} className="py-0.5">
+                                  <div className="px-2 py-0.5 text-[11px] font-bold text-muted-foreground sticky top-0 bg-card/95 backdrop-blur-xs">
+                                    {group.department}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {group.members.map((member, idx) => {
+                                      const isSelected =
+                                        formData.leadAssigneeName.trim().toLowerCase() ===
+                                        member.name.trim().toLowerCase();
+                                      const flatIndex = flatSearchedMembers.findIndex(
+                                        (m) => m.name === member.name && m.department === group.department
+                                      );
+                                      const isActive = flatIndex === activeOptionIndex;
+                                      return (
+                                        <button
+                                          key={`pop-opt-${group.code}-${member.name}-${idx}`}
+                                          type="button"
+                                          role="option"
+                                          id={`assignee-option-${group.code}-${member.name.replace(/\s+/g, "-")}`}
+                                          aria-selected={isSelected}
+                                          onClick={() => {
+                                            handleAssigneeSelect(member.name);
+                                            comboboxTriggerRef.current?.focus();
+                                          }}
+                                          onMouseEnter={() => {
+                                            if (flatIndex >= 0) setActiveOptionIndex(flatIndex);
+                                          }}
+                                          className={cn(
+                                            "w-full px-2 py-1.5 rounded-md text-left flex items-center justify-between gap-2 transition-colors cursor-pointer text-xs",
+                                            isSelected
+                                              ? "bg-primary/10 text-primary font-semibold"
+                                              : isActive
+                                              ? "bg-muted text-foreground"
+                                              : "hover:bg-muted text-foreground"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <span className="size-5 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground shrink-0">
+                                              {getAssigneeInitials(member.name)}
+                                            </span>
+                                            <div className="min-w-0">
+                                              <p className="truncate font-medium">{member.title}</p>
+                                              <p className="text-muted-foreground truncate text-[10px]">{member.role}</p>
+                                            </div>
+                                          </div>
+                                          {isSelected && <Check className="size-3 text-primary shrink-0" strokeWidth={1.5} />}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-3 text-center text-xs text-muted-foreground">
+                                Không tìm thấy nhân sự phù hợp
+                              </div>
+                            )}
+                          </div>
+                        </FloatingPortal>
                       </div>
                     )}
 
@@ -1576,12 +1606,12 @@ export function CreateTaskModal({
                     )}
                   </div>
 
-                  {/* Property: Hạn hoàn thành (Due Date) */}
-                  <div className="space-y-1">
+                  {/* Property: Hạn hoàn thành (Due Date) - 4 cols */}
+                  <div className="sm:col-span-4 space-y-1">
                     <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                       <span>Hạn hoàn thành <span className="text-destructive">*</span></span>
                       {effectiveParentDueDate && (
-                        <span className="text-muted-foreground/70">
+                        <span className="text-[11px] text-muted-foreground/70">
                           Tối đa: {formatDetailDateDisplay(effectiveParentDueDate)}
                         </span>
                       )}
@@ -1601,38 +1631,6 @@ export function CreateTaskModal({
                       className="w-full"
                     />
 
-                    {/* Quick Preset Buttons */}
-                    <div className="flex items-center gap-1 pt-0.5">
-                      <button
-                        type="button"
-                        onClick={() => handleDatePreset(0)}
-                        className="rounded border border-border/50 bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        Hôm nay
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDatePreset(3)}
-                        className="rounded border border-border/50 bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        +3 ngày
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDatePreset(7)}
-                        className="rounded border border-border/50 bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        +1 tuần
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDatePreset(-1)}
-                        className="rounded border border-border/50 bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        Cuối tháng
-                      </button>
-                    </div>
-
                     {errors.dueDate && (
                       <p id="task-due-date-error" className="text-xs font-medium text-destructive mt-1">
                         {errors.dueDate}
@@ -1640,25 +1638,68 @@ export function CreateTaskModal({
                     )}
                   </div>
 
-                  {/* Property: Mức ưu tiên (Priority) */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground block">
+                  {/* Property: Mức ưu tiên (Priority) - 3 cols */}
+                  <div className="sm:col-span-3 space-y-1">
+                    <label id="task-priority-label" className="text-xs font-medium text-muted-foreground block">
                       Mức ưu tiên
                     </label>
                     <div className="relative">
-                      <select
-                        value={formData.priority || "MEDIUM"}
-                        onChange={(e) =>
-                          setFormData((p) => ({ ...p, priority: e.target.value as TaskPriorityInput }))
-                        }
-                        className="w-full h-9 pl-2.5 pr-7 rounded-lg border border-border/70 bg-background text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
+                      <button
+                        ref={priorityTriggerRef}
+                        type="button"
+                        id="task-priority-field"
+                        aria-labelledby="task-priority-label"
+                        aria-expanded={isPriorityOpen}
+                        onClick={() => setIsPriorityOpen((prev) => !prev)}
+                        className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-medium text-foreground flex items-center justify-between gap-1.5 hover:border-border transition-colors cursor-pointer"
                       >
-                        <option value="LOW">Thấp</option>
-                        <option value="MEDIUM">Bình thường</option>
-                        <option value="HIGH">Cao</option>
-                        <option value="URGENT">Khẩn cấp</option>
-                      </select>
-                      <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" strokeWidth={1.5} />
+                        <div className="flex items-center gap-1.5 min-w-0 truncate">
+                          <Flag
+                            className={cn(
+                              "size-3 shrink-0",
+                              PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.iconColor || "text-blue-500"
+                            )}
+                            strokeWidth={1.5}
+                          />
+                          <span className="truncate">
+                            {PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.label || "Bình thường"}
+                          </span>
+                        </div>
+                        <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                      </button>
+
+                      <FloatingPortal
+                        isOpen={isPriorityOpen}
+                        onClose={() => setIsPriorityOpen(false)}
+                        triggerRef={priorityTriggerRef}
+                        className="w-40 p-1 space-y-0.5 shadow-xl rounded-xl border border-border/80 bg-card z-[9999]"
+                        ariaLabel="Chọn mức độ ưu tiên"
+                      >
+                        {PRIORITY_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setFormData((p) => ({ ...p, priority: opt.value }));
+                              setIsPriorityOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-2.5 py-1.5 rounded-md text-xs flex items-center justify-between cursor-pointer transition-colors",
+                              (formData.priority || "MEDIUM") === opt.value
+                                ? "bg-accent font-semibold text-foreground"
+                                : "text-foreground hover:bg-accent/70"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Flag className={cn("size-3", opt.iconColor)} strokeWidth={1.5} />
+                              <span>{opt.label}</span>
+                            </div>
+                            {(formData.priority || "MEDIUM") === opt.value && (
+                              <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
+                            )}
+                          </button>
+                        ))}
+                      </FloatingPortal>
                     </div>
                   </div>
                 </div>
@@ -1766,38 +1807,36 @@ export function CreateTaskModal({
                               className="size-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
                             />
                             <span className="text-xs font-medium text-foreground">
-                              Bắt buộc Trưởng phòng nghiệm thu (NĐ 232)
+                              Bắt buộc Trưởng phòng nghiệm thu (Nghị định 232)
                             </span>
                           </label>
 
-                          <div className="space-y-1">
-                            <textarea
-                              rows={2}
-                              id="task-deliverables-input"
-                              placeholder={
-                                formData.requiresReview
-                                  ? "Bắt buộc: Mô tả sản phẩm đầu ra (PDF quy chế, báo cáo kỹ thuật...)"
-                                  : "Mô tả kết quả hoặc minh chứng nghiệm thu (tùy chọn)..."
-                              }
-                              value={formData.requiredDeliverables || ""}
-                              aria-invalid={Boolean(errors.requiredDeliverables)}
-                              aria-describedby={errors.requiredDeliverables ? "task-deliverables-error" : undefined}
-                              onChange={(e) => {
-                                setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));
-                                if (errors.requiredDeliverables) clearError("requiredDeliverables");
-                              }}
-                              onFocus={() => scrollActiveInputIntoView()}
-                              className={cn(
-                                "w-full min-h-[60px] rounded-lg border bg-background p-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed",
-                                errors.requiredDeliverables ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                          {formData.requiresReview && (
+                            <div className="space-y-1 pl-6 pt-0.5">
+                              <textarea
+                                rows={2}
+                                id="task-deliverables-input"
+                                placeholder="Bắt buộc: Mô tả cụ thể sản phẩm đầu ra (VD: Dự thảo Quy chế PDF, Báo cáo kỹ thuật, Biên bản nghiệm thu...)"
+                                value={formData.requiredDeliverables || ""}
+                                aria-invalid={Boolean(errors.requiredDeliverables)}
+                                aria-describedby={errors.requiredDeliverables ? "task-deliverables-error" : undefined}
+                                onChange={(e) => {
+                                  setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));
+                                  if (errors.requiredDeliverables) clearError("requiredDeliverables");
+                                }}
+                                onFocus={() => scrollActiveInputIntoView()}
+                                className={cn(
+                                  "w-full min-h-[64px] rounded-lg border bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed",
+                                  errors.requiredDeliverables ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                                )}
+                              />
+                              {errors.requiredDeliverables && (
+                                <p id="task-deliverables-error" className="text-xs font-medium text-destructive mt-1">
+                                  {errors.requiredDeliverables}
+                                </p>
                               )}
-                            />
-                            {errors.requiredDeliverables && (
-                              <p id="task-deliverables-error" className="text-xs font-medium text-destructive mt-1">
-                                {errors.requiredDeliverables}
-                              </p>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
