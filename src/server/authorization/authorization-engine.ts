@@ -451,9 +451,8 @@ export function authorize(
   const isSigner =
     resource?.signerId === userId || resource?.authorizedSignerId === userId;
   const isFollower = resource?.followerIds?.includes(userId);
-  const isObserver =
-    resource?.observerIds?.includes(userId) ||
-    resource?.assigneeIds?.includes(userId);
+  const isAssignee = resource?.assigneeIds?.includes(userId);
+  const isObserver = resource?.observerIds?.includes(userId);
 
   // Single DRI Rule: Collaborator cannot reassign DRI
   if (action === 'task.reassign' || action === 'task.assign') {
@@ -539,14 +538,19 @@ export function authorize(
       candidatePolicy = 'STEP_4_MEETING_ORGANIZER_OR_CHAIR';
     }
   } else if (action === 'task.read') {
-    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver) {
+    if (isDRI || isCollaborator || isAssigner || isFollower || isObserver || isAssignee) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_DIRECT_RELATION';
     }
   } else if (action === 'task.update_execution' || action === 'task.submit_result') {
-    if (isDRI || isCollaborator || isAssigner) {
+    if (isDRI || isCollaborator || isAssigner || isAssignee) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
+    }
+  } else if (action === 'task.cancel') {
+    if (isAssigner) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_TASK_CREATOR_CANCEL';
     }
   } else if (action === 'document.outgoing.draft') {
     if (isDrafter || isAssigner) {
@@ -578,8 +582,8 @@ export function authorize(
   for (const pos of positions) {
     const code = pos.positionCode.toUpperCase();
 
-    // HIEU_TRUONG (Rector)
-    if (code === 'HIEU_TRUONG' || code === 'BGH_HT') {
+    // HIEU_TRUONG (Rector) / BAN_GIAM_HIEU (Institutional Executive)
+    if (code === 'HIEU_TRUONG' || code === 'BGH_HT' || code === 'BAN_GIAM_HIEU' || code === 'BGH') {
       // Clerical prohibitions
       if (
         action === 'document.register' ||
@@ -675,6 +679,7 @@ export function authorize(
         action === 'task.create' ||
         action === 'task.assign' ||
         action === 'task.reassign' ||
+        action === 'task.update_execution' ||
         action === 'task.review' ||
         action === 'task.approve' ||
         action === 'task.monitor' ||

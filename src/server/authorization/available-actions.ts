@@ -153,3 +153,75 @@ export function buildDocumentResource(doc: any): AuthorizationResource {
     targetUserId: doc.targetUserId || undefined,
   };
 }
+
+/**
+ * Helper to build canonical task AuthorizationResource from a Task record or DTO.
+ */
+export function buildTaskResource(task: any): AuthorizationResource {
+  if (!task) {
+    return { type: 'task', id: '' };
+  }
+
+  const creatorId = task.creatorId || task.createdById || undefined;
+  const leadUnitId = task.leadUnitId || task.departmentId || undefined;
+  const departmentId = task.departmentId || leadUnitId || undefined;
+
+  // Extract primary DRI
+  let primaryOwnerId =
+    task.primaryOwnerId ||
+    task.assigneeId ||
+    task.leadAssignee?.id ||
+    task.leadAssignee?.userId ||
+    undefined;
+
+  if (!primaryOwnerId && Array.isArray(task.assignees)) {
+    const primary = task.assignees.find(
+      (a: any) => a.roleInTask === 'PRIMARY_OWNER' || a.roleInTask === 'DRI'
+    );
+    if (primary) {
+      primaryOwnerId = primary.userId || primary.id;
+    } else if (task.assignees.length === 1 && (task.assignees[0].id || task.assignees[0].userId)) {
+      primaryOwnerId = task.assignees[0].id || task.assignees[0].userId;
+    }
+  }
+
+  // Extract collaborator IDs & assignee IDs
+  const collaboratorIds: string[] = [];
+  const assigneeIds: string[] = [];
+
+  if (Array.isArray(task.collaboratorIds)) {
+    collaboratorIds.push(...task.collaboratorIds);
+  }
+
+  if (Array.isArray(task.assignees)) {
+    for (const a of task.assignees) {
+      const uid = a.userId || a.id;
+      if (uid) {
+        assigneeIds.push(uid);
+        if (a.roleInTask === 'COLLABORATOR') {
+          collaboratorIds.push(uid);
+        }
+      }
+    }
+  }
+
+  if (primaryOwnerId) assigneeIds.push(primaryOwnerId);
+  assigneeIds.push(...collaboratorIds);
+
+  return {
+    ...task,
+    type: 'task',
+    id: task.id,
+    scope: (task.scope || 'school').toString().toLowerCase(),
+    departmentId,
+    leadDepartmentId: leadUnitId,
+    leadUnitId,
+    creatorId,
+    createdById: creatorId,
+    assignerId: creatorId,
+    primaryOwnerId,
+    collaboratorIds: Array.from(new Set(collaboratorIds)),
+    assigneeIds: Array.from(new Set(assigneeIds)),
+    status: task.status ? task.status.toString().toUpperCase() : undefined,
+  };
+}

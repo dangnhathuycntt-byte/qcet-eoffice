@@ -493,30 +493,28 @@ export class TaskQueryService {
       formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
-      const take = 100;
-      limit = 100;
       const [totalCount, rawTasks] = await Promise.all([
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
           orderBy: filters.orderBy || { dueDate: 'asc' },
-          take,
         }),
       ]);
       total = totalCount;
+      limit = Math.min(totalCount > 0 ? totalCount : 50, 100);
       page = 1;
-      totalPages = Math.ceil(total / limit) || 1;
-      hasMore = rawTasks.length < total;
-      nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
+      totalPages = 1;
+      hasMore = false;
+      nextCursor = null;
       formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
 
-      const limitRaw = filters.limit ?? filters.take ?? 20;
+      const limitRaw = filters.limit ?? filters.take ?? 50;
       const limitNum = parseInt(String(limitRaw), 10);
-      limit = Math.min(Math.max(isNaN(limitNum) ? 20 : limitNum, 1), 100);
+      limit = Math.min(Math.max(isNaN(limitNum) ? 50 : limitNum, 1), 100);
       const skip = (page - 1) * limit;
 
       const [totalCount, rawTasks] = await Promise.all([

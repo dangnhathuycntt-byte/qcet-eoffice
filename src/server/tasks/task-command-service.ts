@@ -412,12 +412,13 @@ export class TaskCommandService {
       academicMonth: number;
       academicYear: string;
       scope: TaskScope;
+      dueDate: Date | null;
     } | null = null;
 
     if (parentTaskId) {
       parentTask = await prisma.task.findUnique({
         where: { id: parentTaskId },
-        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true },
+        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true, dueDate: true },
       });
       if (!parentTask) {
         throw new NotFoundError('Không tìm thấy nhiệm vụ cha');
@@ -437,9 +438,15 @@ export class TaskCommandService {
       throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)');
     }
 
+    if (parentTask?.dueDate && new Date(dueDate).getTime() > new Date(parentTask.dueDate).getTime()) {
+      throw new ValidationError(
+        'Hạn chót của nhiệm vụ con không thể sau hạn chót của nhiệm vụ cha'
+      );
+    }
+
     const curYear = new Date().getFullYear();
 
-    let taskScope: TaskScope = parentTask?.scope || TaskScope.SCHOOL;
+    let taskScope: TaskScope = parentTask?.scope || (effectiveDepartmentId ? TaskScope.DEPARTMENT : TaskScope.SCHOOL);
     if (scope) {
       const s = String(scope).toLowerCase();
       if (s === 'department') taskScope = TaskScope.DEPARTMENT;
