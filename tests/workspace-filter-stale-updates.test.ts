@@ -2,9 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "../src/hooks/use-workspace-query";
+import {
+  useWorkspaceQuery,
+  type UseWorkspaceQueryOptions,
+  type UseWorkspaceQueryReturn,
+} from "../src/hooks/use-workspace-query";
 
-function withBrowserQuery(query: string, run: (hook: UseWorkspaceQueryReturn, params: () => URLSearchParams) => void) {
+function withBrowserQuery(
+  query: string,
+  run: (hook: UseWorkspaceQueryReturn, params: () => URLSearchParams) => void,
+  options?: UseWorkspaceQueryOptions
+) {
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   let url = new URL(`/tasks?${query}`, "https://example.test");
   const navigate = (_state: unknown, _title: string, target: string) => {
@@ -21,7 +29,7 @@ function withBrowserQuery(query: string, run: (hook: UseWorkspaceQueryReturn, pa
   try {
     let hook!: UseWorkspaceQueryReturn;
     function Harness() {
-      hook = useWorkspaceQuery();
+      hook = useWorkspaceQuery(options);
       return null;
     }
     renderToStaticMarkup(React.createElement(Harness));
@@ -50,6 +58,41 @@ test("delayed search cannot restore filters cleared by a scope switch", () => {
     assert.equal(params().get("scope"), "school");
     assert.equal(params().get("priority"), null);
   });
+});
+
+test("clear all removes every data filter even when the default month is current month", () => {
+  withBrowserQuery(
+    "scope=school&dept=CNTT&month=9&status=WAITING_APPROVAL&deadline=overdue&attention=requires_my_approval&priority=HIGH&category=TRAINING&q=report&view=kanban&utm_source=portal",
+    (hook, params) => {
+      hook.resetFilters({
+        ...shallow,
+        preserveScope: true,
+        preserveUnit: false,
+        preserveView: true,
+        resetPeriodTo: "all",
+      });
+
+      assert.equal(params().get("scope"), "school");
+      assert.equal(params().get("view"), "kanban");
+      assert.equal(params().get("month"), "ALL");
+      assert.equal(params().get("utm_source"), "portal");
+      for (const key of [
+        "dept",
+        "unit",
+        "unitId",
+        "status",
+        "deadline",
+        "attention",
+        "priority",
+        "category",
+        "q",
+        "query",
+      ]) {
+        assert.equal(params().get(key), null, `${key} must be cleared`);
+      }
+    },
+    { defaultMonth: 9 }
+  );
 });
 
 test("independent filter changes compose without restoring old values", () => {
