@@ -11,6 +11,9 @@ import {
   Users,
   Building2,
   Calendar,
+  CalendarClock,
+  ChevronRight,
+  Loader2,
   Tag,
   Link2,
   CheckCircle2,
@@ -75,8 +78,10 @@ export interface CreateTaskFormData {
   level: TaskLevel;
   category: TaskCategory;
   title: string;
+  summary?: string;
   leadAssigneeName: string;
   coAssignees: string[];
+  startDate?: string;
   dueDate: string;
   internalDueDate?: string;
   description: string;
@@ -1233,25 +1238,34 @@ export function CreateTaskModal({
             className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-2xl max-h-[100dvh] sm:max-h-[90dvh] flex flex-col rounded-none sm:rounded-xl border-0 sm:border border-border/80 bg-card shadow-xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Header Bar: Minimal, Linear-style breadcrumb */}
-            <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-2.5 border-b border-border/50 bg-card shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span id="modal-title" className="text-xs font-semibold text-foreground truncate">
-                  {isStaff
-                    ? "Tạo việc cá nhân"
-                    : isSubtaskMode
-                    ? "Giao việc con"
-                    : formData.level === "TRUONG"
-                    ? "Giao việc cấp Trường"
-                    : "Giao việc đơn vị"}
+            {/* Top Header Bar: Linear-style breadcrumb */}
+            <header className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3 border-b border-border/60 bg-muted/20 shrink-0 select-none">
+              <div className="flex items-center gap-1.5 text-xs min-w-0">
+                <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                <span className="font-semibold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
+                  {selectedAssigneeDept?.department || (user?.department || "Phòng Quản lý Đào tạo")}
                 </span>
 
-                {/* Parent task or context indicator */}
-                {isSubtaskMode && effectiveParentTitle && (
+                {isSubtaskMode && effectiveParentTitle ? (
                   <>
-                    <span className="text-xs text-muted-foreground/40">/</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={effectiveParentTitle}>
+                    <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
+                    <span className="text-muted-foreground font-normal truncate max-w-[140px] sm:max-w-[200px]" title={effectiveParentTitle}>
                       {effectiveParentTitle}
+                    </span>
+                    <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
+                    <span id="modal-title" className="text-muted-foreground font-medium truncate">
+                      Giao việc con
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
+                    <span id="modal-title" className="text-muted-foreground font-medium truncate">
+                      {isStaff
+                        ? "Tạo việc cá nhân"
+                        : formData.level === "TRUONG"
+                        ? "Giao việc cấp Trường"
+                        : "Tạo nhiệm vụ"}
                     </span>
                   </>
                 )}
@@ -1292,18 +1306,18 @@ export function CreateTaskModal({
                 type="button"
                 onClick={handleRequestClose}
                 aria-label="Đóng"
-                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </button>
-            </div>
+            </header>
 
             {/* Form Content */}
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Scrollable Form Body */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 thin-scrollbar">
                 {/* 1. Title Input (Linear-style: prominent, borderless) */}
-                <div>
+                <div className="space-y-0.5 shrink-0">
                   <label htmlFor="task-title-input" className="sr-only">
                     {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}
                   </label>
@@ -1311,7 +1325,7 @@ export function CreateTaskModal({
                     id="task-title-input"
                     ref={titleInputRef}
                     type="text"
-                    placeholder={isStaff ? "Tên công việc cá nhân..." : "Tên nhiệm vụ..."}
+                    placeholder={isSubtaskMode ? "Tên việc con... *" : isStaff ? "Tên công việc cá nhân... *" : "Tên nhiệm vụ... *"}
                     value={formData.title}
                     aria-invalid={Boolean(errors.title)}
                     aria-describedby={errors.title ? "task-title-error" : undefined}
@@ -1321,8 +1335,8 @@ export function CreateTaskModal({
                     }}
                     onFocus={() => scrollActiveInputIntoView()}
                     className={cn(
-                      "w-full bg-transparent text-base sm:text-lg font-semibold text-foreground placeholder:text-muted-foreground/40 placeholder:font-normal focus:outline-none py-0.5",
-                      errors.title && "text-destructive"
+                      "w-full bg-transparent text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0 leading-snug py-0.5",
+                      errors.title && "text-destructive placeholder:text-rose-400"
                     )}
                   />
                   {errors.title && (
@@ -1332,19 +1346,14 @@ export function CreateTaskModal({
                   )}
                 </div>
 
-                {/* 2. Description (Border-free canvas) */}
-                <div>
-                  <label htmlFor="create-task-description" className="sr-only">
-                    Mô tả chi tiết
-                  </label>
-                  <textarea
-                    id="create-task-description"
-                    rows={2}
-                    placeholder="Thêm mô tả chi tiết hoặc kết quả mong đợi (tùy chọn)..."
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    onFocus={() => scrollActiveInputIntoView()}
-                    className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none resize-none leading-relaxed py-0.5 min-h-[48px]"
+                {/* 2. Short Summary / Expected Outcome Input */}
+                <div className="shrink-0">
+                  <input
+                    type="text"
+                    value={formData.summary || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, summary: e.target.value }))}
+                    placeholder="Thêm mô tả ngắn hoặc kết quả kỳ vọng..."
+                    className="w-full text-xs text-muted-foreground placeholder:text-muted-foreground/60 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 py-0.5"
                   />
                 </div>
 

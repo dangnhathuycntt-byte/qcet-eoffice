@@ -43,10 +43,14 @@ export interface LinearCreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: (task: unknown) => void;
+  onSubmit?: (data: any, result?: any) => void | Promise<void>;
   initialDepartmentCode?: string;
   initialTitle?: string;
   initialLevel?: CreateTaskLevel;
   initialParentTaskId?: string;
+  initialParentTaskTitle?: string;
+  initialLeadAssigneeName?: string;
+  initialDueDate?: string;
 }
 
 const DRAFT_STORAGE_KEY = "qcet_task_create_draft_v1";
@@ -117,10 +121,14 @@ export function LinearCreateTaskModal({
   isOpen,
   onClose,
   onSubmitSuccess,
+  onSubmit,
   initialDepartmentCode = "P_QLDT",
   initialTitle = "",
   initialLevel = "DON_VI",
   initialParentTaskId,
+  initialParentTaskTitle,
+  initialLeadAssigneeName = "",
+  initialDueDate = "",
 }: LinearCreateTaskModalProps) {
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -136,11 +144,21 @@ export function LinearCreateTaskModal({
   const [description, setDescription] = React.useState("");
   const [priority, setPriority] = React.useState<LinearPriority>("MEDIUM");
   const [status, setStatus] = React.useState<"TODO" | "IN_PROGRESS">("IN_PROGRESS");
-  const [leadAssigneeName, setLeadAssigneeName] = React.useState("");
+  const [leadAssigneeName, setLeadAssigneeName] = React.useState(initialLeadAssigneeName);
   const [coAssignees, setCoAssignees] = React.useState<string[]>([]);
   const [startDate, setStartDate] = React.useState("");
-  const [dueDate, setDueDate] = React.useState("");
+  const [dueDate, setDueDate] = React.useState(initialDueDate);
   const [category, setCategory] = React.useState("CHUYEN_DOI_SO");
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialTitle) setTitle(initialTitle);
+      if (initialLeadAssigneeName) setLeadAssigneeName(initialLeadAssigneeName);
+      if (initialDueDate) setDueDate(initialDueDate);
+      if (initialLevel) setLevel(initialLevel);
+      if (initialDepartmentCode) setSelectedDeptCode(initialDepartmentCode);
+    }
+  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, initialDepartmentCode]);
 
   // Database users for foreign key safety
   const [dbUsers, setDbUsers] = React.useState<
@@ -444,6 +462,28 @@ export function LinearCreateTaskModal({
         } catch {
           // Ignore
         }
+        if (onSubmit) {
+          try {
+            await onSubmit(
+              {
+                level,
+                title: title.trim(),
+                summary,
+                startDate,
+                dueDate,
+                description: fullDescription,
+                leadAssigneeName,
+                coAssignees,
+                parentTaskId: initialParentTaskId,
+                priority,
+                category,
+              },
+              res
+            );
+          } catch {
+            // Ignore callback error if network already committed
+          }
+        }
         onSubmitSuccess?.(res.task);
         onClose();
       } else {
@@ -602,12 +642,20 @@ export function LinearCreateTaskModal({
               </FloatingPortal>
             </div>
 
-            <ChevronRight className="size-3 text-muted-foreground/40" />
+            {initialParentTaskTitle && (
+              <>
+                <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
+                <span className="text-muted-foreground font-normal truncate max-w-[140px] sm:max-w-[200px]" title={initialParentTaskTitle}>
+                  {initialParentTaskTitle}
+                </span>
+              </>
+            )}
+            <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
             <span
-              className="text-muted-foreground font-medium"
+              className="text-muted-foreground font-medium truncate"
               id="create-task-modal-title"
             >
-              Tạo nhiệm vụ
+              {initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}
             </span>
           </div>
 
@@ -667,7 +715,7 @@ export function LinearCreateTaskModal({
                   summaryInputRef.current?.focus();
                 }
               }}
-              placeholder="Tên nhiệm vụ... *"
+              placeholder={initialParentTaskId ? "Tên việc con... *" : "Tên nhiệm vụ... *"}
               className={cn(
                 "w-full text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
                 fieldErrors.title && "placeholder:text-rose-400 text-rose-900"
@@ -887,7 +935,7 @@ export function LinearCreateTaskModal({
             <kbd className="font-mono bg-background border border-border px-1 py-0.2 rounded text-[10px] text-foreground shadow-2xs">
               Enter
             </kbd>
-            <span>để tạo</span>
+            <span>{initialParentTaskId ? "để giao việc" : "để tạo"}</span>
           </div>
 
           {/* Action Buttons */}
@@ -910,10 +958,10 @@ export function LinearCreateTaskModal({
               {isSubmitting ? (
                 <>
                   <span className="size-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin inline-block" />
-                  <span>Đang tạo...</span>
+                  <span>{initialParentTaskId ? "Đang giao việc..." : "Đang tạo..."}</span>
                 </>
               ) : (
-                <span>Tạo nhiệm vụ</span>
+                <span>{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
               )}
             </button>
           </div>

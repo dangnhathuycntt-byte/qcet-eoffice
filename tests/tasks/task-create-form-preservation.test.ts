@@ -348,11 +348,12 @@ describe("CreateTaskModal rendered form (T21 / T23 / SK-03 / SK-04)", () => {
     );
   });
 
-  test("the advanced-metadata persistence notice is disclosed (SK-04)", () => {
+  test("advanced metadata options section is removed per streamlined Linear design", () => {
     const html = renderModal();
-    assert.ok(
+    assert.equal(
       html.includes(ADVANCED_METADATA_PERSISTENCE_NOTICE),
-      "the form must disclose that advanced metadata is not yet persisted"
+      false,
+      "advanced metadata options section must be completely eliminated per user request"
     );
   });
 });

@@ -65,7 +65,7 @@ export function LinearTaskDetailView({
   onReview,
   className,
 }: LinearTaskDetailViewProps) {
-  const { notifyError } = useFeedback();
+  const { notifyError, notifySuccess } = useFeedback();
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
   React.useEffect(() => {
     setTask(initialTask);
@@ -287,6 +287,54 @@ export function LinearTaskDetailView({
     ]);
   };
 
+  const handleCreateSubtaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: trimmedTitle,
+        parentTaskId: task.id,
+        level: "DON_VI",
+        leadAssigneeName: assigneeName || undefined,
+        dueDate: dueDate || undefined,
+        departmentCode: (task as any).departmentCode || (task as any).leadDepartmentCode || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message || err?.message || "Không thể tạo việc thành phần");
+    }
+
+    const data = await res.json();
+    const created = data?.task || data?.data;
+
+    if (created) {
+      setTask((prev) => {
+        if (!isSchool || !schoolTask) return prev;
+        const newSubtask: StaffTask = {
+          id: created.id || `sub-${Date.now()}`,
+          title: created.title || trimmedTitle,
+          assigneeName: created.assigneeName || assigneeName || "Chưa phân công",
+          status: "NEW",
+          dueDate: created.dueDate || dueDate,
+          parentSchoolTaskId: task.id,
+          priority: "NORMAL",
+          progress: 0,
+          updatedAt: new Date().toISOString(),
+        } as StaffTask;
+        return {
+          ...prev,
+          subTasks: [...(schoolTask.subTasks || []), newSubtask],
+        } as SchoolTask;
+      });
+      notifySuccess("Tạo việc thành phần thành công", "Thành công");
+    }
+  };
+
   const handleToggleSubtaskStatus = async (st: StaffTask) => {
     const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
     if (onStatusChange) {
@@ -468,7 +516,7 @@ export function LinearTaskDetailView({
             canEdit={true}
             onToggleSubtask={handleToggleSubtaskStatus}
             onSelectSubtask={onSelectSubTask}
-            onAddSubTask={onAddSubTask}
+            onCreateSubTaskInline={handleCreateSubtaskInline}
           />
 
           {/* E. Evidence & Deliverables Section */}

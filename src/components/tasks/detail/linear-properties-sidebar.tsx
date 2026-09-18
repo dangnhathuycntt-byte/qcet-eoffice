@@ -926,10 +926,10 @@ export function LinearPropertiesSidebar({
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                    onClick={() => onNavigateTab?.("subtasks")}
                     className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Thêm việc thành phần mới"
-                    aria-label="Thêm việc thành phần"
+                    title="Xem danh sách việc thành phần"
+                    aria-label="Xem việc thành phần"
                   >
                     <Plus className="size-3.5" strokeWidth={1.5} />
                   </button>
@@ -1007,10 +1007,10 @@ export function LinearPropertiesSidebar({
               {canEdit && (
                 <button
                   type="button"
-                  onClick={() => (onAddSubTask ? onAddSubTask(task.id) : onNavigateTab?.("subtasks"))}
+                  onClick={() => onNavigateTab?.("subtasks")}
                   className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Thêm việc thành phần mới"
-                  aria-label="Thêm việc thành phần"
+                  title="Xem danh sách việc thành phần"
+                  aria-label="Xem việc thành phần"
                 >
                   <Plus className="size-3.5" strokeWidth={1.5} />
                 </button>

@@ -22,7 +22,6 @@ import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-sec
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
-import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -69,7 +68,6 @@ export function TaskDetailPage({
   // Inspector visibility state
   const [showInspector, setShowInspector] = React.useState(true);
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
-  const [isCreateSubTaskModalOpen, setIsCreateSubTaskModalOpen] = React.useState(false);
 
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
@@ -236,7 +234,7 @@ export function TaskDetailPage({
         // Bỏ qua khi đang dùng IME tiếng Việt
         if (e.isComposing || (e as any).nativeEvent?.isComposing || e.keyCode === 229) return;
         // Bỏ qua khi mở dialog/popover
-        if (isProgressModalOpen || isCreateSubTaskModalOpen || isDialogOpen()) return;
+        if (isProgressModalOpen || isDialogOpen()) return;
 
         const target = (e.target || document.activeElement) as HTMLElement | null;
         // Bỏ qua khi đang nhập liệu
@@ -260,7 +258,7 @@ export function TaskDetailPage({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleToggleInspector, isProgressModalOpen, isCreateSubTaskModalOpen]);
+  }, [handleToggleInspector, isProgressModalOpen]);
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
@@ -693,6 +691,7 @@ export function TaskDetailPage({
         title: trimmedTitle,
         parentTaskId: task.id,
         dueDate: dueDate || task.dueDate,
+        leadAssigneeName: assigneeName || undefined,
         scope: "DEPARTMENT",
         priority: "NORMAL",
       }),
@@ -958,7 +957,7 @@ export function TaskDetailPage({
                   canEdit={canEdit}
                   onSaveContent={handleSaveDescription}
                   onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                  onOpenCreateSubtask={() => setIsCreateSubTaskModalOpen(true)}
+                  onOpenCreateSubtask={() => handleTabChange("subtasks")}
                 />
               </div>
             </>
@@ -973,7 +972,6 @@ export function TaskDetailPage({
                 canEdit={canEdit}
                 onToggleSubtask={handleToggleSubtask}
                 onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
                 onCreateSubTaskInline={handleCreateSubTaskInline}
               />
             </div>
@@ -1051,7 +1049,7 @@ export function TaskDetailPage({
               onReassignLead={handleReassignLead}
               onNavigateTab={(tab) => handleTabChange(tab)}
               onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-              onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
+              onAddSubTask={() => handleTabChange("subtasks")}
               auditEvents={feedActivityEvents}
               isMobileAccordion={true}
               showRelatedSections={true}
@@ -1110,21 +1108,6 @@ export function TaskDetailPage({
             />
           </div>
         </div>
-      )}
-
-      {/* Modal Add SubTask */}
-      {isCreateSubTaskModalOpen && (
-        <CreateTaskModal
-          isOpen={isCreateSubTaskModalOpen}
-          onClose={() => setIsCreateSubTaskModalOpen(false)}
-          onSubmitSuccess={() => {
-            setIsCreateSubTaskModalOpen(false);
-            router.refresh();
-          }}
-          initialParentTaskId={task.id}
-          initialParentTaskTitle={task.title}
-          initialLevel="DON_VI"
-        />
       )}
     </div>
   );

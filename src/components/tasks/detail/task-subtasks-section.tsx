@@ -11,6 +11,7 @@ import {
   User,
   MoreHorizontal,
   AlertCircle,
+  ChevronDown,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,11 +19,14 @@ import type { StaffTask } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { computeDueStatus, STATUS_OPTIONS } from "./task-identity-block";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
   subTasks: StaffTask[];
   canEdit?: boolean;
+  personnel?: Array<{ id?: string; name: string; role?: string }>;
   onToggleSubtask?: (subtask: StaffTask) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onAddSubTask?: (parentId: string) => void;
@@ -34,6 +38,7 @@ export function TaskSubtasksSection({
   parentId,
   subTasks = [],
   canEdit = true,
+  personnel,
   onToggleSubtask,
   onSelectSubtask,
   onAddSubTask,
@@ -46,9 +51,47 @@ export function TaskSubtasksSection({
   // Inline creation state
   const [isAddingInline, setIsAddingInline] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
+  const [newAssigneeName, setNewAssigneeName] = React.useState("");
   const [newDueDate, setNewDueDate] = React.useState("");
   const [inlineError, setInlineError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  // Personnel list for assignee selector
+  const [personnelList, setPersonnelList] = React.useState<Array<{ id?: string; name: string; role?: string }>>(() => {
+    if (personnel && personnel.length > 0) return personnel;
+    const list: Array<{ id?: string; name: string; role?: string }> = [];
+    QCET_DEPARTMENT_GROUPS.forEach((g) => {
+      (g.personnel || g.members || []).forEach((m) => {
+        if (!list.some((existing) => existing.name === m.name)) {
+          list.push({ name: m.name, role: m.role || (m as any).title });
+        }
+      });
+    });
+    return list;
+  });
+
+  React.useEffect(() => {
+    if (personnel && personnel.length > 0) {
+      setPersonnelList(personnel);
+      return;
+    }
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && Array.isArray(data.users)) {
+          setPersonnelList((prev) => {
+            const combined = [...prev];
+            data.users.forEach((u: any) => {
+              if (u.name && !combined.some((p) => p.name.toLowerCase() === u.name.toLowerCase())) {
+                combined.push({ id: u.id, name: u.name, role: u.role });
+              }
+            });
+            return combined;
+          });
+        }
+      })
+      .catch(() => {});
+  }, [personnel]);
 
   const handleOpenInline = () => {
     setInlineError(null);
@@ -64,15 +107,16 @@ export function TaskSubtasksSection({
     setInlineError(null);
     try {
       if (onCreateSubTaskInline) {
-        await onCreateSubTaskInline(trimmedTitle, undefined, newDueDate || undefined);
+        await onCreateSubTaskInline(trimmedTitle, newAssigneeName || undefined, newDueDate || undefined);
       } else if (onAddSubTask) {
         onAddSubTask(parentId);
       }
       setNewTitle("");
+      setNewAssigneeName("");
       setNewDueDate("");
       setIsAddingInline(false);
-    } catch {
-      setInlineError("Không thể tạo việc thành phần. Vui lòng thử lại.");
+    } catch (err: any) {
+      setInlineError(err?.message || "Không thể tạo việc thành phần. Vui lòng thử lại.");
     } finally {
       setIsSaving(false);
     }
@@ -101,13 +145,7 @@ export function TaskSubtasksSection({
         {canEdit && (
           <button
             type="button"
-            onClick={() => {
-              if (onCreateSubTaskInline) {
-                handleOpenInline();
-              } else if (onAddSubTask) {
-                onAddSubTask(parentId);
-              }
-            }}
+            onClick={handleOpenInline}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted border border-border/60 hover:border-border transition-colors cursor-pointer"
             title="Thêm việc con"
             aria-label="Thêm việc con"
@@ -135,7 +173,7 @@ export function TaskSubtasksSection({
         <div className="space-y-1.5">
           <form
             onSubmit={handleSaveInline}
-            className="h-10 sm:h-11 flex items-center gap-2 px-3 rounded-lg border border-primary/40 bg-muted/20 text-xs"
+            className="min-h-10 sm:min-h-11 flex flex-wrap sm:flex-nowrap items-center gap-2 px-3 py-1.5 rounded-lg border border-primary/40 bg-muted/20 text-xs"
           >
             <Circle className="size-4 text-muted-foreground/40 shrink-0" />
             <input
@@ -151,19 +189,46 @@ export function TaskSubtasksSection({
                 }
               }}
               placeholder="Tên việc con mới... (Enter để lưu, Esc để hủy)"
-              className="flex-1 min-w-0 bg-transparent text-xs font-normal text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
+              className="flex-1 min-w-[140px] bg-transparent text-xs font-normal text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
             />
-            <input
-              type="date"
-              value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              className="text-xs font-mono text-muted-foreground bg-transparent px-1.5 py-0.5 rounded border border-border/40 focus:outline-hidden"
-            />
-            <div className="flex items-center gap-1 shrink-0">
+
+            {/* Người phụ trách việc con */}
+            <div className="relative flex items-center shrink-0">
+              <User className="size-3 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
+              <select
+                value={newAssigneeName}
+                onChange={(e) => setNewAssigneeName(e.target.value)}
+                className="h-7 pl-6 pr-6 rounded-md border border-border/60 bg-background text-[11px] font-medium text-foreground hover:border-border focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer max-w-[140px] sm:max-w-[170px] truncate"
+                aria-label="Người phụ trách việc con"
+                title={newAssigneeName ? `Phụ trách: ${newAssigneeName}` : "Chọn người phụ trách"}
+              >
+                <option value="">Phụ trách: Chưa giao</option>
+                {personnelList.map((p) => (
+                  <option key={p.id || p.name} value={p.name}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="size-2.5 text-muted-foreground absolute right-1.5 pointer-events-none" strokeWidth={1.5} />
+            </div>
+
+            {/* Hạn hoàn thành */}
+            <div className="shrink-0">
+              <VietnameseDatePicker
+                value={newDueDate}
+                onChange={(val) => setNewDueDate(val)}
+                variant="chip"
+                icon={<Calendar className="size-3 text-muted-foreground" strokeWidth={1.5} />}
+                placeholder="dd/mm/yyyy"
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
               <button
                 type="submit"
                 disabled={isSaving || !newTitle.trim()}
-                className="px-2.5 py-1 rounded bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-none transition-opacity"
               >
                 {isSaving ? "Đang lưu..." : "Thêm"}
               </button>
@@ -173,7 +238,7 @@ export function TaskSubtasksSection({
                   setIsAddingInline(false);
                   setInlineError(null);
                 }}
-                className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                 title="Hủy"
               >
                 <X className="size-3.5" />
