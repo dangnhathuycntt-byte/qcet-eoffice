@@ -15,7 +15,7 @@ import {
   PreconditionFailedError,
   ValidationError,
 } from '@/server/api/errors';
-import { UpdateTaskSchema } from '@/contracts/tasks';
+import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
@@ -96,28 +96,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id } = await Promise.resolve(routeContext.params);
 
-    // SPRINT 4 INVARIANT: Generic PATCH is strictly limited to safe metadata (title, description, priority, dueDate).
-    // Workflow transitions (status, approved, resolution) are strictly prohibited via generic PATCH.
-    try {
-      const rawReq = req.clone();
-      const rawBody = (await rawReq.json().catch(() => null)) as Record<string, unknown> | null;
-      if (
-        rawBody &&
-        (rawBody.status !== undefined ||
-          rawBody.approved !== undefined ||
-          rawBody.resolution !== undefined)
-      ) {
-        throw new ValidationError(
-          'Cấm cập nhật trực tiếp trạng thái (status), nghiệm thu hoàn thành (approved), hoặc kết quả (resolution) qua generic PATCH. Vui lòng sử dụng các endpoint canonical domain actions (/actions/*).',
-          undefined,
-          'CANONICAL_COMMAND_REQUIRED'
-        );
-      }
-    } catch (e) {
-      if (e instanceof ValidationError) throw e;
-    }
-
-    const validatedBody = await parseAndValidateJson(req, UpdateTaskSchema);
+    const validatedBody = await parseAndValidateJson(req, UpdateTaskMetadataSchema);
 
     // Fetch existing task to check existence, OCC, and authorization
     const taskResult = await taskQueryService.getTaskById(id);
@@ -183,38 +162,21 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     // 2. Object-level & Property-level authorization
     // SPRINT 4 INVARIANT: Generic PATCH is strictly limited to safe metadata (title, description, priority, dueDate).
     // Workflow transitions (status, approved, resolution) are strictly prohibited via PATCH.
-    if (
-      validatedBody.status !== undefined ||
-      (validatedBody as any).approved !== undefined ||
-      validatedBody.resolution !== undefined
-    ) {
-      throw new ValidationError(
-        'Cấm cập nhật trực tiếp trạng thái (status), nghiệm thu hoàn thành (approved), hoặc kết quả (resolution) qua generic PATCH. Vui lòng sử dụng các endpoint canonical domain actions (/actions/*).',
-        undefined,
-        'CANONICAL_COMMAND_REQUIRED'
-      );
-    }
-
     const taskResource = buildTaskResource(existingTask);
     const authContext = await loadAuthorizationContext(authUser.id);
-    const updateDecision = authorize(authContext, 'task.update_execution', taskResource);
+    const updateDecision = authorize(authContext, 'task.update_metadata', taskResource);
     if (!updateDecision.allowed) {
       throw new ForbiddenError(updateDecision.reason || 'Bạn không có quyền cập nhật nhiệm vụ này');
     }
 
     // Validate ngày trên dữ liệu sau khi ghép PATCH với bản ghi DB (phân biệt trường bị bỏ qua và null)
-    let mergedStartDate: Date | null = existingTask.startDate ? new Date(existingTask.startDate) : null;
-    if (validatedBody.startDate !== undefined) {
-      mergedStartDate = validatedBody.startDate ? new Date(validatedBody.startDate) : null;
-    }
-
     let mergedDueDate: Date | null = existingTask.dueDate ? new Date(existingTask.dueDate) : null;
     if (validatedBody.dueDate !== undefined) {
       mergedDueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null;
     }
 
-    if (mergedStartDate && mergedDueDate) {
-      if (mergedStartDate.getTime() > mergedDueDate.getTime()) {
+    if (existingTask.startDate && mergedDueDate) {
+      if (new Date(existingTask.startDate).getTime() > mergedDueDate.getTime()) {
         throw new ValidationError(
           'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)'
         );
@@ -225,19 +187,8 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     const updated = await taskCommandService.updateTask(context, id, {
       title: validatedBody.title,
       description: validatedBody.description,
-      progressPercent: validatedBody.progressPercent,
-      progress: validatedBody.progress,
-      departmentId: validatedBody.departmentId,
-      startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
-      assigneeId: validatedBody.assigneeId,
-      collaboratorIds: validatedBody.collaboratorIds,
-      academicMonth: validatedBody.academicMonth,
-      academicYear: validatedBody.academicYear,
-      parentTaskId: validatedBody.parentTaskId,
-      comment: validatedBody.comment,
-      note: validatedBody.note,
       expectedVersion,
     });
 
@@ -266,6 +217,8 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
     assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
 
     const context = await getApiContext(req);
     requestId = context.requestId;
@@ -275,6 +228,7 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id } = await Promise.resolve(routeContext.params);
+    const input = await parseAndValidateJson(req, ArchiveTaskSchema);
 
     const taskResult = await taskQueryService.getTaskById(id);
     if (!taskResult) {
@@ -284,12 +238,12 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
 
     const taskResource = buildTaskResource(existingTask);
     const authContext = await loadAuthorizationContext(authUser.id);
-    const deleteDecision = authorize(authContext, 'task.cancel', taskResource);
-    if (!deleteDecision.allowed) {
-      throw new ForbiddenError(deleteDecision.reason || 'Bạn không có quyền xóa nhiệm vụ này');
+    const archiveDecision = authorize(authContext, 'task.archive', taskResource);
+    if (!archiveDecision.allowed) {
+      throw new ForbiddenError(archiveDecision.reason || 'Bạn không có quyền lưu trữ nhiệm vụ này');
     }
 
-    const result = await taskCommandService.deleteTask(context, id);
+    const result = await taskCommandService.archiveTask(context, id, input);
 
     return apiSuccess(
       {

@@ -288,11 +288,11 @@ export function TaskContextMenu({
   };
 
   const handleDeleteTask = async () => {
-    if (confirm(`Bạn có chắc chắn muốn xóa/hủy nhiệm vụ "${taskTitle}"?`)) {
+    if (confirm(`Bạn có chắc chắn muốn lưu trữ nhiệm vụ "${taskTitle}"?`)) {
       if (onDeleteTask) {
         await onDeleteTask(task.id);
       } else {
-        await deleteTask(task.id);
+        await deleteTask(task.id, Number((task as any).version ?? 1));
       }
       onClose();
     }

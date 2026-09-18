@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { taskDomainActionService } from "@/lib/services/task-domain-actions";
+import { CancelInputSchema } from "@/lib/services/task-domain-actions";
 import {
   ActionRouteContext,
   handleActionError,
@@ -8,7 +9,7 @@ import {
 
 export async function POST(request: NextRequest, context: ActionRouteContext) {
   try {
-    const { session, taskId, body } = await resolveActionContext(request, context);
+    const { session, taskId, body } = await resolveActionContext(request, context, CancelInputSchema, "task.cancel");
     const result = await taskDomainActionService.cancel(session, taskId, body);
 
     return NextResponse.json(
@@ -22,4 +23,3 @@ export async function POST(request: NextRequest, context: ActionRouteContext) {
     return handleActionError(error);
   }
 }
-
