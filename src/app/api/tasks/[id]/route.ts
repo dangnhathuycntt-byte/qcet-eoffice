@@ -170,13 +170,30 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     }
 
     // Validate ngày trên dữ liệu sau khi ghép PATCH với bản ghi DB (phân biệt trường bị bỏ qua và null)
-    let mergedDueDate: Date | null = existingTask.dueDate ? new Date(existingTask.dueDate) : null;
-    if (validatedBody.dueDate !== undefined) {
-      mergedDueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null;
+    let mergedStartDate: Date | null = existingTask.startDate ? new Date(existingTask.startDate) : null;
+    if (validatedBody.startDate !== undefined) {
+      if (validatedBody.startDate === null) {
+        throw new ValidationError('Ngày bắt đầu không được để trống (Start date cannot be empty)');
+      }
+      mergedStartDate = new Date(validatedBody.startDate);
+      if (Number.isNaN(mergedStartDate.getTime())) {
+        throw new ValidationError('Ngày bắt đầu không hợp lệ (Invalid start date)');
+      }
     }
 
-    if (existingTask.startDate && mergedDueDate) {
-      if (new Date(existingTask.startDate).getTime() > mergedDueDate.getTime()) {
+    let mergedDueDate: Date | null = existingTask.dueDate ? new Date(existingTask.dueDate) : null;
+    if (validatedBody.dueDate !== undefined) {
+      if (validatedBody.dueDate === null) {
+        throw new ValidationError('Thời hạn hoàn thành không được để trống (Due date cannot be empty)');
+      }
+      mergedDueDate = new Date(validatedBody.dueDate);
+      if (Number.isNaN(mergedDueDate.getTime())) {
+        throw new ValidationError('Thời hạn hoàn thành không hợp lệ (Invalid due date)');
+      }
+    }
+
+    if (mergedStartDate && mergedDueDate) {
+      if (mergedStartDate.getTime() > mergedDueDate.getTime()) {
         throw new ValidationError(
           'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)'
         );
@@ -187,6 +204,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     const updated = await taskCommandService.updateTask(context, id, {
       title: validatedBody.title,
       description: validatedBody.description,
+      startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
       expectedVersion,

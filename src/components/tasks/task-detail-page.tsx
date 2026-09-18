@@ -502,7 +502,7 @@ export function TaskDetailPage({
   const handlePriorityChange = async (taskId: string, newPriority: TaskPriority) => {
     const res = await updateTaskPriority(taskId, newPriority, (task as any).version);
     if (!res.ok) {
-      console.error("Lỗi cập nhật độ ưu tiên:", res.error);
+      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
       return;
     }
 
@@ -512,6 +512,7 @@ export function TaskDetailPage({
       priority: normalizedPriority,
       version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
     }));
+    notifySuccess("Đã cập nhật độ ưu tiên");
     router.refresh();
   };
 
@@ -519,7 +520,7 @@ export function TaskDetailPage({
   const handleStartDateChange = async (taskId: string, newStartDate: string) => {
     const res = await updateTaskStartDate(taskId, newStartDate, (task as any).version);
     if (!res.ok) {
-      console.error("Lỗi cập nhật ngày bắt đầu:", res.error);
+      notifyError(res.error || "Không thể cập nhật ngày bắt đầu", "Lỗi cập nhật");
       return;
     }
 
@@ -540,6 +541,7 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+    notifySuccess("Đã cập nhật ngày bắt đầu");
     router.refresh();
   };
 
@@ -547,7 +549,7 @@ export function TaskDetailPage({
   const handleDueDateChange = async (taskId: string, newDueDate: string) => {
     const res = await updateTaskDueDate(taskId, newDueDate, (task as any).version);
     if (!res.ok) {
-      console.error("Lỗi cập nhật hạn hoàn thành:", res.error);
+      notifyError(res.error || "Không thể cập nhật hạn hoàn thành", "Lỗi cập nhật");
       return;
     }
 
@@ -567,6 +569,7 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
+    notifySuccess("Đã cập nhật hạn hoàn thành");
     router.refresh();
   };
 

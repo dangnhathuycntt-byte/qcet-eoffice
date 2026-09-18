@@ -36,6 +36,7 @@ export interface TaskListDTO {
   progress: number;
   department?: UserDepartmentDTO | null;
   leadAssignee?: UserSummaryDTO | null;
+  collaborators?: UserSummaryDTO[];
   assignees?: UserSummaryDTO[];
   version: number;
   isOverdue?: boolean;
@@ -282,6 +283,105 @@ function extractLeadAssignee(raw: Record<string, any>): UserSummaryDTO | null {
   return null;
 }
 
+/**
+ * Canonical derived collaborators logic:
+ * "Phối hợp của task cha = tập unique Primary DRI/Chủ trì của các nhiệm vụ con active."
+ *
+ * Rules:
+ * - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
+ * - Khi task con đổi DRI B → C → parent tự phản ánh C.
+ * - Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần.
+ * - Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp.
+ * - Khi task con bị cancel/archive/re-parent → recompute.
+ * - Chỉ tính các task con còn active theo lifecycle canonical (status !== 'CANCELLED', !archivedAt).
+ * - Không lưu một nguồn collaborator thủ công song song nếu có thể derive từ TaskActor/child relation.
+ */
+export function extractDerivedCollaborators(raw: Record<string, any>): UserSummaryDTO[] {
+  const lead = extractLeadAssignee(raw);
+  const parentLeadId = lead?.id;
+  const parentLeadName = (lead?.name || '').trim().toLowerCase();
+
+  const subTasks = Array.isArray(raw.subTasks) ? raw.subTasks : [];
+  const activeSubTasks = subTasks.filter((st: any) => {
+    if (!st || typeof st !== 'object') return false;
+    const s = String(st.status || '').toUpperCase();
+    if (s === 'CANCELLED' || s === 'CANCELED') return false;
+    if (st.archivedAt) return false;
+    return true;
+  });
+
+  const collaboratorMap = new Map<string, UserSummaryDTO>();
+
+  for (const st of activeSubTasks) {
+    let subLead: UserSummaryDTO | null = null;
+
+    // 1. Check TaskActors on subtask (role === 'DRI' or isPrimaryDRI)
+    if (Array.isArray(st.actors)) {
+      const driActor = st.actors.find(
+        (a: any) => a && (a.role === 'DRI' || a.isPrimaryDRI) && (a.user || a.userId)
+      );
+      if (driActor) {
+        if (driActor.user) {
+          subLead = toUserSummaryDTO(driActor.user);
+        } else if (driActor.userId) {
+          subLead = toUserSummaryDTO({
+            id: driActor.userId,
+            name: driActor.userName ?? '',
+            email: driActor.userEmail ?? '',
+            role: 'CHUYEN_VIEN',
+          });
+        }
+      }
+    }
+
+    // 2. Check assignees on subtask (roleInTask === 'PRIMARY_OWNER')
+    if (!subLead && Array.isArray(st.assignees)) {
+      const leadAssignee =
+        st.assignees.find((a: any) => {
+          const role = a?.roleInTask ?? a?.role;
+          return (
+            role === 'PRIMARY_OWNER' ||
+            role === 'primary_owner' ||
+            role === 'LEAD' ||
+            role === 'lead'
+          );
+        }) || st.assignees[0];
+
+      if (leadAssignee) {
+        subLead = extractUserFromAssignee(leadAssignee);
+      }
+    }
+
+    // 3. Fallback: direct lead properties on subtask
+    if (!subLead && (st.assigneeId || st.leadAssigneeId || st.assigneeName || st.leadAssigneeName)) {
+      const name = st.assigneeName || st.leadAssigneeName;
+      if (name) {
+        subLead = toUserSummaryDTO({
+          id: st.assigneeId || st.leadAssigneeId || `usr_${name.replace(/\s+/g, '_').toLowerCase()}`,
+          name,
+          avatarUrl: st.assigneeAvatar || st.leadAssigneeAvatar || null,
+          email: '',
+          role: 'CHUYEN_VIEN',
+        });
+      }
+    }
+
+    if (!subLead || !subLead.name) continue;
+
+    // Rule: Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp
+    if (parentLeadId && subLead.id === parentLeadId) continue;
+    if (parentLeadName && subLead.name.trim().toLowerCase() === parentLeadName) continue;
+
+    // Rule: Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần
+    const key = subLead.id || subLead.name.trim().toLowerCase();
+    if (!collaboratorMap.has(key)) {
+      collaboratorMap.set(key, subLead);
+    }
+  }
+
+  return Array.from(collaboratorMap.values());
+}
+
 export function toTaskDeliverableDTO(d: Record<string, any>): TaskDeliverableDTO {
   return {
     id: String(d.id ?? ''),
@@ -381,6 +481,12 @@ export function toTaskListDTO(rawTask: unknown): TaskListDTO | null {
   if (!rawTask || typeof rawTask !== 'object') return null;
   const task = rawTask as Record<string, any>;
 
+  const leadAssignee = extractLeadAssignee(task);
+  const derivedCollaborators = extractDerivedCollaborators(task);
+  const assignees = leadAssignee
+    ? [leadAssignee, ...derivedCollaborators]
+    : derivedCollaborators;
+
   return {
     id: String(task.id ?? ''),
     code: String(task.code ?? ''),
@@ -390,8 +496,9 @@ export function toTaskListDTO(rawTask: unknown): TaskListDTO | null {
     dueDate: extractDateString(task.dueDate),
     progress: extractProgress(task),
     department: extractDepartment(task),
-    leadAssignee: extractLeadAssignee(task),
-    assignees: extractAssignees(task),
+    leadAssignee,
+    collaborators: derivedCollaborators,
+    assignees,
     version: extractVersion(task),
     isOverdue: isTaskOverdue(task.status, task.dueDate),
     createdAt: toISOStringSafe(task.createdAt),

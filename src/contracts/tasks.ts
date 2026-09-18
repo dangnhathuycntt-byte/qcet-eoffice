@@ -314,12 +314,25 @@ export const UpdateTaskMetadataSchema = z
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.optional(),
+    startDate: IsoDateStringSchema.optional().nullable(),
     dueDate: IsoDateStringSchema.optional().nullable(),
     expectedVersion: z.number().int().min(0).optional(),
     expectedUpdatedAt: z.string().datetime().optional(),
     ifMatch: z.string().trim().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => {
+      if (data.startDate && data.dueDate) {
+        return new Date(data.startDate).getTime() <= new Date(data.dueDate).getTime();
+      }
+      return true;
+    },
+    {
+      message: 'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)',
+      path: ['startDate'],
+    }
+  );
 
 export type UpdateTaskMetadataInput = z.infer<typeof UpdateTaskMetadataSchema>;
 

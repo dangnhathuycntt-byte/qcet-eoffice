@@ -215,7 +215,7 @@ export function buildCreateTaskPayload(
   if (draft.priority) payload.priority = draft.priority;
   if (departmentId) payload.departmentId = departmentId;
   if (assigneeId) payload.assigneeId = assigneeId;
-  if (collaboratorIds.length > 0) payload.collaboratorIds = collaboratorIds;
+  // Collaborators are strictly derived from active subtasks; never forwarded on task creation
   const parentTaskId = trimOrUndefined(draft.parentTaskId);
   if (parentTaskId) payload.parentTaskId = parentTaskId;
 

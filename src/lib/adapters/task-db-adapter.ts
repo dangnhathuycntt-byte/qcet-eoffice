@@ -135,20 +135,13 @@ export function formatLocalDate(d: Date | string | null | undefined): string {
 
 export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTask {
   const primaryOwner = raw.assignees?.find(a => a.roleInTask === 'PRIMARY_OWNER');
-  const collaboratorAssignees = raw.assignees?.filter(a => a.roleInTask === 'COLLABORATOR') || [];
 
   const assigneeName = primaryOwner?.user?.name || 'Chưa phân công';
   const assigneeId = (primaryOwner?.user as any)?.id || primaryOwner?.userId || undefined;
   const assigneeAvatar = primaryOwner?.user?.avatarUrl || undefined;
 
-  const collaborators = collaboratorAssignees
-    .map(a => ({
-      id: (a.user as any)?.id || a.userId,
-      name: a.user?.name || '',
-      avatarUrl: a.user?.avatarUrl || undefined,
-      role: 'COLLABORATOR' as const
-    }))
-    .filter(c => c.name);
+  // Subtasks/leaf tasks have no manual collaborators; collaborators are derived only on parent tasks
+  const collaborators: any[] = [];
 
   const statusMap: Record<string, TaskStatus> = {
     NOT_STARTED: 'NEW',
@@ -209,10 +202,69 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
 export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenceDate?: string): SchoolTask {
   // Tìm người chủ trì chính (Single DRI)
   const primaryOwner = raw.assignees?.find(a => a.roleInTask === 'PRIMARY_OWNER');
-  const collaboratorAssignees = raw.assignees?.filter(a => a.roleInTask === 'COLLABORATOR') || [];
-  const collaborators = collaboratorAssignees
-    .map(a => a.user?.name || '')
-    .filter(Boolean);
+  // Canonical derived collaborators:
+  // "Phối hợp của task cha = tập unique Primary DRI/Chủ trì của các nhiệm vụ con active."
+  // - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
+  // - Khi task con đổi DRI B → C → parent tự phản ánh C.
+  // - Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần.
+  // - Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp.
+  // - Khi task con bị cancel/archive/re-parent → recompute.
+  // - Chỉ tính các task con còn active theo lifecycle canonical (status !== 'CANCELLED', !archivedAt).
+  const parentLeadId = (primaryOwner?.user as any)?.id || primaryOwner?.userId;
+  const parentLeadName = (primaryOwner?.user?.name || '').trim().toLowerCase();
+
+  const collaboratorMap = new Map<string, string>();
+  if (Array.isArray(raw.subTasks)) {
+    for (const st of raw.subTasks) {
+      if (!st || typeof st !== 'object') continue;
+      const s = String(st.status || '').toUpperCase();
+      if (s === 'CANCELLED' || s === 'CANCELED') continue;
+      if (st.archivedAt) continue;
+
+      let subLeadId: string | undefined;
+      let subLeadName: string | undefined;
+
+      // Check actors
+      if (Array.isArray(st.actors)) {
+        const dri = st.actors.find((a: any) => a && (a.role === 'DRI' || a.isPrimaryDRI) && (a.user || a.userId));
+        if (dri) {
+          subLeadId = dri.userId || dri.user?.id;
+          subLeadName = dri.user?.name || dri.userName;
+        }
+      }
+
+      // Check assignees
+      if (!subLeadName && Array.isArray(st.assignees)) {
+        const lead = st.assignees.find((a: any) => {
+          const role = a?.roleInTask ?? a?.role;
+          return role === 'PRIMARY_OWNER' || role === 'primary_owner' || role === 'LEAD';
+        }) || st.assignees[0];
+        if (lead) {
+          subLeadId = lead.userId || lead.user?.id;
+          subLeadName = lead.user?.name || lead.name;
+        }
+      }
+
+      // Fallback
+      if (!subLeadName && (st.assigneeName || st.leadAssigneeName)) {
+        subLeadId = st.assigneeId || st.leadAssigneeId;
+        subLeadName = st.assigneeName || st.leadAssigneeName;
+      }
+
+      if (!subLeadName) continue;
+
+      // Do not duplicate parent's own DRI
+      if (parentLeadId && subLeadId && subLeadId === parentLeadId) continue;
+      if (parentLeadName && subLeadName.trim().toLowerCase() === parentLeadName) continue;
+
+      const key = subLeadId || subLeadName.trim().toLowerCase();
+      if (!collaboratorMap.has(key)) {
+        collaboratorMap.set(key, subLeadName);
+      }
+    }
+  }
+
+  const collaborators = Array.from(collaboratorMap.values());
 
   // Ánh xạ trạng thái chuẩn hóa (chuẩn TaskStatus viết hoa)
   const statusMap: Record<string, TaskStatus> = {

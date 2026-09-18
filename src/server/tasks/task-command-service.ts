@@ -297,7 +297,7 @@ export class TaskCommandService {
         code,
         title: taskTitle,
         description: input.content,
-        status: TaskStatus.IN_PROGRESS,
+        status: TaskStatus.NOT_STARTED,
         originLevel,
         priority: TaskPriority.HIGH,
         scope,
@@ -482,24 +482,13 @@ export class TaskCommandService {
 
     const validAssigneeId =
       typeof assigneeId === 'string' && assigneeId.trim() ? assigneeId.trim() : null;
-    const validCollaboratorIds = Array.isArray(collaboratorIds)
-      ? Array.from(new Set(collaboratorIds)).filter(
-          (id): id is string =>
-            typeof id === 'string' && Boolean(id.trim()) && id.trim() !== validAssigneeId
-        )
-      : [];
 
+    // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), không gán thủ công khi tạo
     const assigneesToCreate: { userId: string; roleInTask: AssigneeRole }[] = [];
     if (validAssigneeId) {
       assigneesToCreate.push({
         userId: validAssigneeId,
         roleInTask: AssigneeRole.PRIMARY_OWNER,
-      });
-    }
-    for (const cId of validCollaboratorIds) {
-      assigneesToCreate.push({
-        userId: cId,
-        roleInTask: AssigneeRole.COLLABORATOR,
       });
     }
 
@@ -531,10 +520,7 @@ export class TaskCommandService {
       }
 
       // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
-      const candidateUserIds = [
-        ...(validAssigneeId ? [validAssigneeId] : []),
-        ...validCollaboratorIds,
-      ];
+      const candidateUserIds = validAssigneeId ? [validAssigneeId] : [];
       const existingUsers =
         candidateUserIds.length > 0
           ? await tx.user.findMany({
@@ -650,20 +636,6 @@ export class TaskCommandService {
           },
         });
       }
-      for (const cId of validCollaboratorIds) {
-        if (cId !== validAssigneeId && existingUserIdSet.has(cId)) {
-          await tx.taskActor.create({
-            data: {
-              taskId: task.id,
-              userId: cId,
-              unitId: resolvedUnitId,
-              role: TaskActorRole.COLLABORATOR,
-              isPrimaryDRI: false,
-              assignedById: effectiveCreatorId,
-            },
-          });
-        }
-      }
 
       const requestId =
         ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
@@ -701,7 +673,7 @@ export class TaskCommandService {
           afterData: {
             assigneeId: validAssigneeId,
             roleInTask: AssigneeRole.PRIMARY_OWNER,
-            collaboratorIds: validCollaboratorIds,
+            collaboratorIds: [],
           },
         });
       }
@@ -846,12 +818,24 @@ export class TaskCommandService {
     // Ghép dữ liệu ngày tháng với bản ghi hiện tại để validate nghiêm ngặt (phân biệt undefined với null)
     let mergedStartDate: Date | null = existing.startDate ? new Date(existing.startDate) : null;
     if (startDate !== undefined) {
-      mergedStartDate = startDate ? new Date(startDate) : null;
+      if (startDate === null) {
+        throw new ValidationError('Ngày bắt đầu không được để trống (Start date cannot be empty)');
+      }
+      mergedStartDate = new Date(startDate);
+      if (Number.isNaN(mergedStartDate.getTime())) {
+        throw new ValidationError('Ngày bắt đầu không hợp lệ (Invalid start date)');
+      }
     }
 
     let mergedDueDate: Date | null = existing.dueDate ? new Date(existing.dueDate) : null;
     if (dueDate !== undefined) {
-      mergedDueDate = dueDate ? new Date(dueDate) : null;
+      if (dueDate === null) {
+        throw new ValidationError('Thời hạn hoàn thành không được để trống (Due date cannot be empty)');
+      }
+      mergedDueDate = new Date(dueDate);
+      if (Number.isNaN(mergedDueDate.getTime())) {
+        throw new ValidationError('Thời hạn hoàn thành không hợp lệ (Invalid due date)');
+      }
     }
 
     if (mergedStartDate && mergedDueDate) {
@@ -1049,48 +1033,11 @@ export class TaskCommandService {
         effectivePrimaryOwnerId = existingOwner?.userId || null;
       }
 
+      // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), tuyệt đối không cho mutate thủ công
       if (collaboratorIds !== undefined) {
-        const validCollabIds = Array.isArray(collaboratorIds)
-          ? Array.from(new Set(collaboratorIds)).filter(
-              (cId): cId is string =>
-                typeof cId === 'string' &&
-                Boolean(cId.trim()) &&
-                cId.trim() !== effectivePrimaryOwnerId
-            )
-          : [];
-
-        // Synchronize canonical TaskActor
-        await tx.taskActor.deleteMany({
-          where: { taskId, role: TaskActorRole.COLLABORATOR },
-        });
-        if (validCollabIds.length > 0) {
-          await tx.taskActor.createMany({
-            data: validCollabIds.map((cId) => ({
-              taskId,
-              userId: cId,
-              role: TaskActorRole.COLLABORATOR,
-              isPrimaryDRI: false,
-              assignedById: user.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-
-        // Legacy TaskAssignee compatibility
-        await tx.taskAssignee.deleteMany({
-          where: { taskId, roleInTask: AssigneeRole.COLLABORATOR },
-        });
-
-        if (validCollabIds.length > 0) {
-          await tx.taskAssignee.createMany({
-            data: validCollabIds.map((cId) => ({
-              taskId,
-              userId: cId,
-              roleInTask: AssigneeRole.COLLABORATOR,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        throw new ValidationError(
+          'Người phối hợp là dữ liệu phái sinh từ các nhiệm vụ con active, không được chỉnh sửa thủ công.'
+        );
       }
 
       const updatedTask = await tx.task.findUniqueOrThrow({
@@ -1169,7 +1116,7 @@ export class TaskCommandService {
           auditLogged = true;
           await logAuditEvent(tx, {
             actorId: user.id,
-            action: 'TASK_START_DATE_CHANGED',
+            action: AuditAction.TASK_START_DATE_CHANGED,
             entityType: AuditEntityType.TASK,
             entityId: taskId,
             requestId,

@@ -343,8 +343,7 @@ describe('Tasks API Route Handler Tests', () => {
 
       assert.strictEqual(owners.length, 1, 'Must have exactly 1 PRIMARY_OWNER');
       assert.strictEqual(owners[0].userId, staffUser1.id);
-      assert.strictEqual(collabs.length, 1, 'Must have exactly 1 COLLABORATOR, deduplicating primary owner');
-      assert.strictEqual(collabs[0].userId, staffUser2.id);
+      assert.strictEqual(collabs.length, 0, 'Must NOT have manual COLLABORATOR in database — collaborators are derived from child tasks (Rule 2)');
     });
 
     test('POST /api/tasks: creates subtask inheriting department from parent and references parentTaskId', async () => {

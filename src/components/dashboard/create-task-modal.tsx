@@ -619,11 +619,6 @@ export function CreateTaskModal({
   const comboboxRef = React.useRef<HTMLDivElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Collaborator search state
-  const [isCollabDropdownOpen, setIsCollabDropdownOpen] = React.useState(false);
-  const [collabSearchQuery, setCollabSearchQuery] = React.useState("");
-  const collabDropdownRef = React.useRef<HTMLDivElement>(null);
-
   const [personnelList, setPersonnelList] = React.useState<ApiPersonnel[]>([]);
 
   // Submission lifecycle (T26 / T27 / T73): the form never closes or clears on a
@@ -853,9 +848,6 @@ export function CreateTaskModal({
       if (comboboxRef.current && !comboboxRef.current.contains(event.target as Node)) {
         setIsComboboxOpen(false);
       }
-      if (collabDropdownRef.current && !collabDropdownRef.current.contains(event.target as Node)) {
-        setIsCollabDropdownOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -872,7 +864,6 @@ export function CreateTaskModal({
 
   const forceClose = React.useCallback(() => {
     setIsComboboxOpen(false);
-    setIsCollabDropdownOpen(false);
     setShowDiscardConfirm(false);
     onClose();
   }, [onClose]);
@@ -882,10 +873,6 @@ export function CreateTaskModal({
     if (isComboboxOpen) {
       setIsComboboxOpen(false);
       comboboxTriggerRef.current?.focus();
-      return;
-    }
-    if (isCollabDropdownOpen) {
-      setIsCollabDropdownOpen(false);
       return;
     }
     if (showDiscardConfirm) {
@@ -900,7 +887,7 @@ export function CreateTaskModal({
     } else {
       forceClose();
     }
-  }, [isSubmitting, isComboboxOpen, isCollabDropdownOpen, showDiscardConfirm, formData, forceClose]);
+  }, [isSubmitting, isComboboxOpen, showDiscardConfirm, formData, forceClose]);
 
   React.useEffect(() => {
     if (isOpen && !prevIsOpen.current) {
@@ -966,7 +953,7 @@ export function CreateTaskModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isCollabDropdownOpen, isSubmitting, handleRequestClose]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isSubmitting, handleRequestClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const focusFieldWithError = React.useCallback(
     (targetId: string, isAdvanced?: boolean) => {
@@ -1000,7 +987,6 @@ export function CreateTaskModal({
         { key: "dueDate", targetId: "task-due-date-input" },
         { key: "internalDueDate", targetId: "task-internal-due-input", isAdvanced: true },
         { key: "requiredDeliverables", targetId: "task-deliverables-input", isAdvanced: true },
-        { key: "coAssignees", targetId: "task-collaborators-input", isAdvanced: true },
       ];
       const first = focusOrder.find((entry) => fieldErrors[entry.key]);
       if (!first) {
@@ -1070,17 +1056,11 @@ export function CreateTaskModal({
       targetDeptCode !== undefined &&
       targetDeptCode !== "BGH";
 
-    const cleanCollaborators = isChildTaskMode
-      ? []
-      : (formData.coAssignees || []).filter(
-          (name) => name && name.trim().toLowerCase() !== formData.leadAssigneeName.trim().toLowerCase()
-        );
-
     const draft: CreateTaskFormData = {
       ...formData,
       parentTaskId: formData.parentTaskId || initialParentTaskId,
       leadAssigneeName: formData.leadAssigneeName,
-      coAssignees: cleanCollaborators,
+      coAssignees: [],
       isBypassWarning: formData.isBypassWarning || isAdminBypass,
     };
 
@@ -1681,91 +1661,6 @@ export function CreateTaskModal({
                       <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" strokeWidth={1.5} />
                     </div>
                   </div>
-
-                  {/* Property: Cán bộ phối hợp (Collaborators - Core Flow) */}
-                  {!isChildTaskMode && (
-                    <div className="space-y-1" ref={collabDropdownRef}>
-                      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                        <span>Phối hợp thực hiện</span>
-                        {formData.coAssignees.length > 0 && (
-                          <span className="text-muted-foreground/70">{formData.coAssignees.length} cán bộ</span>
-                        )}
-                      </div>
-
-                      {/* Selected Collaborators inline chips */}
-                      {formData.coAssignees.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {formData.coAssignees.map((collabName) => (
-                            <span
-                              key={collabName}
-                              className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-xs text-foreground font-medium"
-                            >
-                              <span>{collabName}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFormData((p) => ({
-                                    ...p,
-                                    coAssignees: p.coAssignees.filter((c) => c !== collabName),
-                                  }));
-                                }}
-                                className="text-muted-foreground hover:text-destructive cursor-pointer"
-                                aria-label={`Xóa cán bộ phối hợp ${collabName}`}
-                              >
-                                <X className="size-3" strokeWidth={1.5} />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Add collaborator selector */}
-                      <div className="relative">
-                        <select
-                          value=""
-                          id="task-collaborators-input"
-                          onChange={(e) => {
-                            const selected = e.target.value;
-                            if (selected && !formData.coAssignees.includes(selected)) {
-                              setFormData((p) => ({
-                                ...p,
-                                coAssignees: [...p.coAssignees, selected],
-                              }));
-                              if (errors.coAssignees) clearError("coAssignees");
-                            }
-                          }}
-                          className="w-full h-9 pl-2.5 pr-7 rounded-lg border border-border/70 bg-background text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
-                          aria-label="Thêm cán bộ phối hợp"
-                        >
-                          <option value="">+ Thêm cán bộ phối hợp...</option>
-                          {filteredGroups.map((group, gIdx) => {
-                            const availableMembers = group.members.filter(
-                              (m) =>
-                                m.name !== formData.leadAssigneeName &&
-                                !formData.coAssignees.includes(m.name)
-                            );
-                            if (availableMembers.length === 0) return null;
-                            return (
-                              <optgroup key={`collab-grp-${group.code}-${gIdx}`} label={group.department}>
-                                {availableMembers.map((member, idx) => (
-                                  <option key={`collab-opt-${group.code}-${member.name}-${idx}`} value={member.name}>
-                                    {member.title} - {member.role}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            );
-                          })}
-                        </select>
-                        <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" strokeWidth={1.5} />
-                      </div>
-
-                      {errors.coAssignees && (
-                        <p className="text-xs font-medium text-destructive mt-1">
-                          {errors.coAssignees}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* 4. Progressive Disclosure: Tùy chọn nâng cao */}
@@ -1801,27 +1696,6 @@ export function CreateTaskModal({
                             onFocus={() => scrollActiveInputIntoView()}
                             className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
                           />
-                        </div>
-
-                        {/* Field: Lĩnh vực công tác */}
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground block">
-                            Lĩnh vực công tác
-                          </label>
-                          <div className="relative">
-                            <select
-                              value={formData.category}
-                              onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TaskCategory }))}
-                              className="w-full h-9 pl-2.5 pr-7 rounded-lg border border-border/70 bg-background text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
-                            >
-                              {CATEGORY_OPTIONS.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.label}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-3" strokeWidth={1.5} />
-                          </div>
                         </div>
 
                         {/* Field: Hạn chót nội bộ */}
@@ -1942,7 +1816,6 @@ export function CreateTaskModal({
 
                 {(errors.title ||
                   errors.leadAssigneeName ||
-                  errors.coAssignees ||
                   errors.dueDate ||
                   errors.internalDueDate ||
                   errors.requiredDeliverables ||
@@ -1962,11 +1835,6 @@ export function CreateTaskModal({
                     {errors.leadAssigneeName && (
                       <button type="button" onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline cursor-pointer">
                         • {errors.leadAssigneeName}
-                      </button>
-                    )}
-                    {errors.coAssignees && (
-                      <button type="button" onClick={() => focusFieldWithError("task-collaborators-input")} className="block text-left hover:underline cursor-pointer">
-                        • {errors.coAssignees}
                       </button>
                     )}
                     {errors.dueDate && (

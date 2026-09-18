@@ -114,6 +114,15 @@ const TASK_INCLUDE = {
       title: true,
       status: true,
       progressPercent: true,
+      archivedAt: true,
+      actors: {
+        select: {
+          userId: true,
+          isPrimaryDRI: true,
+          role: true,
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      },
       assignees: {
         include: {
           user: { select: { id: true, name: true, avatarUrl: true } },
@@ -628,6 +637,11 @@ export class TaskQueryService {
         },
         subTasks: {
           include: {
+            actors: {
+              include: {
+                user: { select: { id: true, name: true, avatarUrl: true } },
+              },
+            },
             assignees: {
               include: {
                 user: { select: { id: true, name: true, avatarUrl: true } },

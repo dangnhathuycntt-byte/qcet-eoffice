@@ -700,84 +700,7 @@ export function LinearCreateTaskModal({
 
           {/* 3. Compact Properties Chips Bar (Wrap max 2 rows) */}
           <div className="flex flex-wrap items-center gap-1.5 py-2 my-0.5 border-y border-border/60 shrink-0">
-            {/* 3.1 Status Chip */}
-            <div ref={statusTriggerRef} className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "status" ? null : "status")
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
-                  openDropdown === "status"
-                    ? "border-border bg-accent text-foreground shadow-2xs"
-                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
-                )}
-              >
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full transition-transform duration-150",
-                    status === "IN_PROGRESS" ? "bg-blue-500 scale-110" : "bg-muted-foreground"
-                  )}
-                />
-                <span>{status === "IN_PROGRESS" ? "Đang thực hiện" : "Mới"}</span>
-                <ChevronDown
-                  className={cn(
-                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-                    openDropdown === "status" && "rotate-180 text-foreground"
-                  )}
-                />
-              </button>
-
-              <FloatingPortal
-                isOpen={openDropdown === "status"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={statusTriggerRef}
-                className="w-36 p-1 space-y-0.5"
-                ariaLabel="Chọn trạng thái"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus("IN_PROGRESS");
-                    setOpenDropdown(null);
-                  }}
-                  className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
-                    status === "IN_PROGRESS" ? "bg-accent font-semibold" : "hover:bg-accent/70"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-blue-500" />
-                    <span>Đang thực hiện</span>
-                  </div>
-                  {status === "IN_PROGRESS" && (
-                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus("TODO");
-                    setOpenDropdown(null);
-                  }}
-                  className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] text-foreground cursor-pointer",
-                    status === "TODO" ? "bg-accent font-semibold" : "hover:bg-accent/70"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
-                    <span>Mới</span>
-                  </div>
-                  {status === "TODO" && (
-                    <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />
-                  )}
-                </button>
-              </FloatingPortal>
-            </div>
-
-            {/* 3.2 Priority Chip */}
+            {/* 3.1 Priority Chip */}
             <div ref={priorityTriggerRef} className="relative">
               <button
                 type="button"
@@ -904,79 +827,7 @@ export function LinearCreateTaskModal({
               </FloatingPortal>
             </div>
 
-            {/* 3.4 Collaborators Chip */}
-            <div ref={coTriggerRef} className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "co" ? null : "co")
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
-                  openDropdown === "co"
-                    ? "border-border bg-accent text-foreground shadow-2xs"
-                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
-                )}
-              >
-                <Users className="size-3 text-muted-foreground" strokeWidth={1.5} />
-                <span>
-                  {coAssignees.length > 0
-                    ? `Phối hợp (${coAssignees.length})`
-                    : "+ Phối hợp"}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-                    openDropdown === "co" && "rotate-180 text-foreground"
-                  )}
-                />
-              </button>
-
-              <FloatingPortal
-                isOpen={openDropdown === "co"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={coTriggerRef}
-                className="w-60 p-1 space-y-0.5 max-h-56"
-                ariaLabel="Chọn nhân sự phối hợp"
-              >
-                {availablePersonnel
-                  .filter((p) => p.name !== leadAssigneeName)
-                  .map((person) => {
-                    const isSelected = coAssignees.includes(person.name);
-                    return (
-                      <button
-                        key={person.name}
-                        type="button"
-                        onClick={() => {
-                          setCoAssignees((prev) =>
-                            isSelected
-                              ? prev.filter((n) => n !== person.name)
-                              : [...prev, person.name]
-                          );
-                        }}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between text-foreground hover:bg-accent/70 active:scale-[0.99] cursor-pointer transition-all duration-150"
-                      >
-                        <div>
-                          <div className="font-medium">{person.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{person.role}</div>
-                        </div>
-                        <div
-                          className={cn(
-                            "size-4 rounded border flex items-center justify-center text-[10px] transition-colors",
-                            isSelected
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-border"
-                          )}
-                        >
-                          {isSelected && <Check className="size-3" strokeWidth={1.5} />}
-                        </div>
-                      </button>
-                    );
-                  })}
-              </FloatingPortal>
-            </div>
-
-            {/* 3.5 Start Date Chip */}
+            {/* 3.3 Start Date Chip */}
             <VietnameseDatePicker
               value={startDate}
               onChange={(val) => setStartDate(val)}
@@ -986,7 +837,7 @@ export function LinearCreateTaskModal({
               placeholder="dd/mm/yyyy"
             />
 
-            {/* 3.6 Target Due Date Chip (P0 Field) */}
+            {/* 3.4 Target Due Date Chip (P0 Field) */}
             <VietnameseDatePicker
               value={dueDate}
               required
@@ -1010,61 +861,6 @@ export function LinearCreateTaskModal({
               }
               placeholder="dd/mm/yyyy"
             />
-
-            {/* 3.7 Category / Domain Chip */}
-            <div ref={catTriggerRef} className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "cat" ? null : "cat")
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
-                  openDropdown === "cat"
-                    ? "border-border bg-accent text-foreground shadow-2xs"
-                    : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground"
-                )}
-              >
-                <Tag className="size-3 text-muted-foreground" strokeWidth={1.5} />
-                <span>
-                  {CATEGORY_OPTIONS.find((c) => c.id === category)?.label || "Lĩnh vực"}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "size-2.5 text-muted-foreground transition-transform duration-200 ease-out",
-                    openDropdown === "cat" && "rotate-180 text-foreground"
-                  )}
-                />
-              </button>
-
-              <FloatingPortal
-                isOpen={openDropdown === "cat"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={catTriggerRef}
-                className="w-52 p-1 space-y-0.5"
-                ariaLabel="Chọn lĩnh vực công việc"
-              >
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setCategory(opt.id);
-                      setOpenDropdown(null);
-                    }}
-                    className={cn(
-                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
-                      category === opt.id
-                        ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground hover:bg-accent/70"
-                    )}
-                  >
-                    <span>{opt.label}</span>
-                    {category === opt.id && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
-                  </button>
-                ))}
-              </FloatingPortal>
-            </div>
           </div>
 
           {/* 4. Detailed Description / Canvas */}

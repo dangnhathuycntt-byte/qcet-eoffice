@@ -337,9 +337,15 @@ export async function updateTaskStartDate(
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
+      const errorMessage =
+        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
+        (typeof errJson?.error === 'string' && errJson.error) ||
+        errJson?.message ||
+        `Lỗi thay đổi ngày bắt đầu (${res.status})`;
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi thay đổi ngày bắt đầu (${res.status})`,
+        error: errorMessage,
+        code: errJson?.code || errJson?.error?.code,
       };
     }
 
@@ -371,9 +377,15 @@ export async function updateTaskDueDate(
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
+      const errorMessage =
+        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
+        (typeof errJson?.error === 'string' && errJson.error) ||
+        errJson?.message ||
+        `Lỗi thay đổi hạn hoàn thành (${res.status})`;
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi thay đổi hạn hoàn thành (${res.status})`,
+        error: errorMessage,
+        code: errJson?.code || errJson?.error?.code,
       };
     }
 

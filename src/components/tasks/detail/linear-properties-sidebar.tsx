@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ChevronRight,
   TrendingUp,
-  Tag,
   Activity,
   History,
   Check,
@@ -207,22 +206,6 @@ export function LinearPropertiesSidebar({
   const leadMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Collaborators popover state
-  const [isCollaboratorMenuOpen, setIsCollaboratorMenuOpen] = React.useState(false);
-  const [isUpdatingCollaborators, setIsUpdatingCollaborators] = React.useState(false);
-  const [collaboratorError, setCollaboratorError] = React.useState<string | null>(null);
-  const [collaboratorSearchQuery, setCollaboratorSearchQuery] = React.useState("");
-  const collaboratorMenuRef = React.useRef<HTMLDivElement>(null);
-
-  const initialCollabIds = React.useMemo(() => {
-    const raw = (task as any).collaboratorIds;
-    if (Array.isArray(raw)) return raw;
-    if (staffTask?.collaborators && Array.isArray(staffTask.collaborators)) {
-      return staffTask.collaborators.map((c: any) => c.id).filter(Boolean);
-    }
-    return [];
-  }, [task, staffTask]);
-  const [selectedCollaboratorIds, setSelectedCollaboratorIds] = React.useState<string[]>(initialCollabIds);
-
   React.useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
@@ -251,16 +234,12 @@ export function LinearPropertiesSidebar({
       if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
         setIsLeadMenuOpen(false);
       }
-      if (collaboratorMenuRef.current && !collaboratorMenuRef.current.contains(e.target as Node)) {
-        setIsCollaboratorMenuOpen(false);
-      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsStatusMenuOpen(false);
         setIsPriorityMenuOpen(false);
         setIsLeadMenuOpen(false);
-        setIsCollaboratorMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -357,15 +336,14 @@ export function LinearPropertiesSidebar({
   }, [leadName, departmentName]);
 
   // Members / Collaborators
+  // Members / Collaborators: strictly read-only derived data from server truth (Rule 2)
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
-    if (selectedCollaboratorIds.length > 0 && personnelList.length > 0) {
-      return selectedCollaboratorIds.map((id) => {
-        const found = personnelList.find((p) => p.id === id);
-        return {
-          id,
-          name: found ? found.name : id,
-        };
-      });
+    if (Array.isArray((task as any).collaborators) && (task as any).collaborators.length > 0) {
+      return (task as any).collaborators.map((c: any) => ({
+        id: c.id || c.name,
+        name: c.name || c,
+        avatarUrl: c.avatarUrl,
+      }));
     }
 
     if (isSchool && schoolTask) {
@@ -374,17 +352,8 @@ export function LinearPropertiesSidebar({
         schoolTask.coAssignees.forEach((name, idx) => {
           if (name && typeof name === "string") {
             list.push({ id: `co-${idx}`, name });
-          }
-        });
-      }
-      if (Array.isArray(schoolTask.subTasks)) {
-        schoolTask.subTasks.forEach((st) => {
-          if (st.assigneeName && !list.some((m) => m.name === st.assigneeName)) {
-            list.push({
-              id: st.id || st.assigneeName,
-              name: st.assigneeName,
-              avatarUrl: st.assigneeAvatar,
-            });
+          } else if (name && typeof name === "object") {
+            list.push({ id: (name as any).id || `co-${idx}`, name: (name as any).name || '', avatarUrl: (name as any).avatarUrl });
           }
         });
       }
@@ -398,7 +367,7 @@ export function LinearPropertiesSidebar({
       }));
     }
     return [];
-  }, [selectedCollaboratorIds, personnelList, isSchool, schoolTask, staffTask]);
+  }, [task, isSchool, schoolTask, staffTask]);
 
   // Dates
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
@@ -479,42 +448,6 @@ export function LinearPropertiesSidebar({
     }
   };
 
-  const handleToggleCollaborator = async (userId: string) => {
-    if (!canEdit || isUpdatingCollaborators) return;
-    setCollaboratorError(null);
-    const isCurrentlySelected = selectedCollaboratorIds.includes(userId);
-    const nextIds = isCurrentlySelected
-      ? selectedCollaboratorIds.filter((id) => id !== userId)
-      : [...selectedCollaboratorIds, userId];
-
-    setIsUpdatingCollaborators(true);
-    try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ collaboratorIds: nextIds }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        const errMsg =
-          errJson?.error?.message ||
-          errJson?.message ||
-          (res.status === 403
-            ? "Bạn không có quyền cập nhật người phối hợp cho nhiệm vụ này (403 Forbidden)"
-            : "Không thể cập nhật danh sách người phối hợp. Vui lòng thử lại");
-        setCollaboratorError(errMsg);
-        return;
-      }
-
-      setSelectedCollaboratorIds(nextIds);
-    } catch (e: any) {
-      setCollaboratorError(e?.message || "Lỗi kết nối khi cập nhật người phối hợp");
-    } finally {
-      setIsUpdatingCollaborators(false);
-    }
-  };
-
   const { notifyWarning } = useFeedback();
 
   const handleStartDateChangeInternal = async (newDateIso: string) => {
@@ -585,7 +518,9 @@ export function LinearPropertiesSidebar({
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <CircleDashed className={cn("size-3.5", activeStatusOption.value === "COMPLETED" ? "text-emerald-600" : activeStatusOption.value === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground")} strokeWidth={1.5} />
+                <div className="size-4 shrink-0 flex items-center justify-center">
+                  <CircleDashed className={cn("size-3.5", activeStatusOption.value === "COMPLETED" ? "text-emerald-600" : activeStatusOption.value === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground")} strokeWidth={1.5} />
+                </div>
                 <span>{activeStatusOption.label}</span>
               </div>
 
@@ -658,7 +593,9 @@ export function LinearPropertiesSidebar({
               <div
                 className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
               >
-                <Signal className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
+                <div className="size-4 shrink-0 flex items-center justify-center">
+                  <Signal className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
+                </div>
                 <span>{activePriorityOption.label}</span>
               </div>
 
@@ -701,7 +638,6 @@ export function LinearPropertiesSidebar({
               if (canEdit && !isReassigning) {
                 setIsStatusMenuOpen(false);
                 setIsPriorityMenuOpen(false);
-                setIsCollaboratorMenuOpen(false);
                 setReassignError(null);
                 setIsLeadMenuOpen(!isLeadMenuOpen);
               }
@@ -714,19 +650,23 @@ export function LinearPropertiesSidebar({
             <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phụ trách</span>
             <div className="relative min-w-0">
               <div
-                className="inline-flex items-start gap-1.5 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
+                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
                 style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}
                 title={leadParsed.tooltip}
               >
                 {isReassigning ? (
-                  <div className="flex items-center gap-1.5 text-primary text-xs">
-                    <Loader2 className="size-3.5 animate-spin" />
+                  <div className="flex items-center gap-2 text-primary text-xs">
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <Loader2 className="size-3.5 animate-spin" />
+                    </div>
                     <span>Đang cập nhật...</span>
                   </div>
                 ) : leadParsed.displayName && leadParsed.displayName !== "Chưa phân công" ? (
                   <>
-                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px] shrink-0 mt-0.5">
-                      {getInitials(leadParsed.displayName)}
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px]">
+                        {getInitials(leadParsed.displayName)}
+                      </div>
                     </div>
                     <span
                       className="min-w-0 font-normal line-clamp-2 select-text"
@@ -737,8 +677,10 @@ export function LinearPropertiesSidebar({
                     </span>
                   </>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
-                    <UserPlus className="size-3.5" strokeWidth={1.5} />
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <UserPlus className="size-3.5" strokeWidth={1.5} />
+                    </div>
                     <span>Thêm phụ trách</span>
                   </div>
                 )}
@@ -797,142 +739,36 @@ export function LinearPropertiesSidebar({
             </div>
           </div>
 
-          {/* Members / Collaborators Row with Popover */}
-          <div
-            ref={collaboratorMenuRef}
-            onClick={() => {
-              if (canEdit && !isUpdatingCollaborators) {
-                setIsStatusMenuOpen(false);
-                setIsPriorityMenuOpen(false);
-                setIsLeadMenuOpen(false);
-                setCollaboratorError(null);
-                setCollaboratorSearchQuery("");
-                setIsCollaboratorMenuOpen(!isCollaboratorMenuOpen);
-              }
-            }}
-            className={cn(
-              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
-              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
-            )}
-          >
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Thành viên</span>
+          {/* Members / Collaborators Row: strictly read-only derived data from active subtasks (Rule 2) */}
+          <div className="flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md min-h-[28px] select-none">
+            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phối hợp</span>
             <div className="relative">
-              <div className="flex items-center gap-1.5">
-                {isUpdatingCollaborators ? (
-                  <div className="flex items-center gap-1 text-primary text-xs">
-                    <Loader2 className="size-3 animate-spin" />
-                    <span className="text-[11px]">Đang lưu...</span>
-                  </div>
-                ) : collaborators.length > 0 ? (
-                  <div
-                    className="flex items-center -space-x-1.5 overflow-visible pt-0.5"
-                    title={collaborators.map((c) => c.name).join(", ")}
-                  >
-                    {collaborators.slice(0, 3).map((m) => (
-                      <span
-                        key={m.id}
-                        className="size-5 rounded-full bg-primary/10 text-primary border-2 border-background flex items-center justify-center text-[8px] font-semibold overflow-hidden shrink-0 shadow-xs"
-                        title={m.name}
-                      >
-                        {getInitials(m.name)}
-                      </span>
-                    ))}
-                    {collaborators.length > 3 && (
-                      <span
-                        className="size-5 rounded-full bg-muted text-muted-foreground border-2 border-background flex items-center justify-center text-[9px] font-medium font-mono shrink-0 shadow-xs"
-                        title={`+${collaborators.length - 3} thành viên khác`}
-                      >
-                        +{collaborators.length - 3}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-muted-foreground pt-0.5">
-                    <Users className="size-3.5" strokeWidth={1.5} />
-                    <span>Thêm thành viên</span>
-                  </div>
-                )}
-              </div>
-
-              {isCollaboratorMenuOpen && canEdit && (
+              {collaborators.length > 0 ? (
                 <div
-                  role="dialog"
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-full mt-1.5 w-64 max-h-80 overflow-y-auto rounded-xl border border-border bg-white p-2 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
+                  className="inline-flex items-center px-1.5 py-0.5 -space-x-1.5 overflow-visible"
+                  title={collaborators.map((c) => c.name).join(", ")}
                 >
-                  <div className="text-[11px] font-semibold text-muted-foreground px-1 pb-1.5 select-none flex items-center justify-between">
-                    <span>Người phối hợp</span>
-                    <span className="font-mono text-[10px] text-primary">
-                      {selectedCollaboratorIds.length} đã chọn
+                  {collaborators.slice(0, 3).map((m) => (
+                    <span
+                      key={m.id}
+                      className="size-5 rounded-full bg-primary/10 text-primary border-2 border-background flex items-center justify-center text-[8px] font-semibold overflow-hidden shrink-0 shadow-xs"
+                      title={m.name}
+                    >
+                      {getInitials(m.name)}
                     </span>
-                  </div>
-
-                  {/* Search box */}
-                  <div className="relative mb-2">
-                    <Search className="size-3.5 text-muted-foreground absolute left-2 top-2" />
-                    <input
-                      type="text"
-                      value={collaboratorSearchQuery}
-                      onChange={(e) => setCollaboratorSearchQuery(e.target.value)}
-                      placeholder="Tìm kiếm cán bộ..."
-                      className="w-full text-xs pl-7 pr-2 py-1 rounded-md bg-muted/30 border border-border/60 focus:outline-none focus:border-primary text-foreground"
-                    />
-                  </div>
-
-                  {collaboratorError && (
-                    <div className="mb-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
-                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{collaboratorError}</span>
-                    </div>
+                  ))}
+                  {collaborators.length > 3 && (
+                    <span
+                      className="size-5 rounded-full bg-muted text-muted-foreground border-2 border-background flex items-center justify-center text-[9px] font-medium font-mono shrink-0 shadow-xs"
+                      title={`+${collaborators.length - 3} thành viên khác`}
+                    >
+                      +{collaborators.length - 3}
+                    </span>
                   )}
-
-                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                    {personnelList
-                      .filter((p) => {
-                        if (!collaboratorSearchQuery.trim()) return true;
-                        const query = collaboratorSearchQuery.toLowerCase();
-                        return (
-                          p.name.toLowerCase().includes(query) ||
-                          (p.departmentName && p.departmentName.toLowerCase().includes(query)) ||
-                          (p.email && p.email.toLowerCase().includes(query))
-                        );
-                      })
-                      .map((p) => {
-                        const isSelected = selectedCollaboratorIds.includes(p.id);
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            disabled={isUpdatingCollaborators}
-                            onClick={() => handleToggleCollaborator(p.id)}
-                            className={cn(
-                              "w-full flex items-center justify-between px-2 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
-                              isSelected
-                                ? "bg-primary/10 text-primary font-medium"
-                                : "text-foreground hover:bg-muted/60"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
-                                {getInitials(p.name)}
-                              </div>
-                              <div className="truncate">
-                                <div className="truncate text-foreground font-normal">{p.name}</div>
-                                {p.departmentName && (
-                                  <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
-                                )}
-                              </div>
-                            </div>
-                            <div className={cn(
-                              "size-4 rounded border flex items-center justify-center shrink-0 transition-colors",
-                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-border/80 bg-background"
-                            )}>
-                              {isSelected && <Check className="size-3 text-white" strokeWidth={1.5} />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
+                </div>
+              ) : (
+                <div className="inline-flex items-center px-1.5 py-0.5 text-xs text-muted-foreground/60">
+                  <span className="size-4 shrink-0 flex items-center justify-center">—</span>
                 </div>
               )}
             </div>
@@ -949,16 +785,22 @@ export function LinearPropertiesSidebar({
                   placeholder="Chọn ngày"
                   title="Ngày bắt đầu"
                   variant="inline"
-                  icon={<Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+                  icon={
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    </div>
+                  }
                   showPresets={false}
                   align="right"
                 />
               ) : (
                 <div
                   title="Ngày bắt đầu"
-                  className="inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
+                  className="inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
                 >
-                  <Calendar className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
+                  <div className="size-4 shrink-0 flex items-center justify-center">
+                    <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  </div>
                   <span className="tabular-nums font-normal">
                     {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
                   </span>
@@ -979,15 +821,17 @@ export function LinearPropertiesSidebar({
                   title="Hạn hoàn thành"
                   variant="inline"
                   icon={
-                    <Calendar
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                          ? "text-rose-500"
-                          : "text-muted-foreground"
-                      )}
-                      strokeWidth={1.5}
-                    />
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <Calendar
+                        className={cn(
+                          "size-3.5",
+                          dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                            ? "text-rose-500"
+                            : "text-muted-foreground"
+                        )}
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   }
                   triggerClassName={cn(
                     dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-normal"
@@ -999,21 +843,23 @@ export function LinearPropertiesSidebar({
                 <div
                   title="Hạn hoàn thành"
                   className={cn(
-                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs select-none",
+                    "inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs select-none",
                     dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
                       ? "text-rose-600 font-normal"
                       : "text-foreground font-normal"
                   )}
                 >
-                  <Calendar
-                    className={cn(
-                      "size-3.5 shrink-0",
-                      dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                        ? "text-rose-500"
-                        : "text-muted-foreground"
-                    )}
-                    strokeWidth={1.5}
-                  />
+                  <div className="size-4 shrink-0 flex items-center justify-center">
+                    <Calendar
+                      className={cn(
+                        "size-3.5",
+                        dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
+                          ? "text-rose-500"
+                          : "text-muted-foreground"
+                      )}
+                      strokeWidth={1.5}
+                    />
+                  </div>
                   <span className="tabular-nums font-normal">
                     {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
                   </span>
@@ -1026,7 +872,7 @@ export function LinearPropertiesSidebar({
           <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
             <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Đơn vị</span>
             <div
-              className="flex items-start gap-1.5 min-w-0 text-foreground text-xs leading-snug"
+              className="inline-flex items-start gap-2 px-1.5 py-0.5 rounded min-w-0 text-foreground text-xs leading-snug"
               style={{
                 minWidth: 0,
                 whiteSpace: "normal",
@@ -1034,7 +880,9 @@ export function LinearPropertiesSidebar({
                 textOverflow: "clip",
               }}
             >
-              <Building2 className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
+              <div className="size-4 shrink-0 flex items-center justify-center mt-0.5">
+                <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              </div>
               <span
                 className="min-w-0 font-normal select-text line-clamp-2"
                 title={departmentName}
@@ -1050,36 +898,8 @@ export function LinearPropertiesSidebar({
               </span>
             </div>
           </div>
-
-          {/* Row 8: Labels */}
-          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Nhãn</span>
-            <div
-              className="flex items-start gap-1.5 text-foreground text-xs leading-snug min-w-0"
-              style={{
-                minWidth: 0,
-                whiteSpace: "normal",
-                overflow: "visible",
-                textOverflow: "clip",
-              }}
-            >
-              <Tag className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
-              <span
-                className="min-w-0 font-normal line-clamp-2 select-text"
-                style={{
-                  minWidth: 0,
-                  whiteSpace: "normal",
-                  overflow: "visible",
-                  textOverflow: "clip",
-                  wordBreak: "break-word",
-                }}
-              >
-                {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
-              </span>
-            </div>
-          </div>
         </div>
-            </div>
+      </div>
 
       {showRelatedSections && (
       <>
