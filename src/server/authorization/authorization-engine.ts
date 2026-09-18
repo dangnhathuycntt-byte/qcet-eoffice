@@ -741,12 +741,15 @@ export function authorize(
       code === 'GIANG_VIEN_CHUYEN_VIEN' ||
       code === 'CHUYEN_VIEN' ||
       code === 'GIANG_VIEN' ||
-      code === 'VIEN_CHUC'
+      code === 'VIEN_CHUC' ||
+      code === 'CAN_BO_CHUYEN_VIEN_CANONICAL'
     ) {
       if (
         action === 'task.read' ||
         action === 'task.create' ||
         action === 'task.monitor' ||
+        action === 'task.update_execution' ||
+        action === 'task.update_metadata' ||
         action === 'document.incoming.execute' ||
         action === 'document.outgoing.draft' ||
         action === 'dossier.open'

@@ -140,14 +140,9 @@ export function TaskDetailPage({
   }, []);
 
   const handleOpenSubtaskDrawer = React.useCallback((st: StaffTask) => {
-    setSelectedSubtaskId((currentId) => {
-      if (currentId && currentId !== st.id) {
-        setSubtaskHistory((prev) => [...prev, currentId]);
-      }
-      return st.id;
-    });
-    updateSubtaskUrl(st.id);
-  }, [updateSubtaskUrl]);
+    // ponytail: Navigate directly to subtask full page instead of drawer
+    router.push(`/tasks/${st.id}`);
+  }, [router]);
 
   const handleCloseSubtaskDrawer = React.useCallback(() => {
     setSelectedSubtaskId(null);
@@ -678,34 +673,75 @@ export function TaskDetailPage({
   };
 
   // Inline subtask creation handler
-  const handleCreateSubTaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
+  const handleCreateSubTaskInline = async (
+    title: string,
+    assigneeName?: string,
+    dueDate?: string,
+    assigneeId?: string
+  ) => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       throw new Error("Tên việc thành phần không được để trống");
     }
 
+    let resolvedAssigneeId = assigneeId;
+    if (!resolvedAssigneeId && assigneeName) {
+      try {
+        const uRes = await fetch("/api/users");
+        const uData = await uRes.json();
+        if (uData && Array.isArray(uData.users)) {
+          const matched = uData.users.find(
+            (u: any) =>
+              u.name?.trim().toLowerCase() === assigneeName.trim().toLowerCase() ||
+              u.name?.includes(assigneeName) ||
+              assigneeName.includes(u.name)
+          );
+          if (matched) resolvedAssigneeId = matched.id;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
+
+    const payload: Record<string, unknown> = {
+      title: trimmedTitle,
+      parentTaskId: task.id,
+      dueDate: resolvedDueDate,
+      priority: "NORMAL",
+      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
+    };
+
+    if (resolvedAssigneeId) {
+      payload.assigneeId = resolvedAssigneeId;
+    }
+    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
+    if (deptId) {
+      payload.departmentId = deptId;
+    }
+
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: trimmedTitle,
-        parentTaskId: task.id,
-        dueDate: dueDate || task.dueDate,
-        leadAssigneeName: assigneeName || undefined,
-        scope: "DEPARTMENT",
-        priority: "NORMAL",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => null);
-      const errMsg =
-        errJson?.error?.message ||
-        errJson?.message ||
+      let errMsg = errJson?.error?.message || errJson?.message;
+      if (errJson?.details && typeof errJson.details === "object") {
+        const detailList = Object.entries(errJson.details)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("; ");
+        if (detailList) errMsg = `${errMsg || "Lỗi xác thực"}: ${detailList}`;
+      }
+      throw new Error(
+        errMsg ||
         (res.status === 403
           ? "Bạn không có quyền tạo việc thành phần cho nhiệm vụ này (403 Forbidden)"
-          : "Không thể tạo việc thành phần. Vui lòng thử lại");
-      throw new Error(errMsg);
+          : "Không thể tạo việc thành phần. Vui lòng thử lại")
+      );
     }
 
     router.refresh();
@@ -970,6 +1006,13 @@ export function TaskDetailPage({
                 parentId={task.id}
                 subTasks={subTasks}
                 canEdit={canEdit}
+                departmentCode={
+                  (task as any).departmentCode ||
+                  (task as any).leadDepartmentCode ||
+                  (task as any).department ||
+                  (task as any).leadDepartment ||
+                  clientUser?.departmentCode
+                }
                 onToggleSubtask={handleToggleSubtask}
                 onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
                 onCreateSubTaskInline={handleCreateSubTaskInline}
@@ -1059,20 +1102,6 @@ export function TaskDetailPage({
         </div>
       </div>
 
-      {/* Subtask Detail Peek Drawer (covers right sidebar area on desktop, full-screen on mobile) */}
-      <SubtaskDetailDrawer
-        isOpen={Boolean(activeSubtask)}
-        onClose={handleCloseSubtaskDrawer}
-        subtask={activeSubtask}
-        parentTaskTitle={task.title}
-        parentTaskCode={taskCode}
-        canEdit={canEdit}
-        onSubtaskUpdated={handleSubtaskUpdated}
-        onOpenAnotherSubtask={handleOpenSubtaskDrawer}
-        onNavigateBackHistory={handleNavigateBackSubtaskHistory}
-        hasHistoryPrev={subtaskHistory.length > 0}
-        historyPrevTitle={prevSubtask?.title}
-      />
 
             {/* Modal Cập nhật tiến độ */}
       {isProgressModalOpen && (

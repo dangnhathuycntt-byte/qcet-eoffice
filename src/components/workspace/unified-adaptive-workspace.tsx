@@ -2545,7 +2545,7 @@ export function UnifiedAdaptiveWorkspace({
         }}
         initialLevel={createInitialLevel}
         initialParentTaskId={createInitialParentId}
-        initialDepartmentCode={currentDept !== "ALL" ? currentDept : undefined}
+        initialDepartmentCode={currentDept !== "ALL" ? currentDept : user?.departmentCode || undefined}
       />
 
       {/* 5. Authenticated Review Action Dialog */}

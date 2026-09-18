@@ -125,6 +125,33 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Clicking subtask row must trigger onSelectSubtask to open drawer"
       );
     });
+
+    it("supports inline fast-add with autofocus into task title and strict schema payload", () => {
+      // 1. Autofocus via titleInputRef when inline add is active
+      assert.ok(
+        tableContent.includes("titleInputRef") &&
+          tableContent.includes("titleInputRef.current?.focus()"),
+        "Inline creation must autofocus title input upon opening"
+      );
+
+      // 2. Linear detail view payload compliance (no unrecognized keys for CreateTaskSchema)
+      const detailViewPath = path.join(
+        process.cwd(),
+        "src/components/tasks/detail/linear-task-detail-view.tsx"
+      );
+      const detailViewContent = fs.readFileSync(detailViewPath, "utf-8");
+
+      assert.ok(
+        !detailViewContent.includes('level: "DON_VI"') &&
+          !detailViewContent.includes("leadAssigneeName:"),
+        "Inline subtask creation in linear-task-detail-view must not send legacy level or leadAssigneeName keys"
+      );
+      assert.ok(
+        detailViewContent.includes("parentTaskId: task.id") &&
+          detailViewContent.includes("scope: isSchool ? \"DEPARTMENT\" : \"INDIVIDUAL\""),
+        "Inline subtask creation must pass parentTaskId and valid scope"
+      );
+    });
   });
 
   describe("3. Right Subtask Peek Drawer & Non-Stacking Navigation", () => {

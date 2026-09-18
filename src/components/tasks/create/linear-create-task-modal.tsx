@@ -22,9 +22,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { FloatingPortal } from "@/components/ui/floating-portal";
+import { useAuth } from "@/lib/auth-context";
 import {
   QCET_DEPARTMENT_GROUPS,
   type DepartmentPersonnelGroup,
+  toCanonicalUnitCode,
+  getDepartmentForMember,
 } from "@/lib/departments";
 import {
   submitCreateTask,
@@ -122,7 +125,7 @@ export function LinearCreateTaskModal({
   onClose,
   onSubmitSuccess,
   onSubmit,
-  initialDepartmentCode = "P_QLDT",
+  initialDepartmentCode,
   initialTitle = "",
   initialLevel = "DON_VI",
   initialParentTaskId,
@@ -130,6 +133,24 @@ export function LinearCreateTaskModal({
   initialLeadAssigneeName = "",
   initialDueDate = "",
 }: LinearCreateTaskModalProps) {
+  const { user } = useAuth();
+
+  const userUnitCode = React.useMemo(() => {
+    if (!user) return undefined;
+    const raw = user.departmentCode || user.department;
+    if (raw) {
+      const mapped = toCanonicalUnitCode(raw);
+      if (mapped) return mapped;
+    }
+    if (user.name) {
+      const memberDept = getDepartmentForMember(user.name);
+      if (memberDept) return memberDept.code;
+    }
+    return undefined;
+  }, [user]);
+
+  const effectiveInitialDeptCode = initialDepartmentCode || userUnitCode || "BGH";
+
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -137,7 +158,7 @@ export function LinearCreateTaskModal({
   const [hasRestoredDraft, setHasRestoredDraft] = React.useState(false);
 
   // Form states
-  const [selectedDeptCode, setSelectedDeptCode] = React.useState(initialDepartmentCode);
+  const [selectedDeptCode, setSelectedDeptCode] = React.useState(effectiveInitialDeptCode);
   const [level, setLevel] = React.useState<CreateTaskLevel>(initialLevel);
   const [title, setTitle] = React.useState(initialTitle);
   const [summary, setSummary] = React.useState("");
@@ -156,9 +177,13 @@ export function LinearCreateTaskModal({
       if (initialLeadAssigneeName) setLeadAssigneeName(initialLeadAssigneeName);
       if (initialDueDate) setDueDate(initialDueDate);
       if (initialLevel) setLevel(initialLevel);
-      if (initialDepartmentCode) setSelectedDeptCode(initialDepartmentCode);
+      if (initialDepartmentCode) {
+        setSelectedDeptCode(initialDepartmentCode);
+      } else if (userUnitCode) {
+        setSelectedDeptCode(userUnitCode);
+      }
     }
-  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, initialDepartmentCode]);
+  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, initialDepartmentCode, userUnitCode]);
 
   // Database users for foreign key safety
   const [dbUsers, setDbUsers] = React.useState<
@@ -207,13 +232,23 @@ export function LinearCreateTaskModal({
       });
   }, []);
 
+  // Allowed departments based on user unit
+  const allowedDeptGroups = React.useMemo(() => {
+    if (userUnitCode) {
+      const match = QCET_DEPARTMENT_GROUPS.filter((d) => d.code === userUnitCode);
+      if (match.length > 0) return match;
+    }
+    return QCET_DEPARTMENT_GROUPS;
+  }, [userUnitCode]);
+
   // Department & personnel lookup
   const currentDept = React.useMemo(() => {
     return (
-      QCET_DEPARTMENT_GROUPS.find((d) => d.code === selectedDeptCode) ||
+      allowedDeptGroups.find((d) => d.code === selectedDeptCode) ||
+      allowedDeptGroups[0] ||
       QCET_DEPARTMENT_GROUPS[0]
     );
-  }, [selectedDeptCode]);
+  }, [allowedDeptGroups, selectedDeptCode]);
 
   const availablePersonnel = React.useMemo(() => {
     return currentDept?.personnel || [];
@@ -253,16 +288,30 @@ export function LinearCreateTaskModal({
 
     // Default DRI assignment if empty
     if (!leadAssigneeName && availablePersonnel.length > 0) {
-      setLeadAssigneeName(availablePersonnel[0].name);
+      const defaultPerson =
+        availablePersonnel.find(
+          (p) =>
+            user?.name &&
+            (p.name.toLowerCase().includes(user.name.toLowerCase()) ||
+              user.name.toLowerCase().includes(p.name.toLowerCase()))
+        ) || availablePersonnel[0];
+      setLeadAssigneeName(defaultPerson.name);
     }
-  }, [isOpen, initialTitle, availablePersonnel, leadAssigneeName]);
+  }, [isOpen, initialTitle, availablePersonnel, leadAssigneeName, user?.name]);
 
   // Set default DRI if empty and personnel changes
   React.useEffect(() => {
     if (!leadAssigneeName && availablePersonnel.length > 0) {
-      setLeadAssigneeName(availablePersonnel[0].name);
+      const defaultPerson =
+        availablePersonnel.find(
+          (p) =>
+            user?.name &&
+            (p.name.toLowerCase().includes(user.name.toLowerCase()) ||
+              user.name.toLowerCase().includes(p.name.toLowerCase()))
+        ) || availablePersonnel[0];
+      setLeadAssigneeName(defaultPerson.name);
     }
-  }, [availablePersonnel, leadAssigneeName]);
+  }, [availablePersonnel, leadAssigneeName, user?.name]);
 
   // Dirty state check
   const isDirty = React.useMemo(() => {
@@ -408,18 +457,17 @@ export function LinearCreateTaskModal({
         .filter(Boolean)
         .join("\n\n");
 
-      // Map personnel to real DB users if available
-      const personnelRefs =
-        dbUsers.length > 0
-          ? dbUsers.map((u) => ({
-              id: u.id,
-              name: u.name,
-              departmentId: u.departmentId,
-            }))
-          : availablePersonnel.map((p, idx) => ({
-              id: `person-${idx}-${p.name.replace(/\s+/g, "").toLowerCase()}`,
-              name: p.name,
-            }));
+      // Map unit-scoped personnel to real DB users if available
+      const personnelRefs = availablePersonnel.map((p, idx) => {
+        const matched = dbUsers.find(
+          (u) => u.name.trim().toLowerCase() === p.name.trim().toLowerCase()
+        );
+        return {
+          id: matched ? matched.id : `person-${idx}-${p.name.replace(/\s+/g, "").toLowerCase()}`,
+          name: p.name,
+          departmentId: matched?.departmentId,
+        };
+      });
 
       // Find real user IDs for DRI and collaborators if matched
       const matchedDri = dbUsers.find(
@@ -587,59 +635,67 @@ export function LinearCreateTaskModal({
 
             {/* Department dropdown selector */}
             <div ref={deptTriggerRef} className="relative inline-block text-left">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "dept" ? null : "dept")
-                }
-                className={cn(
-                  "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
-                  openDropdown === "dept"
-                    ? "text-foreground bg-accent shadow-2xs"
-                    : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
-                )}
-              >
-                <span>{currentDept.name}</span>
-                <ChevronDown
-                  className={cn(
-                    "size-3 text-muted-foreground transition-transform duration-200 ease-out",
-                    openDropdown === "dept" && "rotate-180 text-foreground"
-                  )}
-                />
-              </button>
-
-              {/* Department Floating Portal Dropdown */}
-              <FloatingPortal
-                isOpen={openDropdown === "dept"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={deptTriggerRef}
-                className="w-64 p-1 space-y-0.5"
-                ariaLabel="Chọn đơn vị phòng ban"
-              >
-                {QCET_DEPARTMENT_GROUPS.map((dept) => (
+              {allowedDeptGroups.length > 1 ? (
+                <>
                   <button
-                    key={dept.code}
                     type="button"
-                    onClick={() => {
-                      setSelectedDeptCode(dept.code);
-                      setLeadAssigneeName("");
-                      setCoAssignees([]);
-                      setOpenDropdown(null);
-                    }}
+                    onClick={() =>
+                      setOpenDropdown(openDropdown === "dept" ? null : "dept")
+                    }
                     className={cn(
-                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
-                      selectedDeptCode === dept.code
-                        ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground hover:bg-accent/70"
+                      "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
+                      openDropdown === "dept"
+                        ? "text-foreground bg-accent shadow-2xs"
+                        : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
                     )}
                   >
-                    <span className="truncate">{dept.name}</span>
-                    {selectedDeptCode === dept.code && (
-                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
-                    )}
+                    <span>{currentDept.name}</span>
+                    <ChevronDown
+                      className={cn(
+                        "size-3 text-muted-foreground transition-transform duration-200 ease-out",
+                        openDropdown === "dept" && "rotate-180 text-foreground"
+                      )}
+                    />
                   </button>
-                ))}
-              </FloatingPortal>
+
+                  {/* Department Floating Portal Dropdown */}
+                  <FloatingPortal
+                    isOpen={openDropdown === "dept"}
+                    onClose={() => setOpenDropdown(null)}
+                    triggerRef={deptTriggerRef}
+                    className="w-64 p-1 space-y-0.5"
+                    ariaLabel="Chọn đơn vị phòng ban"
+                  >
+                    {allowedDeptGroups.map((dept) => (
+                      <button
+                        key={dept.code}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeptCode(dept.code);
+                          setLeadAssigneeName("");
+                          setCoAssignees([]);
+                          setOpenDropdown(null);
+                        }}
+                        className={cn(
+                          "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
+                          selectedDeptCode === dept.code
+                            ? "font-semibold text-foreground bg-accent"
+                            : "text-foreground hover:bg-accent/70"
+                        )}
+                      >
+                        <span className="truncate">{dept.name}</span>
+                        {selectedDeptCode === dept.code && (
+                          <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    ))}
+                  </FloatingPortal>
+                </>
+              ) : (
+                <span className="font-medium text-foreground px-1.5 py-0.5 select-none">
+                  {currentDept.name}
+                </span>
+              )}
             </div>
 
             {initialParentTaskTitle && (

@@ -287,26 +287,70 @@ export function LinearTaskDetailView({
     ]);
   };
 
-  const handleCreateSubtaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
+  const handleCreateSubtaskInline = async (
+    title: string,
+    assigneeName?: string,
+    dueDate?: string,
+    assigneeId?: string
+  ) => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
+
+    // Resolve assigneeId if not provided directly
+    let resolvedAssigneeId = assigneeId;
+    if (!resolvedAssigneeId && assigneeName) {
+      try {
+        const uRes = await fetch("/api/users");
+        const uData = await uRes.json();
+        if (uData && Array.isArray(uData.users)) {
+          const matched = uData.users.find(
+            (u: any) =>
+              u.name?.trim().toLowerCase() === assigneeName.trim().toLowerCase() ||
+              u.name?.includes(assigneeName) ||
+              assigneeName.includes(u.name)
+          );
+          if (matched) resolvedAssigneeId = matched.id;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
+
+    // Payload adhering strictly to CreateTaskInputSchema
+    const payload: Record<string, unknown> = {
+      title: trimmedTitle,
+      parentTaskId: task.id,
+      dueDate: resolvedDueDate,
+      priority: "NORMAL",
+      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
+    };
+
+    if (resolvedAssigneeId) {
+      payload.assigneeId = resolvedAssigneeId;
+    }
+    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
+    if (deptId) {
+      payload.departmentId = deptId;
+    }
 
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: trimmedTitle,
-        parentTaskId: task.id,
-        level: "DON_VI",
-        leadAssigneeName: assigneeName || undefined,
-        dueDate: dueDate || undefined,
-        departmentCode: (task as any).departmentCode || (task as any).leadDepartmentCode || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);
-      throw new Error(err?.error?.message || err?.message || "Không thể tạo việc thành phần");
+      let errorMsg = err?.error?.message || err?.message;
+      if (err?.details && typeof err.details === "object") {
+        const detailList = Object.entries(err.details)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("; ");
+        if (detailList) errorMsg = `${errorMsg || "Lỗi xác thực"}: ${detailList}`;
+      }
+      throw new Error(errorMsg || "Không thể tạo việc thành phần");
     }
 
     const data = await res.json();
@@ -315,10 +359,18 @@ export function LinearTaskDetailView({
     if (created) {
       setTask((prev) => {
         if (!isSchool || !schoolTask) return prev;
+        // Resolve assignee name: prefer server response, then parameter, fallback
+        const resolvedName =
+          created.assigneeName ||
+          created.assignee?.name ||
+          (resolvedAssigneeId ? assigneeName : undefined) ||
+          assigneeName ||
+          "Chưa phân công";
         const newSubtask: StaffTask = {
           id: created.id || `sub-${Date.now()}`,
           title: created.title || trimmedTitle,
-          assigneeName: created.assigneeName || assigneeName || "Chưa phân công",
+          assigneeName: resolvedName,
+          assigneeId: created.assigneeId || resolvedAssigneeId,
           status: "NEW",
           dueDate: created.dueDate || dueDate,
           parentSchoolTaskId: task.id,
@@ -514,6 +566,13 @@ export function LinearTaskDetailView({
             parentId={task.id}
             subTasks={subTasks}
             canEdit={true}
+            departmentCode={
+              (task as any).departmentCode ||
+              (task as any).leadDepartmentCode ||
+              (task as any).department ||
+              (task as any).leadDepartment ||
+              currentUser?.departmentCode
+            }
             onToggleSubtask={handleToggleSubtaskStatus}
             onSelectSubtask={onSelectSubTask}
             onCreateSubTaskInline={handleCreateSubtaskInline}
