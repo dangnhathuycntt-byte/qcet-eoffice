@@ -379,6 +379,7 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
           description: 'Cập nhật mô tả mới',
           priority: 'HIGH',
           dueDate: '2026-10-15T17:00:00Z',
+          expectedVersion: 3,
         });
         assert.strictEqual(parsed.title, 'Cập nhật tiêu đề nhiệm vụ');
         assert.strictEqual(parsed.priority, 'HIGH');
@@ -406,6 +407,19 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
           }).success,
           false
         );
+        for (const forbidden of [
+          { departmentId: 'dept-other' },
+          { assigneeId: 'user-other' },
+          { collaboratorIds: ['user-other'] },
+          { parentTaskId: 'task-parent' },
+          { progressPercent: 50 },
+          { academicMonth: 9 },
+        ]) {
+          assert.strictEqual(
+            UpdateTaskMetadataSchema.safeParse({ title: 'Updated title', ...forbidden }).success,
+            false
+          );
+        }
       });
     });
 

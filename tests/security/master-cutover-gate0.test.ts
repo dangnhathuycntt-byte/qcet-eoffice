@@ -439,6 +439,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
           await taskDomainActionService.requestRevision(staffASession, taskA.id, {
             deliverableId: deliverableB.id,
             reason: 'Yêu cầu sửa đổi tệp',
+            expectedVersion: taskA.version,
           });
         },
         (err: any) => {
