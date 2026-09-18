@@ -417,7 +417,7 @@ export function buildQuickFilterPills(
 export function resetTaskToolbarFilters(callbacks: Pick<UnifiedTaskToolbarProps,
   "onResetFilters" | "onSearchChange" | "onTabChange" | "onStatusChange" |
   "onDeadlineChange" | "onCategoryChange" | "onPriorityChange" |
-  "onMonthChange" | "onAcademicMonthChange"
+  "onMonthChange" | "onAcademicMonthChange" | "onDepartmentChange"
 >) {
   if (callbacks.onResetFilters) {
     callbacks.onResetFilters();
@@ -429,6 +429,7 @@ export function resetTaskToolbarFilters(callbacks: Pick<UnifiedTaskToolbarProps,
   callbacks.onDeadlineChange?.("all");
   callbacks.onCategoryChange?.("ALL");
   callbacks.onPriorityChange?.("ALL");
+  callbacks.onDepartmentChange?.("ALL");
   (callbacks.onMonthChange || callbacks.onAcademicMonthChange)?.("ALL");
 }
 
@@ -924,6 +925,7 @@ export function UnifiedTaskToolbar({
   const isStatusActive = Boolean(effectiveStatus && effectiveStatus !== "all");
   const isDeadlineActive = Boolean(effectiveDeadline && effectiveDeadline !== "all");
   const isPriorityActive = Boolean(selectedPriority && selectedPriority !== "ALL");
+  const isCategoryActive = Boolean(selectedCategory && selectedCategory !== "ALL");
   const isDepartmentActive = Boolean(selectedDepartment && selectedDepartment !== "ALL");
   const isSearchActive = Boolean(localSearch && localSearch.trim().length > 0);
 
@@ -933,6 +935,7 @@ export function UnifiedTaskToolbar({
     isStatusActive ||
     isDeadlineActive ||
     isPriorityActive ||
+    isCategoryActive ||
     (showDepartmentFilter && isDepartmentActive)
   );
 
@@ -1065,7 +1068,7 @@ export function UnifiedTaskToolbar({
     resetTaskToolbarFilters({
       onResetFilters, onSearchChange, onTabChange, onStatusChange,
       onDeadlineChange, onCategoryChange, onPriorityChange,
-      onMonthChange: handleEffectiveMonthChange,
+      onMonthChange: handleEffectiveMonthChange, onDepartmentChange,
     });
     closeAllMenus();
     setIsFilterOpen(false);
@@ -1770,10 +1773,7 @@ export function UnifiedTaskToolbar({
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => {
-                      onPriorityChange?.("ALL");
-                      if (showDepartmentFilter) onDepartmentChange?.("ALL");
-                    }}
+                    onClick={handleResetFilters}
                     className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     Xóa tất cả

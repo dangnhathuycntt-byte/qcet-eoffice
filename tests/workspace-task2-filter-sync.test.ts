@@ -483,7 +483,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       assert.equal(parsed.status, "ALL");
     });
 
-    test("reset lọc không thay đổi scope hay tháng công tác", () => {
+    test("reset toàn bộ giữ scope nhưng xóa tháng công tác", () => {
       const baseState: WorkspaceFilterState = {
         scope: "unit",
         month: 9,
@@ -493,10 +493,10 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
         q: "từ khóa tìm kiếm",
       };
 
-      // Simulate resetFilters: xóa search/status/attention nhưng giữ scope và month
+      // Clear-all keeps the navigation scope but removes every data filter.
       const resetState: WorkspaceFilterState = {
         scope: baseState.scope,   // giữ scope
-        month: baseState.month,   // giữ kỳ công tác
+        month: "ALL",
         status: "ALL",
         attention: undefined,
         view: "table",
@@ -507,7 +507,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       const parsed = parseWorkspaceQuery(params);
 
       assert.equal(parsed.scope, "unit", "Scope phải được giữ nguyên sau reset");
-      assert.equal(parsed.month, 9, "Tháng công tác phải được giữ nguyên sau reset");
+      assert.equal(parsed.month, "ALL", "Tháng công tác phải được xóa sau reset");
       assert.equal(parsed.status, "ALL", "Status phải được reset về ALL");
       assert.equal(parsed.attention, undefined, "Attention phải được xóa sau reset");
       assert.equal(parsed.q, undefined, "Search query phải được xóa sau reset");

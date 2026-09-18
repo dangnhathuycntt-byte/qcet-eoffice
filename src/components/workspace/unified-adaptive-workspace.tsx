@@ -1636,7 +1636,7 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    setCurrentMonth(currentAcademicMonth);
+    setCurrentMonth("ALL");
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1644,7 +1644,15 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
-    workspaceQuery?.resetFilters({ shallow: true, replace: true, preserveScope: true, preservePeriod: false, preserveView: true });
+    workspaceQuery?.resetFilters({
+      shallow: true,
+      replace: true,
+      preserveScope: true,
+      preserveUnit: false,
+      preservePeriod: false,
+      resetPeriodTo: "all",
+      preserveView: true,
+    });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -1654,7 +1662,6 @@ export function UnifiedAdaptiveWorkspace({
     onWorkboxChange,
     onAction,
     workspaceQuery,
-    currentAcademicMonth,
   ]);
 
   const handleRemoveDept = React.useCallback(() => {

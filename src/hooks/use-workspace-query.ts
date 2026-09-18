@@ -33,7 +33,9 @@ export interface SetScopeOptions extends NavigationOptions {
 
 export interface ResetFiltersOptions extends NavigationOptions {
   preserveScope?: boolean;
+  preserveUnit?: boolean;
   preservePeriod?: boolean;
+  resetPeriodTo?: "default" | "all";
   preserveView?: boolean;
 }
 
@@ -463,15 +465,21 @@ export function useWorkspaceQuery(
     (navOptions?: ResetFiltersOptions) => {
       const queryState = readCurrentState();
       const preserveScope = navOptions?.preserveScope ?? false;
+      const preserveUnit = navOptions?.preserveUnit ?? preserveScope;
       const preservePeriod = navOptions?.preservePeriod ?? false;
+      const resetPeriodTo = navOptions?.resetPeriodTo ?? "default";
       const preserveView = navOptions?.preserveView ?? false;
 
       const resetState: Partial<WorkspaceFilterState> = {
         scope: preserveScope ? queryState.scope : (defaultScope ?? "school"),
-        dept: preserveScope ? queryState.dept : undefined,
-        unit: preserveScope ? queryState.unit : undefined,
-        unitId: preserveScope ? queryState.unitId : undefined,
-        month: preservePeriod ? queryState.month : (defaultMonth ?? "ALL"),
+        dept: preserveUnit ? queryState.dept : undefined,
+        unit: preserveUnit ? queryState.unit : undefined,
+        unitId: preserveUnit ? queryState.unitId : undefined,
+        month: preservePeriod
+          ? queryState.month
+          : resetPeriodTo === "all"
+            ? "ALL"
+            : (defaultMonth ?? "ALL"),
         date: preservePeriod ? queryState.date : undefined,
         status: "ALL",
         priority: undefined,
