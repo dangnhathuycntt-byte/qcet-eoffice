@@ -604,6 +604,20 @@ describe('Unified Authorization Engine (Task 4)', () => {
 
   // Default DENY
   describe('Default DENY', () => {
+    test('staff roles cannot mutate unrelated tasks in their own unit', () => {
+      for (const positionCode of ['GIANG_VIEN', 'CAN_BO_CHUYEN_VIEN_CANONICAL']) {
+        const ctx = createContext({
+          userId: 'staff_1',
+          positions: [createPosition({ userId: 'staff_1', positionCode, unitId: 'khoa_cntt' })],
+          primaryUnitIds: ['khoa_cntt'],
+        });
+        const task: TaskResource = { id: 'unrelated_task', type: 'task', leadUnitId: 'khoa_cntt' };
+        for (const action of ['task.update_metadata', 'task.update_execution'] as const) {
+          assert.equal(authorize(ctx, action, task).allowed, false, positionCode + ': ' + action);
+        }
+        assert.equal(authorize(ctx, 'task.create', task).allowed, true);
+      }
+    });
     test('Unmatched action / resource is denied by default', () => {
       const ctx = createContext({
         userId: 'staff_1',

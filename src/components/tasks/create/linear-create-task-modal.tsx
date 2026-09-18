@@ -19,12 +19,14 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { FloatingPortal } from "@/components/ui/floating-portal";
 import {
   QCET_DEPARTMENT_GROUPS,
   type DepartmentPersonnelGroup,
+  toCanonicalUnitCode,
 } from "@/lib/departments";
 import {
   submitCreateTask,
@@ -122,7 +124,7 @@ export function LinearCreateTaskModal({
   onClose,
   onSubmitSuccess,
   onSubmit,
-  initialDepartmentCode = "P_QLDT",
+  initialDepartmentCode,
   initialTitle = "",
   initialLevel = "DON_VI",
   initialParentTaskId,
@@ -130,6 +132,8 @@ export function LinearCreateTaskModal({
   initialLeadAssigneeName = "",
   initialDueDate = "",
 }: LinearCreateTaskModalProps) {
+  const { user } = useAuth();
+  const defaultDepartmentCode = initialDepartmentCode || toCanonicalUnitCode(user?.departmentCode || user?.department || "") || "P_QLDT";
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -137,7 +141,7 @@ export function LinearCreateTaskModal({
   const [hasRestoredDraft, setHasRestoredDraft] = React.useState(false);
 
   // Form states
-  const [selectedDeptCode, setSelectedDeptCode] = React.useState(initialDepartmentCode);
+  const [selectedDeptCode, setSelectedDeptCode] = React.useState(defaultDepartmentCode);
   const [level, setLevel] = React.useState<CreateTaskLevel>(initialLevel);
   const [title, setTitle] = React.useState(initialTitle);
   const [summary, setSummary] = React.useState("");
@@ -156,9 +160,9 @@ export function LinearCreateTaskModal({
       if (initialLeadAssigneeName) setLeadAssigneeName(initialLeadAssigneeName);
       if (initialDueDate) setDueDate(initialDueDate);
       if (initialLevel) setLevel(initialLevel);
-      if (initialDepartmentCode) setSelectedDeptCode(initialDepartmentCode);
+      setSelectedDeptCode(defaultDepartmentCode);
     }
-  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, initialDepartmentCode]);
+  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, defaultDepartmentCode]);
 
   // Database users for foreign key safety
   const [dbUsers, setDbUsers] = React.useState<

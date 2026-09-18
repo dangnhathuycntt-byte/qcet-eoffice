@@ -741,7 +741,8 @@ export function authorize(
       code === 'GIANG_VIEN_CHUYEN_VIEN' ||
       code === 'CHUYEN_VIEN' ||
       code === 'GIANG_VIEN' ||
-      code === 'VIEN_CHUC'
+      code === 'VIEN_CHUC' ||
+      code === 'CAN_BO_CHUYEN_VIEN_CANONICAL'
     ) {
       if (
         action === 'task.read' ||

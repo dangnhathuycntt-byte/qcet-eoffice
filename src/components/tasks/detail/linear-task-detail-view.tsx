@@ -531,6 +531,13 @@ export function LinearTaskDetailView({
             parentId={task.id}
             subTasks={subTasks}
             canEdit={true}
+            departmentCode={
+              (task as any).departmentCode ||
+              (task as any).leadDepartmentCode ||
+              (task as any).department ||
+              (task as any).leadDepartment ||
+              currentUser?.departmentCode
+            }
             onToggleSubtask={handleToggleSubtaskStatus}
             onSelectSubtask={onSelectSubTask}
             onCreateSubTaskInline={handleCreateSubtaskInline}
