@@ -33,18 +33,11 @@ import {
   ReviewDeliverableInputSchema,
   ApproveTaskInputSchema,
 } from '@/contracts/tasks';
-import {
-  canUserCreateTask,
-  canUserUpdateTask,
-  canUserDeleteTask,
-  canUserSubmitDeliverable,
-  canUserReviewDeliverable,
-  canUserDeleteDeliverable,
-  canUserTransitionStatus,
-  checkActiveDelegation,
-  isPrivilegedUser,
-} from './task-policy';
 import { taskStateMachine } from '@/domain/tasks/state-machine';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
+import { buildTaskResource } from '@/server/authorization/available-actions';
+import type { CapabilityAction } from '@/server/authorization/capability';
 
 export interface CreateFromMeetingResolutionInput {
   meetingId: string;
@@ -120,6 +113,11 @@ export interface ReviewDeliverableInput {
   expectedVersion?: number;
 }
 
+export interface ArchiveTaskInput {
+  reason: string;
+  expectedVersion: number;
+}
+
 function resolveUser(
   ctx: ApiRequestContext | { user: AuthenticatedUser | null }
 ): AuthenticatedUser {
@@ -127,6 +125,18 @@ function resolveUser(
     throw new AuthenticationError('Unauthorized');
   }
   return ctx.user;
+}
+
+async function requireTaskAuthorization(
+  userId: string,
+  action: CapabilityAction,
+  task: Record<string, unknown>
+) {
+  const authorizationContext = await loadAuthorizationContext(userId);
+  const decision = authorize(authorizationContext, action, buildTaskResource(task));
+  if (!decision.allowed) {
+    throw new AuthorizationError(decision.reason || 'Bạn không có quyền thực hiện thao tác này');
+  }
 }
 
 /**
@@ -454,18 +464,13 @@ export class TaskCommandService {
       else if (s === 'school') taskScope = TaskScope.SCHOOL;
     }
 
-    const createCheck = canUserCreateTask(user, {
+    await requireTaskAuthorization(user.id, 'task.create', {
       scope: taskScope,
       departmentId: effectiveDepartmentId,
       // A subtask inherits its parent's scope; only an explicitly chosen scope
       // is subject to the scope-authority gate (P0-06).
       scopeExplicit: Boolean(scope) || !parentTaskId,
     });
-    if (!createCheck.allowed) {
-      throw new AuthorizationError(
-        createCheck.reason || 'Forbidden: Insufficient authority to create task'
-      );
-    }
 
     let taskPriority: TaskPriority = TaskPriority.NORMAL;
     if (priority) {
@@ -500,7 +505,10 @@ export class TaskCommandService {
 
     // Thực hiện trong transaction
     const newTask = await prisma.$transaction(async (tx) => {
-      const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
+      if (creatorId && creatorId !== user.id) {
+        throw new ValidationError('Không được tạo nhiệm vụ thay danh tính người khác');
+      }
+      const effectiveCreatorId = user.id;
 
       // Resolve valid department ID against database to guarantee foreign key integrity
       let validDepartmentId: string | null = null;
@@ -519,10 +527,7 @@ export class TaskCommandService {
       if (dept) {
         validDepartmentId = dept.id;
       } else {
-        const fallbackDept = await tx.department.findFirst({ select: { id: true } });
-        if (fallbackDept) {
-          validDepartmentId = fallbackDept.id;
-        }
+        throw new NotFoundError('Đơn vị được chọn không tồn tại');
       }
 
       // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
@@ -538,6 +543,10 @@ export class TaskCommandService {
             })
           : [];
       const existingUserIdSet = new Set(existingUsers.map((u) => u.id));
+
+      if (existingUserIdSet.size !== candidateUserIds.length) {
+        throw new NotFoundError('Một hoặc nhiều người được phân công không tồn tại');
+      }
 
       const safeAssigneesToCreate = assigneesToCreate.filter((a) =>
         existingUserIdSet.has(a.userId)
@@ -762,12 +771,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const updateCheck = canUserUpdateTask(user, existing);
-    if (!updateCheck.allowed) {
-      throw new AuthorizationError(
-        updateCheck.reason || 'Bạn không có quyền chỉnh sửa nhiệm vụ này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.update_metadata', existing);
 
     const {
       title,
@@ -889,12 +893,7 @@ export class TaskCommandService {
 
       const mappedStatus = statusMap[status];
       if (mappedStatus) {
-        const hasDelegation = await checkActiveDelegation(
-          prisma,
-          user.id,
-          taskId,
-          existing.departmentId
-        );
+        await requireTaskAuthorization(user.id, 'task.update_execution', existing);
 
         // Canonical State Machine Validation
         const fsmResult = taskStateMachine.canTransition(
@@ -902,7 +901,7 @@ export class TaskCommandService {
             id: user.id,
             role: user.role,
             departmentId: user.departmentId,
-            isDelegated: hasDelegation,
+            isDelegated: false,
           },
           {
             id: existing.id,
@@ -928,22 +927,6 @@ export class TaskCommandService {
           }
           throw new AuthorizationError(
             fsmResult.reason || 'Bạn không có quyền thực hiện chuyển đổi trạng thái này'
-          );
-        }
-
-        const transitionCheck = canUserTransitionStatus(
-          user,
-          existing,
-          mappedStatus,
-          {
-            activeDelegation: hasDelegation,
-            newAssigneeId: assigneeId !== undefined ? assigneeId : undefined,
-          }
-        );
-
-        if (!transitionCheck.allowed) {
-          throw new AuthorizationError(
-            transitionCheck.reason || 'Bạn không có quyền thực hiện chuyển đổi trạng thái này'
           );
         }
 
@@ -1277,12 +1260,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const deleteCheck = canUserDeleteTask(user, existing);
-    if (!deleteCheck.allowed) {
-      throw new AuthorizationError(
-        deleteCheck.reason || 'Bạn không có quyền xóa nhiệm vụ này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.archive', existing);
 
     await prisma.$transaction(async (tx) => {
       // 1. Tìm toàn bộ subtasks đệ quy
@@ -1346,6 +1324,66 @@ export class TaskCommandService {
     };
   }
 
+  async archiveTask(
+    ctx: ApiRequestContext | { user: AuthenticatedUser | null },
+    taskId: string,
+    input: ArchiveTaskInput
+  ) {
+    const user = resolveUser(ctx);
+    const existing = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, version: true, archivedAt: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
+    }
+    if (existing.archivedAt) {
+      return { success: true, message: 'Nhiệm vụ đã được lưu trữ', version: existing.version };
+    }
+
+    const reason = input.reason.trim();
+    const requestId =
+      ctx && 'requestId' in ctx && typeof ctx.requestId === 'string' ? ctx.requestId : undefined;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.task.updateMany({
+        where: { id: taskId, version: input.expectedVersion, archivedAt: null },
+        data: {
+          archivedAt: new Date(),
+          archivedById: user.id,
+          archiveReason: reason,
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${input.expectedVersion}`
+        );
+      }
+
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.TASK_ARCHIVED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        requestId,
+        beforeData: { archivedAt: null, version: existing.version },
+        afterData: { archivedById: user.id, archiveReason: reason },
+      });
+      await publishOutboxEvent(tx, {
+        eventType: 'TASK_ARCHIVED_NOTIFICATION',
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: { taskId, actorId: user.id, reason },
+      });
+
+      return { success: true, message: 'Đã lưu trữ nhiệm vụ thành công', version: input.expectedVersion + 1 };
+    });
+
+    return result;
+  }
+
   /**
    * Nộp minh chứng nhiệm vụ và tự động chuyển trạng thái sang WAITING_APPROVAL.
    */
@@ -1371,12 +1409,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const authCheck = canUserSubmitDeliverable(user, task);
-    if (!authCheck.allowed) {
-      throw new AuthorizationError(
-        authCheck.reason || 'Forbidden: Insufficient authority to submit deliverable'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.submit_result', task);
 
     const validationResult = SubmitDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
@@ -1523,25 +1556,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy minh chứng cho nhiệm vụ này');
     }
 
-    const hasDelegation = await checkActiveDelegation(
-      prisma,
-      user.id,
-      taskId,
-      deliverable.task.departmentId
-    );
-
-    const reviewCheck = canUserReviewDeliverable(
-      user,
-      deliverable,
-      deliverable.task,
-      { activeDelegation: hasDelegation }
-    );
-
-    if (!reviewCheck.allowed) {
-      throw new AuthorizationError(
-        reviewCheck.reason || 'Bạn không có thẩm quyền nghiệm thu minh chứng này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.review', deliverable.task);
 
     const validStatus =
       reviewStatus === 'APPROVED'
@@ -1693,17 +1708,7 @@ export class TaskCommandService {
       throw new AuthorizationError('Minh chứng không thuộc về nhiệm vụ được yêu cầu');
     }
 
-    const deleteCheck = canUserDeleteDeliverable(
-      user,
-      deliverable,
-      deliverable.task
-    );
-
-    if (!deleteCheck.allowed) {
-      throw new AuthorizationError(
-        deleteCheck.reason || 'Bạn không có quyền xóa minh chứng này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.update_execution', deliverable.task);
 
     const requestId =
       ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'

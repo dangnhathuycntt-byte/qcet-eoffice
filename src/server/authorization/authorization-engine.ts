@@ -482,11 +482,13 @@ export function authorize(
     !isDRI &&
     !isCollaborator &&
     !isAssigner &&
-    (action === 'task.update_execution' ||
+    (action === 'task.update_metadata' ||
+      action === 'task.update_execution' ||
       action === 'task.submit_result' ||
       action === 'task.approve' ||
       action === 'task.reassign' ||
-      action === 'task.cancel')
+      action === 'task.cancel' ||
+      action === 'task.archive')
   ) {
     return {
       allowed: false,
@@ -542,12 +544,16 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_DIRECT_RELATION';
     }
-  } else if (action === 'task.update_execution' || action === 'task.submit_result') {
+  } else if (
+    action === 'task.update_metadata' ||
+    action === 'task.update_execution' ||
+    action === 'task.submit_result'
+  ) {
     if (isDRI || isCollaborator || isAssigner || isAssignee) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_EXECUTION';
     }
-  } else if (action === 'task.cancel') {
+  } else if (action === 'task.cancel' || action === 'task.archive') {
     if (isAssigner) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_TASK_CREATOR_CANCEL';
@@ -679,6 +685,7 @@ export function authorize(
         action === 'task.create' ||
         action === 'task.assign' ||
         action === 'task.reassign' ||
+        action === 'task.update_metadata' ||
         action === 'task.update_execution' ||
         action === 'task.review' ||
         action === 'task.approve' ||
@@ -686,6 +693,7 @@ export function authorize(
         action === 'task.remind' ||
         action === 'task.close' ||
         action === 'task.cancel' ||
+        action === 'task.archive' ||
         action === 'document.incoming.assign_person' ||
         action === 'document.incoming.execute' ||
         action === 'document.incoming.file' ||
@@ -891,6 +899,7 @@ export function authorize(
         action === 'task.approve' ||
         action === 'task.review' ||
         action === 'task.cancel' ||
+        action === 'task.archive' ||
         action === 'task.close')
     ) {
       scopeDenied = true;

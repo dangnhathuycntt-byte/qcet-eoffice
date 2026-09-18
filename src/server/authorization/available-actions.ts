@@ -46,9 +46,15 @@ export const CANONICAL_DOCUMENT_ACTIONS: CapabilityAction[] = [
 export const CANONICAL_TASK_ACTIONS: CapabilityAction[] = [
   'task.read',
   'task.create',
+  'task.update_metadata',
+  'task.update_execution',
+  'task.submit_result',
   'task.review',
   'task.approve',
   'task.reassign',
+  'task.remind',
+  'task.cancel',
+  'task.archive',
   'task.monitor',
 ];
 

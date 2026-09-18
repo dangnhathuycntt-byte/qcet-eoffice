@@ -27,15 +27,14 @@ import {
   TaskActorAuthorizationError,
   StepProgressionError,
 } from "@/lib/services/task-actor-service";
+import { authorize } from "@/server/authorization/authorization-engine";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import type { AuthorizationResource } from "@/server/authorization/resource";
+import type { CapabilityAction } from "@/server/authorization/capability";
 import {
-  authorize,
-  type AuthenticatedUserContext,
-  type AuthorizationResource,
-  type CapabilityAction,
   SeparationOfDutiesError,
   SingleDRIError,
-  HybridAuthorizationError,
-} from "@/lib/auth/hybrid-authorization";
+} from "@/server/authorization/errors";
 import {
   NotFoundError,
   AuthenticationError,
@@ -52,7 +51,6 @@ import {
   buildTaskContext,
   getStatusLabel,
 } from "@/domain/tasks/state-machine";
-import { canUserTransitionStatus, type AuthenticatedUser } from "@/server/tasks/task-policy";
 
 // ============================================================================
 // Input Validation Schemas
@@ -61,8 +59,8 @@ import { canUserTransitionStatus, type AuthenticatedUser } from "@/server/tasks/
 export const UpdateStatusInputSchema = z.object({
   status: z.nativeEnum(TaskStatus),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type UpdateStatusInput = z.infer<typeof UpdateStatusInputSchema>;
 
@@ -77,35 +75,35 @@ export const SubmitResultInputSchema = z
     fileType: z.string().optional(),
     fileSize: z.number().optional(),
     completionRate: z.number().optional(),
-    expectedVersion: z.number().int().min(0).optional(),
+    expectedVersion: z.number().int().min(0),
   })
   .refine((data) => Boolean(data.summary?.trim() || data.title?.trim() || data.note?.trim()), {
     message: "Tóm tắt kết quả (summary) hoặc tiêu đề minh chứng (title) là bắt buộc",
-  });
+  }).strict();
 
 export type SubmitResultInput = z.infer<typeof SubmitResultInputSchema>;
 
 export const StartInputSchema = z.object({
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type StartInput = z.infer<typeof StartInputSchema>;
 
 export const UpdateProgressInputSchema = z.object({
   progressPercent: z.number().min(0, "Tiến độ phải từ 0% đến 100%").max(100, "Tiến độ không được vượt quá 100%"),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0).optional(),
+  expectedVersion: z.number().int().min(0),
   targetStatus: z.nativeEnum(TaskStatus).optional(),
-});
+}).strict();
 
 export type UpdateProgressInput = z.infer<typeof UpdateProgressInputSchema>;
 
 export const CancelInputSchema = z.object({
   reason: z.string().trim().min(3, "Lý do hủy nhiệm vụ tối thiểu 3 ký tự").max(1000),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type CancelInput = z.infer<typeof CancelInputSchema>;
 
@@ -117,8 +115,8 @@ export const ReviewInputSchema = z.object({
   decision: z.enum(["APPROVED", "REJECTED"]).optional(),
   reviewNote: z.string().optional(),
   note: z.string().optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
 
@@ -128,17 +126,16 @@ export const RequestRevisionInputSchema = z.object({
   deliverableId: z.string().optional(),
   resultId: z.string().optional(),
   stepId: z.string().optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type RequestRevisionInput = z.infer<typeof RequestRevisionInputSchema>;
 
 export const ApproveInputSchema = z.object({
   note: z.string().optional(),
   stepId: z.string().optional(),
-  allowBypass: z.boolean().optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type ApproveInput = z.infer<typeof ApproveInputSchema>;
 
@@ -147,8 +144,8 @@ export const ReassignInputSchema = z.object({
   role: z.literal("DRI").optional().default("DRI"),
   isPrimaryDRI: z.boolean().optional().default(true),
   note: z.string().optional(),
-  expectedVersion: z.number().int().min(0).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type ReassignInput = z.infer<typeof ReassignInputSchema>;
 
@@ -156,7 +153,8 @@ export const RemindInputSchema = z.object({
   message: z.string().optional(),
   urgency: z.enum(["NORMAL", "HIGH", "URGENT"]).optional().default("NORMAL"),
   targetUserIds: z.array(z.string()).optional(),
-});
+  expectedVersion: z.number().int().min(0),
+}).strict();
 
 export type RemindInput = z.infer<typeof RemindInputSchema>;
 
@@ -164,57 +162,8 @@ export type RemindInput = z.infer<typeof RemindInputSchema>;
 // Context Builders & Helpers
 // ============================================================================
 
-async function buildUserContext(session: SessionPayload): Promise<AuthenticatedUserContext> {
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.id },
-    include: {
-      positionAssignments: {
-        where: { status: "ACTIVE" },
-        include: { positionDefinition: true },
-      },
-      department: true,
-    },
-  });
-
-  const activePosition = dbUser?.positionAssignments[0]?.positionDefinition;
-  const activePositionCode =
-    activePosition?.code || (session.title ?? undefined) || (session.role ?? undefined);
-
-  const now = new Date();
-  const v2Grants = await prisma.delegationGrant.findMany({
-    where: {
-      granteeAssignment: { userId: session.id },
-      status: "ACTIVE",
-      validUntil: { gte: now },
-    },
-    include: {
-      granteeAssignment: true,
-    },
-  });
-
-  const formattedGrants = v2Grants.map((g) => ({
-    id: g.id,
-    granteeUserId: g.granteeAssignment.userId,
-    capability: g.action || "*",
-    validFrom: g.validFrom,
-    validUntil: g.validUntil,
-    status: g.status,
-  }));
-
-  const userContext: AuthenticatedUserContext = {
-    id: session.id,
-    email: session.email,
-    name: session.name,
-    role: session.role,
-    systemRole: session.role === "ADMIN" ? "SYSTEM_ADMIN" : session.role,
-    activePositionCode,
-    departmentId: dbUser?.departmentId || session.departmentId || undefined,
-    departmentCode: dbUser?.department?.shortName || undefined,
-    isActive: true,
-    delegationGrants: formattedGrants,
-  };
-
-  return userContext;
+async function buildUserContext(session: SessionPayload) {
+  return loadAuthorizationContext(session.id);
 }
 
 export async function loadTaskAndBuildResource(
@@ -222,7 +171,7 @@ export async function loadTaskAndBuildResource(
   extra?: { deliverableId?: string; resultId?: string; stepId?: string }
 ) {
   const task = await prisma.task.findUnique({
-    where: { id: taskId },
+    where: { id: taskId, archivedAt: null },
     include: {
       actors: {
         include: { user: true },
@@ -372,22 +321,13 @@ function assertAuthAllowed(
       authResult.rejectionCode === "SEPARATION_OF_DUTIES_VIOLATION"
     ) {
       throw new SeparationOfDutiesError(
-        authResult.reason || "Vi phạm nguyên tắc phân lập trách nhiệm (SoD)",
-        action,
-        taskId
+        authResult.reason || "Vi phạm nguyên tắc phân lập trách nhiệm (SoD)"
       );
     }
     if (authResult.rejectionCode === "COLLABORATOR_CANNOT_REASSIGN_DRI") {
-      throw new SingleDRIError(action, taskId);
+      throw new SingleDRIError();
     }
-    throw new HybridAuthorizationError(
-      authResult.reason || "Bạn không có quyền thực hiện thao tác này",
-      authResult.rejectionCode || "INSUFFICIENT_CAPABILITY",
-      action,
-      taskId,
-      403,
-      authResult.auditRecord
-    );
+    throw new AuthorizationError(authResult.reason || "Bạn không có quyền thực hiện thao tác này");
   }
 }
 
@@ -451,20 +391,8 @@ export class TaskDomainActionService {
       );
     }
 
-    // 2. Policy Authority Validation
-    const authUser: AuthenticatedUser = {
-      id: session.id,
-      email: (session as any).email || "",
-      name: (session as any).name || "",
-      role: session.role as any,
-      departmentId: session.departmentId ?? undefined,
-    };
-    const policyResult = canUserTransitionStatus(authUser, task, validated.status);
-    if (!policyResult.allowed) {
-      throw new AuthorizationError(
-        policyResult.reason || "Bạn không có quyền thực hiện chuyển đổi trạng thái này"
-      );
-    }
+    const authResult = authorize(userContext, "task.update_execution", resource);
+    assertAuthAllowed(authResult, "task.update_execution", taskId);
 
     const noteText = validated.note?.trim() || null;
     const targetStatus = validated.status;
@@ -981,17 +909,13 @@ export class TaskDomainActionService {
 
     if (isSubmitter) {
       throw new SeparationOfDutiesError(
-        "Vi phạm nguyên tắc Maker-Checker (SoD): Cán bộ thực thi hoặc nộp minh chứng không được tự thẩm tra sản phẩm của mình.",
-        "task.review",
-        taskId
+        "Vi phạm nguyên tắc Maker-Checker (SoD): Cán bộ thực thi hoặc nộp minh chứng không được tự thẩm tra sản phẩm của mình."
       );
     }
 
     if (primaryOwnerId && primaryOwnerId === session.id) {
       throw new SeparationOfDutiesError(
-        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự thẩm tra kết quả nhiệm vụ của mình.",
-        "task.review",
-        taskId
+        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự thẩm tra kết quả nhiệm vụ của mình."
       );
     }
 
@@ -1151,9 +1075,7 @@ export class TaskDomainActionService {
     // SoD check: Submitter / DRI cannot request revision from themselves
     if (primaryOwnerId && primaryOwnerId === session.id) {
       throw new SeparationOfDutiesError(
-        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính không thể tự yêu cầu làm lại cho chính mình.",
-        "task.review",
-        taskId
+        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính không thể tự yêu cầu làm lại cho chính mình."
       );
     }
 
@@ -1304,22 +1226,16 @@ export class TaskDomainActionService {
     });
 
     // SoD Invariant Enforcement: Rule 4.1 Creator != Approver & DRI != Approver
-    if (!validated.allowBypass) {
-      if (task.createdById === session.id) {
-        throw new SeparationOfDutiesError(
-          "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập không được tự phê duyệt nhiệm vụ của mình.",
-          "task.approve",
-          taskId
-        );
-      }
+    if (task.createdById === session.id) {
+      throw new SeparationOfDutiesError(
+        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập không được tự phê duyệt nhiệm vụ của mình."
+      );
+    }
 
-      if (primaryOwnerId && primaryOwnerId === session.id) {
-        throw new SeparationOfDutiesError(
-          "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự phê duyệt nhiệm vụ của mình.",
-          "task.approve",
-          taskId
-        );
-      }
+    if (primaryOwnerId && primaryOwnerId === session.id) {
+      throw new SeparationOfDutiesError(
+        "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự phê duyệt nhiệm vụ của mình."
+      );
     }
 
     if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
@@ -1328,9 +1244,7 @@ export class TaskDomainActionService {
       );
     }
 
-    const authResult = await authorize(userContext, "task.approve", resource, {
-      allowBypass: validated.allowBypass,
-    });
+    const authResult = authorize(userContext, "task.approve", resource);
     assertAuthAllowed(authResult, "task.approve", taskId);
 
     const noteText = validated.note?.trim() || null;
@@ -1353,7 +1267,7 @@ export class TaskDomainActionService {
           session.id,
           "APPROVED",
           noteText || undefined,
-          { allowBypass: validated.allowBypass },
+          { allowBypass: false },
           tx
         );
       }
@@ -1641,30 +1555,38 @@ export class TaskDomainActionService {
 
     const messageText = validated.message?.trim() || `Nhắc nhở thực hiện nhiệm vụ: ${task.title}`;
 
-    await auditService.logEvent(prisma, {
-      actorId: session.id,
-      action: AuditAction.TASK_REMINDED,
-      entityType: AuditEntityType.TASK,
-      entityId: taskId,
-      beforeData: null,
-      afterData: {
-        urgency: validated.urgency,
-        recipientIds,
-        message: messageText,
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.task.updateMany({
+        where: { id: taskId, version: validated.expectedVersion, archivedAt: null },
+        data: { version: { increment: 1 } },
+      });
+      if (updated.count !== 1) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${validated.expectedVersion}`
+        );
+      }
 
-    await publishOutboxEvent(prisma, {
-      eventType: OutboxEventType.TASK_REMINDER_NOTIFICATION,
-      aggregateType: OutboxAggregateType.TASK,
-      aggregateId: taskId,
-      payload: {
-        taskId,
-        remindedById: session.id,
-        recipientIds,
-        urgency: validated.urgency,
-        message: messageText,
-      },
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_REMINDED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: null,
+        afterData: { urgency: validated.urgency, recipientIds, message: messageText },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_REMINDER_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          remindedById: session.id,
+          recipientIds,
+          urgency: validated.urgency,
+          message: messageText,
+        },
+      });
     });
 
     return {
@@ -1673,10 +1595,10 @@ export class TaskDomainActionService {
       recipientIds,
       urgency: validated.urgency,
       message: messageText,
+      version: validated.expectedVersion + 1,
     };
   }
 }
 
 export const taskDomainActionService = new TaskDomainActionService();
 export const taskDomainActions = taskDomainActionService;
-

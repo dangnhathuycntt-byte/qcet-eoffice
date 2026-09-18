@@ -22,6 +22,7 @@ export const AuditAction = {
   TASK_REASSIGNED: "TASK_REASSIGNED",
   TASK_REVISION_REQUESTED: "TASK_REVISION_REQUESTED",
   TASK_REMINDED: "TASK_REMINDED",
+  TASK_ARCHIVED: "TASK_ARCHIVED",
 
   // Deliverable review actions
   DELIVERABLE_SUBMITTED: "DELIVERABLE_SUBMITTED",
@@ -496,4 +497,3 @@ export const auditService = {
   getTaskAuditTrail,
   getUserAuditTrail,
 };
-
