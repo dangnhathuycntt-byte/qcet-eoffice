@@ -408,7 +408,29 @@ export const TaskRow = React.memo(function TaskRow({
   const paddingClass = "py-2 px-2.5";
   const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
-  const tdBaseClass = "first:rounded-l-lg last:rounded-r-lg transition-colors border-b-[1.5px] border-transparent";
+
+  // Cell styling based on column position (first, middle, last) and contiguous selection group status
+  const getCellClasses = (isFirst: boolean, isLast: boolean) => {
+    const bgClass = isSelected
+      ? "bg-primary/[0.08] group-hover:bg-primary/[0.12]"
+      : "bg-transparent group-hover:bg-muted/50";
+
+    let radiusClass = "rounded-none";
+    if (!isSelected || selectionGroupPosition === "only" || !selectionGroupPosition) {
+      if (isFirst) radiusClass = "rounded-l-lg";
+      else if (isLast) radiusClass = "rounded-r-lg";
+    } else if (selectionGroupPosition === "first") {
+      if (isFirst) radiusClass = "rounded-tl-lg rounded-bl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-tr-lg rounded-br-none rounded-l-none";
+    } else if (selectionGroupPosition === "middle") {
+      radiusClass = "rounded-none";
+    } else if (selectionGroupPosition === "last") {
+      if (isFirst) radiusClass = "rounded-bl-lg rounded-tl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-br-lg rounded-tr-none rounded-l-none";
+    }
+
+    return cn("transition-colors border-b-[1.5px] border-transparent", bgClass, radiusClass);
+  };
 
   return (
     <tr
@@ -423,26 +445,22 @@ export const TaskRow = React.memo(function TaskRow({
       className={cn(
         "group cursor-pointer transition-all select-none bg-transparent text-foreground",
         rowHeightClass,
-        // State 1: Hovered (Linear soft rounded row)
-        "hover:bg-muted/50",
-        // State 2: Focused (WCAG 2.2 AA Focus visible)
-        "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
-        // State 3: Selected — grouped selection block styling (Notion-style)
-        isSelected && "bg-primary/[0.08]",
-        isSelected && selectionGroupPosition === "only" && "[&>td:first-child]:rounded-l-lg [&>td:last-child]:rounded-r-lg",
-        isSelected && selectionGroupPosition === "first" && "[&>td:first-child]:rounded-tl-lg [&>td:last-child]:rounded-tr-lg [&>td]:rounded-b-none [&>td]:border-b-primary/[0.08]",
-        isSelected && selectionGroupPosition === "middle" && "[&>td]:rounded-none [&>td]:border-b-primary/[0.08]",
-        isSelected && selectionGroupPosition === "last" && "[&>td:first-child]:rounded-bl-lg [&>td:last-child]:rounded-br-lg [&>td]:rounded-t-none",
+        // State 1: Hover on unselected row
+        !isSelected && "hover:bg-muted/50",
+        // State 2: Focus on unselected row (WCAG 2.2 AA Focus visible)
+        !isSelected && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
+        // Focus on selected row: subtle inner tint without recreating individual rounded capsule or gaps
+        isSelected && "focus-visible:outline-none focus-visible:[&>td]:bg-primary/[0.14]",
         // State 4: Previewing (Peek preview)
         isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
-        isActive && !isPreviewing && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
+        isActive && !isPreviewing && !isSelected && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
         isExpanded && "bg-muted/20",
         className
       )}
     >
       {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
-      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, tdBaseClass)}>
+      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, getCellClasses(true, false))}>
         <div className="flex items-center gap-1.5">
           {/* Linear Integrated Leading Selector: Large hit area (~32px) for effortless clicking */}
           <div
@@ -502,7 +520,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 2. Phụ trách (Lead Assignee) */}
-      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div
           className="flex items-center gap-2 min-w-0"
           title={`${driInfo.primaryName || "—"}${departmentName ? ` (${departmentName})` : ""}`}
@@ -535,7 +553,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 3. Phối hợp (Collaborators / Subtasks Contributors) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         {coAssigneesList.length > 0 ? (
           <div className="flex items-center -space-x-1">
             {coAssigneesList.slice(0, 3).map((name, i) => (
@@ -559,7 +577,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 4. Thời hạn (Due Date) */}
-      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div className="flex flex-col gap-0.5">
           {task.dueDate ? (
             <>
@@ -597,7 +615,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 5. Tình trạng (Status) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <HealthIndicator
           status={task.status}
           isOverdue={Boolean(slaStatus.isOverdue)}
@@ -607,7 +625,7 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td
-        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, tdBaseClass)}
+        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, getCellClasses(false, true))}
         onClick={(e) => e.stopPropagation()}
       >
         <button
