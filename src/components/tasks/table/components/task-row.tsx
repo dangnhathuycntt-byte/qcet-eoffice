@@ -409,27 +409,27 @@ export const TaskRow = React.memo(function TaskRow({
   };
 
   const paddingClass = "py-2 px-2.5";
-  const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
+  const titlePaddingClass = "pl-3.5 sm:pl-4 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
 
   // Cell styling based on column position (first, middle, last) and contiguous selection group status
   const getCellClasses = (isFirst: boolean, isLast: boolean) => {
     const bgClass = isSelected
       ? "bg-primary/[0.08] group-hover:bg-primary/[0.12]"
-      : "bg-transparent group-hover:bg-muted/50";
+      : "bg-transparent group-hover:bg-muted/35";
 
     let radiusClass = "rounded-none";
     if (!isSelected || selectionGroupPosition === "only" || !selectionGroupPosition) {
-      if (isFirst) radiusClass = "rounded-l-lg";
-      else if (isLast) radiusClass = "rounded-r-lg";
+      if (isFirst) radiusClass = "rounded-l-md";
+      else if (isLast) radiusClass = "rounded-r-md";
     } else if (selectionGroupPosition === "first") {
-      if (isFirst) radiusClass = "rounded-tl-lg rounded-bl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-tr-lg rounded-br-none rounded-l-none";
+      if (isFirst) radiusClass = "rounded-tl-md rounded-bl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-tr-md rounded-br-none rounded-l-none";
     } else if (selectionGroupPosition === "middle") {
       radiusClass = "rounded-none";
     } else if (selectionGroupPosition === "last") {
-      if (isFirst) radiusClass = "rounded-bl-lg rounded-tl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-br-lg rounded-tr-none rounded-l-none";
+      if (isFirst) radiusClass = "rounded-bl-md rounded-tl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-br-md rounded-tr-none rounded-l-none";
     }
 
     return cn("transition-colors border-b-[1.5px] border-transparent", bgClass, radiusClass);
@@ -448,8 +448,8 @@ export const TaskRow = React.memo(function TaskRow({
       className={cn(
         "group cursor-pointer transition-all select-none bg-transparent text-foreground",
         rowHeightClass,
-        // State 1: Hover on unselected row
-        !isSelected && "hover:bg-muted/50",
+        // State 1: Hover on unselected row — subtle tint without competing with selected state
+        !isSelected && "hover:bg-muted/35",
         // State 2: Focus on unselected row (WCAG 2.2 AA Focus visible)
         !isSelected && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
         // Focus on selected row: subtle inner tint without recreating individual rounded capsule or gaps
@@ -477,7 +477,7 @@ export const TaskRow = React.memo(function TaskRow({
                 onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
               }
             }}
-            className="size-7 sm:size-8 -my-2 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+            className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
             onClick={handleCheckboxClick}
             title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
           >

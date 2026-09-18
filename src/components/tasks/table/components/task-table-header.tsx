@@ -138,7 +138,7 @@ export function TaskTableHeader({
 
           // First column padding alignment when selection checkbox is absent
           const isFirstColumn = !showSelection && colIdx === 0;
-          const titlePaddingClass = isFirstColumn ? "pl-3 sm:pl-3.5 pr-2.5 py-1.5" : paddingClass;
+          const titlePaddingClass = isFirstColumn ? "pl-3.5 sm:pl-4 pr-2.5 py-1.5" : paddingClass;
 
           // Special alignment for Title column: Linear Header Leading Selector + Label
           if (col.id === "title") {
@@ -165,7 +165,7 @@ export function TaskTableHeader({
                         onToggleSelectAll?.(!allSelected);
                       }
                     }}
-                    className="size-7 sm:size-8 -my-1.5 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+                    className="size-7 sm:size-8 -my-1.5 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
                     onClick={() => onToggleSelectAll?.(!allSelected)}
                     title={allSelected ? "Bỏ chọn tất cả (X)" : "Chọn tất cả (X)"}
                   >

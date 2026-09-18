@@ -2316,12 +2316,12 @@ export function UnifiedAdaptiveWorkspace({
       ) : (
         <div
           data-slot="task-workspace-canvas"
-          className="w-full space-y-1.5 min-w-0"
+          className="w-full space-y-2.5 min-w-0"
         >
           {/* Inline summary strip — replaces KPI dashboard cards */}
           <div
             data-slot="task-summary-strip"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none pb-0.5"
           >
             <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
             <span>nhiệm vụ</span>
