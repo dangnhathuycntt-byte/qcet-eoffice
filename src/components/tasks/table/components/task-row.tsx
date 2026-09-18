@@ -387,6 +387,9 @@ export const TaskRow = React.memo(function TaskRow({
     if (e.key === "Enter") {
       e.preventDefault();
       onClick?.(task);
+    } else if (e.key === " " || e.key === "x" || e.key === "X") {
+      e.preventDefault();
+      onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
     }
   };
 
@@ -462,9 +465,19 @@ export const TaskRow = React.memo(function TaskRow({
       {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
       <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, getCellClasses(true, false))}>
         <div className="flex items-center gap-1.5">
-          {/* Linear Integrated Leading Selector: Large hit area (~32px) for effortless clicking */}
+          {/* Linear Integrated Leading Selector: Accessible keyboard + large hit area (~32px) */}
           <div
-            className="size-7 sm:size-8 -my-2 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector"
+            role="checkbox"
+            aria-checked={isSelected}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
+              }
+            }}
+            className="size-7 sm:size-8 -my-2 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
             onClick={handleCheckboxClick}
             title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
           >

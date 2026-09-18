@@ -99,16 +99,16 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/60 bg-white/95 backdrop-blur-xs select-none",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-semibold text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-xs font-medium text-muted-foreground")}>
         {/* Optional Selection Checkbox (only rendered when explicitly enabled for batch ops) */}
         {showSelection && (
           <th
             scope="col"
-            className={cn("w-10 text-center align-middle border-b border-border/60", paddingClass)}
+            className={cn("w-10 text-center align-middle", paddingClass)}
           >
             <div className="flex items-center justify-center">
               <input
@@ -117,7 +117,7 @@ export function TaskTableHeader({
                 checked={allSelected}
                 disabled={!hasTasks}
                 onChange={(e) => onToggleSelectAll?.(e.target.checked)}
-                className="size-4 rounded border-border/80 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                className="size-4 rounded border-border/80 text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                 aria-label="Chọn tất cả nhiệm vụ hiển thị"
               />
             </div>
@@ -148,22 +148,31 @@ export function TaskTableHeader({
                 scope="col"
                 aria-sort={ariaSortValue}
                 className={cn(
-                  "align-middle font-medium transition-colors group/th text-left border-b border-border/60",
+                  "align-middle font-medium transition-colors group/th text-left",
                   col.widthClass,
                   titlePaddingClass
                 )}
               >
                 <div className="flex items-center gap-2">
-                  {/* Linear Header Selector: Large hit area (~32px) for effortless clicking */}
+                  {/* Linear Header Selector: Accessible keyboard + hit area */}
                   <div
-                    className="size-7 sm:size-8 -my-1.5 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector"
+                    role="checkbox"
+                    aria-checked={indeterminate ? "mixed" : allSelected}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        onToggleSelectAll?.(!allSelected);
+                      }
+                    }}
+                    className="size-7 sm:size-8 -my-1.5 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
                     onClick={() => onToggleSelectAll?.(!allSelected)}
-                    title={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    title={allSelected ? "Bỏ chọn tất cả (X)" : "Chọn tất cả (X)"}
                   >
                     {indeterminate || allSelected ? (
                       <div
                         className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-95 pointer-events-none"
-                        aria-label={allSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                        aria-hidden="true"
                       >
                         {allSelected ? (
                           <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
@@ -174,7 +183,7 @@ export function TaskTableHeader({
                     ) : (
                       <div
                         className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
-                        aria-label="Chọn tất cả nhiệm vụ hiển thị"
+                        aria-hidden="true"
                       />
                     )}
                   </div>
@@ -184,7 +193,7 @@ export function TaskTableHeader({
                       <button
                         type="button"
                         onClick={() => onSort?.(col.id as TaskSortField)}
-                        className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none"
+                        className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
                       >
                         <span>{col.label}</span>
                         {renderSortIndicator(col.id as TaskSortField)}
@@ -204,7 +213,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-medium transition-colors group/th border-b border-border/60",
+                "align-middle font-medium transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"
@@ -225,7 +234,7 @@ export function TaskTableHeader({
                   <button
                     type="button"
                     onClick={() => onSort?.(col.id as TaskSortField)}
-                    className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none"
+                    className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
                   >
                     <span>{col.label}</span>
                     {renderSortIndicator(col.id as TaskSortField)}
