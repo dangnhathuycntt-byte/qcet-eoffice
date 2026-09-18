@@ -79,13 +79,12 @@ const DISPLAY_SETTINGS_STORAGE_KEY = "qcet_kanban_display_settings";
 
 function loadDisplaySettings(): KanbanDisplaySettings {
   if (typeof window === "undefined") {
-    // In server-side testing / SSR, maintain backward compatibility for regression test assertions
-    return { ...DEFAULT_DISPLAY_SETTINGS, showProgress: true };
+    return { ...DEFAULT_DISPLAY_SETTINGS, showProgress: false };
   }
   try {
     const stored = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
     if (!stored) return DEFAULT_DISPLAY_SETTINGS;
-    return { ...DEFAULT_DISPLAY_SETTINGS, ...JSON.parse(stored) };
+    return { ...DEFAULT_DISPLAY_SETTINGS, ...JSON.parse(stored), showProgress: false };
   } catch {
     return DEFAULT_DISPLAY_SETTINGS;
   }
@@ -856,9 +855,9 @@ function KanbanCard({
       {/* Row 3: Compact Metadata (Priority: Assignee + Due Date + Category) */}
       <div className="flex items-center justify-between gap-1.5 pt-0.5 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {/* Assignee Avatar & Name */}
+          {/* Assignee Avatar & Name - Full available width, no premature truncation */}
           {displaySettings.showAssignee && (
-            <div className="flex items-center gap-1.5 min-w-0 max-w-[130px] shrink-0" title={item.assigneeName}>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1" title={item.assigneeName}>
               {item.assigneeAvatar ? (
                 <img
                   src={item.assigneeAvatar}
@@ -899,32 +898,6 @@ function KanbanCard({
           )}
         </div>
       </div>
-
-      {/* Row 4: Optional Progress Bar */}
-      {displaySettings.showProgress &&
-        item.progressPercent !== undefined &&
-        item.progressPercent > 0 &&
-        (item.progressPercent < 100 || item.status !== "COMPLETED") && (
-          <div className="space-y-0.5 pt-0.5">
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground/70 font-mono tabular-nums">
-              <span>Tiến độ</span>
-              <span>{item.progressPercent}%</span>
-            </div>
-            <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-300",
-                  item.progressPercent === 100
-                    ? "bg-emerald-500"
-                    : item.progressPercent >= 50
-                    ? "bg-blue-500"
-                    : "bg-amber-500"
-                )}
-                style={{ width: `${Math.min(100, Math.max(0, item.progressPercent))}%` }}
-              />
-            </div>
-          </div>
-        )}
     </div>
   );
 }
@@ -1128,7 +1101,6 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
     { key: "showAssignee", label: "Người phụ trách" },
     { key: "showDueDate", label: "Thời hạn" },
     { key: "showParentTask", label: "Nhiệm vụ cha" },
-    { key: "showProgress", label: "Thanh tiến độ %" },
     { key: "showSubtaskCount", label: "Số lượng nhiệm vụ con" },
   ];
 

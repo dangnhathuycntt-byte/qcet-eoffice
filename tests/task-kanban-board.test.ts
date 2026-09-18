@@ -480,7 +480,7 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
     );
   });
 
-  test("65% in-progress card shows the progress bar", () => {
+  test("65% in-progress card suppresses progress bar per kanban view simplification", () => {
     const tasks: SchoolTask[] = [
       makeSchoolTask("mid", {
         title: "Nhiệm vụ đang dở dang",
@@ -492,10 +492,9 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
       React.createElement(TaskKanbanBoard, { tasks })
     );
     assert.ok(
-      html.includes("Tiến độ"),
-      "65% card must render the 'Tiến độ' progress block"
+      !html.includes("Tiến độ"),
+      "kanban card must suppress the 'Tiến độ' progress block"
     );
-    assert.ok(html.includes("65%"), "65% card must render the numeric percent");
   });
 
   test("overdue is not color-only: text label 'Quá hạn' is present", () => {
@@ -942,18 +941,17 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
       progressPercent: 50,
     };
 
-    // 1. With progress and subtasks enabled via displaySettings
+    // 1. With subtasks enabled via displaySettings (progress bar removed from kanban)
     const htmlWithProgress = renderToStaticMarkup(
       React.createElement(TaskKanbanBoard, {
         tasks: [task],
         displaySettings: {
           ...DEFAULT_DISPLAY_SETTINGS,
-          showProgress: true,
           showSubtaskCount: true,
         },
       })
     );
-    assert.ok(htmlWithProgress.includes("Tiến độ"), "Must show progress when enabled");
+    assert.ok(!htmlWithProgress.includes("Tiến độ"), "Must not show progress bar in kanban cards");
     assert.ok(htmlWithProgress.includes("1/2"), "Must show subtask count when enabled");
 
     // 2. With all optional properties disabled
