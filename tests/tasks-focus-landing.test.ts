@@ -95,7 +95,7 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
     assert.ok(html.includes('id="tour-tasks-landing"'));
     assert.ok(html.includes('data-slot="unified-adaptive-workspace"'));
     assert.ok(html.includes('data-slot="adaptive-scope-header"'));
-    assert.ok(html.includes('data-slot="adaptive-metric-strip"'));
+    assert.ok(html.includes('data-slot="task-summary-strip"'));
   });
 
   test("TasksFocusLanding renders UnifiedAdaptiveWorkspace for manager and staff users", () => {

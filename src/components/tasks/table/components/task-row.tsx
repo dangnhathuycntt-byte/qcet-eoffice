@@ -47,6 +47,7 @@ export interface TaskRowProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<void> | void;
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
+  showTaskCode?: boolean;
   className?: string;
 }
 
@@ -290,6 +291,7 @@ export function areTaskRowPropsEqual(
   if (prev.activeCategory !== next.activeCategory) return false;
   if (prev.suppressCategory !== next.suppressCategory) return false;
   if (prev.onAddSubTask !== next.onAddSubTask) return false;
+  if (prev.showTaskCode !== next.showTaskCode) return false;
   if (prev.onContextMenu !== next.onContextMenu) return false;
   return true;
 }
@@ -316,6 +318,7 @@ export const TaskRow = React.memo(function TaskRow({
   onStatusChange,
   onUrge,
   onAddSubTask,
+  showTaskCode = false,
   className,
 }: TaskRowProps) {
   const hasSubtasks = Boolean(task.subTasks && task.subTasks.length > 0);
@@ -465,7 +468,7 @@ export const TaskRow = React.memo(function TaskRow({
 
           {/* Title - Clean & Straight Aligned */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {(task.code || task.taskCode) && (
+            {showTaskCode && (task.code || task.taskCode) && (
               <span className="font-mono text-[11px] font-semibold text-muted-foreground/80 tabular-nums shrink-0">
                 {task.code || task.taskCode}
               </span>

@@ -2316,14 +2316,26 @@ export function UnifiedAdaptiveWorkspace({
       ) : (
         <div
           data-slot="task-workspace-canvas"
-          className="w-full space-y-3 min-w-0"
+          className="w-full space-y-1.5 min-w-0"
         >
-          {/* Adaptive Metric Strip in full-width canvas (hidden or accessible across desktop/mobile) */}
-          <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
+          {/* Inline summary strip — replaces KPI dashboard cards */}
+          <div
+            data-slot="task-summary-strip"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none"
+          >
+            <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
+            <span>nhiệm vụ</span>
+            <span className="text-border">·</span>
+            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : ""}>{metrics.waitingApprovalCount}</span>
+            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600" : ""}>chờ duyệt</span>
+            <span className="text-border">·</span>
+            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : ""}>{metrics.urgentOverdueCount}</span>
+            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600" : ""}>quá hạn</span>
+          </div>
 
           <div
             data-slot="full-width-task-canvas"
-            className="w-full space-y-3 min-w-0"
+            className="w-full space-y-1 min-w-0"
           >
             {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
@@ -2362,7 +2374,7 @@ export function UnifiedAdaptiveWorkspace({
               </div>
             </div>
           ) : (
-            <div className="pt-0.5">
+            <div>
               {viewMode === "table" ? (
                 <ModularCascadingTaskTable
                   tasks={displayedTasks}

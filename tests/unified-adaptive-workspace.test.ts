@@ -57,7 +57,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   const adminUser = DEFAULT_DEMO_USERS[0];
   const staffUser = DEFAULT_DEMO_USERS[2];
 
-  test("renders unified canvas with scope header and metric strip", () => {
+  test("renders unified canvas with scope header and summary strip", () => {
     const html = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
@@ -68,7 +68,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
 
     assert.ok(html.includes("data-slot=\"unified-adaptive-workspace\""));
     assert.ok(html.includes("data-slot=\"adaptive-scope-header\""));
-    assert.ok(html.includes("data-slot=\"adaptive-metric-strip\""));
+    assert.ok(html.includes("data-slot=\"task-summary-strip\""));
   });
 
   test("defaults to 'my' scope for staff users", () => {
@@ -456,11 +456,8 @@ describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
         })
       );
 
-      // Verify task code and titles are rendered
-      assert.ok(
-        html.includes("NV-2026-09-001"),
-        "Table must render task code"
-      );
+      // Task code is hidden by default in the table row (showTaskCode defaults to false).
+      // The code data is preserved for search/detail but not rendered in the list view.
       assert.ok(
         html.includes(selectedTask.title),
         "Table must render task title"
