@@ -6,6 +6,7 @@ import type {
   TaskViewMode,
   CalendarViewMode,
 } from "@/contracts/workspace-semantic";
+import type { TaskTimePreset } from "@/lib/task-time-filter";
 
 export type {
   WorkspaceScopeType,
@@ -39,6 +40,9 @@ export interface WorkspaceFilterState extends BaseWorkspaceFilterState {
   priority?: string;
   category?: string;
   deadline?: string;
+  time?: TaskTimePreset | "range";
+  dateFrom?: string;
+  dateTo?: string;
   _unitParamKey?: "dept" | "unit";
 }
 
@@ -117,6 +121,9 @@ const WORKSPACE_QUERY_KEYS = [
   "category",
   "cat",
   "deadline",
+  "time",
+  "dateFrom",
+  "dateTo",
   "view",
   "viewMode",
   "v",
@@ -372,6 +379,16 @@ export function parseWorkspaceQuery(
   const rawDeadline = extractParam(params, "deadline");
   const deadline = rawDeadline && rawDeadline !== "ALL" && rawDeadline !== "all" ? rawDeadline : undefined;
 
+  const rawTime = extractParam(params, "time");
+  const time = rawTime === "today" || rawTime === "this_week" || rawTime === "this_month" || rawTime === "overdue" || rawTime === "range"
+    ? rawTime
+    : undefined;
+  const rawDateFrom = extractParam(params, "dateFrom");
+  const rawDateTo = extractParam(params, "dateTo");
+  const hasValidRange = Boolean(
+    rawDateFrom && rawDateTo && /^\d{4}-\d{2}-\d{2}$/.test(rawDateFrom) && /^\d{4}-\d{2}-\d{2}$/.test(rawDateTo) && rawDateFrom <= rawDateTo
+  );
+
   return {
     scope,
     unitId,
@@ -383,6 +400,9 @@ export function parseWorkspaceQuery(
     priority,
     category,
     deadline,
+    time: hasValidRange ? "range" : time === "range" ? undefined : time,
+    dateFrom: hasValidRange ? rawDateFrom : undefined,
+    dateTo: hasValidRange ? rawDateTo : undefined,
     attention,
     view,
     q,
@@ -497,6 +517,17 @@ export function serializeWorkspaceQuery(
   // 4. Date (YYYY-MM-DD)
   if (state.date && /^\d{4}-\d{2}-\d{2}$/.test(state.date)) {
     params.set("date", state.date);
+  }
+
+  if (state.time && state.time !== "range") params.set("time", state.time);
+  if (
+    state.time === "range" && state.dateFrom && state.dateTo &&
+    /^\d{4}-\d{2}-\d{2}$/.test(state.dateFrom) && /^\d{4}-\d{2}-\d{2}$/.test(state.dateTo) &&
+    state.dateFrom <= state.dateTo
+  ) {
+    params.set("time", "range");
+    params.set("dateFrom", state.dateFrom);
+    params.set("dateTo", state.dateTo);
   }
 
   // 5. Status (omit 'ALL')

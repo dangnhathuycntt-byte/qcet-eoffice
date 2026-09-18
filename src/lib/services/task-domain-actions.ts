@@ -59,7 +59,7 @@ import {
 export const UpdateStatusInputSchema = z.object({
   status: z.nativeEnum(TaskStatus),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0),
+  expectedVersion: z.number().int().min(0).optional(),
 }).strict();
 
 export type UpdateStatusInput = z.infer<typeof UpdateStatusInputSchema>;
@@ -75,7 +75,7 @@ export const SubmitResultInputSchema = z
     fileType: z.string().optional(),
     fileSize: z.number().optional(),
     completionRate: z.number().optional(),
-    expectedVersion: z.number().int().min(0),
+    expectedVersion: z.number().int().min(0).optional(),
   })
   .refine((data) => Boolean(data.summary?.trim() || data.title?.trim() || data.note?.trim()), {
     message: "Tóm tắt kết quả (summary) hoặc tiêu đề minh chứng (title) là bắt buộc",
@@ -85,7 +85,7 @@ export type SubmitResultInput = z.infer<typeof SubmitResultInputSchema>;
 
 export const StartInputSchema = z.object({
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0),
+  expectedVersion: z.number().int().min(0).optional(),
 }).strict();
 
 export type StartInput = z.infer<typeof StartInputSchema>;
@@ -93,7 +93,7 @@ export type StartInput = z.infer<typeof StartInputSchema>;
 export const UpdateProgressInputSchema = z.object({
   progressPercent: z.number().min(0, "Tiến độ phải từ 0% đến 100%").max(100, "Tiến độ không được vượt quá 100%"),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0),
+  expectedVersion: z.number().int().min(0).optional(),
   targetStatus: z.nativeEnum(TaskStatus).optional(),
 }).strict();
 
@@ -102,7 +102,7 @@ export type UpdateProgressInput = z.infer<typeof UpdateProgressInputSchema>;
 export const CancelInputSchema = z.object({
   reason: z.string().trim().min(3, "Lý do hủy nhiệm vụ tối thiểu 3 ký tự").max(1000),
   note: z.string().trim().max(1000).optional(),
-  expectedVersion: z.number().int().min(0),
+  expectedVersion: z.number().int().min(0).optional(),
 }).strict();
 
 export type CancelInput = z.infer<typeof CancelInputSchema>;
@@ -115,7 +115,7 @@ export const ReviewInputSchema = z.object({
   decision: z.enum(["APPROVED", "REJECTED"]).optional(),
   reviewNote: z.string().optional(),
   note: z.string().optional(),
-  expectedVersion: z.number().int().min(0),
+  expectedVersion: z.number().int().min(0).optional(),
 }).strict();
 
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;

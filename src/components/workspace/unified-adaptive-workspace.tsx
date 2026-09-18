@@ -68,6 +68,11 @@ import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
 import { updateTaskStatus } from "@/lib/tasks/task-actions";
 import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { cn } from "@/lib/utils";
+import {
+  filterTasksByTime,
+  NO_TASK_TIME_FILTER,
+  type TaskTimeFilter,
+} from "@/lib/task-time-filter";
 
 export { type WorkspaceScope, type ViewMode, matchesUser };
 
@@ -98,6 +103,7 @@ export interface FilterDisplayedTasksOptions {
   category?: string;
   priority?: string;
   academicMonth?: number | "ALL";
+  timeFilter?: TaskTimeFilter;
   overdue?: boolean;
   workbox?: string;
   user?: AuthUser | null;
@@ -114,6 +120,7 @@ export function filterDisplayedTasks({
   category,
   priority,
   academicMonth,
+  timeFilter,
   overdue,
   workbox,
   user,
@@ -284,7 +291,9 @@ export function filterDisplayedTasks({
   }
 
   // 6. Academic Month Filter
-  if (academicMonth && academicMonth !== "ALL") {
+  if (timeFilter) {
+    result = filterTasksByTime(result, timeFilter);
+  } else if (academicMonth && academicMonth !== "ALL") {
     result = filterTasksByAcademicMonthStrict(result, Number(academicMonth), "2026-2027");
   }
 
@@ -293,7 +302,9 @@ export function filterDisplayedTasks({
     result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
   }
 
-  return result;
+  // API payloads may contain the same child both flattened and nested. React rows
+  // need one stable identity; keep the first canonical occurrence at this boundary.
+  return Array.from(new Map(result.map((task) => [task.id, task])).values());
 }
 
 /* ---------------------------------------------------------------------------
@@ -946,7 +957,14 @@ export function UnifiedAdaptiveWorkspace({
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
   const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">(() => {
     if (workspaceQuery?.queryState.month !== undefined) return workspaceQuery.queryState.month;
-    return currentAcademicMonth;
+    return "ALL";
+  });
+  const [timeFilter, setTimeFilter] = React.useState<TaskTimeFilter>(() => {
+    const query = workspaceQuery?.queryState;
+    if (query?.time === "range" && query.dateFrom && query.dateTo) return { kind: "range", from: query.dateFrom, to: query.dateTo };
+    if (query?.time && query.time !== "range") return { kind: "preset", preset: query.time };
+    if (typeof query?.month === "number") return { kind: "month", month: query.month };
+    return NO_TASK_TIME_FILTER;
   });
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
@@ -1021,7 +1039,16 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     } else {
-      setCurrentMonth(currentAcademicMonth);
+      setCurrentMonth("ALL");
+    }
+    if (queryState.time === "range" && queryState.dateFrom && queryState.dateTo) {
+      setTimeFilter({ kind: "range", from: queryState.dateFrom, to: queryState.dateTo });
+    } else if (queryState.time && queryState.time !== "range") {
+      setTimeFilter({ kind: "preset", preset: queryState.time });
+    } else if (typeof queryState.month === "number") {
+      setTimeFilter({ kind: "month", month: queryState.month });
+    } else {
+      setTimeFilter(NO_TASK_TIME_FILTER);
     }
     if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
       setInternalOverdue(true);
@@ -1058,6 +1085,9 @@ export function UnifiedAdaptiveWorkspace({
     workspaceQuery?.queryState.query,
     workspaceQuery?.queryState.q,
     workspaceQuery?.queryState.month,
+    workspaceQuery?.queryState.time,
+    workspaceQuery?.queryState.dateFrom,
+    workspaceQuery?.queryState.dateTo,
     workspaceQuery?.queryState.priority,
     workspaceQuery?.queryState.category,
     workspaceQuery?.queryState.deadline,
@@ -1543,6 +1573,7 @@ export function UnifiedAdaptiveWorkspace({
       category: currentCategory,
       priority: currentPriority,
       academicMonth: currentMonth,
+      timeFilter,
       overdue: currentOverdue,
       user,
     });
@@ -1555,6 +1586,7 @@ export function UnifiedAdaptiveWorkspace({
     currentCategory,
     currentPriority,
     currentMonth,
+    timeFilter,
     currentOverdue,
     user,
   ]);
@@ -2114,9 +2146,18 @@ export function UnifiedAdaptiveWorkspace({
           selectedPriority={currentPriority}
           onPriorityChange={handlePriorityChange}
           selectedAcademicMonth={currentMonth}
-          onAcademicMonthChange={(m) => {
-            setCurrentMonth(m);
-            workspaceQuery?.setPeriod({ month: m }, { shallow: true, replace: true });
+          selectedTimeFilter={timeFilter}
+          onTimeFilterChange={(next) => {
+            setTimeFilter(next);
+            const month = next.kind === "month" ? next.month : "ALL";
+            setCurrentMonth(month);
+            workspaceQuery?.updateWorkspaceQuery((prev) => ({
+              ...prev,
+              month,
+              time: next.kind === "preset" ? next.preset : next.kind === "range" ? "range" : undefined,
+              dateFrom: next.kind === "range" ? next.from : undefined,
+              dateTo: next.kind === "range" ? next.to : undefined,
+            }), { shallow: true, replace: true });
           }}
           onResetFilters={handleResetFilters}
           activeViewId={activeViewId}

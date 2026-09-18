@@ -1493,6 +1493,11 @@ export function TaskNotionBlockContent({
     block: NotionBlockItem,
     index: number
   ) => {
+    // 0. Bỏ qua nếu đang gõ tiếng Việt IME / Composition (Enter để chốt dấu/từ)
+    if (e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+      return;
+    }
+
     // 1. Phím "/" mở Slash Menu khi bắt đầu gõ hoặc ô trống
     if (e.key === "/" && (!block.content || block.content.trim() === "")) {
       e.preventDefault();
@@ -1529,23 +1534,42 @@ export function TaskNotionBlockContent({
       return;
     }
 
-    // 3. Phím Enter -> tạo block tiếp theo tự nhiên (Notion style)
+    // 3. Phím Enter -> tạo block tiếp theo hoặc split text / thoát list (Notion style)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const nextId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       const isList = ["checklist", "bulleted_list", "numbered_list"].includes(block.type);
+      const isBlockEmpty = !block.content || block.content.trim() === "";
+
+      // Nếu đang ở ô list trống -> Enter thoát list mode về text block
+      if (isList && isBlockEmpty) {
+        handleUpdateBlock(block.id, { type: "text", level: undefined, checked: undefined });
+        return;
+      }
+
+      // Xác định vị trí con trỏ để split text
+      const inputEl = e.currentTarget;
+      const selStart = inputEl.selectionStart ?? block.content.length;
+      const selEnd = inputEl.selectionEnd ?? block.content.length;
+
+      const contentBefore = block.content.slice(0, selStart);
+      const contentAfter = block.content.slice(selEnd);
+
+      const nextId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const nextType = isList ? block.type : "text";
 
       const nextBlock: NotionBlockItem = {
         id: nextId,
         type: nextType,
-        content: "",
+        content: contentAfter,
         checked: nextType === "checklist" ? false : undefined,
       };
 
       setBlocks((prev) => {
         const next = [...prev];
+        if (contentBefore !== block.content) {
+          next[index] = { ...next[index], content: contentBefore };
+        }
         next.splice(index + 1, 0, nextBlock);
         triggerAutoSave(next);
         return next;
@@ -1575,6 +1599,9 @@ export function TaskNotionBlockContent({
 
   // Trailing Empty Block KeyDown
   const handleTrailingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+      return;
+    }
     if (e.key === "/") {
       e.preventDefault();
       handleOpenSlashMenu(blocks.length, e.currentTarget);
@@ -2518,6 +2545,7 @@ export function TaskNotionBlockContent({
                   setActiveMenuIndex(0);
                 }}
                 onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
                   if (e.key === "Escape") {
                     handleCloseSlashMenu();
                   } else if (e.key === "ArrowDown") {

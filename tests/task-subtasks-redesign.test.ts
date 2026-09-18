@@ -139,14 +139,14 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Drawer must display parent task code when present"
       );
 
-      // 2. Full-page CTA
+      // 2. Streamlined header without heavy full-page CTA
       assert.ok(
-        drawerContent.includes("Mở toàn trang"),
-        "Drawer header must contain 'Mở toàn trang' CTA"
+        !drawerContent.includes("Mở toàn trang"),
+        "Drawer header must be streamlined without redundant 'Mở toàn trang' CTA"
       );
       assert.ok(
-        drawerContent.includes("href={`/tasks/${subtask.id}`}"),
-        "Mở toàn trang CTA must navigate to full subtask page"
+        drawerContent.includes("onClose") && drawerContent.includes("Đóng chi tiết việc con"),
+        "Drawer header must contain close CTA"
       );
 
       // 3. Responsive styling: full width on mobile, covers sidebar on desktop

@@ -485,6 +485,9 @@ export function useWorkspaceQuery(
         priority: undefined,
         category: undefined,
         deadline: undefined,
+        time: undefined,
+        dateFrom: undefined,
+        dateTo: undefined,
         attention: undefined,
         view: preserveView
           ? (queryState.view || defaultView || (isCalendar ? "month" : "table"))

@@ -35,7 +35,9 @@ export async function updateTaskStatus(
       body: JSON.stringify({
         status: newStatus,
         note: note || undefined,
-        expectedVersion,
+        ...(expectedVersion !== undefined && expectedVersion !== null && !isNaN(Number(expectedVersion))
+          ? { expectedVersion: Number(expectedVersion) }
+          : {}),
       }),
     });
 
@@ -234,7 +236,13 @@ export async function updateTaskProgress(
     const res = await fetch(`/api/tasks/${taskId}/actions/update-progress`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ progressPercent, note, expectedVersion }),
+      body: JSON.stringify({
+        progressPercent,
+        note: note || undefined,
+        ...(expectedVersion !== undefined && expectedVersion !== null && !isNaN(Number(expectedVersion))
+          ? { expectedVersion: Number(expectedVersion) }
+          : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -265,7 +273,12 @@ export async function updateTaskPriority(
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority, expectedVersion }),
+      body: JSON.stringify({
+        priority,
+        ...(expectedVersion !== undefined && expectedVersion !== null && !isNaN(Number(expectedVersion))
+          ? { expectedVersion: Number(expectedVersion) }
+          : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -332,7 +345,12 @@ export async function updateTaskStartDate(
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startDate: formattedStartDate, expectedVersion }),
+      body: JSON.stringify({
+        startDate: formattedStartDate,
+        ...(expectedVersion !== undefined && expectedVersion !== null && !isNaN(Number(expectedVersion))
+          ? { expectedVersion: Number(expectedVersion) }
+          : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -372,7 +390,12 @@ export async function updateTaskDueDate(
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dueDate: formattedDueDate, expectedVersion }),
+      body: JSON.stringify({
+        dueDate: formattedDueDate,
+        ...(expectedVersion !== undefined && expectedVersion !== null && !isNaN(Number(expectedVersion))
+          ? { expectedVersion: Number(expectedVersion) }
+          : {}),
+      }),
     });
 
     if (!res.ok) {

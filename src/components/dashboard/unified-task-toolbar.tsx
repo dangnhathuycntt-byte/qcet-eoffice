@@ -23,6 +23,13 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getTaskTimeFilterLabel,
+  isValidTaskDateRange,
+  NO_TASK_TIME_FILTER,
+  type TaskTimeFilter,
+  type TaskTimePreset,
+} from "@/lib/task-time-filter";
 import type { AuthUser } from "@/types/auth";
 import type { SchoolTask, StaffTask, TaskCategory } from "@/types/dashboard";
 import {
@@ -183,6 +190,8 @@ export interface UnifiedTaskToolbarProps {
   // Compatibility aliases
   selectedMonth?: number | "ALL";
   onMonthChange?: (month: number | "ALL") => void;
+  selectedTimeFilter?: TaskTimeFilter;
+  onTimeFilterChange?: (filter: TaskTimeFilter) => void;
 
   academicYear?: string;
   monthlyTaskCounts?: Record<number, number>;
@@ -468,6 +477,8 @@ export function UnifiedTaskToolbar({
   onAcademicMonthChange,
   selectedMonth,
   onMonthChange,
+  selectedTimeFilter,
+  onTimeFilterChange,
   academicYear = "2026-2027",
   monthlyTaskCounts,
   showAcademicMonthBar = false,
@@ -569,6 +580,15 @@ export function UnifiedTaskToolbar({
   // Resolve Month props (supporting compatibility aliases)
   const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
   const handleEffectiveMonthChange = onMonthChange || onAcademicMonthChange;
+  const effectiveTimeFilter: TaskTimeFilter = selectedTimeFilter ??
+    (typeof effectiveMonth === "number" ? { kind: "month", month: effectiveMonth } : NO_TASK_TIME_FILTER);
+  const handleTimeFilterChange = (filter: TaskTimeFilter) => {
+    if (onTimeFilterChange) onTimeFilterChange(filter);
+    else handleEffectiveMonthChange?.(filter.kind === "month" ? filter.month : "ALL");
+  };
+  const [showDateRange, setShowDateRange] = React.useState(false);
+  const [rangeFrom, setRangeFrom] = React.useState("");
+  const [rangeTo, setRangeTo] = React.useState("");
 
   // Resolve role authorizations
   const isExecutive =
@@ -824,10 +844,7 @@ export function UnifiedTaskToolbar({
     return "all";
   }, [selectedDeadline, activeTab]);
 
-  const timeLabel = React.useMemo(() => {
-    if (effectiveMonth === "ALL" || effectiveMonth === undefined) return "Thời gian";
-    return `Tháng ${effectiveMonth}`;
-  }, [effectiveMonth]);
+  const timeLabel = React.useMemo(() => getTaskTimeFilterLabel(effectiveTimeFilter), [effectiveTimeFilter]);
 
   const statusLabel = React.useMemo(() => {
     if (!effectiveStatus || effectiveStatus === "all" || effectiveStatus === "ALL") {
@@ -921,7 +938,7 @@ export function UnifiedTaskToolbar({
     isExecutiveRole,
   ]);
 
-  const isMonthActive = Boolean(effectiveMonth !== "ALL" && effectiveMonth !== undefined);
+  const isMonthActive = effectiveTimeFilter.kind !== "none";
   const isStatusActive = Boolean(effectiveStatus && effectiveStatus !== "all");
   const isDeadlineActive = Boolean(effectiveDeadline && effectiveDeadline !== "all");
   const isPriorityActive = Boolean(selectedPriority && selectedPriority !== "ALL");
@@ -1025,11 +1042,11 @@ export function UnifiedTaskToolbar({
       });
     }
 
-    if (effectiveMonth !== undefined && effectiveMonth !== "ALL") {
+    if (effectiveTimeFilter.kind !== "none") {
       chips.push({
         id: "month",
-        label: `Tháng ${effectiveMonth}`,
-        onRemove: () => handleEffectiveMonthChange?.("ALL"),
+        label: getTaskTimeFilterLabel(effectiveTimeFilter),
+        onRemove: () => handleTimeFilterChange(NO_TASK_TIME_FILTER),
       });
     }
 
@@ -1045,8 +1062,7 @@ export function UnifiedTaskToolbar({
     onDepartmentChange,
     selectedPriority,
     onPriorityChange,
-    effectiveMonth,
-    handleEffectiveMonthChange,
+    effectiveTimeFilter,
   ]);
 
   // Optional 12 month cycle list for year
@@ -1251,7 +1267,7 @@ export function UnifiedTaskToolbar({
                 tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEffectiveMonthChange?.("ALL");
+                  handleTimeFilterChange(NO_TASK_TIME_FILTER);
                 }}
                 title="Xóa lọc thời gian"
                 aria-label="Xóa lọc thời gian"
@@ -1273,36 +1289,39 @@ export function UnifiedTaskToolbar({
               role="dialog"
               aria-label="Chọn thời gian làm việc"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  handleEffectiveMonthChange?.("ALL");
-                  setIsMonthOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer mb-1.5",
-                  !isMonthActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "hover:bg-accent text-foreground"
-                )}
-              >
-                <span>Tất cả thời gian (Cả năm)</span>
-                {!isMonthActive && (
-                  <Check className="size-3.5 text-primary shrink-0" />
-                )}
-              </button>
+              <div className="space-y-0.5">
+                {([
+                  ["today", "Hôm nay"],
+                  ["this_week", "Tuần này"],
+                  ["this_month", "Tháng này"],
+                  ["overdue", "Quá hạn"],
+                ] as Array<[TaskTimePreset, string]>).map(([preset, label]) => {
+                  const selected = effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => { handleTimeFilterChange({ kind: "preset", preset }); setIsMonthOpen(false); }}
+                      className={cn("w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors", selected ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent")}
+                    >
+                      <span>{label}</span>
+                      {selected && <Check className="size-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
 
-              <div className="border-t border-border/60 my-1.5" />
+              <div className="border-t border-border/60 my-2" />
 
               <div className="grid grid-cols-3 gap-1">
                 {academicMonths.map((period) => {
-                  const isSelected = effectiveMonth === period.monthNumber;
+                  const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
                   return (
                     <button
                       key={period.monthNumber}
                       type="button"
                       onClick={() => {
-                        handleEffectiveMonthChange?.(period.monthNumber);
+                        handleTimeFilterChange({ kind: "month", month: period.monthNumber });
                         setIsMonthOpen(false);
                       }}
                       className={cn(
@@ -1317,6 +1336,42 @@ export function UnifiedTaskToolbar({
                   );
                 })}
               </div>
+
+              <div className="border-t border-border/60 my-2" />
+              {!showDateRange ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDateRange(true)}
+                  className="w-full px-2.5 py-1.5 rounded-md text-left font-medium hover:bg-accent transition-colors"
+                >
+                  Chọn khoảng ngày…
+                </button>
+              ) : (
+                <div className="space-y-2 px-1 pb-1">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <label className="space-y-1 text-[10px] text-muted-foreground">Từ ngày
+                      <input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">Đến ngày
+                      <input type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
+                    </label>
+                  </div>
+                  <div className="flex justify-end gap-1.5">
+                    <button type="button" onClick={() => setShowDateRange(false)} className="h-7 px-2 rounded-md hover:bg-accent">Hủy</button>
+                    <button
+                      type="button"
+                      disabled={!isValidTaskDateRange(rangeFrom, rangeTo)}
+                      onClick={() => {
+                        if (!isValidTaskDateRange(rangeFrom, rangeTo)) return;
+                        handleTimeFilterChange({ kind: "range", from: rangeFrom, to: rangeTo });
+                        setShowDateRange(false);
+                        setIsMonthOpen(false);
+                      }}
+                      className="h-7 px-2.5 rounded-md bg-primary text-primary-foreground disabled:opacity-40"
+                    >Áp dụng</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

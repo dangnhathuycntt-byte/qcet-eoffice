@@ -13,6 +13,7 @@ import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate, getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
+import { getTaskContentPreview } from "@/lib/task-content-preview";
 
 export interface LinearPeekPreviewModalProps {
   task: SchoolTask | StaffTask | null;
@@ -189,11 +190,20 @@ export function LinearPeekPreviewModal({
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
 
-  const subTasks = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
+  const subTasks = isSchool && Array.isArray(schoolTask?.subTasks)
+    ? Array.from(new Map(schoolTask.subTasks.map((subtask) => [subtask.id, subtask])).values())
+    : [];
 
-  const taskDescription = isSchool
+  const rawTaskDescription = isSchool
     ? schoolTask?.description
     : staffTask?.deliverableDescription || (task as any).description;
+  const taskDescription = getTaskContentPreview(rawTaskDescription);
+  const parentTaskCode = isSchool
+    ? schoolTask?.parentTaskCode || schoolTask?.parentTask?.code
+    : staffTask?.parentSchoolTaskCode || staffTask?.parentTask?.code;
+  const parentTaskTitle = isSchool
+    ? schoolTask?.parentTaskTitle || schoolTask?.parentTask?.title
+    : staffTask?.parentSchoolTaskTitle || staffTask?.parentTask?.title;
 
   const relativeDue = getRelativeDueTime(task.dueDate);
 
@@ -302,6 +312,15 @@ export function LinearPeekPreviewModal({
             </button>
           </div>
         </div>
+
+        {(parentTaskTitle || parentTaskCode) && (
+          <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground/70" aria-label="Công việc chính">
+            <span className="shrink-0">Công việc chính</span>
+            <span aria-hidden="true">·</span>
+            {parentTaskCode && <span className="shrink-0 font-mono text-muted-foreground/90">{parentTaskCode}</span>}
+            {parentTaskTitle && <span className="truncate text-foreground/70" title={parentTaskTitle}>{parentTaskTitle}</span>}
+          </div>
+        )}
 
         {/* Title — trọng tâm chính, leading thoáng, 2-3 dòng */}
         <h2 className="text-[17px] sm:text-[18px] font-semibold text-foreground leading-snug tracking-tight line-clamp-3">

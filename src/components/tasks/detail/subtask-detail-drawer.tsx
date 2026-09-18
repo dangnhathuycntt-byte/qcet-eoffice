@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   X,
-  ExternalLink,
   ArrowLeft,
   CircleDashed,
   Signal,
@@ -25,7 +24,6 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStatus, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import Link from "next/link";
 
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;
@@ -97,28 +95,40 @@ export function SubtaskDetailDrawer({
   // Handlers
   const handleTitleChange = async (newTitle: string) => {
     if (!subtask) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
     const res = await fetch(`/api/tasks/${subtask.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle }),
+      body: JSON.stringify({
+        title: newTitle.trim(),
+        ...(currentVersion !== undefined ? { expectedVersion: currentVersion } : {}),
+      }),
     });
     if (!res.ok) throw new Error("Không thể lưu tiêu đề việc thành phần");
 
-    const updated = { ...subtask, title: newTitle };
+    const data = await res.json().catch(() => null);
+    const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
+    const updated = { ...subtask, title: newTitle.trim(), version: nextVersion };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
   };
 
   const handleDescriptionChange = async (newDesc: string) => {
     if (!subtask) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
     const res = await fetch(`/api/tasks/${subtask.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: newDesc }),
+      body: JSON.stringify({
+        description: newDesc.trim(),
+        ...(currentVersion !== undefined ? { expectedVersion: currentVersion } : {}),
+      }),
     });
     if (!res.ok) throw new Error("Không thể lưu mô tả việc thành phần");
 
-    const updated = { ...subtask, deliverableDescription: newDesc } as StaffTask;
+    const data = await res.json().catch(() => null);
+    const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
+    const updated = { ...subtask, deliverableDescription: newDesc.trim(), description: newDesc.trim(), version: nextVersion } as StaffTask;
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
   };
@@ -126,14 +136,15 @@ export function SubtaskDetailDrawer({
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (!subtask) return;
     setIsStatusDropdownOpen(false);
-    const previousStatus = subtask.status;
-    const res = await updateTaskStatus(subtask.id, newStatus);
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
+    const res = await updateTaskStatus(subtask.id, newStatus, undefined, currentVersion);
     if (!res.ok) {
       notifyError(res.reason || res.error || "Không thể cập nhật trạng thái nhiệm vụ thành phần", "Lỗi đổi trạng thái");
       return;
     }
 
-    const updated = { ...subtask, status: newStatus };
+    const nextVersion = (res.data as any)?.version ?? (res.data as any)?.data?.version ?? (currentVersion ? currentVersion + 1 : 1);
+    const updated = { ...subtask, status: newStatus, version: nextVersion };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
@@ -142,13 +153,19 @@ export function SubtaskDetailDrawer({
   const handlePriorityChange = async (newPriority: TaskPriority) => {
     if (!subtask) return;
     setIsPriorityDropdownOpen(false);
-    const res = await updateTaskPriority(subtask.id, newPriority);
-    if (!res.ok) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
+    const res = await updateTaskPriority(subtask.id, newPriority, currentVersion);
+    if (!res.ok) {
+      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
+      return;
+    }
 
     const cleanPriority: TaskPriority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
-    const updated = { ...subtask, priority: cleanPriority };
+    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.version ?? (currentVersion ? currentVersion + 1 : 1);
+    const updated = { ...subtask, priority: cleanPriority, version: nextVersion };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
+    notifySuccess("Đã cập nhật độ ưu tiên việc thành phần");
   };
 
   const handleStartDateChange = async (newStartDate: string) => {
@@ -250,16 +267,6 @@ export function SubtaskDetailDrawer({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {/* Nút Mở toàn trang */}
-            <Link
-              href={`/tasks/${subtask.id}`}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              title="Mở toàn trang"
-            >
-              <ExternalLink className="size-3.5" />
-              <span className="hidden sm:inline">Mở toàn trang</span>
-            </Link>
-
             {/* Nút Đóng */}
             <button
               type="button"

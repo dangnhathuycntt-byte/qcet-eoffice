@@ -928,8 +928,8 @@ export function LinearPropertiesSidebar({
                     type="button"
                     onClick={() => onNavigateTab?.("subtasks")}
                     className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Xem danh sách việc thành phần"
-                    aria-label="Xem việc thành phần"
+                    title="Thêm hoặc xem việc thành phần"
+                    aria-label="Thêm việc thành phần"
                   >
                     <Plus className="size-3.5" strokeWidth={1.5} />
                   </button>
@@ -947,8 +947,8 @@ export function LinearPropertiesSidebar({
               </div>
             </div>
 
-            {/* Danh sách việc con gọn (tối đa 3 việc gần nhất) */}
-            <div className="space-y-1.5 pt-0.5">
+            {/* Danh sách việc con gọn (Linear / Notion Style) */}
+            <div className="space-y-1 pt-0.5">
               {subTasks.slice(0, 3).map((st) => {
                 const isCompleted = st.status === "COMPLETED";
                 const statusObj = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
@@ -960,30 +960,33 @@ export function LinearPropertiesSidebar({
                     key={st.id}
                     onClick={() => onSelectSubtask && onSelectSubtask(st)}
                     className={cn(
-                      "group p-2 rounded-lg border border-border/40 hover:border-border/80 bg-background/60 hover:bg-muted/30 transition-all cursor-pointer space-y-1",
+                      "group p-2 rounded-lg border border-border/30 hover:border-border/80 bg-card/60 hover:bg-accent/40 transition-all cursor-pointer space-y-1 shadow-2xs hover:shadow-xs",
                       isCompleted && "opacity-75 bg-muted/10"
                     )}
-                    title={`Xem việc thành phần: ${st.title}`}
+                    title={`Xem chi tiết việc con: ${st.title}`}
                   >
-                    <div
-                      className={cn(
-                        "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug",
-                        isCompleted && "line-through text-muted-foreground"
-                      )}
-                    >
-                      {st.title}
+                    <div className="flex items-start gap-1.5 min-w-0">
+                      <span className={cn("size-2 rounded-full mt-1 shrink-0", statusObj.dotClass)} />
+                      <div
+                        className={cn(
+                          "text-xs font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug flex-1",
+                          isCompleted && "line-through text-muted-foreground"
+                        )}
+                      >
+                        {st.title}
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1.5 text-[11px] text-muted-foreground pt-0.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={cn("size-1.5 rounded-full shrink-0", statusObj.dotClass)} />
+                    <div className="flex items-center justify-between gap-1.5 text-[11px] text-muted-foreground pl-3.5 pt-0.5">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <User className="size-3 text-muted-foreground/60 shrink-0" />
                         <span className="truncate text-[11px]" title={assigneeTitle}>
                           {assigneeTitle}
                         </span>
                       </div>
 
                       {formattedDue && (
-                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80 shrink-0">
+                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80 bg-muted/40 px-1.5 py-0.2 rounded shrink-0">
                           {formattedDue}
                         </span>
                       )}
@@ -1009,8 +1012,8 @@ export function LinearPropertiesSidebar({
                   type="button"
                   onClick={() => onNavigateTab?.("subtasks")}
                   className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Xem danh sách việc thành phần"
-                  aria-label="Xem việc thành phần"
+                  title="Thêm hoặc xem việc thành phần"
+                  aria-label="Thêm việc thành phần"
                 >
                   <Plus className="size-3.5" strokeWidth={1.5} />
                 </button>

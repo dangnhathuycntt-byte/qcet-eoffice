@@ -287,26 +287,68 @@ export function LinearTaskDetailView({
     ]);
   };
 
-  const handleCreateSubtaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
+  const handleCreateSubtaskInline = async (
+    title: string,
+    assigneeName?: string,
+    dueDate?: string,
+    assigneeId?: string
+  ) => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
+
+    let resolvedAssigneeId = assigneeId;
+    if (!resolvedAssigneeId && assigneeName) {
+      try {
+        const cleanName = assigneeName.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/, "").trim();
+        const uRes = await fetch(`/api/users?search=${encodeURIComponent(cleanName)}`);
+        const uData = await uRes.json();
+        if (uData && Array.isArray(uData.users) && uData.users.length > 0) {
+          const matched =
+            uData.users.find((u: any) => u.departmentId === "BGH" || u.department?.shortName === "BGH") ||
+            uData.users.find((u: any) => u.name?.toLowerCase().includes(cleanName.toLowerCase())) ||
+            uData.users[0];
+          if (matched) resolvedAssigneeId = matched.id;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
+
+    // Payload adhering strictly to CreateTaskInputSchema
+    const payload: Record<string, unknown> = {
+      title: trimmedTitle,
+      parentTaskId: task.id,
+      dueDate: resolvedDueDate,
+      priority: "NORMAL",
+      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
+    };
+
+    if (resolvedAssigneeId) {
+      payload.assigneeId = resolvedAssigneeId;
+    }
+    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
+    if (deptId) {
+      payload.departmentId = deptId;
+    }
 
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: trimmedTitle,
-        parentTaskId: task.id,
-        level: "DON_VI",
-        leadAssigneeName: assigneeName || undefined,
-        dueDate: dueDate || undefined,
-        departmentCode: (task as any).departmentCode || (task as any).leadDepartmentCode || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);
-      throw new Error(err?.error?.message || err?.message || "Không thể tạo việc thành phần");
+      let errorMsg = err?.error?.message || err?.message;
+      if (err?.details && typeof err.details === "object") {
+        const detailList = Object.entries(err.details)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("; ");
+        if (detailList) errorMsg = `${errorMsg || "Lỗi xác thực"}: ${detailList}`;
+      }
+      throw new Error(errorMsg || "Không thể tạo việc thành phần");
     }
 
     const data = await res.json();
@@ -315,13 +357,23 @@ export function LinearTaskDetailView({
     if (created) {
       setTask((prev) => {
         if (!isSchool || !schoolTask) return prev;
+        const resolvedName =
+          created.assigneeName ||
+          created.assignee?.name ||
+          (resolvedAssigneeId ? assigneeName : undefined) ||
+          assigneeName ||
+          "Chưa phân công";
+
         const newSubtask: StaffTask = {
           id: created.id || `sub-${Date.now()}`,
           title: created.title || trimmedTitle,
-          assigneeName: created.assigneeName || assigneeName || "Chưa phân công",
+          assigneeName: resolvedName,
+          assigneeId: created.assigneeId || resolvedAssigneeId,
           status: "NEW",
-          dueDate: created.dueDate || dueDate,
+          dueDate: created.dueDate || resolvedDueDate,
           parentSchoolTaskId: task.id,
+          parentSchoolTaskTitle: task.title,
+          parentSchoolTaskCode: task.code,
           priority: "NORMAL",
           progress: 0,
           updatedAt: new Date().toISOString(),
@@ -329,6 +381,7 @@ export function LinearTaskDetailView({
         return {
           ...prev,
           subTasks: [...(schoolTask.subTasks || []), newSubtask],
+          totalSubTasks: (schoolTask.totalSubTasks || 0) + 1,
         } as SchoolTask;
       });
       notifySuccess("Tạo việc thành phần thành công", "Thành công");

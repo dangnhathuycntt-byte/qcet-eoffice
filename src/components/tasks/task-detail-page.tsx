@@ -678,36 +678,104 @@ export function TaskDetailPage({
   };
 
   // Inline subtask creation handler
-  const handleCreateSubTaskInline = async (title: string, assigneeName?: string, dueDate?: string) => {
+  const handleCreateSubTaskInline = async (
+    title: string,
+    assigneeName?: string,
+    dueDate?: string,
+    assigneeId?: string
+  ) => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       throw new Error("Tên việc thành phần không được để trống");
     }
 
+    let resolvedAssigneeId = assigneeId;
+    if (!resolvedAssigneeId && assigneeName) {
+      try {
+        const cleanName = assigneeName.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/, "").trim();
+        const uRes = await fetch(`/api/users?search=${encodeURIComponent(cleanName)}`);
+        const uData = await uRes.json();
+        if (uData && Array.isArray(uData.users) && uData.users.length > 0) {
+          const matched =
+            uData.users.find((u: any) => u.departmentId === "BGH" || u.department?.shortName === "BGH") ||
+            uData.users.find((u: any) => u.name?.toLowerCase().includes(cleanName.toLowerCase())) ||
+            uData.users[0];
+          if (matched) resolvedAssigneeId = matched.id;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
+
+    const payload: Record<string, unknown> = {
+      title: trimmedTitle,
+      parentTaskId: task.id,
+      dueDate: resolvedDueDate,
+      priority: "NORMAL",
+      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
+    };
+
+    if (resolvedAssigneeId) {
+      payload.assigneeId = resolvedAssigneeId;
+    }
+    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
+    if (deptId) {
+      payload.departmentId = deptId;
+    }
+
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: trimmedTitle,
-        parentTaskId: task.id,
-        dueDate: dueDate || task.dueDate,
-        leadAssigneeName: assigneeName || undefined,
-        scope: "DEPARTMENT",
-        priority: "NORMAL",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => null);
-      const errMsg =
-        errJson?.error?.message ||
-        errJson?.message ||
+      let errMsg = errJson?.error?.message || errJson?.message;
+      if (errJson?.details && typeof errJson.details === "object") {
+        const detailList = Object.entries(errJson.details)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+          .join("; ");
+        if (detailList) errMsg = `${errMsg || "Lỗi xác thực"}: ${detailList}`;
+      }
+      throw new Error(
+        errMsg ||
         (res.status === 403
           ? "Bạn không có quyền tạo việc thành phần cho nhiệm vụ này (403 Forbidden)"
-          : "Không thể tạo việc thành phần. Vui lòng thử lại");
-      throw new Error(errMsg);
+          : "Không thể tạo việc thành phần. Vui lòng thử lại")
+      );
     }
 
+    const createdData = await res.json().catch(() => null);
+    const created = createdData?.task || createdData?.data;
+
+    const newSubtask: StaffTask = {
+      id: created?.id || `sub-${Date.now()}`,
+      title: created?.title || trimmedTitle,
+      assigneeName: assigneeName || created?.assigneeName || "Chưa phân công",
+      assigneeId: resolvedAssigneeId || created?.assigneeId,
+      status: "NEW",
+      dueDate: created?.dueDate || resolvedDueDate,
+      parentSchoolTaskId: task.id,
+      parentSchoolTaskTitle: task.title,
+      parentSchoolTaskCode: task.code,
+      priority: "NORMAL",
+      progress: 0,
+      updatedAt: new Date().toISOString(),
+    } as StaffTask;
+
+    setTask((prev) => {
+      if (!isSchool || !schoolTask) return prev;
+      return {
+        ...prev,
+        subTasks: [...(schoolTask.subTasks || []), newSubtask],
+        totalSubTasks: (schoolTask.totalSubTasks || 0) + 1,
+      } as SchoolTask;
+    });
+
+    notifySuccess("Tạo việc thành phần thành công", "Thành công");
     router.refresh();
   };
 

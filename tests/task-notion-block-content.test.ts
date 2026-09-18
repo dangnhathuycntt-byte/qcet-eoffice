@@ -212,6 +212,16 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "Enter must create next block"
       );
       assert.ok(
+        componentContent.includes('e.nativeEvent.isComposing') &&
+          componentContent.includes('keyCode === 229'),
+        "Must ignore Enter when IME Vietnamese composition is active to prevent duplication"
+      );
+      assert.ok(
+        componentContent.includes('contentBefore') &&
+          componentContent.includes('contentAfter'),
+        "Must split text at caret position on Enter"
+      );
+      assert.ok(
         componentContent.includes('e.key === "Backspace"'),
         "Backspace on empty block must convert to text or delete"
       );

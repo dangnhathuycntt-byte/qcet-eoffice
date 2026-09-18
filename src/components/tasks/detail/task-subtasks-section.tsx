@@ -20,17 +20,24 @@ import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { computeDueStatus, STATUS_OPTIONS } from "./task-identity-block";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
+import {
+  QCET_DEPARTMENT_GROUPS,
+  getDepartmentByCode,
+  getDepartmentForMember,
+  toCanonicalUnitCode,
+} from "@/lib/departments";
+import { useAuth } from "@/lib/auth-context";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
   subTasks: StaffTask[];
   canEdit?: boolean;
+  departmentCode?: string;
   personnel?: Array<{ id?: string; name: string; role?: string }>;
   onToggleSubtask?: (subtask: StaffTask) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onAddSubTask?: (parentId: string) => void;
-  onCreateSubTaskInline?: (title: string, assigneeName?: string, dueDate?: string) => Promise<void> | void;
+  onCreateSubTaskInline?: (title: string, assigneeName?: string, dueDate?: string, assigneeId?: string) => Promise<void> | void;
   className?: string;
 }
 
@@ -38,6 +45,7 @@ export function TaskSubtasksSection({
   parentId,
   subTasks = [],
   canEdit = true,
+  departmentCode,
   personnel,
   onToggleSubtask,
   onSelectSubtask,
@@ -48,6 +56,17 @@ export function TaskSubtasksSection({
   const totalCount = subTasks.length;
   const completedCount = subTasks.filter((s) => s.status === "COMPLETED").length;
 
+  const { user } = useAuth();
+  const effectiveDeptCode = React.useMemo(() => {
+    const raw =
+      departmentCode ||
+      user?.departmentCode ||
+      user?.department ||
+      (user?.name ? getDepartmentForMember(user.name)?.code : undefined) ||
+      "BGH";
+    return toCanonicalUnitCode(raw) || raw;
+  }, [departmentCode, user]);
+
   // Inline creation state
   const [isAddingInline, setIsAddingInline] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
@@ -55,19 +74,16 @@ export function TaskSubtasksSection({
   const [newDueDate, setNewDueDate] = React.useState("");
   const [inlineError, setInlineError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Personnel list for assignee selector
+  // Unit-scoped personnel list for assignee selector
   const [personnelList, setPersonnelList] = React.useState<Array<{ id?: string; name: string; role?: string }>>(() => {
     if (personnel && personnel.length > 0) return personnel;
-    const list: Array<{ id?: string; name: string; role?: string }> = [];
-    QCET_DEPARTMENT_GROUPS.forEach((g) => {
-      (g.personnel || g.members || []).forEach((m) => {
-        if (!list.some((existing) => existing.name === m.name)) {
-          list.push({ name: m.name, role: m.role || (m as any).title });
-        }
-      });
-    });
-    return list;
+    const dept = getDepartmentByCode(effectiveDeptCode) || QCET_DEPARTMENT_GROUPS[0];
+    return (dept?.personnel || dept?.members || []).map((m) => ({
+      name: m.name,
+      role: m.role || (m as any).title,
+    }));
   });
 
   React.useEffect(() => {
@@ -75,28 +91,47 @@ export function TaskSubtasksSection({
       setPersonnelList(personnel);
       return;
     }
-    fetch("/api/users")
+    const dept = getDepartmentByCode(effectiveDeptCode) || QCET_DEPARTMENT_GROUPS[0];
+    const initialList = (dept?.personnel || dept?.members || []).map((m) => ({
+      name: m.name,
+      role: m.role || (m as any).title,
+    }));
+    setPersonnelList(initialList);
+
+    // Fetch users for this department with search fallback to attach real DB user IDs
+    fetch(`/api/users?departmentId=${encodeURIComponent(effectiveDeptCode)}&limit=100`)
       .then((r) => r.json())
       .then((data) => {
         if (data && Array.isArray(data.users)) {
           setPersonnelList((prev) => {
-            const combined = [...prev];
-            data.users.forEach((u: any) => {
-              if (u.name && !combined.some((p) => p.name.toLowerCase() === u.name.toLowerCase())) {
-                combined.push({ id: u.id, name: u.name, role: u.role });
-              }
+            return prev.map((p) => {
+              const clean = p.name.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/, "").trim().toLowerCase();
+              const match = data.users.find(
+                (u: any) =>
+                  u.name?.toLowerCase().trim() === p.name.toLowerCase().trim() ||
+                  u.name?.toLowerCase().includes(clean) ||
+                  clean.includes(u.name?.toLowerCase())
+              );
+              return match ? { ...p, id: match.id, role: match.role || p.role } : p;
             });
-            return combined;
           });
         }
       })
       .catch(() => {});
-  }, [personnel]);
+  }, [effectiveDeptCode, personnel]);
 
   const handleOpenInline = () => {
     setInlineError(null);
     setIsAddingInline(true);
   };
+
+  React.useEffect(() => {
+    if (isAddingInline) {
+      titleInputRef.current?.focus();
+      const timer = setTimeout(() => titleInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isAddingInline]);
 
   const handleSaveInline = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,8 +141,38 @@ export function TaskSubtasksSection({
     setIsSaving(true);
     setInlineError(null);
     try {
+      const selectedPerson = personnelList.find(
+        (p) =>
+          p.name === newAssigneeName ||
+          p.name.toLowerCase() === newAssigneeName.toLowerCase()
+      );
+      let assigneeId = selectedPerson?.id;
+
+      // Fallback search by clean name if user ID not yet attached
+      if (!assigneeId && newAssigneeName) {
+        try {
+          const cleanName = newAssigneeName.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/, "").trim();
+          const uRes = await fetch(`/api/users?search=${encodeURIComponent(cleanName)}`);
+          const uData = await uRes.json();
+          if (uData && Array.isArray(uData.users) && uData.users.length > 0) {
+            const matched =
+              uData.users.find((u: any) => u.departmentId === effectiveDeptCode || u.department?.shortName === effectiveDeptCode) ||
+              uData.users.find((u: any) => u.name?.toLowerCase().includes(cleanName.toLowerCase())) ||
+              uData.users[0];
+            if (matched) assigneeId = matched.id;
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
       if (onCreateSubTaskInline) {
-        await onCreateSubTaskInline(trimmedTitle, newAssigneeName || undefined, newDueDate || undefined);
+        await onCreateSubTaskInline(
+          trimmedTitle,
+          newAssigneeName || undefined,
+          newDueDate || undefined,
+          assigneeId || undefined
+        );
       } else if (onAddSubTask) {
         onAddSubTask(parentId);
       }
@@ -177,6 +242,7 @@ export function TaskSubtasksSection({
           >
             <Circle className="size-4 text-muted-foreground/40 shrink-0" />
             <input
+              ref={titleInputRef}
               type="text"
               required
               autoFocus
