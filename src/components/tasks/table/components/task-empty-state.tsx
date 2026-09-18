@@ -51,35 +51,48 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   let displayDescription = description;
   const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
 
-  const isTimeSoleActive = Boolean(
-    (academicMonth !== undefined && academicMonth !== "ALL") &&
-    !isSearchEmpty &&
-    (!department || department === "ALL") &&
-    (!category || category === "ALL") &&
-    (!priority || priority === "ALL") &&
-    (!status || status === "ALL" || status === "all") &&
-    (!attention || attention === "ALL" || attention === "all") &&
-    (!activeTab || activeTab === "all" || activeTab === "ALL")
-  );
+  const activeFiltersCount = [
+    Boolean(isSearchEmpty),
+    Boolean(department && department !== "ALL"),
+    Boolean(category && category !== "ALL"),
+    Boolean(priority && priority !== "ALL"),
+    Boolean(status && status !== "ALL" && status !== "all"),
+    Boolean(attention && attention !== "ALL" && attention !== "all"),
+    Boolean(academicMonth !== undefined && academicMonth !== "ALL"),
+    Boolean(activeTab && activeTab !== "all" && activeTab !== "ALL"),
+  ].filter(Boolean).length;
 
-  const hasFilterActive = Boolean(
-    isSearchEmpty ||
-    (department && department !== "ALL") ||
-    (category && category !== "ALL") ||
-    (priority && priority !== "ALL") ||
-    (status && status !== "ALL" && status !== "all") ||
-    (attention && attention !== "ALL" && attention !== "all") ||
-    (academicMonth !== undefined && academicMonth !== "ALL") ||
-    (activeTab &&
-      activeTab !== "all" &&
-      activeTab !== "ALL")
-  );
+  const hasFilterActive = activeFiltersCount > 0;
 
   if (!displayTitle) {
-    if (isTimeSoleActive) {
+    if (activeFiltersCount > 1) {
+      displayTitle = "Không có nhiệm vụ phù hợp";
+      displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
+    } else if (isSearchEmpty) {
+      displayTitle = `Không tìm thấy nhiệm vụ với từ khóa "${searchQuery}"`;
+      displayDescription =
+        "Vui lòng thử tìm kiếm với từ khóa khác, hoặc kiểm tra lại bộ lọc danh mục và trạng thái.";
+    } else if (activeTab === "overdue" || attention === "overdue") {
+      displayTitle = "Không có nhiệm vụ nào quá hạn";
+      displayDescription =
+        "Tuyệt vời! Tất cả các nhiệm vụ đều đang đúng tiến độ hoặc đã được giải quyết.";
+    } else if (
+      status === "WAITING_APPROVAL" ||
+      status === "waiting_approval" ||
+      activeTab === "waiting_approval" ||
+      attention === "requires_my_approval"
+    ) {
+      displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
+      displayDescription =
+        "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
+    } else if (department && department !== "ALL") {
+      displayTitle = `Đơn vị "${department}" chưa có nhiệm vụ`;
+      displayDescription =
+        "Không có nhiệm vụ nào được phân công hoặc đăng ký cho đơn vị này theo các tiêu chí hiện tại.";
+    } else if (academicMonth !== undefined && academicMonth !== "ALL") {
       displayTitle = `Không có nhiệm vụ trong Tháng ${academicMonth}`;
       displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
-    } else if (hasFilterActive) {
+    } else if (activeFiltersCount > 0) {
       displayTitle = "Không có nhiệm vụ phù hợp";
       displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
     } else {

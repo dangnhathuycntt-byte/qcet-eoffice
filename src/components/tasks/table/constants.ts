@@ -84,7 +84,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
-    label: "Cần chỉnh sửa",
+    label: "Chờ phê duyệt",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",

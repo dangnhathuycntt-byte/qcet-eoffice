@@ -752,8 +752,8 @@ export function UnifiedAdaptiveWorkspace({
       role === "TRUONG_PHONG" ||
       role === "TRUONG_DON_VI" ||
       role === "TRUONG_KHOA" ||
-      Boolean(user?.department) ||
-      Boolean(user?.departmentCode)
+      role === "PHO_PHONG" ||
+      role === "PHO_KHOA"
     ) {
       return "unit";
     }
@@ -2088,7 +2088,7 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          createButtonLabel="Tạo việc"
+          createButtonLabel="+ Giao việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           selectedStatus={currentStatus || "all"}
@@ -2318,6 +2318,9 @@ export function UnifiedAdaptiveWorkspace({
           data-slot="task-workspace-canvas"
           className="w-full space-y-3 min-w-0"
         >
+          {/* Adaptive Metric Strip in full-width canvas (hidden or accessible across desktop/mobile) */}
+          <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
+
           <div
             data-slot="full-width-task-canvas"
             className="w-full space-y-3 min-w-0"

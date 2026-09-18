@@ -87,7 +87,7 @@ export function TaskTableHeader({
     }
     return (
       <ArrowUpDown
-        className="size-3 text-slate-400 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
+        className="size-3 text-muted-foreground opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
         strokeWidth={1.5}
       />
     );
@@ -99,11 +99,11 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 backdrop-blur-xs select-none",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-semibold text-slate-700 dark:text-zinc-300")}>
+      <tr className={cn(rowHeightClass, "text-xs font-semibold text-muted-foreground")}>
         {/* Optional Selection Checkbox (only rendered when explicitly enabled for batch ops) */}
         {showSelection && (
           <th

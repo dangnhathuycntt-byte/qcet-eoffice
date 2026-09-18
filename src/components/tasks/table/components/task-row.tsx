@@ -57,12 +57,19 @@ export interface ParsedLeadAssignee {
 
 export function parseLeadAssignee(
   rawName?: string,
-  department?: string
+  department?: string | { name?: string; code?: string }
 ): ParsedLeadAssignee {
+  const deptStr =
+    typeof department === "string"
+      ? department
+      : department && typeof department === "object"
+      ? department.name || department.code || ""
+      : "";
+
   if (!rawName || !rawName.trim()) {
     return {
       primaryName: "QCET",
-      subtext: department || "",
+      subtext: deptStr,
     };
   }
 
@@ -91,8 +98,8 @@ export function parseLeadAssignee(
   if (prefix) subtextParts.push(prefix);
   if (parenthetical) {
     subtextParts.push(parenthetical);
-  } else if (department && !prefix.includes(department)) {
-    subtextParts.push(department);
+  } else if (deptStr && !prefix.includes(deptStr)) {
+    subtextParts.push(deptStr);
   }
 
   return {
@@ -163,7 +170,7 @@ function HealthIndicator({
 }) {
   if (status === "COMPLETED") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90 dark:text-emerald-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90">
         <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
         <span className="font-medium">Hoàn thành</span>
       </div>
@@ -171,7 +178,7 @@ function HealthIndicator({
   }
   if (isOverdue) {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700">
         <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
         <span className="font-medium">Quá hạn</span>
       </div>
@@ -180,7 +187,7 @@ function HealthIndicator({
   if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
     const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700">
         <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
         <span className="font-medium">{label}</span>
       </div>
@@ -188,7 +195,7 @@ function HealthIndicator({
   }
   if (status === "IN_PROGRESS") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-300">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground">
         <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
         <span className="font-medium">Đang thực hiện</span>
       </div>
@@ -196,8 +203,8 @@ function HealthIndicator({
   }
   // Mới
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
-      <span className="size-1.5 rounded-full bg-slate-400 shrink-0" />
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
       <span className="font-medium">Mới</span>
     </div>
   );
@@ -207,7 +214,7 @@ function HealthIndicator({
  * Circular Progress Ring (Linear style)
  * Clean: When progress is 0%, render subtle plain text to avoid visual clutter
  */
-function CircularProgressRing({ percent }: { percent: number }) {
+export function CircularProgressRing({ percent }: { percent: number }) {
   const bounded = Math.min(100, Math.max(0, percent || 0));
   if (bounded === 0) {
     return (
@@ -221,7 +228,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
   const strokeDashoffset = circumference - (circumference * bounded) / 100;
 
   return (
-    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-foreground font-medium">
       <svg className="size-3.5 shrink-0 -rotate-90" viewBox="0 0 16 16">
         <circle
           cx="8"
@@ -230,7 +237,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-slate-200 dark:text-zinc-700"
+          className="text-border"
         />
         <circle
           cx="8"
@@ -325,7 +332,10 @@ export const TaskRow = React.memo(function TaskRow({
   );
 
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
-  const departmentName = task.department || driInfo.subtext;
+  const departmentName =
+    typeof task.department === "string"
+      ? task.department
+      : (task.department as any)?.name || (task.department as any)?.code || driInfo.subtext;
 
   const coAssigneesList: string[] = React.useMemo(() => {
     const names = new Set<string>();
@@ -404,16 +414,16 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-all select-none bg-transparent text-slate-900 dark:text-zinc-100",
+        "group cursor-pointer transition-all select-none bg-transparent text-foreground",
         rowHeightClass,
         // State 1: Hovered (Linear soft rounded row)
-        "hover:bg-muted/50 dark:hover:bg-zinc-800/50",
+        "hover:bg-muted/50",
         // State 2: Focused (WCAG 2.2 AA Focus visible)
         "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
         // State 3: Selected (Linear Soft Rounded Highlight)
-        isSelected && "bg-primary/[0.08] dark:bg-primary/[0.14]",
+        isSelected && "bg-primary/[0.08]",
         // State 4: Previewing (Peek preview)
-        isPreviewing && "bg-blue-50/70 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40",
+        isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
         isActive && !isPreviewing && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
         isExpanded && "bg-muted/20",
@@ -455,6 +465,11 @@ export const TaskRow = React.memo(function TaskRow({
 
           {/* Title - Clean & Straight Aligned */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            {(task.code || task.taskCode) && (
+              <span className="font-mono text-[11px] font-semibold text-muted-foreground/80 tabular-nums shrink-0">
+                {task.code || task.taskCode}
+              </span>
+            )}
             <span
               className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
@@ -494,7 +509,7 @@ export const TaskRow = React.memo(function TaskRow({
                   className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
                 />
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium tabular-nums text-muted-foreground border border-border/60">
                   {getInitials(driInfo.primaryName)}
                 </span>
               )}
@@ -544,7 +559,7 @@ export const TaskRow = React.memo(function TaskRow({
                     ? "text-rose-600 font-semibold"
                     : slaStatus.isToday
                     ? "text-amber-600 font-semibold"
-                    : "text-slate-600 dark:text-zinc-400 font-normal"
+                    : "text-muted-foreground font-normal"
                 )}
                 title="Thời hạn"
               >
