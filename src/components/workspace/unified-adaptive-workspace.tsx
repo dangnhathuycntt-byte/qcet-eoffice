@@ -752,8 +752,8 @@ export function UnifiedAdaptiveWorkspace({
       role === "TRUONG_PHONG" ||
       role === "TRUONG_DON_VI" ||
       role === "TRUONG_KHOA" ||
-      Boolean(user?.department) ||
-      Boolean(user?.departmentCode)
+      role === "PHO_PHONG" ||
+      role === "PHO_KHOA"
     ) {
       return "unit";
     }
@@ -2088,7 +2088,7 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          createButtonLabel="Tạo việc"
+          createButtonLabel="+ Giao việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           selectedStatus={currentStatus || "all"}
@@ -2316,11 +2316,26 @@ export function UnifiedAdaptiveWorkspace({
       ) : (
         <div
           data-slot="task-workspace-canvas"
-          className="w-full space-y-3 min-w-0"
+          className="w-full space-y-2.5 min-w-0"
         >
+          {/* Inline summary strip — replaces KPI dashboard cards */}
+          <div
+            data-slot="task-summary-strip"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none pb-0.5"
+          >
+            <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
+            <span>nhiệm vụ</span>
+            <span className="text-border">·</span>
+            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : ""}>{metrics.waitingApprovalCount}</span>
+            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600" : ""}>chờ duyệt</span>
+            <span className="text-border">·</span>
+            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : ""}>{metrics.urgentOverdueCount}</span>
+            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600" : ""}>quá hạn</span>
+          </div>
+
           <div
             data-slot="full-width-task-canvas"
-            className="w-full space-y-3 min-w-0"
+            className="w-full space-y-1 min-w-0"
           >
             {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
@@ -2359,7 +2374,7 @@ export function UnifiedAdaptiveWorkspace({
               </div>
             </div>
           ) : (
-            <div className="pt-0.5">
+            <div>
               {viewMode === "table" ? (
                 <ModularCascadingTaskTable
                   tasks={displayedTasks}

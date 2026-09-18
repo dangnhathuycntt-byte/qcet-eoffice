@@ -28,15 +28,15 @@ export interface AdaptiveScopeHeaderProps {
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
-  unit: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
-  my: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
+  school: "text-amber-700 bg-amber-50/80 border-amber-300 font-bold",
+  unit: "text-blue-700 bg-blue-50/80 border-blue-300 font-bold",
+  my: "text-emerald-700 bg-emerald-50/80 border-emerald-300 font-bold",
 };
 
 const scopeBadgeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "bg-primary/10 text-primary border-primary/20",
-  unit: "bg-primary/10 text-primary border-primary/20",
-  my: "bg-primary/10 text-primary border-primary/20",
+  school: "bg-amber-100 text-amber-800 border-amber-200",
+  unit: "bg-blue-100 text-blue-800 border-blue-200",
+  my: "bg-emerald-100 text-emerald-800 border-emerald-200",
 };
 
 export function syncScopeToUrl(scope: WorkspaceScope) {
@@ -138,7 +138,7 @@ export function AdaptiveScopeHeader({
       label: "Toàn trường",
       shortLabel: "Trường",
       icon: School,
-      visible: true,
+      visible: isExecutive,
     },
   ];
 
@@ -173,7 +173,7 @@ export function AdaptiveScopeHeader({
               const Icon = s.icon;
               const isActive = activeScope === s.id;
               const count = badgeCounts?.[s.id];
-              const showBadge = typeof count === "number" && !isNaN(count);
+              const showBadge = typeof count === "number" && !isNaN(count) && count > 0;
               const isUnitUnassigned = s.id === "unit" && isUnassigned;
 
               return (
@@ -202,13 +202,13 @@ export function AdaptiveScopeHeader({
                   <span className="sm:hidden">{s.shortLabel}</span>
                   {showBadge && (
                     <span
-                      data-slot="scope-badge-count"
-                      data-scope={s.id}
+                      data-slot="scope-badge"
+                      aria-label={`${count} nhiệm vụ`}
                       className={cn(
-                        "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold",
+                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
                         isActive
-                          ? "bg-muted text-foreground border border-border/60"
-                          : "bg-muted/80 text-muted-foreground"
+                          ? scopeBadgeActiveStyles[s.id]
+                          : "bg-muted text-muted-foreground border-border/60"
                       )}
                     >
                       {count}
@@ -297,7 +297,7 @@ export function AdaptiveScopeHeader({
             className="hidden sm:inline-flex h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs hover:bg-primary/90 hover:brightness-105 active:scale-[0.98] cursor-pointer"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-            <span>Tạo nhiệm vụ</span>
+            <span>{isExecutive ? "Giao nhiệm vụ" : "Tạo nhiệm vụ"}</span>
           </Button>
         )}
       </div>

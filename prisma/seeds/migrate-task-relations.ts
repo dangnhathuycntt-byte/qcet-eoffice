@@ -90,6 +90,10 @@ export interface MigrationSummary {
   tasksUpdatedWithLeadUnit: number;
 }
 
+export interface MigrateTaskRelationsOptions {
+  taskIds?: string[];
+}
+
 /**
  * Idempotent backfill script that reads existing Task records and creates TaskActors:
  * 1. For each task with assigneeId (or primary assignee), creates a TaskActor with role 'DRI', isPrimaryDRI: true.
@@ -97,7 +101,8 @@ export interface MigrationSummary {
  * 3. For each task with departmentId, matches code against OrganizationalUnit and sets leadUnitId and TaskActor 'LEAD_UNIT'.
  */
 export async function migrateTaskRelations(
-  client?: PrismaClient
+  client?: PrismaClient,
+  options?: MigrateTaskRelationsOptions
 ): Promise<MigrationSummary> {
   const prisma = client || new PrismaClient();
 
@@ -110,8 +115,9 @@ export async function migrateTaskRelations(
     orgUnitByCode.set(u.code, u);
   }
 
-  // 2. Tải toàn bộ tasks cùng quan hệ liên quan
+  // 2. Tải tasks cùng quan hệ liên quan (có thể giới hạn qua options.taskIds)
   const tasks = await prisma.task.findMany({
+    where: options?.taskIds ? { id: { in: options.taskIds } } : undefined,
     include: {
       assignees: true,
       actors: true,
@@ -126,147 +132,172 @@ export async function migrateTaskRelations(
   let tasksUpdatedWithLeadUnit = 0;
 
   for (const task of tasks) {
-    // ----------------------------------------------------
-    // 1. DRI Actor: Identify assigneeId
-    // ----------------------------------------------------
-    const primaryAssignee =
-      task.assignees
-        .filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER)
-        .sort((a, b) => b.assignedAt.getTime() - a.assignedAt.getTime())[0] ??
-      task.assignees[0];
+    try {
+      // ----------------------------------------------------
+      // 1. DRI Actor: Identify assigneeId
+      // ----------------------------------------------------
+      const primaryAssignee =
+        task.assignees
+          .filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER)
+          .sort((a, b) => b.assignedAt.getTime() - a.assignedAt.getTime())[0] ??
+        task.assignees[0];
 
-    const assigneeId = (task as any).assigneeId ?? primaryAssignee?.userId;
+      const assigneeId = (task as any).assigneeId ?? primaryAssignee?.userId;
 
-    if (assigneeId) {
-      const existingDRI = task.actors.find(
-        (a) => a.role === TaskActorRole.DRI && a.userId === assigneeId
-      );
-
-      if (!existingDRI) {
-        // Demote any existing non-matching primary DRI if present
-        const otherExistingDRIs = task.actors.filter(
-          (a) => a.role === TaskActorRole.DRI && a.userId !== assigneeId
+      if (assigneeId) {
+        const existingDRI = task.actors.find(
+          (a) => a.role === TaskActorRole.DRI && a.userId === assigneeId
         );
-        for (const oldDri of otherExistingDRIs) {
+
+        if (!existingDRI) {
+          // Demote any existing non-matching primary DRI if present
+          const otherExistingDRIs = task.actors.filter(
+            (a) => a.role === TaskActorRole.DRI && a.userId !== assigneeId
+          );
+          for (const oldDri of otherExistingDRIs) {
+            await prisma.taskActor.update({
+              where: { id: oldDri.id },
+              data: {
+                role: TaskActorRole.COLLABORATOR,
+                isPrimaryDRI: false,
+              },
+            });
+          }
+
+          // Upsert target user as primary DRI
+          const existingActorForUser = task.actors.find(
+            (a) => a.userId === assigneeId
+          );
+
+          if (existingActorForUser) {
+            await prisma.taskActor.update({
+              where: { id: existingActorForUser.id },
+              data: {
+                role: TaskActorRole.DRI,
+                isPrimaryDRI: true,
+                assignedById: task.createdById,
+              },
+            });
+          } else {
+            await prisma.taskActor.create({
+              data: {
+                taskId: task.id,
+                userId: assigneeId,
+                role: TaskActorRole.DRI,
+                isPrimaryDRI: true,
+                assignedById: task.createdById,
+                appointedAt: task.createdAt,
+              },
+            });
+          }
+          driCount++;
+        } else if (!existingDRI.isPrimaryDRI) {
           await prisma.taskActor.update({
-            where: { id: oldDri.id },
-            data: {
-              role: TaskActorRole.COLLABORATOR,
-              isPrimaryDRI: false,
+            where: { id: existingDRI.id },
+            data: { isPrimaryDRI: true },
+          });
+          driCount++;
+        }
+      }
+
+      // ----------------------------------------------------
+      // 2. ASSIGNER Actor: from createdById
+      // ----------------------------------------------------
+      if (task.createdById) {
+        let hasAssigner = task.actors.some(
+          (a) => a.role === TaskActorRole.ASSIGNER && a.userId === task.createdById
+        );
+
+        if (!hasAssigner) {
+          const count = await prisma.taskActor.count({
+            where: {
+              taskId: task.id,
+              userId: task.createdById,
+              role: TaskActorRole.ASSIGNER,
             },
           });
+          hasAssigner = count > 0;
         }
 
-        // Upsert target user as primary DRI
-        const existingActorForUser = task.actors.find(
-          (a) => a.userId === assigneeId
+        if (!hasAssigner) {
+          const userExists = await prisma.user.count({
+            where: { id: task.createdById },
+          });
+
+          if (userExists > 0) {
+            await prisma.taskActor.create({
+              data: {
+                taskId: task.id,
+                userId: task.createdById,
+                role: TaskActorRole.ASSIGNER,
+                isPrimaryDRI: false,
+                assignedById: task.createdById,
+                appointedAt: task.createdAt,
+              },
+            });
+            assignerCount++;
+          }
+        }
+      }
+
+      // ----------------------------------------------------
+      // 3. LEAD_UNIT: from departmentId / leadUnitId
+      // ----------------------------------------------------
+      let targetOrgUnit: OrganizationalUnit | undefined;
+
+      if (task.leadUnitId) {
+        targetOrgUnit = orgUnits.find((u) => u.id === task.leadUnitId);
+      } else if (task.departmentId) {
+        const canonicalCode =
+          DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId] ??
+          DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId.toUpperCase()];
+
+        if (canonicalCode && orgUnitByCode.has(canonicalCode)) {
+          targetOrgUnit = orgUnitByCode.get(canonicalCode);
+        } else {
+          // Direct code or ID fallback match
+          targetOrgUnit = orgUnits.find(
+            (u) =>
+              u.code.toLowerCase() === task.departmentId?.toLowerCase() ||
+              u.id === task.departmentId
+          );
+        }
+
+        if (targetOrgUnit) {
+          await prisma.task.update({
+            where: { id: task.id },
+            data: { leadUnitId: targetOrgUnit.id },
+          });
+          tasksUpdatedWithLeadUnit++;
+        }
+      }
+
+      if (targetOrgUnit) {
+        const existingLeadUnitActor = task.actors.find(
+          (a) =>
+            a.role === TaskActorRole.LEAD_UNIT && a.unitId === targetOrgUnit?.id
         );
 
-        if (existingActorForUser) {
-          await prisma.taskActor.update({
-            where: { id: existingActorForUser.id },
-            data: {
-              role: TaskActorRole.DRI,
-              isPrimaryDRI: true,
-              assignedById: task.createdById,
-            },
-          });
-        } else {
+        if (!existingLeadUnitActor) {
           await prisma.taskActor.create({
             data: {
               taskId: task.id,
-              userId: assigneeId,
-              role: TaskActorRole.DRI,
-              isPrimaryDRI: true,
+              unitId: targetOrgUnit.id,
+              role: TaskActorRole.LEAD_UNIT,
+              isPrimaryDRI: false,
               assignedById: task.createdById,
               appointedAt: task.createdAt,
             },
           });
+          leadUnitCount++;
         }
-        driCount++;
-      } else if (!existingDRI.isPrimaryDRI) {
-        await prisma.taskActor.update({
-          where: { id: existingDRI.id },
-          data: { isPrimaryDRI: true },
-        });
-        driCount++;
       }
-    }
-
-    // ----------------------------------------------------
-    // 2. ASSIGNER Actor: from createdById
-    // ----------------------------------------------------
-    if (task.createdById) {
-      const existingAssigner = task.actors.find(
-        (a) => a.role === TaskActorRole.ASSIGNER && a.userId === task.createdById
-      );
-
-      if (!existingAssigner) {
-        await prisma.taskActor.create({
-          data: {
-            taskId: task.id,
-            userId: task.createdById,
-            role: TaskActorRole.ASSIGNER,
-            isPrimaryDRI: false,
-            assignedById: task.createdById,
-            appointedAt: task.createdAt,
-          },
-        });
-        assignerCount++;
+    } catch (err: any) {
+      if (err?.code === "P2003" || err?.code === "P2025") {
+        // Task or relation was concurrently deleted during migration scan; safely ignore
+        continue;
       }
-    }
-
-    // ----------------------------------------------------
-    // 3. LEAD_UNIT: from departmentId / leadUnitId
-    // ----------------------------------------------------
-    let targetOrgUnit: OrganizationalUnit | undefined;
-
-    if (task.leadUnitId) {
-      targetOrgUnit = orgUnits.find((u) => u.id === task.leadUnitId);
-    } else if (task.departmentId) {
-      const canonicalCode =
-        DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId] ??
-        DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId.toUpperCase()];
-
-      if (canonicalCode && orgUnitByCode.has(canonicalCode)) {
-        targetOrgUnit = orgUnitByCode.get(canonicalCode);
-      } else {
-        // Direct code or ID fallback match
-        targetOrgUnit = orgUnits.find(
-          (u) =>
-            u.code.toLowerCase() === task.departmentId?.toLowerCase() ||
-            u.id === task.departmentId
-        );
-      }
-
-      if (targetOrgUnit) {
-        await prisma.task.update({
-          where: { id: task.id },
-          data: { leadUnitId: targetOrgUnit.id },
-        });
-        tasksUpdatedWithLeadUnit++;
-      }
-    }
-
-    if (targetOrgUnit) {
-      const existingLeadUnitActor = task.actors.find(
-        (a) =>
-          a.role === TaskActorRole.LEAD_UNIT && a.unitId === targetOrgUnit?.id
-      );
-
-      if (!existingLeadUnitActor) {
-        await prisma.taskActor.create({
-          data: {
-            taskId: task.id,
-            unitId: targetOrgUnit.id,
-            role: TaskActorRole.LEAD_UNIT,
-            isPrimaryDRI: false,
-            assignedById: task.createdById,
-            appointedAt: task.createdAt,
-          },
-        });
-        leadUnitCount++;
-      }
+      throw err;
     }
   }
 

@@ -153,22 +153,32 @@ export function SubtaskDetailDrawer({
 
   const handleStartDateChange = async (newStartDate: string) => {
     if (!subtask) return;
-    const res = await updateTaskStartDate(subtask.id, newStartDate);
-    if (!res.ok) return;
+    const res = await updateTaskStartDate(subtask.id, newStartDate, (subtask as any).version);
+    if (!res.ok) {
+      notifyError(res.error || "Không thể cập nhật ngày bắt đầu", "Lỗi cập nhật");
+      return;
+    }
 
-    const updated = { ...subtask, startDate: newStartDate } as StaffTask;
+    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (subtask as any).version;
+    const updated = { ...subtask, startDate: newStartDate, version: nextVersion } as StaffTask;
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
+    notifySuccess("Đã cập nhật ngày bắt đầu việc con");
   };
 
   const handleDueDateChange = async (newDueDate: string) => {
     if (!subtask) return;
-    const res = await updateTaskDueDate(subtask.id, newDueDate);
-    if (!res.ok) return;
+    const res = await updateTaskDueDate(subtask.id, newDueDate, (subtask as any).version);
+    if (!res.ok) {
+      notifyError(res.error || "Không thể cập nhật hạn hoàn thành", "Lỗi cập nhật");
+      return;
+    }
 
-    const updated = { ...subtask, dueDate: newDueDate };
+    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (subtask as any).version;
+    const updated = { ...subtask, dueDate: newDueDate, version: nextVersion };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
+    notifySuccess("Đã cập nhật hạn hoàn thành việc con");
   };
 
   // Keyboard shortcut: Escape để đóng drawer (khi không sửa text)

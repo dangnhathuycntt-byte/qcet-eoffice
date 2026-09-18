@@ -47,6 +47,9 @@ export interface TaskRowProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<void> | void;
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
+  showTaskCode?: boolean;
+  /** Position within a contiguous selection group: 'first' | 'middle' | 'last' | 'only' | null */
+  selectionGroupPosition?: "first" | "middle" | "last" | "only" | null;
   className?: string;
 }
 
@@ -57,12 +60,19 @@ export interface ParsedLeadAssignee {
 
 export function parseLeadAssignee(
   rawName?: string,
-  department?: string
+  department?: string | { name?: string; code?: string }
 ): ParsedLeadAssignee {
+  const deptStr =
+    typeof department === "string"
+      ? department
+      : department && typeof department === "object"
+      ? department.name || department.code || ""
+      : "";
+
   if (!rawName || !rawName.trim()) {
     return {
       primaryName: "QCET",
-      subtext: department || "",
+      subtext: deptStr,
     };
   }
 
@@ -91,8 +101,8 @@ export function parseLeadAssignee(
   if (prefix) subtextParts.push(prefix);
   if (parenthetical) {
     subtextParts.push(parenthetical);
-  } else if (department && !prefix.includes(department)) {
-    subtextParts.push(department);
+  } else if (deptStr && !prefix.includes(deptStr)) {
+    subtextParts.push(deptStr);
   }
 
   return {
@@ -163,7 +173,7 @@ function HealthIndicator({
 }) {
   if (status === "COMPLETED") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90 dark:text-emerald-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90">
         <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
         <span className="font-medium">Hoàn thành</span>
       </div>
@@ -171,7 +181,7 @@ function HealthIndicator({
   }
   if (isOverdue) {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700">
         <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
         <span className="font-medium">Quá hạn</span>
       </div>
@@ -180,7 +190,7 @@ function HealthIndicator({
   if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
     const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700">
         <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
         <span className="font-medium">{label}</span>
       </div>
@@ -188,7 +198,7 @@ function HealthIndicator({
   }
   if (status === "IN_PROGRESS") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-300">
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground">
         <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
         <span className="font-medium">Đang thực hiện</span>
       </div>
@@ -196,8 +206,8 @@ function HealthIndicator({
   }
   // Mới
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
-      <span className="size-1.5 rounded-full bg-slate-400 shrink-0" />
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
       <span className="font-medium">Mới</span>
     </div>
   );
@@ -207,7 +217,7 @@ function HealthIndicator({
  * Circular Progress Ring (Linear style)
  * Clean: When progress is 0%, render subtle plain text to avoid visual clutter
  */
-function CircularProgressRing({ percent }: { percent: number }) {
+export function CircularProgressRing({ percent }: { percent: number }) {
   const bounded = Math.min(100, Math.max(0, percent || 0));
   if (bounded === 0) {
     return (
@@ -221,7 +231,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
   const strokeDashoffset = circumference - (circumference * bounded) / 100;
 
   return (
-    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700 dark:text-zinc-300 font-medium">
+    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-foreground font-medium">
       <svg className="size-3.5 shrink-0 -rotate-90" viewBox="0 0 16 16">
         <circle
           cx="8"
@@ -230,7 +240,7 @@ function CircularProgressRing({ percent }: { percent: number }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-slate-200 dark:text-zinc-700"
+          className="text-border"
         />
         <circle
           cx="8"
@@ -283,6 +293,8 @@ export function areTaskRowPropsEqual(
   if (prev.activeCategory !== next.activeCategory) return false;
   if (prev.suppressCategory !== next.suppressCategory) return false;
   if (prev.onAddSubTask !== next.onAddSubTask) return false;
+  if (prev.showTaskCode !== next.showTaskCode) return false;
+  if (prev.selectionGroupPosition !== next.selectionGroupPosition) return false;
   if (prev.onContextMenu !== next.onContextMenu) return false;
   return true;
 }
@@ -309,6 +321,8 @@ export const TaskRow = React.memo(function TaskRow({
   onStatusChange,
   onUrge,
   onAddSubTask,
+  showTaskCode = false,
+  selectionGroupPosition = null,
   className,
 }: TaskRowProps) {
   const hasSubtasks = Boolean(task.subTasks && task.subTasks.length > 0);
@@ -325,7 +339,10 @@ export const TaskRow = React.memo(function TaskRow({
   );
 
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
-  const departmentName = task.department || driInfo.subtext;
+  const departmentName =
+    typeof task.department === "string"
+      ? task.department
+      : (task.department as any)?.name || (task.department as any)?.code || driInfo.subtext;
 
   const coAssigneesList: string[] = React.useMemo(() => {
     const names = new Set<string>();
@@ -370,6 +387,9 @@ export const TaskRow = React.memo(function TaskRow({
     if (e.key === "Enter") {
       e.preventDefault();
       onClick?.(task);
+    } else if (e.key === " " || e.key === "x" || e.key === "X") {
+      e.preventDefault();
+      onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
     }
   };
 
@@ -389,9 +409,31 @@ export const TaskRow = React.memo(function TaskRow({
   };
 
   const paddingClass = "py-2 px-2.5";
-  const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
+  const titlePaddingClass = "pl-3.5 sm:pl-4 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
-  const tdBaseClass = "first:rounded-l-lg last:rounded-r-lg transition-colors";
+
+  // Cell styling based on column position (first, middle, last) and contiguous selection group status
+  const getCellClasses = (isFirst: boolean, isLast: boolean) => {
+    const bgClass = isSelected
+      ? "bg-primary/[0.08] group-hover:bg-primary/[0.12]"
+      : "bg-transparent group-hover:bg-muted/35";
+
+    let radiusClass = "rounded-none";
+    if (!isSelected || selectionGroupPosition === "only" || !selectionGroupPosition) {
+      if (isFirst) radiusClass = "rounded-l-md";
+      else if (isLast) radiusClass = "rounded-r-md";
+    } else if (selectionGroupPosition === "first") {
+      if (isFirst) radiusClass = "rounded-tl-md rounded-bl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-tr-md rounded-br-none rounded-l-none";
+    } else if (selectionGroupPosition === "middle") {
+      radiusClass = "rounded-none";
+    } else if (selectionGroupPosition === "last") {
+      if (isFirst) radiusClass = "rounded-bl-md rounded-tl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-br-md rounded-tr-none rounded-l-none";
+    }
+
+    return cn("transition-colors border-b-[1.5px] border-transparent", bgClass, radiusClass);
+  };
 
   return (
     <tr
@@ -404,28 +446,38 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-all select-none bg-transparent text-slate-900 dark:text-zinc-100",
+        "group cursor-pointer transition-all select-none bg-transparent text-foreground",
         rowHeightClass,
-        // State 1: Hovered (Linear soft rounded row)
-        "hover:bg-muted/50 dark:hover:bg-zinc-800/50",
-        // State 2: Focused (WCAG 2.2 AA Focus visible)
-        "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
-        // State 3: Selected (Linear Soft Rounded Highlight)
-        isSelected && "bg-primary/[0.08] dark:bg-primary/[0.14]",
+        // State 1: Hover on unselected row — subtle tint without competing with selected state
+        !isSelected && "hover:bg-muted/35",
+        // State 2: Focus on unselected row (WCAG 2.2 AA Focus visible)
+        !isSelected && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
+        // Focus on selected row: subtle inner tint without recreating individual rounded capsule or gaps
+        isSelected && "focus-visible:outline-none focus-visible:[&>td]:bg-primary/[0.14]",
         // State 4: Previewing (Peek preview)
-        isPreviewing && "bg-blue-50/70 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40",
+        isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
-        isActive && !isPreviewing && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
+        isActive && !isPreviewing && !isSelected && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
         isExpanded && "bg-muted/20",
         className
       )}
     >
       {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
-      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, tdBaseClass)}>
+      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, getCellClasses(true, false))}>
         <div className="flex items-center gap-1.5">
-          {/* Linear Integrated Leading Selector: Large hit area (~32px) for effortless clicking */}
+          {/* Linear Integrated Leading Selector: Accessible keyboard + large hit area (~32px) */}
           <div
-            className="size-7 sm:size-8 -my-2 -ml-1 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector"
+            role="checkbox"
+            aria-checked={isSelected}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
+              }
+            }}
+            className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
             onClick={handleCheckboxClick}
             title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
           >
@@ -455,6 +507,11 @@ export const TaskRow = React.memo(function TaskRow({
 
           {/* Title - Clean & Straight Aligned */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            {showTaskCode && (task.code || task.taskCode) && (
+              <span className="font-mono text-[11px] font-semibold text-muted-foreground/80 tabular-nums shrink-0">
+                {task.code || task.taskCode}
+              </span>
+            )}
             <span
               className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
@@ -476,7 +533,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 2. Phụ trách (Lead Assignee) */}
-      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div
           className="flex items-center gap-2 min-w-0"
           title={`${driInfo.primaryName || "—"}${departmentName ? ` (${departmentName})` : ""}`}
@@ -494,7 +551,7 @@ export const TaskRow = React.memo(function TaskRow({
                   className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
                 />
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium tabular-nums text-muted-foreground border border-border/60">
                   {getInitials(driInfo.primaryName)}
                 </span>
               )}
@@ -509,7 +566,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 3. Phối hợp (Collaborators / Subtasks Contributors) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         {coAssigneesList.length > 0 ? (
           <div className="flex items-center -space-x-1">
             {coAssigneesList.slice(0, 3).map((name, i) => (
@@ -533,7 +590,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 4. Thời hạn (Due Date) */}
-      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div className="flex flex-col gap-0.5">
           {task.dueDate ? (
             <>
@@ -544,7 +601,7 @@ export const TaskRow = React.memo(function TaskRow({
                     ? "text-rose-600 font-semibold"
                     : slaStatus.isToday
                     ? "text-amber-600 font-semibold"
-                    : "text-slate-600 dark:text-zinc-400 font-normal"
+                    : "text-muted-foreground font-normal"
                 )}
                 title="Thời hạn"
               >
@@ -571,7 +628,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 5. Tình trạng (Status) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, tdBaseClass)}>
+      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <HealthIndicator
           status={task.status}
           isOverdue={Boolean(slaStatus.isOverdue)}
@@ -581,7 +638,7 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td
-        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, tdBaseClass)}
+        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, getCellClasses(false, true))}
         onClick={(e) => e.stopPropagation()}
       >
         <button

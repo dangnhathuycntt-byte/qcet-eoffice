@@ -527,7 +527,9 @@ export async function approveTaskAtomic(
       const completedAtDate = payload.completedAt
         ? new Date(payload.completedAt)
         : new Date();
-      const progressPercent = payload.progressPercent ?? 100;
+      // COMPLETED is a canonical terminal state: callers cannot persist a
+      // contradictory progress value through the generic payload.
+      const progressPercent = 100;
 
       let updatedTask: Task;
       if (payload.expectedTaskVersion !== undefined) {

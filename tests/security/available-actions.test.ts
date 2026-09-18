@@ -427,9 +427,15 @@ describe('Task 10: Canonical Available Actions Computation', () => {
       assert.deepStrictEqual(CANONICAL_TASK_ACTIONS, [
         'task.read',
         'task.create',
+        'task.update_metadata',
+        'task.update_execution',
+        'task.submit_result',
         'task.review',
         'task.approve',
         'task.reassign',
+        'task.remind',
+        'task.cancel',
+        'task.archive',
         'task.monitor',
       ]);
     });

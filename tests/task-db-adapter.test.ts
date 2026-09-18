@@ -56,8 +56,8 @@ describe('TaskDbAdapter Unit Tests', () => {
     assert.strictEqual(schoolTask.department, 'Khoa Điện - Điện tử');
     assert.strictEqual(schoolTask.assignedTo, 'ThS. Nguyễn Văn A');
     assert.strictEqual(schoolTask.dueDate, '2026-09-24');
-    assert.strictEqual(schoolTask.status, 'in_progress');
-    assert.strictEqual(schoolTask.priority, 'high');
+    assert.strictEqual(schoolTask.status, 'IN_PROGRESS');
+    assert.strictEqual(schoolTask.priority, 'HIGH');
     assert.strictEqual(schoolTask.academicMonth, 9);
     assert.strictEqual(schoolTask.progress, 65);
     assert.strictEqual(schoolTask.collaborators?.length, 1);
@@ -87,8 +87,8 @@ describe('TaskDbAdapter Unit Tests', () => {
     const result = mapPrismaTaskToSchoolTask(rawMinimal);
     assert.strictEqual(result.department, 'Chưa phân bổ');
     assert.strictEqual(result.assignedTo, 'Chưa phân công');
-    assert.strictEqual(result.status, 'not_started');
-    assert.strictEqual(result.priority, 'medium');
+    assert.strictEqual(result.status, 'NOT_STARTED');
+    assert.strictEqual(result.priority, 'NORMAL');
   });
 
   test('maps SchoolTask domain object to Prisma create input structure', () => {
@@ -279,6 +279,7 @@ describe('TaskDbAdapter Unit Tests', () => {
         academicYear: '2026-2027',
         startDate: new Date('2026-09-15T08:00:00+07:00'),
         dueDate: new Date('2026-09-25T17:00:00+07:00'),
+        updatedAt: new Date('2026-09-24T10:00:00+07:00'),
         departmentId: 'p-cntt',
         department: {
           id: 'p-cntt',

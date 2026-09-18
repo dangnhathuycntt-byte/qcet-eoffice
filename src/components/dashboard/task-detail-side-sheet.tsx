@@ -1253,28 +1253,7 @@ export function TaskDetailSideSheet({
               )}
             </div>
 
-            {/* Cell 5: Category (SchoolTask only) */}
-            {schoolTask && (
-              <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Tag className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                  Danh mục chuyên môn
-                </span>
-                <div>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
-                      getCategoryBadgeConfig(schoolTask.category).className
-                    )}
-                  >
-                    {schoolTask.categoryLabel ||
-                      getCategoryBadgeConfig(schoolTask.category).label}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Cell 6: Co-assignees (SchoolTask only) */}
+            {/* Cell 5: Co-assignees (SchoolTask only - read-only derived from active subtasks) */}
             {schoolTask && schoolTask.coAssignees && schoolTask.coAssignees.length > 0 && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">

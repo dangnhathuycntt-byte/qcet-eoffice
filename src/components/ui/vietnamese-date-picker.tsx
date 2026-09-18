@@ -284,14 +284,18 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent hover:bg-muted/50 shadow-none whitespace-nowrap focus-visible:outline-hidden",
+            "group inline-flex items-center gap-2 py-0.5 px-1.5 rounded transition-colors text-xs font-normal cursor-pointer select-none border-0 bg-transparent hover:bg-muted/50 shadow-none whitespace-nowrap focus-visible:outline-hidden",
             hasValue ? "text-foreground" : "text-muted-foreground",
             isOpen && "text-foreground",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName
           )}
         >
-          {icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+          {icon || (
+            <div className="size-4 shrink-0 flex items-center justify-center">
+              <CalendarIcon className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            </div>
+          )}
           <span className="tabular-nums font-normal">
             {hasValue ? displayDate : placeholder}
           </span>

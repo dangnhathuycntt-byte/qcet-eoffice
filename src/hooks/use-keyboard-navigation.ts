@@ -282,14 +282,20 @@ export function handleKeyboardNavigation(
     }
   }
 
-  // 4b. Space: Xem nhanh dòng hiện tại (Linear Peek / macOS Quick Look)
+  // 4b. Space: Xem nhanh dòng hiện tại (Linear Peek / macOS Quick Look) hoặc Chọn / Bỏ chọn dòng
   if (key === " " || event.code === "Space") {
     if (activeIndex >= 0 && activeIndex < itemCount) {
       if (event.preventDefault) event.preventDefault();
       const targetId = activeId || idList[activeIndex];
-      if (targetId && onSpacePeek) {
-        onSpacePeek(targetId);
-        return true;
+      if (targetId) {
+        if (onSpacePeek) {
+          onSpacePeek(targetId);
+          return true;
+        }
+        if (onToggleSelect) {
+          onToggleSelect(targetId);
+          return true;
+        }
       }
     }
   }

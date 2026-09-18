@@ -73,17 +73,26 @@ describe("Linear Compact Composer Modal - Production Specification", () => {
       "Must have short summary input directly beneath title"
     );
 
-    // 6. Compact Property Chips (Status, Priority, DRI, Collaborators, StartDate, DueDate, Category)
-    assert.ok(html.includes("Đang thực hiện") || html.includes("Mới"), "Must render Status property chip");
+    // 6. Compact Property Chips (Priority, DRI, StartDate, DueDate) - Status, Collaborators & Category removed per new business rules
+    assert.ok(
+      !html.includes("Đang thực hiện"),
+      "Must NOT render Status selector in create modal (new tasks are always 'Mới')"
+    );
     assert.ok(
       html.includes("Bình thường") || html.includes("Khẩn cấp") || html.includes("Cao"),
       "Must render Priority property chip"
     );
     assert.ok(html.includes("Chủ trì"), "Must render DRI (Chủ trì) property chip");
-    assert.ok(html.includes("+ Phối hợp") || html.includes("Phối hợp"), "Must render Collaborators property chip");
+    assert.ok(
+      !html.includes("+ Phối hợp") && !html.includes("Phối hợp ("),
+      "Must NOT render manual Collaborators selector (collaborators are derived from active child tasks)"
+    );
     assert.ok(html.includes("Bắt đầu:"), "Must render Start date property chip");
     assert.ok(html.includes("Hạn:"), "Must render Due date property chip");
-    assert.ok(html.includes("Chuyển đổi số") || html.includes("Lĩnh vực"), "Must render Category property chip");
+    assert.ok(
+      !html.includes("Chuyển đổi số") && !html.includes("Lĩnh vực"),
+      "Must NOT render Category/Tag property chip (Tag/category removed from task UX)"
+    );
 
     // 7. Description Canvas
     assert.ok(

@@ -12,7 +12,9 @@ import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError } from '@/server/api/errors';
 import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
-import { canCreateTask } from '@/server/policies/task-policy';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
+import { buildTaskResource, computeAvailableActions } from '@/server/authorization/available-actions';
 import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
 import { withIdempotency } from '@/lib/db/idempotency';
 
@@ -28,23 +30,29 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const rawParams = Object.fromEntries(url.searchParams.entries());
 
-    // Clamp pagination limit parameters to max 100 before schema validation
+    // Sanitize and clamp pagination query parameters before schema validation
+    if (rawParams.page !== undefined) {
+      const parsed = Number(rawParams.page);
+      if (!Number.isNaN(parsed)) {
+        rawParams.page = String(Math.max(1, Math.floor(parsed)));
+      }
+    }
     if (rawParams.pageSize !== undefined) {
       const parsed = Number(rawParams.pageSize);
       if (!Number.isNaN(parsed)) {
-        rawParams.pageSize = String(Math.min(Math.max(1, parsed), 100));
+        rawParams.pageSize = String(Math.min(Math.max(1, Math.floor(parsed)), 200));
       }
     }
     if (rawParams.limit !== undefined && rawParams.limit !== 'all') {
       const parsed = Number(rawParams.limit);
       if (!Number.isNaN(parsed)) {
-        rawParams.limit = String(Math.min(Math.max(1, parsed), 100));
+        rawParams.limit = String(Math.min(Math.max(1, Math.floor(parsed)), 200));
       }
     }
     if (rawParams.take !== undefined && rawParams.take !== 'all') {
       const parsed = Number(rawParams.take);
       if (!Number.isNaN(parsed)) {
-        rawParams.take = String(Math.min(Math.max(1, parsed), 100));
+        rawParams.take = String(Math.min(Math.max(1, Math.floor(parsed)), 200));
       }
     }
 
@@ -55,16 +63,14 @@ export async function GET(req: Request) {
       assertRateLimit(authUser.id, 'SEARCH');
     }
 
-    // Clamp pagination limit to max 100
-    let effectiveLimit = 20;
+    // Default pagination limit is 50, bounded to [1, 200]
+    let effectiveLimit = 50;
     if (typeof validatedQuery.limit === 'number') {
-      effectiveLimit = Math.min(Math.max(1, validatedQuery.limit), 100);
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.limit), 200);
     } else if (typeof validatedQuery.take === 'number') {
-      effectiveLimit = Math.min(Math.max(1, validatedQuery.take), 100);
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.take), 200);
     } else if (rawParams.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
-      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
-    } else if (typeof validatedQuery.pageSize === 'number') {
-      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 200);
     }
 
     const isAll =
@@ -73,7 +79,8 @@ export async function GET(req: Request) {
       validatedQuery.limit === 'all' ||
       rawParams.limit === 'all';
 
-    const result = await taskQueryService.queryTasks(context, {
+    const authorizationContext = await loadAuthorizationContext(authUser.id);
+    const result = await taskQueryService.queryTasks(authorizationContext, {
       all: isAll,
       page: validatedQuery.page,
       limit: isAll ? undefined : effectiveLimit,
@@ -93,10 +100,17 @@ export async function GET(req: Request) {
       parentTaskId: validatedQuery.parentTaskId,
     });
 
-    const taskList = toTaskListDTOArray(result.tasks || result.data);
+    const taskList = toTaskListDTOArray(result.tasks || result.data).map((task) => ({
+      ...task,
+      availableActions: computeAvailableActions(
+        authorizationContext,
+        buildTaskResource(task)
+      ),
+    }));
 
     const pagination = {
       ...result.pagination,
+      limit: !isAll && effectiveLimit !== undefined ? effectiveLimit : result.limit,
       pageSize: result.limit,
     };
 
@@ -110,7 +124,7 @@ export async function GET(req: Request) {
         total: result.total,
         totalCount: result.totalCount,
         page: result.page,
-        limit: result.limit,
+        limit: pagination.limit,
         hasMore: result.hasMore,
         nextCursor: result.nextCursor,
       },
@@ -140,9 +154,16 @@ export async function POST(req: Request) {
 
     const validatedBody = await parseAndValidateJson(req, CreateTaskSchema);
 
-    // Object authorization: Check whether user can create a task for the specified department
-    if (!canCreateTask(authUser, validatedBody.departmentId)) {
-      throw new ForbiddenError('Bạn không có quyền tạo nhiệm vụ cho đơn vị này');
+    // Canonical object authorization: Check whether user can create a task for the specified department
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const authDecision = authorize(authContext, 'task.create', {
+      type: 'task',
+      departmentId: validatedBody.departmentId ?? undefined,
+      leadUnitId: validatedBody.departmentId ?? undefined,
+      scope: validatedBody.scope?.toLowerCase(),
+    });
+    if (!authDecision.allowed) {
+      throw new ForbiddenError(authDecision.reason || 'Bạn không có quyền tạo nhiệm vụ cho đơn vị này');
     }
 
     const rawIdempotencyKey =

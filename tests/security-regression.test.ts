@@ -225,6 +225,84 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
       },
     });
 
+    // Ensure OrganizationalUnit exists for dept-cntt
+    await prisma.organizationalUnit.upsert({
+      where: { id: "dept-cntt" },
+      update: { status: "ACTIVE" },
+      create: {
+        id: "dept-cntt",
+        code: "KHOA_CNTT_SEC_TEST",
+        name: "Khoa CNTT (Test Unit)",
+        type: "FACULTY",
+        status: "ACTIVE",
+      },
+    });
+
+    // Ensure OrganizationalUnit exists for BGH
+    await prisma.organizationalUnit.upsert({
+      where: { id: "unit-bgh-sec-test" },
+      update: { status: "ACTIVE" },
+      create: {
+        id: "unit-bgh-sec-test",
+        code: "BGH_SEC_TEST",
+        name: "Ban Giam Hieu (Test Unit)",
+        type: "SCHOOL",
+        status: "ACTIVE",
+      },
+    });
+
+    // Ensure PositionDefinitions exist
+    const posDefLead = await prisma.positionDefinition.upsert({
+      where: { code: "TRUONG_PHONG" },
+      update: { isLeadership: true },
+      create: {
+        code: "TRUONG_PHONG",
+        title: "Trưởng phòng / Trưởng khoa",
+        group: "LDPU",
+        isLeadership: true,
+      },
+    });
+
+    const posDefBgh = await prisma.positionDefinition.upsert({
+      where: { code: "BAN_GIAM_HIEU" },
+      update: { isLeadership: true },
+      create: {
+        code: "BAN_GIAM_HIEU",
+        title: "Ban Giám Hiệu",
+        group: "LDPU",
+        isLeadership: true,
+      },
+    });
+
+    // Create PositionAssignments
+    await prisma.positionAssignment.upsert({
+      where: { id: "pos-assign-lead-cntt-sec" },
+      update: { status: "ACTIVE" },
+      create: {
+        id: "pos-assign-lead-cntt-sec",
+        userId: "user-lead-cntt",
+        positionDefinitionId: posDefLead.id,
+        unitId: "dept-cntt",
+        type: "PRIMARY",
+        status: "ACTIVE",
+        effectiveFrom: new Date("2020-01-01"),
+      },
+    });
+
+    await prisma.positionAssignment.upsert({
+      where: { id: "pos-assign-bgh-sec" },
+      update: { status: "ACTIVE" },
+      create: {
+        id: "pos-assign-bgh-sec",
+        userId: "user-bgh",
+        positionDefinitionId: posDefBgh.id,
+        unitId: "unit-bgh-sec-test",
+        type: "PRIMARY",
+        status: "ACTIVE",
+        effectiveFrom: new Date("2020-01-01"),
+      },
+    });
+
     // Setup test tasks
     await prisma.task.upsert({
       where: { id: "task-daotao-1" },
@@ -269,6 +347,9 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
 
   after(async () => {
     const ephemeralUserIds = ["user-creator-1", "user-assignee", "user-cntt", "user-lead-cntt", "user-bgh"];
+    await prisma.positionAssignment.deleteMany({
+      where: { id: { in: ["pos-assign-lead-cntt-sec", "pos-assign-bgh-sec"] } },
+    });
     await prisma.taskAssignee.deleteMany({
       where: {
         OR: [
@@ -288,6 +369,9 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     });
     await prisma.user.deleteMany({
       where: { id: { in: ephemeralUserIds } },
+    });
+    await prisma.organizationalUnit.deleteMany({
+      where: { id: "unit-bgh-sec-test" },
     });
     await prisma.department.deleteMany({
       where: { id: { in: ["dept-daotao", "dept-cntt"] } },
@@ -310,7 +394,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     assert.equal(res.status, 403);
     const body = await res.json();
     assert.equal(body.success, false);
-    assert.match(body.error, /không có quyền|Forbidden/i);
+    assert.match(body.error, /không có quyền|Forbidden|thẩm quyền/i);
   });
 
   it("PATCH /api/tasks/[id] allows task creator to update task", async () => {
@@ -381,23 +465,28 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     assert.equal(body.data.title, "Updated by BGH");
   });
 
-  it("DELETE /api/tasks/[id] returns 403 when user is regular assignee (not creator or BGH/ADMIN)", async () => {
+  it("DELETE /api/tasks/[id] (archive) returns 403 when user is regular assignee (not creator or BGH/ADMIN)", async () => {
     const token = createTestToken({ id: "user-assignee", role: "GIANG_VIEN", departmentId: "dept-cntt" });
     const req = new NextRequest("http://localhost:3001/api/tasks/task-cntt-1", {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
     assert.equal(res.status, 403);
   });
 
-  it("DELETE /api/tasks/[id] allows task creator to delete task", async () => {
-    // Create dedicated task for creator deletion test
+  it("DELETE /api/tasks/[id] (archive) allows task creator to archive task", async () => {
+    // Create dedicated task for creator archive test
     const tempTask = await prisma.task.create({
       data: {
         id: "task-temp-delete-creator",
         code: "TASK-TEMP-DEL-1",
-        title: "Nhiệm vụ xóa bởi creator",
+        title: "Nhiệm vụ lưu trữ bởi creator",
         status: "NOT_STARTED",
         departmentId: "dept-daotao",
         createdById: "user-creator-1",
@@ -410,21 +499,26 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     const token = createTestToken({ id: "user-creator-1", role: "TRUONG_PHONG", departmentId: "dept-daotao" });
     const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
     assert.equal(res.status, 200);
     const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
-    assert.equal(check, null);
+    assert.ok(check?.archivedAt !== null, 'Task should be archived, not hard-deleted');
   });
 
-  it("DELETE /api/tasks/[id] allows BGH/ADMIN to delete task", async () => {
-    // Create dedicated task for BGH deletion test
+  it("DELETE /api/tasks/[id] (archive) allows BGH/ADMIN to archive task", async () => {
+    // Create dedicated task for BGH archive test
     const tempTask = await prisma.task.create({
       data: {
         id: "task-temp-delete-bgh",
         code: "TASK-TEMP-DEL-2",
-        title: "Nhiệm vụ xóa bởi BGH",
+        title: "Nhiệm vụ lưu trữ bởi BGH",
         status: "NOT_STARTED",
         departmentId: "dept-daotao",
         createdById: "user-creator-1",
@@ -437,12 +531,17 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     const token = createTestToken({ id: "user-bgh", role: "BAN_GIAM_HIEU" });
     const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
     assert.equal(res.status, 200);
     const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
-    assert.equal(check, null);
+    assert.ok(check?.archivedAt !== null, 'Task should be archived, not hard-deleted');
   });
 
   it("POST /api/documents/[id]/directives returns 401 when unauthenticated", async () => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { taskDomainActionService } from "@/lib/services/task-domain-actions";
+import { RemindInputSchema } from "@/lib/services/task-domain-actions";
 import {
   ActionRouteContext,
   handleActionError,
@@ -8,7 +9,7 @@ import {
 
 export async function POST(request: NextRequest, context: ActionRouteContext) {
   try {
-    const { session, taskId, body } = await resolveActionContext(request, context);
+    const { session, taskId, body } = await resolveActionContext(request, context, RemindInputSchema, "task.remind");
     const result = await taskDomainActionService.remind(session, taskId, body);
 
     return NextResponse.json(

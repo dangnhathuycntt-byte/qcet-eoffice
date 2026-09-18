@@ -318,7 +318,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     test('PATCH /api/tasks/[id] returns clean DTO without raw property', async () => {
       const req = createRequest(`http://localhost:3000/api/tasks/${taskA.id}`, {
         method: 'PATCH',
-        token: adminToken,
+        token: staffAToken,
         body: {
           title: `Updated Title Task A ${testRunId}`,
         },
@@ -439,6 +439,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
           await taskDomainActionService.requestRevision(staffASession, taskA.id, {
             deliverableId: deliverableB.id,
             reason: 'Yêu cầu sửa đổi tệp',
+            expectedVersion: taskA.version,
           });
         },
         (err: any) => {

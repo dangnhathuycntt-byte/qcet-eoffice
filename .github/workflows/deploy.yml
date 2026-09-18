@@ -95,6 +95,7 @@ jobs:
         run: |
           echo "Executing Prisma database migrations for Staging..."
           npx prisma migrate deploy
+          npm run db:drift:check
 
       - name: Build Next.js Application (Standalone)
         env:
@@ -150,6 +151,7 @@ jobs:
         run: |
           echo "Executing Prisma database migrations for Production..."
           npx prisma migrate deploy
+          npm run db:drift:check
 
       - name: Build Next.js Application (Standalone)
         env:

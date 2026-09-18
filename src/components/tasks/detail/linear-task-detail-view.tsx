@@ -30,6 +30,7 @@ export interface LinearTaskDetailViewProps {
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
+  onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
   onTitleChange?: (taskId: string, newTitle: string) => Promise<void> | void;
   onDescriptionChange?: (taskId: string, newDescription: string) => Promise<void> | void;
   onAddSubTask?: (parentId: string) => void;
@@ -52,6 +53,7 @@ export function LinearTaskDetailView({
   onStatusChange,
   onPriorityChange,
   onDueDateChange,
+  onStartDateChange,
   onTitleChange,
   onDescriptionChange,
   onAddSubTask,
@@ -212,6 +214,23 @@ export function LinearTaskDetailView({
       ...prev,
       dueDate: newDueDate,
     }));
+  };
+
+  const handleStartDateChangeInternal = async (taskId: string, newStartDate: string) => {
+    if (onStartDateChange) {
+      await onStartDateChange(taskId, newStartDate);
+    } else {
+      const res = await updateTaskStartDate(taskId, newStartDate, (task as any).version);
+      if (!res.ok) {
+        notifyError(res.error || "Không thể cập nhật ngày bắt đầu", "Lỗi cập nhật");
+        return;
+      }
+      setTask((prev) => ({
+        ...prev,
+        startDate: newStartDate,
+        version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
+      } as any));
+    }
   };
 
   const handleTitleChangeInternal = async (taskId: string, newTitle: string) => {
@@ -398,10 +417,7 @@ export function LinearTaskDetailView({
             onStatusChange={handleStatusChangeInternal}
             onPriorityChange={handlePriorityChangeInternal}
             onTitleChange={handleTitleChangeInternal}
-            onStartDateChange={async (taskId, newStartDate) => {
-              await updateTaskStartDate(taskId, newStartDate);
-              setTask((prev) => ({ ...prev, startDate: newStartDate } as any));
-            }}
+            onStartDateChange={handleStartDateChangeInternal}
             onDueDateChange={handleDueDateChangeInternal}
             onAddDeliverable={handleAddDeliverable}
             onDeleteDeliverable={handleDeleteDeliverable}
@@ -476,6 +492,7 @@ export function LinearTaskDetailView({
               currentUser={currentUser}
               onStatusChange={handleStatusChangeInternal}
               onPriorityChange={handlePriorityChangeInternal}
+              onStartDateChange={handleStartDateChangeInternal}
               onDueDateChange={handleDueDateChangeInternal}
               onSelectSubtask={onSelectSubTask}
               onAddSubTask={onAddSubTask}
@@ -494,6 +511,7 @@ export function LinearTaskDetailView({
         currentUser={currentUser}
         onStatusChange={handleStatusChangeInternal}
         onPriorityChange={handlePriorityChangeInternal}
+        onStartDateChange={handleStartDateChangeInternal}
         onDueDateChange={handleDueDateChangeInternal}
         auditEvents={feedActivityEvents as AuditLogItem[]}
       />

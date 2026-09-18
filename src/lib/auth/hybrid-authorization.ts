@@ -912,11 +912,42 @@ export async function authorize(
   // --------------------------------------------------------------------------
   const relationships = getResourceRelationships(user, resource);
 
+  // Observer cannot mutate tasks
+  const isObserver = relationships.has("OBSERVER");
+  const isDri = relationships.has("DRI");
+  const isCollaborator = relationships.has("COLLABORATOR");
+  const isAssigner = relationships.has("ASSIGNER");
+
+  if (
+    isObserver &&
+    !isDri &&
+    !isCollaborator &&
+    !isAssigner &&
+    (action === "task.update_execution" ||
+      action === "task.submit_result" ||
+      action === "task.approve" ||
+      action === "task.reassign" ||
+      action === "task.assign" ||
+      action === "task.cancel")
+  ) {
+    const isApprove = action === "task.approve";
+    return {
+      allowed: false,
+      granted: false,
+      rejectionCode: isApprove ? "INSUFFICIENT_CAPABILITY" : "INSUFFICIENT_RELATIONSHIP",
+      statusCode: isApprove ? "INSUFFICIENT_CAPABILITY" : "INSUFFICIENT_RELATIONSHIP",
+      reason: "Người theo dõi hoặc quan sát không có quyền thay đổi dữ liệu tác vụ.",
+      auditRecord: {
+        ...baseAuditRecord,
+        decision: "DENY",
+        rejectionCode: isApprove ? "INSUFFICIENT_CAPABILITY" : "INSUFFICIENT_RELATIONSHIP",
+        policyMatched: "STEP_5_OBSERVER_READ_ONLY_GUARD",
+      },
+    };
+  }
+
   // Single DRI Rule: Collaborator cannot reassign DRI
   if (action === "task.reassign" || action === "task.assign") {
-    const isCollaborator = relationships.has("COLLABORATOR");
-    const isDri = relationships.has("DRI");
-    const isAssigner = relationships.has("ASSIGNER");
     const isLeader =
       isExecutivePosition(user.activePositionCode) ||
       (isUnitLeaderPosition(user.activePositionCode) && relationships.has("LEAD_UNIT"));
@@ -1703,10 +1734,7 @@ function evaluateCapabilityMatrix(
     if (action === "task.approve" || action === "task.close") {
       if (
         relationships.has("ASSIGNER") ||
-        relationships.has("LEAD_UNIT") ||
-        relationships.has("DRI") ||
-        resource.scope === "SCHOOL" ||
-        resource.scope === "school"
+        relationships.has("LEAD_UNIT")
       ) {
         return { allowed: true, policyMatched: "STAFF_TASK_APPROVE" };
       }

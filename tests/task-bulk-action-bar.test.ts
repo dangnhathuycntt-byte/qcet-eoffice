@@ -13,6 +13,7 @@ import {
 } from "../src/components/tasks/table/components/task-bulk-action-bar";
 import {
   TaskRow,
+  CircularProgressRing,
   areTaskRowPropsEqual,
   parseLeadAssignee,
 } from "../src/components/tasks/table/components/task-row";
@@ -475,7 +476,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       // T10: the rest live on secondary surfaces, so they must NOT stand open.
       for (const disclosed of [
         'aria-label="Lọc theo đơn vị phòng ban"',
-        'aria-label="Lọc theo danh mục DACUM"',
         'aria-label="Mật độ hiển thị bảng"',
         'aria-label="Chế độ hiển thị gọn"',
         'aria-label="Chế độ xem không gian làm việc"',
@@ -498,7 +498,6 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       assert.ok(toolbarSrc.includes('data-slot="desktop-display-panel"'), "Display panel must exist");
       for (const offered of [
         'aria-label="Lọc theo đơn vị phòng ban"',
-        'aria-label="Lọc theo danh mục DACUM"',
         'aria-label="Mật độ hiển thị bảng"',
         'aria-label="Chế độ hiển thị gọn"',
         'aria-label="Chế độ xem không gian làm việc"',
@@ -619,21 +618,18 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
         "Should render task title"
       );
 
-      // 3. Đơn vị & Chủ trì
+      // 3. Đơn vị & Chủ trì (Phụ trách)
       assert.ok(html.includes("Khoa CNTT"), "Should render department");
       assert.ok(html.includes("Nguyễn Tiến Phong"), "Should render DRI name");
       assert.ok(html.includes('src="https://example.com/avatar1.jpg"'), "Should render avatar");
 
-      // 4. Tiến độ (Circular progress ring percent)
-      assert.ok(html.includes("65%"), "Should render tabular progress percentage");
-
-      // 5. Hạn (SLA formatted date)
+      // 4. Hạn (SLA formatted date)
       assert.ok(html.includes("30/09/2026"), "Should render SLA formatted date");
 
-      // 6. Trạng thái (Single clear status badge)
+      // 5. Trạng thái (Single clear status badge)
       assert.ok(html.includes("Đang thực hiện"), "Should render status badge");
 
-      // 7. Actions (Overflow menu button)
+      // 6. Actions (Overflow menu button)
       assert.ok(html.includes('aria-label="Thao tác nhanh"'), "Should render overflow menu button");
     });
 
@@ -759,9 +755,9 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       );
 
       assert.ok(html.includes("Nhiệm vụ"), "Header contains Nhiệm vụ");
-      assert.ok(html.includes("Chủ trì") || html.includes("Đơn vị"), "Header contains Chủ trì/Đơn vị");
-      assert.ok(html.includes("Tiến độ"), "Header contains Tiến độ");
-      assert.ok(html.includes("Hạn chót") || html.includes("Hạn"), "Header contains Hạn");
+      assert.ok(html.includes("Phụ trách") || html.includes("Chủ trì"), "Header contains Phụ trách");
+      assert.ok(html.includes("Phối hợp") || html.includes("Việc con"), "Header contains Phối hợp");
+      assert.ok(html.includes("Thời hạn") || html.includes("Hạn"), "Header contains Thời hạn");
       assert.ok(html.includes("Tình trạng") || html.includes("Trạng thái"), "Header contains Tình trạng");
     });
   });
@@ -834,17 +830,23 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
     });
 
     it("renders 0% progress with 0% text", () => {
-      const html = renderRow({ ...mockTask, progressPercent: 0, subTasks: [] });
+      const html = renderToStaticMarkup(
+        React.createElement(CircularProgressRing, { percent: 0 })
+      );
       assert.ok(html.includes("0%"), "0% text must render");
     });
 
     it("renders completed 100% with 100% text", () => {
-      const html = renderRow({ ...mockTask, progressPercent: 100, status: "COMPLETED", subTasks: [] });
+      const html = renderToStaticMarkup(
+        React.createElement(CircularProgressRing, { percent: 100 })
+      );
       assert.ok(html.includes("100%"), "100% text must render");
     });
 
     it("renders partial progress with ring indicator", () => {
-      const html = renderRow({ ...mockTask, progressPercent: 45, subTasks: [] });
+      const html = renderToStaticMarkup(
+        React.createElement(CircularProgressRing, { percent: 45 })
+      );
       assert.ok(html.includes("45%"), "45% text must render");
       assert.ok(html.includes("<svg"), "progress must render ring svg");
     });

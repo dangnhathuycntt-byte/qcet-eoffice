@@ -8,6 +8,7 @@ import {
   DashboardDataContext,
   DashboardActionsContext,
   DashboardModalContext,
+  DashboardNavContext,
 } from "../src/components/dashboard/dashboard-context";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
@@ -39,6 +40,20 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
     openCreateModal: () => {},
   };
 
+  const mockNav = {
+    currentZone: "tasks",
+    currentScope: "school",
+    viewMode: "table",
+    isStaffExpanded: false,
+    useAdvancedToolbar: false,
+    handleZoneChange: () => {},
+    handleScopeChange: () => {},
+    handleViewModeChange: () => {},
+    handleToggleStaffExpanded: () => {},
+    setIsStaffExpanded: () => {},
+    setUseAdvancedToolbar: () => {},
+  };
+
   function renderLandingWithContext(dataOverrides: Record<string, unknown> = {}) {
     const mockData = {
       tasks: payload.tasks,
@@ -53,15 +68,19 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
         AppRouterContext.Provider,
         { value: mockRouter },
         React.createElement(
-          DashboardDataContext.Provider,
-          { value: mockData as unknown as React.ComponentProps<typeof DashboardDataContext.Provider>["value"] },
+          DashboardNavContext.Provider,
+          { value: mockNav as unknown as React.ComponentProps<typeof DashboardNavContext.Provider>["value"] },
           React.createElement(
-            DashboardActionsContext.Provider,
-            { value: mockActions as unknown as React.ComponentProps<typeof DashboardActionsContext.Provider>["value"] },
+            DashboardDataContext.Provider,
+            { value: mockData as unknown as React.ComponentProps<typeof DashboardDataContext.Provider>["value"] },
             React.createElement(
-              DashboardModalContext.Provider,
-              { value: mockModal as unknown as React.ComponentProps<typeof DashboardModalContext.Provider>["value"] },
-              React.createElement(TasksFocusLanding)
+              DashboardActionsContext.Provider,
+              { value: mockActions as unknown as React.ComponentProps<typeof DashboardActionsContext.Provider>["value"] },
+              React.createElement(
+                DashboardModalContext.Provider,
+                { value: mockModal as unknown as React.ComponentProps<typeof DashboardModalContext.Provider>["value"] },
+                React.createElement(TasksFocusLanding)
+              )
             )
           )
         )
@@ -76,7 +95,7 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
     assert.ok(html.includes('id="tour-tasks-landing"'));
     assert.ok(html.includes('data-slot="unified-adaptive-workspace"'));
     assert.ok(html.includes('data-slot="adaptive-scope-header"'));
-    assert.ok(html.includes('data-slot="adaptive-metric-strip"'));
+    assert.ok(html.includes('data-slot="task-summary-strip"'));
   });
 
   test("TasksFocusLanding renders UnifiedAdaptiveWorkspace for manager and staff users", () => {

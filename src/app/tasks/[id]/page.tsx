@@ -7,8 +7,11 @@ import { getSessionFromRequest } from "@/lib/jwt-session";
 import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@/lib/adapters/task-db-adapter";
 import { TaskDetailPage } from "@/components/tasks/task-detail-page";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
-import { canReadTask, canUpdateTask } from "@/server/policies/task-policy";
 import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
+import { taskQueryService } from "@/server/tasks";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { authorize } from "@/server/authorization/authorization-engine";
+import { buildTaskResource, computeAvailableActions } from "@/server/authorization/available-actions";
 
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
@@ -110,49 +113,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
       : null;
 
   // Fetch full task entity with all related data
-  const rawTask = await prisma.task.findUnique({
-    where: { id },
-    include: {
-      department: true,
-      assignees: {
-        include: {
-          user: {
-            select: { id: true, name: true, avatarUrl: true },
-          },
-        },
-      },
-      deliverables: {
-        include: {
-          uploadedBy: { select: { id: true, name: true, avatarUrl: true } },
-          reviewer: { select: { id: true, name: true, avatarUrl: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      resolutions: {
-        include: {
-          actor: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      parentTask: {
-        select: { id: true, code: true, title: true, scope: true },
-      },
-      subTasks: {
-        where: {
-          status: { not: "CANCELLED" },
-        },
-        include: {
-          assignees: {
-            include: {
-              user: { select: { id: true, name: true, avatarUrl: true } },
-            },
-          },
-          deliverables: true,
-        },
-        orderBy: { dueDate: "asc" },
-      },
-    },
-  });
+  const rawTask = await taskQueryService.getTaskEntityForInternalUse(id);
 
   if (!rawTask) {
     notFound();
@@ -160,10 +121,13 @@ export default async function Page({ params }: TaskDetailPageParams) {
 
   // Keep the server-rendered page on the same BOLA boundary as GET /api/tasks/[id].
   // Return 404 for unauthorized objects so task IDs cannot be enumerated.
-  if (!canReadTask(session as any, rawTask)) {
+  const authorizationContext = await loadAuthorizationContext(session.id);
+  const taskResource = buildTaskResource(rawTask);
+  if (!authorize(authorizationContext, "task.read", taskResource).allowed) {
     notFound();
   }
-  const canEdit = canUpdateTask(session as any, rawTask);
+  const availableActions = computeAvailableActions(authorizationContext, taskResource);
+  const canEdit = availableActions.includes("task.update_metadata");
 
   // Format task according to scope
   const isSchoolScope = rawTask.scope === "SCHOOL";
@@ -172,6 +136,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
       ? mapPrismaTaskToSchoolTask(rawTask)
       : mapPrismaTaskToStaffTask(rawTask)
   ) as unknown as SchoolTask | StaffTask;
+  (mappedTask as any).availableActions = availableActions;
 
   // 1. Fetch audit events from audit_events table
   const dbAuditEvents = await prisma.auditEvent.findMany({

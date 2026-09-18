@@ -121,7 +121,7 @@ export function UniversalActionQueue({
         data-slot="universal-action-queue"
         className={cn("py-8 text-center text-xs text-slate-400", className)}
       >
-        Không có nhiệm vụ cần xử lý gấp.
+        Không có nhiệm vụ cần xử lý gấp. Tất cả công việc đều đúng tiến độ.
       </div>
     );
   }

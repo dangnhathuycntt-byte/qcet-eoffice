@@ -59,6 +59,7 @@ async function run() {
     const expectedChecks = [
       'chk_tasks_progress_percent',
       'chk_tasks_due_date_after_start_date',
+      'chk_tasks_completion_lifecycle',
       'chk_push_subscriptions_failure_count',
       'chk_outbox_events_attempts',
     ];
@@ -80,14 +81,30 @@ async function run() {
       throw new Error(`Missing expected partial unique index: task_assignees_one_primary_owner`);
     }
 
+    const auditTriggers = await prisma.$queryRawUnsafe(`
+      SELECT tgname
+      FROM pg_trigger
+      WHERE tgrelid = '"${testSchema}"."audit_events"'::regclass
+        AND NOT tgisinternal;
+    `);
+    if (!auditTriggers.some((trigger) => trigger.tgname === 'audit_events_append_only')) {
+      throw new Error('Missing append-only trigger on audit_events');
+    }
+
     // 6. Verify _prisma_migrations record
     const migrations = await prisma.$queryRawUnsafe(`
       SELECT migration_name, finished_at, rolled_back_at
       FROM "${testSchema}"."_prisma_migrations";
     `);
     console.log(`[db:migrate:test-fresh] Recorded migrations:`, migrations.map((m) => m.migration_name));
-    if (!migrations.some((m) => m.migration_name === '20260910000000_baseline' && m.finished_at)) {
-      throw new Error(`Migration 20260910000000_baseline not recorded as finished in _prisma_migrations`);
+    const expectedMigrations = [
+      '20260910000000_baseline',
+      '20260918050000_database_integrity_hardening',
+    ];
+    for (const migrationName of expectedMigrations) {
+      if (!migrations.some((m) => m.migration_name === migrationName && m.finished_at)) {
+        throw new Error(`Migration ${migrationName} not recorded as finished in _prisma_migrations`);
+      }
     }
 
     console.log(`[db:migrate:test-fresh] SUCCESS: Fresh database deployment verified cleanly.`);

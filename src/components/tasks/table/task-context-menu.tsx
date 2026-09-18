@@ -31,6 +31,8 @@ import {
   deleteTask,
 } from "@/lib/tasks/task-actions";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
+import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface TaskContextMenuProps {
   task: SchoolTask | StaffTask | null;
@@ -68,6 +70,9 @@ export function TaskContextMenu({
   const [activeSubmenu, setActiveSubmenu] = React.useState<ActiveSubmenu>(null);
   const [copiedNotification, setCopiedNotification] = React.useState<string | null>(null);
   const [menuCoords, setMenuCoords] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const feedback = useFeedback();
 
   // Focus trap & Return focus (REQ-07 / REQ-23)
   React.useEffect(() => {
@@ -113,6 +118,8 @@ export function TaskContextMenu({
 
     setMenuCoords({ x: Math.max(padding, adjustedX), y: Math.max(padding, adjustedY) });
     setActiveSubmenu(null);
+    setShowDeleteConfirm(false);
+    setIsDeleting(false);
   }, [isOpen, position]);
 
   // Handle outside click & escape
@@ -287,14 +294,27 @@ export function TaskContextMenu({
     onClose();
   };
 
-  const handleDeleteTask = async () => {
-    if (confirm(`Bạn có chắc chắn muốn xóa/hủy nhiệm vụ "${taskTitle}"?`)) {
+  const handleDeleteTask = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
       if (onDeleteTask) {
         await onDeleteTask(task.id);
       } else {
-        await deleteTask(task.id);
+        await deleteTask(task.id, Number((task as any).version ?? 1));
       }
+      feedback.notifySuccess(`Nhiệm vụ "${taskTitle}" đã được lưu trữ thành công.`);
+      setShowDeleteConfirm(false);
       onClose();
+    } catch (err) {
+      feedback.notifyError(
+        err instanceof Error ? err.message : "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -675,6 +695,20 @@ export function TaskContextMenu({
         <Trash2 className="size-3.5" strokeWidth={1.5} />
         <span>Xóa / Hủy nhiệm vụ...</span>
       </button>
+
+      {/* Destructive Confirmation Dialog */}
+      <DestructiveConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setIsDeleting(false); }}
+        onConfirm={handleConfirmDelete}
+        title="Xóa / Hủy nhiệm vụ"
+        entityName={taskTitle}
+        description="sẽ được lưu trữ và không còn hiển thị trong danh sách nhiệm vụ đang hoạt động."
+        confirmLabel="Xóa / Hủy nhiệm vụ"
+        cancelLabel="Giữ lại"
+        irreversible
+        isConfirming={isDeleting}
+      />
     </div>
   );
 }

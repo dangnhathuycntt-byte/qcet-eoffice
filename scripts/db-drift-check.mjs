@@ -51,7 +51,13 @@ const allowedDiffLines = [
 const cleanedLines = diffSql
   .split('\n')
   .map((line) => line.trim())
-  .filter((line) => line.length > 0 && !line.startsWith('warn') && !line.startsWith('For more information'))
+  .filter(
+    (line) =>
+      line.length > 0 &&
+      !line.startsWith('--') &&
+      !line.startsWith('warn') &&
+      !line.startsWith('For more information')
+  )
   .filter((line) => !allowedDiffLines.includes(line));
 
 if (cleanedLines.length > 0) {

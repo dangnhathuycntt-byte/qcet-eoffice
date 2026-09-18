@@ -18,9 +18,26 @@ describe('Tasks API Route Handler Tests', () => {
     const dept = await prisma.department.findFirst();
     assert.ok(dept, 'Must have at least one department in database');
 
-    const user = (await prisma.user.findFirst({
-      where: { role: 'ADMIN' },
-    })) || (await prisma.user.findFirst());
+    // In QCET Canonical Authorization, technical SYSTEM_ADMIN cannot perform non-technical task mutations
+    // due to Separation of Powers. Use an institutional leader with an active PositionAssignment for task lifecycle tests.
+    const user =
+      (await prisma.user.findFirst({
+        where: {
+          role: { not: 'ADMIN' },
+          positionAssignments: {
+            some: {
+              status: 'ACTIVE',
+              positionDefinition: {
+                code: { in: ['TRUONG_DON_VI', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG', 'TRUONG_KHOA', 'HIEU_TRUONG', 'PHO_HIEU_TRUONG'] },
+              },
+            },
+          },
+        },
+      })) ||
+      (await prisma.user.findFirst({
+        where: { role: { not: 'ADMIN' } },
+      })) ||
+      (await prisma.user.findFirst());
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
     testDeptId = user.departmentId || dept.id;
@@ -231,10 +248,25 @@ describe('Tasks API Route Handler Tests', () => {
     let parentCreatedTaskId: string;
 
     before(async () => {
-      const users = await prisma.user.findMany({ take: 5 });
-      const nonAdmins = users.filter((u) => u.id !== testUserId);
-      staffUser1 = nonAdmins[0] || users[0];
-      staffUser2 = nonAdmins[1] || users[1] || users[0];
+      const stamp = Date.now();
+      staffUser1 = await prisma.user.create({
+        data: {
+          id: `usr_tar_s1_${stamp}`,
+          email: `tar_s1_${stamp}@unit.local`,
+          name: 'TAR Staff 1',
+          role: 'CHUYEN_VIEN',
+          departmentId: testDeptId,
+        },
+      });
+      staffUser2 = await prisma.user.create({
+        data: {
+          id: `usr_tar_s2_${stamp}`,
+          email: `tar_s2_${stamp}@unit.local`,
+          name: 'TAR Staff 2',
+          role: 'CHUYEN_VIEN',
+          departmentId: testDeptId,
+        },
+      });
 
       staffToken1 = signSessionToken({
         id: staffUser1.id,
@@ -243,6 +275,14 @@ describe('Tasks API Route Handler Tests', () => {
         role: staffUser1.role,
         departmentId: staffUser1.departmentId,
       });
+    });
+
+    after(async () => {
+      if (staffUser1?.id || staffUser2?.id) {
+        await prisma.user.deleteMany({
+          where: { id: { in: [staffUser1?.id, staffUser2?.id].filter(Boolean) } },
+        });
+      }
     });
 
     test('POST /api/tasks: returns 404 when parentTaskId does not exist', async () => {
@@ -303,8 +343,7 @@ describe('Tasks API Route Handler Tests', () => {
 
       assert.strictEqual(owners.length, 1, 'Must have exactly 1 PRIMARY_OWNER');
       assert.strictEqual(owners[0].userId, staffUser1.id);
-      assert.strictEqual(collabs.length, 1, 'Must have exactly 1 COLLABORATOR, deduplicating primary owner');
-      assert.strictEqual(collabs[0].userId, staffUser2.id);
+      assert.strictEqual(collabs.length, 0, 'Must NOT have manual COLLABORATOR in database — collaborators are derived from child tasks (Rule 2)');
     });
 
     test('POST /api/tasks: creates subtask inheriting department from parent and references parentTaskId', async () => {
@@ -411,10 +450,11 @@ describe('Tasks API Route Handler Tests', () => {
       assert.ok(taskObj.subTasks !== undefined, 'task.subTasks must be defined');
     });
 
-    test('PATCH /api/tasks/[id]: prevents self-referencing parentTaskId and handles invalid parentTaskId', async () => {
+    test('PATCH /api/tasks/[id]: rejects parentTaskId via generic metadata PATCH (canonical contract)', async () => {
       assert.ok(parentCreatedTaskId);
       const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
 
+      // parentTaskId is not allowed in UpdateTaskMetadataSchema — must use dedicated command
       const reqSelf = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
         method: 'PATCH',
         headers: {
@@ -427,29 +467,14 @@ describe('Tasks API Route Handler Tests', () => {
         }),
       });
       const resSelf = await patchTask(reqSelf, context);
-      assert.strictEqual(resSelf.status, 400);
-      const jsonSelf = await resSelf.json();
-      assert.match(jsonSelf.error, /Nhiệm vụ không thể là nhiệm vụ cha của chính nó/i);
-
-      const reqInvalid = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          origin: 'http://localhost:3000',
-          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
-        },
-        body: JSON.stringify({
-          parentTaskId: 'non-existent-parent-id-xyz',
-        }),
-      });
-      const resInvalid = await patchTask(reqInvalid, context);
-      assert.strictEqual(resInvalid.status, 404);
+      assert.strictEqual(resSelf.status, 400, 'parentTaskId rejected by strict metadata schema');
     });
 
-    test('PATCH /api/tasks/[id]: safely updates single DRI and collaboratorIds', async () => {
+    test('PATCH /api/tasks/[id]: rejects assigneeId and collaboratorIds via generic metadata PATCH (canonical contract)', async () => {
       assert.ok(parentCreatedTaskId);
       const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
 
+      // assigneeId/collaboratorIds must go through canonical reassign command, not generic PATCH
       const req = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
         method: 'PATCH',
         headers: {
@@ -464,19 +489,7 @@ describe('Tasks API Route Handler Tests', () => {
       });
 
       const res = await patchTask(req, context);
-      assert.strictEqual(res.status, 200);
-
-      const assignees = await prisma.taskAssignee.findMany({
-        where: { taskId: parentCreatedTaskId },
-      });
-
-      const owners = assignees.filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collabs = assignees.filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
-
-      assert.strictEqual(owners.length, 1, 'Only 1 PRIMARY_OWNER');
-      assert.strictEqual(owners[0].userId, staffUser2.id);
-      assert.strictEqual(collabs.length, 1, 'Only 1 COLLABORATOR');
-      assert.strictEqual(collabs[0].userId, staffUser1.id);
+      assert.strictEqual(res.status, 400, 'assigneeId/collaboratorIds rejected by strict metadata schema');
     });
   });
 });

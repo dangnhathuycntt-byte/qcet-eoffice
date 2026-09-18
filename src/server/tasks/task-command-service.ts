@@ -33,18 +33,11 @@ import {
   ReviewDeliverableInputSchema,
   ApproveTaskInputSchema,
 } from '@/contracts/tasks';
-import {
-  canUserCreateTask,
-  canUserUpdateTask,
-  canUserDeleteTask,
-  canUserSubmitDeliverable,
-  canUserReviewDeliverable,
-  canUserDeleteDeliverable,
-  canUserTransitionStatus,
-  checkActiveDelegation,
-  isPrivilegedUser,
-} from './task-policy';
 import { taskStateMachine } from '@/domain/tasks/state-machine';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
+import { buildTaskResource } from '@/server/authorization/available-actions';
+import type { CapabilityAction } from '@/server/authorization/capability';
 
 export interface CreateFromMeetingResolutionInput {
   meetingId: string;
@@ -120,6 +113,11 @@ export interface ReviewDeliverableInput {
   expectedVersion?: number;
 }
 
+export interface ArchiveTaskInput {
+  reason: string;
+  expectedVersion: number;
+}
+
 function resolveUser(
   ctx: ApiRequestContext | { user: AuthenticatedUser | null }
 ): AuthenticatedUser {
@@ -127,6 +125,18 @@ function resolveUser(
     throw new AuthenticationError('Unauthorized');
   }
   return ctx.user;
+}
+
+async function requireTaskAuthorization(
+  userId: string,
+  action: CapabilityAction,
+  task: Record<string, unknown>
+) {
+  const authorizationContext = await loadAuthorizationContext(userId);
+  const decision = authorize(authorizationContext, action, buildTaskResource(task));
+  if (!decision.allowed) {
+    throw new AuthorizationError(decision.reason || 'Bạn không có quyền thực hiện thao tác này');
+  }
 }
 
 /**
@@ -287,7 +297,7 @@ export class TaskCommandService {
         code,
         title: taskTitle,
         description: input.content,
-        status: TaskStatus.IN_PROGRESS,
+        status: TaskStatus.NOT_STARTED,
         originLevel,
         priority: TaskPriority.HIGH,
         scope,
@@ -412,12 +422,13 @@ export class TaskCommandService {
       academicMonth: number;
       academicYear: string;
       scope: TaskScope;
+      dueDate: Date | null;
     } | null = null;
 
     if (parentTaskId) {
       parentTask = await prisma.task.findUnique({
         where: { id: parentTaskId },
-        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true },
+        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true, dueDate: true },
       });
       if (!parentTask) {
         throw new NotFoundError('Không tìm thấy nhiệm vụ cha');
@@ -437,9 +448,15 @@ export class TaskCommandService {
       throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)');
     }
 
+    if (parentTask?.dueDate && new Date(dueDate).getTime() > new Date(parentTask.dueDate).getTime()) {
+      throw new ValidationError(
+        'Hạn chót của nhiệm vụ con không thể sau hạn chót của nhiệm vụ cha'
+      );
+    }
+
     const curYear = new Date().getFullYear();
 
-    let taskScope: TaskScope = parentTask?.scope || TaskScope.SCHOOL;
+    let taskScope: TaskScope = parentTask?.scope || (effectiveDepartmentId ? TaskScope.DEPARTMENT : TaskScope.SCHOOL);
     if (scope) {
       const s = String(scope).toLowerCase();
       if (s === 'department') taskScope = TaskScope.DEPARTMENT;
@@ -447,18 +464,13 @@ export class TaskCommandService {
       else if (s === 'school') taskScope = TaskScope.SCHOOL;
     }
 
-    const createCheck = canUserCreateTask(user, {
+    await requireTaskAuthorization(user.id, 'task.create', {
       scope: taskScope,
       departmentId: effectiveDepartmentId,
       // A subtask inherits its parent's scope; only an explicitly chosen scope
       // is subject to the scope-authority gate (P0-06).
       scopeExplicit: Boolean(scope) || !parentTaskId,
     });
-    if (!createCheck.allowed) {
-      throw new AuthorizationError(
-        createCheck.reason || 'Forbidden: Insufficient authority to create task'
-      );
-    }
 
     let taskPriority: TaskPriority = TaskPriority.NORMAL;
     if (priority) {
@@ -470,13 +482,8 @@ export class TaskCommandService {
 
     const validAssigneeId =
       typeof assigneeId === 'string' && assigneeId.trim() ? assigneeId.trim() : null;
-    const validCollaboratorIds = Array.isArray(collaboratorIds)
-      ? Array.from(new Set(collaboratorIds)).filter(
-          (id): id is string =>
-            typeof id === 'string' && Boolean(id.trim()) && id.trim() !== validAssigneeId
-        )
-      : [];
 
+    // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), không gán thủ công khi tạo
     const assigneesToCreate: { userId: string; roleInTask: AssigneeRole }[] = [];
     if (validAssigneeId) {
       assigneesToCreate.push({
@@ -484,16 +491,13 @@ export class TaskCommandService {
         roleInTask: AssigneeRole.PRIMARY_OWNER,
       });
     }
-    for (const cId of validCollaboratorIds) {
-      assigneesToCreate.push({
-        userId: cId,
-        roleInTask: AssigneeRole.COLLABORATOR,
-      });
-    }
 
     // Thực hiện trong transaction
     const newTask = await prisma.$transaction(async (tx) => {
-      const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
+      if (creatorId && creatorId !== user.id) {
+        throw new ValidationError('Không được tạo nhiệm vụ thay danh tính người khác');
+      }
+      const effectiveCreatorId = user.id;
 
       // Resolve valid department ID against database to guarantee foreign key integrity
       let validDepartmentId: string | null = null;
@@ -512,17 +516,11 @@ export class TaskCommandService {
       if (dept) {
         validDepartmentId = dept.id;
       } else {
-        const fallbackDept = await tx.department.findFirst({ select: { id: true } });
-        if (fallbackDept) {
-          validDepartmentId = fallbackDept.id;
-        }
+        throw new NotFoundError('Đơn vị được chọn không tồn tại');
       }
 
       // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
-      const candidateUserIds = [
-        ...(validAssigneeId ? [validAssigneeId] : []),
-        ...validCollaboratorIds,
-      ];
+      const candidateUserIds = validAssigneeId ? [validAssigneeId] : [];
       const existingUsers =
         candidateUserIds.length > 0
           ? await tx.user.findMany({
@@ -531,6 +529,10 @@ export class TaskCommandService {
             })
           : [];
       const existingUserIdSet = new Set(existingUsers.map((u) => u.id));
+
+      if (existingUserIdSet.size !== candidateUserIds.length) {
+        throw new NotFoundError('Một hoặc nhiều người được phân công không tồn tại');
+      }
 
       const safeAssigneesToCreate = assigneesToCreate.filter((a) =>
         existingUserIdSet.has(a.userId)
@@ -634,20 +636,6 @@ export class TaskCommandService {
           },
         });
       }
-      for (const cId of validCollaboratorIds) {
-        if (cId !== validAssigneeId && existingUserIdSet.has(cId)) {
-          await tx.taskActor.create({
-            data: {
-              taskId: task.id,
-              userId: cId,
-              unitId: resolvedUnitId,
-              role: TaskActorRole.COLLABORATOR,
-              isPrimaryDRI: false,
-              assignedById: effectiveCreatorId,
-            },
-          });
-        }
-      }
 
       const requestId =
         ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
@@ -685,7 +673,7 @@ export class TaskCommandService {
           afterData: {
             assigneeId: validAssigneeId,
             roleInTask: AssigneeRole.PRIMARY_OWNER,
-            collaboratorIds: validCollaboratorIds,
+            collaboratorIds: [],
           },
         });
       }
@@ -755,12 +743,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const updateCheck = canUserUpdateTask(user, existing);
-    if (!updateCheck.allowed) {
-      throw new AuthorizationError(
-        updateCheck.reason || 'Bạn không có quyền chỉnh sửa nhiệm vụ này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.update_metadata', existing);
 
     const {
       title,
@@ -835,12 +818,24 @@ export class TaskCommandService {
     // Ghép dữ liệu ngày tháng với bản ghi hiện tại để validate nghiêm ngặt (phân biệt undefined với null)
     let mergedStartDate: Date | null = existing.startDate ? new Date(existing.startDate) : null;
     if (startDate !== undefined) {
-      mergedStartDate = startDate ? new Date(startDate) : null;
+      if (startDate === null) {
+        throw new ValidationError('Ngày bắt đầu không được để trống (Start date cannot be empty)');
+      }
+      mergedStartDate = new Date(startDate);
+      if (Number.isNaN(mergedStartDate.getTime())) {
+        throw new ValidationError('Ngày bắt đầu không hợp lệ (Invalid start date)');
+      }
     }
 
     let mergedDueDate: Date | null = existing.dueDate ? new Date(existing.dueDate) : null;
     if (dueDate !== undefined) {
-      mergedDueDate = dueDate ? new Date(dueDate) : null;
+      if (dueDate === null) {
+        throw new ValidationError('Thời hạn hoàn thành không được để trống (Due date cannot be empty)');
+      }
+      mergedDueDate = new Date(dueDate);
+      if (Number.isNaN(mergedDueDate.getTime())) {
+        throw new ValidationError('Thời hạn hoàn thành không hợp lệ (Invalid due date)');
+      }
     }
 
     if (mergedStartDate && mergedDueDate) {
@@ -882,12 +877,7 @@ export class TaskCommandService {
 
       const mappedStatus = statusMap[status];
       if (mappedStatus) {
-        const hasDelegation = await checkActiveDelegation(
-          prisma,
-          user.id,
-          taskId,
-          existing.departmentId
-        );
+        await requireTaskAuthorization(user.id, 'task.update_execution', existing);
 
         // Canonical State Machine Validation
         const fsmResult = taskStateMachine.canTransition(
@@ -895,7 +885,7 @@ export class TaskCommandService {
             id: user.id,
             role: user.role,
             departmentId: user.departmentId,
-            isDelegated: hasDelegation,
+            isDelegated: false,
           },
           {
             id: existing.id,
@@ -924,29 +914,11 @@ export class TaskCommandService {
           );
         }
 
-        const transitionCheck = canUserTransitionStatus(
-          user,
-          existing,
-          mappedStatus,
-          {
-            activeDelegation: hasDelegation,
-            newAssigneeId: assigneeId !== undefined ? assigneeId : undefined,
-          }
-        );
-
-        if (!transitionCheck.allowed) {
-          throw new AuthorizationError(
-            transitionCheck.reason || 'Bạn không có quyền thực hiện chuyển đổi trạng thái này'
-          );
-        }
-
         scalarUpdateData.status = mappedStatus;
         if (mappedStatus === TaskStatus.COMPLETED) {
           scalarUpdateData.completedAt = new Date();
-          if (scalarUpdateData.progressPercent === undefined) {
-            scalarUpdateData.progressPercent = 100;
-          }
-        } else if (existing.status === TaskStatus.COMPLETED) {
+          scalarUpdateData.progressPercent = 100;
+        } else {
           scalarUpdateData.completedAt = null;
         }
       }
@@ -1059,48 +1031,11 @@ export class TaskCommandService {
         effectivePrimaryOwnerId = existingOwner?.userId || null;
       }
 
+      // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), tuyệt đối không cho mutate thủ công
       if (collaboratorIds !== undefined) {
-        const validCollabIds = Array.isArray(collaboratorIds)
-          ? Array.from(new Set(collaboratorIds)).filter(
-              (cId): cId is string =>
-                typeof cId === 'string' &&
-                Boolean(cId.trim()) &&
-                cId.trim() !== effectivePrimaryOwnerId
-            )
-          : [];
-
-        // Synchronize canonical TaskActor
-        await tx.taskActor.deleteMany({
-          where: { taskId, role: TaskActorRole.COLLABORATOR },
-        });
-        if (validCollabIds.length > 0) {
-          await tx.taskActor.createMany({
-            data: validCollabIds.map((cId) => ({
-              taskId,
-              userId: cId,
-              role: TaskActorRole.COLLABORATOR,
-              isPrimaryDRI: false,
-              assignedById: user.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-
-        // Legacy TaskAssignee compatibility
-        await tx.taskAssignee.deleteMany({
-          where: { taskId, roleInTask: AssigneeRole.COLLABORATOR },
-        });
-
-        if (validCollabIds.length > 0) {
-          await tx.taskAssignee.createMany({
-            data: validCollabIds.map((cId) => ({
-              taskId,
-              userId: cId,
-              roleInTask: AssigneeRole.COLLABORATOR,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        throw new ValidationError(
+          'Người phối hợp là dữ liệu phái sinh từ các nhiệm vụ con active, không được chỉnh sửa thủ công.'
+        );
       }
 
       const updatedTask = await tx.task.findUniqueOrThrow({
@@ -1179,7 +1114,7 @@ export class TaskCommandService {
           auditLogged = true;
           await logAuditEvent(tx, {
             actorId: user.id,
-            action: 'TASK_START_DATE_CHANGED',
+            action: AuditAction.TASK_START_DATE_CHANGED,
             entityType: AuditEntityType.TASK,
             entityId: taskId,
             requestId,
@@ -1270,12 +1205,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const deleteCheck = canUserDeleteTask(user, existing);
-    if (!deleteCheck.allowed) {
-      throw new AuthorizationError(
-        deleteCheck.reason || 'Bạn không có quyền xóa nhiệm vụ này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.archive', existing);
 
     await prisma.$transaction(async (tx) => {
       // 1. Tìm toàn bộ subtasks đệ quy
@@ -1339,6 +1269,66 @@ export class TaskCommandService {
     };
   }
 
+  async archiveTask(
+    ctx: ApiRequestContext | { user: AuthenticatedUser | null },
+    taskId: string,
+    input: ArchiveTaskInput
+  ) {
+    const user = resolveUser(ctx);
+    const existing = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, version: true, archivedAt: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
+    }
+    if (existing.archivedAt) {
+      return { success: true, message: 'Nhiệm vụ đã được lưu trữ', version: existing.version };
+    }
+
+    const reason = input.reason.trim();
+    const requestId =
+      ctx && 'requestId' in ctx && typeof ctx.requestId === 'string' ? ctx.requestId : undefined;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.task.updateMany({
+        where: { id: taskId, version: input.expectedVersion, archivedAt: null },
+        data: {
+          archivedAt: new Date(),
+          archivedById: user.id,
+          archiveReason: reason,
+          version: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${input.expectedVersion}`
+        );
+      }
+
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.TASK_ARCHIVED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        requestId,
+        beforeData: { archivedAt: null, version: existing.version },
+        afterData: { archivedById: user.id, archiveReason: reason },
+      });
+      await publishOutboxEvent(tx, {
+        eventType: 'TASK_ARCHIVED_NOTIFICATION',
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: { taskId, actorId: user.id, reason },
+      });
+
+      return { success: true, message: 'Đã lưu trữ nhiệm vụ thành công', version: input.expectedVersion + 1 };
+    });
+
+    return result;
+  }
+
   /**
    * Nộp minh chứng nhiệm vụ và tự động chuyển trạng thái sang WAITING_APPROVAL.
    */
@@ -1364,12 +1354,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const authCheck = canUserSubmitDeliverable(user, task);
-    if (!authCheck.allowed) {
-      throw new AuthorizationError(
-        authCheck.reason || 'Forbidden: Insufficient authority to submit deliverable'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.submit_result', task);
 
     const validationResult = SubmitDeliverableInputSchema.safeParse(input);
     if (!validationResult.success) {
@@ -1516,25 +1501,7 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy minh chứng cho nhiệm vụ này');
     }
 
-    const hasDelegation = await checkActiveDelegation(
-      prisma,
-      user.id,
-      taskId,
-      deliverable.task.departmentId
-    );
-
-    const reviewCheck = canUserReviewDeliverable(
-      user,
-      deliverable,
-      deliverable.task,
-      { activeDelegation: hasDelegation }
-    );
-
-    if (!reviewCheck.allowed) {
-      throw new AuthorizationError(
-        reviewCheck.reason || 'Bạn không có thẩm quyền nghiệm thu minh chứng này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.review', deliverable.task);
 
     const validStatus =
       reviewStatus === 'APPROVED'
@@ -1571,6 +1538,7 @@ export class TaskCommandService {
       } else if (validStatus === DeliverableReviewStatus.REVISION_REQUIRED) {
         // Bị yêu cầu chỉnh sửa, đưa nhiệm vụ về lại IN_PROGRESS
         taskUpdateData.status = TaskStatus.IN_PROGRESS;
+        taskUpdateData.completedAt = null;
       }
 
       if (expectedVersion !== undefined) {
@@ -1686,17 +1654,7 @@ export class TaskCommandService {
       throw new AuthorizationError('Minh chứng không thuộc về nhiệm vụ được yêu cầu');
     }
 
-    const deleteCheck = canUserDeleteDeliverable(
-      user,
-      deliverable,
-      deliverable.task
-    );
-
-    if (!deleteCheck.allowed) {
-      throw new AuthorizationError(
-        deleteCheck.reason || 'Bạn không có quyền xóa minh chứng này'
-      );
-    }
+    await requireTaskAuthorization(user.id, 'task.update_execution', deliverable.task);
 
     const requestId =
       ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'

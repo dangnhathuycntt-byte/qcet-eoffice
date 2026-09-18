@@ -314,20 +314,36 @@ export const UpdateTaskMetadataSchema = z
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.optional(),
+    startDate: IsoDateStringSchema.optional().nullable(),
     dueDate: IsoDateStringSchema.optional().nullable(),
-    departmentId: z
-      .string()
-      .trim()
-      .max(64, 'Department ID cannot exceed 64 characters')
-      .optional()
-      .nullable(),
-    parentTaskId: z.string().trim().max(128).optional().nullable(),
-    academicMonth: z.coerce.number().int().min(1).max(12).optional(),
-    academicYear: z.string().trim().max(20).optional(),
+    expectedVersion: z.number().int().min(0).optional(),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    ifMatch: z.string().trim().optional(),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      if (data.startDate && data.dueDate) {
+        return new Date(data.startDate).getTime() <= new Date(data.dueDate).getTime();
+      }
+      return true;
+    },
+    {
+      message: 'Ngày bắt đầu không được sau thời hạn hoàn thành (Start date cannot be after due date)',
+      path: ['startDate'],
+    }
+  );
+
+export type UpdateTaskMetadataInput = z.infer<typeof UpdateTaskMetadataSchema>;
+
+export const ArchiveTaskSchema = z
+  .object({
+    reason: z.string().trim().min(3).max(1000),
+    expectedVersion: z.number().int().min(0),
   })
   .strict();
 
-export type UpdateTaskMetadataInput = z.infer<typeof UpdateTaskMetadataSchema>;
+export type ArchiveTaskInput = z.infer<typeof ArchiveTaskSchema>;
 
 /**
  * Change task status command contract.

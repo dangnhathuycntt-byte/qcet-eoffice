@@ -88,7 +88,7 @@ describe('Create Task UI -> API contract (C1/T05) — buildCreateTaskPayload', (
     assert.strictEqual(CreateTaskInputSchema.safeParse(payload).success, true);
     assert.strictEqual(payload.title, 'Rà soát hồ sơ kiểm định chất lượng');
     assert.strictEqual(payload.assigneeId, 'usr_dri_001');
-    assert.deepStrictEqual(payload.collaboratorIds, ['usr_col_002', 'usr_col_003']);
+    assert.strictEqual(payload.collaboratorIds, undefined, 'collaboratorIds must not be forwarded on creation — derived from subtasks');
     assert.strictEqual(payload.priority, 'MEDIUM');
     assert.strictEqual(payload.scope, 'DEPARTMENT');
     assert.strictEqual(payload.departmentId, 'dept_qldt');
@@ -190,20 +190,14 @@ describe('Create Task UI -> API contract (C1/T05) — buildCreateTaskPayload', (
     );
   });
 
-  it('accepts pre-resolved IDs and excludes the primary owner from collaborators', () => {
+  it('does not emit collaboratorIds on creation — collaborators are strictly derived from active child tasks', () => {
     const payload = buildCreateTaskPayload(makeDraft(), {
       assigneeId: 'usr_dri_001',
       collaboratorIds: ['usr_col_002', 'usr_col_002', 'usr_dri_001'],
     });
 
     assert.strictEqual(payload.assigneeId, 'usr_dri_001');
-    assert.deepStrictEqual(payload.collaboratorIds, ['usr_col_002']);
-  });
-
-  it('caps collaborators at the schema maximum of 50', () => {
-    const manyIds = Array.from({ length: 60 }, (_, i) => `usr_col_${i}`);
-    const payload = buildCreateTaskPayload(makeDraft(), { collaboratorIds: manyIds });
-    assert.strictEqual(payload.collaboratorIds?.length, 50);
+    assert.strictEqual(payload.collaboratorIds, undefined);
   });
 
   it('exposes a pure, DB-free personnel resolver', () => {

@@ -189,13 +189,20 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
   const title = task.title;
 
   // 3. Department & Assignee
-  const departmentName =
+  const rawDept =
     (isSubTask && (flattenedTask?.assignedToDepartmentName || flattenedTask?.parentDepartment)) ||
     (schoolTask && (schoolTask.department || schoolTask.leadDepartmentCode)) ||
     anyTask.department ||
     anyTask.leadDepartmentCode ||
     anyTask.departmentCode ||
     "QCET";
+
+  const departmentName =
+    typeof rawDept === "string"
+      ? rawDept
+      : rawDept && typeof rawDept === "object"
+      ? rawDept.name || rawDept.code || "QCET"
+      : "QCET";
 
   const assigneeName =
     (isSubTask && flattenedTask?.assigneeName) ||

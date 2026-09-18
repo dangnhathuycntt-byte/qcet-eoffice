@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ZodError } from "zod";
-import { getSessionFromRequest, SessionPayload } from "@/lib/jwt-session";
+import { ZodError, type ZodType } from "zod";
+import type { SessionPayload } from "@/lib/jwt-session";
 import {
   ApiError,
   AuthenticationError,
@@ -14,14 +14,34 @@ import {
 import {
   SeparationOfDutiesError,
   SingleDRIError,
-  HybridAuthorizationError,
-} from "@/lib/auth/hybrid-authorization";
+  SeparationOfPowersError,
+  UnitScopeDeniedError,
+  PortfolioMismatchError,
+  DelegationExpiredError,
+  DelegationRevokedError,
+  NonDelegablePowerError,
+  InvalidWorkflowStateError,
+} from "@/server/authorization/errors";
 import {
   SegregationOfDutiesError,
   MakerCheckerError,
   TaskActorAuthorizationError,
   StepProgressionError,
 } from "@/lib/services/task-actor-service";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import {
+  assertJsonContentType,
+  assertRequestBodySize,
+  MAX_PAYLOAD_SIZE,
+  parseAndValidateJson,
+} from "@/server/api/validation";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { authorize } from "@/server/authorization/authorization-engine";
+import { buildTaskResource } from "@/server/authorization/available-actions";
+import type { CapabilityAction } from "@/server/authorization/capability";
+import { taskQueryService } from "@/server/tasks";
 
 export interface ActionRouteContext {
   params: Promise<{ id: string }>;
@@ -81,17 +101,6 @@ export function handleActionError(error: any) {
     );
   }
 
-  if (error instanceof HybridAuthorizationError) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-        code: error.rejectionCode || "FORBIDDEN",
-      },
-      { status: error.statusCode || 403 }
-    );
-  }
-
   // State Transition Error -> 409 Conflict with domain details
   if (error instanceof InvalidTransitionError) {
     return NextResponse.json(
@@ -146,27 +155,36 @@ export function handleActionError(error: any) {
 
 export async function resolveActionContext(
   request: NextRequest,
-  context: ActionRouteContext
+  context: ActionRouteContext,
+  schema: ZodType,
+  action: CapabilityAction
 ): Promise<{ session: SessionPayload; taskId: string; body: any }> {
-  const session = await getSessionFromRequest(request);
-  if (!session) {
-    throw new AuthenticationError("Yêu cầu xác thực tài khoản", "AUTH_REQUIRED");
-  }
+  assertCsrf(request);
+  assertJsonContentType(request);
+  assertRequestBodySize(request, MAX_PAYLOAD_SIZE);
+
+  const apiContext = await getApiContext(request);
+  const user = requireAuthenticated(apiContext);
+  assertRateLimit(user.id, "MUTATIONS_SENSITIVE");
 
   const { id: taskId } = await Promise.resolve(context.params);
   if (!taskId || !taskId.trim()) {
     throw new ValidationError("Mã nhiệm vụ (id) không hợp lệ");
   }
 
-  let body: any = {};
-  try {
-    const text = await request.text();
-    if (text && text.trim()) {
-      body = JSON.parse(text);
-    }
-  } catch (err) {
-    throw new ValidationError("Dữ liệu JSON không đúng định dạng");
+  const body = await parseAndValidateJson(request, schema);
+  const taskResult = await taskQueryService.getTaskById(taskId);
+  if (!taskResult) {
+    throw new NotFoundError("Không tìm thấy nhiệm vụ");
   }
+
+  const authorizationContext = await loadAuthorizationContext(user.id);
+  const decision = authorize(authorizationContext, action, buildTaskResource(taskResult.task));
+  if (!decision.allowed) {
+    throw new ForbiddenError(decision.reason || "Bạn không có quyền thực hiện thao tác này");
+  }
+
+  const session = user as unknown as SessionPayload;
 
   return { session, taskId, body };
 }

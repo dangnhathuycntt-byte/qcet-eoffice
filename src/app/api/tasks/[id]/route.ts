@@ -15,15 +15,14 @@ import {
   PreconditionFailedError,
   ValidationError,
 } from '@/server/api/errors';
-import { UpdateTaskSchema } from '@/contracts/tasks';
+import { ArchiveTaskSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
 import {
-  canReadTask,
-  canUpdateTask,
-  canApproveTask,
-  canChangeTaskStatus,
-  canDeleteTask,
-} from '@/server/policies/task-policy';
+  computeAvailableActions,
+  buildTaskResource,
+} from '@/server/authorization/available-actions';
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
@@ -46,19 +45,27 @@ export async function GET(req: Request, routeContext: RouteContext) {
     }
 
     const taskSubject = result.task;
+    const taskResource = buildTaskResource(taskSubject);
 
-    // Object authorization check (BOLA protection)
-    if (!canReadTask(authUser, taskSubject)) {
-      throw new ForbiddenError('Bạn không có quyền xem nhiệm vụ này');
+    // Canonical object authorization check (BOLA protection)
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const readDecision = authorize(authContext, 'task.read', taskResource);
+    if (!readDecision.allowed) {
+      throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');
     }
 
-    const taskDetail = result.task;
+    const availableActions = computeAvailableActions(authContext, taskResource);
+    const taskDetail = {
+      ...result.task,
+      availableActions,
+    };
 
     return apiSuccess(
       {
         success: true,
         task: taskDetail,
         data: taskDetail,
+        availableActions,
       },
       {
         headers: {
@@ -89,28 +96,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id } = await Promise.resolve(routeContext.params);
 
-    // SPRINT 4 INVARIANT: Generic PATCH is strictly limited to safe metadata (title, description, priority, dueDate).
-    // Workflow transitions (status, approved, resolution) are strictly prohibited via generic PATCH.
-    try {
-      const rawReq = req.clone();
-      const rawBody = (await rawReq.json().catch(() => null)) as Record<string, unknown> | null;
-      if (
-        rawBody &&
-        (rawBody.status !== undefined ||
-          rawBody.approved !== undefined ||
-          rawBody.resolution !== undefined)
-      ) {
-        throw new ValidationError(
-          'Cấm cập nhật trực tiếp trạng thái (status), nghiệm thu hoàn thành (approved), hoặc kết quả (resolution) qua generic PATCH. Vui lòng sử dụng các endpoint canonical domain actions (/actions/*).',
-          undefined,
-          'CANONICAL_COMMAND_REQUIRED'
-        );
-      }
-    } catch (e) {
-      if (e instanceof ValidationError) throw e;
-    }
-
-    const validatedBody = await parseAndValidateJson(req, UpdateTaskSchema);
+    const validatedBody = await parseAndValidateJson(req, UpdateTaskMetadataSchema);
 
     // Fetch existing task to check existence, OCC, and authorization
     const taskResult = await taskQueryService.getTaskById(id);
@@ -176,31 +162,34 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     // 2. Object-level & Property-level authorization
     // SPRINT 4 INVARIANT: Generic PATCH is strictly limited to safe metadata (title, description, priority, dueDate).
     // Workflow transitions (status, approved, resolution) are strictly prohibited via PATCH.
-    if (
-      validatedBody.status !== undefined ||
-      (validatedBody as any).approved !== undefined ||
-      validatedBody.resolution !== undefined
-    ) {
-      throw new ValidationError(
-        'Cấm cập nhật trực tiếp trạng thái (status), nghiệm thu hoàn thành (approved), hoặc kết quả (resolution) qua generic PATCH. Vui lòng sử dụng các endpoint canonical domain actions (/actions/*).',
-        undefined,
-        'CANONICAL_COMMAND_REQUIRED'
-      );
-    }
-
-    if (!canUpdateTask(authUser, existingTask)) {
-      throw new ForbiddenError('Bạn không có quyền cập nhật nhiệm vụ này');
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const updateDecision = authorize(authContext, 'task.update_metadata', taskResource);
+    if (!updateDecision.allowed) {
+      throw new ForbiddenError(updateDecision.reason || 'Bạn không có quyền cập nhật nhiệm vụ này');
     }
 
     // Validate ngày trên dữ liệu sau khi ghép PATCH với bản ghi DB (phân biệt trường bị bỏ qua và null)
     let mergedStartDate: Date | null = existingTask.startDate ? new Date(existingTask.startDate) : null;
     if (validatedBody.startDate !== undefined) {
-      mergedStartDate = validatedBody.startDate ? new Date(validatedBody.startDate) : null;
+      if (validatedBody.startDate === null) {
+        throw new ValidationError('Ngày bắt đầu không được để trống (Start date cannot be empty)');
+      }
+      mergedStartDate = new Date(validatedBody.startDate);
+      if (Number.isNaN(mergedStartDate.getTime())) {
+        throw new ValidationError('Ngày bắt đầu không hợp lệ (Invalid start date)');
+      }
     }
 
     let mergedDueDate: Date | null = existingTask.dueDate ? new Date(existingTask.dueDate) : null;
     if (validatedBody.dueDate !== undefined) {
-      mergedDueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null;
+      if (validatedBody.dueDate === null) {
+        throw new ValidationError('Thời hạn hoàn thành không được để trống (Due date cannot be empty)');
+      }
+      mergedDueDate = new Date(validatedBody.dueDate);
+      if (Number.isNaN(mergedDueDate.getTime())) {
+        throw new ValidationError('Thời hạn hoàn thành không hợp lệ (Invalid due date)');
+      }
     }
 
     if (mergedStartDate && mergedDueDate) {
@@ -215,17 +204,9 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     const updated = await taskCommandService.updateTask(context, id, {
       title: validatedBody.title,
       description: validatedBody.description,
-      departmentId: validatedBody.departmentId,
       startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
-      assigneeId: validatedBody.assigneeId,
-      collaboratorIds: validatedBody.collaboratorIds,
-      academicMonth: validatedBody.academicMonth,
-      academicYear: validatedBody.academicYear,
-      parentTaskId: validatedBody.parentTaskId,
-      comment: validatedBody.comment,
-      note: validatedBody.note,
       expectedVersion,
     });
 
@@ -254,6 +235,8 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
     assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
 
     const context = await getApiContext(req);
     requestId = context.requestId;
@@ -263,6 +246,7 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id } = await Promise.resolve(routeContext.params);
+    const input = await parseAndValidateJson(req, ArchiveTaskSchema);
 
     const taskResult = await taskQueryService.getTaskById(id);
     if (!taskResult) {
@@ -270,11 +254,14 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     }
     const existingTask = taskResult.task;
 
-    if (!canDeleteTask(authUser, existingTask)) {
-      throw new ForbiddenError('Bạn không có quyền xóa nhiệm vụ này');
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const archiveDecision = authorize(authContext, 'task.archive', taskResource);
+    if (!archiveDecision.allowed) {
+      throw new ForbiddenError(archiveDecision.reason || 'Bạn không có quyền lưu trữ nhiệm vụ này');
     }
 
-    const result = await taskCommandService.deleteTask(context, id);
+    const result = await taskCommandService.archiveTask(context, id, input);
 
     return apiSuccess(
       {

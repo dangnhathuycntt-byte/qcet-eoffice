@@ -127,6 +127,7 @@ export const TASK_CAPABILITIES = [
   'task.create',
   'task.assign',
   'task.reassign',
+  'task.update_metadata',
   'task.update_execution',
   'task.submit_result',
   'task.review',
@@ -135,6 +136,7 @@ export const TASK_CAPABILITIES = [
   'task.remind',
   'task.close',
   'task.cancel',
+  'task.archive',
 ] as const;
 
 export type TaskCapabilityAction = (typeof TASK_CAPABILITIES)[number];
@@ -389,6 +391,7 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'task.create': 'Khởi tạo nhiệm vụ',
   'task.assign': 'Phân công nhiệm vụ',
   'task.reassign': 'Điều chuyển nhiệm vụ / Thay đổi DRI',
+  'task.update_metadata': 'Cập nhật metadata nhiệm vụ',
   'task.update_execution': 'Cập nhật tiến độ thực hiện',
   'task.submit_result': 'Nộp sản phẩm / kết quả thực hiện',
   'task.review': 'Đánh giá sản phẩm nhiệm vụ',
@@ -397,6 +400,7 @@ const CAPABILITY_NAMES: Readonly<Record<string, string>> = {
   'task.remind': 'Đôn đốc nhắc nhở nhiệm vụ',
   'task.close': 'Đóng hoàn tất nhiệm vụ',
   'task.cancel': 'Hủy bỏ nhiệm vụ',
+  'task.archive': 'Lưu trữ nhiệm vụ',
   // System
   'account.manage': 'Quản trị tài khoản người dùng',
   'org.manage': 'Quản lý cơ cấu tổ chức & phòng ban',

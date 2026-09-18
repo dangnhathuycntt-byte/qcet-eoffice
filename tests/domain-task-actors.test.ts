@@ -1212,8 +1212,8 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         where: { taskId: { in: testTasksList } },
       });
 
-      // RUN PASS 2
-      const summary2 = await migrateTaskRelations(prisma);
+      // RUN PASS 2 (scoped to test tasks for deterministic idempotency)
+      const summary2 = await migrateTaskRelations(prisma, { taskIds: testTasksList });
       assert.equal(summary2.driCreatedOrUpdated, 0, "Pass 2 must create/update 0 DRIs");
       assert.equal(summary2.assignerCreated, 0, "Pass 2 must create 0 ASSIGNERs");
       assert.equal(summary2.leadUnitCreated, 0, "Pass 2 must create 0 LEAD_UNITs");
@@ -1230,7 +1230,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       );
 
       // RUN PASS 3
-      const summary3 = await migrateTaskRelations(prisma);
+      const summary3 = await migrateTaskRelations(prisma, { taskIds: testTasksList });
       assert.equal(summary3.driCreatedOrUpdated, 0, "Pass 3 must create/update 0 DRIs");
       assert.equal(summary3.assignerCreated, 0, "Pass 3 must create 0 ASSIGNERs");
       assert.equal(summary3.leadUnitCreated, 0, "Pass 3 must create 0 LEAD_UNITs");

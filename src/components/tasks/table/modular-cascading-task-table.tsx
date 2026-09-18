@@ -237,6 +237,7 @@ export function ModularCascadingTaskTable({
   );
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const lastClickedIndexRef = React.useRef<number | null>(null);
 
   const activeColSpan = React.useMemo(() => {
     let span = 5; // Title + Status + Lead + Due + Actions = 5
@@ -544,6 +545,16 @@ export function ModularCascadingTaskTable({
     initialExpandedIds: autoExpandedParentIds,
   });
 
+  // Clear selection when filters/scope change to prevent bulk ops on hidden tasks
+  const filteredTaskIdsRef = React.useRef<string>("");
+  React.useEffect(() => {
+    const key = filteredTasks.map((t) => t.id).join(",");
+    if (filteredTaskIdsRef.current && filteredTaskIdsRef.current !== key) {
+      tableState.clearSelection();
+    }
+    filteredTaskIdsRef.current = key;
+  }, [filteredTasks, tableState]);
+
   const handlePageChange = React.useCallback(
     (newPage: number) => {
       tableState.setPage(newPage);
@@ -707,6 +718,23 @@ export function ModularCascadingTaskTable({
     return paginatedResult.items.map((t) => t.id);
   }, [paginatedResult.items]);
 
+  // 9b. Selection group positions — contiguous selected rows share a visual block
+  const selectionGroupPositions = React.useMemo(() => {
+    const items = paginatedResult.items;
+    const selected = tableState.selectedIds;
+    const positions = new Map<string, "first" | "middle" | "last" | "only">();
+    for (let i = 0; i < items.length; i++) {
+      if (!selected.has(items[i].id)) continue;
+      const prevSelected = i > 0 && selected.has(items[i - 1].id);
+      const nextSelected = i < items.length - 1 && selected.has(items[i + 1].id);
+      if (prevSelected && nextSelected) positions.set(items[i].id, "middle");
+      else if (prevSelected) positions.set(items[i].id, "last");
+      else if (nextSelected) positions.set(items[i].id, "first");
+      else positions.set(items[i].id, "only");
+    }
+    return positions;
+  }, [paginatedResult.items, tableState.selectedIds]);
+
   // 10. Table Container Ref, Task Selection & URL Deep Linking
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -718,6 +746,29 @@ export function ModularCascadingTaskTable({
       onSelectTask?.(task);
     },
     [syncWithUrl, urlSync, onSelectTask]
+  );
+
+  // Shift+Click range selection handler
+  const handleRowToggleSelect = React.useCallback(
+    (taskId: string, e?: React.MouseEvent | React.ChangeEvent) => {
+      const currentIndex = paginatedResult.items.findIndex((t) => t.id === taskId);
+      if (currentIndex === -1) {
+        tableState.toggleSelect(taskId);
+        return;
+      }
+
+      const isShift = e && "shiftKey" in e && (e as React.MouseEvent).shiftKey;
+      if (isShift && lastClickedIndexRef.current !== null) {
+        const start = Math.min(lastClickedIndexRef.current, currentIndex);
+        const end = Math.max(lastClickedIndexRef.current, currentIndex);
+        const rangeIds = paginatedResult.items.slice(start, end + 1).map((t) => t.id);
+        tableState.selectMultiple(rangeIds);
+      } else {
+        tableState.toggleSelect(taskId);
+      }
+      lastClickedIndexRef.current = currentIndex;
+    },
+    [paginatedResult.items, tableState]
   );
 
   // Sync selected task from URL search params on mount or param update
@@ -1230,7 +1281,7 @@ export function ModularCascadingTaskTable({
           {/* Desktop Table View (>= 768px) - Linear Soft Rounded Rows */}
           <div className="hidden md:block overflow-hidden bg-transparent">
             <div className="overflow-x-auto thin-scrollbar px-0.5 sm:px-1">
-              <table className="w-full text-left border-separate border-spacing-y-[1.5px]">
+              <table className="w-full text-left border-separate border-spacing-y-0">
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
                   indeterminate={tableState.someVisibleSelected}
@@ -1282,11 +1333,12 @@ export function ModularCascadingTaskTable({
                         density={tableState.density}
                         visibleColumns={effectiveVisibleColumns}
                         showSelection={false}
+                        selectionGroupPosition={selectionGroupPositions.get(task.id) ?? null}
                         selectedAcademicMonth={selectedAcademicMonth}
                         activeCategory={activeCategory}
                         canAssign={canAssignUnit}
                         onAddSubTask={effectiveOnAddSubTask}
-                        onToggleSelect={() => tableState.toggleSelect(task.id)}
+                        onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
                         onClick={handleEffectiveSelectTask}
                         onContextMenu={handleRowContextMenu}
                         onStatusChange={onStatusChange}

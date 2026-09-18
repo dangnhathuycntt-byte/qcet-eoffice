@@ -7,7 +7,7 @@ import type {
 } from "../types";
 import { matchesUser } from "@/lib/role-task-filter";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
-import { isTaskPastDue } from "@/lib/academic-calendar";
+import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 
 export type {
@@ -42,6 +42,7 @@ export interface DeriveWorkspaceDataOptions {
   user: AuthUser | null;
   scope: WorkspaceScope;
   selectedDepartment?: string;
+  referenceDate?: string;
 }
 
 export interface DerivedWorkspaceData {
@@ -102,10 +103,54 @@ export function countScopeTasks(
   if (scope === "school") return cleanTasks.length;
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   if (scope === "unit") {
-    if (userDept && userDept !== "ALL") {
-      return filterTasksForTable(cleanTasks, "ALL", "", userDept).length;
+    if (!userDept || userDept === "ALL") {
+      return cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
     }
-    return cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0).length;
+    const canonicalDept = resolveDepartmentId(userDept) || userDept;
+    return cleanTasks.filter((t) => {
+      const taskDept =
+        t.departmentCode ||
+        t.department ||
+        t.leadDepartmentCode ||
+        t.leadDepartment ||
+        t.departmentId ||
+        t.leadDepartmentId;
+
+      const matchParent =
+        (taskDept && (
+          taskDept.toUpperCase() === userDept.toUpperCase() ||
+          taskDept.toLowerCase() === userDept.toLowerCase() ||
+          taskDept === canonicalDept ||
+          resolveDepartmentId(taskDept) === canonicalDept
+        )) ||
+        t.coDepartmentCodes?.some(
+          (code) =>
+            code.toUpperCase() === userDept.toUpperCase() ||
+            code === canonicalDept ||
+            resolveDepartmentId(code) === canonicalDept
+        ) ||
+        t.coDepartments?.some(
+          (dept) =>
+            dept.toLowerCase() === userDept.toLowerCase() ||
+            dept === canonicalDept ||
+            resolveDepartmentId(dept) === canonicalDept
+        );
+
+      const matchChild =
+        t.subTasks?.some((st) => {
+          const subDept = st.departmentCode || st.department || st.departmentId;
+          return (
+            subDept && (
+              subDept.toUpperCase() === userDept.toUpperCase() ||
+              subDept.toLowerCase() === userDept.toLowerCase() ||
+              subDept === canonicalDept ||
+              resolveDepartmentId(subDept) === canonicalDept
+            )
+          );
+        });
+
+      return Boolean(matchParent || matchChild);
+    }).length;
   }
   // scope === "my"
   if (!user) return cleanTasks.length;
@@ -132,6 +177,7 @@ export function deriveAdaptiveWorkspaceData({
   user,
   scope,
   selectedDepartment,
+  referenceDate,
 }: DeriveWorkspaceDataOptions): DerivedWorkspaceData {
   const cleanTasks = tasks.filter(isProductionTask);
   const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
@@ -144,7 +190,51 @@ export function deriveAdaptiveWorkspaceData({
     scopedTasks = cleanTasks;
   } else if (scope === "unit") {
     if (userDept && userDept !== "ALL") {
-      scopedTasks = filterTasksForTable(cleanTasks, "ALL", "", userDept);
+      const canonicalDept = resolveDepartmentId(userDept) || userDept;
+      scopedTasks = cleanTasks.filter((t) => {
+        const taskDept =
+          t.departmentCode ||
+          t.department ||
+          t.leadDepartmentCode ||
+          t.leadDepartment ||
+          t.departmentId ||
+          t.leadDepartmentId;
+
+        const matchParent =
+          (taskDept && (
+            taskDept.toUpperCase() === userDept.toUpperCase() ||
+            taskDept.toLowerCase() === userDept.toLowerCase() ||
+            taskDept === canonicalDept ||
+            resolveDepartmentId(taskDept) === canonicalDept
+          )) ||
+          t.coDepartmentCodes?.some(
+            (code) =>
+              code.toUpperCase() === userDept.toUpperCase() ||
+              code === canonicalDept ||
+              resolveDepartmentId(code) === canonicalDept
+          ) ||
+          t.coDepartments?.some(
+            (dept) =>
+              dept.toLowerCase() === userDept.toLowerCase() ||
+              dept === canonicalDept ||
+              resolveDepartmentId(dept) === canonicalDept
+          );
+
+        const matchChild =
+          t.subTasks?.some((st) => {
+            const subDept = st.departmentCode || st.department || st.departmentId;
+            return (
+              subDept && (
+                subDept.toUpperCase() === userDept.toUpperCase() ||
+                subDept.toLowerCase() === userDept.toLowerCase() ||
+                subDept === canonicalDept ||
+                resolveDepartmentId(subDept) === canonicalDept
+              )
+            );
+          });
+
+        return Boolean(matchParent || matchChild);
+      });
     } else {
       scopedTasks = cleanTasks.filter((t) => t.subTasks && t.subTasks.length > 0);
     }
@@ -175,6 +265,8 @@ export function deriveAdaptiveWorkspaceData({
   let subtasksWaitingApprovalCount = 0;
   let subtasksUrgentOverdueCount = 0;
 
+  const refDate = referenceDate || (selectedDepartment?.startsWith('20') ? selectedDepartment : getSystemReferenceDate());
+
   scopedTasks.forEach((t) => {
     if (t.status === "COMPLETED") completedParentTasks++;
     if (
@@ -184,7 +276,7 @@ export function deriveAdaptiveWorkspaceData({
     ) {
       parentWaitingApprovalCount++;
     }
-    if (t.dueDate && isTaskPastDue(t.dueDate) && t.status !== "COMPLETED") {
+    if (t.dueDate && isTaskPastDue(t.dueDate, refDate) && t.status !== "COMPLETED") {
       parentUrgentOverdueCount++;
     }
 
@@ -198,7 +290,7 @@ export function deriveAdaptiveWorkspaceData({
       ) {
         subtasksWaitingApprovalCount++;
       }
-      if (st.dueDate && isTaskPastDue(st.dueDate) && st.status !== "COMPLETED") {
+      if (st.dueDate && isTaskPastDue(st.dueDate, refDate) && st.status !== "COMPLETED") {
         subtasksUrgentOverdueCount++;
       }
     });

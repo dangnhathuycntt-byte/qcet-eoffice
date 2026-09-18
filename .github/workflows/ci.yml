@@ -35,6 +35,15 @@ jobs:
       - name: Validate Prisma Schema
         run: npx prisma validate
 
+      - name: Verify Fresh Database Migrations
+        run: npm run db:migrate:test-fresh
+
+      - name: Verify Upgrade Database Migrations
+        run: npm run db:migrate:test-upgrade
+
+      - name: Detect Unexpected Database Drift
+        run: npm run db:drift:check
+
       - name: Run NPM Security Audit
         run: npm audit --audit-level=high
 

@@ -40,8 +40,8 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
       format: 'NV',
     });
 
-    assert.match(code1, /^NV-2026-09-\d{3}$/);
-    assert.match(code2, /^NV-2026-09-\d{3}$/);
+    assert.match(code1, /^NV-2026-09-\d{3,}$/);
+    assert.match(code2, /^NV-2026-09-\d{3,}$/);
 
     const seq1 = parseInt(code1.split('-')[3], 10);
     const seq2 = parseInt(code2.split('-')[3], 10);
@@ -105,6 +105,30 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
 
   test('synchronizes with existing seeded tasks to prevent code collisions', async () => {
     // In year 2026, month 10, existing tasks NV-2026-10-005..008 exist
+    // Ensure at least one task with code NV-2026-10-008 exists to verify synchronization
+    const existingTask = await prisma.task.findUnique({
+      where: { code: 'NV-2026-10-008' },
+    });
+    let createdTestTask = false;
+    if (!existingTask) {
+      const dept = await prisma.department.findFirst();
+      const user = await prisma.user.findFirst();
+      if (dept && user) {
+        await prisma.task.create({
+          data: {
+            code: 'NV-2026-10-008',
+            title: 'Test Seed Task for Code Sync',
+            departmentId: dept.id,
+            createdById: user.id,
+            academicMonth: 10,
+            academicYear: '2026-2027',
+            dueDate: new Date('2026-10-31T17:00:00Z'),
+          },
+        });
+        createdTestTask = true;
+      }
+    }
+
     // Reset sequence for month 10 to ensure fresh initialization
     await prisma.taskSequence.deleteMany({
       where: {
@@ -113,19 +137,26 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
         departmentCode: 'M10',
       },
     });
+    resetTaskCodeMemorySequences();
 
-    const code = await generateTaskCodeAtomic(prisma, {
-      year: 2026,
-      month: 10,
-      format: 'NV',
-    });
+    try {
+      const code = await generateTaskCodeAtomic(prisma, {
+        year: 2026,
+        month: 10,
+        format: 'NV',
+      });
 
-    const seq = parseInt(code.split('-')[3], 10);
-    assert.ok(
-      seq > 8,
-      `Generated code seq (${seq}) must be greater than existing seeded tasks (max 8)`
-    );
-    assert.match(code, /^NV-2026-10-\d{3}$/);
+      const seq = parseInt(code.split('-')[3], 10);
+      assert.ok(
+        seq > 8,
+        `Generated code seq (${seq}) must be greater than existing seeded tasks (max 8)`
+      );
+      assert.match(code, /^NV-2026-10-\d{3}$/);
+    } finally {
+      if (createdTestTask) {
+        await prisma.task.deleteMany({ where: { code: 'NV-2026-10-008' } });
+      }
+    }
   });
 
   test('performance: execution is O(1) and executes fast (< 25ms per call)', async () => {

@@ -337,9 +337,15 @@ export async function updateTaskStartDate(
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
+      const errorMessage =
+        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
+        (typeof errJson?.error === 'string' && errJson.error) ||
+        errJson?.message ||
+        `Lỗi thay đổi ngày bắt đầu (${res.status})`;
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi thay đổi ngày bắt đầu (${res.status})`,
+        error: errorMessage,
+        code: errJson?.code || errJson?.error?.code,
       };
     }
 
@@ -371,9 +377,15 @@ export async function updateTaskDueDate(
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
+      const errorMessage =
+        (typeof errJson?.error === 'object' && errJson?.error?.message) ||
+        (typeof errJson?.error === 'string' && errJson.error) ||
+        errJson?.message ||
+        `Lỗi thay đổi hạn hoàn thành (${res.status})`;
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi thay đổi hạn hoàn thành (${res.status})`,
+        error: errorMessage,
+        code: errJson?.code || errJson?.error?.code,
       };
     }
 
@@ -389,21 +401,24 @@ export async function updateTaskDueDate(
 
 export async function deleteTask(
   taskId: string,
+  expectedVersion: number,
   reason?: string
 ): Promise<TaskActionResult> {
   try {
-    // Check if task cancel action or direct delete
-    const res = await fetch(`/api/tasks/${taskId}/actions/cancel`, {
+    const res = await fetch(`/api/tasks/${taskId}/actions/archive`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: reason || "Hủy nhiệm vụ từ menu thao tác" }),
+      body: JSON.stringify({
+        reason: reason || "Lưu trữ nhiệm vụ từ menu thao tác",
+        expectedVersion,
+      }),
     });
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
       return {
         ok: false,
-        error: errJson.error || errJson.message || `Lỗi hủy nhiệm vụ (${res.status})`,
+        error: errJson.error || errJson.message || `Lỗi lưu trữ nhiệm vụ (${res.status})`,
       };
     }
 

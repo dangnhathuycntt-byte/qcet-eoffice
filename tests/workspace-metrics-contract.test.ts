@@ -189,7 +189,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
   });
 
   it("urgentOverdueCount evaluates using isTaskPastDue from academic calendar rather than local system clock", () => {
-    const refDate = getSystemReferenceDate(); // "2026-09-09"
+    const refDate = "2026-09-09";
     assert.ok(refDate, "system reference date must exist");
 
     // Verification of isTaskPastDue canonical behavior
@@ -249,6 +249,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
       tasks: [overdueParent, todayParent, completedYesterdayParent],
       user: mockUser,
       scope: "school",
+      referenceDate: refDate,
     });
 
     const metrics = result.metrics as WorkspaceMetrics;

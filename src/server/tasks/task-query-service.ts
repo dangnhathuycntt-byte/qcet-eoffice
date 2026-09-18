@@ -114,6 +114,15 @@ const TASK_INCLUDE = {
       title: true,
       status: true,
       progressPercent: true,
+      archivedAt: true,
+      actors: {
+        select: {
+          userId: true,
+          isPrimaryDRI: true,
+          role: true,
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      },
       assignees: {
         include: {
           user: { select: { id: true, name: true, avatarUrl: true } },
@@ -182,7 +191,8 @@ function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: D
 /**
  * Canonical task read authorization filter builder (Phase 2 Cutover / F02).
  * Constructs Prisma.TaskWhereInput enforcing server-side authorization:
- * - Institutional Leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, BGH, school oversight) or System Admin: {} (school-wide oversight)
+ * - Institutional Leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, BGH, school oversight): school-wide
+ * - Technical SYSTEM_ADMIN: denied operational Task data by default
  * - Unit Manager / Head (TRUONG_PHONG, TRUONG_KHOA): sees tasks in assigned units + direct participant tasks
  * - Staff / Individual: sees tasks in own unit + direct participant tasks; never cross-department or unassigned school tasks
  * - Expired assignments drop back to active scopes
@@ -214,7 +224,7 @@ export function buildTaskReadWhere(
   }
 
   if (isSystemAdmin) {
-    return {};
+    return { id: '__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__' };
   }
 
   // 2. Institutional Leadership Evaluation (School-wide oversight)
@@ -323,7 +333,7 @@ export class TaskQueryService {
     const assignedTo = filters.assignedTo;
     const parentTaskId = filters.parentTaskId;
 
-    const where: Prisma.TaskWhereInput = {};
+    const where: Prisma.TaskWhereInput = { archivedAt: null };
 
     if (month !== undefined && String(month) !== 'all') {
       where.academicMonth = parseInt(String(month), 10);
@@ -493,30 +503,28 @@ export class TaskQueryService {
       formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
-      const take = 100;
-      limit = 100;
       const [totalCount, rawTasks] = await Promise.all([
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
           orderBy: filters.orderBy || { dueDate: 'asc' },
-          take,
         }),
       ]);
       total = totalCount;
+      limit = Math.min(totalCount > 0 ? totalCount : 50, 100);
       page = 1;
-      totalPages = Math.ceil(total / limit) || 1;
-      hasMore = rawTasks.length < total;
-      nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
+      totalPages = 1;
+      hasMore = false;
+      nextCursor = null;
       formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
 
-      const limitRaw = filters.limit ?? filters.take ?? 20;
+      const limitRaw = filters.limit ?? filters.take ?? 50;
       const limitNum = parseInt(String(limitRaw), 10);
-      limit = Math.min(Math.max(isNaN(limitNum) ? 20 : limitNum, 1), 100);
+      limit = Math.min(Math.max(isNaN(limitNum) ? 50 : limitNum, 1), 100);
       const skip = (page - 1) * limit;
 
       const [totalCount, rawTasks] = await Promise.all([
@@ -600,7 +608,7 @@ export class TaskQueryService {
    */
   async getTaskEntityForInternalUse(taskId: string) {
     return prisma.task.findUnique({
-      where: { id: taskId },
+      where: { id: taskId, archivedAt: null },
       include: {
         department: true,
         assignees: {
@@ -629,6 +637,11 @@ export class TaskQueryService {
         },
         subTasks: {
           include: {
+            actors: {
+              include: {
+                user: { select: { id: true, name: true, avatarUrl: true } },
+              },
+            },
             assignees: {
               include: {
                 user: { select: { id: true, name: true, avatarUrl: true } },

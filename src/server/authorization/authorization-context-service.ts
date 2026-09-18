@@ -4,7 +4,9 @@ import {
   AssignmentType,
   BodyStatus,
   DelegationStatus,
+  JobCatalogGroup,
   UnitStatus,
+  UnitType,
   UserRole,
 } from '@prisma/client';
 import {
