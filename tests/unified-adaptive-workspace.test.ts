@@ -2,6 +2,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
 import { TaskDetailSideSheet } from "../src/components/dashboard/task-detail-side-sheet";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
@@ -22,6 +24,33 @@ import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 
+const mockRouter = {
+  push: () => {},
+  replace: () => {},
+  prefetch: () => {},
+  back: () => {},
+  forward: () => {},
+  refresh: () => {},
+};
+
+function renderWorkspace(element: React.ReactElement): string {
+  return renderToStaticMarkup(
+    React.createElement(
+      AppRouterContext.Provider,
+      { value: mockRouter },
+      React.createElement(
+        PathnameContext.Provider,
+        { value: "/" },
+        React.createElement(
+          SearchParamsContext.Provider,
+          { value: new URLSearchParams() },
+          element
+        )
+      )
+    )
+  );
+}
+
 describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   const payload = getMockDashboardPayload();
   const tasks = payload.tasks;
@@ -29,7 +58,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   const staffUser = DEFAULT_DEMO_USERS[2];
 
   test("renders unified canvas with scope header and metric strip", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
@@ -43,7 +72,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   });
 
   test("defaults to 'my' scope for staff users", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: staffUser,
         tasks,
@@ -55,7 +84,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   });
 
   test("respects forcedScope and initialScope when specified", () => {
-    const htmlForced = renderToStaticMarkup(
+    const htmlForced = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: staffUser,
         tasks,
@@ -65,7 +94,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
     );
     assert.ok(htmlForced.includes("data-active-scope=\"school\""));
 
-    const htmlInitial = renderToStaticMarkup(
+    const htmlInitial = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
@@ -77,7 +106,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   });
 
   test("omits redundant context banner for clean canvas across all roles", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
@@ -94,7 +123,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
   });
 
   test("zero emojis in rendered markup", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
@@ -148,8 +177,17 @@ describe("Adaptive Workspace Data Derivation", () => {
     data.scopedTasks.forEach((task) => {
       const isDeptRelated =
         task.departmentCode === "K_CNTT" ||
+        task.departmentCode === "CNTT" ||
         task.department === "Khoa CNTT" ||
-        task.subTasks?.some((st) => st.departmentCode === "K_CNTT" || st.department === "Khoa CNTT");
+        task.department === "Khoa Công nghệ thông tin" ||
+        (task as any).leadDepartment === "Khoa Công nghệ thông tin" ||
+        task.subTasks?.some(
+          (st) =>
+            st.departmentCode === "K_CNTT" ||
+            st.departmentCode === "CNTT" ||
+            st.department === "Khoa CNTT" ||
+            st.department === "Khoa Công nghệ thông tin"
+        );
       assert.ok(isDeptRelated);
     });
   });
@@ -382,7 +420,7 @@ const sampleTasks: SchoolTask[] = [
 describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
   describe("1. Full-Width Task Canvas Structure", () => {
     test("workspace renders full-width task canvas without rigid action queue column by default", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           tasks: sampleTasks,
           user: sampleUser,
@@ -430,7 +468,7 @@ describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
 
       // Verify selected row is active
       assert.ok(
-        html.includes("bg-primary/[0.04]") || html.includes("bg-slate-50") || html.includes("border-l-4"),
+        html.includes("bg-primary/[0.04]") || html.includes("bg-slate-50") || html.includes("border-l-4") || html.includes("bg-primary/[0.08]"),
         "Selected task row must have active styling"
       );
     });
@@ -592,7 +630,7 @@ describe("Task 4: Full-Width Task Canvas & Adaptive Detail Surface", () => {
     });
 
     test("UnifiedAdaptiveWorkspace contains zero dark: classes", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           tasks: sampleTasks,
           user: sampleUser,

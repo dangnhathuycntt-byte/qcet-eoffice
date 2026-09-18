@@ -2,6 +2,8 @@ import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
 import { UniversalActionQueue } from "../src/components/workspace/components/universal-action-queue";
@@ -15,6 +17,33 @@ import {
 } from "../src/lib/onboarding-constants";
 import type { AuthUser } from "../src/types/auth";
 import type { SchoolTask } from "../src/types/dashboard";
+
+const mockRouter = {
+  push: () => {},
+  replace: () => {},
+  prefetch: () => {},
+  back: () => {},
+  forward: () => {},
+  refresh: () => {},
+};
+
+function renderWorkspace(element: React.ReactElement): string {
+  return renderToStaticMarkup(
+    React.createElement(
+      AppRouterContext.Provider,
+      { value: mockRouter },
+      React.createElement(
+        PathnameContext.Provider,
+        { value: "/" },
+        React.createElement(
+          SearchParamsContext.Provider,
+          { value: new URLSearchParams() },
+          element
+        )
+      )
+    )
+  );
+}
 
 describe("Workspace Real Data Flow & Authentic State Suite", () => {
   const adminUser: AuthUser = {
@@ -99,7 +128,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     test("renders clean empty state when tasks array is genuinely empty", () => {
       const emptyTasks: SchoolTask[] = [];
 
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: staffUser,
           tasks: emptyTasks,
@@ -118,7 +147,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     test("renders loading state when initialLoading is true and tasks are empty", () => {
       const emptyTasks: SchoolTask[] = [];
 
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: managerUser,
           tasks: emptyTasks,
@@ -134,7 +163,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     test("renders offline/error banner when isOffline or errorMessage is present", () => {
       const emptyTasks: SchoolTask[] = [];
 
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: adminUser,
           tasks: emptyTasks,
@@ -152,7 +181,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     });
 
     test("assigns default scope based on authentic user role", () => {
-      const htmlAdmin = renderToStaticMarkup(
+      const htmlAdmin = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: adminUser,
           tasks: [],
@@ -161,7 +190,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
       );
       assert.ok(htmlAdmin.includes("data-active-scope=\"school\""));
 
-      const htmlManager = renderToStaticMarkup(
+      const htmlManager = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: managerUser,
           tasks: [],
@@ -170,7 +199,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
       );
       assert.ok(htmlManager.includes("data-active-scope=\"unit\""));
 
-      const htmlStaff = renderToStaticMarkup(
+      const htmlStaff = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: staffUser,
           tasks: [],
@@ -181,7 +210,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     });
 
     test("staff user renders unified segmented tablist with unit and my scopes", () => {
-      const htmlStaff = renderToStaticMarkup(
+      const htmlStaff = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: staffUser,
           tasks: [],
@@ -332,7 +361,7 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
   };
 
   test("1. Workspace gán default scope dựa trên user thật từ session", () => {
-    const htmlAdmin = renderToStaticMarkup(
+    const htmlAdmin = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks: [],
@@ -341,7 +370,7 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
     );
     assert.ok(htmlAdmin.includes("data-active-scope=\"school\""));
 
-    const htmlMgr = renderToStaticMarkup(
+    const htmlMgr = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: managerUser,
         tasks: [],
@@ -350,7 +379,7 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
     );
     assert.ok(htmlMgr.includes("data-active-scope=\"unit\""));
 
-    const htmlStaff = renderToStaticMarkup(
+    const htmlStaff = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: staffUser,
         tasks: [],
@@ -391,7 +420,7 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
   test("3. Không fallback về mock payload khi API trả về lỗi hoặc rỗng", () => {
     const emptyTasks: SchoolTask[] = [];
 
-    const htmlOffline = renderToStaticMarkup(
+    const htmlOffline = renderWorkspace(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks: emptyTasks,

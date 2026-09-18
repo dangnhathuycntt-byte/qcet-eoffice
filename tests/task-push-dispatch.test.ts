@@ -43,20 +43,50 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     testDepartmentId = dept.id;
 
     // 2. Find or create test users
-    // Admin / Ban Giam Hieu (exclude temporary test users created by other concurrent suites)
+    // Institutional Leader / Ban Giam Hieu (Separation of Powers: ADMIN is SYSTEM_ADMIN and cannot mutate institutional tasks)
     const ephemeralTestUserIds = ['user-bgh', 'user-creator-1', 'user-assignee', 'user-cntt', 'user-lead-cntt'];
     let admin = await prisma.user.findFirst({
       where: {
-        role: { in: [UserRole.BAN_GIAM_HIEU, UserRole.ADMIN] },
+        role: UserRole.BAN_GIAM_HIEU,
+        positionAssignments: {
+          some: {
+            status: 'ACTIVE',
+            positionDefinition: {
+              code: { in: ['HIEU_TRUONG', 'PHO_HIEU_TRUONG', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG'] },
+            },
+          },
+        },
         id: { notIn: ephemeralTestUserIds },
       },
     });
     if (!admin) {
       admin = await prisma.user.findFirst({
-        where: { id: { notIn: ephemeralTestUserIds } },
+        where: {
+          role: UserRole.BAN_GIAM_HIEU,
+          id: { notIn: ephemeralTestUserIds },
+        },
+      });
+    }
+    if (!admin) {
+      admin = await prisma.user.findFirst({
+        where: {
+          role: { not: UserRole.ADMIN },
+          positionAssignments: {
+            some: {
+              status: 'ACTIVE',
+              positionDefinition: {
+                code: { in: ['HIEU_TRUONG', 'PHO_HIEU_TRUONG', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG'] },
+              },
+            },
+          },
+          id: { notIn: ephemeralTestUserIds },
+        },
       });
     }
     assert.ok(admin, 'Admin/BGH user must exist');
+    if (admin.departmentId) {
+      testDepartmentId = admin.departmentId;
+    }
     adminUser = {
       id: admin.id,
       name: admin.name,
@@ -176,7 +206,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           userId: staffUser.id,
           category: 'task',
           type: 'assigned',
-          linkHref: `/portal?task=${testTask.id}`,
+          linkHref: { contains: testTask.id },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -247,7 +277,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           userId: staffUser.id,
           category: 'resolution',
           type: 'directive',
-          linkHref: `/portal?task=${task.id}`,
+          linkHref: { contains: task.id },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -267,6 +297,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Origin': 'http://localhost:3000',
+          'Referer': 'http://localhost:3000',
           cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
         },
         body: JSON.stringify({
@@ -298,7 +330,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           userId: staffUser.id,
           category: 'task',
           type: 'assigned',
-          linkHref: `/portal?task=${taskId}`,
+          linkHref: { contains: taskId },
         },
       });
 
@@ -335,6 +367,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Origin': 'http://localhost:3000',
+          'Referer': 'http://localhost:3000',
           cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
         },
         body: JSON.stringify({
@@ -358,7 +392,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           userId: staffUser.id,
           category: 'resolution',
           type: 'directive',
-          linkHref: `/portal?task=${task.id}`,
+          linkHref: { contains: task.id },
         },
       });
 

@@ -26,14 +26,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import { DashboardZone } from "../src/components/dashboard/zones/dashboard-zone";
+import { ExecutiveActionCenter } from "../src/components/dashboard/executive-action-center";
 import { WorkbenchMobileFeed } from "../src/components/dashboard/workbench-mobile-feed";
 import {
   DashboardDataContext,
   DashboardActionsContext,
   DashboardModalContext,
+  DashboardNavContext,
   type DashboardDataContextValue,
   type DashboardActionsContextValue,
   type DashboardModalContextValue,
+  type DashboardNavContextValue,
 } from "../src/components/dashboard/dashboard-context";
 import type { DashboardStats } from "../src/types/dashboard";
 import type { ExecutiveActionStats } from "../src/lib/executive-matrix-aggregator";
@@ -141,6 +144,20 @@ const MODAL_VALUE: DashboardModalContextValue = {
   closeDelegationModal: noop,
 };
 
+const NAV_VALUE: DashboardNavContextValue = {
+  activeZone: "dashboard",
+  scope: "SCHOOL_TASKS",
+  viewMode: "table",
+  isStaffExpanded: false,
+  useAdvancedToolbar: false,
+  handleZoneChange: noop,
+  handleScopeChange: noop,
+  handleViewModeChange: noop,
+  handleToggleStaffExpanded: noop,
+  setIsStaffExpanded: noop,
+  setUseAdvancedToolbar: noop,
+};
+
 const MOCK_ROUTER = {
   push: noop,
   replace: noop,
@@ -162,15 +179,31 @@ function renderZone(data: DashboardDataContextValue): string {
           SearchParamsContext.Provider,
           { value: new URLSearchParams("") },
           React.createElement(
-            DashboardDataContext.Provider,
-            { value: data },
+            DashboardNavContext.Provider,
+            { value: NAV_VALUE },
             React.createElement(
-              DashboardActionsContext.Provider,
-              { value: ACTIONS_VALUE },
+              DashboardDataContext.Provider,
+              { value: data },
               React.createElement(
-                DashboardModalContext.Provider,
-                { value: MODAL_VALUE },
-                React.createElement(DashboardZone)
+                DashboardActionsContext.Provider,
+                { value: ACTIONS_VALUE },
+                React.createElement(
+                  DashboardModalContext.Provider,
+                  { value: MODAL_VALUE },
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(DashboardZone),
+                    React.createElement(ExecutiveActionCenter, {
+                      stats: data.executiveStats || EMPTY_EXEC_STATS,
+                      activeFilter: data.executiveFilter,
+                      onFilterChange: noop,
+                      items: data.executiveActionItems,
+                      isLoading: data.isLoading,
+                      errorMessage: data.errorMessage,
+                    })
+                  )
+                )
               )
             )
           )

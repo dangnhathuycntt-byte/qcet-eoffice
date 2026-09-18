@@ -18,9 +18,26 @@ describe('Tasks API Route Handler Tests', () => {
     const dept = await prisma.department.findFirst();
     assert.ok(dept, 'Must have at least one department in database');
 
-    const user = (await prisma.user.findFirst({
-      where: { role: 'ADMIN' },
-    })) || (await prisma.user.findFirst());
+    // In QCET Canonical Authorization, technical SYSTEM_ADMIN cannot perform non-technical task mutations
+    // due to Separation of Powers. Use an institutional leader with an active PositionAssignment for task lifecycle tests.
+    const user =
+      (await prisma.user.findFirst({
+        where: {
+          role: { not: 'ADMIN' },
+          positionAssignments: {
+            some: {
+              status: 'ACTIVE',
+              positionDefinition: {
+                code: { in: ['TRUONG_DON_VI', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG', 'TRUONG_KHOA', 'HIEU_TRUONG', 'PHO_HIEU_TRUONG'] },
+              },
+            },
+          },
+        },
+      })) ||
+      (await prisma.user.findFirst({
+        where: { role: { not: 'ADMIN' } },
+      })) ||
+      (await prisma.user.findFirst());
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
     testDeptId = user.departmentId || dept.id;
@@ -231,10 +248,25 @@ describe('Tasks API Route Handler Tests', () => {
     let parentCreatedTaskId: string;
 
     before(async () => {
-      const users = await prisma.user.findMany({ take: 5 });
-      const nonAdmins = users.filter((u) => u.id !== testUserId);
-      staffUser1 = nonAdmins[0] || users[0];
-      staffUser2 = nonAdmins[1] || users[1] || users[0];
+      const stamp = Date.now();
+      staffUser1 = await prisma.user.create({
+        data: {
+          id: `usr_tar_s1_${stamp}`,
+          email: `tar_s1_${stamp}@unit.local`,
+          name: 'TAR Staff 1',
+          role: 'CHUYEN_VIEN',
+          departmentId: testDeptId,
+        },
+      });
+      staffUser2 = await prisma.user.create({
+        data: {
+          id: `usr_tar_s2_${stamp}`,
+          email: `tar_s2_${stamp}@unit.local`,
+          name: 'TAR Staff 2',
+          role: 'CHUYEN_VIEN',
+          departmentId: testDeptId,
+        },
+      });
 
       staffToken1 = signSessionToken({
         id: staffUser1.id,
@@ -243,6 +275,14 @@ describe('Tasks API Route Handler Tests', () => {
         role: staffUser1.role,
         departmentId: staffUser1.departmentId,
       });
+    });
+
+    after(async () => {
+      if (staffUser1?.id || staffUser2?.id) {
+        await prisma.user.deleteMany({
+          where: { id: { in: [staffUser1?.id, staffUser2?.id].filter(Boolean) } },
+        });
+      }
     });
 
     test('POST /api/tasks: returns 404 when parentTaskId does not exist', async () => {
