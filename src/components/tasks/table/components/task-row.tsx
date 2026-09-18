@@ -48,6 +48,8 @@ export interface TaskRowProps {
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   showTaskCode?: boolean;
+  /** Position within a contiguous selection group: 'first' | 'middle' | 'last' | 'only' | null */
+  selectionGroupPosition?: "first" | "middle" | "last" | "only" | null;
   className?: string;
 }
 
@@ -292,6 +294,7 @@ export function areTaskRowPropsEqual(
   if (prev.suppressCategory !== next.suppressCategory) return false;
   if (prev.onAddSubTask !== next.onAddSubTask) return false;
   if (prev.showTaskCode !== next.showTaskCode) return false;
+  if (prev.selectionGroupPosition !== next.selectionGroupPosition) return false;
   if (prev.onContextMenu !== next.onContextMenu) return false;
   return true;
 }
@@ -319,6 +322,7 @@ export const TaskRow = React.memo(function TaskRow({
   onUrge,
   onAddSubTask,
   showTaskCode = false,
+  selectionGroupPosition = null,
   className,
 }: TaskRowProps) {
   const hasSubtasks = Boolean(task.subTasks && task.subTasks.length > 0);
@@ -404,7 +408,7 @@ export const TaskRow = React.memo(function TaskRow({
   const paddingClass = "py-2 px-2.5";
   const titlePaddingClass = "pl-3 sm:pl-3.5 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
-  const tdBaseClass = "first:rounded-l-lg last:rounded-r-lg transition-colors";
+  const tdBaseClass = "first:rounded-l-lg last:rounded-r-lg transition-colors border-b-[1.5px] border-transparent";
 
   return (
     <tr
@@ -423,8 +427,12 @@ export const TaskRow = React.memo(function TaskRow({
         "hover:bg-muted/50",
         // State 2: Focused (WCAG 2.2 AA Focus visible)
         "focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
-        // State 3: Selected (Linear Soft Rounded Highlight)
+        // State 3: Selected — grouped selection block styling (Notion-style)
         isSelected && "bg-primary/[0.08]",
+        isSelected && selectionGroupPosition === "only" && "[&>td:first-child]:rounded-l-lg [&>td:last-child]:rounded-r-lg",
+        isSelected && selectionGroupPosition === "first" && "[&>td:first-child]:rounded-tl-lg [&>td:last-child]:rounded-tr-lg [&>td]:rounded-b-none [&>td]:border-b-primary/[0.08]",
+        isSelected && selectionGroupPosition === "middle" && "[&>td]:rounded-none [&>td]:border-b-primary/[0.08]",
+        isSelected && selectionGroupPosition === "last" && "[&>td:first-child]:rounded-bl-lg [&>td:last-child]:rounded-br-lg [&>td]:rounded-t-none",
         // State 4: Previewing (Peek preview)
         isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail

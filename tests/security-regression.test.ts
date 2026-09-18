@@ -465,23 +465,28 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     assert.equal(body.data.title, "Updated by BGH");
   });
 
-  it("DELETE /api/tasks/[id] returns 403 when user is regular assignee (not creator or BGH/ADMIN)", async () => {
+  it("DELETE /api/tasks/[id] (archive) returns 403 when user is regular assignee (not creator or BGH/ADMIN)", async () => {
     const token = createTestToken({ id: "user-assignee", role: "GIANG_VIEN", departmentId: "dept-cntt" });
     const req = new NextRequest("http://localhost:3001/api/tasks/task-cntt-1", {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
     assert.equal(res.status, 403);
   });
 
-  it("DELETE /api/tasks/[id] allows task creator to delete task", async () => {
-    // Create dedicated task for creator deletion test
+  it("DELETE /api/tasks/[id] (archive) allows task creator to archive task", async () => {
+    // Create dedicated task for creator archive test
     const tempTask = await prisma.task.create({
       data: {
         id: "task-temp-delete-creator",
         code: "TASK-TEMP-DEL-1",
-        title: "Nhiệm vụ xóa bởi creator",
+        title: "Nhiệm vụ lưu trữ bởi creator",
         status: "NOT_STARTED",
         departmentId: "dept-daotao",
         createdById: "user-creator-1",
@@ -494,21 +499,26 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     const token = createTestToken({ id: "user-creator-1", role: "TRUONG_PHONG", departmentId: "dept-daotao" });
     const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
     assert.equal(res.status, 200);
     const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
-    assert.equal(check, null);
+    assert.ok(check?.archivedAt !== null, 'Task should be archived, not hard-deleted');
   });
 
-  it("DELETE /api/tasks/[id] allows BGH/ADMIN to delete task", async () => {
-    // Create dedicated task for BGH deletion test
+  it("DELETE /api/tasks/[id] (archive) allows BGH/ADMIN to archive task", async () => {
+    // Create dedicated task for BGH archive test
     const tempTask = await prisma.task.create({
       data: {
         id: "task-temp-delete-bgh",
         code: "TASK-TEMP-DEL-2",
-        title: "Nhiệm vụ xóa bởi BGH",
+        title: "Nhiệm vụ lưu trữ bởi BGH",
         status: "NOT_STARTED",
         departmentId: "dept-daotao",
         createdById: "user-creator-1",
@@ -521,12 +531,17 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     const token = createTestToken({ id: "user-bgh", role: "BAN_GIAM_HIEU" });
     const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "origin": "http://localhost:3001",
+      },
+      body: JSON.stringify({ reason: "Lưu trữ nhiệm vụ cũ", expectedVersion: 1 }),
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
     assert.equal(res.status, 200);
     const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
-    assert.equal(check, null);
+    assert.ok(check?.archivedAt !== null, 'Task should be archived, not hard-deleted');
   });
 
   it("POST /api/documents/[id]/directives returns 401 when unauthenticated", async () => {

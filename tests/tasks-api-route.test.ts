@@ -451,10 +451,11 @@ describe('Tasks API Route Handler Tests', () => {
       assert.ok(taskObj.subTasks !== undefined, 'task.subTasks must be defined');
     });
 
-    test('PATCH /api/tasks/[id]: prevents self-referencing parentTaskId and handles invalid parentTaskId', async () => {
+    test('PATCH /api/tasks/[id]: rejects parentTaskId via generic metadata PATCH (canonical contract)', async () => {
       assert.ok(parentCreatedTaskId);
       const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
 
+      // parentTaskId is not allowed in UpdateTaskMetadataSchema — must use dedicated command
       const reqSelf = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
         method: 'PATCH',
         headers: {
@@ -467,29 +468,14 @@ describe('Tasks API Route Handler Tests', () => {
         }),
       });
       const resSelf = await patchTask(reqSelf, context);
-      assert.strictEqual(resSelf.status, 400);
-      const jsonSelf = await resSelf.json();
-      assert.match(jsonSelf.error, /Nhiệm vụ không thể là nhiệm vụ cha của chính nó/i);
-
-      const reqInvalid = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          origin: 'http://localhost:3000',
-          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
-        },
-        body: JSON.stringify({
-          parentTaskId: 'non-existent-parent-id-xyz',
-        }),
-      });
-      const resInvalid = await patchTask(reqInvalid, context);
-      assert.strictEqual(resInvalid.status, 404);
+      assert.strictEqual(resSelf.status, 400, 'parentTaskId rejected by strict metadata schema');
     });
 
-    test('PATCH /api/tasks/[id]: safely updates single DRI and collaboratorIds', async () => {
+    test('PATCH /api/tasks/[id]: rejects assigneeId and collaboratorIds via generic metadata PATCH (canonical contract)', async () => {
       assert.ok(parentCreatedTaskId);
       const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
 
+      // assigneeId/collaboratorIds must go through canonical reassign command, not generic PATCH
       const req = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
         method: 'PATCH',
         headers: {
@@ -504,19 +490,7 @@ describe('Tasks API Route Handler Tests', () => {
       });
 
       const res = await patchTask(req, context);
-      assert.strictEqual(res.status, 200);
-
-      const assignees = await prisma.taskAssignee.findMany({
-        where: { taskId: parentCreatedTaskId },
-      });
-
-      const owners = assignees.filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collabs = assignees.filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
-
-      assert.strictEqual(owners.length, 1, 'Only 1 PRIMARY_OWNER');
-      assert.strictEqual(owners[0].userId, staffUser2.id);
-      assert.strictEqual(collabs.length, 1, 'Only 1 COLLABORATOR');
-      assert.strictEqual(collabs[0].userId, staffUser1.id);
+      assert.strictEqual(res.status, 400, 'assigneeId/collaboratorIds rejected by strict metadata schema');
     });
   });
 });

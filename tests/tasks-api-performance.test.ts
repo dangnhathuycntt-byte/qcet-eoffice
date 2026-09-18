@@ -346,14 +346,16 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       });
       createdDocIds.push(docSub.id);
 
-      // Execute DELETE on parent task
+      // Execute DELETE (archive) on parent task
       const req = new NextRequest(`http://localhost:3000/api/tasks/${parentTask.id}`, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           Origin: 'http://localhost:3000',
           Referer: 'http://localhost:3000',
           cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
         },
+        body: JSON.stringify({ reason: 'Lưu trữ nhiệm vụ kiểm thử cascade', expectedVersion: 1 }),
       });
 
       const res = await deleteTask(req, { params: Promise.resolve({ id: parentTask.id }) });
@@ -361,35 +363,34 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       const json = await res.json();
       assert.strictEqual(json.success, true);
 
-      // Verify parent task deleted
+      // Verify parent task archived (not hard-deleted)
       const checkParent = await prisma.task.findUnique({ where: { id: parentTask.id } });
-      assert.strictEqual(checkParent, null, 'Parent task must be deleted');
+      assert.ok(checkParent, 'Parent task must still exist');
+      assert.ok(checkParent?.archivedAt !== null, 'Parent task must be archived');
 
-      // Verify subtasks deleted
+      // Archive only marks parent — subtasks and relations are preserved
       const checkSub = await prisma.task.findUnique({ where: { id: subTask.id } });
-      assert.strictEqual(checkSub, null, 'Subtask must be deleted');
+      assert.ok(checkSub, 'Subtask must still exist after archive');
       const checkSubSub = await prisma.task.findUnique({ where: { id: subSubTask.id } });
-      assert.strictEqual(checkSubSub, null, 'Nested subtask must be deleted');
+      assert.ok(checkSubSub, 'Nested subtask must still exist after archive');
 
-      // Verify assignees and deliverables deleted
+      // Assignees and deliverables are preserved (archive ≠ hard delete)
       const checkAssignees = await prisma.taskAssignee.findMany({
         where: { taskId: { in: [parentTask.id, subTask.id, subSubTask.id] } },
       });
-      assert.strictEqual(checkAssignees.length, 0, 'All task assignees must be deleted');
+      assert.ok(checkAssignees.length > 0, 'Task assignees must be preserved after archive');
 
       const checkDeliverables = await prisma.taskDeliverable.findMany({
         where: { taskId: { in: [parentTask.id, subTask.id, subSubTask.id] } },
       });
-      assert.strictEqual(checkDeliverables.length, 0, 'All task deliverables must be deleted');
+      assert.ok(checkDeliverables.length > 0, 'Task deliverables must be preserved after archive');
 
-      // Verify documents still exist but their linkedTaskId is unlinked (null)
+      // Documents remain linked (archive doesn't unlink)
       const updatedDocParent = await prisma.document.findUnique({ where: { id: docParent.id } });
       assert.ok(updatedDocParent, 'Document linked to parent should still exist');
-      assert.strictEqual(updatedDocParent?.linkedTaskId, null, 'Parent document linkedTaskId must be set to null');
 
       const updatedDocSub = await prisma.document.findUnique({ where: { id: docSub.id } });
       assert.ok(updatedDocSub, 'Document linked to subtask should still exist');
-      assert.strictEqual(updatedDocSub?.linkedTaskId, null, 'Subtask document linkedTaskId must be set to null');
     });
   });
 });
