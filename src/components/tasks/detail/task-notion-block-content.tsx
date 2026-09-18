@@ -139,6 +139,106 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
  * Kiểm tra xem một block có chứa dữ liệu thực tế hay không.
  * Các block rỗng (chỉ có placeholder) không được lưu hoặc hiển thị như dữ liệu thật.
  */
+
+/**
+ * Read text content from a contentEditable div or input/textarea.
+ */
+function readBlockText(el: HTMLElement): string {
+  if ('value' in el && typeof (el as any).value === 'string') return (el as any).value;
+  return el.innerText?.replace(/\r\n/g, '\n') || '';
+}
+
+/**
+ * Place caret at a given offset inside a contentEditable div.
+ */
+function setBlockCaret(el: HTMLElement, offset: number) {
+  el.focus();
+  if ('setSelectionRange' in el) {
+    (el as any).setSelectionRange(offset, offset);
+    return;
+  }
+  const doc = el.ownerDocument;
+  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let remaining = Math.max(0, offset);
+  let node = walker.nextNode();
+  while (node) {
+    const len = node.textContent?.length || 0;
+    if (remaining <= len) break;
+    remaining -= len;
+    node = walker.nextNode();
+  }
+  const range = doc.createRange();
+  if (node) range.setStart(node, remaining);
+  else { range.selectNodeContents(el); range.collapse(false); }
+  range.collapse(true);
+  doc.getSelection()?.removeAllRanges();
+  doc.getSelection()?.addRange(range);
+}
+
+/**
+ * ContentEditable text cell that syncs to block state on input.
+ */
+const ContentEditableCell = React.memo(function ContentEditableCell({
+  blockId,
+  value,
+  disabled,
+  className,
+  placeholder,
+  onFocus,
+  onBlur,
+  onUpdate,
+  onKeyDown,
+  blockInputRefs,
+}: {
+  blockId: string;
+  value: string;
+  disabled: boolean;
+  className?: string;
+  placeholder?: string;
+  onFocus: () => void;
+  onBlur: (e: React.FocusEvent) => void;
+  onUpdate: (content: string) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  blockInputRefs: React.MutableRefObject<Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLDivElement>>;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const composingRef = React.useRef(false);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && readBlockText(el) !== value) el.textContent = value;
+  }, [value]);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (el) blockInputRefs.current.set(blockId, el);
+    return () => { blockInputRefs.current.delete(blockId); };
+  }, [blockId, blockInputRefs]);
+
+  const handleInput = React.useCallback(() => {
+    if (composingRef.current) return;
+    const el = ref.current;
+    if (el) onUpdate(readBlockText(el));
+  }, [onUpdate]);
+
+  return (
+    <div
+      ref={ref}
+      data-block-text={blockId}
+      contentEditable={disabled ? false : 'plaintext-only' as any}
+      suppressContentEditableWarning
+      onFocus={onFocus}
+      onBlur={onBlur}
+      onInput={handleInput}
+      onKeyDown={onKeyDown}
+      onCompositionStart={() => { composingRef.current = true; }}
+      onCompositionEnd={() => { composingRef.current = false; handleInput(); }}
+      data-placeholder={placeholder}
+      className={cn(className, 'min-h-[1.5em] whitespace-pre-wrap break-words outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/35 empty:before:pointer-events-none')}
+    />
+  );
+});
+
 export function isMeaningfulBlock(b: NotionBlockItem | null | undefined): boolean {
   if (!b) return false;
 
@@ -536,7 +636,7 @@ export function TaskNotionBlockContent({
   const menuListRef = React.useRef<HTMLDivElement>(null);
   const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
   const blockWrapperRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
-  const blockInputRefs = React.useRef<Map<string, HTMLInputElement | HTMLTextAreaElement>>(new Map());
+  const blockInputRefs = React.useRef<Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLDivElement>>(new Map());
   const trailingInputRef = React.useRef<HTMLInputElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const pendingFocusBlockIdRef = React.useRef<string | null>(null);
@@ -637,6 +737,10 @@ export function TaskNotionBlockContent({
             if (pendingFocusAtEndRef.current) {
               const len = el.value.length;
               el.setSelectionRange(len, len);
+            }
+          } else if (el instanceof HTMLDivElement && el.hasAttribute('data-block-text')) {
+            if (pendingFocusAtEndRef.current) {
+              setBlockCaret(el, readBlockText(el).length);
             }
           }
           if ("select" in el && el instanceof HTMLInputElement) {
@@ -1511,7 +1615,7 @@ export function TaskNotionBlockContent({
 
   // Xử lý phím Enter / Backspace / Slash trong text input của block
   const handleBlockKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLDivElement>,
     block: NotionBlockItem,
     index: number
   ) => {
@@ -1570,9 +1674,9 @@ export function TaskNotionBlockContent({
       }
 
       // Xác định vị trí con trỏ để split text
-      const inputEl = e.currentTarget;
-      const selStart = inputEl.selectionStart ?? block.content.length;
-      const selEnd = inputEl.selectionEnd ?? block.content.length;
+      const inputEl = e.currentTarget as HTMLInputElement | HTMLTextAreaElement | HTMLDivElement;
+      const selStart = "selectionStart" in inputEl ? (inputEl.selectionStart ?? block.content.length) : block.content.length;
+      const selEnd = "selectionEnd" in inputEl ? (inputEl.selectionEnd ?? block.content.length) : block.content.length;
 
       const contentBefore = block.content.slice(0, selStart);
       const contentAfter = block.content.slice(selEnd);
@@ -1631,11 +1735,11 @@ export function TaskNotionBlockContent({
       e.preventDefault();
       const last = blocks[blocks.length - 1];
       if (last) {
-        const input = blockInputRefs.current.get(last.id);
-        if (input) {
-          input.focus();
-          const len = input.value.length;
-          input.setSelectionRange(len, len);
+       const input = blockInputRefs.current.get(last.id);
+       if (input) {
+         input.focus();
+          const len = readBlockText(input).length;
+          setBlockCaret(input, len);
         }
       }
       return;
@@ -2162,7 +2266,7 @@ interface NotionBlockRowProps {
   handleUpdateBlock: (blockId: string, updates: Partial<NotionBlockItem>) => void;
   handleDeleteBlock: (blockId: string) => void;
   handleBlockKeyDown: (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLDivElement | HTMLDivElement>,
     block: NotionBlockItem,
     index: number
   ) => void;
@@ -2176,7 +2280,7 @@ interface NotionBlockRowProps {
   handleBlockFocus: (blockId: string) => void;
   handleBlockBlur: (e: React.FocusEvent, blockId: string) => void;
   blockWrapperRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
-  blockInputRefs: React.MutableRefObject<Map<string, HTMLInputElement | HTMLTextAreaElement>>;
+  blockInputRefs: React.MutableRefObject<Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLDivElement>>;
 }
 
 const NotionBlockRow = React.memo(function NotionBlockRow({
@@ -2230,10 +2334,10 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
       {canEdit && (
         <div
           className={cn(
-            "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 -ml-6 mr-1",
-            isSelected
-              ? "opacity-100"
-              : "opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"
+            "w-5 shrink-0 flex items-center justify-start pt-1 select-none transition-opacity duration-100 motion-reduce:transition-none -ml-6 mr-1",
+            isSelected || isDragging
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none group-hover/block:opacity-100 group-hover/block:pointer-events-auto group-focus-within/block:opacity-100 group-focus-within/block:pointer-events-auto"
           )}
         >
           <div className="relative flex items-center">
@@ -2243,7 +2347,7 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
               onClick={(e) => handleBlockHandleClick(e, block, index)}
               onContextMenu={(e) => handleContextMenu(e, block)}
               style={{ touchAction: "none" }}
-              className="size-6 p-1 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden select-none"
+              className="size-5 p-1 rounded text-muted-foreground/40 hover:text-foreground/80 cursor-grab active:cursor-grabbing transition-colors bg-transparent border-0 outline-hidden select-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Chọn hoặc kéo khối"
             >
               <GripVertical className="size-3.5" />
@@ -2256,28 +2360,17 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
       <div className="flex-1 min-w-0">
         {/* 1. Text Block */}
         {block.type === "text" && (
-          <div className="relative flex items-center min-h-[28px]">
-            <textarea
-              key={`block-input-${block.id}`}
-              ref={(el) => {
-                if (el) {
-                  blockInputRefs.current.set(block.id, el);
-                } else {
-                  blockInputRefs.current.delete(block.id);
-                }
-              }}
-              rows={1}
-              disabled={!canEdit}
+          <div className="relative flex items-start min-h-[28px]">
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onInput={(e) => autoResizeTextarea(e.currentTarget)}
-              onChange={(e) => {
-                handleUpdateBlock(block.id, { content: e.target.value });
-                autoResizeTextarea(e.target);
-              }}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
-              className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-foreground focus:outline-hidden py-0.5 cursor-text block relative z-10"
+              blockInputRefs={blockInputRefs}
+              className="w-full bg-transparent text-sm leading-relaxed text-foreground py-0.5 cursor-text relative z-10"
             />
             {/* Placeholder Hint Layer với kbd '/' keycap: luôn ở sau textarea và ẩn/hiện bằng CSS để không remount textarea */}
             <div
@@ -2297,21 +2390,18 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
 
         {/* 2. Heading Block (H1, H2, H3) */}
         {block.type === "heading" && (
-          <input
-            ref={(el) => {
-              if (el) blockInputRefs.current.set(block.id, el);
-              else blockInputRefs.current.delete(block.id);
-            }}
-            type="text"
-            disabled={!canEdit}
+          <ContentEditableCell
+            blockId={block.id}
             value={block.content}
+            disabled={!canEdit}
             onFocus={() => handleBlockFocus(block.id)}
             onBlur={(e) => handleBlockBlur(e, block.id)}
-            onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+            onUpdate={(content) => handleUpdateBlock(block.id, { content })}
             onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+            blockInputRefs={blockInputRefs}
             placeholder={!block.content ? "Tiêu đề..." : undefined}
             className={cn(
-              "w-full bg-transparent text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden py-1 font-bold tracking-tight cursor-text transition-colors",
+              "w-full bg-transparent text-foreground py-1 font-bold tracking-tight cursor-text transition-colors",
               block.level === 1 && "text-xl sm:text-2xl mt-2 mb-0.5",
               block.level === 3 && "text-sm sm:text-base font-semibold mt-1 mb-0.5",
               (!block.level || block.level === 2) && "text-base sm:text-lg font-semibold mt-1.5 mb-0.5"
@@ -2323,18 +2413,15 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
         {block.type === "bulleted_list" && (
           <div className="flex items-start gap-2 py-0.5">
             <span className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
-            <input
-              ref={(el) => {
-                if (el) blockInputRefs.current.set(block.id, el);
-                else blockInputRefs.current.delete(block.id);
-              }}
-              type="text"
-              disabled={!canEdit}
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              blockInputRefs={blockInputRefs}
               placeholder={!block.content ? "Danh sách..." : undefined}
               className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
             />
@@ -2347,18 +2434,15 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
             <span className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
               {currentNumber}.
             </span>
-            <input
-              ref={(el) => {
-                if (el) blockInputRefs.current.set(block.id, el);
-                else blockInputRefs.current.delete(block.id);
-              }}
-              type="text"
-              disabled={!canEdit}
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              blockInputRefs={blockInputRefs}
               placeholder={!block.content ? "Danh sách..." : undefined}
               className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
             />
@@ -2381,21 +2465,18 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
                 <Circle className="size-4 text-muted-foreground/60 hover:text-foreground" />
               )}
             </button>
-            <input
-              ref={(el) => {
-                if (el) blockInputRefs.current.set(block.id, el);
-                else blockInputRefs.current.delete(block.id);
-              }}
-              type="text"
-              disabled={!canEdit}
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              blockInputRefs={blockInputRefs}
               placeholder={!block.content ? "Việc cần làm..." : undefined}
               className={cn(
-                "w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors",
+                "w-full bg-transparent text-sm leading-relaxed text-foreground cursor-text transition-colors",
                 block.checked && "line-through text-muted-foreground/70"
               )}
             />
@@ -2405,18 +2486,15 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
         {/* 6. Quote (Trích dẫn) */}
         {block.type === "quote" && (
           <div className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90">
-            <input
-              ref={(el) => {
-                if (el) blockInputRefs.current.set(block.id, el);
-                else blockInputRefs.current.delete(block.id);
-              }}
-              type="text"
-              disabled={!canEdit}
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              blockInputRefs={blockInputRefs}
               placeholder={!block.content ? "Trích dẫn..." : undefined}
               className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden italic cursor-text transition-colors"
             />
@@ -2427,18 +2505,15 @@ const NotionBlockRow = React.memo(function NotionBlockRow({
         {block.type === "callout" && (
           <div className="flex items-start gap-2.5 p-2.5 my-1 rounded-xl bg-primary/5 border border-primary/20 text-foreground">
             <Info className="size-4 text-primary shrink-0 mt-0.5" />
-            <input
-              ref={(el) => {
-                if (el) blockInputRefs.current.set(block.id, el);
-                else blockInputRefs.current.delete(block.id);
-              }}
-              type="text"
-              disabled={!canEdit}
+            <ContentEditableCell
+              blockId={block.id}
               value={block.content}
+              disabled={!canEdit}
               onFocus={() => handleBlockFocus(block.id)}
               onBlur={(e) => handleBlockBlur(e, block.id)}
-              onChange={(e) => handleUpdateBlock(block.id, { content: e.target.value })}
+              onUpdate={(content) => handleUpdateBlock(block.id, { content })}
               onKeyDown={(e) => handleBlockKeyDown(e, block, index)}
+              blockInputRefs={blockInputRefs}
               placeholder={!block.content ? "Ghi chú thông tin..." : undefined}
               className="w-full bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/35 focus:placeholder:text-muted-foreground/60 focus:outline-hidden cursor-text transition-colors"
             />

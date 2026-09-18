@@ -165,6 +165,8 @@ function editingScope(contents: string[]) {
     blockInputRefs: { current: inputs },
     blockWrapperRefs: { current: new Map(blocks.map(block => [block.id, { focus() { focused = `wrapper-${block.id}`; } }])) },
     HTMLTextAreaElement: Textarea, HTMLInputElement: class {}, autoResizeTextarea() {},
+    readBlockText(el: any) { return el?.value ?? el?.innerText ?? ''; },
+    setBlockCaret(el: any, offset: number) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(offset, offset); },
     setSelectedBlockIds(value: Set<string>) { scope.selected = value; },
     setAnchorBlockId() {}, setActiveContextMenu() {},
     setBlocks(update: (previous: typeof blocks) => typeof blocks) { scope.blocks = update(scope.blocks); },
@@ -212,4 +214,26 @@ test('subtask properties match the compact overview density', () => {
   assert.match(properties, /className="[^"]*text-xs[^>]*"/);
   assert.ok(!properties.includes('min-h-9'));
   assert.match(properties, /min-h-7/);
+});
+
+
+test('block handles reveal per row without hidden pointer hitboxes or layout motion', () => {
+  const source = readFileSync(editorPath, 'utf8');
+  const row = source.slice(source.indexOf('const NotionBlockRow ='));
+  const handle = row.slice(row.indexOf('{canEdit && ('), row.indexOf('<GripVertical'));
+  assert.match(row, /group\/block relative/);
+  assert.match(handle, /isSelected \|\| isDragging/);
+  assert.match(handle, /opacity-100 pointer-events-auto/);
+  assert.match(handle, /opacity-0 pointer-events-none/);
+  for (const state of ['group-hover/block', 'group-focus-within/block']) {
+    assert.ok(handle.includes(state + ':opacity-100'));
+    assert.ok(handle.includes(state + ':pointer-events-auto'));
+  }
+  assert.match(handle, /transition-opacity duration-100 motion-reduce:transition-none/);
+  assert.doesNotMatch(handle, /transition-all|animate-|scale-|translate-/);
+  assert.match(handle, /w-5 shrink-0/);
+  assert.match(handle, /className="size-5 /);
+  assert.match(handle, /focus-visible:ring-2/);
+  assert.equal((row.match(/\{\.\.\.listeners\}/g) || []).length, 1);
+  assert.match(handle, /<button[\s\S]*\{\.\.\.listeners\}/);
 });

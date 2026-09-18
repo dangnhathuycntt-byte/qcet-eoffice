@@ -44,12 +44,13 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "Must NOT have internal scroll on main editor (only dropdown menu if applicable)"
       );
 
-      // 4. Textarea must have autoResizeTextarea and overflow-hidden to auto-grow with text
+      // 4. Text blocks auto-grow: contentEditable divs or textarea with autoResize
       assert.ok(
-        componentContent.includes("autoResizeTextarea") &&
-          componentContent.includes("overflow-hidden") &&
-          componentContent.includes("resize-none"),
-        "Textarea must auto-grow and hide internal overflow"
+        componentContent.includes("ContentEditableCell") ||
+          (componentContent.includes("autoResizeTextarea") &&
+            componentContent.includes("overflow-hidden") &&
+            componentContent.includes("resize-none")),
+        "Text blocks must auto-grow via contentEditable or autoResizeTextarea"
       );
     });
 
@@ -113,7 +114,9 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
       // 3. Drag handle (⋮⋮) is only revealed on hover/focus
       assert.ok(
-        componentContent.includes("opacity-0 group-hover/block:opacity-100 focus-within:opacity-100"),
+        componentContent.includes("opacity-0 pointer-events-none") &&
+          componentContent.includes("group-hover/block:opacity-100") &&
+          componentContent.includes("group-focus-within/block:opacity-100"),
         "Drag handle must only be visible on hover or focus"
       );
     });
