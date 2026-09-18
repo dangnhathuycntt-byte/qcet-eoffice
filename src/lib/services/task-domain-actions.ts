@@ -1096,6 +1096,7 @@ export class TaskDomainActionService {
         where: { id: taskId },
         data: {
           status: TaskStatus.IN_PROGRESS,
+          completedAt: null,
           version: { increment: 1 },
         },
       });
@@ -1404,6 +1405,7 @@ export class TaskDomainActionService {
         where: { id: taskId },
         data: {
           status: TaskStatus.CANCELLED,
+          completedAt: null,
           version: { increment: 1 },
           updatedAt: new Date(),
         },

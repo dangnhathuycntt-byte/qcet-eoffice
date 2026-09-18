@@ -67,17 +67,8 @@ log "Source Dump: ${DUMP_FILE}"
 
 if command -v pg_restore >/dev/null 2>&1; then
   log "Executing pg_restore (clean, if-exists, no-owner)..."
-  # Note: pg_restore may return 1 on minor warnings (like dropping non-existent tables)
   pg_restore -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" \
-    --clean --if-exists --no-owner --no-privileges -v "${DUMP_FILE}" || {
-      CODE=$?
-      if [[ $CODE -eq 1 ]]; then
-        log "pg_restore finished with benign warnings (code 1)."
-      else
-        log "ERROR: pg_restore failed with exit code $CODE"
-        exit $CODE
-      fi
-    }
+    --clean --if-exists --no-owner --no-privileges --exit-on-error -v "${DUMP_FILE}"
   log "Database restoration completed successfully."
 else
   log "ERROR: pg_restore command not found in PATH."

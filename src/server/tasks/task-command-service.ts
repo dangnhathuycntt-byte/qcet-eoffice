@@ -917,10 +917,8 @@ export class TaskCommandService {
         scalarUpdateData.status = mappedStatus;
         if (mappedStatus === TaskStatus.COMPLETED) {
           scalarUpdateData.completedAt = new Date();
-          if (scalarUpdateData.progressPercent === undefined) {
-            scalarUpdateData.progressPercent = 100;
-          }
-        } else if (existing.status === TaskStatus.COMPLETED) {
+          scalarUpdateData.progressPercent = 100;
+        } else {
           scalarUpdateData.completedAt = null;
         }
       }
@@ -1540,6 +1538,7 @@ export class TaskCommandService {
       } else if (validStatus === DeliverableReviewStatus.REVISION_REQUIRED) {
         // Bị yêu cầu chỉnh sửa, đưa nhiệm vụ về lại IN_PROGRESS
         taskUpdateData.status = TaskStatus.IN_PROGRESS;
+        taskUpdateData.completedAt = null;
       }
 
       if (expectedVersion !== undefined) {

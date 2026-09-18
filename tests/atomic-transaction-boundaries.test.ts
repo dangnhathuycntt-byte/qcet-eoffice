@@ -370,6 +370,9 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       const result = await approveTaskAtomic(prisma, {
         taskId: created.task.id,
         approverId: testApproverId,
+        // A caller-provided partial value must not create an internally
+        // contradictory COMPLETED task.
+        progressPercent: 17,
         resolution: {
           resolutionType: ResolutionType.DIRECTIVE_NOTE,
           directiveNote: 'Đạt yêu cầu xuất sắc. Phê duyệt hoàn thành nhiệm vụ.',

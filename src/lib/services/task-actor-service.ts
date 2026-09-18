@@ -545,7 +545,7 @@ export async function initiateApprovalProcess(
 
     await tx.task.update({
       where: { id: taskId },
-      data: { status: TaskStatus.WAITING_APPROVAL },
+      data: { status: TaskStatus.WAITING_APPROVAL, completedAt: null },
     });
 
     return {
@@ -687,7 +687,7 @@ export async function executeApprovalStep(
 
       await tx.task.update({
         where: { id: task.id },
-        data: { status: TaskStatus.IN_PROGRESS },
+        data: { status: TaskStatus.IN_PROGRESS, completedAt: null },
       });
     } else {
       // Step APPROVED: Check if next step exists

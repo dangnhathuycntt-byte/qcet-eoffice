@@ -36,7 +36,9 @@ services:
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--dns-result-order=ipv4first"
-      DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-qcet_admin}:${POSTGRES_PASSWORD}@qcet-db:5432/${POSTGRES_DB:-qcet_eoffice}?schema=public}
+      # Runtime credentials must be a dedicated least-privilege role. Never
+      # fall back to the database owner used for bootstrap and migrations.
+      DATABASE_URL: ${APP_DATABASE_URL:?Vui long cung cap APP_DATABASE_URL cho tai khoan ung dung it dac quyen}
       JWT_SECRET: ${JWT_SECRET:?Vui long cung cap JWT_SECRET}
       NEXTAUTH_URL: ${PUBLIC_APP_URL:-https://qcet.dixxie.store}
       NEXT_PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://qcet.dixxie.store}
