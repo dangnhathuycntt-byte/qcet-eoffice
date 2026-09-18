@@ -403,7 +403,7 @@ export function validateTaskForm(
     (!data.requiredDeliverables || data.requiredDeliverables.trim().length === 0)
   ) {
     errors.requiredDeliverables =
-      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232).";
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232/DACUM).";
   }
   if (data.internalDueDate && data.dueDate) {
     if (new Date(data.internalDueDate).getTime() > new Date(data.dueDate).getTime()) {
