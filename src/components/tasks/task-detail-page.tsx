@@ -292,13 +292,20 @@ export function TaskDetailPage({
     (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
     task.id.slice(0, 8).toUpperCase();
 
+  const parentTaskId = (task as any).parentSchoolTaskId || (task as any).parentTaskId || (task as any).parentTask?.id;
+  const parentTaskTitle = (task as any).parentSchoolTaskTitle || (task as any).parentTaskTitle || (task as any).parentTask?.title;
+
   React.useEffect(() => {
-    setBreadcrumbItems([
+    const items: Array<{ label: string; href?: string; mono?: boolean }> = [
       { label: "Nhiệm vụ", href: "/tasks" },
-      { label: task.title },
-    ]);
+    ];
+    if (parentTaskId && parentTaskTitle) {
+      items.push({ label: parentTaskTitle, href: `/tasks/${parentTaskId}` });
+    }
+    items.push({ label: task.title });
+    setBreadcrumbItems(items);
     return () => setBreadcrumbItems(null);
-  }, [setBreadcrumbItems, task.title]);
+  }, [setBreadcrumbItems, task.title, parentTaskId, parentTaskTitle]);
 
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
 

@@ -359,18 +359,18 @@ export function LinearTaskDetailView({
     if (created) {
       setTask((prev) => {
         if (!isSchool || !schoolTask) return prev;
-        // Resolve assignee name: prefer server response, then parameter, fallback
+        // Resolve assignee name from server DTO (leadAssignee.name) or form parameter
         const resolvedName =
-          created.assigneeName ||
-          created.assignee?.name ||
-          (resolvedAssigneeId ? assigneeName : undefined) ||
           assigneeName ||
+          created.leadAssignee?.name ||
+          created.assignee?.name ||
+          created.assigneeName ||
           "Chưa phân công";
         const newSubtask: StaffTask = {
           id: created.id || `sub-${Date.now()}`,
           title: created.title || trimmedTitle,
           assigneeName: resolvedName,
-          assigneeId: created.assigneeId || resolvedAssigneeId,
+          assigneeId: created.assigneeId || created.leadAssignee?.id || resolvedAssigneeId,
           status: "NEW",
           dueDate: created.dueDate || dueDate,
           parentSchoolTaskId: task.id,
