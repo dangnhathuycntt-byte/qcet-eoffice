@@ -1734,10 +1734,7 @@ function evaluateCapabilityMatrix(
     if (action === "task.approve" || action === "task.close") {
       if (
         relationships.has("ASSIGNER") ||
-        relationships.has("LEAD_UNIT") ||
-        relationships.has("DRI") ||
-        resource.scope === "SCHOOL" ||
-        resource.scope === "school"
+        relationships.has("LEAD_UNIT")
       ) {
         return { allowed: true, policyMatched: "STAFF_TASK_APPROVE" };
       }
