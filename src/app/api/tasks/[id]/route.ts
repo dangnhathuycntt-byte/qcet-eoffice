@@ -17,13 +17,12 @@ import {
 } from '@/server/api/errors';
 import { UpdateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
 import {
-  canReadTask,
-  canUpdateTask,
-  canApproveTask,
-  canChangeTaskStatus,
-  canDeleteTask,
-} from '@/server/policies/task-policy';
+  computeAvailableActions,
+  buildTaskResource,
+} from '@/server/authorization/available-actions';
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
@@ -46,19 +45,27 @@ export async function GET(req: Request, routeContext: RouteContext) {
     }
 
     const taskSubject = result.task;
+    const taskResource = buildTaskResource(taskSubject);
 
-    // Object authorization check (BOLA protection)
-    if (!canReadTask(authUser, taskSubject)) {
-      throw new ForbiddenError('Bạn không có quyền xem nhiệm vụ này');
+    // Canonical object authorization check (BOLA protection)
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const readDecision = authorize(authContext, 'task.read', taskResource);
+    if (!readDecision.allowed) {
+      throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');
     }
 
-    const taskDetail = result.task;
+    const availableActions = computeAvailableActions(authContext, taskResource);
+    const taskDetail = {
+      ...result.task,
+      availableActions,
+    };
 
     return apiSuccess(
       {
         success: true,
         task: taskDetail,
         data: taskDetail,
+        availableActions,
       },
       {
         headers: {
@@ -188,8 +195,11 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       );
     }
 
-    if (!canUpdateTask(authUser, existingTask)) {
-      throw new ForbiddenError('Bạn không có quyền cập nhật nhiệm vụ này');
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const updateDecision = authorize(authContext, 'task.update_execution', taskResource);
+    if (!updateDecision.allowed) {
+      throw new ForbiddenError(updateDecision.reason || 'Bạn không có quyền cập nhật nhiệm vụ này');
     }
 
     // Validate ngày trên dữ liệu sau khi ghép PATCH với bản ghi DB (phân biệt trường bị bỏ qua và null)
@@ -215,6 +225,8 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     const updated = await taskCommandService.updateTask(context, id, {
       title: validatedBody.title,
       description: validatedBody.description,
+      progressPercent: validatedBody.progressPercent,
+      progress: validatedBody.progress,
       departmentId: validatedBody.departmentId,
       startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
@@ -270,8 +282,11 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     }
     const existingTask = taskResult.task;
 
-    if (!canDeleteTask(authUser, existingTask)) {
-      throw new ForbiddenError('Bạn không có quyền xóa nhiệm vụ này');
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const deleteDecision = authorize(authContext, 'task.cancel', taskResource);
+    if (!deleteDecision.allowed) {
+      throw new ForbiddenError(deleteDecision.reason || 'Bạn không có quyền xóa nhiệm vụ này');
     }
 
     const result = await taskCommandService.deleteTask(context, id);

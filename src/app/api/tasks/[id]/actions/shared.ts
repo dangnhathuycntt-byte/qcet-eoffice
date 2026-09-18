@@ -14,8 +14,15 @@ import {
 import {
   SeparationOfDutiesError,
   SingleDRIError,
-  HybridAuthorizationError,
-} from "@/lib/auth/hybrid-authorization";
+  SeparationOfPowersError,
+  UnitScopeDeniedError,
+  PortfolioMismatchError,
+  DelegationExpiredError,
+  DelegationRevokedError,
+  NonDelegablePowerError,
+  InvalidWorkflowStateError,
+} from "@/server/authorization/errors";
+import { HybridAuthorizationError } from "@/lib/auth/hybrid-authorization";
 import {
   SegregationOfDutiesError,
   MakerCheckerError,

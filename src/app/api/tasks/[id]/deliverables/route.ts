@@ -11,7 +11,9 @@ import { assertCsrf } from '@/server/security/csrf';
 import { NotFoundError, ForbiddenError } from '@/server/api/errors';
 import { SubmitDeliverableSchema, ReviewDeliverableInputSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
-import { canSubmitDeliverable } from '@/server/policies/task-policy';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { authorize } from '@/server/authorization/authorization-engine';
+import { buildTaskResource } from '@/server/authorization/available-actions';
 import { toTaskDeliverableDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
@@ -41,10 +43,14 @@ export async function POST(req: Request, routeContext: RouteContext) {
 
     const existingTask = taskResult.task;
 
-    // Object authorization check
-    if (!canSubmitDeliverable(authUser, existingTask)) {
+    // Canonical object authorization check
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const submitDecision = authorize(authContext, 'task.submit_result', taskResource);
+    if (!submitDecision.allowed) {
       throw new ForbiddenError(
-        'Bạn không có quyền nộp minh chứng cho nhiệm vụ này hoặc nhiệm vụ đã bị hủy'
+        submitDecision.reason ||
+          'Bạn không có quyền nộp minh chứng cho nhiệm vụ này hoặc nhiệm vụ đã bị hủy'
       );
     }
 

@@ -82,21 +82,28 @@ export async function dispatchTaskAssignedPush(
       }
     }
 
-    // Query actors from canonical TaskActor model
+    // Query assignees from TaskAssignee and canonical TaskActor models
     if (task.id) {
       try {
-        const dbActors = await prisma.taskActor.findMany({
-          where: { taskId: task.id, userId: { not: null } },
-          select: { userId: true },
-        });
+        const [dbAssignees, dbActors] = await Promise.all([
+          prisma.taskAssignee.findMany({
+            where: { taskId: task.id },
+            select: { userId: true },
+          }),
+          prisma.taskActor.findMany({
+            where: { taskId: task.id, userId: { not: null } },
+            select: { userId: true },
+          }),
+        ]);
+        for (const a of dbAssignees) {
+          if (a.userId) targetUserIdSet.add(a.userId);
+        }
         for (const a of dbActors) {
-          if (a.userId) {
-            targetUserIdSet.add(a.userId);
-          }
+          if (a.userId) targetUserIdSet.add(a.userId);
         }
       } catch (dbErr) {
         // Continue with memory assignees if DB query encounters an issue
-        console.warn('[dispatchTaskAssignedPush] DB actor lookup warning:', dbErr);
+        console.warn('[dispatchTaskAssignedPush] DB assignee lookup warning:', dbErr);
       }
     }
 
@@ -202,17 +209,26 @@ export async function dispatchExecutiveDirectivePush(
   try {
     const stakeholderUserIds = new Set<string>();
 
-    // 1. Task actors
+    // 1. Task assignees and actors
     try {
-      const actors = await prisma.taskActor.findMany({
-        where: { taskId, userId: { not: null } },
-        select: { userId: true },
-      });
+      const [assignees, actors] = await Promise.all([
+        prisma.taskAssignee.findMany({
+          where: { taskId },
+          select: { userId: true },
+        }),
+        prisma.taskActor.findMany({
+          where: { taskId, userId: { not: null } },
+          select: { userId: true },
+        }),
+      ]);
+      for (const a of assignees) {
+        if (a.userId) stakeholderUserIds.add(a.userId);
+      }
       for (const a of actors) {
         if (a.userId) stakeholderUserIds.add(a.userId);
       }
     } catch (e) {
-      console.warn('[dispatchExecutiveDirectivePush] Actor lookup error:', e);
+      console.warn('[dispatchExecutiveDirectivePush] Assignee/Actor lookup error:', e);
     }
 
     // 2. Department head(s) of task

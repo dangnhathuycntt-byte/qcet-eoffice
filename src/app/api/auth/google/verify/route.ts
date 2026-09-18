@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * OAuth sessions must be created exclusively by Auth.js so callback validation,
  * PKCE/state checks, account linking, and database sessions follow one path.
  */
-export async function POST(_request?: Request) {
+export async function POST(_request: Request) {
   return NextResponse.json(
     {
       success: false,
