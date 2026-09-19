@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
-import { cn } from "@/lib/utils";
+import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -85,12 +85,7 @@ export function formatDisplayName(name?: string | null): string {
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
   if (!cleanName || cleanName === "Người dùng") return "QC";
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "QC";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
+  return baseGetInitials(cleanName);
 }
 
 export interface DesktopSidebarItem extends CanonicalRouteConfig {

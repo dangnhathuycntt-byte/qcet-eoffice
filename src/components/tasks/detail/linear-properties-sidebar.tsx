@@ -39,7 +39,7 @@ import {
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
 import {
   formatDisplayDate,
@@ -85,13 +85,6 @@ export interface LinearPropertiesSidebarProps {
   activeSubtaskId?: string | null;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onAddSubtask?: () => void;
-}
-
-function getInitials(name?: string): string {
-  if (!name || !name.trim()) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 /**

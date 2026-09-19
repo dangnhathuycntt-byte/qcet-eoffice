@@ -59,7 +59,7 @@ import {
 } from "@/lib/dacum-workflow-engine";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
 import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
 import {
@@ -508,15 +508,6 @@ export function isTaskCompletedLifecycle(
   task: SchoolTask | StaffTask | null | undefined
 ): boolean {
   return mapDbStatusToLifecycle(task?.status ?? "") === "COMPLETED";
-}
-
-function getInitials(name: string): string {
-  if (!name) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
 }
 
 function getRelativeTimeString(

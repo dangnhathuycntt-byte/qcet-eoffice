@@ -8,7 +8,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { TableDensity } from "../types";
 import { getStatusBadgeConfig } from "../constants";
@@ -36,13 +36,6 @@ export interface SubtaskInlineRowProps {
   ) => Promise<void> | void;
   onOpenSubmitModal?: (task: StaffTask) => void;
   className?: string;
-}
-
-function getInitials(name?: string): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({

@@ -18,19 +18,14 @@ import {
 } from "@/components/layout/sidebar-context";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 
 import { formatDisplayName } from "@/components/layout/app-sidebar";
 
 export function getInitials(name?: string | null): string {
   const cleanName = formatDisplayName(name);
   if (!cleanName || cleanName === "Người dùng") return "QC";
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "QC";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
+  return baseGetInitials(cleanName);
 }
 
 function MobileHeaderTitle({ pathname }: { pathname: string }) {
