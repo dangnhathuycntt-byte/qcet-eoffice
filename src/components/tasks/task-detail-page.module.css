@@ -53,36 +53,25 @@
   }
 }
 
-/* ── Tab bar — underline style ────────────────────────────────── */
+/* ── Tab bar — pill style ─────────────────────────────────────── */
 .workspace > nav[role='tablist'] {
   flex-shrink: 0;
   position: static;
-  display: flex;
-  gap: 0;
-  padding: 0 clamp(24px, 3vw, 48px);
+  padding: 8px;
   border: 0;
-  border-bottom: 1px solid var(--border);
   background: var(--card);
 }
 .workspace > nav [role='tab'] {
-  padding: 10px 14px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  font-size: 13px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
   font-weight: 500;
-  color: var(--muted-foreground);
-  background: transparent;
-  transition: color 160ms ease, border-color 160ms ease;
-}
-.workspace > nav [role='tab']:hover {
-  color: var(--foreground);
+  background: var(--card);
 }
 .workspace > nav [aria-selected='true'] {
-  color: var(--foreground);
-  border-bottom-color: var(--foreground);
+  background: var(--muted);
+  border-color: transparent;
   font-weight: 500;
-  background: transparent;
 }
 
 /* ── Header nav ───────────────────────────────────────────────── */
