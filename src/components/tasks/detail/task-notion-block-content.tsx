@@ -1007,7 +1007,7 @@ function FixedToolbar({ editor }: { editor: any }) {
   const tbBtnIdle = "text-muted-foreground hover:bg-muted hover:text-foreground";
 
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-0.5 overflow-x-auto no-scrollbar border-b border-border/40 bg-background px-1 py-1 text-xs select-none">
+    <div className="sticky top-0 z-10 flex items-center gap-0.5 overflow-x-auto no-scrollbar border-b border-border/40 bg-background px-1 py-1 text-xs select-none">
       {/* ── Text style dropdown (H1/H2/H3/Paragraph) ── */}
       <ToolbarDropdown
         trigger={
