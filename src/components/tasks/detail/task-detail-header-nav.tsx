@@ -15,8 +15,6 @@ export interface TaskDetailHeaderNavProps {
   taskTitle: string;
   onBack: () => void;
   showBreadcrumbs?: boolean;
-  showInspector: boolean;
-  onToggleInspector: () => void;
   onOpenProgressModal?: () => void;
   onRefresh?: () => void;
   className?: string;

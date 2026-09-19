@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MOBILE_BREAKPOINT = 1024;
@@ -35,7 +35,34 @@ export function TaskDetailSplitLayout({
     return (
       <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
         <div className="flex-1 min-h-0">{children}</div>
-        {inspectorOpen && <div className="w-full border-t border-border/40 pt-4">{inspector}</div>}
+        {inspectorOpen ? (
+          <div className="w-full border-t border-border/40 pt-4">
+            <div className="flex items-center justify-between px-4 pb-2">
+              <span className="text-xs font-medium text-muted-foreground">Thuộc tính</span>
+              <button
+                type="button"
+                onClick={onToggleInspector}
+                title="Ẩn thuộc tính"
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                Ẩn
+              </button>
+            </div>
+            {inspector}
+          </div>
+        ) : (
+          <div className="border-t border-border/40 px-4 py-2">
+            <button
+              type="button"
+              onClick={onToggleInspector}
+              title="Hiện thuộc tính"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+              <span>Hiện thuộc tính</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -67,11 +94,11 @@ export function TaskDetailSplitLayout({
           )}
         >
           {inspectorOpen ? (
-            <PanelRightClose className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <ChevronRight className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
           ) : (
             <>
-              <PanelRightOpen className="size-3.5" strokeWidth={1.5} />
-              <span className="hidden xl:inline text-[11px] font-medium whitespace-nowrap">Thuộc tính</span>
+              <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+              <span className="hidden lg:inline text-[11px] font-medium whitespace-nowrap">Thuộc tính</span>
             </>
           )}
         </button>

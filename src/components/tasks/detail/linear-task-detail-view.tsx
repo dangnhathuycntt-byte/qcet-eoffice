@@ -464,8 +464,6 @@ export function LinearTaskDetailView({
         taskCode={taskCode}
         taskTitle={task.title}
         onBack={onBack}
-        showInspector={showInspector}
-        onToggleInspector={handleToggleInspector}
         onRefresh={onRefresh}
       />
 

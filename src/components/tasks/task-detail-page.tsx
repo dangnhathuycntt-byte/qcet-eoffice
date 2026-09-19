@@ -980,8 +980,6 @@ export function TaskDetailPage({
         taskTitle={task.title}
         onBack={handleBackToList}
         showBreadcrumbs={false}
-        showInspector={showInspector}
-        onToggleInspector={handleToggleInspector}
         onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
         onRefresh={() => router.refresh()}
       />

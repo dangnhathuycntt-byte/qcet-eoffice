@@ -289,19 +289,16 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Header must eliminate 'In thông tin' menu item"
     );
 
-    // 2. Inspector toggle button tooltip and accessibility
+    // 2. Inspector toggle removed from header — now lives at content/panel separator
     assert.ok(
-      headerContent.includes('title="Ẩn/Hiện thuộc tính (Space)"'),
-      "Inspector toggle button must have tooltip 'Ẩn/Hiện thuộc tính (Space)'"
+      !headerContent.includes("PanelRightClose") &&
+        !headerContent.includes("PanelRightOpen") &&
+        !headerContent.includes("onToggleInspector"),
+      "Header must not contain inspector toggle — it lives at the separator edge"
     );
     assert.ok(
-      headerContent.includes("aria-expanded={showInspector}"),
-      "Inspector toggle button must bind aria-expanded accurately"
-    );
-    assert.match(
-      headerContent,
-      />\s*Space\s*</,
-      "Inspector toggle button must display Space kbd hint"
+      headerContent.includes('title="Sao chép liên kết"'),
+      "Copy link button must have tooltip 'Sao chép liên kết'"
     );
 
     // 3. TaskDetailPage Space keyboard shortcut logic
