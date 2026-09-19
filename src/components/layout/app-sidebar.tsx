@@ -47,7 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
-import { Popover } from "@base-ui/react/popover";
+import { Menu } from "@base-ui/react/menu";
 import { cn } from "@/lib/utils";
 
 const UserProfileModal = dynamic(
@@ -366,12 +366,12 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
         {/* ========================================================= */}
-        <Popover.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
+        <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Linear Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
           <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
-            <Popover.Trigger
+            <Menu.Trigger
               ref={accountTriggerRef}
               type="button"
               className={cn(
@@ -397,7 +397,7 @@ export function AppSidebar() {
                   isProfileDropdownOpen && "rotate-180 text-foreground"
                 )}
               />
-            </Popover.Trigger>
+            </Menu.Trigger>
 
             {/* Right: Quick Action Buttons (Search & Floating Create Task) */}
             <div className="flex items-center gap-1 shrink-0 ml-0.5">
@@ -437,9 +437,9 @@ export function AppSidebar() {
 
           {/* Account dropdown via Base UI Popover */}
 
-          <Popover.Portal>
-          <Popover.Positioner className="z-50" align="start" sideOffset={6} collisionPadding={12}>
-          <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+          <Menu.Portal>
+          <Menu.Positioner className="z-50" align="start" sideOffset={6} collisionPadding={12}>
+          <Menu.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
             className="w-60 p-2 shadow-2xl border border-border/80 bg-popover rounded-xl"
             role="menu"
             aria-label="Menu tài khoản"
@@ -538,12 +538,12 @@ export function AppSidebar() {
                 </div>
               </div>
             )}
-          </Popover.Popup>
-          </Popover.Positioner>
-          </Popover.Portal>
+          </Menu.Popup>
+          </Menu.Positioner>
+          </Menu.Portal>
 
         </div>
-        </Popover.Root>
+        </Menu.Root>
 
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}

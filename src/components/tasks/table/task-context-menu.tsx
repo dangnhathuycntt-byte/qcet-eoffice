@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Popover } from "@base-ui/react/popover";
+import { Menu } from "@base-ui/react/menu";
 import {
   Star,
   Clock,
@@ -232,17 +232,15 @@ export function TaskContextMenu({
 
   return (
     <>
-    <Popover.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
-    <Popover.Portal>
-    <Popover.Positioner className="z-50"
+    <Menu.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Menu.Portal>
+    <Menu.Positioner className="z-50"
       anchor={position ? { getBoundingClientRect: () => new DOMRect(position.x, position.y, 0, 0) } : triggerElement}
       align="start"
       collisionPadding={12}
     >
-    <Popover.Popup
-      finalFocus={() => triggerElement ?? true}
+    <Menu.Popup
       ref={menuRef}
-      role="menu"
       aria-label="Thao tác nhanh nhiệm vụ"
       style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
       className="w-60 select-none rounded-lg border border-border/80 bg-white p-1 text-xs text-slate-800 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
@@ -598,10 +596,10 @@ export function TaskContextMenu({
         <span>Xóa / Hủy nhiệm vụ...</span>
       </button>
 
-    </Popover.Popup>
-    </Popover.Positioner>
-    </Popover.Portal>
-    </Popover.Root>
+    </Menu.Popup>
+    </Menu.Positioner>
+    </Menu.Portal>
+    </Menu.Root>
 
 
       {/* Destructive Confirmation Dialog */}

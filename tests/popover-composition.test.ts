@@ -4,7 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 import ts from "typescript";
 
-test("Base UI popups have portal, positioning context, and a trigger or explicit anchor", () => {
+test("Base UI popups/menus have portal, positioning context, and a trigger or explicit anchor", () => {
   const directory = path.resolve("src");
   let popupCount = 0;
   for (const entry of readdirSync(directory, { recursive: true }).map(String)) {
@@ -17,21 +17,21 @@ test("Base UI popups have portal, positioning context, and a trigger or explicit
       ts.forEachChild(node, visit);
     };
     visit(source);
-    for (const popup of elements.filter((node) => node.openingElement.tagName.getText(source) === "Popover.Popup")) {
+    for (const popup of elements.filter((node) => (node.openingElement.tagName.getText(source) === "Popover.Popup" || node.openingElement.tagName.getText(source) === "Menu.Popup"))) {
       popupCount++;
       const ancestors: ts.JsxElement[] = [];
       for (let ancestor = popup.parent; ancestor; ancestor = ancestor.parent) {
         if (ts.isJsxElement(ancestor)) ancestors.push(ancestor);
       }
-      const positioner = ancestors.find((node) => node.openingElement.tagName.getText(source) === "Popover.Positioner");
-      const root = ancestors.find((node) => node.openingElement.tagName.getText(source) === "Popover.Root");
+      const positioner = ancestors.find((node) => (node.openingElement.tagName.getText(source) === "Popover.Positioner" || node.openingElement.tagName.getText(source) === "Menu.Positioner"));
+      const root = ancestors.find((node) => (node.openingElement.tagName.getText(source) === "Popover.Root" || node.openingElement.tagName.getText(source) === "Menu.Root"));
       assert.ok(positioner, `${entry}: Popup requires Positioner`);
       const layer = positioner.openingElement.attributes.properties.find((attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "className");
       assert.ok(layer && ts.isJsxAttribute(layer) && layer.initializer && ts.isStringLiteral(layer.initializer) && layer.initializer.text.split(/\s+/).includes("z-50"), `${entry}: overlay layer belongs on the Positioner stacking context`);
       assert.ok(root, `${entry}: Popup requires Root`);
-      assert.ok(ancestors.some((node) => node.openingElement.tagName.getText(source) === "Popover.Portal"), `${entry}: Popup requires Portal`);
+      assert.ok(ancestors.some((node) => (node.openingElement.tagName.getText(source) === "Popover.Portal" || node.openingElement.tagName.getText(source) === "Menu.Portal")), `${entry}: Popup requires Portal`);
       const hasAnchor = positioner.openingElement.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "anchor");
-      const hasTrigger = elements.some((node) => node.pos >= root.pos && node.end <= root.end && node.openingElement.tagName.getText(source) === "Popover.Trigger");
+      const hasTrigger = elements.some((node) => node.pos >= root.pos && node.end <= root.end && (node.openingElement.tagName.getText(source) === "Popover.Trigger" || node.openingElement.tagName.getText(source) === "Menu.Trigger"));
       assert.ok(hasAnchor || hasTrigger, `${entry}: Positioner requires an anchor or registered trigger`);
     }
   }
