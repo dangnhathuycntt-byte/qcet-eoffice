@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
+import { Popover } from "@base-ui/react/popover";
 import styles from "../task-detail-page.module.css";
 import {
   X,
@@ -13,6 +14,7 @@ import {
   Clock3,
   Link2,
   Users,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -33,6 +35,12 @@ export interface SubtaskDetailDrawerProps {
   parentTaskId: string;
   canEdit?: boolean;
   onSubtaskUpdated?: (updated: StaffTask) => void;
+  /** All siblings of the current child (parent's subTasks) */
+  siblings?: StaffTask[];
+  /** Navigate to a sibling child */
+  onSelectSibling?: (st: StaffTask) => void;
+  /** Open create-subtask flow */
+  onAddSubtask?: () => void;
 }
 
 export function SubtaskDetailDrawer({
@@ -42,6 +50,9 @@ export function SubtaskDetailDrawer({
   parentTaskId,
   canEdit = true,
   onSubtaskUpdated,
+  siblings = [],
+  onSelectSibling,
+  onAddSubtask,
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
@@ -274,7 +285,7 @@ export function SubtaskDetailDrawer({
     notifySuccess("Đã cập nhật hạn hoàn thành việc con");
   };
 
-  // Peek keyboard: Esc closes drawer
+  // Peek keyboard: Esc closes, ArrowUp/ArrowDown navigates siblings
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -283,16 +294,28 @@ export function SubtaskDetailDrawer({
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
         target?.tagName === "SELECT" ||
-        target?.isContentEditable;
+        target?.isContentEditable ||
+        !!target?.closest("[role='combobox'], [role='listbox'], [role='menu'], [data-slate-editor]");
       if (isEditing) return;
 
       if (e.key === "Escape") {
         onClose();
+        return;
+      }
+
+      // ArrowUp/ArrowDown — navigate siblings
+      if ((e.key === "ArrowDown" || e.key === "ArrowUp") && onSelectSibling && siblings.length > 1) {
+        e.preventDefault();
+        const currentIdx = subtask ? siblings.findIndex((st) => st.id === subtask.id) : -1;
+        if (currentIdx === -1) return;
+        const direction = e.key === "ArrowDown" ? 1 : -1;
+        const nextIdx = (currentIdx + direction + siblings.length) % siblings.length;
+        onSelectSibling(siblings[nextIdx]);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (typeof window === "undefined" || !subtask) return;
@@ -309,6 +332,11 @@ export function SubtaskDetailDrawer({
   }, [notifySuccess, notifyError, subtask, parentTaskId]);
 
   if (!isOpen || !subtask) return null;
+
+  // Sibling switcher data
+  const currentIndex = siblings.findIndex((st) => st.id === subtask.id);
+  const siblingPosition = currentIndex >= 0 ? currentIndex + 1 : 1;
+  const siblingTotal = siblings.length;
 
   const description = (subtask as any).description || subtask.deliverableDescription || "";
   const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
@@ -330,8 +358,75 @@ export function SubtaskDetailDrawer({
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
         className={styles.peekSurface}
       >
-        <div className="group/peek-header flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border px-4 select-none">
-          {/* Copy link — subtle, visible on hover/focus and touch */}
+        <div className="group/peek-header flex h-12 shrink-0 items-center gap-1 border-b border-border px-3 select-none">
+          {/* Sibling switcher trigger — left side */}
+          {siblings.length > 0 && (
+            <Popover.Root>
+              <Popover.Trigger
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span>Việc con</span>
+                <span className="tabular-nums font-medium text-foreground">{siblingPosition}/{siblingTotal}</span>
+                <ChevronDown className="size-3 opacity-60" />
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={8}>
+                  <Popover.Popup className="w-72 rounded-lg border border-border bg-popover shadow-lg animate-in fade-in-0 duration-150">
+                    {/* Popover header */}
+                    <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+                      <span className="text-xs font-medium text-foreground">Việc con</span>
+                      <span className="text-[11px] tabular-nums text-muted-foreground">{siblingPosition}/{siblingTotal}</span>
+                    </div>
+                    {/* Sibling list */}
+                    <div className="max-h-64 overflow-y-auto overscroll-contain px-1 pb-1">
+                      {siblings.map((sib) => {
+                        const isSelected = sib.id === subtask.id;
+                        const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
+                        return (
+                          <Popover.Close
+                            key={sib.id}
+                            render={<button type="button" />}
+                            onClick={() => {
+                              if (!isSelected && onSelectSibling) onSelectSibling(sib);
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              isSelected
+                                ? "bg-muted/60 font-medium"
+                                : "hover:bg-muted/40"
+                            )}
+                          >
+                            <span className={cn("size-2 shrink-0 rounded-full", statusObj.dotClass)} />
+                            <span className="min-w-0 truncate flex-1">{sib.title}</span>
+                            {isSelected && <Check className="size-3 shrink-0 text-muted-foreground" />}
+                          </Popover.Close>
+                        );
+                      })}
+                    </div>
+                    {/* Add subtask */}
+                    {onAddSubtask && (
+                      <div className="border-t border-border/40 px-1 py-1">
+                        <Popover.Close
+                          render={<button type="button" />}
+                          onClick={onAddSubtask}
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <Plus className="size-3.5" />
+                          <span>Thêm việc con</span>
+                        </Popover.Close>
+                      </div>
+                    )}
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Copy link — subtle, visible on hover/focus */}
           <button
             type="button"
             onClick={handleCopyLink}

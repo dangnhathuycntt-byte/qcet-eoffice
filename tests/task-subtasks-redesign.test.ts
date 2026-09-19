@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () => {
+describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", () => {
   const sidebarPath = path.join(process.cwd(), "src/components/tasks/detail/linear-properties-sidebar.tsx");
   const drawerPath = path.join(process.cwd(), "src/components/tasks/detail/subtask-detail-drawer.tsx");
   const detailPagePath = path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx");
@@ -18,54 +18,80 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
   const headerContent = fs.readFileSync(headerPath, "utf-8");
   const cssContent = fs.readFileSync(cssPath, "utf-8");
 
-  describe("1. Unified Workspace Layout", () => {
-    it("splitWorkspace uses flexbox row, not CSS grid", () => {
+  describe("1. Dual Independent Cards Layout", () => {
+    it("splitWorkspace uses CSS grid, not flexbox row", () => {
       // Check the .splitWorkspace rule specifically
       const splitIdx = cssContent.indexOf(".splitWorkspace {");
       assert.ok(splitIdx >= 0, ".splitWorkspace must exist");
       const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
-        splitBlock.includes("display: flex") && splitBlock.includes("flex-direction: row"),
-        "splitWorkspace must use flexbox row layout"
+        splitBlock.includes("display: grid"),
+        "splitWorkspace must use CSS grid layout"
       );
       assert.ok(
-        !splitBlock.includes("grid-template-columns"),
-        "splitWorkspace must not use CSS grid"
+        splitBlock.includes("grid-template-columns"),
+        "splitWorkspace must define grid columns"
       );
       assert.ok(
-        !cssContent.includes("data-peek-open"),
-        "No data-peek-open grid switching rule"
+        splitBlock.includes("gap:"),
+        "splitWorkspace must use gap (not margin hack) for card spacing"
       );
     });
 
-    it("single card shell — border/radius on splitWorkspace, not on workspace/peekSurface", () => {
-      // splitWorkspace has card styling
-      const splitIdx = cssContent.indexOf(".splitWorkspace");
+    it("splitWorkspace is layout-only — no border, no radius, no background", () => {
+      const splitIdx = cssContent.indexOf(".splitWorkspace {");
       const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
-        splitBlock.includes("border-radius") && splitBlock.includes("border:"),
-        "splitWorkspace must have card border and radius"
+        !splitBlock.includes("border:") && !splitBlock.includes("border-radius") && !splitBlock.includes("background:"),
+        "splitWorkspace must NOT have card styling (border/radius/background)"
       );
     });
 
-    it("peekSurface is inset card on desktop, fixed overlay on mobile", () => {
-      assert.ok(cssContent.includes("width: 440px"), "Peek pane must be 440px on desktop");
-      assert.ok(cssContent.includes("flex-shrink: 0"), "Peek pane must not shrink");
+    it("workspace and peekSurface are independent cards with border/radius/background", () => {
+      // workspace card
+      const workspaceIdx = cssContent.indexOf(".workspace {");
+      assert.ok(workspaceIdx >= 0, ".workspace must exist");
+      const workspaceBlock = cssContent.slice(workspaceIdx, cssContent.indexOf("}", workspaceIdx) + 1);
       assert.ok(
-        cssContent.includes("border-radius: 14px"),
-        "Peek pane must have rounded corners"
+        workspaceBlock.includes("border:") && workspaceBlock.includes("border-radius") && workspaceBlock.includes("background:"),
+        "workspace must have independent card styling"
+      );
+      // peekSurface card (mobile base rule)
+      const peekIdx = cssContent.indexOf(".peekSurface {");
+      assert.ok(peekIdx >= 0, ".peekSurface must exist");
+      const peekBlock = cssContent.slice(peekIdx, cssContent.indexOf("}", peekIdx) + 1);
+      assert.ok(
+        peekBlock.includes("border:") && peekBlock.includes("border-radius") && peekBlock.includes("background:"),
+        "peekSurface must have independent card styling"
+      );
+    });
+
+    it("peekSurface is fixed overlay on mobile, grid column on desktop", () => {
+      // Mobile: fixed overlay
+      const peekIdx = cssContent.indexOf(".peekSurface {");
+      const peekBlock = cssContent.slice(peekIdx, cssContent.indexOf("}", peekIdx) + 1);
+      assert.ok(
+        peekBlock.includes("position: fixed"),
+        "Peek pane must be fixed overlay on mobile"
+      );
+      // Desktop: data-peek-open triggers second grid column
+      assert.ok(
+        cssContent.includes("data-peek-open"),
+        "Must use data-peek-open to toggle grid columns on desktop"
       );
       assert.ok(
-        cssContent.includes("margin: 8px"),
-        "Peek pane must have inset margin"
+        cssContent.includes("clamp(420px, 30vw, 500px)"),
+        "Child column must be clamp(420px, 30vw, 500px)"
       );
+      // No border-left divider
       assert.ok(
         !cssContent.includes("border-left: 1px solid var(--border)"),
         "Peek pane must not use hard left border divider"
       );
+      // No margin hack
       assert.ok(
-        cssContent.includes("position: fixed"),
-        "Peek pane must be fixed overlay on mobile"
+        !cssContent.includes("margin: 8px 8px 8px 0"),
+        "Peek pane must not use margin hack for gap"
       );
     });
 
@@ -181,6 +207,79 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
       assert.ok(drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"));
       assert.ok(drawerContent.includes("<TaskNotionBlockContent"));
     });
+
+    it("drawer accepts siblings, onSelectSibling, onAddSubtask props", () => {
+      assert.ok(drawerContent.includes("siblings"), "Must accept siblings prop");
+      assert.ok(drawerContent.includes("onSelectSibling"), "Must accept onSelectSibling prop");
+      assert.ok(drawerContent.includes("onAddSubtask"), "Must accept onAddSubtask prop");
+    });
+
+    it("drawer has sibling switcher with x/y label and popover", () => {
+      assert.ok(
+        drawerContent.includes("siblingPosition") && drawerContent.includes("siblingTotal"),
+        "Must compute sibling position and total"
+      );
+      assert.ok(drawerContent.includes("Việc con"), "Header must show 'Việc con' label");
+      assert.ok(
+        drawerContent.includes("Popover.Root") && drawerContent.includes("Popover.Trigger"),
+        "Must use @base-ui Popover for sibling switcher"
+      );
+    });
+
+    it("popover shows sibling list with status dots and titles", () => {
+      assert.ok(drawerContent.includes("statusObj.dotClass"), "Each sibling row must show status dot");
+      assert.ok(drawerContent.includes("sib.title"), "Each sibling row must show title");
+      // No technical IDs
+      assert.ok(
+        !drawerContent.includes(">{sib.id}<") && !drawerContent.includes("{sib.taskId}"),
+        "Sibling rows must not display raw IDs"
+      );
+    });
+
+    it("popover has '+ Thêm việc con' action", () => {
+      assert.ok(drawerContent.includes("Thêm việc con"), "Popover must have add child action");
+    });
+
+    it("drawer does NOT have Back/Previous/Next buttons", () => {
+      assert.ok(!drawerContent.includes("Previous"), "No Previous button");
+      assert.ok(!drawerContent.includes("handleNavigateBack"), "No back navigation handler");
+      assert.ok(
+        !drawerContent.includes('aria-label="Quay lại"') && !drawerContent.includes(">Quay lại<"),
+        "No back button"
+      );
+    });
+  });
+
+  describe("4b. Keyboard Navigation", () => {
+    it("ArrowUp/ArrowDown calls onSelectSibling with wrapping", () => {
+      assert.ok(
+        drawerContent.includes('e.key === "ArrowDown"') && drawerContent.includes('e.key === "ArrowUp"'),
+        "Must handle ArrowDown and ArrowUp"
+      );
+      assert.ok(
+        drawerContent.includes("siblings.length") && drawerContent.includes("% siblings.length"),
+        "Must wrap around using modulo"
+      );
+    });
+
+    it("keyboard nav is blocked inside editable contexts", () => {
+      assert.ok(drawerContent.includes("isContentEditable"), "Must check contentEditable");
+      assert.ok(
+        drawerContent.includes("data-slate-editor"),
+        "Must check Slate editor to avoid intercepting editor keys"
+      );
+      assert.ok(
+        drawerContent.includes("role='combobox'") || drawerContent.includes('role=\'combobox\''),
+        "Must check combobox role"
+      );
+    });
+
+    it("Esc closes the drawer", () => {
+      assert.ok(
+        drawerContent.includes('"Escape"') && drawerContent.includes("onClose"),
+        "Esc must trigger onClose"
+      );
+    });
   });
 
   describe("5. Header — Simplified", () => {
@@ -193,6 +292,29 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
     it("header has inspector toggle hidden when drawer open", () => {
       assert.ok(headerContent.includes("onToggleInspector"));
       assert.ok(headerContent.includes("!isDrawerOpen"));
+    });
+  });
+
+  describe("5b. TaskDetailPage passes sibling props to drawer", () => {
+    it("passes siblings={subTasks} to SubtaskDetailDrawer", () => {
+      assert.ok(
+        detailPageContent.includes("siblings={subTasks}"),
+        "TaskDetailPage must pass subTasks as siblings to the drawer"
+      );
+    });
+
+    it("passes onSelectSibling={handleOpenSubtaskDrawer}", () => {
+      assert.ok(
+        detailPageContent.includes("onSelectSibling={handleOpenSubtaskDrawer}"),
+        "TaskDetailPage must pass handleOpenSubtaskDrawer as onSelectSibling"
+      );
+    });
+
+    it("passes onAddSubtask={handleAddSubtask}", () => {
+      assert.ok(
+        detailPageContent.includes("onAddSubtask={handleAddSubtask}"),
+        "TaskDetailPage must pass handleAddSubtask as onAddSubtask"
+      );
     });
   });
 

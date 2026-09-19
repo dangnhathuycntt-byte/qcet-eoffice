@@ -706,7 +706,7 @@ export function TaskDetailPage({
   };
 
   return (
-    <div className={styles.splitWorkspace}>
+    <div className={styles.splitWorkspace} data-peek-open={Boolean(activeSubtask)}>
     {/* Parent pane */}
     <div
       data-slot="task-workspace"
@@ -886,7 +886,7 @@ export function TaskDetailPage({
 
     </div>
 
-    {/* Child peek — direct sibling inside unified workspace */}
+    {/* Child peek — independent card beside parent */}
     <SubtaskDetailDrawer
       isOpen={Boolean(activeSubtask)}
       onClose={handleCloseSubtaskDrawer}
@@ -894,6 +894,9 @@ export function TaskDetailPage({
       parentTaskId={task.id}
       canEdit={canEdit}
       onSubtaskUpdated={handleSubtaskUpdated}
+      siblings={subTasks}
+      onSelectSibling={handleOpenSubtaskDrawer}
+      onAddSubtask={handleAddSubtask}
     />
 
     {/* Modal Tạo việc con */}
