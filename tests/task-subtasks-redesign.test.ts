@@ -48,12 +48,20 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
       );
     });
 
-    it("peekSurface is inline 420px pane on desktop, fixed overlay on mobile", () => {
-      assert.ok(cssContent.includes("width: 420px"), "Peek pane must be 420px on desktop");
+    it("peekSurface is inset card on desktop, fixed overlay on mobile", () => {
+      assert.ok(cssContent.includes("width: 440px"), "Peek pane must be 440px on desktop");
       assert.ok(cssContent.includes("flex-shrink: 0"), "Peek pane must not shrink");
       assert.ok(
-        cssContent.includes("border-left: 1px solid var(--border)"),
-        "Peek pane uses 1px left border as divider"
+        cssContent.includes("border-radius: 14px"),
+        "Peek pane must have rounded corners"
+      );
+      assert.ok(
+        cssContent.includes("margin: 10px"),
+        "Peek pane must have inset margin"
+      );
+      assert.ok(
+        !cssContent.includes("border-left: 1px solid var(--border)"),
+        "Peek pane must not use hard left border divider"
       );
       assert.ok(
         cssContent.includes("position: fixed"),

@@ -330,7 +330,7 @@ export function SubtaskDetailDrawer({
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
         className={styles.peekSurface}
       >
-        <div className="group/peek-header flex h-11 shrink-0 items-center justify-end gap-1 border-b border-border/40 bg-card/95 px-3 backdrop-blur-md select-none">
+        <div className="group/peek-header flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border/50 px-4 select-none">
           {/* Copy link — subtle, visible on hover/focus and touch */}
           <button
             type="button"
@@ -357,7 +357,7 @@ export function SubtaskDetailDrawer({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words px-5 py-5 sm:px-6 overscroll-contain">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
           {/* Child title first */}
           <div className="space-y-1.5">
             <DirectInlineEditor
