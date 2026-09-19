@@ -1,18 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Group, Panel, Separator, usePanelRef } from "react-resizable-panels";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_INSPECTOR_PCT = 28;
-const MIN_INSPECTOR_PCT = 20;
-const MAX_INSPECTOR_PCT = 40;
 const MOBILE_BREAKPOINT = 1024;
-const STORAGE_KEY = 'qcet-inspector-pct';
-function readStoredPct(): number {
-  try { const v = localStorage.getItem(STORAGE_KEY); if (v) { const n = Number(v); if (n >= MIN_INSPECTOR_PCT && n <= MAX_INSPECTOR_PCT) return n; } } catch {}
-  return DEFAULT_INSPECTOR_PCT;
-}
 
 interface TaskDetailSplitLayoutProps {
   inspectorOpen: boolean;
@@ -29,8 +21,6 @@ export function TaskDetailSplitLayout({
   inspector,
   className,
 }: TaskDetailSplitLayoutProps) {
-  const inspectorPanelRef = usePanelRef();
-  const storedPct = React.useRef(readStoredPct());
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -40,16 +30,6 @@ export function TaskDetailSplitLayout({
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
-
-  React.useEffect(() => {
-    const panel = inspectorPanelRef.current;
-    if (!panel) return;
-    if (inspectorOpen) {
-      if (panel.isCollapsed()) panel.expand();
-    } else {
-      if (!panel.isCollapsed()) panel.collapse();
-    }
-  }, [inspectorOpen, inspectorPanelRef]);
 
   if (isMobile) {
     return (
@@ -61,39 +41,47 @@ export function TaskDetailSplitLayout({
   }
 
   return (
-    <Group
-      orientation="horizontal"
-      className={cn("flex-1 min-h-0", className)}
-    >
-      <Panel minSize="50%" defaultSize={`${100 - storedPct.current}%`} id="main">
+    <div className={cn("flex flex-1 min-h-0 min-w-0", className)}>
+      <div className="flex-1 min-h-0 min-w-0">
         {children}
-      </Panel>
+      </div>
 
-      <Separator
-        className={cn(
-          "w-px bg-transparent hover:bg-primary/40 focus-visible:bg-primary/60",
-          "transition-colors duration-100 cursor-col-resize",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-          "motion-reduce:transition-none",
-          "data-[resize-handle-active]:bg-primary/60",
-        )}
-        aria-label="Thay đổi độ rộng cột thuộc tính"
-      >
-        <div className="w-3 h-full -ml-1.5" />
-      </Separator>
+      {/* Separator edge with collapse/expand control */}
+      <div className="relative flex items-center shrink-0">
+        {/* Thin divider line */}
+        <div className={cn("w-px self-stretch", inspectorOpen ? "bg-border/40" : "bg-transparent")} />
 
-      <Panel
-        panelRef={inspectorPanelRef}
-        id="inspector"
-        defaultSize={`${storedPct.current}%`}
-        minSize={`${MIN_INSPECTOR_PCT}%`}
-        maxSize={`${MAX_INSPECTOR_PCT}%`}
-        collapsible
-        collapsedSize="0%"
-        onResize={(size) => { try { const pct = Math.round(size.asPercentage); if (pct >= MIN_INSPECTOR_PCT && pct <= MAX_INSPECTOR_PCT) localStorage.setItem(STORAGE_KEY, String(pct)); } catch {} }}
-      >
-        {inspector}
-      </Panel>
-    </Group>
+        {/* Collapse / Expand chevron at the separator edge */}
+        <button
+          type="button"
+          onClick={onToggleInspector}
+          title={inspectorOpen ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
+          aria-label={inspectorOpen ? "Ẩn thuộc tính" : "Hiện thuộc tính"}
+          aria-expanded={inspectorOpen}
+          className={cn(
+            "absolute z-10 flex items-center justify-center rounded-full border border-border/60 bg-background shadow-sm transition-colors cursor-pointer",
+            "hover:bg-muted hover:border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
+            inspectorOpen
+              ? "size-6 -right-3"
+              : "h-7 gap-1 px-2 -right-1 text-xs text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {inspectorOpen ? (
+            <PanelRightClose className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+          ) : (
+            <>
+              <PanelRightOpen className="size-3.5" strokeWidth={1.5} />
+              <span className="hidden xl:inline text-[11px] font-medium whitespace-nowrap">Thuộc tính</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {inspectorOpen && (
+        <div className="w-[300px] shrink-0 min-w-0 pl-4">
+          {inspector}
+        </div>
+      )}
+    </div>
   );
 }

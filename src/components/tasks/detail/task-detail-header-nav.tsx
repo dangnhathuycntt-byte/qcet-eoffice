@@ -5,13 +5,10 @@ import {
   ArrowLeft,
   Link2,
   Check,
-  PanelRightClose,
-  PanelRightOpen,
   Box,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { m } from "motion/react";
 
 export interface TaskDetailHeaderNavProps {
   taskCode: string;
@@ -30,10 +27,7 @@ export function TaskDetailHeaderNav({
   taskTitle,
   onBack,
   showBreadcrumbs = true,
-  showInspector,
-  onToggleInspector,
   onOpenProgressModal,
-  onRefresh,
   className,
 }: TaskDetailHeaderNavProps) {
   const [copiedLink, setCopiedLink] = React.useState(false);
@@ -86,7 +80,7 @@ export function TaskDetailHeaderNav({
       </nav>
       )}
 
-      {/* Right: Sleek Action Icons */}
+      {/* Right: Compact Action Icons */}
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
         {/* Cập nhật tiến độ Button */}
         {onOpenProgressModal && (
@@ -100,50 +94,19 @@ export function TaskDetailHeaderNav({
           </button>
         )}
 
-        {/* Copy Link Button */}
+        {/* Copy Link Button — icon with tooltip */}
         <button
           type="button"
           onClick={handleCopyLink}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
-          title="Sao chép liên kết nhiệm vụ"
-          aria-label="Sao chép liên kết nhiệm vụ"
+          className="inline-flex items-center justify-center size-8 rounded-lg border border-border/50 bg-background hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+          title="Sao chép liên kết"
+          aria-label="Sao chép liên kết"
         >
           {copiedLink ? (
-            <>
-              <Check className="size-3.5 text-emerald-600 shrink-0" strokeWidth={1.5} />
-              <span className="text-emerald-700 font-medium text-xs">Đã sao chép</span>
-            </>
+            <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
           ) : (
-            <>
-              <Link2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-              <span className="hidden sm:inline text-xs">Sao chép liên kết</span>
-            </>
+            <Link2 className="size-3.5" strokeWidth={1.5} />
           )}
-        </button>
-
-        {/* Toggle Inspector Button (Desktop) */}
-        <button
-          type="button"
-          onClick={onToggleInspector}
-          className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
-            showInspector
-              ? "bg-muted/80 border-border/80 text-foreground font-semibold"
-              : "bg-background border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-          title="Ẩn/Hiện thuộc tính (Space)"
-          aria-label="Ẩn hoặc hiện cột thuộc tính"
-          aria-expanded={showInspector}
-        >
-          {showInspector ? (
-            <PanelRightClose className="size-3.5 shrink-0 transition-all duration-200 hover:scale-110 active:scale-95" strokeWidth={1.5} />
-          ) : (
-            <PanelRightOpen className="size-3.5 shrink-0 transition-all duration-200 hover:scale-110 active:scale-95" strokeWidth={1.5} />
-          )}
-          <span className="hidden sm:inline">Thuộc tính</span>
-          <kbd className="hidden lg:inline-block px-1.5 py-0.2 rounded bg-muted text-[10px] font-mono text-muted-foreground">
-            Space
-          </kbd>
         </button>
       </div>
     </header>
