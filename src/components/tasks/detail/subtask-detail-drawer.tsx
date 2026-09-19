@@ -368,7 +368,7 @@ export function SubtaskDetailDrawer({
               >
                 <span>Việc con</span>
                 <span className="tabular-nums font-medium text-foreground">{siblingPosition}/{siblingTotal}</span>
-                <ChevronDown className="size-3 opacity-60" />
+                <ChevronDown className="size-3 opacity-60" strokeWidth={1.5} />
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={8}>
@@ -386,7 +386,6 @@ export function SubtaskDetailDrawer({
                         return (
                           <Popover.Close
                             key={sib.id}
-                            render={<button type="button" />}
                             onClick={() => {
                               if (!isSelected && onSelectSibling) onSelectSibling(sib);
                             }}
@@ -408,11 +407,10 @@ export function SubtaskDetailDrawer({
                     {onAddSubtask && (
                       <div className="border-t border-border/40 px-1 py-1">
                         <Popover.Close
-                          render={<button type="button" />}
                           onClick={onAddSubtask}
                           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          <Plus className="size-3.5" />
+                          <Plus className="size-3.5" strokeWidth={1.5} />
                           <span>Thêm việc con</span>
                         </Popover.Close>
                       </div>
