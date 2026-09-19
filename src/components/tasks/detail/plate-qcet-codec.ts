@@ -38,6 +38,13 @@ const PT = {
   attachment: "qcet_attachment",
   link: "qcet_link",
   bookmark: "qcet_bookmark",
+  table: "table",
+  tableRow: "tr",
+  tableCell: "td",
+  tableHeader: "th",
+  toggle: "toggle",
+  mention: "mention",
+  mediaEmbed: "media_embed",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -64,6 +71,13 @@ export interface PlateElement {
   // Plate list fields
   listStyleType?: string;
   indent?: number;
+  // Toggle
+  open?: boolean;
+  // Table
+  header?: boolean;
+  colSizes?: number[];
+  // Mention
+  value?: string;
 }
 
 export type PlateValue = PlateElement[];
