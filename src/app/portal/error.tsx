@@ -28,7 +28,7 @@ export default function PortalError({
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
             {error?.message ||
-              "Không thể tải dữ liệu điều hành. Vui lòng thử lại hoặc quay về bảng điều khiển."}
+              "Không thể tải dữ liệu điều hành. Vui lòng thử lại hoặc quay về bàn làm việc."}
           </p>
           {error?.digest && (
             <p className="mt-2 text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
@@ -56,7 +56,7 @@ export default function PortalError({
           >
             <Link href="/dashboard">
               <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-              <span>Bảng điều khiển</span>
+              <span>Bàn làm việc</span>
             </Link>
           </Button>
         </div>

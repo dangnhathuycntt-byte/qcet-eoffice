@@ -40,7 +40,7 @@ import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/da
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { cn, getInitials } from "@/lib/utils";
-import { getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
+import { getRelativeDueTime } from "@/lib/task-detail-helpers";
 import {
   formatDisplayDate,
   formatDateTime,

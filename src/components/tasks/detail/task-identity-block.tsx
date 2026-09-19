@@ -32,7 +32,7 @@ import {
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";

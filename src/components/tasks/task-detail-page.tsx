@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useSidebarLayout } from "@/components/layout/sidebar-context";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 import { cn } from "@/lib/utils";
-import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-header-nav";
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
 import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";

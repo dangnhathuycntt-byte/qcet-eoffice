@@ -38,7 +38,7 @@ import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
+import { isSchoolTask } from "@/types/dashboard";
 import { LinearTaskDetailView } from "@/components/tasks/detail/linear-task-detail-view";
 import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
