@@ -289,16 +289,16 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Header must eliminate 'In thông tin' menu item"
     );
 
-    // 2. Inspector toggle removed from header — now lives at content/panel separator
+    // 2. Inspector toggle moved to header as panel icon (hidden when drawer open)
     assert.ok(
-      !headerContent.includes("PanelRightClose") &&
-        !headerContent.includes("PanelRightOpen") &&
-        !headerContent.includes("onToggleInspector"),
-      "Header must not contain inspector toggle — it lives at the separator edge"
+      headerContent.includes("PanelRight") &&
+        headerContent.includes("onToggleInspector") &&
+        headerContent.includes("isDrawerOpen"),
+      "Header must expose a panel icon for inspector toggle, hidden when drawer is open"
     );
     assert.ok(
-      headerContent.includes('title="Sao chép liên kết"'),
-      "Copy link button must have tooltip 'Sao chép liên kết'"
+      headerContent.includes('title="Sao chép liên kết"') || headerContent.includes("Sao chép liên kết"),
+      "Copy link must be accessible from overflow menu"
     );
 
     // 3. TaskDetailPage Space keyboard shortcut logic

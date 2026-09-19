@@ -343,15 +343,29 @@ export function SubtaskDetailDrawer({
       >
         <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-card/95 px-3 backdrop-blur-md select-none">
           <div className="flex min-w-0 items-center gap-1.5">
+            {/* Back button: only show on mobile or when navigating subtask history */}
+            {(hasHistoryPrev) && (
             <button
               type="button"
               onClick={hasHistoryPrev && onNavigateBackHistory ? onNavigateBackHistory : onClose}
-              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
               title={hasHistoryPrev ? `Quay lại: ${historyPrevTitle || "Việc trước"}` : "Quay về nhiệm vụ cha"}
               aria-label="Quay lại"
             >
               <ArrowLeft className="size-4" />
             </button>
+            )}
+            {hasHistoryPrev && onNavigateBackHistory && (
+            <button
+              type="button"
+              onClick={onNavigateBackHistory}
+              className="hidden lg:inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={`Quay lại: ${historyPrevTitle || "Việc trước"}`}
+              aria-label="Quay lại"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+            )}
             <span className="truncate font-mono text-[11px] text-muted-foreground">
               {subtaskCode}
             </span>
