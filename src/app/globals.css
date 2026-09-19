@@ -231,19 +231,13 @@
 }
 
 @layer base {
+  /* Fade-in with slight upward slide — uses tw-animate-css under the hood */
   .animate-fade-in {
-    animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    animation: animate-in;
+    --tw-enter-opacity: 0;
+    --tw-enter-translate-y: 6px;
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
