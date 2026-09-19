@@ -280,8 +280,10 @@ function ParagraphEl({ attributes, children, element }: any) {
   if (indent >= 1 && listStyle) {
     if (typeof checked === "boolean") {
       const toggleChecked = () => {
-        const path = editor.api.findPath(element);
-        if (path) editor.tf.setNodes({ checked: !checked } as any, { at: path });
+        if (!editor.api.isReadOnly()) {
+          const path = editor.api.findPath(element);
+          if (path) editor.tf.setNodes({ checked: !checked } as any, { at: path });
+        }
       };
       return (
         <div {...attributes} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
@@ -372,7 +374,7 @@ function ImageEl({ attributes, children, element }: any) {
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
               <img src={url} alt={caption || "Hình ảnh"} className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none" loading="lazy" />
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                <button type="button" onClick={() => { const p = editor.api.findPath(element); if (p) editor.tf.removeNodes({ at: p }); }} className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer" title="Xóa">
+                <button type="button" onClick={() => { if (!editor.api.isReadOnly()) { const p = editor.api.findPath(element); if (p) editor.tf.removeNodes({ at: p }); } }} className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer" title="Xóa">
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
@@ -524,6 +526,8 @@ function BookmarkEl({ attributes, children, element }: any) {
 function BlockRow({ children, element }: { children: React.ReactNode; element: any }) {
   const { props: selectableProps } = useBlockSelectable();
   const isSelected = useBlockSelected();
+  const editor = useEditorRef();
+  const readOnly = editor.api.isReadOnly();
   const { isDragging, previewRef, handleRef } = useDraggable({ element });
   const { dropLine } = useDropLine({ id: element.id, orientation: "horizontal" });
   return (
@@ -537,7 +541,7 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
       )}
       data-block-id={element.id}
     >
-      <div className="w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5" contentEditable={false}>
+      <div className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5", readOnly && "invisible")} contentEditable={false}>
         <button
           ref={handleRef}
           type="button"
@@ -852,7 +856,7 @@ export function TaskNotionBlockContent({
 
   // Global file drop listeners
   React.useEffect(() => {
-    if (!globalFileDrop) return;
+    if (!globalFileDrop || !canEdit) return;
     const handleDragEnter = (e: DragEvent) => {
       if (e.dataTransfer?.types.includes("Files")) {
         dragCounterRef.current++;
@@ -952,6 +956,7 @@ export function TaskNotionBlockContent({
 
   // Slash menu handlers
   const handleOpenSlashMenu = React.useCallback((anchorEl?: HTMLElement | null) => {
+    if (!canEdit) return;
     setMenuSearchQuery("");
     if (anchorEl) {
       const rect = anchorEl.getBoundingClientRect();
@@ -986,6 +991,7 @@ export function TaskNotionBlockContent({
 
   const handleSelectMenuItem = React.useCallback((option: MenuItemOption) => {
     handleCloseSlashMenu();
+    if (editor.api.isReadOnly()) return;
 
     const newBlockId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     let newNode: PlateElemT;
@@ -1057,6 +1063,7 @@ export function TaskNotionBlockContent({
 
   // Handle paste for images
   const handlePaste = React.useCallback((e: React.ClipboardEvent) => {
+    if (!canEdit) return;
     const items = e.clipboardData?.items;
     if (items) {
       for (let i = 0; i < items.length; i++) {

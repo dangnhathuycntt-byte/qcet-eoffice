@@ -337,17 +337,14 @@ function ToastViewportRenderer({ dismissToast }: { dismissToast: (id: string) =>
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<ToastItem[]>([]);
-
   const dismissToast = React.useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    toastManager.close(id);
   }, []);
 
   const showToast = React.useCallback(
     (item: Omit<ToastItem, "id">): string => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const toast = { ...item, id };
-      setToasts((prev) => [...prev, toast]);
       toastManager.add({ ...toast, timeout: item.durationMs ?? 4000 });
       return id;
     },
@@ -360,8 +357,8 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const notifyInfo = React.useCallback((m: string, t?: string) => showToast({ variant: "info", message: m, title: t }), [showToast]);
 
   const contextValue = React.useMemo<FeedbackContextValue>(
-    () => ({ toasts, showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo }),
-    [toasts, showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo],
+    () => ({ toasts: [], showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo }),
+    [showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo],
   );
 
   return (

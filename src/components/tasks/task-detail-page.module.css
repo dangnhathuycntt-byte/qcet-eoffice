@@ -113,18 +113,6 @@
   justify-content: center;
   align-items: flex-start;
 }
-.shellClosed {
-  max-width: 780px;
-  margin-inline: auto;
-}
-.shellClosed .content {
-  max-width: 780px;
-}
-.shellOpen {
-  max-width: 1220px;
-  margin-inline: auto;
-  column-gap: clamp(48px, 4vw, 72px);
-}
 .content {
   min-width: 0;
   width: 100%;
@@ -140,15 +128,7 @@
   max-width: 100%;
   margin: 0 auto;
 }
-.inspector {
-  width: 300px;
-  max-width: 100%;
-  min-width: 0;
-  padding-top: 48px;
-  flex-shrink: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
+
 .workspace [data-slot='linear-properties-sidebar'] {
   padding: 0;
   display: flex;
@@ -252,62 +232,16 @@
   .workspace button:active:not(:disabled) { transform: none; }
 }
 @media (min-width: 1440px) {
-  .canvas {
-    padding: 0 48px 64px;
-  }
-  .shellOpen {
-    max-width: 1240px;
-  }
-  .shellClosed {
-    max-width: 780px;
-  }
+  .canvas { padding: 0 48px 64px; }
 }
 @media (min-width: 1024px) and (max-width: 1439px) {
-  .canvas {
-    padding: 0 32px 56px;
-  }
-  .shellClosed {
-    max-width: 780px;
-  }
-  .shellOpen {
-    max-width: 1180px;
-  }
-  .content {
-    padding-top: 40px;
-    max-width: 100%;
-  }
-  .inspector {
-    width: 300px;
-    padding-top: 40px;
-  }
+  .canvas { padding: 0 32px 56px; }
+  .content { padding-top: 40px; max-width: 100%; }
 }
 @media (max-width: 1023px) {
-  .canvas {
-    padding: 0 16px 40px;
-  }
-  .shellOpen,
-  .shellClosed {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    max-width: 100%;
-  }
-  .shellOpen .content,
-  .shellOpen .inspector {
-    grid-column: auto;
-    width: 100%;
-  }
-  .content {
-    padding-top: 24px;
-    max-width: 100%;
-  }
-  .expanded {
-    max-width: 100%;
-  }
-  .inspector {
-    width: 100%;
-    padding-top: 0;
-  }
+  .canvas { padding: 0 16px 40px; }
+  .content { padding-top: 24px; max-width: 100%; }
+  .expanded { max-width: 100%; }
   .workspace [data-slot='task-identity-block'] :is(h1, textarea) { font-size: 21px; }
   .workspace > nav[role='tablist'] { flex-wrap: wrap; }
   .workspace [data-slot='task-detail-header-nav'][data-breadcrumbs='false'] {
@@ -320,14 +254,6 @@
 
 @container (max-width: 1100px) {
   .canvas { padding-inline: 24px; }
-  .shellOpen {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-  .shellOpen .content,
-  .shellOpen .inspector { width: 100%; max-width: 100%; }
-  .inspector { padding-top: 0; }
 }
 @container (max-width: 480px) {
   .canvas { padding-inline: 12px; }
