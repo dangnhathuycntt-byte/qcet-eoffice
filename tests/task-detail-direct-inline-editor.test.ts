@@ -257,7 +257,7 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     );
   });
 
-  it("TaskDetailHeaderNav eliminates trailing '...' dropdown and correctly exposes Space shortcut on inspector toggle", () => {
+  it("TaskDetailHeaderNav uses taskId prop with canonical copy link, no dead nav props", () => {
     const headerPath = path.join(
       process.cwd(),
       "src/components/tasks/detail/task-detail-header-nav.tsx"
@@ -267,7 +267,7 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     const headerContent = fs.readFileSync(headerPath, "utf-8");
     const detailContent = fs.readFileSync(detailPagePath, "utf-8");
 
-    // 1. Elimination of '...' more actions button and its dropdown
+    // 1. No dead nav props
     assert.ok(
       !headerContent.includes("MoreHorizontal"),
       "Header must eliminate MoreHorizontal icon"
@@ -277,19 +277,25 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Header must eliminate showMoreMenu dropdown state"
     );
     assert.ok(
-      !headerContent.includes("Làm mới dữ liệu"),
-      "Header must eliminate 'Làm mới dữ liệu' menu item"
+      !headerContent.includes("onBack"),
+      "Header must not have onBack prop"
     );
     assert.ok(
-      !headerContent.includes("Chia sẻ nhiệm vụ"),
-      "Header must eliminate 'Chia sẻ nhiệm vụ' menu item"
-    );
-    assert.ok(
-      !headerContent.includes("In thông tin"),
-      "Header must eliminate 'In thông tin' menu item"
+      !headerContent.includes("taskCode"),
+      "Header must not have taskCode prop"
     );
 
-    // 2. Inspector toggle moved to header as panel icon (hidden when drawer open)
+    // 2. Uses taskId and canonical URL helpers
+    assert.ok(
+      headerContent.includes("taskId: string"),
+      "Header must require taskId prop"
+    );
+    assert.ok(
+      headerContent.includes("getTaskDetailUrl"),
+      "Header must use getTaskDetailUrl for copy link"
+    );
+
+    // 3. Inspector toggle moved to header as panel icon (hidden when drawer open)
     assert.ok(
       headerContent.includes("PanelRight") &&
         headerContent.includes("onToggleInspector") &&
@@ -298,10 +304,10 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     );
     assert.ok(
       headerContent.includes('title="Sao chép liên kết"') || headerContent.includes("Sao chép liên kết"),
-      "Copy link must be accessible from overflow menu"
+      "Copy link must be accessible"
     );
 
-    // 3. TaskDetailPage Space keyboard shortcut logic
+    // 4. TaskDetailPage Space keyboard shortcut logic
     assert.ok(
       detailContent.includes('e.code === "Space" || e.key === " "'),
       "TaskDetailPage must listen to Space key"

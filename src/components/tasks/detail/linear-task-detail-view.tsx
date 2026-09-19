@@ -3,9 +3,6 @@
 import * as React from "react";
 import {
   FileText,
-  Edit2,
-  Check,
-  X,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -14,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { TaskDetailHeaderNav } from "./task-detail-header-nav";
 import { TaskIdentityBlock } from "./task-identity-block";
 import { TaskProgressComposer } from "./task-progress-composer";
-import { TaskSubtasksSection } from "./task-subtasks-section";
 import { TaskEvidenceSection, type DeliverableItem } from "./task-evidence-section";
 import { TaskActivityTimeline, type ActivityEvent } from "./task-activity-timeline";
 import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-sidebar";
@@ -26,37 +22,31 @@ import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface LinearTaskDetailViewProps {
   task: SchoolTask | StaffTask;
-  onBack: () => void;
+  taskId: string;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
   onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
   onTitleChange?: (taskId: string, newTitle: string) => Promise<void> | void;
   onDescriptionChange?: (taskId: string, newDescription: string) => Promise<void> | void;
-  onAddSubTask?: (parentId: string) => void;
   onSelectSubTask?: (subTaskOrId: string | StaffTask) => void;
   currentUser?: AuthUser | null;
   auditEvents?: AuditLogItem[] | ActivityEvent[];
   onRefresh?: () => Promise<void> | void;
   onSubmitDeliverable?: (task: SchoolTask | StaffTask) => void;
   onReview?: (task: SchoolTask | StaffTask) => void;
-  initialTab?: "overview" | "activity" | "subtasks";
-  onTabChange?: (tab: "overview" | "activity" | "subtasks") => void;
   className?: string;
 }
 
-export type DetailTab = "overview" | "activity" | "subtasks";
-
 export function LinearTaskDetailView({
   task: initialTask,
-  onBack,
+  taskId,
   onStatusChange,
   onPriorityChange,
   onDueDateChange,
   onStartDateChange,
   onTitleChange,
   onDescriptionChange,
-  onAddSubTask,
   onSelectSubTask,
   currentUser,
   auditEvents: initialAuditEvents = [],
@@ -102,19 +92,12 @@ export function LinearTaskDetailView({
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
 
-  const taskCode =
-    task.code ||
-    (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
-    task.id.slice(0, 8).toUpperCase();
-
   const currentProgressPercent =
     typeof (task as any).progressPercent === "number"
       ? (task as any).progressPercent
       : isSchool
       ? schoolTask?.progress ?? 0
       : 0;
-
-  const subTasks = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
 
   const rawDescription = isSchool
     ? schoolTask?.description
@@ -459,12 +442,11 @@ export function LinearTaskDetailView({
         className
       )}
     >
-      {/* 1. Compact Detail Navigation Header (44-48px) */}
+      {/* 1. Compact Detail Navigation Header */}
       <TaskDetailHeaderNav
-        taskCode={taskCode}
-        taskTitle={task.title}
-        onBack={onBack}
-        onRefresh={onRefresh}
+        taskId={taskId}
+        showInspector={showInspector}
+        onToggleInspector={handleToggleInspector}
       />
 
       {/* 2. Workspace Body: Main Content + Right Properties Inspector */}
@@ -524,24 +506,7 @@ export function LinearTaskDetailView({
             </div>
           </section>
 
-          {/* D. Subtasks Section */}
-          <TaskSubtasksSection
-            parentId={task.id}
-            subTasks={subTasks}
-            canEdit={true}
-            departmentCode={
-              (task as any).departmentCode ||
-              (task as any).leadDepartmentCode ||
-              (task as any).department ||
-              (task as any).leadDepartment ||
-              currentUser?.departmentCode
-            }
-            onToggleSubtask={handleToggleSubtaskStatus}
-            onSelectSubtask={onSelectSubTask}
-            onCreateSubTaskInline={handleCreateSubtaskInline}
-          />
-
-          {/* E. Evidence & Deliverables Section */}
+          {/* D. Evidence & Deliverables Section */}
           <TaskEvidenceSection
             taskId={task.id}
             deliverables={deliverables}
@@ -574,7 +539,6 @@ export function LinearTaskDetailView({
                   onStartDateChange={handleStartDateChangeInternal}
                   onDueDateChange={handleDueDateChangeInternal}
                   onSelectSubtask={onSelectSubTask}
-                  onAddSubTask={onAddSubTask}
                   auditEvents={feedActivityEvents as AuditLogItem[]}
                   canEdit={true}
                 />

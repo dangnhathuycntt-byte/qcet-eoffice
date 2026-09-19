@@ -34,6 +34,7 @@ import {
   Box,
   Loader2,
   Search,
+  Plus,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -925,9 +926,9 @@ export function LinearPropertiesSidebar({
               </div>
             </div>
 
-            {/* Danh sách việc con gọn (Linear / Notion Style) */}
-            <div className="space-y-1 pt-0.5">
-              {subTasks.slice(0, 3).map((st, idx) => {
+            {/* Danh sách việc con gọn (Linear / Notion Style) — scrollable */}
+            <div className="space-y-1 pt-0.5 max-h-[320px] overflow-y-auto overscroll-contain">
+              {subTasks.map((st, idx) => {
                 const isCompleted = st.status === "COMPLETED";
                 const statusObj = STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
                 const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName);
@@ -978,12 +979,23 @@ export function LinearPropertiesSidebar({
           /* Trạng thái 0 việc thành phần: 1 dòng compact duy nhất "Việc thành phần   0   +" */
           <div className="flex items-center justify-between py-1 text-xs select-none">
             <span
-              onClick={() => onNavigateTab?.("subtasks")}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-muted-foreground"
             >
               Việc thành phần
             </span>
-            <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
+              {canEdit && onAddSubTask && (
+                <button
+                  type="button"
+                  onClick={() => onAddSubTask(task.id)}
+                  aria-label="Thêm việc thành phần"
+                  className="size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

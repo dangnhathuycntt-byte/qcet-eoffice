@@ -3,14 +3,10 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subtask Drawer", () => {
+describe("Subtasks UX Redesign Suite — Compact Sidebar, Subtask Drawer & Simplified Navigation", () => {
   const sidebarPath = path.join(
     process.cwd(),
     "src/components/tasks/detail/linear-properties-sidebar.tsx"
-  );
-  const tableSectionPath = path.join(
-    process.cwd(),
-    "src/components/tasks/detail/task-subtasks-section.tsx"
   );
   const drawerPath = path.join(
     process.cwd(),
@@ -24,215 +20,207 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
     process.cwd(),
     "src/components/tasks/detail/task-notion-block-content.tsx"
   );
+  const headerPath = path.join(
+    process.cwd(),
+    "src/components/tasks/detail/task-detail-header-nav.tsx"
+  );
 
   const sidebarContent = fs.readFileSync(sidebarPath, "utf-8");
-  const tableContent = fs.readFileSync(tableSectionPath, "utf-8");
   const drawerContent = fs.readFileSync(drawerPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
   const sharedEditorContent = fs.readFileSync(sharedEditorPath, "utf-8");
+  const headerContent = fs.readFileSync(headerPath, "utf-8");
 
-  describe("1. Overview Tab Cleanup & Sidebar Compact Subtasks List", () => {
-    it("Overview tab does NOT render the large TaskSubtasksSection under description", () => {
-      // Find the activeTab === "overview" block in TaskDetailPage
-      const overviewIndex = detailPageContent.indexOf('activeTab === "overview"');
-      assert.ok(overviewIndex > 0, "TaskDetailPage must have activeTab === 'overview' block");
-
-      // Find the end of activeTab === "overview" block (marked by activeTab === "subtasks")
-      const subtasksIndex = detailPageContent.indexOf('activeTab === "subtasks"');
-      assert.ok(subtasksIndex > overviewIndex, "activeTab === 'subtasks' must follow overview");
-
-      const overviewBlock = detailPageContent.slice(overviewIndex, subtasksIndex);
+  describe("1. Parent Task Detail — Only Overview & Activity Tabs, No IDs", () => {
+    it("parent detail has Overview and Activity tabs", () => {
       assert.ok(
-        !overviewBlock.includes("<TaskSubtasksSection"),
-        "Overview tab must NOT include the large TaskSubtasksSection"
+        detailPageContent.includes('activeTab === "overview"'),
+        "TaskDetailPage must have overview tab"
+      );
+      assert.ok(
+        detailPageContent.includes('activeTab === "activity"'),
+        "TaskDetailPage must have activity tab"
       );
     });
 
-    it("Sidebar renders compact Notion-style subtasks list with line-clamp-2, title, due date, and status", () => {
-      // 1. Must contain header with subtask count, add button, and 'Xem tất cả'
+    it("TaskDetailHeaderNav uses taskId prop, no taskCode/taskTitle/onBack/breadcrumbs", () => {
       assert.ok(
-        sidebarContent.includes("completedSubTasks") && sidebarContent.includes("subTasks.length"),
-        "Sidebar header must show total and completed subtask count"
+        headerContent.includes("taskId: string"),
+        "Header must accept taskId as required prop"
       );
       assert.ok(
-        sidebarContent.includes("Xem tất cả"),
-        "Sidebar header must include 'Xem tất cả' button"
+        !headerContent.includes("taskCode"),
+        "Header must not have taskCode prop"
       );
+      assert.ok(
+        !headerContent.includes("onBack"),
+        "Header must not have onBack prop"
+      );
+      assert.ok(
+        !headerContent.includes("showBreadcrumbs"),
+        "Header must not have showBreadcrumbs prop"
+      );
+      assert.ok(
+        headerContent.includes("getTaskDetailUrl"),
+        "Header must use getTaskDetailUrl for canonical copy link"
+      );
+    });
 
-      // 2. Subtask items have line-clamp-2
+    it("Header copy link awaits clipboard and cleans timer on unmount", () => {
+      assert.ok(
+        headerContent.includes("await navigator.clipboard.writeText"),
+        "Copy link must await clipboard write"
+      );
+      assert.ok(
+        headerContent.includes("copyTimerRef"),
+        "Copy link must use a ref-tracked timer"
+      );
+      assert.ok(
+        headerContent.includes("clearTimeout(copyTimerRef.current)"),
+        "Copy link must clean timer on repeat / unmount"
+      );
+    });
+
+    it("Header toggle hidden when child drawer open, restored otherwise", () => {
+      assert.ok(
+        headerContent.includes("onToggleInspector") &&
+          headerContent.includes("isDrawerOpen"),
+        "Header must expose panel toggle, hidden when drawer is open"
+      );
+      assert.ok(
+        headerContent.includes("!isDrawerOpen"),
+        "Panel toggle must be conditionally hidden when drawer is open"
+      );
+    });
+  });
+
+  describe("2. Sidebar Compact Subtasks List", () => {
+    it("renders all subtask entries (not sliced to 3) with scrollable container", () => {
+      assert.ok(
+        sidebarContent.includes("subTasks.map("),
+        "Sidebar must render all subtask entries, not slice"
+      );
+      assert.ok(
+        !sidebarContent.includes("subTasks.slice(0, 3)"),
+        "Sidebar must not silently truncate list to 3"
+      );
+      assert.ok(
+        sidebarContent.includes("max-h-") && sidebarContent.includes("overflow-y-auto"),
+        "Subtask list container must be scrollable"
+      );
+    });
+
+    it("renders compact items with line-clamp-2, assignee, and due date", () => {
       assert.ok(
         sidebarContent.includes("line-clamp-2"),
-        "Sidebar subtask titles must be limited to max 2 lines with line-clamp-2"
+        "Sidebar subtask titles must be limited to max 2 lines"
       );
-
-      // 3. Subtask items use formatAssigneeNameWithTitle
       assert.ok(
         sidebarContent.includes("formatAssigneeNameWithTitle(st.assigneeName)"),
         "Sidebar must format assignee names with academic titles"
       );
-
-      // 4. Subtask items show due date
       assert.ok(
         sidebarContent.includes("formatDisplayDate(st.dueDate)"),
         "Sidebar subtask items must display due date"
       );
+    });
 
-      // 5. Empty state is a compact single line with label, zero count, and add button
+    it("empty state shows compact row, add button only renders with real onAddSubTask callback", () => {
       assert.ok(
         sidebarContent.includes("Việc thành phần") &&
-          sidebarContent.includes('className="font-mono text-muted-foreground text-xs font-medium">0</span>') &&
-          sidebarContent.includes('aria-label="Thêm việc thành phần"'),
-        "Sidebar must render the canonical compact empty row"
+          sidebarContent.includes('className="font-mono text-muted-foreground text-xs font-medium">0</span>'),
+        "Sidebar must render canonical compact empty row"
+      );
+      assert.ok(
+        sidebarContent.includes('aria-label="Thêm việc thành phần"'),
+        "Add button must exist with proper aria-label"
+      );
+      assert.ok(
+        sidebarContent.includes("canEdit && onAddSubTask &&"),
+        "Add button must only render when both canEdit and onAddSubTask are truthy"
       );
     });
   });
 
-  describe("2. Linear Compact Sub-Issues List Redesign", () => {
-    it("eliminates heavy table/card and horizontal scrollbar in favor of compact div rows", () => {
-      // Must NOT contain <table>, <thead>, <tbody>, or overflow-x-auto
+  describe("3. Subtask Drawer — Child-First, No Parent Navigation", () => {
+    it("drawer uses parentTaskId for canonical copy link, not window.location", () => {
       assert.ok(
-        !tableContent.includes("<table") && !tableContent.includes("overflow-x-auto"),
-        "Subtasks section must not use heavy table container or horizontal scrollbar"
-      );
-
-      // Header contains title, progress '0/0', and add subtask button
-      assert.ok(
-        tableContent.includes("Việc thành phần") &&
-          tableContent.includes("{completedCount}/{totalCount}") &&
-          tableContent.includes("Thêm việc con"),
-        "Header must only contain 'Việc thành phần', progress '0/0', and '+ Thêm việc con' button"
-      );
-
-      // Minimal empty state without duplicate add button or card box
-      assert.ok(
-        tableContent.includes("Chưa có việc thành phần") &&
-          tableContent.includes("Tạo việc con để phân rã nhiệm vụ này."),
-        "Empty state must display minimal text without heavy box"
-      );
-
-      // Row height and structure: status icon | title | assignee | due date | status badge + action '...'
-      assert.ok(
-        tableContent.includes("h-10 sm:h-11") || tableContent.includes("min-h-[40px]"),
-        "Subtask row height must be compact (40-44px)"
+        drawerContent.includes("parentTaskId: string"),
+        "Drawer must accept parentTaskId as required prop"
       );
       assert.ok(
-        tableContent.includes("st.title") &&
-          tableContent.includes("assigneeTitle") &&
-          tableContent.includes("formatDisplayDate(st.dueDate)") &&
-          tableContent.includes("statusObj.label") &&
-          tableContent.includes("MoreHorizontal"),
-        "Subtask row must contain status icon, title, assignee, due date, status badge, and hover action '...'"
+        drawerContent.includes("getTaskDetailUrl(parentTaskId, subtask.id)"),
+        "Drawer must use getTaskDetailUrl with parentTaskId for canonical deep link"
       );
-
-      // Clicking subtask row calls onSelectSubtask
       assert.ok(
-        tableContent.includes("onSelectSubtask && onSelectSubtask(st)"),
-        "Clicking subtask row must trigger onSelectSubtask to open drawer"
+        !drawerContent.includes("window.location.pathname"),
+        "Drawer must not derive copy link from window.location.pathname"
       );
     });
 
-    it("supports inline fast-add with autofocus into task title and strict schema payload", () => {
-      // 1. Autofocus via titleInputRef when inline add is active
+    it("drawer does not have parentTaskTitle, parentTaskCode, or onOpenAnotherSubtask props", () => {
       assert.ok(
-        tableContent.includes("titleInputRef") &&
-          tableContent.includes("titleInputRef.current?.focus()"),
-        "Inline creation must autofocus title input upon opening"
-      );
-
-      // 2. Linear detail view payload compliance (no unrecognized keys for CreateTaskSchema)
-      const detailViewPath = path.join(
-        process.cwd(),
-        "src/components/tasks/detail/linear-task-detail-view.tsx"
-      );
-      const detailViewContent = fs.readFileSync(detailViewPath, "utf-8");
-
-      assert.ok(
-        !detailViewContent.includes('level: "DON_VI"') &&
-          !detailViewContent.includes("leadAssigneeName:"),
-        "Inline subtask creation in linear-task-detail-view must not send legacy level or leadAssigneeName keys"
+        !drawerContent.includes("parentTaskTitle"),
+        "Drawer must not have parentTaskTitle prop"
       );
       assert.ok(
-        detailViewContent.includes("parentTaskId: task.id") &&
-          detailViewContent.includes("scope: isSchool ? \"DEPARTMENT\" : \"INDIVIDUAL\""),
-        "Inline subtask creation must pass parentTaskId and valid scope"
+        !drawerContent.includes("parentTaskCode"),
+        "Drawer must not have parentTaskCode prop"
+      );
+      assert.ok(
+        !drawerContent.includes("onOpenAnotherSubtask"),
+        "Drawer must not have onOpenAnotherSubtask prop"
       );
     });
-  });
 
-  describe("3. Right Subtask Peek Drawer & Non-Stacking Navigation", () => {
-    it("SubtaskDetailDrawer renders a flat quick-preview surface with compact editing", () => {
-      // 1. Back link / parent task reference
+    it("drawer always shows close button plus subtle copy link with hover/focus/touch visibility", () => {
       assert.ok(
-        drawerContent.includes("parentTaskTitle"),
-        "Drawer must link back to parent task title"
+        drawerContent.includes('title="Đóng (Esc)"'),
+        "Close button must always be visible"
       );
       assert.ok(
-        drawerContent.includes("parentTaskCode"),
-        "Drawer must display parent task code when present"
+        drawerContent.includes("group-hover/peek-header:text-muted-foreground") &&
+          drawerContent.includes("focus-visible:text-foreground"),
+        "Copy link must be visible on hover/focus"
       );
+      assert.ok(
+        drawerContent.includes("active:!text-foreground"),
+        "Copy link must be visible on touch (active state)"
+      );
+    });
 
-      // 2. Utility toolbar keeps more actions without the open-page link
+    it("drawer copy link awaits clipboard, reports error, and cleans timer", () => {
       assert.ok(
-        !drawerContent.includes("Mở trang") && drawerContent.includes("MoreHorizontal"),
-        "Drawer toolbar must omit open-page navigation and retain more actions"
+        drawerContent.includes("await navigator.clipboard.writeText"),
+        "Copy must await clipboard"
       );
       assert.ok(
-        drawerContent.includes("onClose") && drawerContent.includes("Đóng chi tiết việc con"),
-        "Drawer header must contain close CTA"
+        drawerContent.includes("notifyError") && drawerContent.includes("Lỗi clipboard"),
+        "Copy must report clipboard errors"
       );
+      assert.ok(
+        drawerContent.includes("copyTimerRef") &&
+          drawerContent.includes("clearTimeout(copyTimerRef.current)"),
+        "Copy must clean timer ref"
+      );
+    });
 
-      // 3. Desktop uses sibling surfaces; only compact screens use an overlay.
-      const layout = fs.readFileSync(path.join(process.cwd(), "src/components/tasks/task-detail-page.module.css"), "utf-8");
-      assert.ok(
-        drawerContent.includes("styles.peekSurface") &&
-          detailPageContent.includes('orientation="horizontal"') &&
-          detailPageContent.includes('minSize="320px"') &&
-          detailPageContent.includes('maxSize="45%"') &&
-          detailPageContent.includes("SUBTASK_PANE_STORAGE_KEY") &&
-          detailPageContent.includes("window.localStorage.getItem") &&
-          detailPageContent.includes("window.localStorage.setItem") &&
-          detailPageContent.includes("window.matchMedia") &&
-          detailPageContent.includes("!peekOpen || !isDesktop") &&
-          layout.includes(".subtaskResizeSeparator") &&
-          layout.includes("cursor: col-resize") &&
-          layout.includes("width: 8px") &&
-          !layout.includes("grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px)") &&
-          layout.includes("padding: calc(var(--spacing) * 2)") &&
-          layout.includes("border-radius: var(--radius-xl)") &&
-          layout.includes("position: relative") &&
-          drawerContent.includes("lg:hidden") &&
-          !drawerContent.includes('aria-modal="true"'),
-        "Peek must use a persisted desktop split pane with a compact-only mobile backdrop"
-      );
-
-      // 4. Non-stacking navigation: uses in-drawer history stack rather than nested drawers
-      assert.ok(
-        drawerContent.includes("hasHistoryPrev") &&
-          drawerContent.includes("onNavigateBackHistory"),
-        "Drawer must support in-drawer history navigation without stacking"
-      );
-
-      // 5. Uses DirectInlineEditor for title and description
+    it("drawer child title is first, uses DirectInlineEditor and real API mutations", () => {
       assert.ok(
         drawerContent.includes("<DirectInlineEditor"),
-        "Drawer must share DirectInlineEditor for title and description editing"
+        "Drawer must use DirectInlineEditor for title editing"
       );
-
-      // 6. Flat hierarchy: no persistent metadata or empty description card
-      assert.ok(
-        !drawerContent.includes('aria-label="Thuộc tính việc thành phần" className="divide-y') &&
-          drawerContent.includes("<TaskNotionBlockContent") &&
-          drawerContent.includes("isDeadlineEditorOpen"),
-        "Peek must render flat metadata, the shared document editor, and a collapsed deadline row"
-      );
-
-      // 7. Real API mutations
       assert.ok(
         drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"),
         "Drawer must execute real API PATCH mutations"
       );
+      assert.ok(
+        drawerContent.includes("<TaskNotionBlockContent"),
+        "Drawer must include shared document editor"
+      );
+    });
 
-      // 8. Shared editor presentation stays flat in both main task and subtask surfaces
+    it("shared editor presentation stays flat in both main task and subtask surfaces", () => {
       const rootIndex = sharedEditorContent.indexOf('data-slot="task-notion-block-content"');
       assert.ok(rootIndex > 0, "Shared Plate editor root must exist");
       const rootBlock = sharedEditorContent.slice(rootIndex, rootIndex + 500);
@@ -243,49 +231,9 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
         "Main task and subtask must share the same flat, canvas-integrated editor shell"
       );
     });
-
-    it("TaskDetailPage manages drawer state, URL search param synchronization, and history stack", () => {
-      // 1. URL search param synchronization (?subtaskId=...)
-      assert.ok(
-        detailPageContent.includes("subtaskId"),
-        "TaskDetailPage must synchronize subtaskId URL param"
-      );
-      assert.ok(
-        detailPageContent.includes("window.history.pushState"),
-        "TaskDetailPage must use pushState to preserve scroll position and filter state"
-      );
-
-      // 2. Popstate listener for browser Back/Forward
-      assert.ok(
-        detailPageContent.includes("popstate"),
-        "TaskDetailPage must handle popstate to support browser navigation"
-      );
-
-      // 3. Non-stacking history management
-      assert.ok(
-        detailPageContent.includes("subtaskHistory"),
-        "TaskDetailPage must maintain subtaskHistory stack"
-      );
-      assert.ok(
-        detailPageContent.includes("handleNavigateBackSubtaskHistory"),
-        "TaskDetailPage must provide history back handler"
-      );
-
-      // 4. Rollup & subtask update synchronization
-      assert.ok(
-        detailPageContent.includes("handleSubtaskUpdated"),
-        "TaskDetailPage must synchronize subtask edits back to parent state"
-      );
-
-      assert.ok(
-        detailPageContent.includes("lastPeekSubtaskIdRef") &&
-          detailPageContent.includes("handleNavigateSubtaskSibling"),
-        "TaskDetailPage must support Space toggling and arrow sibling navigation for Peek"
-      );
-    });
   });
 
-  describe("4. Activity Tab Progress Banner Elimination & Timeline Promotion", () => {
+  describe("4. Activity Tab — Timeline Promoted, No Progress Banner", () => {
     it("completely eliminates 'Báo cáo tiến độ mới nhất' banner from Activity tab", () => {
       assert.ok(
         !detailPageContent.includes("Báo cáo tiến độ mới nhất"),
@@ -293,7 +241,7 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
       );
     });
 
-    it("promotes 'Nhật ký xử lý & Lịch sử hoạt động' to the top of Activity tab without extra whitespace", () => {
+    it("promotes audit timeline to the top of Activity tab", () => {
       const activityIndex = detailPageContent.indexOf('activeTab === "activity"');
       assert.ok(activityIndex > 0, "Activity tab block must exist");
 
@@ -301,7 +249,6 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
       const timelineIndex = activityBlock.indexOf("Nhật ký xử lý & Lịch sử hoạt động");
       assert.ok(timelineIndex > 0, "Audit timeline must be present in Activity tab");
 
-      // Verify that no other content precedes the timeline in the activity block
       const beforeTimeline = activityBlock.slice(0, timelineIndex);
       assert.ok(
         !beforeTimeline.includes("Cập nhật tiến độ"),

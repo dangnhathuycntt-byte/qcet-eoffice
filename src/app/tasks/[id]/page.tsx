@@ -10,11 +10,11 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
-import { authorize } from "@/server/authorization/authorization-engine";
-import { buildTaskResource, computeAvailableActions } from "@/server/authorization/available-actions";
+import { resolveTaskDetailContext } from "@/server/tasks/task-detail-context";
 
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: TaskDetailPageParams): Promise<Metadata> {
@@ -89,16 +89,28 @@ function formatAuditDescription(event: {
   }
 }
 
-export default async function Page({ params }: TaskDetailPageParams) {
+export default async function Page({ params, searchParams }: TaskDetailPageParams) {
   const { id } = await params;
   if (!id) {
     notFound();
   }
 
+  // Resolve searchParams — preserve full query string for login returnTo
+  const resolvedSearchParams = await searchParams;
+  const queryString = new URLSearchParams(
+    Object.entries(resolvedSearchParams).flatMap(([k, v]) =>
+      v === undefined ? [] : Array.isArray(v) ? v.map((val) => [k, val]) : [[k, v]]
+    )
+  ).toString();
+  const subtaskId = typeof resolvedSearchParams.subtaskId === "string"
+    ? resolvedSearchParams.subtaskId
+    : undefined;
+
   const cookieStore = await cookies();
   const session = await getSessionFromRequest({ cookies: cookieStore });
   if (!session) {
-    redirect(`/login?returnTo=${encodeURIComponent(`/tasks/${id}`)}`);
+    const returnPath = queryString ? `/tasks/${id}?${queryString}` : `/tasks/${id}`;
+    redirect(`/login?returnTo=${encodeURIComponent(returnPath)}`);
   }
 
   const currentUser =
@@ -112,24 +124,33 @@ export default async function Page({ params }: TaskDetailPageParams) {
         }
       : null;
 
-  // Fetch full task entity with all related data
-  const rawTask = await taskQueryService.getTaskEntityForInternalUse(id);
-
-  if (!rawTask) {
-    notFound();
-  }
-
-  // Keep the server-rendered page on the same BOLA boundary as GET /api/tasks/[id].
-  // Return 404 for unauthorized objects so task IDs cannot be enumerated.
+  // Load authorization context once for all auth checks
   const authorizationContext = await loadAuthorizationContext(session.id);
-  const taskResource = buildTaskResource(rawTask);
-  if (!authorize(authorizationContext, "task.read", taskResource).allowed) {
+
+  // Resolve canonical route with independent authorization of task, ancestors, and children
+  const result = await resolveTaskDetailContext(
+    id,
+    subtaskId,
+    queryString,
+    authorizationContext,
+    (taskId) => taskQueryService.getTaskEntityForInternalUse(taskId),
+  );
+
+  if (result.outcome === "notFound") {
     notFound();
   }
-  const availableActions = computeAvailableActions(authorizationContext, taskResource);
+
+  if (result.outcome === "redirect") {
+    redirect(result.redirectTo!);
+  }
+
+  // outcome === 'render'
+  const rawTask = result.canonicalRawTask!;
+  const availableActions = result.canonicalAvailableActions!;
   const canEdit = availableActions.includes("task.update_metadata");
 
-  // Format task according to scope
+  // Format task according to scope.
+  // Use raw sub-task aggregates for progress/count (not the auth-filtered subset).
   const isSchoolScope = rawTask.scope === "SCHOOL";
   const mappedTask = (
     isSchoolScope
@@ -137,6 +158,18 @@ export default async function Page({ params }: TaskDetailPageParams) {
       : mapPrismaTaskToStaffTask(rawTask)
   ) as unknown as SchoolTask | StaffTask;
   (mappedTask as any).availableActions = availableActions;
+
+  // Override subTasks on the mapped task with only auth-readable direct children.
+  // Preserve business aggregates (totalSubTasks, completedSubTasks) from raw data.
+  if (result.peekTasks) {
+    (mappedTask as any).subTasks = result.peekTasks;
+  }
+  if (result.rawSubTaskCount !== undefined) {
+    (mappedTask as any).totalSubTasks = result.rawSubTaskCount;
+  }
+  if (result.rawCompletedSubTaskCount !== undefined) {
+    (mappedTask as any).completedSubTasks = result.rawCompletedSubTaskCount;
+  }
 
   // 1. Fetch audit events from audit_events table
   const dbAuditEvents = await prisma.auditEvent.findMany({
@@ -198,6 +231,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
       auditEvents={combinedAuditEvents}
       currentUser={currentUser}
       canEdit={canEdit}
+      peekTasks={result.peekTasks}
     />
   );
 }

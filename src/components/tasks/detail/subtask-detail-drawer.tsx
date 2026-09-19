@@ -6,13 +6,11 @@ import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
 import {
   X,
-  ArrowLeft,
   Signal,
   UserPlus,
   Check,
   ChevronDown,
   Clock3,
-  MoreHorizontal,
   Link2,
   Users,
 } from "lucide-react";
@@ -25,36 +23,25 @@ import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
 import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   subtask: StaffTask | null;
-  parentTaskTitle: string;
-  parentTaskCode?: string;
+  parentTaskId: string;
   canEdit?: boolean;
   onSubtaskUpdated?: (updated: StaffTask) => void;
-  onOpenAnotherSubtask?: (subtask: StaffTask) => void;
-  onNavigateSibling?: (direction: -1 | 1) => void;
-  onNavigateBackHistory?: () => void;
-  hasHistoryPrev?: boolean;
-  historyPrevTitle?: string;
 }
 
 export function SubtaskDetailDrawer({
   isOpen,
   onClose,
   subtask: initialSubtask,
-  parentTaskTitle,
-  parentTaskCode,
+  parentTaskId,
   canEdit = true,
   onSubtaskUpdated,
-  onOpenAnotherSubtask,
-  onNavigateSibling,
-  onNavigateBackHistory,
-  hasHistoryPrev = false,
-  historyPrevTitle,
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
@@ -62,13 +49,13 @@ export function SubtaskDetailDrawer({
   React.useEffect(() => {
     setSubtask(initialSubtask);
     setIsDeadlineEditorOpen(false);
-    setIsMoreMenuOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
   const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
+  const [copiedLink, setCopiedLink] = React.useState(false);
+  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const deadlineRef = React.useRef<HTMLDivElement>(null);
   const [personnelList, setPersonnelList] = React.useState<
     Array<{ id: string; name: string; email?: string; departmentName?: string }>
@@ -89,6 +76,12 @@ export function SubtaskDetailDrawer({
       })
       .catch(() => {});
   }, [canEdit]);
+
+  React.useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // Close deadline popover on outside click
   React.useEffect(() => {
@@ -281,7 +274,7 @@ export function SubtaskDetailDrawer({
     notifySuccess("Đã cập nhật hạn hoàn thành việc con");
   };
 
-  // Peek keyboard navigation: Esc closes; arrows keep the pane open while moving siblings.
+  // Peek keyboard: Esc closes drawer
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -295,32 +288,28 @@ export function SubtaskDetailDrawer({
 
       if (e.key === "Escape") {
         onClose();
-        return;
-      }
-
-      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && onNavigateSibling) {
-        e.preventDefault();
-        onNavigateSibling(e.key === "ArrowUp" ? -1 : 1);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, onNavigateSibling]);
+  }, [isOpen, onClose]);
 
   const handleCopyLink = React.useCallback(async () => {
     if (typeof window === "undefined" || !subtask) return;
-    const url = `${window.location.origin}/tasks/${subtask.id}`;
-    await navigator.clipboard.writeText(url);
-    setIsMoreMenuOpen(false);
-    notifySuccess("Đã sao chép liên kết việc thành phần");
-  }, [notifySuccess, subtask]);
+    try {
+      const url = getTaskDetailUrl(parentTaskId, subtask.id);
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedLink(false), 2000);
+      notifySuccess("Đã sao chép liên kết việc thành phần");
+    } catch {
+      notifyError("Không thể sao chép liên kết", "Lỗi clipboard");
+    }
+  }, [notifySuccess, notifyError, subtask, parentTaskId]);
 
   if (!isOpen || !subtask) return null;
 
-  const subtaskCode =
-    (subtask as any).code ||
-    (subtask as any).taskId ||
-    subtask.id.slice(0, 12).toUpperCase();
   const description = (subtask as any).description || subtask.deliverableDescription || "";
   const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
   const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
@@ -341,74 +330,35 @@ export function SubtaskDetailDrawer({
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
         className={styles.peekSurface}
       >
-        <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-card/95 px-3 backdrop-blur-md select-none">
-          <div className="flex min-w-0 items-center gap-1.5">
-            {/* Back button: only show on mobile or when navigating subtask history */}
-            {(hasHistoryPrev) && (
-            <button
-              type="button"
-              onClick={hasHistoryPrev && onNavigateBackHistory ? onNavigateBackHistory : onClose}
-              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-              title={hasHistoryPrev ? `Quay lại: ${historyPrevTitle || "Việc trước"}` : "Quay về nhiệm vụ cha"}
-              aria-label="Quay lại"
-            >
-              <ArrowLeft className="size-4" />
-            </button>
+        <div className="group/peek-header flex h-11 shrink-0 items-center justify-end gap-1 border-b border-border/40 bg-card/95 px-3 backdrop-blur-md select-none">
+          {/* Copy link — subtle, visible on hover/focus and touch */}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex size-8 items-center justify-center text-muted-foreground/0 group-hover/peek-header:text-muted-foreground/60 hover:!text-foreground active:!text-foreground transition-colors cursor-pointer focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title="Sao chép liên kết"
+            aria-label="Sao chép liên kết việc thành phần"
+          >
+            {copiedLink ? (
+              <Check className="size-3.5 text-emerald-600" />
+            ) : (
+              <Link2 className="size-3.5" />
             )}
-            {hasHistoryPrev && onNavigateBackHistory && (
-            <button
-              type="button"
-              onClick={onNavigateBackHistory}
-              className="hidden lg:inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title={`Quay lại: ${historyPrevTitle || "Việc trước"}`}
-              aria-label="Quay lại"
-            >
-              <ArrowLeft className="size-4" />
-            </button>
-            )}
-            <span className="truncate font-mono text-[11px] text-muted-foreground">
-              {subtaskCode}
-            </span>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-0.5">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsMoreMenuOpen((open) => !open)}
-                className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                title="Thêm thao tác"
-                aria-label="Thêm thao tác"
-                aria-expanded={isMoreMenuOpen}
-              >
-                <MoreHorizontal className="size-4" />
-              </button>
-              {isMoreMenuOpen && (
-                <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg ">
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs hover:bg-muted cursor-pointer"
-                  >
-                    <Link2 className="size-3.5 text-muted-foreground" />
-                    Sao chép liên kết
-                  </button>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title="Đóng (Esc)"
-              aria-label="Đóng chi tiết việc con"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
+          </button>
+          {/* Close — always visible */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title="Đóng (Esc)"
+            aria-label="Đóng chi tiết việc con"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words px-5 py-5 sm:px-6 overscroll-contain">
+          {/* Child title first */}
           <div className="space-y-1.5">
             <DirectInlineEditor
               value={subtask.title}
@@ -422,17 +372,6 @@ export function SubtaskDetailDrawer({
               viewClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
               editorClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
             />
-            <button
-              type="button"
-              onClick={onClose}
-              className="group flex max-w-full items-start gap-1.5 text-left text-xs leading-relaxed text-muted-foreground transition-colors hover:text-foreground"
-              title="Quay về nhiệm vụ cha"
-            >
-              <span aria-hidden="true" className="shrink-0">↳</span>
-              <span className="line-clamp-2">
-                {parentTaskTitle}
-              </span>
-            </button>
           </div>
 
           <section aria-label="Thuộc tính việc thành phần" className="mt-4 space-y-0.5 text-xs select-none">

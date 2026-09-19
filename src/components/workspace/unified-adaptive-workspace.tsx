@@ -2064,16 +2064,13 @@ export function UnifiedAdaptiveWorkspace({
         <div data-slot="in-canvas-linear-detail" className="w-full">
           <LinearTaskDetailView
             task={internalSelectedTask}
-            onBack={handleCloseDetail}
+            taskId={internalSelectedTask.id}
             onStatusChange={handleStatusChange}
             onPriorityChange={async (taskId, priority) => {
               const pVal = priority === "MEDIUM" ? "NORMAL" : priority;
               setInternalTasks((prev) =>
                 prev.map((t) => (t.id === taskId ? { ...t, priority: pVal } : t))
               );
-            }}
-            onAddSubTask={(parentId) => {
-              openCreateModal("DON_VI", parentId);
             }}
             onSelectSubTask={(subTaskOrId) => {
               if (typeof subTaskOrId === "string") {

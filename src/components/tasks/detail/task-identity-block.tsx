@@ -171,11 +171,6 @@ export function TaskIdentityBlock({
     return map;
   }, [allowedTransitions]);
 
-  const taskCode =
-    task.code ||
-    (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
-    task.id.slice(0, 8).toUpperCase();
-
   const scopeLabel = isSchool ? "Cấp Trường" : "Cấp Đơn vị";
 
   const rawLeadName = isSchool
@@ -313,9 +308,9 @@ export function TaskIdentityBlock({
             />
           </div>
 
-          {/* Subtitle / Sub-heading (Linear Project Style: NV-2026-001 · Cấp Trường) */}
+          {/* Subtitle — scope label only, no IDs in primary display */}
           <p className="text-xs text-muted-foreground font-normal pt-0.5 select-none">
-            {taskCode} · {scopeLabel}
+            {scopeLabel}
           </p>
         </div>
 

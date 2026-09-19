@@ -39,6 +39,8 @@ export interface TaskDetailPageProps {
   }>;
   currentUser?: any;
   canEdit?: boolean;
+  /** Independently authorized peek targets (descendants with availableActions) */
+  peekTasks?: StaffTask[];
 }
 
 const SUBTASK_SPLIT_BREAKPOINT = 1024;
@@ -126,6 +128,7 @@ export function TaskDetailPage({
   auditEvents: initialAuditEvents = [],
   currentUser: serverUser,
   canEdit = false,
+  peekTasks: _peekTasks,
 }: TaskDetailPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -958,15 +961,9 @@ export function TaskDetailPage({
           isOpen={Boolean(activeSubtask)}
           onClose={handleCloseSubtaskDrawer}
           subtask={activeSubtask}
-          parentTaskTitle={task.title}
-          parentTaskCode={taskCode}
+          parentTaskId={task.id}
           canEdit={canEdit}
           onSubtaskUpdated={handleSubtaskUpdated}
-          onOpenAnotherSubtask={handleOpenSubtaskDrawer}
-          onNavigateSibling={handleNavigateSubtaskSibling}
-          onNavigateBackHistory={handleNavigateBackSubtaskHistory}
-          hasHistoryPrev={subtaskHistory.length > 0}
-          historyPrevTitle={prevSubtask?.title}
         />
       }
     >
@@ -976,15 +973,11 @@ export function TaskDetailPage({
     >
       {/* 1. Header Navigation Bar (Linear Style) */}
       <TaskDetailHeaderNav
-        taskCode={taskCode}
-        taskTitle={task.title}
-        onBack={handleBackToList}
-        showBreadcrumbs={false}
+        taskId={task.id}
         showInspector={showInspector}
         onToggleInspector={handleToggleInspector}
         isDrawerOpen={Boolean(activeSubtask)}
         onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
-        onRefresh={() => router.refresh()}
       />
 
       {/* 2. Sub-Tabs Bar (Linear Style: Overview, Activity, Issues) */}
