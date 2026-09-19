@@ -20,6 +20,7 @@ import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-dr
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
+import { LinearCreateTaskModal } from "@/components/tasks/create/linear-create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -149,6 +150,10 @@ export function TaskDetailPage({
   const handleToggleInspector = React.useCallback(() => {
     setShowInspector((prev) => !prev);
   }, []);
+
+  // Create subtask modal state
+  const [isCreateSubtaskOpen, setIsCreateSubtaskOpen] = React.useState(false);
+  const handleAddSubtask = React.useCallback(() => setIsCreateSubtaskOpen(true), []);
 
   // Keyboard shortcut: Cmd/Ctrl + I để thu gọn/mở Inspector sidebar
   React.useEffect(() => {
@@ -782,6 +787,10 @@ export function TaskDetailPage({
                 auditEvents={feedActivityEvents}
                 isMobileAccordion={true}
                 showRelatedSections={true}
+                subTasks={subTasks}
+                activeSubtaskId={selectedSubtaskId}
+                onSelectSubtask={handleOpenSubtaskDrawer}
+                onAddSubtask={handleAddSubtask}
               />
             </aside>
           }
@@ -885,6 +894,18 @@ export function TaskDetailPage({
       parentTaskId={task.id}
       canEdit={canEdit}
       onSubtaskUpdated={handleSubtaskUpdated}
+    />
+
+    {/* Modal Tạo việc con */}
+    <LinearCreateTaskModal
+      isOpen={isCreateSubtaskOpen}
+      onClose={() => setIsCreateSubtaskOpen(false)}
+      initialParentTaskId={task.id}
+      initialParentTaskTitle={task.title}
+      onSubmitSuccess={() => {
+        setIsCreateSubtaskOpen(false);
+        router.refresh();
+      }}
     />
 
     {/* Modal Cập nhật tiến độ */}

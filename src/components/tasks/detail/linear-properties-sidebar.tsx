@@ -50,6 +50,7 @@ import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   taskStateMachine,
@@ -80,6 +81,10 @@ export interface LinearPropertiesSidebarProps {
   canEdit?: boolean;
   showRelatedSections?: boolean;
   className?: string;
+  subTasks?: StaffTask[];
+  activeSubtaskId?: string | null;
+  onSelectSubtask?: (subtask: StaffTask) => void;
+  onAddSubtask?: () => void;
 }
 
 function getInitials(name?: string): string {
@@ -184,6 +189,10 @@ export function LinearPropertiesSidebar({
   canEdit = true,
   showRelatedSections = true,
   className,
+  subTasks,
+  activeSubtaskId,
+  onSelectSubtask,
+  onAddSubtask,
 }: LinearPropertiesSidebarProps) {
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
@@ -882,6 +891,15 @@ export function LinearPropertiesSidebar({
           </div>
         </div>
       </div>
+
+      {subTasks && onSelectSubtask && (
+        <TaskSubtasksSidebarSection
+          subTasks={subTasks}
+          activeSubtaskId={activeSubtaskId}
+          onSelectSubtask={onSelectSubtask}
+          onAddSubtask={onAddSubtask}
+        />
+      )}
 
       {showRelatedSections && (
       <>

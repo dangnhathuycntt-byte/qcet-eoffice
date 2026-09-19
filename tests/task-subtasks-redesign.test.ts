@@ -109,19 +109,30 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
     });
   });
 
-  describe("3. Sidebar — No Subtask List", () => {
-    it("sidebar does not have subtask list, onSelectSubtask, or onAddSubTask", () => {
+  describe("3. Sidebar — Compact Subtask Section", () => {
+    it("sidebar has compact subtask section via TaskSubtasksSidebarSection", () => {
       assert.ok(
-        !sidebarContent.includes("onSelectSubtask"),
-        "Sidebar must not have onSelectSubtask prop"
+        sidebarContent.includes("TaskSubtasksSidebarSection"),
+        "Sidebar must import and render TaskSubtasksSidebarSection"
       );
       assert.ok(
-        !sidebarContent.includes("onAddSubTask"),
-        "Sidebar must not have onAddSubTask prop"
+        sidebarContent.includes("subTasks"),
+        "Sidebar must accept subTasks prop"
       );
       assert.ok(
-        !sidebarContent.includes("subTasks.map("),
-        "Sidebar must not render a subtask list"
+        sidebarContent.includes("activeSubtaskId"),
+        "Sidebar must accept activeSubtaskId prop"
+      );
+      assert.ok(
+        sidebarContent.includes("onSelectSubtask"),
+        "Sidebar must accept onSelectSubtask prop"
+      );
+    });
+
+    it("sidebar does NOT use old large TaskSubtasksSection", () => {
+      assert.ok(
+        !sidebarContent.includes("TaskSubtasksSection"),
+        "Sidebar must not use the old large TaskSubtasksSection"
       );
     });
 
