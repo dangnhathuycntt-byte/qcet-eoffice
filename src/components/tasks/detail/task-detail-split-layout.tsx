@@ -65,38 +65,35 @@ export function TaskDetailSplitLayout({
       orientation="horizontal"
       className={cn("flex-1 min-h-0", className)}
     >
-      <Panel minSize="50%" defaultSize={inspectorOpen ? `${100 - storedPct.current}%` : "100%"} id="main">
+      <Panel minSize="50%" defaultSize={`${100 - storedPct.current}%`} id="main">
         {children}
       </Panel>
 
-      {inspectorOpen && (
-        <>
-          <Separator
-            className={cn(
-              "w-px bg-transparent hover:bg-primary/40 focus-visible:bg-primary/60",
-              "transition-colors duration-100 cursor-col-resize",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-              "motion-reduce:transition-none",
-              "data-[resize-handle-active]:bg-primary/60",
-            )}
-            aria-label="Thay đổi độ rộng cột thuộc tính"
-          >
-            <div className="w-3 h-full -ml-1.5" />
-          </Separator>
+      <Separator
+        className={cn(
+          "w-px bg-transparent hover:bg-primary/40 focus-visible:bg-primary/60",
+          "transition-colors duration-100 cursor-col-resize",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          "motion-reduce:transition-none",
+          "data-[resize-handle-active]:bg-primary/60",
+        )}
+        aria-label="Thay đổi độ rộng cột thuộc tính"
+      >
+        <div className="w-3 h-full -ml-1.5" />
+      </Separator>
 
-          <Panel
-            panelRef={inspectorPanelRef}
-            id="inspector"
-            defaultSize={`${storedPct.current}%`}
-            minSize={`${MIN_INSPECTOR_PCT}%`}
-            maxSize={`${MAX_INSPECTOR_PCT}%`}
-            collapsible
-            onResize={(size) => { try { const pct = Math.round(size.asPercentage); if (pct >= MIN_INSPECTOR_PCT && pct <= MAX_INSPECTOR_PCT) localStorage.setItem(STORAGE_KEY, String(pct)); } catch {} }}
-          >
-            {inspector}
-          </Panel>
-        </>
-      )}
+      <Panel
+        panelRef={inspectorPanelRef}
+        id="inspector"
+        defaultSize={`${storedPct.current}%`}
+        minSize={`${MIN_INSPECTOR_PCT}%`}
+        maxSize={`${MAX_INSPECTOR_PCT}%`}
+        collapsible
+        collapsedSize="0%"
+        onResize={(size) => { try { const pct = Math.round(size.asPercentage); if (pct >= MIN_INSPECTOR_PCT && pct <= MAX_INSPECTOR_PCT) localStorage.setItem(STORAGE_KEY, String(pct)); } catch {} }}
+      >
+        {inspector}
+      </Panel>
     </Group>
   );
 }
