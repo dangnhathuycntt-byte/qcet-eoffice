@@ -373,6 +373,10 @@ function ImageEl({ attributes, children, element }: any) {
           <div className="relative group/image my-2 max-w-full">
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
               <img src={url} alt={caption || "Hình ảnh"} className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none" loading="lazy" />
+              {!editor.api.isReadOnly() && <input type="text" defaultValue={caption || ""} placeholder="Thêm chú thích..." onBlur={(ev) => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ content: ev.target.value } as any, { at: p }); }} className="w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40" />}
+              {!editor.api.isReadOnly() && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                {[25, 50, 75, 100].map((w) => <button key={w} type="button" onClick={() => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p }); }} className={"px-1.5 py-0.5 text-[10px] rounded cursor-pointer " + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{w}%</button>)}
+              </div>}
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
                 <button type="button" onClick={() => { if (!editor.api.isReadOnly()) { const p = editor.api.findPath(element); if (p) editor.tf.removeNodes({ at: p }); } }} className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer" title="Xóa">
                   <Trash2 className="size-3.5" />
@@ -541,7 +545,7 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
       )}
       data-block-id={element.id}
     >
-      <div className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5", readOnly && "invisible")} contentEditable={false}>
+      <div className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5", readOnly && "invisible")} contentEditable={false} data-qcet-block-selection-rail="">
         <button
           ref={handleRef}
           type="button"
@@ -808,6 +812,8 @@ export function TaskNotionBlockContent({
           areaOptions: {
             behaviour: { startThreshold: 4, scrolling: { speedDivider: 1.5 } },
             features: { singleTap: { allow: false } },
+            startAreas: ["[data-qcet-block-selection-rail]"],
+            boundaries: ["[data-slot=\"task-notion-block-content\"]"],
           },
         },
       }),
@@ -825,6 +831,25 @@ export function TaskNotionBlockContent({
   }, []);
 
   // Autosave: debounced, skip blob URLs
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  // URL Paste Chooser
+  const [urlPastePopover, setUrlPastePopover] = React.useState<{ url: string; blockPath: number[] } | null>(null);
+  const handleUrlPasteChoice = React.useCallback((choice: 'link' | 'bookmark', info: { url: string; blockPath: number[] }) => {
+    if (editor.api.isReadOnly()) return;
+    const meta = resolveUrlMetadata(info.url);
+    const nodeId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newNode: PlateElemT = {
+      id: nodeId,
+      type: choice === 'link' ? PT.link : PT.bookmark,
+      children: [{ text: meta.url }],
+      url: meta.url,
+      description: meta.description,
+    } as PlateElemT;
+    editor.tf.insertNodes([newNode] as any, { at: [info.blockPath[0] + 1] });
+    setUrlPastePopover(null);
+  }, [editor]);
+
   const triggerAutoSave = React.useCallback(
     (plateValue: PlateValue) => {
       const qcetBlocks = plateToQcet(plateValue);
@@ -835,7 +860,10 @@ export function TaskNotionBlockContent({
           const payload = serializeBlocksToContent(qcetBlocks);
           lastSavedContentRef.current = payload;
           await onSaveContent(payload);
-        } catch {}
+          setSaveError(null);
+        } catch (err: any) {
+          setSaveError(err?.message || "Lỗi lưu nội dung");
+        }
       }, 800);
     },
     [onSaveContent],
@@ -951,7 +979,15 @@ export function TaskNotionBlockContent({
       }
     });
 
-    editor.tf.insertNodes(newNodes as any, { at: [editor.children.length] });
+    // 3-tier insertion: focused block → nearest block → end of document
+    const sel = editor.selection;
+    let insertAt: number[];
+    if (sel) {
+      insertAt = [sel.anchor.path[0] + 1];
+    } else {
+      insertAt = [editor.children.length];
+    }
+    editor.tf.insertNodes(newNodes as any, { at: insertAt });
   }, [editor]);
 
   // Slash menu handlers
@@ -1061,9 +1097,19 @@ export function TaskNotionBlockContent({
     }
   }, [editor, handleOpenSlashMenu]);
 
-  // Handle paste for images
+  // Handle paste for images and URLs
   const handlePaste = React.useCallback((e: React.ClipboardEvent) => {
     if (!canEdit) return;
+    // URL paste detection
+    const plainText = e.clipboardData?.getData("text/plain")?.trim();
+    if (plainText && /^https?:\/\//i.test(plainText) && !e.clipboardData?.types.includes("Files")) {
+      const sel = editor.selection;
+      if (sel) {
+        e.preventDefault();
+        setUrlPastePopover({ url: plainText, blockPath: [sel.anchor.path[0]] });
+        return;
+      }
+    }
     const items = e.clipboardData?.items;
     if (items) {
       for (let i = 0; i < items.length; i++) {
@@ -1078,7 +1124,7 @@ export function TaskNotionBlockContent({
         }
       }
     }
-  }, [handleProcessDroppedFiles]);
+  }, [canEdit, handleProcessDroppedFiles]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -1100,8 +1146,24 @@ export function TaskNotionBlockContent({
             className="outline-hidden min-h-[2em] [&_[data-slate-placeholder]]:text-muted-foreground/35 [&_[data-slate-placeholder]]:!opacity-100"
             style={{ minHeight: "2em" }}
           />
-          <BlockSelectionAfterEditable />
+        <BlockSelectionAfterEditable />
         </Plate>
+        {saveError && (
+          <div className="flex items-center gap-1.5 px-2 py-1 mt-1 text-xs text-rose-600 bg-rose-50 rounded-md border border-rose-200">
+            <span>{saveError}</span>
+            <button type="button" onClick={() => { setSaveError(null); triggerAutoSave(editor.children as any); }} className="ml-auto text-[10px] font-medium underline cursor-pointer">Thử lại</button>
+          </div>
+        )}
+
+        {/* URL Paste Chooser */}
+        {urlPastePopover && (
+          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg border border-border bg-card shadow-lg text-xs animate-in fade-in-0 zoom-in-95">
+            <span className="truncate max-w-[200px] text-muted-foreground font-mono">{urlPastePopover.url}</span>
+            <button type="button" onClick={() => handleUrlPasteChoice('link', urlPastePopover)} className="px-2 py-1 rounded-md bg-primary text-primary-foreground font-medium cursor-pointer hover:opacity-90">Liên kết</button>
+            <button type="button" onClick={() => handleUrlPasteChoice('bookmark', urlPastePopover)} className="px-2 py-1 rounded-md bg-muted text-foreground font-medium cursor-pointer hover:bg-muted/80">Bookmark</button>
+            <button type="button" onClick={() => setUrlPastePopover(null)} className="px-1.5 py-1 text-muted-foreground hover:text-foreground cursor-pointer">×</button>
+          </div>
+        )}
 
         {/* Slash Command Menu */}
         {mounted && (

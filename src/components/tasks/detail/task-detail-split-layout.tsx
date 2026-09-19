@@ -8,6 +8,11 @@ const DEFAULT_INSPECTOR_PCT = 28;
 const MIN_INSPECTOR_PCT = 20;
 const MAX_INSPECTOR_PCT = 40;
 const MOBILE_BREAKPOINT = 1024;
+const STORAGE_KEY = 'qcet-inspector-pct';
+function readStoredPct(): number {
+  try { const v = localStorage.getItem(STORAGE_KEY); if (v) { const n = Number(v); if (n >= MIN_INSPECTOR_PCT && n <= MAX_INSPECTOR_PCT) return n; } } catch {}
+  return DEFAULT_INSPECTOR_PCT;
+}
 
 interface TaskDetailSplitLayoutProps {
   inspectorOpen: boolean;
@@ -25,6 +30,7 @@ export function TaskDetailSplitLayout({
   className,
 }: TaskDetailSplitLayoutProps) {
   const inspectorPanelRef = usePanelRef();
+  const storedPct = React.useRef(readStoredPct());
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -59,7 +65,7 @@ export function TaskDetailSplitLayout({
       orientation="horizontal"
       className={cn("flex-1 min-h-0", className)}
     >
-      <Panel minSize="50%" defaultSize={inspectorOpen ? `${100 - DEFAULT_INSPECTOR_PCT}%` : "100%"} id="main">
+      <Panel minSize="50%" defaultSize={inspectorOpen ? `${100 - storedPct.current}%` : "100%"} id="main">
         {children}
       </Panel>
 
@@ -81,11 +87,11 @@ export function TaskDetailSplitLayout({
           <Panel
             panelRef={inspectorPanelRef}
             id="inspector"
-            defaultSize={`${DEFAULT_INSPECTOR_PCT}%`}
+            defaultSize={`${storedPct.current}%`}
             minSize={`${MIN_INSPECTOR_PCT}%`}
             maxSize={`${MAX_INSPECTOR_PCT}%`}
             collapsible
-            onResize={() => {}}
+            onResize={(size) => { try { const pct = Math.round(size.asPercentage); if (pct >= MIN_INSPECTOR_PCT && pct <= MAX_INSPECTOR_PCT) localStorage.setItem(STORAGE_KEY, String(pct)); } catch {} }}
           >
             {inspector}
           </Panel>
