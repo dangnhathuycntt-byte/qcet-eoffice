@@ -69,6 +69,7 @@ export function SubtaskDetailDrawer({
   const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
+  const deadlineRef = React.useRef<HTMLDivElement>(null);
   const [personnelList, setPersonnelList] = React.useState<
     Array<{ id: string; name: string; email?: string; departmentName?: string }>
   >([]);
@@ -88,6 +89,18 @@ export function SubtaskDetailDrawer({
       })
       .catch(() => {});
   }, [canEdit]);
+
+  // Close deadline popover on outside click
+  React.useEffect(() => {
+    if (!isDeadlineEditorOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (deadlineRef.current && !deadlineRef.current.contains(e.target as Node)) {
+        setIsDeadlineEditorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isDeadlineEditorOpen]);
 
   // Status & Priority objects
   const currentStatusObj =
@@ -543,7 +556,7 @@ export function SubtaskDetailDrawer({
               </div>
             )}
 
-            <div className="relative">
+            <div ref={deadlineRef} className="relative">
               <button
                 type="button"
                 onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
