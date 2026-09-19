@@ -56,7 +56,7 @@ describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () 
         "Peek pane must have rounded corners"
       );
       assert.ok(
-        cssContent.includes("margin: 10px"),
+        cssContent.includes("margin: 8px"),
         "Peek pane must have inset margin"
       );
       assert.ok(

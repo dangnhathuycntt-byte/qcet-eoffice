@@ -47,7 +47,7 @@
     z-index: auto;
     width: 440px;
     flex-shrink: 0;
-    margin: 10px;
+    margin: 8px 8px 8px 0;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--card);

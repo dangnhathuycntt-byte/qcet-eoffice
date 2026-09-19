@@ -330,7 +330,7 @@ export function SubtaskDetailDrawer({
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
         className={styles.peekSurface}
       >
-        <div className="group/peek-header flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border/50 px-4 select-none">
+        <div className="group/peek-header flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border px-4 select-none">
           {/* Copy link — subtle, visible on hover/focus and touch */}
           <button
             type="button"
