@@ -2,6 +2,7 @@
 
 // Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
 import * as React from "react";
+import { Group, Panel, Separator, type Layout, type LayoutChangedMeta } from "react-resizable-panels";
 import styles from "./task-detail-page.module.css";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
@@ -38,6 +39,86 @@ export interface TaskDetailPageProps {
   }>;
   currentUser?: any;
   canEdit?: boolean;
+}
+
+const SUBTASK_SPLIT_BREAKPOINT = 1024;
+const SUBTASK_PANE_STORAGE_KEY = "qcet-task-detail-subtask-pane-pct";
+const SUBTASK_MAIN_PANEL_ID = "task-detail-main";
+const SUBTASK_PEEK_PANEL_ID = "task-detail-subtask";
+const DEFAULT_SUBTASK_PANE_PCT = 30;
+
+interface TaskSubtaskSplitProps {
+  peekOpen: boolean;
+  drawer: React.ReactNode;
+  children: React.ReactNode;
+}
+
+function TaskSubtaskSplit({ peekOpen, drawer, children }: TaskSubtaskSplitProps) {
+  const [isDesktop, setIsDesktop] = React.useState(false);
+  const [subtaskPanePct, setSubtaskPanePct] = React.useState(DEFAULT_SUBTASK_PANE_PCT);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia(`(min-width: ${SUBTASK_SPLIT_BREAKPOINT}px)`);
+    const syncViewport = () => setIsDesktop(mediaQuery.matches);
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      const storedPct = Number(window.localStorage.getItem(SUBTASK_PANE_STORAGE_KEY));
+      if (Number.isFinite(storedPct) && storedPct > 0 && storedPct <= 45) {
+        setSubtaskPanePct(storedPct);
+      }
+    } catch {}
+  }, []);
+
+  const handleLayoutChanged = React.useCallback((layout: Layout, meta: LayoutChangedMeta) => {
+    if (!meta.isUserInteraction) return;
+    const nextPct = layout[SUBTASK_PEEK_PANEL_ID];
+    if (!Number.isFinite(nextPct)) return;
+    setSubtaskPanePct(nextPct);
+    try {
+      window.localStorage.setItem(SUBTASK_PANE_STORAGE_KEY, String(nextPct));
+    } catch {}
+  }, []);
+
+  if (!peekOpen || !isDesktop) {
+    return <>{children}{drawer}</>;
+  }
+
+  return (
+    <Group
+      orientation="horizontal"
+      className={styles.subtaskSplitGroup}
+      onLayoutChanged={handleLayoutChanged}
+      resizeTargetMinimumSize={{ fine: 8, coarse: 16 }}
+    >
+      <Panel
+        id={SUBTASK_MAIN_PANEL_ID}
+        defaultSize={`${100 - subtaskPanePct}%`}
+        minSize="400px"
+        className={styles.subtaskSplitPanel}
+      >
+        {children}
+      </Panel>
+      <Separator
+        id="task-detail-subtask-separator"
+        className={styles.subtaskResizeSeparator}
+        aria-label="Thay đổi độ rộng việc thành phần"
+      />
+      <Panel
+        id={SUBTASK_PEEK_PANEL_ID}
+        defaultSize={`${subtaskPanePct}%`}
+        minSize="320px"
+        maxSize="45%"
+        className={styles.subtaskSplitPanel}
+      >
+        {drawer}
+      </Panel>
+    </Group>
+  );
 }
 
 export function TaskDetailPage({
@@ -371,7 +452,9 @@ export function TaskDetailPage({
     });
 
     if (!res.ok) {
-      throw new Error("Không thể lưu mô tả");
+      const errBody = await res.json().catch(() => null);
+      const serverMsg = errBody?.error || errBody?.message || "";
+      throw new Error(serverMsg || "Không thể lưu mô tả");
     }
 
     const payload = await res.json().catch(() => null);
@@ -868,6 +951,25 @@ export function TaskDetailPage({
 
   return (
     <div className={styles.splitWorkspace} data-peek-open={Boolean(activeSubtask)}>
+    <TaskSubtaskSplit
+      peekOpen={Boolean(activeSubtask)}
+      drawer={
+        <SubtaskDetailDrawer
+          isOpen={Boolean(activeSubtask)}
+          onClose={handleCloseSubtaskDrawer}
+          subtask={activeSubtask}
+          parentTaskTitle={task.title}
+          parentTaskCode={taskCode}
+          canEdit={canEdit}
+          onSubtaskUpdated={handleSubtaskUpdated}
+          onOpenAnotherSubtask={handleOpenSubtaskDrawer}
+          onNavigateSibling={handleNavigateSubtaskSibling}
+          onNavigateBackHistory={handleNavigateBackSubtaskHistory}
+          hasHistoryPrev={subtaskHistory.length > 0}
+          historyPrevTitle={prevSubtask?.title}
+        />
+      }
+    >
     <div
       data-slot="task-workspace"
       className={styles.workspace}
@@ -1010,28 +1112,17 @@ export function TaskDetailPage({
 
 
 
-              {/* Vùng nội dung dạng Block (Notion style) thay thế khối việc thành phần cũ */}
-              <div className="pt-2 flex-1 flex flex-col">
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => setIsProgressModalOpen(true)}
-                    className="mb-4 self-start rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-                  >
-                    Viết báo cáo tiến độ
-                  </button>
-                )}
-                <TaskNotionBlockContent
-                  globalFileDrop={!activeSubtask}
-                  taskId={task.id}
-                  initialDescription={currentDescription}
-                  subTasks={subTasks}
-                  canEdit={canEdit}
-                  onSaveContent={handleSaveDescription}
-                  onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                  onOpenCreateSubtask={() => handleTabChange("subtasks")}
-                />
-              </div>
+              {/* Nội dung chính dạng block, hòa trực tiếp vào canvas nhiệm vụ */}
+              <TaskNotionBlockContent
+                globalFileDrop={!activeSubtask}
+                taskId={task.id}
+                initialDescription={currentDescription}
+                subTasks={subTasks}
+                canEdit={canEdit}
+                onSaveContent={handleSaveDescription}
+                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+                onOpenCreateSubtask={() => handleTabChange("subtasks")}
+              />
             </>
           )}
 
@@ -1114,21 +1205,7 @@ export function TaskDetailPage({
       </div>
 
     </div>
-      {/* Sibling inspector surface; compact screens use a sheet. */}
-      <SubtaskDetailDrawer
-        isOpen={Boolean(activeSubtask)}
-        onClose={handleCloseSubtaskDrawer}
-        subtask={activeSubtask}
-        parentTaskTitle={task.title}
-        parentTaskCode={taskCode}
-        canEdit={canEdit}
-        onSubtaskUpdated={handleSubtaskUpdated}
-        onOpenAnotherSubtask={handleOpenSubtaskDrawer}
-        onNavigateSibling={handleNavigateSubtaskSibling}
-        onNavigateBackHistory={handleNavigateBackSubtaskHistory}
-        hasHistoryPrev={subtaskHistory.length > 0}
-        historyPrevTitle={prevSubtask?.title}
-      />
+    </TaskSubtaskSplit>
 
             {/* Modal Cập nhật tiến độ */}
       {isProgressModalOpen && (

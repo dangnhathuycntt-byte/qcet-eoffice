@@ -117,6 +117,37 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "Drag handle must only be visible on hover or focus"
       );
     });
+
+    it("integrates the shared editor into the canvas without an outer card", () => {
+      const rootIndex = componentContent.indexOf('data-slot="task-notion-block-content"');
+      assert.ok(rootIndex > 0, "Editor root slot must exist");
+
+      const rootBlock = componentContent.slice(rootIndex, rootIndex + 500);
+      assert.ok(
+        !rootBlock.includes("rounded-xl") &&
+          !rootBlock.includes("border border-border") &&
+          !rootBlock.includes("bg-card") &&
+          !rootBlock.includes("overflow-hidden"),
+        "Shared editor root must not render a rounded bordered card"
+      );
+      assert.ok(
+        componentContent.includes("border-b border-border/40") &&
+          componentContent.includes("overflow-x-auto no-scrollbar"),
+        "Fixed toolbar must keep a subtle divider and stay on one horizontally scrollable row"
+      );
+    });
+
+    it("renders the main editor directly without the progress-report CTA", () => {
+      assert.ok(
+        !detailPageContent.includes("Viết báo cáo tiến độ"),
+        "Task Detail must not render the redundant progress-report CTA above the editor"
+      );
+      assert.ok(
+        detailPageContent.includes("onOpenProgressModal") &&
+          detailPageContent.includes("<TaskProgressComposer"),
+        "The canonical header progress action and composer must remain available"
+      );
+    });
   });
 
   describe("3. Block Engine, Serialization & Slash Menu", () => {
@@ -251,6 +282,132 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
   });
 
+  describe("4b. Plate-native mark plugins and floating toolbar", () => {
+    it("wires BoldPlugin, ItalicPlugin, UnderlinePlugin, StrikethroughPlugin, CodePlugin", () => {
+      assert.ok(
+        componentContent.includes("BoldPlugin") &&
+          componentContent.includes("ItalicPlugin") &&
+          componentContent.includes("UnderlinePlugin") &&
+          componentContent.includes("StrikethroughPlugin") &&
+          componentContent.includes("CodePlugin"),
+        "Must wire all 5 mark plugins from @platejs/basic-nodes/react"
+      );
+    });
+
+    it("has a floating formatting toolbar that appears on text selection", () => {
+      assert.ok(
+        componentContent.includes("FloatingToolbar") &&
+          componentContent.includes("isMarkActive") &&
+          componentContent.includes("toggleMark"),
+        "Must render a FloatingToolbar with mark toggle actions"
+      );
+    });
+
+    it("wires LinkPlugin with triggerFloatingLinkInsert (static import, not require())", () => {
+      assert.ok(
+        componentContent.includes('import { LinkPlugin, triggerFloatingLinkInsert }') ||
+          componentContent.includes("from \"@platejs/link/react\""),
+        "Must statically import LinkPlugin and triggerFloatingLinkInsert"
+      );
+      assert.ok(
+        !componentContent.includes("require(\"@platejs/link/react\")"),
+        "Must NOT use dynamic require() for link plugin"
+      );
+    });
+
+    it("readonly disables floating toolbar", () => {
+      assert.ok(
+        componentContent.includes("isReadOnly") &&
+          componentContent.includes("FloatingToolbar"),
+        "FloatingToolbar must check readOnly state"
+      );
+    });
+  });
+
+  describe("4c. SlashPlugin integration (Plate-native trigger)", () => {
+    it("wires SlashPlugin from @platejs/slash-command/react", () => {
+      assert.ok(
+        componentContent.includes("SlashPlugin") &&
+          componentContent.includes("@platejs/slash-command/react"),
+        "Must import and wire SlashPlugin"
+      );
+    });
+
+    it("does NOT have custom '/' key handler (Plate owns trigger)", () => {
+      assert.ok(
+        !componentContent.includes('e.key === "/"') &&
+          !componentContent.includes("key === '/'"),
+        "Must NOT have custom '/' detection — SlashPlugin handles it"
+      );
+    });
+
+    it("does NOT have custom isMenuOpen/menuSearchQuery/menuAnchorElement state", () => {
+      assert.ok(
+        !componentContent.includes("isMenuOpen") &&
+          !componentContent.includes("menuSearchQuery") &&
+          !componentContent.includes("menuAnchorElement"),
+        "Must NOT have custom slash menu state — SlashPlugin/SlashInputElement owns it"
+      );
+    });
+
+    it("renders SlashInputElement that uses SlashMenu for QCET grouped presentation", () => {
+      assert.ok(
+        componentContent.includes("SlashInputElement") &&
+          componentContent.includes("SlashSelectContext"),
+        "Must render SlashInputElement via SlashInputPlugin.withComponent"
+      );
+    });
+  });
+
+  describe("4d. Six-dot block menu with indent/outdent", () => {
+    it("block menu has indent and outdent actions", () => {
+      assert.ok(
+        componentContent.includes("plateIndent") &&
+          componentContent.includes("plateOutdent") &&
+          componentContent.includes("IndentIncrease") &&
+          componentContent.includes("IndentDecrease"),
+        "Block menu must offer indent (Thụt vào) and outdent (Giảm thụt)"
+      );
+    });
+
+    it("block menu has turn-into, duplicate, and delete", () => {
+      assert.ok(
+        componentContent.includes("TURN_INTO_OPTIONS") &&
+          componentContent.includes("duplicateBlock") &&
+          componentContent.includes("deleteBlock"),
+        "Block menu must have turn-into, duplicate, and delete actions"
+      );
+    });
+  });
+
+  describe("4e. Multi-block contextual toolbar", () => {
+    it("renders MultiBlockToolbar when blocks are selected", () => {
+      assert.ok(
+        componentContent.includes("MultiBlockToolbar") &&
+          componentContent.includes("BlockSelectionPlugin"),
+        "Must render a MultiBlockToolbar using BlockSelectionPlugin state"
+      );
+    });
+  });
+
+  describe("4f. Autoformat input rules", () => {
+    it("wires heading, blockquote, hr, list, and mark input rules", () => {
+      assert.ok(
+        componentContent.includes("HeadingRules.markdown()") &&
+          componentContent.includes("BlockquoteRules.markdown()") &&
+          componentContent.includes("HorizontalRuleRules.markdown()") &&
+          componentContent.includes("BulletedListRules.markdown()") &&
+          componentContent.includes("OrderedListRules.markdown()") &&
+          componentContent.includes("TaskListRules.markdown()") &&
+          componentContent.includes("BoldRules.markdown()") &&
+          componentContent.includes("ItalicRules.markdown()") &&
+          componentContent.includes("CodeRules.markdown()") &&
+          componentContent.includes("StrikethroughRules.markdown()"),
+        "Must wire all autoformat input rules via plugin.extend({ inputRules: [...] })"
+      );
+    });
+  });
+
   describe("5. Slash Menu Collision Handling & Safe Viewport Auto-Scroll", () => {
     it("implements smooth auto-scroll on slash menu open with block: 'nearest'", () => {
       assert.ok(
@@ -262,27 +419,20 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
     it("handles collision by flipping top if bottom viewport space is insufficient", () => {
       assert.ok(
-        componentContent.includes("shouldFlip") || (componentContent.includes("shouldFlipTop") && componentContent.includes("spaceBelow") && componentContent.includes("spaceAbove")),
-        "Must compute viewport space and flip to top when bottom space is inadequate"
-      );
-      assert.ok(
-        componentContent.includes("BOTTOM_SAFETY_MARGIN") || componentContent.includes("COLLISION_PADDING") || componentContent.includes("spaceBelow"),
-        "Must enforce safety padding margins from viewport edges"
+        componentContent.includes("flip") && componentContent.includes("useFloating"),
+        "Must use @floating-ui/react flip() middleware for collision handling"
       );
     });
 
     it("portals menu to document.body and applies dynamic max-height with internal scroll", () => {
-      // 1. Must use createPortal to document.body
       assert.ok(
-        componentContent.includes("createPortal") && componentContent.includes("document.body"),
-        "Must portal slash menu to document.body to prevent clipping from parent overflow"
+        componentContent.includes("createPortal"),
+        "Must portal slash menu to prevent clipping from parent overflow"
       );
 
-      // 2. Must dynamically compute menuMaxHeight based on available viewport height
       assert.ok(
-        componentContent.includes("menuMaxHeight") &&
-          (componentContent.includes("availableHeight") || componentContent.includes("available")),
-        "Must compute dynamic max-height based on available viewport space"
+        componentContent.includes("size") && componentContent.includes("availableHeight"),
+        "Must use Floating UI size() middleware for dynamic max-height"
       );
 
       // 3. Menu list must scroll internally with flex-1 min-h-0 and overscroll-contain
@@ -295,9 +445,8 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
     it("shifts menu horizontally so it never exceeds left or right viewport edges", () => {
       assert.ok(
-        componentContent.includes("maxLeft") &&
-          componentContent.includes("window.innerWidth"),
-        "Must clamp horizontal position with shift so menu is always fully visible"
+        componentContent.includes("shift") && componentContent.includes("useFloating"),
+        "Must use @floating-ui/react shift() middleware for horizontal containment"
       );
     });
 

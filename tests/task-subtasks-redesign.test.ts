@@ -20,11 +20,16 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
     process.cwd(),
     "src/components/tasks/task-detail-page.tsx"
   );
+  const sharedEditorPath = path.join(
+    process.cwd(),
+    "src/components/tasks/detail/task-notion-block-content.tsx"
+  );
 
   const sidebarContent = fs.readFileSync(sidebarPath, "utf-8");
   const tableContent = fs.readFileSync(tableSectionPath, "utf-8");
   const drawerContent = fs.readFileSync(drawerPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
+  const sharedEditorContent = fs.readFileSync(sharedEditorPath, "utf-8");
 
   describe("1. Overview Tab Cleanup & Sidebar Compact Subtasks List", () => {
     it("Overview tab does NOT render the large TaskSubtasksSection under description", () => {
@@ -180,14 +185,24 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
       const layout = fs.readFileSync(path.join(process.cwd(), "src/components/tasks/task-detail-page.module.css"), "utf-8");
       assert.ok(
         drawerContent.includes("styles.peekSurface") &&
-          layout.includes("grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px)") &&
-          layout.includes("gap: calc(var(--spacing) * 2)") &&
+          detailPageContent.includes('orientation="horizontal"') &&
+          detailPageContent.includes('minSize="320px"') &&
+          detailPageContent.includes('maxSize="45%"') &&
+          detailPageContent.includes("SUBTASK_PANE_STORAGE_KEY") &&
+          detailPageContent.includes("window.localStorage.getItem") &&
+          detailPageContent.includes("window.localStorage.setItem") &&
+          detailPageContent.includes("window.matchMedia") &&
+          detailPageContent.includes("!peekOpen || !isDesktop") &&
+          layout.includes(".subtaskResizeSeparator") &&
+          layout.includes("cursor: col-resize") &&
+          layout.includes("width: 8px") &&
+          !layout.includes("grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px)") &&
           layout.includes("padding: calc(var(--spacing) * 2)") &&
           layout.includes("border-radius: var(--radius-xl)") &&
           layout.includes("position: relative") &&
           drawerContent.includes("lg:hidden") &&
           !drawerContent.includes('aria-modal="true"'),
-        "Peek must reflow the main surface with inset, matching corners, and a compact-only backdrop"
+        "Peek must use a persisted desktop split pane with a compact-only mobile backdrop"
       );
 
       // 4. Non-stacking navigation: uses in-drawer history stack rather than nested drawers
@@ -215,6 +230,17 @@ describe("Subtasks UX Redesign Suite — Compact Sidebar, 5-Column Table & Subta
       assert.ok(
         drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"),
         "Drawer must execute real API PATCH mutations"
+      );
+
+      // 8. Shared editor presentation stays flat in both main task and subtask surfaces
+      const rootIndex = sharedEditorContent.indexOf('data-slot="task-notion-block-content"');
+      assert.ok(rootIndex > 0, "Shared Plate editor root must exist");
+      const rootBlock = sharedEditorContent.slice(rootIndex, rootIndex + 500);
+      assert.ok(
+        !rootBlock.includes("rounded-xl") &&
+          !rootBlock.includes("border border-border") &&
+          !rootBlock.includes("bg-card"),
+        "Main task and subtask must share the same flat, canvas-integrated editor shell"
       );
     });
 

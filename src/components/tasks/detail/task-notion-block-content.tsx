@@ -993,7 +993,7 @@ function FixedToolbar({ editor }: { editor: any }) {
   const tbBtnIdle = "text-muted-foreground hover:bg-muted hover:text-foreground";
 
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-0.5 border-b border-border/60 bg-card/95 backdrop-blur-xs px-2 py-1 text-xs select-none">
+    <div className="sticky top-0 z-30 flex items-center gap-0.5 overflow-x-auto no-scrollbar border-b border-border/40 bg-background px-1 py-1 text-xs select-none">
       {/* ── Text style dropdown (H1/H2/H3/Paragraph) ── */}
       <ToolbarDropdown
         trigger={
@@ -1896,13 +1896,13 @@ export function TaskNotionBlockContent({
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}
         className={cn(
-          "relative flex-1 min-h-0 flex flex-col rounded-xl border border-border/40 bg-card overflow-hidden text-foreground transition-colors focus-within:border-border/70",
+          "relative flex-1 min-h-0 flex flex-col text-foreground",
           className
         )}
       >
         <FixedToolbar editor={editor} />
 
-        <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex-1 min-h-0 px-1 py-3">
           <Plate
             editor={editor}
             onValueChange={({ value }) => {
