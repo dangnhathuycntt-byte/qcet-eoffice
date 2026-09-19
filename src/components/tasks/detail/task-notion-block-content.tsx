@@ -879,32 +879,46 @@ function ToolbarDropdown({
   className?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
+  const wrapRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  const { refs, floatingStyles } = useFloating({
+    strategy: "fixed",
+    placement: "bottom-start",
+    whileElementsMounted: autoUpdate,
+    middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+  });
 
   React.useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        wrapRef.current && !wrapRef.current.contains(e.target as Node) &&
+        panelRef.current && !panelRef.current.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={(el) => { (wrapRef as any).current = el; refs.setReference(el); }}>
       <div onMouseDown={(e) => { e.preventDefault(); setOpen((p) => !p); }}>
         {trigger}
       </div>
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
+          ref={(el) => { (panelRef as any).current = el; refs.setFloating(el); }}
+          style={floatingStyles}
           className={cn(
-            "absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
+            "z-[100] min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
             className,
           )}
           onMouseDown={(e) => e.preventDefault()}
         >
           {children}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
