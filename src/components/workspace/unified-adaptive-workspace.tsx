@@ -125,7 +125,9 @@ export function filterDisplayedTasks({
   workbox,
   user,
 }: FilterDisplayedTasksOptions): SchoolTask[] {
-  let result = tasks;
+  // Issue #21: Only show top-level (parent) tasks in the list.
+  // Child tasks are still available as nested subTasks on each parent.
+  let result = tasks.filter((t) => !t.parentTaskId);
 
   // 1. Search Query
   if (search && search.trim()) {
@@ -1246,9 +1248,11 @@ export function UnifiedAdaptiveWorkspace({
   }, [workspaceQuery, tasks]);
 
   // Canonical Scope Filtering: NEVER mutate subtasks in-memory
+  // Issue #21: Only scope-filter top-level tasks; child tasks remain nested
   const scopedTasks = React.useMemo(() => {
+    const topLevel = tasks.filter((t) => !t.parentTaskId);
     return filterTasksByScope(
-      tasks,
+      topLevel,
       workspaceScopeToTaskScope(activeScope),
       user,
       currentDept
@@ -1282,10 +1286,12 @@ export function UnifiedAdaptiveWorkspace({
     actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length;
 
   // Scope Badge Counts: Total tasks visible per scope BEFORE search/supplementary filters
+  // Issue #21: Count only top-level tasks (parentTaskId is falsy)
   const calculatedScopeBadgeCounts = React.useMemo<Record<WorkspaceScope, number>>(() => {
-    const myTasks = filterTasksByScope(tasks, "my", user);
-    const unitTasks = filterTasksByScope(tasks, "unit", user, currentDept);
-    const schoolTasks = filterTasksByScope(tasks, "school", user, currentDept);
+    const topLevel = tasks.filter((t) => !t.parentTaskId);
+    const myTasks = filterTasksByScope(topLevel, "my", user);
+    const unitTasks = filterTasksByScope(topLevel, "unit", user, currentDept);
+    const schoolTasks = filterTasksByScope(topLevel, "school", user, currentDept);
 
     return {
       my: myTasks.length,

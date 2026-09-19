@@ -370,7 +370,11 @@ export class TaskQueryService {
       ];
     }
 
-    if (parentTaskId !== undefined && parentTaskId !== 'all') {
+    if (parentTaskId === undefined) {
+      // Issue #21: Default to top-level tasks only when client does not
+      // specify parentTaskId.  Pass parentTaskId=all to opt out.
+      where.parentTaskId = null;
+    } else if (parentTaskId !== 'all') {
       if (parentTaskId === 'null' || parentTaskId === 'root' || parentTaskId === null) {
         where.parentTaskId = null;
       } else {
