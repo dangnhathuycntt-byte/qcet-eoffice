@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 import {
   User,
   Users,
@@ -221,32 +222,21 @@ export function LinearPropertiesSidebar({
       .catch(() => {});
   }, []);
 
-  // Click outside listener & Keyboard accessibility
+  // Close dropdowns on outside click / Escape (lightweight per-menu)
   React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
-        setIsStatusMenuOpen(false);
-      }
-      if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
-        setIsPriorityMenuOpen(false);
-      }
-      if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
-        setIsLeadMenuOpen(false);
-      }
+    const refs = [statusMenuRef, priorityMenuRef, leadMenuRef];
+    const setters = [setIsStatusMenuOpen, setIsPriorityMenuOpen, setIsLeadMenuOpen];
+    const handler = (e: MouseEvent) => {
+      refs.forEach((ref, i) => {
+        if (ref.current && !ref.current.contains(e.target as Node)) setters[i](false);
+      });
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsStatusMenuOpen(false);
-        setIsPriorityMenuOpen(false);
-        setIsLeadMenuOpen(false);
-      }
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setters.forEach((s) => s(false));
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("keydown", keyHandler);
+    return () => { document.removeEventListener("mousedown", handler); window.removeEventListener("keydown", keyHandler); };
   }, []);
 
   // Status mapping

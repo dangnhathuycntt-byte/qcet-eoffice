@@ -29,8 +29,10 @@ test('panel motion changes only composited visual properties in 160–220ms', ()
 
 test('inspector snaps once without a second Motion owner or delayed exit', () => {
   assert.doesNotMatch(page, /motion\/react|AnimatePresence|<m\./);
-  assert.match(page, /showInspector && \(\s*<aside/);
-  assert.match(page, /className=\{styles.inspector\}/);
+  // Inspector now rendered via TaskDetailSplitLayout; verify integration
+  assert.match(page, /TaskDetailSplitLayout/);
+  // inspector className now in split layout component
+  assert.ok(page.includes("inspectorOpen") || page.includes("styles.inspector"));
 });
 
 test('reduced motion covers both workspace and sibling drawer', () => {

@@ -14,7 +14,7 @@ import {
   formatIsoDate,
   toIctDateTimeParts,
 } from "@/lib/format/date";
-import { FloatingPortal } from "./floating-portal";
+import { Popover } from "@base-ui/react/popover";
 
 export type DateGranularity = "day" | "month" | "quarter" | "half-year" | "year";
 
@@ -268,18 +268,18 @@ export function VietnameseDatePicker({
   const headerInputValue = hasValue ? `${displayDate}` : "";
 
   return (
+    <Popover.Root open={isOpen} onOpenChange={(open) => setIsOpen(open)}>
     <div
       ref={containerRef}
       className={cn("relative inline-block text-left select-none", className)}
     >
       {/* 1. Trigger Area */}
       {variant === "inline" ? (
-        <button
+        <Popover.Trigger
           type="button"
           id={id}
           title={title || label || undefined}
           disabled={disabled}
-          onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
@@ -299,14 +299,13 @@ export function VietnameseDatePicker({
           <span className="tabular-nums font-normal">
             {hasValue ? displayDate : placeholder}
           </span>
-        </button>
+        </Popover.Trigger>
       ) : variant === "chip" ? (
-        <button
+        <Popover.Trigger
           type="button"
           id={id}
           title={title || undefined}
           disabled={disabled}
-          onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
@@ -327,14 +326,13 @@ export function VietnameseDatePicker({
           <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
             {hasValue ? displayDate : placeholder}
           </span>
-        </button>
+        </Popover.Trigger>
       ) : (
-        <button
+        <Popover.Trigger
           type="button"
           id={id}
           title={title || undefined}
           disabled={disabled}
-          onClick={() => !disabled && setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
@@ -359,19 +357,16 @@ export function VietnameseDatePicker({
               <X className="size-3" strokeWidth={1.5} />
             </span>
           )}
-        </button>
+        </Popover.Trigger>
       )}
 
       {/* 2. Linear-Style Date Picker Popover Portal */}
-      <FloatingPortal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        triggerRef={containerRef}
-        align={align}
-        offset={4}
-        collisionPadding={12}
-        ariaLabel="Chọn ngày trên lịch"
-        className="w-[290px] p-3 text-foreground"
+
+      <Popover.Portal>
+      <Popover.Positioner className="z-50" align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
+      <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+        aria-label="Chọn ngày trên lịch"
+        className="w-[290px] p-3 text-foreground rounded-xl border border-border bg-popover shadow-2xl"
       >
         {/* Header Label */}
         <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
@@ -646,8 +641,12 @@ export function VietnameseDatePicker({
             )}
           </div>
         )}
-      </FloatingPortal>
+      </Popover.Popup>
+      </Popover.Positioner>
+      </Popover.Portal>
+
     </div>
+    </Popover.Root>
   );
 }
 

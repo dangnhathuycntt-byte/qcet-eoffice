@@ -41,7 +41,7 @@ import {
 } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { FloatingPortal } from "@/components/ui/floating-portal";
+import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
 import type { TaskPriorityInput } from "@/contracts/tasks";
 import {
@@ -864,17 +864,6 @@ export function CreateTaskModal({
     [personnelList, formData.vtvlRole, user?.role, errors.leadAssigneeName]
   );
 
-  // Close combobox when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (comboboxRef.current && !comboboxRef.current.contains(event.target as Node)) {
-        setIsComboboxOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Sync state on open
   const prevIsOpen = React.useRef(false);
   const parentTask = React.useMemo(() => {
@@ -971,6 +960,7 @@ export function CreateTaskModal({
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -1375,8 +1365,9 @@ export function CreateTaskModal({
                         {user?.name || "Bạn"} ({user?.roleLabel || "Cá nhân"})
                       </div>
                     ) : (
+                      <Popover.Root open={isComboboxOpen} onOpenChange={(open) => setIsComboboxOpen(open)}>
                       <div className="relative">
-                        <button
+                        <Popover.Trigger
                           ref={comboboxTriggerRef}
                           type="button"
                           id="task-assignee-field"
@@ -1387,10 +1378,6 @@ export function CreateTaskModal({
                           aria-invalid={Boolean(errors.leadAssigneeName)}
                           aria-describedby={errors.leadAssigneeName ? "task-assignee-error" : undefined}
                           aria-labelledby="task-assignee-label"
-                          onClick={() => {
-                            setIsComboboxOpen((prev) => !prev);
-                            setTimeout(() => searchInputRef.current?.focus(), 60);
-                          }}
                           className={cn(
                             "w-full h-9 px-2.5 rounded-lg border bg-background text-left text-xs font-medium text-foreground flex items-center justify-between gap-2 hover:border-border transition-colors cursor-pointer",
                             errors.leadAssigneeName || isExternalDeptBlocked
@@ -1409,16 +1396,13 @@ export function CreateTaskModal({
                             <span className="text-muted-foreground/60">Chọn cán bộ phụ trách...</span>
                           )}
                           <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                        </button>
+                        </Popover.Trigger>
 
-                        {/* Combobox Dropdown Popover via FloatingPortal (Overlays outside modal scroll container) */}
-                        <FloatingPortal
-                          isOpen={isComboboxOpen}
-                          onClose={() => setIsComboboxOpen(false)}
-                          triggerRef={comboboxTriggerRef}
-                          className="w-[340px] sm:w-[420px] p-0 overflow-hidden shadow-2xl rounded-xl border border-border/80 bg-card z-[9999]"
-                          ariaLabel="Danh sách cán bộ phụ trách"
-                        >
+                        {/* Combobox Dropdown Popover via Base UI Popover */}
+
+                        <Popover.Portal>
+                        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                        <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-[340px] sm:w-[420px] p-0 overflow-hidden shadow-2xl rounded-xl border border-border/80 bg-card " aria-label="Danh sách cán bộ phụ trách">
                           <div className="p-2 border-b border-border/50 bg-muted/30">
                             <div className="relative flex items-center">
                               <Search className="size-3.5 text-muted-foreground absolute left-2 pointer-events-none" strokeWidth={1.5} />
@@ -1574,8 +1558,12 @@ export function CreateTaskModal({
                               </div>
                             )}
                           </div>
-                        </FloatingPortal>
+                        </Popover.Popup>
+                        </Popover.Positioner>
+                        </Popover.Portal>
+
                       </div>
+                      </Popover.Root>
                     )}
 
                     {errors.leadAssigneeName && (
@@ -1652,14 +1640,14 @@ export function CreateTaskModal({
                     <label id="task-priority-label" className="text-xs font-medium text-muted-foreground block">
                       Mức ưu tiên
                     </label>
+                    <Popover.Root open={isPriorityOpen} onOpenChange={(open) => setIsPriorityOpen(open)}>
                     <div className="relative">
-                      <button
+                      <Popover.Trigger
                         ref={priorityTriggerRef}
                         type="button"
                         id="task-priority-field"
                         aria-labelledby="task-priority-label"
                         aria-expanded={isPriorityOpen}
-                        onClick={() => setIsPriorityOpen((prev) => !prev)}
                         className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-medium text-foreground flex items-center justify-between gap-1.5 hover:border-border transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-1.5 min-w-0 truncate">
@@ -1675,15 +1663,12 @@ export function CreateTaskModal({
                           </span>
                         </div>
                         <ChevronDown className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                      </button>
+                      </Popover.Trigger>
 
-                      <FloatingPortal
-                        isOpen={isPriorityOpen}
-                        onClose={() => setIsPriorityOpen(false)}
-                        triggerRef={priorityTriggerRef}
-                        className="w-40 p-1 space-y-0.5 shadow-xl rounded-xl border border-border/80 bg-card z-[9999]"
-                        ariaLabel="Chọn mức độ ưu tiên"
-                      >
+
+                      <Popover.Portal>
+                      <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                      <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-40 p-1 space-y-0.5 shadow-xl rounded-xl border border-border/80 bg-card " aria-label="Chọn mức độ ưu tiên">
                         {PRIORITY_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
@@ -1708,8 +1693,12 @@ export function CreateTaskModal({
                             )}
                           </button>
                         ))}
-                      </FloatingPortal>
+                      </Popover.Popup>
+                      </Popover.Positioner>
+                      </Popover.Portal>
+
                     </div>
+                    </Popover.Root>
                   </div>
                 </div>
 

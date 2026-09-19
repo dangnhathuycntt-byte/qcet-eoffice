@@ -1,3 +1,8 @@
+/**
+ * @deprecated All consumers migrated to @base-ui/react/popover.
+ * This file has 0 active imports and can be safely deleted.
+ * Kept temporarily for reference during code review.
+ */
 "use client";
 
 import * as React from "react";

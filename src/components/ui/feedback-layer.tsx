@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
+import { Toast } from "@base-ui/react/toast";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -12,7 +11,6 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toastVariants } from "@/lib/motion/variants";
 
 // ============================================================================
 // Types & Interfaces
@@ -252,110 +250,88 @@ export function FormValidationSummary({
 }
 
 // ============================================================================
-// 3. Feedback Toast & Container (Transient Notifications)
+// 3. Toast — Base UI powered
 // ============================================================================
+
+const toastManager = Toast.createToastManager();
 
 export interface FeedbackToastProps {
   toast: ToastItem;
   onDismiss: (id: string) => void;
+  rawToast?: any;
 }
 
-export function FeedbackToast({ toast, onDismiss }: FeedbackToastProps) {
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss(toast.id);
-    }, toast.durationMs ?? 4000);
-    return () => clearTimeout(timer);
-  }, [toast.id, toast.durationMs, onDismiss]);
-
+export function FeedbackToast({ toast, onDismiss, rawToast }: FeedbackToastProps) {
   const styles = VARIANT_STYLES[toast.variant];
-
   return (
-    <m.div
-      layout
-      variants={toastVariants}
-      initial="initial"
-      animate="animate"
-      exit={{ opacity: 0, y: 4, transition: { duration: 0.14 } }}
-      role="status"
-      aria-live="polite"
-      data-slot="feedback-toast"
+    <Toast.Root
+      toast={rawToast}
       className={cn(
         "group pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border p-3 shadow-lg transition-colors min-h-[44px]",
-        styles.container
+        styles.container,
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         {renderVariantIcon(toast.variant)}
         <div className="min-w-0 flex-1 text-xs">
-          {toast.title && (
-            <div className={cn("font-semibold", styles.titleColor)}>
-              {toast.title}
-            </div>
-          )}
-          <div className={cn("font-normal truncate", styles.textColor)}>
-            {toast.message}
-          </div>
+          {toast.title && <Toast.Title className={cn("font-semibold", styles.titleColor)}>{toast.title}</Toast.Title>}
+          <Toast.Description className={cn("font-normal truncate", styles.textColor)}>{toast.message}</Toast.Description>
         </div>
       </div>
-
       <div className="flex items-center gap-1.5 shrink-0">
         {toast.action && (
-          <button
-            type="button"
-            onClick={() => {
-              toast.action?.onClick();
-              onDismiss(toast.id);
-            }}
-            className={cn(
-              "px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors",
-              styles.actionBtn
-            )}
-          >
-            {toast.action.label}
-          </button>
+          <Toast.Action onClick={() => { toast.action?.onClick(); }}>
+            <button type="button" className={cn("px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors", styles.actionBtn)}>
+              {toast.action.label}
+            </button>
+          </Toast.Action>
         )}
-        <button
-          type="button"
-          onClick={() => onDismiss(toast.id)}
-          aria-label="Đóng thông báo nổi"
-          className="size-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 cursor-pointer transition-colors"
-        >
+        <Toast.Close aria-label="Đóng thông báo nổi"
+          className="size-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 cursor-pointer transition-colors">
           <X className="size-3.5" strokeWidth={1.5} />
-        </button>
+        </Toast.Close>
       </div>
-    </m.div>
+    </Toast.Root>
   );
 }
 
 export function ToastContainer({
-  toasts,
-  onDismiss,
-  className,
+  toasts: _legacyToasts,
+  onDismiss: _legacyDismiss,
+  className: _className,
 }: {
   toasts: ToastItem[];
   onDismiss: (id: string) => void;
   className?: string;
 }) {
+  return null;
+}
+
+// ============================================================================
+// 3b. Viewport renderer (must be inside Toast.Provider)
+// ============================================================================
+
+function ToastViewportRenderer({ dismissToast }: { dismissToast: (id: string) => void }) {
+  const manager = Toast.useToastManager();
   return (
-    <div
+    <Toast.Viewport
       aria-label="Thông báo hệ thống"
-      className={cn(
-        "fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full",
-        className
-      )}
+      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        {toasts.map((toast) => (
-          <FeedbackToast key={toast.id} toast={toast} onDismiss={onDismiss} />
-        ))}
-      </AnimatePresence>
-    </div>
+      {manager.toasts.map((t: any) => (
+        <FeedbackToast
+          key={t.id}
+          toast={{ id: t.id, variant: t.variant || "info", title: t.title, message: t.message || t.description || "", action: t.action }}
+          onDismiss={dismissToast}
+          rawToast={t}
+        />
+      ))}
+    </Toast.Viewport>
   );
 }
 
 // ============================================================================
-// 4. Feedback Context & Provider
+// 4. Feedback Context & Provider — Base UI Toast under the hood
 // ============================================================================
 
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
@@ -370,53 +346,30 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const showToast = React.useCallback(
     (item: Omit<ToastItem, "id">): string => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      setToasts((prev) => [...prev, { ...item, id }]);
+      const toast = { ...item, id };
+      setToasts((prev) => [...prev, toast]);
+      toastManager.add({ ...toast, timeout: item.durationMs ?? 4000 });
       return id;
     },
-    []
+    [],
   );
 
-  const notifySuccess = React.useCallback(
-    (message: string, title?: string) =>
-      showToast({ variant: "success", message, title }),
-    [showToast]
-  );
-
-  const notifyError = React.useCallback(
-    (message: string, title?: string) =>
-      showToast({ variant: "error", message, title }),
-    [showToast]
-  );
-
-  const notifyWarning = React.useCallback(
-    (message: string, title?: string) =>
-      showToast({ variant: "warning", message, title }),
-    [showToast]
-  );
-
-  const notifyInfo = React.useCallback(
-    (message: string, title?: string) =>
-      showToast({ variant: "info", message, title }),
-    [showToast]
-  );
+  const notifySuccess = React.useCallback((m: string, t?: string) => showToast({ variant: "success", message: m, title: t }), [showToast]);
+  const notifyError = React.useCallback((m: string, t?: string) => showToast({ variant: "error", message: m, title: t }), [showToast]);
+  const notifyWarning = React.useCallback((m: string, t?: string) => showToast({ variant: "warning", message: m, title: t }), [showToast]);
+  const notifyInfo = React.useCallback((m: string, t?: string) => showToast({ variant: "info", message: m, title: t }), [showToast]);
 
   const contextValue = React.useMemo<FeedbackContextValue>(
-    () => ({
-      toasts,
-      showToast,
-      dismissToast,
-      notifySuccess,
-      notifyError,
-      notifyWarning,
-      notifyInfo,
-    }),
-    [toasts, showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo]
+    () => ({ toasts, showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo }),
+    [toasts, showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo],
   );
 
   return (
     <FeedbackContext.Provider value={contextValue}>
-      {children}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <Toast.Provider toastManager={toastManager}>
+        {children}
+        <ToastViewportRenderer dismissToast={dismissToast} />
+      </Toast.Provider>
     </FeedbackContext.Provider>
   );
 }
@@ -424,15 +377,9 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
 export function useFeedback(): FeedbackContextValue {
   const context = React.useContext(FeedbackContext);
   if (!context) {
-    // Fallback no-op implementation when used outside provider
     return {
-      toasts: [],
-      showToast: () => "",
-      dismissToast: () => {},
-      notifySuccess: () => "",
-      notifyError: () => "",
-      notifyWarning: () => "",
-      notifyInfo: () => "",
+      toasts: [], showToast: () => "", dismissToast: () => {},
+      notifySuccess: () => "", notifyError: () => "", notifyWarning: () => "", notifyInfo: () => "",
     };
   }
   return context;

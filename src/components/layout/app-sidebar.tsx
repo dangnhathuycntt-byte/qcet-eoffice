@@ -47,7 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
-import { FloatingPortal } from "@/components/ui/floating-portal";
+import { Popover } from "@base-ui/react/popover";
 import { cn } from "@/lib/utils";
 
 const UserProfileModal = dynamic(
@@ -187,28 +187,7 @@ export function AppSidebar() {
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
 
-  // Close profile dropdown on outside click
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // Tránh đóng khi click bên trong FloatingPortal
-      const portalEl = document.querySelector('[data-floating-portal="true"]');
-      if (portalEl && portalEl.contains(target)) return;
-
-      if (
-        profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(target)
-      ) {
-        setIsProfileDropdownOpen(false);
-      }
-    };
-    if (isProfileDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isProfileDropdownOpen]);
+  // ponytail: click-outside handled by Base UI Popover
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
@@ -387,14 +366,14 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
         {/* ========================================================= */}
+        <Popover.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Linear Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
           <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
-            <button
+            <Popover.Trigger
               ref={accountTriggerRef}
               type="button"
-              onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
               className={cn(
                 "h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user",
                 isProfileDropdownOpen
@@ -418,7 +397,7 @@ export function AppSidebar() {
                   isProfileDropdownOpen && "rotate-180 text-foreground"
                 )}
               />
-            </button>
+            </Popover.Trigger>
 
             {/* Right: Quick Action Buttons (Search & Floating Create Task) */}
             <div className="flex items-center gap-1 shrink-0 ml-0.5">
@@ -456,16 +435,14 @@ export function AppSidebar() {
             </div>
           </div>
 
-          {/* Unified Account Dropdown Popover via FloatingPortal (escapes sidebar stacking context) */}
-          <FloatingPortal
-            isOpen={isProfileDropdownOpen && Boolean(user)}
-            onClose={() => setIsProfileDropdownOpen(false)}
-            triggerRef={accountTriggerRef}
-            offset={6}
-            align="left"
-            className="w-60 p-2 z-[9999] shadow-2xl border border-border/80 bg-popover rounded-xl"
+          {/* Account dropdown via Base UI Popover */}
+
+          <Popover.Portal>
+          <Popover.Positioner className="z-50" align="start" sideOffset={6} collisionPadding={12}>
+          <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
+            className="w-60 p-2 shadow-2xl border border-border/80 bg-popover rounded-xl"
             role="menu"
-            ariaLabel="Menu tài khoản"
+            aria-label="Menu tài khoản"
           >
             {user && (
               <div>
@@ -561,8 +538,12 @@ export function AppSidebar() {
                 </div>
               </div>
             )}
-          </FloatingPortal>
+          </Popover.Popup>
+          </Popover.Positioner>
+          </Popover.Portal>
+
         </div>
+        </Popover.Root>
 
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}

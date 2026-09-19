@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { FloatingPortal } from "@/components/ui/floating-portal";
+import { Popover } from "@base-ui/react/popover";
 import {
   QCET_DEPARTMENT_GROUPS,
   type DepartmentPersonnelGroup,
@@ -179,7 +179,7 @@ export function LinearCreateTaskModal({
   // Active open popovers
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
 
-  // Trigger Refs for FloatingPortal
+  // Trigger Refs for Popover
   const deptTriggerRef = React.useRef<HTMLDivElement>(null);
   const statusTriggerRef = React.useRef<HTMLDivElement>(null);
   const priorityTriggerRef = React.useRef<HTMLDivElement>(null);
@@ -525,6 +525,7 @@ export function LinearCreateTaskModal({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       // 1. Cmd/Ctrl + Enter to submit
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
@@ -590,12 +591,10 @@ export function LinearCreateTaskModal({
             <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
 
             {/* Department dropdown selector */}
+            <Popover.Root open={openDropdown === "dept"} onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}>
             <div ref={deptTriggerRef} className="relative inline-block text-left">
-              <button
+              <Popover.Trigger
                 type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "dept" ? null : "dept")
-                }
                 className={cn(
                   "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
                   openDropdown === "dept"
@@ -610,16 +609,13 @@ export function LinearCreateTaskModal({
                     openDropdown === "dept" && "rotate-180 text-foreground"
                   )}
                 />
-              </button>
+              </Popover.Trigger>
 
               {/* Department Floating Portal Dropdown */}
-              <FloatingPortal
-                isOpen={openDropdown === "dept"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={deptTriggerRef}
-                className="w-64 p-1 space-y-0.5"
-                ariaLabel="Chọn đơn vị phòng ban"
-              >
+
+              <Popover.Portal>
+              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+              <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl" aria-label="Chọn đơn vị phòng ban">
                 {QCET_DEPARTMENT_GROUPS.map((dept) => (
                   <button
                     key={dept.code}
@@ -643,8 +639,12 @@ export function LinearCreateTaskModal({
                     )}
                   </button>
                 ))}
-              </FloatingPortal>
+              </Popover.Popup>
+              </Popover.Positioner>
+              </Popover.Portal>
+
             </div>
+            </Popover.Root>
 
             {initialParentTaskTitle && (
               <>
@@ -753,12 +753,10 @@ export function LinearCreateTaskModal({
           {/* 3. Compact Properties Chips Bar (Wrap max 2 rows) */}
           <div className="flex flex-wrap items-center gap-1.5 py-2 my-0.5 border-y border-border/60 shrink-0">
             {/* 3.1 Priority Chip */}
+            <Popover.Root open={openDropdown === "priority"} onOpenChange={(open) => setOpenDropdown(open ? "priority" : null)}>
             <div ref={priorityTriggerRef} className="relative">
-              <button
+              <Popover.Trigger
                 type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "priority" ? null : "priority")
-                }
                 className={cn(
                   "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
                   openDropdown === "priority"
@@ -777,15 +775,12 @@ export function LinearCreateTaskModal({
                     openDropdown === "priority" && "rotate-180 text-foreground"
                   )}
                 />
-              </button>
+              </Popover.Trigger>
 
-              <FloatingPortal
-                isOpen={openDropdown === "priority"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={priorityTriggerRef}
-                className="w-40 p-1 space-y-0.5"
-                ariaLabel="Chọn mức độ ưu tiên"
-              >
+
+              <Popover.Portal>
+              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+              <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl" aria-label="Chọn mức độ ưu tiên">
                 {PRIORITY_KEYS.map((p) => (
                   <button
                     key={p}
@@ -811,16 +806,18 @@ export function LinearCreateTaskModal({
                     {priority === p && <Check className="size-3 text-foreground shrink-0" strokeWidth={1.5} />}
                   </button>
                 ))}
-              </FloatingPortal>
+              </Popover.Popup>
+              </Popover.Positioner>
+              </Popover.Portal>
+
             </div>
+            </Popover.Root>
 
             {/* 3.3 Lead Assignee (DRI) Chip (P0 Field) */}
+            <Popover.Root open={openDropdown === "dri"} onOpenChange={(open) => setOpenDropdown(open ? "dri" : null)}>
             <div ref={driTriggerRef} className="relative">
-              <button
+              <Popover.Trigger
                 type="button"
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "dri" ? null : "dri")
-                }
                 className={cn(
                   "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
                   fieldErrors.lead
@@ -840,15 +837,12 @@ export function LinearCreateTaskModal({
                     openDropdown === "dri" && "rotate-180 text-foreground"
                   )}
                 />
-              </button>
+              </Popover.Trigger>
 
-              <FloatingPortal
-                isOpen={openDropdown === "dri"}
-                onClose={() => setOpenDropdown(null)}
-                triggerRef={driTriggerRef}
-                className="w-60 p-1 space-y-0.5 max-h-56"
-                ariaLabel="Chọn người chủ trì"
-              >
+
+              <Popover.Portal>
+              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+              <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-60 p-1 space-y-0.5 max-h-56 rounded-xl border border-border bg-popover shadow-2xl overflow-y-auto" aria-label="Chọn người chủ trì">
                 {availablePersonnel.map((person) => (
                   <button
                     key={person.name}
@@ -876,8 +870,12 @@ export function LinearCreateTaskModal({
                     )}
                   </button>
                 ))}
-              </FloatingPortal>
+              </Popover.Popup>
+              </Popover.Positioner>
+              </Popover.Portal>
+
             </div>
+            </Popover.Root>
 
             {/* 3.3 Start Date Chip */}
             <VietnameseDatePicker

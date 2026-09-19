@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 import {
   ChevronLeft,
   ChevronRight,
@@ -87,34 +88,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   const pageNumbers = getPageNumbers(safeCurrentPage, totalPages);
 
   // Click outside listener for custom page size dropdown
-  React.useEffect(() => {
-    if (!isSizeMenuOpen) return;
-
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (
-        sizeMenuRef.current &&
-        !sizeMenuRef.current.contains(e.target as Node)
-      ) {
-        setIsSizeMenuOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsSizeMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside, true);
-    document.addEventListener("touchstart", handleClickOutside, true);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside, true);
-      document.removeEventListener("touchstart", handleClickOutside, true);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSizeMenuOpen]);
+  // ponytail: click-outside/Escape handled by Base UI Popover
 
   const handlePrevious = () => {
     if (safeCurrentPage > 1 && !disabled) {
@@ -168,19 +142,19 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         </div>
 
         {/* Custom Page Size Dropdown Popover */}
+        <Popover.Root open={isSizeMenuOpen} onOpenChange={setIsSizeMenuOpen}>
         <div className="relative flex items-center gap-1.5 ml-1" ref={sizeMenuRef}>
           <label htmlFor="task-table-page-size" className="sr-only">
             Số lượng công việc trên mỗi trang
           </label>
 
-          <button
+          <Popover.Trigger
             type="button"
             id="task-table-page-size-trigger"
             aria-label="Số lượng công việc trên mỗi trang"
             aria-expanded={isSizeMenuOpen}
             aria-haspopup="listbox"
             disabled={disabled || totalItems === 0}
-            onClick={() => !disabled && setIsSizeMenuOpen((prev) => !prev)}
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-all hover:bg-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
               isSizeMenuOpen && "border-primary ring-1 ring-primary bg-muted/40"
@@ -194,14 +168,17 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
               )}
               strokeWidth={1.5}
             />
-          </button>
+          </Popover.Trigger>
 
           {/* Floating Dropdown Popover */}
           {isSizeMenuOpen && (
-            <div
+            <Popover.Portal>
+            <Popover.Positioner className="z-50" side="top" align="start" sideOffset={6} collisionPadding={12}>
+            <Popover.Popup
+              style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
               role="listbox"
               aria-label="Chọn số lượng công việc mỗi trang"
-              className="absolute bottom-full mb-1.5 left-0 z-50 min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
+              className="min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
             >
               <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 mb-1">
                 Kích thước trang
@@ -230,7 +207,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                   </button>
                 );
               })}
-            </div>
+            </Popover.Popup>
+            </Popover.Positioner>
+            </Popover.Portal>
           )}
 
           {/* Hidden native select for accessibility, testing & fallback sync */}
@@ -250,6 +229,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             ))}
           </select>
         </div>
+        </Popover.Root>
       </div>
 
       {/* Right section: Page navigation buttons & optional shortcut trigger */}

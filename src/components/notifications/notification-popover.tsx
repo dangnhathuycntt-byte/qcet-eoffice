@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 import Link from "next/link";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
 import {
   AlertTriangle,
   Check,
@@ -12,7 +11,6 @@ import {
   ExternalLink,
   RefreshCw,
 } from "lucide-react";
-import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
@@ -99,32 +97,9 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     });
   }, [unreadCount, setBadgeCounts]);
 
-  // Close on outside click
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef?.current && containerRef.current.contains(e.target as Node)) {
-        return;
-      }
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose, containerRef]);
+  // ponytail: click-outside handled by Base UI Popover
 
-  // Close on Escape key
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  // ponytail: Escape handled by Base UI Popover
 
   // Optimistic mark-read with rollback to server truth on failure (T46).
   const markAsRead = async (id: string) => {
@@ -177,18 +152,15 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
   }, [filteredNotifications]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <m.div
-          key="notification-popover"
+    <Popover.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Popover.Portal>
+        <Popover.Positioner className="z-50" anchor={containerRef} align="end" sideOffset={8} collisionPadding={8}>
+        <Popover.Popup
           ref={popoverRef}
-          role="dialog"
           aria-label="Trung tâm thông báo"
-          variants={popoverVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[420px] max-h-[85vh] sm:max-h-[580px] bg-card rounded-2xl border border-border/80 shadow-2xl z-50 flex flex-col overflow-hidden select-none"
+          finalFocus={() => containerRef?.current?.querySelector<HTMLElement>("button") ?? true}
+          style={{ maxWidth: "var(--available-width)", maxHeight: "min(580px, 85vh, var(--available-height))" }}
+          className="w-[calc(100vw-16px)] sm:w-[420px] bg-card rounded-2xl border border-border/80 shadow-2xl flex flex-col overflow-hidden select-none animate-in fade-in-0 zoom-in-95"
         >
       {/* Header Container */}
       <div className="p-3.5 pb-2.5 border-b border-border/50 bg-muted/20 shrink-0">
@@ -363,9 +335,10 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
           <ExternalLink size={12} strokeWidth={1.5} />
         </Link>
       </div>
-    </m.div>
-    )}
-  </AnimatePresence>
+        </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 

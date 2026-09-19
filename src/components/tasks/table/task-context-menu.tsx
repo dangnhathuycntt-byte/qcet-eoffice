@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 import {
   Star,
   Clock,
@@ -66,135 +67,32 @@ export function TaskContextMenu({
   availableAssignees = [],
 }: TaskContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const previousActiveElement = React.useRef<HTMLElement | null>(null);
   const [activeSubmenu, setActiveSubmenu] = React.useState<ActiveSubmenu>(null);
   const [copiedNotification, setCopiedNotification] = React.useState<string | null>(null);
-  const [menuCoords, setMenuCoords] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const feedback = useFeedback();
 
-  // Focus trap & Return focus (REQ-07 / REQ-23)
   React.useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = (triggerElement || document.activeElement) as HTMLElement | null;
-      const timer = setTimeout(() => {
-        if (menuRef.current) {
-          const firstFocusable = menuRef.current.querySelector<HTMLElement>(
-            'button:not([disabled]), [tabindex="0"]:not([disabled]), input:not([disabled])'
-          );
-          firstFocusable?.focus();
-        }
-      }, 40);
-      return () => clearTimeout(timer);
-    } else {
-      if (previousActiveElement.current) {
-        previousActiveElement.current.focus();
-        previousActiveElement.current = null;
-      }
-    }
-  }, [isOpen, triggerElement]);
-
-  // Adjust menu position to keep within viewport bounds
-  React.useEffect(() => {
-    if (!isOpen || !position) return;
-
-    const menuWidth = 240;
-    const menuHeight = 360;
-    const padding = 12;
-
-    const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
-    const windowHeight = typeof window !== "undefined" ? window.innerHeight : 768;
-
-    let adjustedX = position.x;
-    let adjustedY = position.y;
-
-    if (adjustedX + menuWidth > windowWidth - padding) {
-      adjustedX = windowWidth - menuWidth - padding;
-    }
-    if (adjustedY + menuHeight > windowHeight - padding) {
-      adjustedY = Math.max(padding, windowHeight - menuHeight - padding);
-    }
-
-    setMenuCoords({ x: Math.max(padding, adjustedX), y: Math.max(padding, adjustedY) });
+    if (!isOpen) return;
     setActiveSubmenu(null);
     setShowDeleteConfirm(false);
     setIsDeleting(false);
   }, [isOpen, position]);
 
-  // Handle outside click & escape
+  // ponytail: click-outside + Escape + focus trap → Base UI Popover
   React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
+    if (!isOpen || !task) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-
-      // Focus trap for Tab key
-      if (e.key === "Tab") {
-        if (!menuRef.current) return;
-        const focusables = Array.from(
-          menuRef.current.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [tabindex="0"]:not([disabled]), input:not([disabled])'
-          )
-        );
-        if (focusables.length === 0) return;
-
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-        return;
-      }
-
-      // Keyboard shortcuts when context menu is open
-      if (!task) return;
-
       const key = e.key.toLowerCase();
-      if (key === "s") {
-        e.preventDefault();
-        setActiveSubmenu((prev) => (prev === "status" ? null : "status"));
-      } else if (key === "p") {
-        e.preventDefault();
-        setActiveSubmenu((prev) => (prev === "priority" ? null : "priority"));
-      } else if (key === "a") {
-        e.preventDefault();
-        setActiveSubmenu((prev) => (prev === "assignee" ? null : "assignee"));
-      } else if (key === "d") {
-        e.preventDefault();
-        setActiveSubmenu((prev) => (prev === "dueDate" ? null : "dueDate"));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        onClose();
-        onOpenDetail?.(task);
-      }
+      if (key === "s") { e.preventDefault(); setActiveSubmenu((p) => p === "status" ? null : "status"); }
+      else if (key === "p") { e.preventDefault(); setActiveSubmenu((p) => p === "priority" ? null : "priority"); }
+      else if (key === "a") { e.preventDefault(); setActiveSubmenu((p) => p === "assignee" ? null : "assignee"); }
+      else if (key === "d") { e.preventDefault(); setActiveSubmenu((p) => p === "dueDate" ? null : "dueDate"); }
+      else if (e.key === "Enter") { e.preventDefault(); onClose(); onOpenDetail?.(task); }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, task, onOpenDetail]);
 
   if (!isOpen || !task) {
@@ -333,16 +231,20 @@ export function TaskContextMenu({
   ];
 
   return (
-    <div
+    <>
+    <Popover.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Popover.Portal>
+    <Popover.Positioner className="z-50"
+      anchor={position ? { getBoundingClientRect: () => new DOMRect(position.x, position.y, 0, 0) } : triggerElement}
+      align="start"
+      collisionPadding={12}
+    >
+    <Popover.Popup
+      finalFocus={() => triggerElement ?? true}
       ref={menuRef}
       role="menu"
       aria-label="Thao tác nhanh nhiệm vụ"
-      style={{
-        position: "fixed",
-        top: `${menuCoords.y}px`,
-        left: `${menuCoords.x}px`,
-        zIndex: 9999,
-      }}
+      style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
       className="w-60 select-none rounded-lg border border-border/80 bg-white p-1 text-xs text-slate-800 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
     >
       {/* Copied Feedback Toast */}
@@ -696,6 +598,12 @@ export function TaskContextMenu({
         <span>Xóa / Hủy nhiệm vụ...</span>
       </button>
 
+    </Popover.Popup>
+    </Popover.Positioner>
+    </Popover.Portal>
+    </Popover.Root>
+
+
       {/* Destructive Confirmation Dialog */}
       <DestructiveConfirmDialog
         isOpen={showDeleteConfirm}
@@ -709,6 +617,6 @@ export function TaskContextMenu({
         irreversible
         isConfirming={isDeleting}
       />
-    </div>
+    </>
   );
 }

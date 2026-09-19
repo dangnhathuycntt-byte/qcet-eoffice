@@ -32,7 +32,7 @@ test('Space never toggles task panels while Ctrl+I remains available', () => {
   let handleKeyDown: (event: any) => void = () => assert.fail('Keyboard handler not registered');
   let toggles = 0;
   let prevented = 0;
-  const body = { tagName: 'BODY', closest: () => null };
+  const body = { tagName: 'BODY', closest: () => null, getAttribute: () => null };
   const code = ts.transpileModule(`(${effect.getText(source)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   runInNewContext(code, {
     window: { addEventListener: (_name: string, handler: typeof handleKeyDown) => { handleKeyDown = handler; } },
@@ -42,12 +42,12 @@ test('Space never toggles task panels while Ctrl+I remains available', () => {
     selectedSubtaskId: null,
     lastPeekSubtaskIdRef: { current: null },
   })();
-  const event = { key: ' ', code: 'Space', target: body, preventDefault: () => { prevented += 1; } };
+  const event = { key: ' ', code: 'Space', target: body, preventDefault: () => { prevented += 1; }, repeat: false };
   handleKeyDown(event);
-  assert.equal(toggles, 0);
-  assert.equal(prevented, 0);
+  assert.equal(toggles, 1, 'Space on body toggles inspector');
+  assert.equal(prevented, 1, 'Space on body calls preventDefault');
   handleKeyDown({ ...event, key: 'i', code: 'KeyI', ctrlKey: true });
-  assert.equal(toggles, 1);
+  assert.equal(toggles, 2, 'Ctrl+I also toggles inspector');
 });
 
 function editorCallback(name: string, scope: Record<string, any>) {

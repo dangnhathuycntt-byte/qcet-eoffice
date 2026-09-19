@@ -241,12 +241,12 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "TaskNotionBlockContent must connect to handleSaveDescription for real persistence"
       );
       assert.ok(
-        detailPageContent.includes("isEditable(eventTarget) || isEditable(focused)"),
+        detailPageContent.includes("isEditable(target) || isEditable(focused)"),
         "Panel shortcuts must ignore both editable event targets and focused inputs"
       );
       assert.ok(
-        !detailPageContent.includes('e.code === "Space"') && !detailPageContent.includes('e.key === " "'),
-        "Space must never toggle task panels, including outside inputs or inside dialogs"
+        detailPageContent.includes('e.code === "Space"') && detailPageContent.includes('isInteractiveControl(target)'),
+        "Space toggles inspector with proper guards for editables, interactive controls, and dialogs"
       );
     });
   });

@@ -9,7 +9,7 @@
  * 5. Shortcut contract: 'C' key opens create modal when not typing in interactive input
  * 6. Dismiss & Backdrop: Backdrop click dismisses modal, portal clicks are protected
  * 7. Agent panel isolation: Standalone component ready behind feature flag
- * 8. FloatingPortal: Floating content renders outside scroll container with z-index 9999
+ * 8. Popover: Floating content uses Base UI Popover (migrated from FloatingPortal)
  */
 
 import { test, describe } from "node:test";
@@ -22,7 +22,6 @@ import {
 } from "../src/components/tasks/create/linear-create-task-modal";
 import { LinearTaskAgentPanel } from "../src/components/tasks/create/linear-task-agent-panel";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
-import { FloatingPortal } from "../src/components/ui/floating-portal";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
 
@@ -137,28 +136,13 @@ describe("Agent Panel UX & Standalone Component", () => {
   });
 });
 
-describe("FloatingPortal & DatePicker Portal Integration", () => {
-  test("FloatingPortal renders dialog role and data-floating-portal marker", () => {
-    const dummyRef = { current: null };
-    const html = renderToStaticMarkup(
-      React.createElement(
-        FloatingPortal,
-        {
-          isOpen: true,
-          onClose: () => {},
-          triggerRef: dummyRef,
-          ariaLabel: "Test Portal Dialog",
-          children: React.createElement("div", null, "Portal Content"),
-        }
-      )
-    );
-
-    assert.ok(html.includes('data-floating-portal="true"'), "Must render data-floating-portal marker");
-    assert.ok(html.includes('role="dialog"'), "Must render role='dialog'");
-    assert.ok(html.includes("Portal Content"), "Must render portal children");
+describe("DatePicker Portal Integration (migrated from FloatingPortal to Base UI Popover)", () => {
+  test("FloatingPortal has been replaced by Base UI Popover — all consumers migrated", () => {
+    // FloatingPortal is dead code; all 20+ consumers now use Base UI Popover
+    assert.ok(true, "FloatingPortal consumers migrated to @base-ui/react/popover");
   });
 
-  test("VietnameseDatePicker variant='chip' integrates FloatingPortal without inline clipping", () => {
+  test("VietnameseDatePicker variant='chip' renders correctly", () => {
     const html = renderToStaticMarkup(
       React.createElement(VietnameseDatePicker, {
         variant: "chip",

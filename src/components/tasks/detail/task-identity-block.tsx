@@ -278,21 +278,15 @@ export function TaskIdentityBlock({
     );
   }, [personnelList, leadSearchQuery]);
 
-  // Close dropdowns on click outside
+  // Close dropdowns on outside click / Escape
   React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
-        setIsStatusDropdownOpen(false);
-      }
-      if (priorityMenuRef.current && !priorityMenuRef.current.contains(e.target as Node)) {
-        setIsPriorityDropdownOpen(false);
-      }
-      if (leadMenuRef.current && !leadMenuRef.current.contains(e.target as Node)) {
-        setIsLeadDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const refs = [statusMenuRef, priorityMenuRef, leadMenuRef];
+    const setters = [setIsStatusDropdownOpen, setIsPriorityDropdownOpen, setIsLeadDropdownOpen];
+    const onMouse = (e: MouseEvent) => { refs.forEach((r, i) => { if (r.current && !r.current.contains(e.target as Node)) setters[i](false); }); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setters.forEach((s) => s(false)); };
+    document.addEventListener("mousedown", onMouse);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onMouse); window.removeEventListener("keydown", onKey); };
   }, []);
 
   return (

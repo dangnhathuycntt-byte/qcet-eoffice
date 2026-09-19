@@ -19,6 +19,7 @@ import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-co
 import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
+import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
@@ -180,21 +181,35 @@ export function TaskDetailPage({
       }
       return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
     };
+    const isInteractiveControl = (el: HTMLElement | null): boolean => {
+      if (!el) return false;
+      const tag = el.tagName?.toLowerCase();
+      return tag === "button" || tag === "a" || el.getAttribute("role") === "button" || el.getAttribute("role") === "menuitem" || el.getAttribute("role") === "option";
+    };
+    const isDialogOpen = (): boolean => Boolean(document.querySelector('[role="dialog"]:not([hidden]), [role="menu"]:not([hidden]), [data-state="open"]'));
 
 
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const focused = document.activeElement as HTMLElement | null;
-      const eventTarget = e.target as HTMLElement | null;
+      const target = e.target as HTMLElement | null;
       if (
         e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
-        isEditable(eventTarget) || isEditable(focused) ||
-        eventTarget?.closest?.('[data-slot="task-notion-block-content"]')
+        isEditable(target) || isEditable(focused) ||
+        target?.closest?.('[data-slot="task-notion-block-content"]')
       ) return;
 
       // Phím Cmd/Ctrl + I
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
         if (e.repeat) return;
+        e.preventDefault();
+        handleToggleInspector();
+      }
+      // Space to toggle inspector
+      if (e.code === "Space" || e.key === " ") {
+        if (e.repeat) return;
+        if (isInteractiveControl(target) || isInteractiveControl(focused)) return;
+        if (isDialogOpen()) return;
         e.preventDefault();
         handleToggleInspector();
       }
@@ -939,13 +954,29 @@ export function TaskDetailPage({
 
       {/* 3. Main Workspace Canvas Layout with Centered Page Shell */}
       <div ref={canvasRef} className={styles.canvas}>
-        <div
-          data-slot="task-shell"
-          data-inspector={showInspector ? "open" : "closed"}
-          className={cn(
-            styles.shell,
-            styles.shellOpen
-          )}
+        <TaskDetailSplitLayout
+          inspectorOpen={showInspector}
+          onToggleInspector={handleToggleInspector}
+          inspector={
+            <aside aria-label="Cột thu��c tính nhiệm vụ" style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
+              <LinearPropertiesSidebar
+                task={task}
+                currentUser={currentUser}
+                canEdit={canEdit}
+                onStatusChange={handleStatusChange}
+                onPriorityChange={handlePriorityChange}
+                onDueDateChange={handleDueDateChange}
+                onStartDateChange={handleStartDateChange}
+                onReassignLead={handleReassignLead}
+                onNavigateTab={(tab) => handleTabChange(tab)}
+                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+                onAddSubTask={() => handleTabChange("subtasks")}
+                auditEvents={feedActivityEvents}
+                isMobileAccordion={true}
+                showRelatedSections={true}
+              />
+            </aside>
+          }
         >
           {/* Left / Center Main Content Canvas */}
           <main
@@ -1079,34 +1110,7 @@ export function TaskDetailPage({
           )}
                 </main>
 
-        {/* Right Column: Properties Inspector Sidebar (Linear Style) */}
-          {showInspector && (
-            <aside
-              aria-label="Cột thuộc tính nhiệm vụ"
-              className={styles.inspector}
-              style={{ overflow: "hidden", minWidth: 0 }}
-            >
-              <div style={{ width: 300 }}>
-                <LinearPropertiesSidebar
-                  task={task}
-                  currentUser={currentUser}
-                  canEdit={canEdit}
-                  onStatusChange={handleStatusChange}
-                  onPriorityChange={handlePriorityChange}
-                  onDueDateChange={handleDueDateChange}
-                  onStartDateChange={handleStartDateChange}
-                  onReassignLead={handleReassignLead}
-                  onNavigateTab={(tab) => handleTabChange(tab)}
-                  onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                  onAddSubTask={() => handleTabChange("subtasks")}
-                  auditEvents={feedActivityEvents}
-                  isMobileAccordion={true}
-                  showRelatedSections={true}
-                />
-              </div>
-            </aside>
-          )}
-        </div>
+        </TaskDetailSplitLayout>
       </div>
 
     </div>
