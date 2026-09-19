@@ -2,7 +2,6 @@
 
 // Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
 import * as React from "react";
-import { Group, Panel, Separator, type Layout, type LayoutChangedMeta } from "react-resizable-panels";
 import styles from "./task-detail-page.module.css";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
@@ -17,7 +16,6 @@ import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-heade
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
 import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
-import { TaskSubtasksSection } from "@/components/tasks/detail/task-subtasks-section";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
@@ -26,7 +24,7 @@ import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDue
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
-export type DetailTab = "overview" | "subtasks" | "activity";
+export type DetailTab = "overview" | "activity";
 
 export interface TaskDetailPageProps {
   task: SchoolTask | StaffTask;
@@ -41,86 +39,6 @@ export interface TaskDetailPageProps {
   canEdit?: boolean;
   /** Independently authorized peek targets (descendants with availableActions) */
   peekTasks?: StaffTask[];
-}
-
-const SUBTASK_SPLIT_BREAKPOINT = 1024;
-const SUBTASK_PANE_STORAGE_KEY = "qcet-task-detail-subtask-pane-pct";
-const SUBTASK_MAIN_PANEL_ID = "task-detail-main";
-const SUBTASK_PEEK_PANEL_ID = "task-detail-subtask";
-const DEFAULT_SUBTASK_PANE_PCT = 30;
-
-interface TaskSubtaskSplitProps {
-  peekOpen: boolean;
-  drawer: React.ReactNode;
-  children: React.ReactNode;
-}
-
-function TaskSubtaskSplit({ peekOpen, drawer, children }: TaskSubtaskSplitProps) {
-  const [isDesktop, setIsDesktop] = React.useState(false);
-  const [subtaskPanePct, setSubtaskPanePct] = React.useState(DEFAULT_SUBTASK_PANE_PCT);
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(`(min-width: ${SUBTASK_SPLIT_BREAKPOINT}px)`);
-    const syncViewport = () => setIsDesktop(mediaQuery.matches);
-    syncViewport();
-    mediaQuery.addEventListener("change", syncViewport);
-    return () => mediaQuery.removeEventListener("change", syncViewport);
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      const storedPct = Number(window.localStorage.getItem(SUBTASK_PANE_STORAGE_KEY));
-      if (Number.isFinite(storedPct) && storedPct > 0 && storedPct <= 45) {
-        setSubtaskPanePct(storedPct);
-      }
-    } catch {}
-  }, []);
-
-  const handleLayoutChanged = React.useCallback((layout: Layout, meta: LayoutChangedMeta) => {
-    if (!meta.isUserInteraction) return;
-    const nextPct = layout[SUBTASK_PEEK_PANEL_ID];
-    if (!Number.isFinite(nextPct)) return;
-    setSubtaskPanePct(nextPct);
-    try {
-      window.localStorage.setItem(SUBTASK_PANE_STORAGE_KEY, String(nextPct));
-    } catch {}
-  }, []);
-
-  if (!peekOpen || !isDesktop) {
-    return <>{children}{drawer}</>;
-  }
-
-  return (
-    <Group
-      orientation="horizontal"
-      className={styles.subtaskSplitGroup}
-      onLayoutChanged={handleLayoutChanged}
-      resizeTargetMinimumSize={{ fine: 8, coarse: 16 }}
-    >
-      <Panel
-        id={SUBTASK_MAIN_PANEL_ID}
-        defaultSize={`${100 - subtaskPanePct}%`}
-        minSize="400px"
-        className={styles.subtaskSplitPanel}
-      >
-        {children}
-      </Panel>
-      <Separator
-        id="task-detail-subtask-separator"
-        className={styles.subtaskResizeSeparator}
-        aria-label="Thay đổi độ rộng việc thành phần"
-      />
-      <Panel
-        id={SUBTASK_PEEK_PANEL_ID}
-        defaultSize={`${subtaskPanePct}%`}
-        minSize="320px"
-        maxSize="45%"
-        className={styles.subtaskSplitPanel}
-      >
-        {drawer}
-      </Panel>
-    </Group>
-  );
 }
 
 export function TaskDetailPage({
@@ -154,7 +72,7 @@ export function TaskDetailPage({
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
   const validTab: DetailTab =
-    tabParam === "subtasks" || tabParam === "activity" ? tabParam : "overview";
+    tabParam === "activity" ? tabParam : "overview";
 
   const [activeTab, setActiveTab] = React.useState<DetailTab>(validTab);
   const canvasRef = React.useRef<HTMLDivElement>(null);
@@ -162,7 +80,7 @@ export function TaskDetailPage({
     if (canvasRef.current) canvasRef.current.scrollTop = 0;
   }, [activeTab]);
   React.useEffect(() => {
-    if (tabParam === "subtasks" || tabParam === "activity" || tabParam === "overview") {
+    if (tabParam === "activity" || tabParam === "overview") {
       setActiveTab(tabParam as DetailTab);
     }
   }, [tabParam]);
@@ -184,11 +102,9 @@ export function TaskDetailPage({
     }
   };
 
-  // Subtask Drawer State & History Navigation (URL: ?subtaskId=...)
+  // Subtask Drawer State (URL: ?subtaskId=...)
   const initialSubtaskId = searchParams.get("subtaskId");
   const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
-  const [subtaskHistory, setSubtaskHistory] = React.useState<string[]>([]);
-  const lastPeekSubtaskIdRef = React.useRef<string | null>(initialSubtaskId);
 
   // Sync with URL search params changes (e.g. reload or back/forward)
   React.useEffect(() => {
@@ -196,7 +112,6 @@ export function TaskDetailPage({
       if (typeof window === "undefined") return;
       const params = new URLSearchParams(window.location.search);
       const sid = params.get("subtaskId");
-      if (sid) lastPeekSubtaskIdRef.current = sid;
       setSelectedSubtaskId(sid || null);
     };
     window.addEventListener("popstate", handlePopState);
@@ -221,30 +136,13 @@ export function TaskDetailPage({
   }, []);
 
   const handleOpenSubtaskDrawer = React.useCallback((st: StaffTask) => {
-    lastPeekSubtaskIdRef.current = st.id;
-    setSelectedSubtaskId((currentId) => {
-      if (currentId && currentId !== st.id) {
-        setSubtaskHistory((prev) => [...prev, currentId]);
-      }
-      return st.id;
-    });
+    setSelectedSubtaskId(st.id);
     updateSubtaskUrl(st.id);
   }, [updateSubtaskUrl]);
 
   const handleCloseSubtaskDrawer = React.useCallback(() => {
     setSelectedSubtaskId(null);
-    setSubtaskHistory([]);
     updateSubtaskUrl(null);
-  }, [updateSubtaskUrl]);
-
-  const handleNavigateBackSubtaskHistory = React.useCallback(() => {
-    setSubtaskHistory((prev) => {
-      if (prev.length === 0) return prev;
-      const prevId = prev[prev.length - 1];
-      setSelectedSubtaskId(prevId);
-      updateSubtaskUrl(prevId);
-      return prev.slice(0, -1);
-    });
   }, [updateSubtaskUrl]);
 
   // Handler toggle Inspector dùng chung cho cả nút bấm và phím tắt
@@ -363,23 +261,6 @@ export function TaskDetailPage({
   }, [selectedSubtaskId, subTasks]);
 
   const showInspector = inspectorExpanded && !activeSubtask;
-
-  const handleNavigateSubtaskSibling = React.useCallback((direction: -1 | 1) => {
-    if (!selectedSubtaskId || subTasks.length < 2) return;
-    const currentIndex = subTasks.findIndex((st) => st.id === selectedSubtaskId);
-    if (currentIndex === -1) return;
-    const nextIndex = (currentIndex + direction + subTasks.length) % subTasks.length;
-    const nextId = subTasks[nextIndex].id;
-    lastPeekSubtaskIdRef.current = nextId;
-    setSelectedSubtaskId(nextId);
-    updateSubtaskUrl(nextId);
-  }, [selectedSubtaskId, subTasks, updateSubtaskUrl]);
-
-  const prevSubtaskId = subtaskHistory.length > 0 ? subtaskHistory[subtaskHistory.length - 1] : null;
-  const prevSubtask = React.useMemo(() => {
-    if (!prevSubtaskId) return null;
-    return subTasks.find((st) => st.id === prevSubtaskId) || null;
-  }, [prevSubtaskId, subTasks]);
 
   const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
     setTask((prev) => {
@@ -711,139 +592,6 @@ export function TaskDetailPage({
     router.refresh();
   };
 
-  // Subtask toggle status handler
-  const handleToggleSubtask = async (st: StaffTask) => {
-    const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "WAITING_APPROVAL";
-    const res = st.status === "COMPLETED"
-      ? await updateTaskStatus(st.id, newStatus, undefined, (st as any).version)
-      : await updateTaskProgress(st.id, 100, "Hoàn tất việc thành phần và gửi duyệt", (st as any).version);
-    if (res.ok) {
-      setTask((prev) => {
-        if (!isSchool || !schoolTask) return prev;
-        const updatedSubtasks = schoolTask.subTasks.map((s) =>
-          s.id === st.id
-            ? {
-                ...s,
-                status: ((res.data as any)?.status ?? newStatus) as TaskStatus,
-                progressPercent: st.status === "COMPLETED" ? (s as any).progressPercent : 100,
-                version: (res.data as any)?.version ?? (s as any).version,
-              }
-            : s
-        );
-        return {
-          ...prev,
-          subTasks: updatedSubtasks,
-        } as SchoolTask;
-      });
-
-      router.refresh();
-    } else {
-      notifyError(res.reason || res.error || "Không thể cập nhật việc thành phần", "Lỗi thao tác");
-    }
-  };
-
-  // Inline subtask creation handler
-  const handleCreateSubTaskInline = async (
-    title: string,
-    assigneeName?: string,
-    dueDate?: string,
-    assigneeId?: string
-  ) => {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      throw new Error("Tên việc thành phần không được để trống");
-    }
-
-    let resolvedAssigneeId = assigneeId;
-    if (!resolvedAssigneeId && assigneeName) {
-      try {
-        const cleanName = assigneeName.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/, "").trim();
-        const uRes = await fetch(`/api/users?search=${encodeURIComponent(cleanName)}`);
-        const uData = await uRes.json();
-        if (uData && Array.isArray(uData.users) && uData.users.length > 0) {
-          const matched =
-            uData.users.find((u: any) => u.departmentId === "BGH" || u.department?.shortName === "BGH") ||
-            uData.users.find((u: any) => u.name?.toLowerCase().includes(cleanName.toLowerCase())) ||
-            uData.users[0];
-          if (matched) resolvedAssigneeId = matched.id;
-        }
-      } catch {
-        // Fallback
-      }
-    }
-
-    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
-
-    const payload: Record<string, unknown> = {
-      title: trimmedTitle,
-      parentTaskId: task.id,
-      dueDate: resolvedDueDate,
-      priority: "NORMAL",
-      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
-    };
-
-    if (resolvedAssigneeId) {
-      payload.assigneeId = resolvedAssigneeId;
-    }
-    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
-    if (deptId) {
-      payload.departmentId = deptId;
-    }
-
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => null);
-      let errMsg = errJson?.error?.message || errJson?.message;
-      if (errJson?.details && typeof errJson.details === "object") {
-        const detailList = Object.entries(errJson.details)
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-          .join("; ");
-        if (detailList) errMsg = `${errMsg || "Lỗi xác thực"}: ${detailList}`;
-      }
-      throw new Error(
-        errMsg ||
-        (res.status === 403
-          ? "Bạn không có quyền tạo việc thành phần cho nhiệm vụ này (403 Forbidden)"
-          : "Không thể tạo việc thành phần. Vui lòng thử lại")
-      );
-    }
-
-    const createdData = await res.json().catch(() => null);
-    const created = createdData?.task || createdData?.data;
-
-    const newSubtask: StaffTask = {
-      id: created?.id || `sub-${Date.now()}`,
-      title: created?.title || trimmedTitle,
-      assigneeName: assigneeName || created?.assigneeName || "Chưa phân công",
-      assigneeId: resolvedAssigneeId || created?.assigneeId,
-      status: "NEW",
-      dueDate: created?.dueDate || resolvedDueDate,
-      parentSchoolTaskId: task.id,
-      parentSchoolTaskTitle: task.title,
-      parentSchoolTaskCode: task.code,
-      priority: "NORMAL",
-      progress: 0,
-      updatedAt: new Date().toISOString(),
-    } as StaffTask;
-
-    setTask((prev) => {
-      if (!isSchool || !schoolTask) return prev;
-      return {
-        ...prev,
-        subTasks: [...(schoolTask.subTasks || []), newSubtask],
-        totalSubTasks: (schoolTask.totalSubTasks || 0) + 1,
-      } as SchoolTask;
-    });
-
-    notifySuccess("Tạo việc thành phần thành công", "Thành công");
-    router.refresh();
-  };
-
   // Deliverables add handler
   const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
     const trimmedTitle = title.trim();
@@ -953,25 +701,13 @@ export function TaskDetailPage({
   };
 
   return (
-    <div className={styles.splitWorkspace} data-peek-open={Boolean(activeSubtask)}>
-    <TaskSubtaskSplit
-      peekOpen={Boolean(activeSubtask)}
-      drawer={
-        <SubtaskDetailDrawer
-          isOpen={Boolean(activeSubtask)}
-          onClose={handleCloseSubtaskDrawer}
-          subtask={activeSubtask}
-          parentTaskId={task.id}
-          canEdit={canEdit}
-          onSubtaskUpdated={handleSubtaskUpdated}
-        />
-      }
-    >
+    <div className={styles.splitWorkspace}>
+    {/* Parent pane */}
     <div
       data-slot="task-workspace"
       className={styles.workspace}
     >
-      {/* 1. Header Navigation Bar (Linear Style) */}
+      {/* Header Navigation Bar */}
       <TaskDetailHeaderNav
         taskId={task.id}
         showInspector={showInspector}
@@ -980,7 +716,7 @@ export function TaskDetailPage({
         onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
       />
 
-      {/* 2. Sub-Tabs Bar (Linear Style: Overview, Activity, Issues) */}
+      {/* Tabs: Tổng quan + Hoạt động */}
       <nav
         role="tablist"
         aria-label="Các phân mục chi tiết nhiệm vụ"
@@ -1024,37 +760,15 @@ export function TaskDetailPage({
             </span>
           )}
         </button>
-
-        <button
-          role="tab"
-          id="tab-subtasks"
-          aria-selected={activeTab === "subtasks"}
-          aria-controls="panel-subtasks"
-          type="button"
-          onClick={() => handleTabChange("subtasks")}
-          className={cn(
-            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
-            activeTab === "subtasks"
-              ? "border-primary text-foreground font-semibold"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <span>Việc thành phần</span>
-          {subTasks.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
-              {subTasks.length}
-            </span>
-          )}
-        </button>
       </nav>
 
-      {/* 3. Main Workspace Canvas Layout with Centered Page Shell */}
+      {/* Main Workspace Canvas */}
       <div ref={canvasRef} className={styles.canvas}>
         <TaskDetailSplitLayout
           inspectorOpen={showInspector}
           onToggleInspector={handleToggleInspector}
           inspector={
-            <aside aria-label="Cột thu��c tính nhiệm vụ" style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
+            <aside aria-label="Cột thuộc tính nhiệm vụ" style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
               <LinearPropertiesSidebar
                 task={task}
                 currentUser={currentUser}
@@ -1064,9 +778,7 @@ export function TaskDetailPage({
                 onDueDateChange={handleDueDateChange}
                 onStartDateChange={handleStartDateChange}
                 onReassignLead={handleReassignLead}
-                onNavigateTab={(tab) => handleTabChange(tab)}
-                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                onAddSubTask={() => handleTabChange("subtasks")}
+                onNavigateTab={(tab) => handleTabChange(tab as DetailTab)}
                 auditEvents={feedActivityEvents}
                 isMobileAccordion={true}
                 showRelatedSections={true}
@@ -1074,20 +786,14 @@ export function TaskDetailPage({
             </aside>
           }
         >
-          {/* Left / Center Main Content Canvas */}
           <main
             role="tabpanel"
             id={`panel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
-            className={cn(
-              styles.content,
-              !showInspector && styles.expanded
-            )}
+            className={styles.content}
           >
-          {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <>
-              {/* Task Identity Block (Icon, Title, Subtitle, Compact Properties khi Sidebar đóng) */}
               <TaskIdentityBlock
                 task={task}
                 currentUser={currentUser}
@@ -1104,9 +810,6 @@ export function TaskDetailPage({
                 showInlineProperties={!showInspector && !activeSubtask}
               />
 
-
-
-              {/* Nội dung chính dạng block, hòa trực tiếp vào canvas nhiệm vụ */}
               <TaskNotionBlockContent
                 globalFileDrop={!activeSubtask}
                 taskId={task.id}
@@ -1115,42 +818,16 @@ export function TaskDetailPage({
                 canEdit={canEdit}
                 onSaveContent={handleSaveDescription}
                 onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                onOpenCreateSubtask={() => handleTabChange("subtasks")}
               />
             </>
           )}
 
-          {/* TAB 2: ISSUES / SUBTASKS */}
-          {activeTab === "subtasks" && (
-            <div
-              className="space-y-4"
-            >
-              <TaskSubtasksSection
-                parentId={task.id}
-                subTasks={subTasks}
-                canEdit={canEdit}
-                departmentCode={
-                  (task as any).departmentCode ||
-                  (task as any).leadDepartmentCode ||
-                  (task as any).department ||
-                  (task as any).leadDepartment ||
-                  clientUser?.departmentCode
-                }
-                onToggleSubtask={handleToggleSubtask}
-                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
-                onCreateSubTaskInline={handleCreateSubTaskInline}
-              />
-            </div>
-          )}
-
-          {/* TAB 3: ACTIVITY FEED & PROGRESS REPORTS */}
           {activeTab === "activity" && (
             <div className="space-y-4">
-              {/* Chronological Audit Timeline */}
               <section className="space-y-4">
                 <div className="pb-3 border-b border-border/40">
                   <h2 className="text-xs font-semibold text-foreground tracking-tight">
-                    Nhật ký xử lý & Lịch sử hoạt động
+                    Nhật ký xử lý &amp; Lịch sử hoạt động
                   </h2>
                   <p className="text-xs text-muted-foreground pt-0.5">
                     Ghi nhận đầy đủ các thay đổi, cập nhật và thao tác trên nhiệm vụ.
@@ -1199,43 +876,52 @@ export function TaskDetailPage({
       </div>
 
     </div>
-    </TaskSubtaskSplit>
 
-            {/* Modal Cập nhật tiến độ */}
-      {isProgressModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-border/50 pb-3">
-              <span className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</span>
-              <button
-                type="button"
-                onClick={() => setIsProgressModalOpen(false)}
-                className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              >
-                <X className="size-4" strokeWidth={1.5} />
-              </button>
-            </div>
+    {/* Child peek — direct sibling inside unified workspace */}
+    <SubtaskDetailDrawer
+      isOpen={Boolean(activeSubtask)}
+      onClose={handleCloseSubtaskDrawer}
+      subtask={activeSubtask}
+      parentTaskId={task.id}
+      canEdit={canEdit}
+      onSubtaskUpdated={handleSubtaskUpdated}
+    />
 
-            <TaskProgressComposer
-              taskId={task.id}
-              initialProgress={currentProgressPercent}
-              taskStatus={task.status}
-              leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
-              completedSubtasks={completedSubtasks}
-              totalSubtasks={subTasks.length}
-              canEdit={canEdit}
-              onProgressUpdated={async (p, note) => {
-                await handleProgressUpdated(p, note);
-                setIsProgressModalOpen(false);
-              }}
-              onStatusChange={async (id, st, note) => {
-                await handleStatusChange(id, st, note);
-                setIsProgressModalOpen(false);
-              }}
-            />
+    {/* Modal Cập nhật tiến độ */}
+    {isProgressModalOpen && (
+      <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between border-b border-border/50 pb-3">
+            <span className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</span>
+            <button
+              type="button"
+              onClick={() => setIsProgressModalOpen(false)}
+              className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X className="size-4" strokeWidth={1.5} />
+            </button>
           </div>
+
+          <TaskProgressComposer
+            taskId={task.id}
+            initialProgress={currentProgressPercent}
+            taskStatus={task.status}
+            leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
+            completedSubtasks={completedSubtasks}
+            totalSubtasks={subTasks.length}
+            canEdit={canEdit}
+            onProgressUpdated={async (p, note) => {
+              await handleProgressUpdated(p, note);
+              setIsProgressModalOpen(false);
+            }}
+            onStatusChange={async (id, st, note) => {
+              await handleStatusChange(id, st, note);
+              setIsProgressModalOpen(false);
+            }}
+          />
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 }

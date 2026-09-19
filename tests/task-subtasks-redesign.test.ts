@@ -3,259 +3,196 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-describe("Subtasks UX Redesign Suite — Compact Sidebar, Subtask Drawer & Simplified Navigation", () => {
-  const sidebarPath = path.join(
-    process.cwd(),
-    "src/components/tasks/detail/linear-properties-sidebar.tsx"
-  );
-  const drawerPath = path.join(
-    process.cwd(),
-    "src/components/tasks/detail/subtask-detail-drawer.tsx"
-  );
-  const detailPagePath = path.join(
-    process.cwd(),
-    "src/components/tasks/task-detail-page.tsx"
-  );
-  const sharedEditorPath = path.join(
-    process.cwd(),
-    "src/components/tasks/detail/task-notion-block-content.tsx"
-  );
-  const headerPath = path.join(
-    process.cwd(),
-    "src/components/tasks/detail/task-detail-header-nav.tsx"
-  );
+describe("Task Detail Unified Workspace — Layout, Tabs, Drawer & Sidebar", () => {
+  const sidebarPath = path.join(process.cwd(), "src/components/tasks/detail/linear-properties-sidebar.tsx");
+  const drawerPath = path.join(process.cwd(), "src/components/tasks/detail/subtask-detail-drawer.tsx");
+  const detailPagePath = path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx");
+  const sharedEditorPath = path.join(process.cwd(), "src/components/tasks/detail/task-notion-block-content.tsx");
+  const headerPath = path.join(process.cwd(), "src/components/tasks/detail/task-detail-header-nav.tsx");
+  const cssPath = path.join(process.cwd(), "src/components/tasks/task-detail-page.module.css");
 
   const sidebarContent = fs.readFileSync(sidebarPath, "utf-8");
   const drawerContent = fs.readFileSync(drawerPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
   const sharedEditorContent = fs.readFileSync(sharedEditorPath, "utf-8");
   const headerContent = fs.readFileSync(headerPath, "utf-8");
+  const cssContent = fs.readFileSync(cssPath, "utf-8");
 
-  describe("1. Parent Task Detail — Only Overview & Activity Tabs, No IDs", () => {
-    it("parent detail has Overview and Activity tabs", () => {
+  describe("1. Unified Workspace Layout", () => {
+    it("splitWorkspace uses flexbox row, not CSS grid", () => {
+      // Check the .splitWorkspace rule specifically
+      const splitIdx = cssContent.indexOf(".splitWorkspace {");
+      assert.ok(splitIdx >= 0, ".splitWorkspace must exist");
+      const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
-        detailPageContent.includes('activeTab === "overview"'),
-        "TaskDetailPage must have overview tab"
+        splitBlock.includes("display: flex") && splitBlock.includes("flex-direction: row"),
+        "splitWorkspace must use flexbox row layout"
       );
       assert.ok(
-        detailPageContent.includes('activeTab === "activity"'),
-        "TaskDetailPage must have activity tab"
+        !splitBlock.includes("grid-template-columns"),
+        "splitWorkspace must not use CSS grid"
+      );
+      assert.ok(
+        !cssContent.includes("data-peek-open"),
+        "No data-peek-open grid switching rule"
       );
     });
 
-    it("TaskDetailHeaderNav uses taskId prop, no taskCode/taskTitle/onBack/breadcrumbs", () => {
+    it("single card shell — border/radius on splitWorkspace, not on workspace/peekSurface", () => {
+      // splitWorkspace has card styling
+      const splitIdx = cssContent.indexOf(".splitWorkspace");
+      const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
-        headerContent.includes("taskId: string"),
-        "Header must accept taskId as required prop"
-      );
-      assert.ok(
-        !headerContent.includes("taskCode"),
-        "Header must not have taskCode prop"
-      );
-      assert.ok(
-        !headerContent.includes("onBack"),
-        "Header must not have onBack prop"
-      );
-      assert.ok(
-        !headerContent.includes("showBreadcrumbs"),
-        "Header must not have showBreadcrumbs prop"
-      );
-      assert.ok(
-        headerContent.includes("getTaskDetailUrl"),
-        "Header must use getTaskDetailUrl for canonical copy link"
+        splitBlock.includes("border-radius") && splitBlock.includes("border:"),
+        "splitWorkspace must have card border and radius"
       );
     });
 
-    it("Header copy link awaits clipboard and cleans timer on unmount", () => {
+    it("peekSurface is inline 420px pane on desktop, fixed overlay on mobile", () => {
+      assert.ok(cssContent.includes("width: 420px"), "Peek pane must be 420px on desktop");
+      assert.ok(cssContent.includes("flex-shrink: 0"), "Peek pane must not shrink");
       assert.ok(
-        headerContent.includes("await navigator.clipboard.writeText"),
-        "Copy link must await clipboard write"
+        cssContent.includes("border-left: 1px solid var(--border)"),
+        "Peek pane uses 1px left border as divider"
       );
       assert.ok(
-        headerContent.includes("copyTimerRef"),
-        "Copy link must use a ref-tracked timer"
-      );
-      assert.ok(
-        headerContent.includes("clearTimeout(copyTimerRef.current)"),
-        "Copy link must clean timer on repeat / unmount"
+        cssContent.includes("position: fixed"),
+        "Peek pane must be fixed overlay on mobile"
       );
     });
 
-    it("Header toggle hidden when child drawer open, restored otherwise", () => {
-      assert.ok(
-        headerContent.includes("onToggleInspector") &&
-          headerContent.includes("isDrawerOpen"),
-        "Header must expose panel toggle, hidden when drawer is open"
-      );
-      assert.ok(
-        headerContent.includes("!isDrawerOpen"),
-        "Panel toggle must be conditionally hidden when drawer is open"
-      );
-    });
-  });
-
-  describe("2. Sidebar Compact Subtasks List", () => {
-    it("renders all subtask entries (not sliced to 3) with scrollable container", () => {
-      assert.ok(
-        sidebarContent.includes("subTasks.map("),
-        "Sidebar must render all subtask entries, not slice"
-      );
-      assert.ok(
-        !sidebarContent.includes("subTasks.slice(0, 3)"),
-        "Sidebar must not silently truncate list to 3"
-      );
-      assert.ok(
-        sidebarContent.includes("max-h-") && sidebarContent.includes("overflow-y-auto"),
-        "Subtask list container must be scrollable"
-      );
+    it("content pane has no max-width cap", () => {
+      // Find the .content rule
+      const contentIdx = cssContent.indexOf(".content {");
+      if (contentIdx >= 0) {
+        const contentBlock = cssContent.slice(contentIdx, cssContent.indexOf("}", contentIdx) + 1);
+        assert.ok(
+          !contentBlock.includes("max-width: 750px"),
+          "Content must not have 750px max-width"
+        );
+      }
+      assert.ok(!cssContent.includes(".expanded"), "No .expanded class should exist");
+      assert.ok(!cssContent.includes(".shell {"), "No .shell class should exist");
     });
 
-    it("renders compact items with line-clamp-2, assignee, and due date", () => {
+    it("no react-resizable-panels in TaskDetailPage", () => {
       assert.ok(
-        sidebarContent.includes("line-clamp-2"),
-        "Sidebar subtask titles must be limited to max 2 lines"
+        !detailPageContent.includes("react-resizable-panels"),
+        "TaskDetailPage must not import react-resizable-panels"
       );
       assert.ok(
-        sidebarContent.includes("formatAssigneeNameWithTitle(st.assigneeName)"),
-        "Sidebar must format assignee names with academic titles"
-      );
-      assert.ok(
-        sidebarContent.includes("formatDisplayDate(st.dueDate)"),
-        "Sidebar subtask items must display due date"
-      );
-    });
-
-    it("empty state shows compact row, add button only renders with real onAddSubTask callback", () => {
-      assert.ok(
-        sidebarContent.includes("Việc thành phần") &&
-          sidebarContent.includes('className="font-mono text-muted-foreground text-xs font-medium">0</span>'),
-        "Sidebar must render canonical compact empty row"
-      );
-      assert.ok(
-        sidebarContent.includes('aria-label="Thêm việc thành phần"'),
-        "Add button must exist with proper aria-label"
-      );
-      assert.ok(
-        sidebarContent.includes("canEdit && onAddSubTask &&"),
-        "Add button must only render when both canEdit and onAddSubTask are truthy"
+        !detailPageContent.includes("TaskSubtaskSplit"),
+        "TaskSubtaskSplit component must be removed"
       );
     });
   });
 
-  describe("3. Subtask Drawer — Child-First, No Parent Navigation", () => {
-    it("drawer uses parentTaskId for canonical copy link, not window.location", () => {
-      assert.ok(
-        drawerContent.includes("parentTaskId: string"),
-        "Drawer must accept parentTaskId as required prop"
-      );
-      assert.ok(
-        drawerContent.includes("getTaskDetailUrl(parentTaskId, subtask.id)"),
-        "Drawer must use getTaskDetailUrl with parentTaskId for canonical deep link"
-      );
-      assert.ok(
-        !drawerContent.includes("window.location.pathname"),
-        "Drawer must not derive copy link from window.location.pathname"
-      );
+  describe("2. Tabs — Only Tổng quan + Hoạt động", () => {
+    it("has overview and activity tabs", () => {
+      assert.ok(detailPageContent.includes('activeTab === "overview"'));
+      assert.ok(detailPageContent.includes('activeTab === "activity"'));
     });
 
-    it("drawer does not have parentTaskTitle, parentTaskCode, or onOpenAnotherSubtask props", () => {
+    it("does NOT have subtasks tab", () => {
       assert.ok(
-        !drawerContent.includes("parentTaskTitle"),
-        "Drawer must not have parentTaskTitle prop"
+        !detailPageContent.includes('tab-subtasks'),
+        "No subtasks tab button"
       );
       assert.ok(
-        !drawerContent.includes("parentTaskCode"),
-        "Drawer must not have parentTaskCode prop"
+        !detailPageContent.includes('activeTab === "subtasks"'),
+        "No subtasks tab panel"
       );
       assert.ok(
-        !drawerContent.includes("onOpenAnotherSubtask"),
-        "Drawer must not have onOpenAnotherSubtask prop"
-      );
-    });
-
-    it("drawer always shows close button plus subtle copy link with hover/focus/touch visibility", () => {
-      assert.ok(
-        drawerContent.includes('title="Đóng (Esc)"'),
-        "Close button must always be visible"
-      );
-      assert.ok(
-        drawerContent.includes("group-hover/peek-header:text-muted-foreground") &&
-          drawerContent.includes("focus-visible:text-foreground"),
-        "Copy link must be visible on hover/focus"
-      );
-      assert.ok(
-        drawerContent.includes("active:!text-foreground"),
-        "Copy link must be visible on touch (active state)"
-      );
-    });
-
-    it("drawer copy link awaits clipboard, reports error, and cleans timer", () => {
-      assert.ok(
-        drawerContent.includes("await navigator.clipboard.writeText"),
-        "Copy must await clipboard"
-      );
-      assert.ok(
-        drawerContent.includes("notifyError") && drawerContent.includes("Lỗi clipboard"),
-        "Copy must report clipboard errors"
-      );
-      assert.ok(
-        drawerContent.includes("copyTimerRef") &&
-          drawerContent.includes("clearTimeout(copyTimerRef.current)"),
-        "Copy must clean timer ref"
-      );
-    });
-
-    it("drawer child title is first, uses DirectInlineEditor and real API mutations", () => {
-      assert.ok(
-        drawerContent.includes("<DirectInlineEditor"),
-        "Drawer must use DirectInlineEditor for title editing"
-      );
-      assert.ok(
-        drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"),
-        "Drawer must execute real API PATCH mutations"
-      );
-      assert.ok(
-        drawerContent.includes("<TaskNotionBlockContent"),
-        "Drawer must include shared document editor"
-      );
-    });
-
-    it("shared editor presentation stays flat in both main task and subtask surfaces", () => {
-      const rootIndex = sharedEditorContent.indexOf('data-slot="task-notion-block-content"');
-      assert.ok(rootIndex > 0, "Shared Plate editor root must exist");
-      const rootBlock = sharedEditorContent.slice(rootIndex, rootIndex + 500);
-      assert.ok(
-        !rootBlock.includes("rounded-xl") &&
-          !rootBlock.includes("border border-border") &&
-          !rootBlock.includes("bg-card"),
-        "Main task and subtask must share the same flat, canvas-integrated editor shell"
+        !detailPageContent.includes("TaskSubtasksSection"),
+        "TaskSubtasksSection must not be imported or rendered"
       );
     });
   });
 
-  describe("4. Activity Tab — Timeline Promoted, No Progress Banner", () => {
-    it("completely eliminates 'Báo cáo tiến độ mới nhất' banner from Activity tab", () => {
+  describe("3. Sidebar — No Subtask List", () => {
+    it("sidebar does not have subtask list, onSelectSubtask, or onAddSubTask", () => {
       assert.ok(
-        !detailPageContent.includes("Báo cáo tiến độ mới nhất"),
-        "TaskDetailPage must not contain 'Báo cáo tiến độ mới nhất' banner"
+        !sidebarContent.includes("onSelectSubtask"),
+        "Sidebar must not have onSelectSubtask prop"
+      );
+      assert.ok(
+        !sidebarContent.includes("onAddSubTask"),
+        "Sidebar must not have onAddSubTask prop"
+      );
+      assert.ok(
+        !sidebarContent.includes("subTasks.map("),
+        "Sidebar must not render a subtask list"
       );
     });
 
-    it("promotes audit timeline to the top of Activity tab", () => {
+    it("sidebar onNavigateTab only accepts overview or activity", () => {
+      assert.ok(
+        sidebarContent.includes('"overview" | "activity"'),
+        "onNavigateTab type must be overview | activity only"
+      );
+      assert.ok(
+        !sidebarContent.includes('"subtasks"'),
+        "Sidebar must not reference subtasks tab"
+      );
+    });
+  });
+
+  describe("4. Subtask Drawer — Child-First, Minimal Chrome", () => {
+    it("drawer uses parentTaskId for canonical copy link", () => {
+      assert.ok(drawerContent.includes("parentTaskId: string"));
+      assert.ok(drawerContent.includes("getTaskDetailUrl"));
+    });
+
+    it("drawer has no parent navigation chrome", () => {
+      assert.ok(!drawerContent.includes("parentTaskTitle"));
+      assert.ok(!drawerContent.includes("parentTaskCode"));
+      assert.ok(!drawerContent.includes("onOpenAnotherSubtask"));
+    });
+
+    it("drawer shows close + hover copy link", () => {
+      assert.ok(drawerContent.includes('title="Đóng (Esc)"'));
+      assert.ok(
+        drawerContent.includes("group-hover/peek-header") || drawerContent.includes("group/peek-header"),
+        "Copy link must use group hover pattern"
+      );
+    });
+
+    it("drawer uses DirectInlineEditor and real API mutations", () => {
+      assert.ok(drawerContent.includes("<DirectInlineEditor"));
+      assert.ok(drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"));
+      assert.ok(drawerContent.includes("<TaskNotionBlockContent"));
+    });
+  });
+
+  describe("5. Header — Simplified", () => {
+    it("header uses taskId, no taskCode or breadcrumbs", () => {
+      assert.ok(headerContent.includes("taskId: string"));
+      assert.ok(!headerContent.includes("taskCode"));
+      assert.ok(!headerContent.includes("onBack"));
+    });
+
+    it("header has inspector toggle hidden when drawer open", () => {
+      assert.ok(headerContent.includes("onToggleInspector"));
+      assert.ok(headerContent.includes("!isDrawerOpen"));
+    });
+  });
+
+  describe("6. Activity Tab Content", () => {
+    it("activity tab has audit timeline", () => {
       const activityIndex = detailPageContent.indexOf('activeTab === "activity"');
       assert.ok(activityIndex > 0, "Activity tab block must exist");
-
-      const activityBlock = detailPageContent.slice(activityIndex);
-      const timelineIndex = activityBlock.indexOf("Nhật ký xử lý & Lịch sử hoạt động");
-      assert.ok(timelineIndex > 0, "Audit timeline must be present in Activity tab");
-
-      const beforeTimeline = activityBlock.slice(0, timelineIndex);
+      const activityBlock = detailPageContent.slice(activityIndex, activityIndex + 2000);
       assert.ok(
-        !beforeTimeline.includes("Cập nhật tiến độ"),
-        "No progress banner or update button before audit timeline in Activity tab"
+        activityBlock.includes("feedActivityEvents"),
+        "Activity tab must render feed events"
+      );
+    });
+
+    it("no progress banner before timeline", () => {
+      assert.ok(
+        !detailPageContent.includes("Báo cáo tiến độ mới nhất"),
+        "No progress banner in activity tab"
       );
     });
   });
 });
-
-// QCET subtasks tests verified
