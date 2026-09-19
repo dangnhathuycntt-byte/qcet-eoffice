@@ -668,8 +668,7 @@ function ImageEl({ attributes, children, element }: any) {
           <div className="relative group/image my-2 max-w-full">
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
               <img src={url} alt={caption || "Hình ảnh"} className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none" loading="lazy" />
-              {!editor.api.isReadOnly() && <input type="text" defaultValue={caption || ""} placeholder="Thêm chú thích..." onBlur={(ev) => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ content: ev.target.value } as any, { at: p }); }} className="w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40" />}
-              {!editor.api.isReadOnly() && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
+              {!editor.api.isReadOnly() && <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
                 {[25, 50, 75, 100].map((w) => <button key={w} type="button" onClick={() => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p }); }} className={"px-1.5 py-0.5 text-[10px] rounded cursor-pointer " + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{w}%</button>)}
               </div>}
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
@@ -678,6 +677,7 @@ function ImageEl({ attributes, children, element }: any) {
                 </button>
               </div>
             </div>
+            {!editor.api.isReadOnly() && <input type="text" defaultValue={caption || ""} placeholder="Thêm chú thích..." onBlur={(ev) => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ content: ev.target.value } as any, { at: p }); }} className="block w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40" style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }} />}
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
