@@ -13,6 +13,7 @@ import {
   BaseParagraphPlugin,
   NodeIdPlugin,
   TrailingBlockPlugin,
+  ExitBreakPlugin,
 } from "platejs";
 import {
   BaseH1Plugin,
@@ -20,15 +21,56 @@ import {
   BaseH3Plugin,
   BaseBlockquotePlugin,
   BaseHorizontalRulePlugin,
+  HeadingRules,
+  BlockquoteRules,
+  HorizontalRuleRules,
+  BoldRules,
+  ItalicRules,
+  CodeRules,
+  StrikethroughRules,
 } from "@platejs/basic-nodes";
-import { BaseCalloutPlugin } from "@platejs/callout";
-import { BaseListPlugin } from "@platejs/list";
-import { BaseIndentPlugin } from "@platejs/indent";
-import { BlockSelectionPlugin, BlockSelectionAfterEditable, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
-import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import {
+  BoldPlugin,
+  ItalicPlugin,
+  UnderlinePlugin,
+  StrikethroughPlugin,
+  CodePlugin,
+  HighlightPlugin,
+} from "@platejs/basic-nodes/react";
+import { BaseCalloutPlugin } from "@platejs/callout";
+import { BaseListPlugin, BulletedListRules, OrderedListRules, TaskListRules } from "@platejs/list";
+import { BaseIndentPlugin, indent as plateIndent, outdent as plateOutdent } from "@platejs/indent";
+import { LinkPlugin, triggerFloatingLinkInsert } from "@platejs/link/react";
+import { SlashPlugin, SlashInputPlugin } from "@platejs/slash-command/react";
+import { BlockSelectionPlugin, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
+import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
+import {
+  TablePlugin,
+  TableRowPlugin,
+  TableCellPlugin,
+  TableCellHeaderPlugin,
+} from "@platejs/table/react";
+import { TogglePlugin } from "@platejs/toggle/react";
+import { MentionPlugin, MentionInputPlugin } from "@platejs/mention/react";
+import { MediaEmbedPlugin } from "@platejs/media/react";
+import { TocPlugin } from "@platejs/toc/react";
+import {
+  autoUpdate,
+  flip,
+  offset,
+  shift,
+  size,
+  useFloating,
+} from "@floating-ui/react";
+import {
+  Copy,
+  ArrowRight,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Code2,
+  Link,
   GripVertical,
   Type,
   Heading1,
@@ -42,16 +84,30 @@ import {
   Minus,
   Paperclip,
   Link2,
-  Search,
   Trash2,
   ExternalLink,
+  ChevronRight,
+  ChevronDown,
+  Search,
   CheckCircle2,
   Circle,
   Image as ImageIcon,
   FileText,
   Bookmark,
   Globe,
+  IndentIncrease,
+  IndentDecrease,
   UploadCloud,
+  Highlighter,
+  Table as TableIcon,
+  AtSign,
+  Tv,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  BookOpen,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
@@ -84,7 +140,10 @@ export type NotionBlockType =
   | "image"
   | "attachment"
   | "link"
-  | "bookmark";
+  | "bookmark"
+  | "table"
+  | "toggle"
+  | "media_embed";
 
 export interface NotionBlockItem {
   id: string;
@@ -103,6 +162,10 @@ export interface NotionBlockItem {
   thumbnailUrl?: string;
   isInternalQcet?: boolean;
   entityType?: string;
+  align?: "left" | "center" | "right" | "justify";
+  open?: boolean;
+  rows?: Array<{ cells: Array<{ content: string; isHeader?: boolean; children?: any[] }> }>;
+  providerType?: string;
 }
 
 export function moveBlock(blocks: NotionBlockItem[], activeId: string, overId: string) {
@@ -168,57 +231,65 @@ export function resolveUrlMetadata(rawUrl: string, currentTaskTitle?: string): U
           entityType: "task",
         };
       }
-      if (pathname.includes("/documents/")) {
+      if (pathname.includes("/documents/") || pathname.includes("/van-ban/")) {
         return {
           url,
-          title: "Văn bản & Hồ sơ công việc",
+          title: "Văn bản & Hồ sơ QCET",
           domain: "QCET E-Office",
-          description: "Cổng văn bản điện tử và hồ sơ điều hành",
+          description: "Văn bản chỉ đạo, hồ sơ hành chính nội bộ",
           isInternalQcet: true,
           entityType: "document",
         };
       }
-      if (pathname.includes("/meetings/")) {
+      if (pathname.includes("/schedule/") || pathname.includes("/lich-tuan/") || pathname.includes("/meetings/")) {
         return {
           url,
-          title: "Lịch họp & Công tác",
+          title: "Lịch công tác trường",
           domain: "QCET E-Office",
-          description: "Lịch công tác và biên bản họp điều hành",
+          description: "Lịch tuần và sự kiện công tác toàn trường",
           isInternalQcet: true,
-          entityType: "meeting",
+          entityType: pathname.includes("/meetings/") ? "meeting" : "schedule",
         };
       }
     }
 
-    // Link thông thường ngoài hệ thống
-    let displayTitle = domain.replace(/^www\./, "");
-    if (domain.includes("github.com")) displayTitle = "GitHub Repository";
-    else if (domain.includes("youtube.com") || domain.includes("youtu.be")) displayTitle = "YouTube Video";
-    else if (domain.includes("google.com")) displayTitle = "Tài liệu Google";
+    // Link bên ngoài: Trích xuất tên trang từ domain
+    const cleanDomain = domain.replace(/^www\./, "");
+    let siteName = cleanDomain;
+    if (cleanDomain.includes("google.com")) siteName = "Google Drive / Docs";
+    else if (cleanDomain.includes("github.com")) siteName = "GitHub Repository";
+    else if (cleanDomain.includes("youtube.com") || cleanDomain.includes("youtu.be")) siteName = "YouTube Video";
+    else if (cleanDomain.includes("canva.com")) siteName = "Canva Design";
+    else if (cleanDomain.includes("figma.com")) siteName = "Figma File";
+    else if (cleanDomain.includes("notion.site") || cleanDomain.includes("notion.so")) siteName = "Notion Page";
+    else if (cleanDomain.includes("zalo.me")) siteName = "Zalo Group / Chat";
 
     return {
       url,
-      title: displayTitle,
-      domain: domain.replace(/^www\./, ""),
-      description: pathname !== "/" ? pathname : undefined,
+      title: siteName,
+      domain: cleanDomain,
+      description: "Liên kết ngoài được đính kèm trong nội dung nhiệm vụ",
+      favicon: `https://www.google.com/s2/favicons?domain=${cleanDomain}&sz=32`,
+      isInternalQcet: false,
     };
   } catch {
     return {
       url,
       title: url,
-      domain: url,
+      domain: "Liên kết ngoài",
+      isInternalQcet: false,
     };
   }
 }
 
 // ---------------------------------------------------------------------------
-// Slash Menu options (unchanged QCET command inventory)
+// Menu item options for Slash command & Quick action
 // ---------------------------------------------------------------------------
 
 interface MenuItemOption {
   id: string;
   type: NotionBlockType;
-  group: "Soạn thảo" | "Danh sách" | "Tiêu đề" | "Trích dẫn & Ghi chú" | "Phương tiện & Tệp" | "Liên kết" | "Phân cách";
+  group: "Soạn thảo" | "Danh sách" | "Tiêu đề" | "Trích dẫn & Ghi chú" | "Bảng biểu & Cấu trúc" | "Phương tiện & Tệp" | "Liên kết" | "Phân cách";
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -236,15 +307,27 @@ const MENU_OPTIONS: MenuItemOption[] = [
   { id: "opt-h3", type: "heading", level: 3, group: "Tiêu đề", title: "Tiêu đề 3", description: "Tiêu đề nhỏ", icon: Heading3, shortcut: "###" },
   { id: "opt-quote", type: "quote", group: "Trích dẫn & Ghi chú", title: "Trích dẫn", description: "Trích dẫn ý kiến hoặc chỉ đạo", icon: Quote, shortcut: ">" },
   { id: "opt-callout", type: "callout", group: "Trích dẫn & Ghi chú", title: "Ghi chú nổi bật", description: "Hộp lưu ý hoặc thông điệp quan trọng", icon: Info },
+  { id: "opt-table", type: "table", group: "Bảng biểu & Cấu trúc", title: "Bảng biểu", description: "Tạo bảng dữ liệu phân công, báo cáo", icon: TableIcon, shortcut: "/table" },
+  { id: "opt-toggle", type: "toggle", group: "Bảng biểu & Cấu trúc", title: "Khối thu gọn (Toggle)", description: "Thu gọn hướng dẫn, danh mục dài", icon: ChevronRight, shortcut: "/toggle" },
   { id: "opt-image", type: "image", group: "Phương tiện & Tệp", title: "Hình ảnh", description: "Tải lên hoặc dán hình ảnh trực quan", icon: ImageIcon, shortcut: "/image" },
   { id: "opt-attachment", type: "attachment", group: "Phương tiện & Tệp", title: "Tệp đính kèm", description: "Đính kèm tệp PDF, DOCX, bảng tính", icon: Paperclip, shortcut: "/file" },
+  { id: "opt-media-embed", type: "media_embed", group: "Phương tiện & Tệp", title: "Nhúng phương tiện", description: "Nhúng video hướng dẫn YouTube/Loom/Drive", icon: Tv, shortcut: "/embed" },
   { id: "opt-bookmark", type: "bookmark", group: "Liên kết", title: "Dấu trang web", description: "Thẻ xem trước trực quan cho liên kết", icon: Bookmark, shortcut: "/bookmark" },
   { id: "opt-link", type: "link", group: "Liên kết", title: "Liên kết", description: "Đường dẫn liên kết web hoặc tài liệu ngoài", icon: Link2, shortcut: "/link" },
   { id: "opt-divider", type: "divider", group: "Phân cách", title: "Đường phân cách", description: "Đường kẻ chia tách phân đoạn", icon: Minus, shortcut: "---" },
 ];
 
+// Mock QCET staff directory for @mention combobox
+const QCET_STAFF_DIRECTORY = [
+  { id: "u-1", name: "TS. Nguyễn Văn A", role: "Hiệu trưởng", email: "nva@qcet.edu.vn" },
+  { id: "u-2", name: "ThS. Trần Thị B", role: "Trưởng phòng Đào tạo", email: "ttb@qcet.edu.vn" },
+  { id: "u-3", name: "ThS. Lê Văn C", role: "Trưởng khoa CNTT", email: "lvc@qcet.edu.vn" },
+  { id: "u-4", name: "CN. Đặng Nhật Huy", role: "Chuyên viên CNTT", email: "dnhhuy@qcet.edu.vn" },
+  { id: "u-5", name: "ThS. Phạm Thu D", role: "Phó Trưởng phòng TCHC", email: "ptd@qcet.edu.vn" },
+];
+
 // ---------------------------------------------------------------------------
-// Custom Plate plugins for QCET void block types
+// Custom Plate plugins for QCET void & custom block types
 // ---------------------------------------------------------------------------
 
 const QcetImagePlugin = createPlatePlugin({
@@ -267,8 +350,28 @@ const QcetBookmarkPlugin = createPlatePlugin({
   node: { isElement: true, isVoid: true, type: PT.bookmark },
 });
 
+// Alignment Plugin using Plate nodeProps inject
+const QcetAlignPlugin = createPlatePlugin({
+  key: "align",
+  inject: {
+    nodeProps: {
+      styleKey: "textAlign",
+      validNodeValues: ["left", "center", "right", "justify"],
+      defaultNodeValue: "left",
+    },
+    targetPlugins: [
+      BaseParagraphPlugin.key,
+      BaseH1Plugin.key,
+      BaseH2Plugin.key,
+      BaseH3Plugin.key,
+      BaseBlockquotePlugin.key,
+      BaseCalloutPlugin.key,
+    ],
+  },
+});
+
 // ---------------------------------------------------------------------------
-// Plate element render components — visual output matches original exactly
+// Plate element render components
 // ---------------------------------------------------------------------------
 
 function ParagraphEl({ attributes, children, element }: any) {
@@ -276,6 +379,9 @@ function ParagraphEl({ attributes, children, element }: any) {
   const indent = element.indent;
   const listStyle = element.listStyleType;
   const checked = element.checked;
+  const textAlign = element.textAlign;
+
+  const alignStyle = textAlign ? { textAlign } : undefined;
 
   if (indent >= 1 && listStyle) {
     if (typeof checked === "boolean") {
@@ -286,7 +392,7 @@ function ParagraphEl({ attributes, children, element }: any) {
         }
       };
       return (
-        <div {...attributes} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
+        <div {...attributes} style={alignStyle} className="flex items-start gap-2.5 py-0.5 text-sm leading-relaxed">
           <button type="button" contentEditable={false} onClick={toggleChecked} className="mt-0.5 shrink-0 select-none cursor-pointer" aria-label={checked ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}>
             {checked ? (
               <CheckCircle2 className="size-4 text-emerald-600 fill-emerald-100" />
@@ -302,7 +408,7 @@ function ParagraphEl({ attributes, children, element }: any) {
     }
     if (listStyle === "decimal") {
       return (
-        <div {...attributes} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
+        <div {...attributes} style={alignStyle} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
           <span contentEditable={false} className="font-mono text-xs text-muted-foreground font-semibold shrink-0 mt-0.5 w-4 text-right select-none">
             {(element.listStart ?? 1)}.
           </span>
@@ -311,7 +417,7 @@ function ParagraphEl({ attributes, children, element }: any) {
       );
     }
     return (
-      <div {...attributes} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
+      <div {...attributes} style={alignStyle} className="flex items-start gap-2 py-0.5 text-sm leading-relaxed">
         <span contentEditable={false} className="size-1.5 rounded-full bg-foreground/70 shrink-0 mt-2" />
         <span className="flex-1 min-w-0">{children}</span>
       </div>
@@ -319,31 +425,31 @@ function ParagraphEl({ attributes, children, element }: any) {
   }
 
   return (
-    <div {...attributes} className="text-sm leading-relaxed text-foreground py-0.5">
+    <div {...attributes} style={alignStyle} className="text-sm leading-relaxed text-foreground py-0.5">
       {children}
     </div>
   );
 }
 
-function H1El({ attributes, children }: any) {
-  return <h1 {...attributes} className="text-xl sm:text-2xl mt-2 mb-0.5 font-bold tracking-tight text-foreground">{children}</h1>;
+function H1El({ attributes, children, element }: any) {
+  return <h1 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-xl sm:text-2xl mt-2 mb-0.5 font-bold tracking-tight text-foreground">{children}</h1>;
 }
 
-function H2El({ attributes, children }: any) {
-  return <h2 {...attributes} className="text-base sm:text-lg font-semibold mt-1.5 mb-0.5 tracking-tight text-foreground">{children}</h2>;
+function H2El({ attributes, children, element }: any) {
+  return <h2 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-base sm:text-lg font-semibold mt-1.5 mb-0.5 tracking-tight text-foreground">{children}</h2>;
 }
 
-function H3El({ attributes, children }: any) {
-  return <h3 {...attributes} className="text-sm sm:text-base font-semibold mt-1 mb-0.5 tracking-tight text-foreground">{children}</h3>;
+function H3El({ attributes, children, element }: any) {
+  return <h3 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-sm sm:text-base font-semibold mt-1 mb-0.5 tracking-tight text-foreground">{children}</h3>;
 }
 
-function BlockquoteEl({ attributes, children }: any) {
-  return <blockquote {...attributes} className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90 text-sm leading-relaxed">{children}</blockquote>;
+function BlockquoteEl({ attributes, children, element }: any) {
+  return <blockquote {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90 text-sm leading-relaxed">{children}</blockquote>;
 }
 
 function CalloutEl({ attributes, children }: any) {
   return (
-    <div {...attributes} className="flex items-start gap-2.5 p-2.5 my-1 rounded-xl bg-primary/5 border border-primary/20 text-foreground text-sm leading-relaxed">
+    <div {...attributes} className="flex items-start gap-2 px-2.5 py-1.5 my-1 rounded-xl bg-primary/5 border border-primary/20 text-foreground text-sm leading-relaxed">
       <Info className="size-4 text-primary shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">{children}</div>
     </div>
@@ -358,6 +464,195 @@ function HrEl({ attributes, children }: any) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Table Components
+// ---------------------------------------------------------------------------
+
+function TableEl({ attributes, children }: any) {
+  return (
+    <div className="my-3 overflow-x-auto rounded-lg border border-border/50">
+      <table {...attributes} className="w-full border-collapse text-sm text-left">
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function TableRowEl({ attributes, children }: any) {
+  return <tr {...attributes} className="border-b border-border/30 last:border-b-0">{children}</tr>;
+}
+
+function TableCellEl({ attributes, children }: any) {
+  return <td {...attributes} className="border-r border-border/30 last:border-r-0 px-3 py-2 min-w-[100px] min-h-[36px] align-top text-foreground leading-relaxed relative group/cell [&[data-selected]]:bg-primary/[0.06]">{children}</td>;
+}
+
+function TableCellHeaderEl({ attributes, children }: any) {
+  return <th {...attributes} className="border-r border-border/30 last:border-r-0 bg-muted/30 px-3 py-2 min-w-[100px] min-h-[36px] align-top font-semibold text-foreground leading-relaxed select-none relative [&[data-selected]]:bg-primary/[0.06]">{children}</th>;
+}
+
+// ---------------------------------------------------------------------------
+// Toggle (Collapsible) Component
+// ---------------------------------------------------------------------------
+
+function ToggleEl({ attributes, children, element }: any) {
+  const editor = useEditorRef();
+  const isOpen = element.open ?? true;
+
+  const handleToggle = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!editor.api.isReadOnly()) {
+      const path = editor.api.findPath(element);
+      if (path) {
+        editor.tf.setNodes({ open: !isOpen } as any, { at: path });
+      }
+    }
+  }, [editor, element, isOpen]);
+
+  return (
+    <div {...attributes} className="my-1.5 rounded-lg border border-border/40 bg-muted/10 p-1 transition-colors">
+      <div className="flex items-start gap-1.5">
+        <button
+          type="button"
+          contentEditable={false}
+          onClick={handleToggle}
+          className="mt-0.5 size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-transform"
+          aria-label={isOpen ? "Thu gọn" : "Mở rộng"}
+        >
+          <ChevronRight className={cn("size-3.5 transition-transform duration-150", isOpen && "rotate-90")} />
+        </button>
+        <div className="flex-1 min-w-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mention Components
+// ---------------------------------------------------------------------------
+
+function MentionEl({ attributes, children, element }: any) {
+  return (
+    <span
+      {...attributes}
+      contentEditable={false}
+      className="inline-flex items-center gap-1 mx-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-medium select-none align-baseline"
+      title={`Cán bộ QCET: ${element.value || ""}`}
+    >
+      <AtSign className="size-3" />
+      <span>{element.value || "Cán bộ"}</span>
+      {children}
+    </span>
+  );
+}
+
+function MentionInputElement({ attributes, children, element }: any) {
+  const editor = useEditorRef();
+  const query = (element.children?.[0]?.text || "").replace(/^@/, "").toLowerCase();
+  const [filtered, setFiltered] = React.useState(QCET_STAFF_DIRECTORY);
+
+  React.useEffect(() => {
+    if (!query) setFiltered(QCET_STAFF_DIRECTORY);
+    else setFiltered(QCET_STAFF_DIRECTORY.filter((s) => s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query)));
+  }, [query]);
+
+  const selectStaff = React.useCallback((staff: typeof QCET_STAFF_DIRECTORY[0]) => {
+    const path = editor.api.findPath(element);
+    if (path) {
+      editor.tf.removeNodes({ at: path });
+      editor.tf.insertNodes([
+        {
+          type: PT.mention,
+          key: staff.id,
+          value: staff.name,
+          children: [{ text: "" }],
+        } as any,
+        { text: " " },
+      ], { at: path });
+    }
+  }, [editor, element]);
+
+  return (
+    <span {...attributes} className="relative inline">
+      <span className="text-primary font-medium">@{query}</span>
+      <div contentEditable={false} className="absolute left-0 top-full mt-1 z-50 w-64 rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+        <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nhân sự QCET</div>
+        <div className="max-h-48 overflow-y-scroll space-y-0.5">
+          {filtered.map((staff) => (
+            <button
+              key={staff.id}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); selectStaff(staff); }}
+              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs text-left cursor-pointer"
+            >
+              <div>
+                <div className="font-medium text-foreground">{staff.name}</div>
+                <div className="text-[10px] text-muted-foreground">{staff.role}</div>
+              </div>
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-2 py-2 text-xs text-muted-foreground text-center">Không tìm thấy cán bộ</div>
+          )}
+        </div>
+      </div>
+      {children}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Media Embed Component
+// ---------------------------------------------------------------------------
+
+function MediaEmbedEl({ attributes, children, element }: any) {
+  const { url } = element;
+  return (
+    <div {...attributes} className="my-3">
+      <div contentEditable={false} className="aspect-video w-full rounded-xl overflow-hidden border border-border/60 bg-muted/20 shadow-2xs">
+        {url ? (
+          <iframe
+            src={url.includes("youtube.com/watch?v=") ? url.replace("watch?v=", "embed/") : url}
+            title="Nhúng phương tiện"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground text-xs gap-1.5">
+            <Tv className="size-6 text-primary/60" />
+            <span>Chưa cấu hình URL video/iframe</span>
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TOC Component
+// ---------------------------------------------------------------------------
+
+function TocEl({ attributes, children }: any) {
+  return (
+    <div {...attributes} contentEditable={false} className="my-3 p-3 rounded-xl border border-primary/20 bg-primary/5 text-xs">
+      <div className="flex items-center gap-1.5 font-semibold text-primary mb-2">
+        <BookOpen className="size-4" />
+        <span>Mục lục nội dung</span>
+      </div>
+      <div className="text-muted-foreground italic">Mục lục được tự động trích xuất từ các tiêu đề H1, H2, H3.</div>
+      {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Media / Attachment / Link / Bookmark Renderers (existing)
+// ---------------------------------------------------------------------------
 
 function ImageEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
@@ -437,34 +732,30 @@ function LinkBlockEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const [draftUrl, setDraftUrl] = React.useState("");
   const { url, description: desc } = element;
-  const text = element.children?.[0]?.text || "";
-  const commitUrl = React.useCallback((rawUrl: string) => {
-    const meta = resolveUrlMetadata(rawUrl);
+  const setLinkUrl = React.useCallback((newUrl: string) => {
+    const meta = resolveUrlMetadata(newUrl);
     const path = editor.api.findPath(element);
-    if (path) editor.tf.setNodes({ url: meta.url, description: meta.description } as any, { at: path });
+    if (path) editor.tf.setNodes({ url: meta.url, description: meta.description, isInternalQcet: meta.isInternalQcet } as any, { at: path });
   }, [editor, element]);
   return (
     <div {...attributes}>
       <div contentEditable={false} className="py-0.5">
-        {!url && (
-          <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
-            <Link2 className="size-3.5 text-primary shrink-0" />
-            <input type="text" value={draftUrl} autoFocus onChange={(e) => setDraftUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) { e.preventDefault(); commitUrl(draftUrl.trim()); } }}
-              placeholder="Dán URL liên kết (nhấn Enter)..."
-              className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono" />
-          </div>
-        )}
-        {url && (
-          <div className="flex items-center gap-2.5 p-2 my-0.5 rounded-lg border border-border/60 hover:bg-muted/20 transition-colors text-xs">
-            <Globe className="size-3.5 text-primary/70 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-foreground text-sm truncate">{text || url}</div>
-              {desc && <div className="text-muted-foreground text-[11px] truncate">{desc}</div>}
-            </div>
-            <a href={url} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
+        {url ? (
+          <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/30 border border-border/60 hover:bg-muted/50 transition-colors text-xs group/link">
+            <Link2 className="size-4 text-primary shrink-0 ml-1" />
+            <a href={url} target="_blank" rel="noreferrer" className="flex-1 min-w-0 font-medium text-primary hover:underline truncate">
+              {url}
+            </a>
+            {desc && <span className="text-muted-foreground truncate max-w-xs">{desc}</span>}
+            <a href={url} target="_blank" rel="noreferrer" className="p-1 rounded text-muted-foreground hover:text-foreground">
               <ExternalLink className="size-3.5" />
             </a>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
+            <Link2 className="size-4 text-muted-foreground shrink-0" />
+            <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setLinkUrl(draftUrl); }} placeholder="Dán đường dẫn liên kết (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
+            <button type="button" onClick={() => { if (draftUrl.trim()) setLinkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer">Lưu</button>
           </div>
         )}
       </div>
@@ -476,39 +767,40 @@ function LinkBlockEl({ attributes, children, element }: any) {
 function BookmarkEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const [draftUrl, setDraftUrl] = React.useState("");
-  const { url, description: desc } = element;
-  const text = element.children?.[0]?.text || "";
-  let domain = "";
-  try { domain = new URL(url || "").hostname.replace(/^www\./, ""); } catch {}
-  const commitUrl = React.useCallback((rawUrl: string) => {
-    const meta = resolveUrlMetadata(rawUrl);
+  const { url, description: desc, favicon, thumbnailUrl, isInternalQcet } = element;
+  const setBookmarkUrl = React.useCallback((newUrl: string) => {
+    const meta = resolveUrlMetadata(newUrl);
     const path = editor.api.findPath(element);
-    if (path) editor.tf.setNodes({ url: meta.url, description: meta.description } as any, { at: path });
+    if (path) editor.tf.setNodes({ url: meta.url, description: meta.description, favicon: meta.favicon, isInternalQcet: meta.isInternalQcet } as any, { at: path });
   }, [editor, element]);
   return (
     <div {...attributes}>
-      <div contentEditable={false} className="py-1">
-        {!url && (
-          <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs">
-            <Bookmark className="size-3.5 text-primary shrink-0" />
-            <input type="text" value={draftUrl} autoFocus onChange={(e) => setDraftUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) { e.preventDefault(); commitUrl(draftUrl.trim()); } }}
-              placeholder="Dán URL trang web để tạo dấu trang (nhấn Enter)..."
-              className="w-full bg-transparent text-xs text-foreground focus:outline-hidden font-mono" />
-          </div>
-        )}
-        {url && (
-          <div className="group/bookmark my-1.5 flex items-stretch justify-between rounded-xl border border-border/60 hover:border-border hover:bg-muted/20 transition-all overflow-hidden text-xs">
-            <a href={url} target="_blank" rel="noreferrer" className="flex-1 p-3 flex flex-col justify-between min-w-0">
-              <div className="space-y-1">
-                <div className="font-semibold text-sm text-foreground hover:text-primary transition-colors line-clamp-1">{text || domain}</div>
-                {desc && <p className="text-muted-foreground text-[11px] line-clamp-2 leading-relaxed">{desc}</p>}
+      <div contentEditable={false} className="py-0.5">
+        {url ? (
+          <div className="flex items-center gap-3 p-3 my-1.5 rounded-xl bg-card border border-border/70 hover:border-primary/40 hover:bg-muted/30 transition-all text-xs shadow-2xs group/bm">
+            {thumbnailUrl ? (
+              <img src={thumbnailUrl} alt="" className="size-10 rounded-lg object-cover shrink-0" />
+            ) : favicon ? (
+              <img src={favicon} alt="" className="size-5 rounded shrink-0" />
+            ) : (
+              <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0"><Globe className="size-4" /></div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-foreground text-sm truncate flex items-center gap-1.5">
+                <span>{url}</span>
+                {isInternalQcet && <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/15 text-primary font-semibold">Nội bộ</span>}
               </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground/70 text-[11px] font-mono mt-2">
-                <Globe className="size-3 text-primary/70 shrink-0" />
-                <span className="truncate">{domain}</span>
-              </div>
+              {desc && <div className="text-muted-foreground text-[11px] truncate mt-0.5">{desc}</div>}
+            </div>
+            <a href={url} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+              <ExternalLink className="size-4" />
             </a>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-2 my-1 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
+            <Bookmark className="size-4 text-muted-foreground shrink-0" />
+            <input type="text" value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && draftUrl.trim()) setBookmarkUrl(draftUrl); }} placeholder="Dán link web để tạo thẻ dấu trang (nhấn Enter)..." className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50 text-xs" />
+            <button type="button" onClick={() => { if (draftUrl.trim()) setBookmarkUrl(draftUrl); }} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer">Tạo thẻ</button>
           </div>
         )}
       </div>
@@ -517,15 +809,470 @@ function BookmarkEl({ attributes, children, element }: any) {
   );
 }
 
+function InlineLinkEl({ attributes, children, element }: any) {
+  return (
+    <a
+      {...attributes}
+      href={element.url}
+      target="_blank"
+      rel="noreferrer"
+      className="text-primary underline decoration-primary/40 hover:decoration-primary cursor-pointer"
+    >
+      {children}
+    </a>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// Block wrapper with hover-only six-dot handle
+// Multi-block selection toolbar
 // ---------------------------------------------------------------------------
 
+function MultiBlockToolbar({ editor }: { editor: any }) {
+  const readOnly = editor.api.isReadOnly();
+  const [hasSelection, setHasSelection] = React.useState(false);
 
+  React.useEffect(() => {
+    const check = () => {
+      try {
+        const ids = editor.api.blockSelection?.getSelectedIds?.() || editor.getOption?.(BlockSelectionPlugin, "selectedIds");
+        setHasSelection(ids && (ids instanceof Set ? ids.size > 1 : Object.keys(ids).length > 1));
+      } catch { setHasSelection(false); }
+    };
+    const timer = setInterval(check, 300);
+    return () => clearInterval(timer);
+  }, [editor]);
+
+  if (!hasSelection || readOnly) return null;
+
+  return (
+    <div className="sticky bottom-2 z-40 flex items-center justify-center pointer-events-none">
+      <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-1.5 shadow-lg text-xs">
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.tf.duplicateSelection?.(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer">
+          <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
+        </button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.tf.deleteFragment?.(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+          <Trash2 className="size-3.5" /> Xóa
+        </button>
+        <div className="w-px h-4 bg-border/60 mx-0.5" />
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); plateIndent(editor); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer" title="Thụt vào">
+          <IndentIncrease className="size-3.5 text-muted-foreground" />
+        </button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); plateOutdent(editor); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer" title="Giảm thụt">
+          <IndentDecrease className="size-3.5 text-muted-foreground" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
-// renderElement — wraps each block with the handle gutter
+// Toolbar Dropdown primitive (click-to-toggle, closes on outside click)
 // ---------------------------------------------------------------------------
+
+function ToolbarDropdown({
+  trigger,
+  children,
+  className,
+}: {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <div onMouseDown={(e) => { e.preventDefault(); setOpen((p) => !p); }}>
+        {trigger}
+      </div>
+      {open && (
+        <div
+          className={cn(
+            "absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
+            className,
+          )}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({
+  icon: Icon,
+  label,
+  onAction,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onAction: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onAction(); }}
+      className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left hover:bg-muted transition-colors cursor-pointer"
+    >
+      <Icon className="size-3.5 text-muted-foreground shrink-0" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Compact Fixed / Sticky Toolbar Component (P0)
+// ---------------------------------------------------------------------------
+
+function FixedToolbar({ editor }: { editor: any }) {
+  const readOnly = editor.api.isReadOnly();
+  if (readOnly) return null;
+
+  const isMarkActive = (mark: string) => {
+    try { return editor.api.isMarkActive(mark); } catch { return false; }
+  };
+  const toggleMark = (mark: string) => {
+    editor.tf.toggleMark(mark);
+  };
+
+  const handleInsertTable = () => {
+    const tableId = `t-${Date.now()}`;
+    const tableNode: PlateElemT = {
+      id: tableId,
+      type: PT.table,
+      children: [
+        {
+          id: `tr-${tableId}-0`,
+          type: PT.tableRow,
+          children: [
+            { id: `th-${tableId}-0-0`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 1" }] }] },
+            { id: `th-${tableId}-0-1`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 2" }] }] },
+            { id: `th-${tableId}-0-2`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 3" }] }] },
+          ],
+        },
+        {
+          id: `tr-${tableId}-1`,
+          type: PT.tableRow,
+          children: [
+            { id: `td-${tableId}-1-0`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+            { id: `td-${tableId}-1-1`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+            { id: `td-${tableId}-1-2`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+          ],
+        },
+      ],
+    };
+    editor.tf.insertNodes([tableNode] as any);
+  };
+
+  const handleInsertToggle = () => {
+    const toggleNode: PlateElemT = {
+      id: `toggle-${Date.now()}`,
+      type: PT.toggle,
+      open: true,
+      children: [{ text: "Mục hướng dẫn / Checklist..." }],
+    };
+    editor.tf.insertNodes([toggleNode] as any);
+  };
+
+  const handleAlign = (align: "left" | "center" | "right" | "justify") => {
+    editor.tf.setNodes({ textAlign: align } as any);
+  };
+
+  const tbBtn = "size-7 flex items-center justify-center rounded-md cursor-pointer transition-colors";
+  const tbBtnIdle = "text-muted-foreground hover:bg-muted hover:text-foreground";
+
+  return (
+    <div className="sticky top-0 z-30 flex items-center gap-0.5 border-b border-border/60 bg-card/95 backdrop-blur-xs px-2 py-1 text-xs select-none">
+      {/* ── Text style dropdown (H1/H2/H3/Paragraph) ── */}
+      <ToolbarDropdown
+        trigger={
+          <button type="button" title="Văn bản" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+            <Type className="size-3.5" />
+            <ChevronDown className="size-2.5 opacity-60" />
+          </button>
+        }
+      >
+        <DropdownItem icon={Type} label="Văn bản" onAction={() => editor.tf.setNodes({ type: PT.paragraph } as any)} />
+        <DropdownItem icon={Heading1} label="Tiêu đề 1" onAction={() => editor.tf.setNodes({ type: PT.h1 } as any)} />
+        <DropdownItem icon={Heading2} label="Tiêu đề 2" onAction={() => editor.tf.setNodes({ type: PT.h2 } as any)} />
+        <DropdownItem icon={Heading3} label="Tiêu đề 3" onAction={() => editor.tf.setNodes({ type: PT.h3 } as any)} />
+      </ToolbarDropdown>
+
+      <div className="w-px h-4 bg-border/60 mx-0.5" />
+
+      {/* ── Inline marks: Bold / Italic / Underline / Highlight ── */}
+      <button type="button" title="In đậm (⌘B)" onMouseDown={(e) => { e.preventDefault(); toggleMark("bold"); }} className={cn(tbBtn, isMarkActive("bold") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+        <Bold className="size-3.5" />
+      </button>
+      <button type="button" title="In nghiêng (⌘I)" onMouseDown={(e) => { e.preventDefault(); toggleMark("italic"); }} className={cn(tbBtn, isMarkActive("italic") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+        <Italic className="size-3.5" />
+      </button>
+      <button type="button" title="Gạch chân (⌘U)" onMouseDown={(e) => { e.preventDefault(); toggleMark("underline"); }} className={cn(tbBtn, isMarkActive("underline") ? "bg-primary/15 text-primary" : tbBtnIdle)}>
+        <Underline className="size-3.5" />
+      </button>
+      <button type="button" title="Đánh dấu nổi bật (⌘⇧H)" onMouseDown={(e) => { e.preventDefault(); toggleMark("highlight"); }} className={cn(tbBtn, isMarkActive("highlight") ? "bg-amber-100 text-amber-900" : tbBtnIdle)}>
+        <Highlighter className="size-3.5" />
+      </button>
+
+      <div className="w-px h-4 bg-border/60 mx-0.5" />
+
+      {/* ── Link ── */}
+      <button type="button" title="Chèn liên kết (⌘K)" onMouseDown={(e) => { e.preventDefault(); triggerFloatingLinkInsert(editor, { focused: true }); }} className={cn(tbBtn, tbBtnIdle)}>
+        <Link className="size-3.5" />
+      </button>
+
+      <div className="w-px h-4 bg-border/60 mx-0.5" />
+
+      {/* ── List dropdown ── */}
+      <ToolbarDropdown
+        trigger={
+          <button type="button" title="Danh sách" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+            <List className="size-3.5" />
+            <ChevronDown className="size-2.5 opacity-60" />
+          </button>
+        }
+      >
+        <DropdownItem icon={List} label="Dấu đầu dòng" onAction={() => editor.tf.setNodes({ type: PT.paragraph, listStyleType: "disc", indent: 1 } as any)} />
+        <DropdownItem icon={ListOrdered} label="Đánh số" onAction={() => editor.tf.setNodes({ type: PT.paragraph, listStyleType: "decimal", indent: 1 } as any)} />
+        <DropdownItem icon={CheckSquare} label="Checklist" onAction={() => editor.tf.setNodes({ type: PT.paragraph, listStyleType: "disc", indent: 1, checked: false } as any)} />
+      </ToolbarDropdown>
+
+      {/* ── Alignment dropdown ── */}
+      <ToolbarDropdown
+        trigger={
+          <button type="button" title="Căn chỉnh" className={cn(tbBtn, tbBtnIdle, "gap-0.5 w-auto px-1.5")}>
+            <AlignLeft className="size-3.5" />
+            <ChevronDown className="size-2.5 opacity-60" />
+          </button>
+        }
+      >
+        <DropdownItem icon={AlignLeft} label="Căn trái" onAction={() => handleAlign("left")} />
+        <DropdownItem icon={AlignCenter} label="Căn giữa" onAction={() => handleAlign("center")} />
+        <DropdownItem icon={AlignRight} label="Căn phải" onAction={() => handleAlign("right")} />
+        <DropdownItem icon={AlignJustify} label="Căn đều" onAction={() => handleAlign("justify")} />
+      </ToolbarDropdown>
+
+      <div className="w-px h-4 bg-border/60 mx-0.5" />
+
+      {/* ── Table ── */}
+      <button type="button" title="Chèn bảng biểu" onMouseDown={(e) => { e.preventDefault(); handleInsertTable(); }} className={cn(tbBtn, tbBtnIdle)}>
+        <TableIcon className="size-3.5" />
+      </button>
+
+      {/* ── More / Overflow (Quote, Callout, Toggle, Divider) ── */}
+      <ToolbarDropdown
+        trigger={
+          <button type="button" title="Thêm" className={cn(tbBtn, tbBtnIdle)}>
+            <MoreHorizontal className="size-3.5" />
+          </button>
+        }
+      >
+        <DropdownItem icon={Quote} label="Trích dẫn" onAction={() => editor.tf.setNodes({ type: PT.blockquote } as any)} />
+        <DropdownItem icon={Info} label="Ghi chú nổi bật" onAction={() => editor.tf.setNodes({ type: PT.callout } as any)} />
+        <DropdownItem icon={ChevronRight} label="Khối thu gọn" onAction={() => handleInsertToggle()} />
+        <DropdownItem icon={Minus} label="Đường phân cách" onAction={() => editor.tf.insertNodes([{ id: `hr-${Date.now()}`, type: PT.hr, children: [{ text: "" }] }] as any)} />
+      </ToolbarDropdown>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Floating Toolbar Component
+// ---------------------------------------------------------------------------
+
+function FloatingToolbar({ editor }: { editor: any }) {
+  const [visible, setVisible] = React.useState(false);
+  const readOnly = editor.api.isReadOnly();
+
+  const { refs, floatingStyles } = useFloating({
+    strategy: "fixed",
+    placement: "top",
+    whileElementsMounted: autoUpdate,
+    middleware: [offset(8), flip(), shift({ padding: 8 })],
+  });
+
+  React.useEffect(() => {
+    if (readOnly) { setVisible(false); return; }
+    const sel = editor.selection;
+    if (!sel || editor.api.isCollapsed?.(sel)) {
+      setVisible(false);
+      return;
+    }
+    const domSel = window.getSelection();
+    if (!domSel || domSel.rangeCount === 0) {
+      setVisible(false);
+      return;
+    }
+    const range = domSel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setVisible(false);
+      return;
+    }
+    refs.setPositionReference({
+      getBoundingClientRect: () => rect,
+    });
+    setVisible(true);
+  }, [editor, editor.selection, readOnly, refs]);
+
+  if (!visible || typeof document === "undefined") return null;
+
+  const isMarkActive = (mark: string) => {
+    try { return editor.api.isMarkActive(mark); } catch { return false; }
+  };
+  const toggleMark = (mark: string) => {
+    editor.tf.toggleMark(mark);
+  };
+
+  const marks = [
+    { key: "bold", icon: Bold, label: "In đậm (⌘B)" },
+    { key: "italic", icon: Italic, label: "In nghiêng (⌘I)" },
+    { key: "underline", icon: Underline, label: "Gạch chân (⌘U)" },
+    { key: "strikethrough", icon: Strikethrough, label: "Gạch xóa" },
+    { key: "code", icon: Code2, label: "Mã lệnh" },
+    { key: "highlight", icon: Highlighter, label: "Đánh dấu nổi bật (⌘⇧H)" },
+  ];
+
+  return createPortal(
+    <div
+      ref={refs.setFloating}
+      style={floatingStyles}
+      className="z-50 flex items-center gap-0.5 rounded-lg border border-border/80 bg-card p-0.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+    >
+      {marks.map(({ key, icon: Icon, label }) => (
+        <button
+          key={key}
+          type="button"
+          title={label}
+          onMouseDown={(e) => { e.preventDefault(); toggleMark(key); }}
+          className={cn(
+            "size-7 flex items-center justify-center rounded-md text-xs transition-colors cursor-pointer",
+            isMarkActive(key) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <Icon className="size-3.5" strokeWidth={1.5} />
+        </button>
+      ))}
+      <div className="w-px h-4 bg-border/60 mx-0.5" />
+      <button
+        type="button"
+        title="Chèn liên kết (⌘K)"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          triggerFloatingLinkInsert(editor, { focused: true });
+        }}
+        className="size-7 flex items-center justify-center rounded-md text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+      >
+        <Link className="size-3.5" strokeWidth={1.5} />
+      </button>
+    </div>,
+    document.body,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Block wrapper with hover-only six-dot handle + block menu
+// ---------------------------------------------------------------------------
+
+const TURN_INTO_OPTIONS = [
+  { type: "text", label: "Văn bản", icon: Type },
+  { type: "heading", level: 1, label: "Tiêu đề 1", icon: Heading1 },
+  { type: "heading", level: 2, label: "Tiêu đề 2", icon: Heading2 },
+  { type: "heading", level: 3, label: "Tiêu đề 3", icon: Heading3 },
+  { type: "bulleted_list", label: "Dấu đầu dòng", icon: List },
+  { type: "numbered_list", label: "Đánh số", icon: ListOrdered },
+  { type: "checklist", label: "Checklist", icon: CheckSquare },
+  { type: "quote", label: "Trích dẫn", icon: Quote },
+  { type: "callout", label: "Ghi chú", icon: Info },
+] as const;
+
+function BlockMenu({ editor, element, onClose }: { editor: any; element: any; onClose: () => void }) {
+  const [showTurnInto, setShowTurnInto] = React.useState(false);
+
+  const turnInto = React.useCallback((opt: typeof TURN_INTO_OPTIONS[number]) => {
+    const path = editor.api.findPath(element);
+    if (!path) return;
+    const qcetBlock = plateToQcet([element])[0];
+    const converted: any = { id: qcetBlock.id, type: opt.type, content: qcetBlock.content };
+    if (opt.type === "heading") converted.level = (opt as any).level;
+    if (opt.type === "checklist") converted.checked = false;
+    const [plateNode] = qcetToPlate([converted]);
+    const richChildren = element.children;
+    const finalNode = { ...plateNode, children: richChildren };
+    editor.tf.removeNodes({ at: path });
+    editor.tf.insertNodes([finalNode] as any, { at: path });
+    onClose();
+  }, [editor, element, onClose]);
+
+  const duplicateBlock = React.useCallback(() => {
+    const path = editor.api.findPath(element);
+    if (!path) return;
+    const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const clone = { ...JSON.parse(JSON.stringify(element)), id };
+    editor.tf.insertNodes([clone] as any, { at: [path[0] + 1] });
+    onClose();
+  }, [editor, element, onClose]);
+
+  const deleteBlock = React.useCallback(() => {
+    const path = editor.api.findPath(element);
+    if (!path) return;
+    editor.tf.removeNodes({ at: path });
+    onClose();
+  }, [editor, element, onClose]);
+
+  return (
+    <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-lg border border-border/80 bg-card p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+      <button
+        type="button"
+        onClick={() => setShowTurnInto(!showTurnInto)}
+        className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+      >
+        <span className="flex items-center gap-2"><ArrowRight className="size-3.5 text-muted-foreground" /> Chuyển thành</span>
+        <ChevronRight className="size-3 text-muted-foreground" strokeWidth={1.5} />
+      </button>
+      {showTurnInto && (
+        <div className="ml-1 mt-0.5 space-y-0.5 border-l border-border/40 pl-1">
+          {TURN_INTO_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={`${opt.type}-${(opt as any).level || ""}`}
+                type="button"
+                onClick={() => turnInto(opt)}
+                className="flex w-full items-center gap-2 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer text-left text-xs"
+              >
+                <Icon className="size-3.5 text-muted-foreground" /> {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <button type="button" onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
+        <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
+      </button>
+      <button type="button" onClick={() => { plateIndent(editor); onClose(); }} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
+        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
+      </button>
+      <button type="button" onClick={() => { plateOutdent(editor); onClose(); }} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
+        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
+      </button>
+      <button type="button" onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left">
+        <Trash2 className="size-3.5" /> Xóa block
+      </button>
+    </div>
+  );
+}
 
 function BlockRow({ children, element }: { children: React.ReactNode; element: any }) {
   const { props: selectableProps } = useBlockSelectable();
@@ -534,6 +1281,25 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
   const readOnly = editor.api.isReadOnly();
   const { isDragging, previewRef, handleRef } = useDraggable({ element });
   const { dropLine } = useDropLine({ id: element.id, orientation: "horizontal" });
+  const [showBlockMenu, setShowBlockMenu] = React.useState(false);
+  const blockMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!showBlockMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (blockMenuRef.current && !blockMenuRef.current.contains(e.target as Node)) {
+        setShowBlockMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showBlockMenu]);
+
+  // Don't render block drag handles for table inner elements (rows, cells)
+  if (element.type === PT.tableRow || element.type === PT.tableCell || element.type === PT.tableHeader) {
+    return <>{children}</>;
+  }
+
   return (
     <div
       ref={previewRef}
@@ -545,27 +1311,27 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
       )}
       data-block-id={element.id}
     >
-      <div className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5", readOnly && "invisible")} contentEditable={false} data-qcet-block-selection-rail="">
+      <div ref={blockMenuRef} className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5 relative", readOnly && "invisible")} contentEditable={false} data-qcet-block-selection-rail="">
         <button
           ref={handleRef}
           type="button"
           contentEditable={false}
           tabIndex={-1}
-          aria-label="Kéo để sắp xếp lại"
+          aria-label="Mở menu block hoặc kéo để sắp xếp"
+          onClick={(e) => { e.stopPropagation(); setShowBlockMenu((prev) => !prev); }}
           className={cn(
             "size-5 flex items-center justify-center rounded-md",
             "text-muted-foreground/50 hover:text-foreground hover:bg-muted",
-            "cursor-grab active:cursor-grabbing transition-all duration-100",
+            "cursor-grab active:cursor-grabbing transition-opacity duration-100",
             "opacity-0 pointer-events-none",
             "group-hover/block:opacity-100 group-hover/block:pointer-events-auto",
-            "group-focus-within/block:opacity-100 group-focus-within/block:pointer-events-auto",
-            "focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-primary/40",
+            "focus-visible:ring-2 focus-visible:ring-primary/40",
             "motion-reduce:transition-none",
-            (isSelected || isDragging) && "!opacity-100 !pointer-events-auto",
           )}
         >
           <GripVertical className="size-3.5" />
         </button>
+        {showBlockMenu && !readOnly && <BlockMenu editor={editor} element={element} onClose={() => setShowBlockMenu(false)} />}
       </div>
       <div className="flex-1 min-w-0">{children}</div>
       {dropLine && (
@@ -578,44 +1344,60 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
   );
 }
 
-function renderElement(props: any) {
-  const { element } = props;
-  let inner: React.ReactNode;
+// ---------------------------------------------------------------------------
+// Slash Menu component
+// ---------------------------------------------------------------------------
 
-  switch (element.type) {
-    case PT.h1: inner = <H1El {...props} />; break;
-    case PT.h2: inner = <H2El {...props} />; break;
-    case PT.h3: inner = <H3El {...props} />; break;
-    case PT.blockquote: inner = <BlockquoteEl {...props} />; break;
-    case PT.callout: inner = <CalloutEl {...props} />; break;
-    case PT.hr: inner = <HrEl {...props} />; break;
-    case PT.image: inner = <ImageEl {...props} />; break;
-    case PT.attachment: inner = <AttachmentEl {...props} />; break;
-    case PT.link: inner = <LinkBlockEl {...props} />; break;
-    case PT.bookmark: inner = <BookmarkEl {...props} />; break;
-    default: inner = <ParagraphEl {...props} />; break;
-  }
+const SlashSelectContext = React.createContext<((option: MenuItemOption) => void) | null>(null);
+
+function SlashInputElement({ attributes, children, element }: any) {
+  const editor = useEditorRef();
+  const onSelectOption = React.useContext(SlashSelectContext);
+  const searchQuery = (element.children?.[0]?.text || "").replace(/^\//, "");
+  const filteredOptions = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return MENU_OPTIONS;
+    return MENU_OPTIONS.filter((opt) =>
+      opt.title.toLowerCase().includes(q) || opt.description.toLowerCase().includes(q) ||
+      opt.group.toLowerCase().includes(q) || (opt.shortcut?.toLowerCase().includes(q) ?? false)
+    );
+  }, [searchQuery]);
+
+  const handleSelect = React.useCallback((option: MenuItemOption) => {
+    const path = editor.api.findPath(element);
+    if (path) editor.tf.removeNodes({ at: path });
+    onSelectOption?.(option);
+  }, [editor, element, onSelectOption]);
+
+  const inlineRef = React.useRef<HTMLSpanElement>(null);
 
   return (
-    <BlockRow element={element}>
-      {inner}
-    </BlockRow>
+    <span {...attributes} ref={inlineRef}>
+      <span contentEditable={false} className="inline">
+        <SlashMenu
+          isOpen={true}
+          onClose={() => {
+            const path = editor.api.findPath(element);
+            if (path) editor.tf.removeNodes({ at: path });
+          }}
+          onSelect={handleSelect}
+          searchQuery={searchQuery}
+          setSearchQuery={() => {}}
+          anchorElement={inlineRef.current}
+          filteredOptions={filteredOptions}
+        />
+      </span>
+      {children}
+    </span>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Slash Menu component (extracted for reuse)
-// ---------------------------------------------------------------------------
 
 function SlashMenu({
   isOpen,
   onClose,
   onSelect,
   searchQuery,
-  setSearchQuery,
-  menuPosition,
-  menuPlacement,
-  menuMaxHeight,
+  anchorElement,
   filteredOptions,
 }: {
   isOpen: boolean;
@@ -623,127 +1405,122 @@ function SlashMenu({
   onSelect: (option: MenuItemOption) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  menuPosition: { top?: number; bottom?: number; left: number } | null;
-  menuPlacement: "bottom" | "top";
-  menuMaxHeight: number;
+  anchorElement: HTMLElement | null;
   filteredOptions: MenuItemOption[];
 }) {
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const menuInputRef = React.useRef<HTMLInputElement>(null);
-  const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
   const menuListRef = React.useRef<HTMLDivElement>(null);
+  const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
+
+  const { refs, floatingStyles } = useFloating({
+    strategy: "fixed",
+    placement: "bottom-start",
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(6),
+      flip({ padding: 14 }),
+      shift({ padding: 14 }),
+      size({
+        padding: 14,
+        apply({ availableHeight, elements }) {
+          Object.assign(elements.floating.style, {
+            maxHeight: `${Math.min(availableHeight, 320)}px`,
+          });
+        },
+      }),
+    ],
+  });
 
   React.useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => menuInputRef.current?.focus(), 40);
-    }
-  }, [isOpen]);
+    if (anchorElement) refs.setPositionReference(anchorElement);
+  }, [anchorElement, refs]);
 
   React.useEffect(() => {
     setActiveIndex(0);
-  }, [searchQuery]);
+  }, [filteredOptions]);
 
   React.useEffect(() => {
-    if (isOpen) {
-      const btn = menuItemRefs.current.get(activeIndex);
-      btn?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const el = menuItemRefs.current.get(activeIndex);
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-  }, [activeIndex, isOpen]);
+  }, [activeIndex]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // e.nativeEvent.isComposing && keyCode === 229
+      if (e.isComposing || (e as any).nativeEvent?.isComposing || (e as any).keyCode === 229) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((prev) => (prev + 1) % Math.max(1, filteredOptions.length));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex((prev) => (prev - 1 + filteredOptions.length) % Math.max(1, filteredOptions.length));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (filteredOptions[activeIndex]) {
+          onSelect(filteredOptions[activeIndex]);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, activeIndex, filteredOptions, onSelect, onClose]);
 
   if (!isOpen || typeof document === "undefined") return null;
 
-  const groups = ["Soạn thảo", "Danh sách", "Tiêu đề", "Trích dẫn & Ghi chú", "Phương tiện & Tệp", "Liên kết", "Phân cách"] as const;
-
   return createPortal(
     <div
-      role="dialog"
-      aria-label="Menu lệnh"
-      className="fixed inset-0 z-50 pointer-events-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      ref={refs.setFloating}
+      style={floatingStyles}
+      className="z-50 w-72 overflow-y-scroll overscroll-contain rounded-xl border border-border/80 bg-card p-1 text-xs shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
     >
-      <div
-        style={{
-          position: "fixed",
-          top: menuPosition?.top !== undefined ? `${menuPosition.top}px` : undefined,
-          bottom: menuPosition?.bottom !== undefined ? `${menuPosition.bottom}px` : undefined,
-          left: menuPosition ? `${menuPosition.left}px` : undefined,
-          maxHeight: `${menuMaxHeight}px`,
-        }}
-        className={cn(
-          "w-72 max-w-[calc(100vw-28px)] rounded-2xl border border-border bg-white p-1.5 text-foreground shadow-2xl z-50 select-none flex flex-col",
-          menuPlacement === "top"
-            ? "animate-in fade-in-0 slide-in-from-bottom-2 duration-100"
-            : "animate-in fade-in-0 slide-in-from-top-2 duration-100",
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative mb-1.5 shrink-0">
-          <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
-          <input
-            ref={menuInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
-              if (e.key === "Escape") { onClose(); }
-              else if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex((p) => p < filteredOptions.length - 1 ? p + 1 : 0); }
-              else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex((p) => p > 0 ? p - 1 : filteredOptions.length - 1); }
-              else if (e.key === "Enter") { e.preventDefault(); const opt = filteredOptions[activeIndex]; if (opt) onSelect(opt); }
-            }}
-            placeholder="Tìm lệnh..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-muted/40 rounded-xl border border-border/60 focus:outline-hidden focus:ring-1 focus:ring-primary/40 font-medium"
-          />
-        </div>
-        <div ref={menuListRef} className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-0.5 overscroll-contain">
-          {groups.map((groupName) => {
-            const groupOpts = filteredOptions.filter((o) => o.group === groupName);
-            if (groupOpts.length === 0) return null;
-            return (
-              <div key={groupName} className="space-y-0.5">
-                <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground/80">{groupName}</div>
-                {groupOpts.map((opt) => {
-                  const idx = filteredOptions.indexOf(opt);
-                  const isActive = idx === activeIndex;
-                  const Icon = opt.icon;
-                  return (
-                    <button
-                      key={opt.id}
-                      ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
-                      type="button"
-                      onClick={() => onSelect(opt)}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer",
-                        isActive ? "bg-muted text-foreground font-medium" : "hover:bg-muted/60 text-muted-foreground",
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-1 rounded-lg border border-border/60 bg-white shrink-0"><Icon className="size-3.5 text-foreground" /></div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-medium text-foreground truncate">{opt.title}</div>
-                          <div className="text-[11px] text-muted-foreground truncate">{opt.description}</div>
-                        </div>
-                      </div>
-                      {opt.shortcut && <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0">{opt.shortcut}</span>}
-                    </button>
-                  );
-                })}
+      <div ref={menuListRef} className="space-y-0.5">
+        {filteredOptions.map((opt, idx) => {
+          const Icon = opt.icon;
+          const isSelected = idx === activeIndex;
+          return (
+            <button
+              key={opt.id}
+              ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
+              type="button"
+              onMouseEnter={() => setActiveIndex(idx)}
+              onClick={() => onSelect(opt)}
+              className={cn(
+                "flex w-full items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
+              )}
+            >
+              <div className={cn("p-1 rounded-md", isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                <Icon className="size-3.5" />
               </div>
-            );
-          })}
-          {filteredOptions.length === 0 && (
-            <div className="text-center py-6 text-xs text-muted-foreground/60">Không tìm thấy lệnh phù hợp</div>
-          )}
-        </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{opt.title}</div>
+                <div className={cn("text-[10px] truncate", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{opt.description}</div>
+              </div>
+              {opt.shortcut && (
+                <span className={cn("font-mono text-[10px] px-1 py-0.5 rounded", isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                  {opt.shortcut}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {filteredOptions.length === 0 && (
+          <div className="px-3 py-4 text-center text-muted-foreground">Không có kết quả phù hợp</div>
+        )}
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main component — Plate-powered editor with QCET persistence
+// Main Component: TaskNotionBlockContent
 // ---------------------------------------------------------------------------
 
 export function TaskNotionBlockContent({
@@ -760,48 +1537,66 @@ export function TaskNotionBlockContent({
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
-  // Slash Menu State
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [menuSearchQuery, setMenuSearchQuery] = React.useState("");
-  const [menuPlacement, setMenuPlacement] = React.useState<"bottom" | "top">("bottom");
-  const [menuMaxHeight, setMenuMaxHeight] = React.useState(320);
-  const [menuPosition, setMenuPosition] = React.useState<{ top?: number; bottom?: number; left: number } | null>(null);
-
-  // Global file drop
+  // Global file drop state
   const [isGlobalDragging, setIsGlobalDragging] = React.useState(false);
   const dragCounterRef = React.useRef(0);
-  const resetGlobalDrag = React.useCallback(() => { dragCounterRef.current = 0; setIsGlobalDragging(false); }, []);
+  const resetGlobalDrag = React.useCallback(() => {
+    dragCounterRef.current = 0;
+    setIsGlobalDragging(false);
+  }, []);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const lastSavedContentRef = React.useRef<string | null>(initialDescription || null);
 
-  // Filtered menu options
-  const filteredMenuOptions = React.useMemo(() => {
-    const q = menuSearchQuery.trim().toLowerCase();
-    if (!q) return MENU_OPTIONS;
-    return MENU_OPTIONS.filter((opt) => {
-      return opt.title.toLowerCase().includes(q) || opt.description.toLowerCase().includes(q) ||
-        opt.group.toLowerCase().includes(q) || (opt.shortcut?.toLowerCase().includes(q) ?? false);
-    });
-  }, [menuSearchQuery]);
-
   // Compute initial Plate value from persisted description
   const initialValue = React.useMemo(() => parseToPlateValue(initialDescription), []);
 
-  // Create Plate editor with all plugins
+  // Create Plate editor with full v53 plugins
   const editor = usePlateEditor({
     value: initialValue as any,
     plugins: [
       BaseParagraphPlugin.withComponent(ParagraphEl),
-      BaseH1Plugin.withComponent(H1El),
-      BaseH2Plugin.withComponent(H2El),
-      BaseH3Plugin.withComponent(H3El),
-      BaseBlockquotePlugin.withComponent(BlockquoteEl),
-      BaseCalloutPlugin.withComponent(CalloutEl),
-      BaseHorizontalRulePlugin.withComponent(HrEl),
-      BaseListPlugin,
+      BaseH1Plugin.withComponent(H1El).extend({ inputRules: [HeadingRules.markdown()] }).configure({
+        rules: { break: { empty: "reset", splitReset: true }, delete: { start: "reset" } },
+      }),
+      BaseH2Plugin.withComponent(H2El).extend({ inputRules: [HeadingRules.markdown()] }).configure({
+        rules: { break: { empty: "reset", splitReset: true }, delete: { start: "reset" } },
+      }),
+      BaseH3Plugin.withComponent(H3El).extend({ inputRules: [HeadingRules.markdown()] }).configure({
+        rules: { break: { empty: "reset", splitReset: true }, delete: { start: "reset" } },
+      }),
+      BaseBlockquotePlugin.withComponent(BlockquoteEl).extend({ inputRules: [BlockquoteRules.markdown()] }).configure({
+        rules: { break: { default: "lineBreak", empty: "reset" } },
+      }),
+      BaseCalloutPlugin.withComponent(CalloutEl).configure({
+        rules: { break: { default: "lineBreak", empty: "reset", emptyLineEnd: "deleteExit" } },
+      }),
+      BaseHorizontalRulePlugin.withComponent(HrEl).extend({ inputRules: [HorizontalRuleRules.markdown()] }),
+      BaseListPlugin.extend({ inputRules: [BulletedListRules.markdown(), OrderedListRules.markdown(), TaskListRules.markdown()] }),
       BaseIndentPlugin,
+      BoldPlugin.extend({ inputRules: [BoldRules.markdown()] }),
+      ItalicPlugin.extend({ inputRules: [ItalicRules.markdown()] }),
+      UnderlinePlugin,
+      StrikethroughPlugin.extend({ inputRules: [StrikethroughRules.markdown()] }),
+      CodePlugin.extend({ inputRules: [CodeRules.markdown()] }),
+      HighlightPlugin,
+      LinkPlugin.withComponent(InlineLinkEl),
+      SlashPlugin.configure({ options: { trigger: "/", triggerPreviousCharPattern: /^\s?$/ } }),
+      SlashInputPlugin.withComponent(SlashInputElement),
+      TablePlugin.withComponent(TableEl),
+      TableRowPlugin.withComponent(TableRowEl),
+      TableCellPlugin.withComponent(TableCellEl),
+      TableCellHeaderPlugin.withComponent(TableCellHeaderEl),
+      TogglePlugin.withComponent(ToggleEl),
+      MentionPlugin.withComponent(MentionEl),
+      MentionInputPlugin.withComponent(MentionInputElement),
+      MediaEmbedPlugin.withComponent(MediaEmbedEl),
+      TocPlugin.withComponent(TocEl),
+      ExitBreakPlugin.configure({
+        shortcuts: { insert: { keys: "mod+enter" }, insertBefore: { keys: "mod+shift+enter" } },
+      }),
+      QcetAlignPlugin,
       QcetImagePlugin.withComponent(ImageEl),
       QcetAttachmentPlugin.withComponent(AttachmentEl),
       QcetLinkBlockPlugin.withComponent(LinkBlockEl),
@@ -813,7 +1608,7 @@ export function TaskNotionBlockContent({
             behaviour: { startThreshold: 4, scrolling: { speedDivider: 1.5 } },
             features: { singleTap: { allow: false } },
             startAreas: ["[data-qcet-block-selection-rail]"],
-            boundaries: ["[data-slot=\"task-notion-block-content\"]"],
+            boundaries: ['[data-slot="task-notion-block-content"]'],
           },
         },
       }),
@@ -826,6 +1621,13 @@ export function TaskNotionBlockContent({
         [PT.attachment]: AttachmentEl,
         [PT.link]: LinkBlockEl,
         [PT.bookmark]: BookmarkEl,
+        [PT.table]: TableEl,
+        [PT.tableRow]: TableRowEl,
+        [PT.tableCell]: TableCellEl,
+        [PT.tableHeader]: TableCellHeaderEl,
+        [PT.toggle]: ToggleEl,
+        [PT.mention]: MentionEl,
+        [PT.mediaEmbed]: MediaEmbedEl,
       },
     },
   }, []);
@@ -835,13 +1637,13 @@ export function TaskNotionBlockContent({
 
   // URL Paste Chooser
   const [urlPastePopover, setUrlPastePopover] = React.useState<{ url: string; blockPath: number[] } | null>(null);
-  const handleUrlPasteChoice = React.useCallback((choice: 'link' | 'bookmark', info: { url: string; blockPath: number[] }) => {
+  const handleUrlPasteChoice = React.useCallback((choice: "link" | "bookmark", info: { url: string; blockPath: number[] }) => {
     if (editor.api.isReadOnly()) return;
     const meta = resolveUrlMetadata(info.url);
     const nodeId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newNode: PlateElemT = {
       id: nodeId,
-      type: choice === 'link' ? PT.link : PT.bookmark,
+      type: choice === "link" ? PT.link : PT.bookmark,
       children: [{ text: meta.url }],
       url: meta.url,
       description: meta.description,
@@ -850,74 +1652,9 @@ export function TaskNotionBlockContent({
     setUrlPastePopover(null);
   }, [editor]);
 
-  const triggerAutoSave = React.useCallback(
-    (plateValue: PlateValue) => {
-      const qcetBlocks = plateToQcet(plateValue);
-      if (qcetBlocks.some((b) => b.url?.startsWith("blob:"))) return;
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(async () => {
-        try {
-          const payload = serializeBlocksToContent(qcetBlocks);
-          lastSavedContentRef.current = payload;
-          await onSaveContent(payload);
-          setSaveError(null);
-        } catch (err: any) {
-          setSaveError(err?.message || "Lỗi lưu nội dung");
-        }
-      }, 800);
-    },
-    [onSaveContent],
-  );
-
-  // Sync external description changes
-  React.useEffect(() => {
-    if (containerRef.current?.contains(document.activeElement)) return;
-    if (initialDescription !== lastSavedContentRef.current) {
-      lastSavedContentRef.current = initialDescription || null;
-      const newValue = parseToPlateValue(initialDescription);
-      editor.tf.setValue(newValue as any);
-    }
-  }, [initialDescription, editor]);
-
-  // Cleanup debounce
-  React.useEffect(() => { return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); }; }, []);
-
-  // Global file drop listeners
-  React.useEffect(() => {
-    if (!globalFileDrop || !canEdit) return;
-    const handleDragEnter = (e: DragEvent) => {
-      if (e.dataTransfer?.types.includes("Files")) {
-        dragCounterRef.current++;
-        setIsGlobalDragging(true);
-      }
-    };
-    const handleDragLeave = () => {
-      dragCounterRef.current--;
-      if (dragCounterRef.current <= 0) resetGlobalDrag();
-    };
-    const handleDrop = (e: DragEvent) => {
-      resetGlobalDrag();
-      const files = e.dataTransfer?.files;
-      if (files && files.length > 0) {
-        e.preventDefault();
-        handleProcessDroppedFiles(files);
-      }
-    };
-    const handleDragOver = (e: DragEvent) => { e.preventDefault(); };
-    window.addEventListener("dragenter", handleDragEnter);
-    window.addEventListener("dragleave", handleDragLeave);
-    window.addEventListener("drop", handleDrop);
-    window.addEventListener("dragover", handleDragOver);
-    return () => {
-      window.removeEventListener("dragenter", handleDragEnter);
-      window.removeEventListener("dragleave", handleDragLeave);
-      window.removeEventListener("drop", handleDrop);
-      window.removeEventListener("dragover", handleDragOver);
-    };
-  }, [globalFileDrop]);
-
   // Process dropped files
-  const handleProcessDroppedFiles = React.useCallback((files: FileList | File[]) => {
+  const handleProcessDroppedFiles = React.useCallback((files: FileList | File[], clientY?: number) => {
+    if (!canEdit || editor.api.isReadOnly()) return;
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
     const formatSize = (bytes: number) => {
@@ -942,9 +1679,9 @@ export function TaskNotionBlockContent({
             const dataUrl = ev.target?.result as string;
             if (dataUrl) {
               const nodes = editor.children as PlateElemT[];
-              const idx = nodes.findIndex((n) => n.id === nodeId);
-              if (idx >= 0) {
-                editor.tf.setNodes({ url: dataUrl } as any, { at: [idx] });
+              const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
+              if (nodeIdx >= 0) {
+                editor.tf.setNodes({ url: dataUrl } as any, { at: [nodeIdx] });
               }
             }
           };
@@ -964,9 +1701,9 @@ export function TaskNotionBlockContent({
             const dataUrl = ev.target?.result as string;
             if (dataUrl) {
               const nodes = editor.children as PlateElemT[];
-              const idx = nodes.findIndex((n) => n.id === nodeId);
-              if (idx >= 0) {
-                editor.tf.setNodes({ url: dataUrl } as any, { at: [idx] });
+              const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
+              if (nodeIdx >= 0) {
+                editor.tf.setNodes({ url: dataUrl } as any, { at: [nodeIdx] });
               }
             }
           };
@@ -979,7 +1716,7 @@ export function TaskNotionBlockContent({
       }
     });
 
-    // 3-tier insertion: focused block → nearest block → end of document
+    // 3-tier insertion: focused block -> canvas cursor clientY -> end of document
     const sel = editor.selection;
     let insertAt: number[];
     if (sel) {
@@ -988,219 +1725,225 @@ export function TaskNotionBlockContent({
       insertAt = [editor.children.length];
     }
     editor.tf.insertNodes(newNodes as any, { at: insertAt });
-  }, [editor]);
+  }, [canEdit, editor]);
 
-  // Slash menu handlers
-  const handleOpenSlashMenu = React.useCallback((anchorEl?: HTMLElement | null) => {
-    if (!canEdit) return;
-    setMenuSearchQuery("");
-    if (anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
-      const GAP = 6;
-      const spaceBelow = window.innerHeight - rect.bottom - GAP - 16;
-      const spaceAbove = rect.top - GAP - 14;
-      const shouldFlip = spaceBelow < 250 && spaceAbove > spaceBelow;
-      const placement = shouldFlip ? "top" : "bottom";
-      const available = Math.max(160, Math.min(320, shouldFlip ? spaceAbove : spaceBelow));
-      let left = rect.left;
-      const maxLeft = window.innerWidth - 288 - 14;
-      if (left > maxLeft) left = maxLeft;
-      if (left < 14) left = 14;
-      setMenuPlacement(placement);
-      setMenuMaxHeight(available);
-      setMenuPosition({
-        top: placement === "bottom" ? rect.bottom + GAP : undefined,
-        bottom: placement === "top" ? window.innerHeight - rect.top + GAP : undefined,
-        left,
-      });
-    } else {
-      setMenuPosition(null);
+  // Container paste and drop handlers
+  const handleContainerPaste = React.useCallback((e: React.ClipboardEvent) => {
+    if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      handleProcessDroppedFiles(e.clipboardData.files);
     }
-    setIsMenuOpen(true);
-  }, []);
+  }, [handleProcessDroppedFiles]);
 
-  const handleCloseSlashMenu = React.useCallback(() => {
-    setIsMenuOpen(false);
-    setMenuSearchQuery("");
-    setMenuPosition(null);
-  }, []);
+  const handleContainerDrop = React.useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      e.preventDefault();
+      handleProcessDroppedFiles(e.dataTransfer.files, e.clientY);
+    }
+  }, [handleProcessDroppedFiles]);
 
-  const handleSelectMenuItem = React.useCallback((option: MenuItemOption) => {
-    handleCloseSlashMenu();
-    if (editor.api.isReadOnly()) return;
+  // Window drag & drop listeners
+  React.useEffect(() => {
+    if (!globalFileDrop || !canEdit) return;
 
-    const newBlockId = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    let newNode: PlateElemT;
-
-    // Convert QCET menu option to Plate node
-    const qcetBlock: NotionBlockItem = {
-      id: newBlockId,
-      type: option.type,
-      content: "",
-      checked: option.type === "checklist" ? false : undefined,
-      level: option.level || (option.type === "heading" ? 2 : undefined),
-      url: (option.type === "link" || option.type === "bookmark" || option.type === "image") ? "" : undefined,
-      fileName: option.type === "attachment" ? "" : undefined,
-      imageWidth: option.type === "image" ? 100 : undefined,
+    const handleWindowDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) {
+        e.preventDefault();
+        dragCounterRef.current += 1;
+        setIsGlobalDragging(true);
+      }
+    };
+    const handleWindowDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) {
+        e.preventDefault();
+      }
+    };
+    const handleWindowDragLeave = (e: DragEvent) => {
+      if (e.dataTransfer?.types?.includes("Files")) {
+        e.preventDefault();
+        dragCounterRef.current -= 1;
+        if (dragCounterRef.current <= 0) {
+          resetGlobalDrag();
+        }
+      }
+    };
+    const handleWindowDrop = (e: DragEvent) => {
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault();
+        resetGlobalDrag();
+        handleProcessDroppedFiles(e.dataTransfer.files, e.clientY);
+      }
     };
 
-    const plateNodes = qcetToPlate([qcetBlock]);
-    newNode = plateNodes[0];
+    window.addEventListener("dragenter", handleWindowDragEnter);
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("dragleave", handleWindowDragLeave);
+    window.addEventListener("drop", handleWindowDrop);
 
-    // Insert at current selection or end
-    const sel = editor.selection;
-    if (sel) {
-      const path = sel.anchor.path;
-      const blockPath = [path[0]];
-      const currentNode = editor.children[blockPath[0]] as PlateElemT;
-      const currentText = currentNode?.children?.map((c: any) => c.text || "").join("") || "";
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter);
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("dragleave", handleWindowDragLeave);
+      window.removeEventListener("drop", handleWindowDrop);
+    };
+  }, [globalFileDrop, canEdit, resetGlobalDrag, handleProcessDroppedFiles]);
 
-      if (!currentText.trim()) {
-        // Replace empty block
-        editor.tf.removeNodes({ at: blockPath });
-        editor.tf.insertNodes([newNode] as any, { at: blockPath });
-      } else {
-        // Insert after current block
-        editor.tf.insertNodes([newNode] as any, { at: [blockPath[0] + 1] });
-      }
-    } else {
-      editor.tf.insertNodes([newNode] as any, { at: [editor.children.length] });
-    }
-
-    // Focus the new block
-    setTimeout(() => {
-      const nodes = editor.children as PlateElemT[];
-      const idx = nodes.findIndex((n) => n.id === newBlockId);
-      if (idx >= 0) {
-        editor.tf.select({ anchor: { path: [idx, 0], offset: 0 }, focus: { path: [idx, 0], offset: 0 } });
-      }
-    }, 50);
-  }, [editor, handleCloseSlashMenu]);
-
-  // Handle "/" key to open slash menu
-  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
-
-    if (e.key === "/") {
-      const sel = editor.selection;
-      if (sel) {
-        const path = sel.anchor.path;
-        const blockPath = [path[0]];
-        const currentNode = editor.children[blockPath[0]] as PlateElemT;
-        const currentText = currentNode?.children?.map((c: any) => c.text || "").join("") || "";
-        if (!currentText.trim()) {
-          e.preventDefault();
-          const el = containerRef.current?.querySelector(`[data-block-id="${currentNode.id}"]`) as HTMLElement;
-          handleOpenSlashMenu(el);
+  const triggerAutoSave = React.useCallback(
+    (plateValue: PlateValue) => {
+      const qcetBlocks = plateToQcet(plateValue);
+      if (qcetBlocks.some((b) => b.url?.startsWith("blob:"))) return;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          const payload = serializeBlocksToContent(qcetBlocks);
+          // Skip save if content unchanged from last saved or initial state
+          if (payload === lastSavedContentRef.current) return;
+          await onSaveContent(payload);
+          lastSavedContentRef.current = payload;
+          setSaveError(null);
+        } catch (err: any) {
+          setSaveError(err?.message || "Lỗi lưu nội dung");
         }
-      }
-    }
-  }, [editor, handleOpenSlashMenu]);
+      }, 800);
+    },
+    [onSaveContent],
+  );
 
-  // Handle paste for images and URLs
-  const handlePaste = React.useCallback((e: React.ClipboardEvent) => {
-    if (!canEdit) return;
-    // URL paste detection
-    const plainText = e.clipboardData?.getData("text/plain")?.trim();
-    if (plainText && /^https?:\/\//i.test(plainText) && !e.clipboardData?.types.includes("Files")) {
-      const sel = editor.selection;
-      if (sel) {
-        e.preventDefault();
-        setUrlPastePopover({ url: plainText, blockPath: [sel.anchor.path[0]] });
+  // Sync external description changes
+  React.useEffect(() => {
+    if (containerRef.current?.contains(document.activeElement)) return;
+    if (initialDescription !== lastSavedContentRef.current) {
+      lastSavedContentRef.current = initialDescription || null;
+      const newValue = parseToPlateValue(initialDescription);
+      editor.tf.setValue(newValue as any);
+    }
+  }, [initialDescription, editor]);
+
+  // Handle Slash menu option selection
+  const handleSlashSelect = React.useCallback(
+    (option: MenuItemOption) => {
+      if (editor.api.isReadOnly()) return;
+      const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+      if (option.type === "table") {
+        const tableNode: PlateElemT = {
+          id,
+          type: PT.table,
+          children: [
+            {
+              id: `tr-${id}-0`,
+              type: PT.tableRow,
+              children: [
+                { id: `th-${id}-0-0`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 1" }] }] },
+                { id: `th-${id}-0-1`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 2" }] }] },
+                { id: `th-${id}-0-2`, type: PT.tableHeader, children: [{ type: PT.paragraph, children: [{ text: "Cột 3" }] }] },
+              ],
+            },
+            {
+              id: `tr-${id}-1`,
+              type: PT.tableRow,
+              children: [
+                { id: `td-${id}-1-0`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+                { id: `td-${id}-1-1`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+                { id: `td-${id}-1-2`, type: PT.tableCell, children: [{ type: PT.paragraph, children: [{ text: "" }] }] },
+              ],
+            },
+          ],
+        };
+        editor.tf.insertNodes([tableNode] as any);
         return;
       }
-    }
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            e.preventDefault();
-            handleProcessDroppedFiles([file]);
-            return;
-          }
-        }
+
+      if (option.type === "toggle") {
+        const toggleNode: PlateElemT = {
+          id,
+          type: PT.toggle,
+          open: true,
+          children: [{ text: "Mục hướng dẫn..." }],
+        };
+        editor.tf.insertNodes([toggleNode] as any);
+        return;
       }
-    }
-  }, [canEdit, handleProcessDroppedFiles]);
+
+      if (option.type === "media_embed") {
+        const embedNode: PlateElemT = {
+          id,
+          type: PT.mediaEmbed,
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          children: [{ text: "" }],
+        };
+        editor.tf.insertNodes([embedNode] as any);
+        return;
+      }
+
+      const qcetBlock: NotionBlockItem = {
+        id,
+        type: option.type,
+        content: "",
+        ...(option.level ? { level: option.level } : {}),
+      };
+      const [plateNode] = qcetToPlate([qcetBlock]);
+      editor.tf.insertNodes([plateNode] as any);
+    },
+    [editor],
+  );
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <SlashSelectContext.Provider value={handleSlashSelect}>
       <div
         ref={containerRef}
         data-slot="task-notion-block-content"
-        onPaste={handlePaste}
-        className={cn("w-full relative font-sans text-sm text-foreground flex flex-col pl-6", className)}
+        onPaste={handleContainerPaste}
+        onDrop={handleContainerDrop}
+        className={cn(
+          "relative flex-1 min-h-0 flex flex-col rounded-xl border border-border/40 bg-card overflow-hidden text-foreground transition-colors focus-within:border-border/70",
+          className
+        )}
       >
-        <Plate
-          editor={editor}
-          onChange={({ value }) => { triggerAutoSave(value as any); }}
-        >
-          <PlateContent
-            readOnly={!canEdit}
-            renderElement={renderElement}
-            onKeyDown={handleKeyDown}
-            placeholder="Nhập nội dung hoặc gõ / để chèn"
-            className="outline-hidden min-h-[2em] [&_[data-slate-placeholder]]:text-muted-foreground/35 [&_[data-slate-placeholder]]:!opacity-100"
-            style={{ minHeight: "2em" }}
-          />
-        <BlockSelectionAfterEditable />
-        </Plate>
-        {saveError && (
-          <div className="flex items-center gap-1.5 px-2 py-1 mt-1 text-xs text-rose-600 bg-rose-50 rounded-md border border-rose-200">
-            <span>{saveError}</span>
-            <button type="button" onClick={() => { setSaveError(null); triggerAutoSave(editor.children as any); }} className="ml-auto text-[10px] font-medium underline cursor-pointer">Thử lại</button>
-          </div>
-        )}
+        <FixedToolbar editor={editor} />
 
-        {/* URL Paste Chooser */}
-        {urlPastePopover && (
-          <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-lg border border-border bg-card shadow-lg text-xs animate-in fade-in-0 zoom-in-95">
-            <span className="truncate max-w-[200px] text-muted-foreground font-mono">{urlPastePopover.url}</span>
-            <button type="button" onClick={() => handleUrlPasteChoice('link', urlPastePopover)} className="px-2 py-1 rounded-md bg-primary text-primary-foreground font-medium cursor-pointer hover:opacity-90">Liên kết</button>
-            <button type="button" onClick={() => handleUrlPasteChoice('bookmark', urlPastePopover)} className="px-2 py-1 rounded-md bg-muted text-foreground font-medium cursor-pointer hover:bg-muted/80">Bookmark</button>
-            <button type="button" onClick={() => setUrlPastePopover(null)} className="px-1.5 py-1 text-muted-foreground hover:text-foreground cursor-pointer">×</button>
-          </div>
-        )}
-
-        {/* Slash Command Menu */}
-        {mounted && (
-          <SlashMenu
-            isOpen={isMenuOpen}
-            onClose={handleCloseSlashMenu}
-            onSelect={handleSelectMenuItem}
-            searchQuery={menuSearchQuery}
-            setSearchQuery={setMenuSearchQuery}
-            menuPosition={menuPosition}
-            menuPlacement={menuPlacement}
-            menuMaxHeight={menuMaxHeight}
-            filteredOptions={filteredMenuOptions}
-          />
-        )}
-
-        {/* Global File Drop Overlay */}
-        {mounted && isGlobalDragging && typeof document !== "undefined" && createPortal(
-          <div
-            role="presentation"
-            data-testid="global-file-drop-overlay"
-            onClick={resetGlobalDrag}
-            className="fixed inset-0 z-50 pointer-events-auto flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs transition-all animate-in fade-in duration-150 p-6"
+        <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4">
+          <Plate
+            editor={editor}
+            onValueChange={({ value }) => {
+              if (canEdit) triggerAutoSave(value as PlateValue);
+            }}
           >
-            <div className="flex flex-col items-center gap-3.5 p-8 bg-card/95 shadow-2xl rounded-2xl border-2 border-dashed border-primary/60 max-w-sm text-center transform scale-100 transition-transform">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs animate-bounce">
-                <UploadCloud className="w-8 h-8" />
+            <PlateContent
+              readOnly={!canEdit}
+              placeholder="Nhập nội dung hoặc gõ / để chèn"
+              className="outline-none text-sm leading-relaxed"
+            />
+            <FloatingToolbar editor={editor} />
+            <MultiBlockToolbar editor={editor} />
+          </Plate>
+        </div>
+
+        {/* Global File Drop Full-Viewport Overlay Portal */}
+        {isGlobalDragging && typeof document !== "undefined" && createPortal(
+          <div
+            data-testid="global-file-drop-overlay"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm border-4 border-dashed border-primary/60 animate-in fade-in-0 duration-150 pointer-events-none"
+          >
+            <div className="p-4 rounded-2xl bg-card border border-border shadow-2xl flex flex-col items-center gap-3 text-center max-w-sm">
+              <div className="p-3 rounded-full bg-primary/10 text-primary">
+                <UploadCloud className="size-8 animate-bounce" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold text-foreground tracking-tight">Thả để thêm vào nội dung</h3>
-                <p className="text-xs text-muted-foreground">Ảnh, PDF, tài liệu và các tệp khác</p>
+              <div>
+                <h3 className="text-base font-semibold text-foreground">Thả để thêm vào nội dung</h3>
+                <p className="text-xs text-muted-foreground mt-1">Ảnh, PDF, tài liệu và các tệp khác</p>
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
+        )}
+
+        {saveError && (
+          <div className="px-3 py-1 bg-rose-50 border-t border-rose-200 text-rose-600 text-xs">
+            {saveError}
+          </div>
         )}
       </div>
-    </DndProvider>
+    </SlashSelectContext.Provider>
   );
 }
