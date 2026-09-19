@@ -46,12 +46,9 @@ export function TaskDetailSplitLayout({
         {children}
       </div>
       {inspectorOpen && (
-        <>
-          <div className="w-px self-stretch bg-border/40 shrink-0" />
-          <div className="w-[300px] shrink-0 min-w-0 pl-4">
+          <div className="w-[300px] shrink-0 min-w-0 pl-8">
             {inspector}
           </div>
-        </>
       )}
     </div>
   );

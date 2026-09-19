@@ -11,11 +11,12 @@ test("open inspector renders fixed-width sidebar alongside main content", () => 
     children: "Main content",
     inspector: "Properties",
   }));
-  // Inspector uses fixed w-[300px] with a thin border separator
+  // Inspector uses fixed w-[300px] with spacing (no vertical divider line)
   assert.ok(html.includes("Main content"), "Main content must render");
   assert.ok(html.includes("Properties"), "Properties panel must render when open");
   assert.ok(html.includes("w-[300px]"), "Inspector must use fixed 300px width");
-  assert.ok(html.includes("w-px"), "Separator must be a thin 1px border");
+  assert.ok(!html.includes("w-px"), "No vertical divider line between content and inspector");
+  assert.ok(html.includes("pl-8"), "Inspector uses left padding for spacing");
 });
 
 test("closed inspector leaves the full width for content", () => {
