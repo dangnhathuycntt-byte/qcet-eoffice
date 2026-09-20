@@ -27,6 +27,7 @@ const TEST_UPLOADS_DIR = path.resolve("./test_authz_sandbox");
 describe("P0-1: Orphan file default-deny on /api/documents/download", () => {
   let testUserId = "";
   let sessionToken = "";
+  const originalUploadsDir = process.env.UPLOADS_DIR;
 
   before(async () => {
     process.env.UPLOADS_DIR = TEST_UPLOADS_DIR;
@@ -56,6 +57,11 @@ describe("P0-1: Orphan file default-deny on /api/documents/download", () => {
 
   after(async () => {
     fs.rmSync(TEST_UPLOADS_DIR, { recursive: true, force: true });
+    if (originalUploadsDir !== undefined) {
+      process.env.UPLOADS_DIR = originalUploadsDir;
+    } else {
+      delete process.env.UPLOADS_DIR;
+    }
     if (testUserId) {
       await prisma.user.deleteMany({ where: { id: testUserId } });
     }

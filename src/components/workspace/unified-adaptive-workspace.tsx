@@ -983,6 +983,37 @@ function UnifiedAdaptiveWorkspaceInner({
   const currentOverdue = internalOverdue || Boolean(isOverdueOnly);
   const currentWorkbox = internalWorkbox ?? activeWorkbox;
 
+  // Prop synchronization for controlled filters
+  React.useEffect(() => {
+    if (selectedDepartment !== undefined) {
+      setInternalDept(selectedDepartment);
+    }
+  }, [selectedDepartment]);
+
+  React.useEffect(() => {
+    if (isOverdueOnly !== undefined) {
+      setInternalOverdue(Boolean(isOverdueOnly));
+    }
+  }, [isOverdueOnly]);
+
+  React.useEffect(() => {
+    if (activeStatus !== undefined) {
+      setInternalStatus(activeStatus);
+    }
+  }, [activeStatus]);
+
+  React.useEffect(() => {
+    if (searchQuery !== undefined) {
+      setInternalSearch(searchQuery);
+    }
+  }, [searchQuery]);
+
+  React.useEffect(() => {
+    if (activeWorkbox !== undefined) {
+      setInternalWorkbox(activeWorkbox);
+    }
+  }, [activeWorkbox]);
+
   // Synchronize state with canonical workspace query (URL-driven navigation: back/forward)
   React.useEffect(() => {
     const { queryState } = workspaceQuery;

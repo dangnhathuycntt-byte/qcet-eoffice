@@ -767,14 +767,12 @@ export class TaskQueryService {
     let formattedTasks: SchoolTask[] = [];
 
     if (isAll) {
-      const [totalCount, rawTasks] = await Promise.all([
-        prisma.task.count({ where }),
-        prisma.task.findMany({
-          where,
-          include: TASK_LIST_INCLUDE,
-          orderBy: filters.orderBy || { dueDate: 'asc' },
-        }),
-      ]);
+      const rawTasks = await prisma.task.findMany({
+        where,
+        include: TASK_LIST_INCLUDE,
+        orderBy: filters.orderBy || { dueDate: 'asc' },
+      });
+      const totalCount = rawTasks.length;
       total = totalCount;
       limit = Math.min(totalCount > 0 ? totalCount : 50, 100);
       page = 1;

@@ -14,6 +14,7 @@ import {
   scoreVietnameseSearch,
   QCET_ACRONYMS,
 } from '@/lib/search/vietnamese-search';
+import { TaskScope } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
         extractFieldErrors(parseResult.error)
       );
     }
-    const { q: rawQParam, query: rawQueryParam, limit = 20 } = parseResult.data;
+    const { q: rawQParam, query: rawQueryParam, limit = 20, scope } = parseResult.data;
     const q = (rawQParam || rawQueryParam || '').trim();
 
     const foldedQ = foldVietnamese(q);
@@ -115,6 +116,22 @@ export async function GET(request: NextRequest) {
 
     // Base query filter for tasks
     const andConditions: any[] = [];
+
+    // Optional user-specified narrowing scope for tasks
+    if (scope) {
+      if (scope === 'school') {
+        andConditions.push({ scope: TaskScope.SCHOOL });
+      } else if (scope === 'unit') {
+        andConditions.push({ scope: TaskScope.DEPARTMENT });
+      } else if (scope === 'personal') {
+        andConditions.push({
+          OR: [
+            { scope: TaskScope.INDIVIDUAL },
+            { assignees: { some: { userId: authUser.id } } },
+          ],
+        });
+      }
+    }
 
     if (q) {
       const taskOrConditions: any[] = [
