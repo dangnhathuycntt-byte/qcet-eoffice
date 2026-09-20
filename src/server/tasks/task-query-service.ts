@@ -343,7 +343,7 @@ export function buildTaskViewWhere(
   context: AuthorizationContext | AuthenticatedUser | any
 ): Prisma.TaskWhereInput {
   if (!context) {
-    return { id: '__DENY_ANONYMOUS__' };
+    return { id: { in: [] } };
   }
 
   const now = new Date();
@@ -356,7 +356,7 @@ export function buildTaskViewWhere(
   } = extractUserContextDetails(context, now);
 
   if (!userId) {
-    return { id: '__DENY_ANONYMOUS__' };
+    return { id: { in: [] } };
   }
 
   switch (view) {
@@ -367,7 +367,7 @@ export function buildTaskViewWhere(
 
     case 'unit': {
       if (myUnitIds.length === 0) {
-        return { id: '__NO_UNIT_MATCH__' };
+        return { id: { in: [] } };
       }
 
       const unitFilter: Prisma.StringFilter =
@@ -419,9 +419,10 @@ export function buildTaskViewWhere(
             },
           },
 
-          // 3. User is approver / reviewer on current approval action
+          // 3. User is approver / reviewer on current approval action (when no multi-step approval process)
           {
             status: TaskStatus.WAITING_APPROVAL,
+            approvalProcesses: { none: {} },
             actors: {
               some: {
                 userId: userFilter,

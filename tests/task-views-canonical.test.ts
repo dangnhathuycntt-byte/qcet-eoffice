@@ -411,6 +411,59 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     const bghApprovalWhere = buildTaskViewWhere('approval', bghContext);
     const bghMatches = matchesApprovalQuery(task, bghApprovalWhere);
     assert.equal(bghMatches, false, 'BGH must NOT see task waiting at step 0 when BGH is assigned to future step 1');
+
+    // 3. Staff has no approval role or delegation -> MUST NOT MATCH
+    const staffApprovalWhere = buildTaskViewWhere('approval', staffContext);
+    const staffMatches = matchesApprovalQuery(task, staffApprovalWhere);
+    assert.equal(staffMatches, false, 'Staff must NOT see task waiting at approval');
+
+    // 4. Leader of another unit (CNTT) has no approval role or delegation on Dao Tao task -> MUST NOT MATCH
+    const leaderApprovalWhere = buildTaskViewWhere('approval', leaderContext);
+    const leaderMatches = matchesApprovalQuery(task, leaderApprovalWhere);
+    assert.equal(leaderMatches, false, 'Unit Leader of CNTT must NOT see Dao Tao task waiting at approval');
+
+    // 5. Expired delegation -> MUST NOT MATCH
+    const expiredDelegateContext = new AuthorizationContextModel({
+      userId: 'user_expired_delegate',
+      user: {
+        id: 'user_expired_delegate',
+        email: 'expired.delegate@qcet.edu.vn',
+        name: 'Người hết hạn ủy quyền',
+        role: 'CHUYEN_VIEN',
+        departmentId: 'unit_daotao',
+        isActive: true,
+      },
+      systemRoles: [],
+      positions: [],
+      responsibilityAreas: [],
+      portfolios: [],
+      delegations: [
+        {
+          id: 'del_expired_01',
+          grantorAssignmentId: 'pos_leader_daotao',
+          grantorUserId: 'user_leader_daotao',
+          granteeAssignmentId: 'pos_expired_cv',
+          granteeUserId: 'user_expired_delegate',
+          responsibilityAreaId: null,
+          action: 'task.approve',
+          resourceScope: 'unit:unit_daotao',
+          validFrom: new Date('2026-08-01'),
+          validUntil: new Date('2026-09-15'), // Expired before now (2026-09-21)
+          sourceDocumentNumber: 'GUQ-EXPIRED',
+          reason: 'Ủy quyền hết hạn',
+          status: 'ACTIVE' as DelegationStatus,
+          revokedAt: null,
+          revokedReason: null,
+          scopeRules: [],
+        },
+      ],
+      bodyMemberships: [],
+      primaryUnitIds: ['unit_daotao'],
+      generatedAt: now,
+    });
+    const expiredWhere = buildTaskViewWhere('approval', expiredDelegateContext);
+    const expiredMatches = matchesApprovalQuery(task, expiredWhere);
+    assert.equal(expiredMatches, false, 'Expired delegation must NOT see task in approval view');
   });
 
   it('5. view=related với subtask DRI: task cha phải xuất hiện kèm quan hệ việc thành phần', () => {
