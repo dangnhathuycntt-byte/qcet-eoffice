@@ -251,6 +251,12 @@
   animation: spin-slow 3s linear infinite;
 }
 
+@keyframes progress-indeterminate {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
 @utility content-auto {
   content-visibility: auto;
   contain-intrinsic-size: 1px 64px;
