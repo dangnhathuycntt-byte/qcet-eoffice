@@ -16,6 +16,13 @@ import type { SchoolTask } from '@/types/dashboard';
 
 export type DomainTaskScope = 'SCHOOL' | 'DEPARTMENT' | 'INDIVIDUAL';
 
+export type TaskView = 'related' | 'unit' | 'all' | 'approval';
+
+export interface TaskViewerContext {
+  relation: 'DRI' | 'ASSIGNER' | 'FOLLOWER' | 'SUBTASK_DRI' | 'APPROVER' | null;
+  matchedSubtaskCount: number;
+}
+
 export type DomainTaskStatus =
   | 'NOT_STARTED'
   | 'IN_PROGRESS'
@@ -94,6 +101,7 @@ export interface TaskDomainModel {
   dacumTaskDefTitle?: string | null;
   isOverdue: boolean;
   requiresReview: boolean;
+  viewerContext?: TaskViewerContext;
 }
 
 export interface TaskMetricsDomain {
@@ -162,6 +170,7 @@ export interface TaskDTO {
   completedSubTasks: number;
   isOverdue: boolean;
   requiresReview: boolean;
+  viewerContext?: TaskViewerContext;
 }
 
 export interface TaskMetricsDTO {
