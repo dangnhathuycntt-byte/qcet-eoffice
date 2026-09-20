@@ -254,6 +254,8 @@ function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: D
   return false;
 }
 
+export const MAX_APPROVAL_STEPS = 20;
+
 /**
  * Extract active user identity, unit IDs, position assignments, and valid delegation grants.
  */
@@ -431,20 +433,24 @@ export function buildTaskViewWhere(
             approvalProcesses: {
               some: {
                 status: { in: [ApprovalProcessStatus.IN_REVIEW, 'IN_PROGRESS' as any] },
-                steps: {
-                  some: {
-                    status: ApprovalStepStatus.PENDING,
-                    OR: [
-                      { reviewerUserId: userFilter },
-                      ...(activeAssignmentIds.length > 0
-                        ? [{ reviewerAssignmentId: { in: activeAssignmentIds } }]
-                        : []),
-                      ...(delegatedGrantorAssignmentIds.length > 0
-                        ? [{ reviewerAssignmentId: { in: delegatedGrantorAssignmentIds } }]
-                        : []),
-                    ],
+                OR: Array.from({ length: MAX_APPROVAL_STEPS + 1 }, (_, k) => ({
+                  currentStepIndex: k,
+                  steps: {
+                    some: {
+                      stepOrder: k,
+                      status: ApprovalStepStatus.PENDING,
+                      OR: [
+                        { reviewerUserId: userFilter },
+                        ...(activeAssignmentIds.length > 0
+                          ? [{ reviewerAssignmentId: { in: activeAssignmentIds } }]
+                          : []),
+                        ...(delegatedGrantorAssignmentIds.length > 0
+                          ? [{ reviewerAssignmentId: { in: delegatedGrantorAssignmentIds } }]
+                          : []),
+                      ],
+                    },
                   },
-                },
+                })),
               },
             },
           },
@@ -470,14 +476,14 @@ export function buildTaskViewWhere(
         stepTargetOrConditions.push({ reviewerAssignmentId: { in: delegatedGrantorAssignmentIds } });
       }
 
-      // Step progression check: ensure future steps never match
+      // Step progression check: ensure future steps never match (strictly currentStepIndex === stepOrder)
       const currentStepChecks: Prisma.TaskApprovalProcessWhereInput[] = [];
-      for (let k = 0; k <= 10; k++) {
+      for (let k = 0; k <= MAX_APPROVAL_STEPS; k++) {
         currentStepChecks.push({
           currentStepIndex: k,
           steps: {
             some: {
-              stepOrder: { in: [k, k + 1] },
+              stepOrder: k,
               status: ApprovalStepStatus.PENDING,
               OR: stepTargetOrConditions,
             },

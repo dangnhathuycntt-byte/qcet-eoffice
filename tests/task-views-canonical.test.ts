@@ -361,9 +361,56 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     const hasProcessCheck = orConditions.some((c: any) => c.approvalProcesses?.some !== undefined);
     assert.ok(hasProcessCheck, 'approval view must inspect approvalProcesses');
 
-    // Test that BGH (reviewer of future step 1) is not matched when step 0 is current
+    // Execution check: evaluate task against approval where clauses
+    const task = sampleTasks.taskWaitingApproval;
+
+    function matchesApprovalQuery(t: any, whereClause: any): boolean {
+      if (whereClause.status && whereClause.status !== t.status) return false;
+      const orBranches = whereClause.OR || [];
+      return orBranches.some((branch: any) => {
+        // 1. Multi-step approvalProcesses branch
+        if (branch.approvalProcesses?.some) {
+          const procSome = branch.approvalProcesses.some;
+          const processes = t.approvalProcesses || [];
+          return processes.some((proc: any) => {
+            const stepChecks = procSome.OR || [];
+            return stepChecks.some((chk: any) => {
+              if (chk.currentStepIndex !== proc.currentStepIndex) return false;
+              const stepSome = chk.steps?.some;
+              if (!stepSome) return false;
+              const steps = proc.steps || [];
+              return steps.some((st: any) => {
+                if (st.status !== stepSome.status) return false;
+                if (st.stepOrder !== stepSome.stepOrder) return false;
+                const targetOr = stepSome.OR || [];
+                return targetOr.some((tgt: any) => {
+                  if (tgt.reviewerUserId) {
+                    const filter = tgt.reviewerUserId;
+                    if (filter.equals && filter.equals === st.reviewerUserId) return true;
+                    if (filter.in && filter.in.includes(st.reviewerUserId)) return true;
+                  }
+                  if (tgt.reviewerAssignmentId) {
+                    const filter = tgt.reviewerAssignmentId;
+                    if (filter.in && filter.in.includes(st.reviewerAssignmentId)) return true;
+                  }
+                  return false;
+                });
+              });
+            });
+          });
+        }
+        return false;
+      });
+    }
+
+    // 1. Delegated approver has valid delegation from grantor pos_leader_daotao -> MATCHES current step 0
+    const delegateMatches = matchesApprovalQuery(task, viewWhere);
+    assert.equal(delegateMatches, true, 'Delegated approver must see task waiting at current step 0');
+
+    // 2. BGH is reviewer for future step 1 (stepOrder: 1), but currentStepIndex is 0 -> MUST NOT MATCH (NO LEAK)
     const bghApprovalWhere = buildTaskViewWhere('approval', bghContext);
-    assert.ok(bghApprovalWhere, 'BGH approval where must be created');
+    const bghMatches = matchesApprovalQuery(task, bghApprovalWhere);
+    assert.equal(bghMatches, false, 'BGH must NOT see task waiting at step 0 when BGH is assigned to future step 1');
   });
 
   it('5. view=related với subtask DRI: task cha phải xuất hiện kèm quan hệ việc thành phần', () => {
