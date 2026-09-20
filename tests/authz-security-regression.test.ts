@@ -354,7 +354,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.ok(body.success);
-    const taskIds = body.data.results.tasks.map((t: any) => t.id);
+    const taskIds = body.results.tasks.map((t: any) => t.id);
     // SYSTEM_ADMIN bị deny bởi buildTaskReadWhere → không thấy bất kỳ task nào
     assert.ok(
       !taskIds.includes(IDS.taskSchool) && !taskIds.includes(IDS.taskDeptA),
@@ -368,7 +368,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.ok(body.success);
-    const taskIds = body.data.results.tasks.map((t: any) => t.id);
+    const taskIds = body.results.tasks.map((t: any) => t.id);
     // BGH có active leadership position → buildTaskReadWhere trả {} → thấy mọi task
     assert.ok(
       taskIds.includes(IDS.taskSchool),
@@ -383,7 +383,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.ok(body.success);
-    const taskIds = body.data.results.tasks.map((t: any) => t.id);
+    const taskIds = body.results.tasks.map((t: any) => t.id);
     assert.ok(
       !taskIds.includes(IDS.taskDeptB),
       `CHUYEN_VIEN dept A không được thấy task dept B (${IDS.taskDeptB}) dù truyền scope=school`
@@ -396,7 +396,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.ok(body.success);
-    const taskIds = body.data.results.tasks.map((t: any) => t.id);
+    const taskIds = body.results.tasks.map((t: any) => t.id);
     assert.ok(
       !taskIds.includes(IDS.taskDeptA),
       `CHUYEN_VIEN dept B không được thấy task dept A (${IDS.taskDeptA}) dù truyền scope=school`

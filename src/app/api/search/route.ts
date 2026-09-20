@@ -152,17 +152,11 @@ export async function GET(request: NextRequest) {
     // Canonical Task authorization (replaces legacy isAdmin + manual scope branching)
     // Note: scope=school query param is intentionally IGNORED for authorization.
     // buildTaskReadWhere() determines access based on canonical position assignments.
-    // Data classification filter below remains in place.
     const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
     const canonicalTaskAuthWhere = buildTaskReadWhere(authorizationContext);
     if (Object.keys(canonicalTaskAuthWhere).length > 0) {
       andConditions.push(canonicalTaskAuthWhere);
     }
-
-    // Phase 9 & Section 31/43: Data classification filter for tasks
-    andConditions.push({
-      dataClassification: { not: 'STATE_SECRET' as any },
-    });
 
     const tasksWhere = andConditions.length > 0 ? { AND: andConditions } : {};
 
@@ -401,20 +395,22 @@ export async function GET(request: NextRequest) {
       issuedDate: d.issuedDate ? d.issuedDate.toISOString() : "",
     }));
 
-    return apiSuccess(
-      {
-        query: q,
-        results: {
-          tasks: formattedTasks,
-          documents: formattedDocuments,
-          users: sortedUsers,
-        },
-        count: {
-          tasks: formattedTasks.length,
-          documents: formattedDocuments.length,
-          users: sortedUsers.length,
-        },
+    const searchPayload = {
+      query: q,
+      results: {
+        tasks: formattedTasks,
+        documents: formattedDocuments,
+        users: sortedUsers,
       },
+      count: {
+        tasks: formattedTasks.length,
+        documents: formattedDocuments.length,
+        users: sortedUsers.length,
+      },
+    };
+
+    return apiSuccess(
+      searchPayload,
       {
         requestId,
         headers: {
