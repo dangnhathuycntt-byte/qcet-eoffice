@@ -14,6 +14,7 @@ import {
   getSystemReferenceDateStr,
   isTaskPastDue,
   getIctReferenceDateStart,
+  type TaskView,
 } from '@/domain/tasks';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
 import { TaskQueryParamsSchema } from '@/contracts/tasks';
@@ -224,6 +225,22 @@ function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: D
   }
 
   return false;
+}
+
+/**
+ * Canonical task query view filter builder (Issue #26).
+ * Constructs Prisma.TaskWhereInput enforcing canonical TaskView semantics:
+ * - 'related': Direct actor on task, assigner, creator, current approval action,
+ *              or active subtask DRI (without flattening subtasks to top-level rows)
+ * - 'unit': Tasks matching user's active units (PositionAssignment / leadUnitId / unitId)
+ * - 'all': Unconstrained view filter {} (scoped strictly by prior buildTaskReadWhere)
+ * - 'approval': Tasks with a current approval step actively pending for the user / valid delegation
+ */
+export function buildTaskViewWhere(
+  view: TaskView,
+  context: AuthorizationContext | AuthenticatedUser | any
+): Prisma.TaskWhereInput {
+  throw new Error('Not implemented');
 }
 
 /**
