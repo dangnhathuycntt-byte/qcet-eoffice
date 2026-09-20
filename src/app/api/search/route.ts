@@ -8,14 +8,14 @@ import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';
 import { SearchQuerySchema } from '@/contracts/common';
 import { assertRateLimit } from '@/server/security/rate-limit';
-import { isAdmin } from '@/server/policies/document-policy';
 import {
   foldVietnamese,
   normalizeTelexQuery,
   scoreVietnameseSearch,
   QCET_ACRONYMS,
 } from '@/lib/search/vietnamese-search';
-import { TaskScope } from '@prisma/client';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
 
 export interface SearchTaskResult {
   id: string;
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         extractFieldErrors(parseResult.error)
       );
     }
-    const { q: rawQParam, query: rawQueryParam, limit = 20, scope } = parseResult.data;
+    const { q: rawQParam, query: rawQueryParam, limit = 20 } = parseResult.data;
     const q = (rawQParam || rawQueryParam || '').trim();
 
     const foldedQ = foldVietnamese(q);
@@ -149,49 +149,20 @@ export async function GET(request: NextRequest) {
       andConditions.push({ OR: taskOrConditions });
     }
 
-    // Role and Scope authorization filter
-    const userIsAdmin = isAdmin(authUser);
-
-    if (scope === 'personal') {
-      andConditions.push({
-        OR: [
-          { createdById: authUser.id },
-          { assignees: { some: { userId: authUser.id } } },
-        ],
-      });
-    } else if (scope === 'unit') {
-      if (authUser.departmentId) {
-        andConditions.push({ departmentId: authUser.departmentId });
-      } else if (!userIsAdmin) {
-        // User with no department can only see their own tasks in unit scope
-        andConditions.push({
-          OR: [
-            { createdById: authUser.id },
-            { assignees: { some: { userId: authUser.id } } },
-          ],
-        });
-      }
-    } else if (scope === 'school') {
-      andConditions.push({ scope: TaskScope.SCHOOL });
-    } else if (!userIsAdmin) {
-      // Unscoped query for non-admin: restrict to assigned, created, own department, or school-wide tasks
-      const permittedConditions: any[] = [
-        { createdById: authUser.id },
-        { assignees: { some: { userId: authUser.id } } },
-        { scope: TaskScope.SCHOOL },
-      ];
-      if (authUser.departmentId) {
-        permittedConditions.push({ departmentId: authUser.departmentId });
-      }
-      andConditions.push({ OR: permittedConditions });
+    // Canonical Task authorization (replaces legacy isAdmin + manual scope branching)
+    // Note: scope=school query param is intentionally IGNORED for authorization.
+    // buildTaskReadWhere() determines access based on canonical position assignments.
+    // Data classification filter below remains in place.
+    const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
+    const canonicalTaskAuthWhere = buildTaskReadWhere(authorizationContext);
+    if (Object.keys(canonicalTaskAuthWhere).length > 0) {
+      andConditions.push(canonicalTaskAuthWhere);
     }
 
     // Phase 9 & Section 31/43: Data classification filter for tasks
-    if (!userIsAdmin) {
-      andConditions.push({
-        dataClassification: { not: 'STATE_SECRET' as any },
-      });
-    }
+    andConditions.push({
+      dataClassification: { not: 'STATE_SECRET' as any },
+    });
 
     const tasksWhere = andConditions.length > 0 ? { AND: andConditions } : {};
 
@@ -254,7 +225,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Phase 9 & Section 31/43: Classification filter for documents
-    if (!userIsAdmin) {
+    // SYSTEM_ADMIN is denied operational access; apply classification filter to all users.
+    {
       const docAndConditions: any[] = [];
       if (documentsWhere.OR) {
         docAndConditions.push(documentsWhere);
