@@ -138,12 +138,14 @@ export function SubtaskDetailDrawer({
   // Handlers
   const handleTitleChange = async (newTitle: string) => {
     if (!subtask) return;
+    const cleaned = newTitle.replace(/\r?\n|\r/g, " ").trim();
+    if (!cleaned) return;
     const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
     const res = await fetch(`/api/tasks/${subtask.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: newTitle.trim(),
+        title: cleaned,
         ...(currentVersion !== undefined ? { expectedVersion: currentVersion } : {}),
       }),
     });
@@ -151,7 +153,7 @@ export function SubtaskDetailDrawer({
 
     const data = await res.json().catch(() => null);
     const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
-    const updated = { ...subtask, title: newTitle.trim(), version: nextVersion };
+    const updated = { ...subtask, title: cleaned, version: nextVersion };
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
   };
@@ -462,8 +464,8 @@ export function SubtaskDetailDrawer({
               submitOnEnter={true}
               ariaLabel="Tên việc thành phần"
               placeholder="Nhập tên việc thành phần..."
-              viewClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
-              editorClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug"
+              viewClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              editorClassName="text-[21px] font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
             />
           </div>
 

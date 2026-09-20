@@ -11,30 +11,11 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
-  ChevronRight,
-  TrendingUp,
-  Activity,
-  History,
   Check,
-  Edit2,
-  X,
-  Layers,
-  CalendarClock,
-  Sparkles,
-  ExternalLink,
   Signal,
   UserPlus,
   CircleDashed,
-  Compass,
-  MessageSquare,
-  Paperclip,
-  ArrowLeftRight,
-  SquareUserRound,
-  PenLine,
-  Box,
   Loader2,
-  Search,
-  Plus,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -57,7 +38,6 @@ import {
   buildActorContext,
   buildTaskContext,
 } from "@/domain/tasks/state-machine";
-import { getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 
 export interface AuditLogItem {
   id: string;
@@ -892,89 +872,6 @@ export function LinearPropertiesSidebar({
           onSelectSubtask={onSelectSubtask}
           onAddSubtask={onAddSubtask}
         />
-      )}
-
-      {showRelatedSections && (
-      <>
-
-      {/* SECTION: ACTIVITY (Linear Style - Tối đa 3 hoạt động mới nhất) */}
-      <div className="mt-1 pt-5 border-t border-border/40 select-none">
-        {auditEvents.length > 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <div
-                onClick={() => onNavigateTab?.("activity")}
-                className="flex items-center gap-1.5 min-w-0 cursor-pointer hover:text-foreground transition-colors"
-                title="Xem nhật ký hoạt động"
-              >
-                <span className="text-xs font-semibold text-foreground truncate">
-                  Hoạt động
-                </span>
-                <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums shrink-0">
-                  {auditEvents.length}
-                </span>
-              </div>
-              {onNavigateTab && (
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab("activity")}
-                  className="text-[11px] font-medium text-primary hover:underline cursor-pointer pl-1"
-                  title="Xem tất cả hoạt động"
-                >
-                  Xem tất cả
-                </button>
-              )}
-            </div>
-
-            {/* Compact Chronological Activity List (Tối đa 3 hoạt động) */}
-            <div className="space-y-1.5 pt-0.5">
-              {auditEvents.slice(0, 3).map((evt, idx) => {
-                const isNameChange = evt.action === "UPDATE_TITLE" || evt.description?.includes("tiêu đề") || evt.description?.includes("tên");
-                const isPriority = evt.action === "UPDATE_PRIORITY" || evt.description?.includes("ưu tiên");
-                const isDate = evt.action === "UPDATE_DUE_DATE" || evt.description?.includes("hạn");
-                const isProgress = evt.action === "UPDATE_PROGRESS" || evt.description?.includes("tiến độ");
-
-                return (
-                  <div key={evt.id || `audit-${idx}-${evt.timestamp}`} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-snug py-0.5">
-                    <span className="mt-0.5 shrink-0 text-muted-foreground/70">
-                      {isNameChange ? (
-                        <PenLine className="size-3.5" strokeWidth={1.5} />
-                      ) : isPriority ? (
-                        <Signal className="size-3.5" strokeWidth={1.5} />
-                      ) : isDate ? (
-                        <Calendar className="size-3.5" strokeWidth={1.5} />
-                      ) : isProgress ? (
-                        <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={1.5} />
-                      ) : (
-                        <Box className="size-3.5" strokeWidth={1.5} />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-foreground font-normal">{evt.actorName || "Người dùng"}</span>{" "}
-                      <span className="text-foreground/80">{evt.description || getAuditActionLabel(evt.action)}</span>
-                      <span className="text-muted-foreground/50 ml-1.5 font-normal text-[10px]">
-                        · {formatDisplayDate(evt.timestamp)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          /* Trạng thái 0 hoạt động: 1 dòng compact duy nhất "Hoạt động   0", loại bỏ khoảng trắng thừa */
-          <div className="flex items-center justify-between py-1 text-xs select-none">
-            <span
-              onClick={() => onNavigateTab?.("activity")}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              Hoạt động
-            </span>
-            <span className="font-mono text-muted-foreground text-xs font-medium">0</span>
-          </div>
-        )}
-      </div>
-      </>
       )}
     </div>
   );

@@ -111,6 +111,7 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes('title="Tạo việc con"'), "Must render + button with proper title");
+    assert.ok(html.includes("Thêm"), "Must render 'Thêm' quick action text");
   });
 
   it("does not render + button when onAddSubtask is not provided", () => {
@@ -140,5 +141,84 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
     assert.ok(html.includes("bg-blue-600"), "IN_PROGRESS dot");
     assert.ok(html.includes("bg-amber-600"), "WAITING_APPROVAL dot");
     assert.ok(html.includes("bg-emerald-600"), "COMPLETED dot");
+  });
+
+  it("renders due date formatted as DD/MM", () => {
+    const sub = makeSubtask({
+      id: "s-due",
+      title: "Việc con có hạn",
+      dueDate: "2026-10-25",
+    });
+    const html = renderToStaticMarkup(
+      React.createElement(TaskSubtasksSidebarSection, {
+        subTasks: [sub],
+        onSelectSubtask: () => {},
+      })
+    );
+    assert.ok(html.includes("25/10"), "Must show compact due date 25/10");
+    assert.ok(html.includes('title="Hạn hoàn thành: 25/10/2026"'), "Must have title tooltip with full date");
+  });
+
+  it("renders line-through and muted styling for COMPLETED status", () => {
+    const sub = makeSubtask({
+      id: "s-comp",
+      title: "Việc đã xong",
+      status: "COMPLETED",
+    });
+    const html = renderToStaticMarkup(
+      React.createElement(TaskSubtasksSidebarSection, {
+        subTasks: [sub],
+        onSelectSubtask: () => {},
+      })
+    );
+    assert.ok(
+      html.includes("line-through"),
+      "Completed subtask title must have line-through"
+    );
+    assert.ok(
+      html.includes("text-muted-foreground/60"),
+      "Completed subtask title must have text-muted-foreground/60"
+    );
+  });
+
+  it("renders assignee avatar image when assigneeAvatar is present", () => {
+    const sub = makeSubtask({
+      id: "s-av",
+      title: "Việc con với avatar ảnh",
+      assigneeName: "Nguyễn Văn A",
+      assigneeAvatar: "https://example.com/avatar.png",
+    });
+    const html = renderToStaticMarkup(
+      React.createElement(TaskSubtasksSidebarSection, {
+        subTasks: [sub],
+        onSelectSubtask: () => {},
+      })
+    );
+    assert.ok(
+      html.includes('src="https://example.com/avatar.png"'),
+      "Must render img element with assigneeAvatar src"
+    );
+  });
+
+  it("renders assignee initials when assigneeName is present without avatar image", () => {
+    const sub = makeSubtask({
+      id: "s-init",
+      title: "Việc con với initials",
+      assigneeName: "Trần Thị Bích",
+    });
+    const html = renderToStaticMarkup(
+      React.createElement(TaskSubtasksSidebarSection, {
+        subTasks: [sub],
+        onSelectSubtask: () => {},
+      })
+    );
+    assert.ok(
+      html.includes('title="Trần Thị Bích"'),
+      "Must have title attribute with assigneeName"
+    );
+    assert.ok(
+      html.includes("bg-primary/10"),
+      "Must render circle with bg-primary/10"
+    );
   });
 });

@@ -171,8 +171,6 @@ export function TaskIdentityBlock({
     return map;
   }, [allowedTransitions]);
 
-  const scopeLabel = isSchool ? "Cấp Trường" : "Cấp Đơn vị";
-
   const rawLeadName = isSchool
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
@@ -293,8 +291,9 @@ export function TaskIdentityBlock({
             <DirectInlineEditor
               value={task.title}
               onSave={async (newTitle) => {
-                if (onTitleChange) {
-                  await onTitleChange(task.id, newTitle);
+                const cleaned = newTitle.replace(/\r?\n|\r/g, " ").trim();
+                if (onTitleChange && cleaned) {
+                  await onTitleChange(task.id, cleaned);
                 }
               }}
               canEdit={canEdit}
@@ -303,15 +302,10 @@ export function TaskIdentityBlock({
               submitOnEnter={true}
               ariaLabel="Tên nhiệm vụ"
               placeholder="Nhập tên nhiệm vụ..."
-              viewClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug"
-              editorClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug"
+              viewClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              editorClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
             />
           </div>
-
-          {/* Subtitle — scope label only, no IDs in primary display */}
-          <p className="text-xs text-muted-foreground font-normal pt-0.5 select-none">
-            {scopeLabel}
-          </p>
         </div>
 
       {showInlineProperties && (

@@ -238,25 +238,32 @@ export function TaskDetailPage({
     : staffTask?.deliverableDescription || (task as any).description || "";
 
   // Computed fields
-  const taskCode =
-    task.code ||
-    (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
-    task.id.slice(0, 8).toUpperCase();
+  const officialCode = task.code || (isSchool ? schoolTask?.taskCode : staffTask?.taskId);
+  const taskCode = officialCode || task.id.slice(0, 8).toUpperCase();
 
   const parentTaskId = (task as any).parentSchoolTaskId || (task as any).parentTaskId || (task as any).parentTask?.id;
   const parentTaskTitle = (task as any).parentSchoolTaskTitle || (task as any).parentTaskTitle || (task as any).parentTask?.title;
+  const parentTaskCode = (task as any).parentSchoolTaskCode || (task as any).parentTaskCode || (task as any).parentTask?.code;
 
   React.useEffect(() => {
     const items: Array<{ label: string; href?: string; mono?: boolean }> = [
       { label: "Nhiệm vụ", href: "/tasks" },
     ];
-    if (parentTaskId && parentTaskTitle) {
-      items.push({ label: parentTaskTitle, href: `/tasks/${parentTaskId}` });
+    if (parentTaskId) {
+      items.push({
+        label: parentTaskCode || parentTaskTitle || "Nhiệm vụ cha",
+        href: `/tasks/${parentTaskId}`,
+        mono: Boolean(parentTaskCode),
+      });
     }
-    items.push({ label: task.title });
+    // Ưu tiên hiển thị mã nhiệm vụ chính thức (NV-...), nếu chưa có mã thì hiển thị tiêu đề
+    items.push({
+      label: officialCode || task.title,
+      mono: Boolean(officialCode),
+    });
     setBreadcrumbItems(items);
     return () => setBreadcrumbItems(null);
-  }, [setBreadcrumbItems, task.title, parentTaskId, parentTaskTitle]);
+  }, [setBreadcrumbItems, officialCode, task.title, parentTaskId, parentTaskCode, parentTaskTitle]);
 
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
 
@@ -721,11 +728,11 @@ export function TaskDetailPage({
         onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
       />
 
-      {/* Tabs: Tổng quan + Hoạt động */}
+      {/* Tabs: Tổng quan + Hoạt động — thanh mảnh, tinh tế */}
       <nav
         role="tablist"
         aria-label="Các phân mục chi tiết nhiệm vụ"
-        className="flex items-center gap-1 px-4 sm:px-6 border-b border-border/40 bg-background/90 text-xs font-medium sticky top-12 z-20 backdrop-blur-md select-none"
+        className="flex items-center gap-1 px-4 sm:px-6 h-9 border-b border-border/30 bg-background/70 text-xs font-normal sticky top-12 z-20 backdrop-blur-xs select-none"
       >
         <button
           role="tab"
@@ -735,10 +742,10 @@ export function TaskDetailPage({
           type="button"
           onClick={() => handleTabChange("overview")}
           className={cn(
-            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
+            "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px",
             activeTab === "overview"
-              ? "border-primary text-foreground font-semibold"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-primary text-foreground font-medium"
+              : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
           )}
         >
           <span>Tổng quan</span>
@@ -752,15 +759,15 @@ export function TaskDetailPage({
           type="button"
           onClick={() => handleTabChange("activity")}
           className={cn(
-            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
+            "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px",
             activeTab === "activity"
-              ? "border-primary text-foreground font-semibold"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-primary text-foreground font-medium"
+              : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
           )}
         >
           <span>Hoạt động</span>
           {feedActivityEvents.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
+            <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground/60 leading-none">
               {feedActivityEvents.length}
             </span>
           )}

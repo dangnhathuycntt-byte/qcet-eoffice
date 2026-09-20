@@ -204,6 +204,7 @@ export interface TaskNotionBlockContentProps {
   subTasks?: StaffTask[];
   canEdit?: boolean;
   globalFileDrop?: boolean;
+  showFixedToolbar?: boolean;
   onSaveContent: (newContent: string) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
   onOpenCreateSubtask?: () => void;
@@ -1561,6 +1562,7 @@ export function TaskNotionBlockContent({
   subTasks = [],
   canEdit = true,
   globalFileDrop = true,
+  showFixedToolbar = false,
   onSaveContent,
   onSelectSubtask,
   onOpenCreateSubtask,
@@ -1932,7 +1934,7 @@ export function TaskNotionBlockContent({
           className
         )}
       >
-        <FixedToolbar editor={editor} />
+        {showFixedToolbar && <FixedToolbar editor={editor} />}
 
         <div className="flex-1 min-h-0 px-1 py-3">
           <Plate
