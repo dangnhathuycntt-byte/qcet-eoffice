@@ -433,7 +433,7 @@ export function buildTaskViewWhere(
           {
             approvalProcesses: {
               some: {
-                status: { in: [ApprovalProcessStatus.IN_REVIEW, 'IN_PROGRESS' as any] },
+                status: ApprovalProcessStatus.IN_REVIEW,
                 OR: Array.from({ length: MAX_APPROVAL_STEPS + 1 }, (_, k) => ({
                   currentStepIndex: k,
                   steps: {
@@ -499,7 +499,7 @@ export function buildTaskViewWhere(
           {
             approvalProcesses: {
               some: {
-                status: { in: [ApprovalProcessStatus.IN_REVIEW, 'IN_PROGRESS' as any] },
+                status: ApprovalProcessStatus.IN_REVIEW,
                 OR: currentStepChecks,
               },
             },
