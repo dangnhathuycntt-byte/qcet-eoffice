@@ -178,7 +178,7 @@ export async function resolveActionContext(
     throw new NotFoundError("Không tìm thấy nhiệm vụ");
   }
 
-  const authorizationContext = await loadAuthorizationContext(user.id);
+  const authorizationContext = await loadAuthorizationContext(user.id, new Date(), { useCache: true, ttlMs: 10_000 });
   const decision = authorize(authorizationContext, action, buildTaskResource(taskResult.task));
   if (!decision.allowed) {
     throw new ForbiddenError(decision.reason || "Bạn không có quyền thực hiện thao tác này");

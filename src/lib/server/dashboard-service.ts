@@ -125,6 +125,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     }),
     prisma.notification.findMany({
       take: 15,
+      where: options?.userId ? { userId: options.userId } : undefined,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

@@ -562,4 +562,5 @@ export function LinearTaskDetailView({
     </div>
   );
 }
-import { AnimatePresence, m } from "motion/react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";

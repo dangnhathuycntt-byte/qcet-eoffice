@@ -345,8 +345,15 @@ function CalendarRouteContent() {
     updateUrlParam("date", newDate);
   }, [selectedDate, handleSelectDate, updateUrlParam]);
 
+  const loadAbortRef = useRef<AbortController | null>(null);
   const loadCalendarData = useCallback(async (showRefreshingSpinner = false) => {
     void showRefreshingSpinner;
+
+    // Cancel any in-flight request from a previous period change
+    loadAbortRef.current?.abort();
+    loadAbortRef.current = new AbortController();
+    const { signal } = loadAbortRef.current;
+
     setIsLoading(true);
     setError(null);
 
@@ -359,8 +366,8 @@ function CalendarRouteContent() {
       });
 
       const [taskResponse, meetingResponse] = await Promise.all([
-        fetch("/api/dashboard/overview"),
-        fetch(`/api/meetings?${meetingParams.toString()}`),
+        fetch("/api/dashboard/overview", { signal }),
+        fetch(`/api/meetings?${meetingParams.toString()}`, { signal }),
       ]);
 
       if (!taskResponse.ok) throw new Error("Không thể tải danh sách nhiệm vụ từ máy chủ");
@@ -371,6 +378,7 @@ function CalendarRouteContent() {
       setTasks(Array.isArray(taskData?.tasks) ? taskData.tasks : []);
       setMeetings(Array.isArray(meetingData?.items) ? meetingData.items : []);
     } catch (loadError) {
+      if ((loadError as any)?.name === "AbortError") return;
       setError(loadError instanceof Error ? loadError.message : "Đã xảy ra lỗi khi kết nối dữ liệu lịch biểu");
     } finally {
       setIsLoading(false);

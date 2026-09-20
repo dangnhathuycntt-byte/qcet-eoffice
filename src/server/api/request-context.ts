@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { getSessionFromRequest, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { AuthenticationError, AuthorizationError } from '@/server/api/errors';
 import { getRequestId } from '@/server/observability/logger';
 import {
@@ -166,10 +165,11 @@ export async function getApiContext(
     try {
       currentSession = await resolveCurrentSession(request);
       if (currentSession) {
-        const legacySession = await getSessionFromRequest(request as any);
-        let dbRole = legacySession?.role || 'CHUYEN_VIEN';
-        let dbDept = legacySession?.departmentId ?? null;
-        let dbTitle = legacySession?.title ?? null;
+        // Single DB query for role/departmentId/title — resolveCurrentSession already
+        // verified the session and user.isActive; this adds the profile fields only.
+        let dbRole = 'CHUYEN_VIEN';
+        let dbDept: string | null = null;
+        let dbTitle: string | null = null;
 
         try {
           const fullDbUser = await prisma.user.findUnique({
@@ -182,7 +182,7 @@ export async function getApiContext(
             dbTitle = fullDbUser.title ?? dbTitle;
           }
         } catch {
-          // Gracefully keep token payload values
+          // Gracefully keep default values
         }
 
         user = {

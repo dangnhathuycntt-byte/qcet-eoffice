@@ -35,6 +35,7 @@ export async function GET(request?: NextRequest): Promise<NextResponse> {
     const options: LiveDashboardOptions = {
       academicMonth: isNaN(Number(academicMonth)) ? undefined : academicMonth,
       academicYear,
+      userId: authUser.id,
     };
 
     const userIsAdmin = isAdmin(authUser);

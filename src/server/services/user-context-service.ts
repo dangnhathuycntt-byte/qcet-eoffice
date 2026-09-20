@@ -22,7 +22,7 @@ export class UserContextService {
    * by mapping the canonical AuthorizationContext to the UserContextResponse DTO.
    */
   static async getUserContext(userId: string, now: Date = new Date()): Promise<UserContextResponse> {
-    const authContext = await loadAuthorizationContext(userId, now);
+    const authContext = await loadAuthorizationContext(userId, now, { useCache: true, ttlMs: 10_000 });
     return this.mapToUserContextResponse(authContext, now);
   }
 
