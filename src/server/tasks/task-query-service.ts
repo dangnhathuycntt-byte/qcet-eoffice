@@ -1,6 +1,15 @@
 import { prisma } from '@/lib/prisma';
 import { mapPrismaTaskToSchoolTask, type SchoolTask, formatLocalDate } from '@/lib/adapters/task-db-adapter';
-import { TaskScope, TaskStatus, Prisma, AssignmentStatus } from '@prisma/client';
+import {
+  TaskScope,
+  TaskStatus,
+  Prisma,
+  AssignmentStatus,
+  TaskActorRole,
+  ApprovalProcessStatus,
+  ApprovalStepStatus,
+  DelegationStatus,
+} from '@prisma/client';
 import type { ApiRequestContext, AuthenticatedUser } from '@/server/api/request-context';
 import {
   type AuthorizationContext,
@@ -15,6 +24,7 @@ import {
   isTaskPastDue,
   getIctReferenceDateStart,
   type TaskView,
+  type TaskViewerContext,
 } from '@/domain/tasks';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
 import { TaskQueryParamsSchema } from '@/contracts/tasks';
@@ -27,6 +37,7 @@ export interface TaskQueryFilters {
   dept?: string;
   academicYear?: string;
   year?: string;
+  view?: TaskView;
   scope?: string;
   assignedTo?: string;
   parentTaskId?: string | null;
@@ -95,6 +106,14 @@ export interface TaskMetricsResult {
 /** Lightweight projection for list views — includes summary subtasks for rollup and collaborators, omits deliverables, dacumTaskDef, description */
 const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   department: { select: { id: true, name: true, shortName: true, color: true } },
+  actors: {
+    select: {
+      userId: true,
+      role: true,
+      isPrimaryDRI: true,
+      user: { select: { id: true, name: true, avatarUrl: true } },
+    },
+  },
   assignees: {
     include: {
       user: { select: { id: true, name: true, avatarUrl: true } },
@@ -132,6 +151,14 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
 
 const TASK_INCLUDE = {
   department: true,
+  actors: {
+    select: {
+      userId: true,
+      role: true,
+      isPrimaryDRI: true,
+      user: { select: { id: true, name: true, avatarUrl: true } },
+    },
+  },
   assignees: {
     include: {
       user: { select: { id: true, name: true, avatarUrl: true } },
@@ -228,6 +255,79 @@ function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: D
 }
 
 /**
+ * Extract active user identity, unit IDs, position assignments, and valid delegation grants.
+ */
+export function extractUserContextDetails(
+  context: AuthorizationContext | AuthenticatedUser | any,
+  now: Date = new Date()
+) {
+  const isAuthCtx = isAuthorizationContext(context);
+  const userId = isAuthCtx
+    ? context.userId || context.user?.id
+    : context?.id || context?.userId;
+
+  const myUnitIdsSet = new Set<string>();
+  const activeAssignmentIds: string[] = [];
+  const delegatedGrantorUserIds: string[] = [];
+  const delegatedGrantorAssignmentIds: string[] = [];
+
+  if (isAuthCtx) {
+    if (Array.isArray(context.primaryUnitIds)) {
+      for (const id of context.primaryUnitIds) {
+        if (id) myUnitIdsSet.add(id);
+      }
+    }
+    if (Array.isArray(context.positions)) {
+      for (const pos of context.positions) {
+        if (isPositionActive(pos, now)) {
+          if (pos.unitId) myUnitIdsSet.add(pos.unitId);
+          if (pos.id) activeAssignmentIds.push(pos.id);
+        }
+      }
+    }
+    if (context.user?.departmentId) {
+      myUnitIdsSet.add(context.user.departmentId);
+    }
+    // Active delegations
+    if (Array.isArray(context.delegations)) {
+      for (const del of context.delegations) {
+        const isActive =
+          del.status === 'ACTIVE' || (del.status as any) === DelegationStatus.ACTIVE;
+        const isValidDate =
+          (!del.validFrom || new Date(del.validFrom) <= now) &&
+          (!del.validUntil || new Date(del.validUntil) >= now);
+        const notRevoked = !del.revokedAt;
+        const isActionMatch =
+          !del.action ||
+          del.action === 'task.approve' ||
+          del.action === '*' ||
+          del.action === 'task.*';
+
+        if (isActive && isValidDate && notRevoked && isActionMatch) {
+          if (del.grantorUserId) delegatedGrantorUserIds.push(del.grantorUserId);
+          if (del.grantorAssignmentId) delegatedGrantorAssignmentIds.push(del.grantorAssignmentId);
+        }
+      }
+    }
+  } else if (context) {
+    if (context.departmentId) myUnitIdsSet.add(context.departmentId);
+    if (Array.isArray(context.primaryUnitIds)) {
+      for (const id of context.primaryUnitIds) {
+        if (id) myUnitIdsSet.add(id);
+      }
+    }
+  }
+
+  return {
+    userId: userId || null,
+    myUnitIds: Array.from(myUnitIdsSet),
+    activeAssignmentIds,
+    delegatedGrantorUserIds,
+    delegatedGrantorAssignmentIds,
+  };
+}
+
+/**
  * Canonical task query view filter builder (Issue #26).
  * Constructs Prisma.TaskWhereInput enforcing canonical TaskView semantics:
  * - 'related': Direct actor on task, assigner, creator, current approval action,
@@ -240,7 +340,270 @@ export function buildTaskViewWhere(
   view: TaskView,
   context: AuthorizationContext | AuthenticatedUser | any
 ): Prisma.TaskWhereInput {
-  throw new Error('Not implemented');
+  if (!context) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  const now = new Date();
+  const {
+    userId,
+    myUnitIds,
+    activeAssignmentIds,
+    delegatedGrantorUserIds,
+    delegatedGrantorAssignmentIds,
+  } = extractUserContextDetails(context, now);
+
+  if (!userId) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  switch (view) {
+    case 'all': {
+      // 'all' is all tasks the user is authorized to read (scoped by buildTaskReadWhere)
+      return {};
+    }
+
+    case 'unit': {
+      if (myUnitIds.length === 0) {
+        return { id: '__NO_UNIT_MATCH__' };
+      }
+
+      const unitFilter: Prisma.StringFilter =
+        myUnitIds.length === 1 ? { equals: myUnitIds[0] } : { in: myUnitIds };
+
+      return {
+        OR: [
+          { leadUnitId: unitFilter },
+          { departmentId: unitFilter },
+          { actors: { some: { unitId: unitFilter } } },
+          {
+            subTasks: {
+              some: {
+                archivedAt: null,
+                OR: [
+                  { leadUnitId: unitFilter },
+                  { departmentId: unitFilter },
+                  { actors: { some: { unitId: unitFilter } } },
+                ],
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    case 'related': {
+      const allActorUserIds = Array.from(new Set([userId, ...delegatedGrantorUserIds]));
+      const userFilter: Prisma.StringFilter =
+        allActorUserIds.length === 1 ? { equals: allActorUserIds[0] } : { in: allActorUserIds };
+
+      return {
+        OR: [
+          // 1. Direct creator, actor, or legacy assignee on parent task
+          { createdById: userFilter },
+          { actors: { some: { userId: userFilter } } },
+          { assignees: { some: { userId: userFilter } } },
+
+          // 2. DRI or assignee on any active child subtask (Issue #21 parent-only match)
+          {
+            subTasks: {
+              some: {
+                archivedAt: null,
+                OR: [
+                  { actors: { some: { userId: userFilter } } },
+                  { assignees: { some: { userId: userFilter } } },
+                ],
+              },
+            },
+          },
+
+          // 3. User is approver / reviewer on current approval action
+          {
+            status: TaskStatus.WAITING_APPROVAL,
+            actors: {
+              some: {
+                userId: userFilter,
+                role: { in: [TaskActorRole.APPROVER, TaskActorRole.REVIEWER] },
+              },
+            },
+          },
+          {
+            approvalProcesses: {
+              some: {
+                status: { in: [ApprovalProcessStatus.IN_REVIEW, 'IN_PROGRESS' as any] },
+                steps: {
+                  some: {
+                    status: ApprovalStepStatus.PENDING,
+                    OR: [
+                      { reviewerUserId: userFilter },
+                      ...(activeAssignmentIds.length > 0
+                        ? [{ reviewerAssignmentId: { in: activeAssignmentIds } }]
+                        : []),
+                      ...(delegatedGrantorAssignmentIds.length > 0
+                        ? [{ reviewerAssignmentId: { in: delegatedGrantorAssignmentIds } }]
+                        : []),
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    case 'approval': {
+      const approvalUserIds = Array.from(new Set([userId, ...delegatedGrantorUserIds]));
+      const approvalUserFilter: Prisma.StringFilter =
+        approvalUserIds.length === 1
+          ? { equals: approvalUserIds[0] }
+          : { in: approvalUserIds };
+
+      const stepTargetOrConditions: Prisma.TaskApprovalStepWhereInput[] = [
+        { reviewerUserId: approvalUserFilter },
+      ];
+
+      if (activeAssignmentIds.length > 0) {
+        stepTargetOrConditions.push({ reviewerAssignmentId: { in: activeAssignmentIds } });
+      }
+      if (delegatedGrantorAssignmentIds.length > 0) {
+        stepTargetOrConditions.push({ reviewerAssignmentId: { in: delegatedGrantorAssignmentIds } });
+      }
+
+      // Step progression check: ensure future steps never match
+      const currentStepChecks: Prisma.TaskApprovalProcessWhereInput[] = [];
+      for (let k = 0; k <= 10; k++) {
+        currentStepChecks.push({
+          currentStepIndex: k,
+          steps: {
+            some: {
+              stepOrder: { in: [k, k + 1] },
+              status: ApprovalStepStatus.PENDING,
+              OR: stepTargetOrConditions,
+            },
+          },
+        });
+      }
+
+      return {
+        status: TaskStatus.WAITING_APPROVAL,
+        OR: [
+          // Multi-step approval process: must match the CURRENT pending step
+          {
+            approvalProcesses: {
+              some: {
+                status: { in: [ApprovalProcessStatus.IN_REVIEW, 'IN_PROGRESS' as any] },
+                OR: currentStepChecks,
+              },
+            },
+          },
+          // Direct task-level approver actor fallback (when no formal approval process created)
+          {
+            approvalProcesses: { none: {} },
+            actors: {
+              some: {
+                role: { in: [TaskActorRole.APPROVER, TaskActorRole.REVIEWER] },
+                userId: approvalUserFilter,
+              },
+            },
+          },
+        ],
+      };
+    }
+
+    default:
+      return {};
+  }
+}
+
+/**
+ * Compute viewer metadata relation & matched subtasks (Issue #21, #26).
+ */
+export function computeTaskViewerContext(
+  task: any,
+  userId: string | null | undefined
+): TaskViewerContext | undefined {
+  if (!userId || !task) return undefined;
+
+  // 1. Direct DRI on parent task
+  const isDirectDRI =
+    (task.actors || []).some(
+      (a: any) =>
+        (a.userId === userId || a.user?.id === userId) &&
+        (a.role === 'DRI' || a.role === TaskActorRole.DRI || a.isPrimaryDRI)
+    ) ||
+    (task.assignees || []).some(
+      (a: any) =>
+        (a.userId === userId || a.user?.id === userId) &&
+        (a.roleInTask === 'PRIMARY_OWNER' || a.roleInTask === 'DRI')
+    );
+
+  if (isDirectDRI) {
+    return { relation: 'DRI', matchedSubtaskCount: 0 };
+  }
+
+  // 2. Direct Assigner / Creator on parent task
+  const isAssigner =
+    task.createdById === userId ||
+    (task.actors || []).some(
+      (a: any) =>
+        (a.userId === userId || a.user?.id === userId) &&
+        (a.role === 'ASSIGNER' || a.role === TaskActorRole.ASSIGNER)
+    );
+  if (isAssigner) {
+    return { relation: 'ASSIGNER', matchedSubtaskCount: 0 };
+  }
+
+  // 3. Direct Approver / Reviewer on parent task
+  const isApprover = (task.actors || []).some(
+    (a: any) =>
+      (a.userId === userId || a.user?.id === userId) &&
+      (a.role === 'APPROVER' ||
+        a.role === 'REVIEWER' ||
+        a.role === TaskActorRole.APPROVER ||
+        a.role === TaskActorRole.REVIEWER)
+  );
+  if (isApprover) {
+    return { relation: 'APPROVER', matchedSubtaskCount: 0 };
+  }
+
+  // 4. Subtasks match (Issue #21 parent-only match metadata)
+  const activeSubtasks = (task.subTasks || []).filter(
+    (st: any) => !st.archivedAt && String(st.status || '').toUpperCase() !== 'CANCELLED'
+  );
+  const matchedSubtasks = activeSubtasks.filter((st: any) => {
+    return (
+      (st.actors || []).some(
+        (a: any) =>
+          (a.userId === userId || a.user?.id === userId) &&
+          (a.role === 'DRI' || a.role === TaskActorRole.DRI || a.isPrimaryDRI)
+      ) ||
+      (st.assignees || []).some(
+        (a: any) => a.userId === userId || a.user?.id === userId
+      ) ||
+      st.assigneeId === userId ||
+      st.leadAssigneeId === userId
+    );
+  });
+
+  if (matchedSubtasks.length > 0) {
+    return {
+      relation: 'SUBTASK_DRI',
+      matchedSubtaskCount: matchedSubtasks.length,
+    };
+  }
+
+  // 5. Follower
+  const isFollower = (task.actors || []).some(
+    (a: any) =>
+      (a.userId === userId || a.user?.id === userId) &&
+      (a.role === 'FOLLOWER' || a.role === TaskActorRole.FOLLOWER)
+  );
+  if (isFollower) {
+    return { relation: 'FOLLOWER', matchedSubtaskCount: 0 };
+  }
+
+  return { relation: null, matchedSubtaskCount: 0 };
 }
 
 /**
@@ -507,6 +870,18 @@ export class TaskQueryService {
       }
     }
 
+    // Canonical Task View Layer (Issue #26)
+    const effectiveView = filters.view;
+    if (effectiveView && authTarget) {
+      const viewWhere = buildTaskViewWhere(effectiveView, authTarget);
+      if (viewWhere && Object.keys(viewWhere).length > 0) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          viewWhere,
+        ];
+      }
+    }
+
     const isAll =
       filters.all === true ||
       filters.all === 'true' ||
@@ -525,6 +900,16 @@ export class TaskQueryService {
     let totalPages = 1;
     let hasMore = false;
     let nextCursor: string | null = null;
+
+    const effectiveUserId = isAuthorizationContext(ctx) ? ctx.userId : ctx.user?.id;
+    const formatTaskWithViewer = (t: any) => {
+      const st = mapPrismaTaskToSchoolTask(t, canonicalRefDateStr);
+      const vc = computeTaskViewerContext(t, effectiveUserId);
+      if (vc) {
+        st.viewerContext = vc;
+      }
+      return st;
+    };
 
     if (hasCursor) {
       const cursor = String(filters.cursor).trim();
@@ -555,7 +940,7 @@ export class TaskQueryService {
         hasMore = false;
         nextCursor = null;
       }
-      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
+      formattedTasks = rawTasks.map(formatTaskWithViewer);
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
       const [totalCount, rawTasks] = await Promise.all([
@@ -572,7 +957,7 @@ export class TaskQueryService {
       totalPages = 1;
       hasMore = false;
       nextCursor = null;
-      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
+      formattedTasks = rawTasks.map(formatTaskWithViewer);
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
@@ -597,7 +982,7 @@ export class TaskQueryService {
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
       hasMore = skip + rawTasks.length < total;
       nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
-      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
+      formattedTasks = rawTasks.map(formatTaskWithViewer);
     }
 
     const pagination: TaskPaginationMeta = {

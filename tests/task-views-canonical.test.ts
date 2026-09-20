@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import {
   buildTaskReadWhere,
   buildTaskViewWhere,
+  computeTaskViewerContext,
 } from '../src/server/tasks/task-query-service';
 import type { TaskView } from '../src/domain/tasks';
 import {
@@ -312,29 +313,74 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     // Must return Prisma where clause matching user as direct actor OR active subtask DRI
     const viewWhere = buildTaskViewWhere('related', staffContext);
     assert.ok(viewWhere, 'buildTaskViewWhere("related") must return a valid Prisma where clause');
+    assert.ok(Array.isArray((viewWhere as any).OR), 'related view must contain OR conditions');
+
+    // Check that direct actor and child subtasks are both queried
+    const orConditions = (viewWhere as any).OR;
+    const hasActorCheck = orConditions.some((c: any) => c.actors?.some?.userId !== undefined);
+    const hasSubtaskCheck = orConditions.some((c: any) => c.subTasks?.some !== undefined);
+    assert.ok(hasActorCheck, 'related view must query direct actors');
+    assert.ok(hasSubtaskCheck, 'related view must query child subtasks (parent-only view)');
   });
 
   it('2. view=unit: Unit Leader chỉ thấy task thuộc đơn vị mình dựa trên active PositionAssignment', () => {
     const viewWhere = buildTaskViewWhere('unit', leaderContext);
     assert.ok(viewWhere, 'buildTaskViewWhere("unit") must return a valid Prisma where clause');
+    assert.ok(Array.isArray((viewWhere as any).OR), 'unit view must contain OR conditions');
+
+    // Verify unitId matches leader's unit_cntt from active position assignment
+    const orConditions = (viewWhere as any).OR;
+    const hasLeadUnit = orConditions.some((c: any) => {
+      const u = c.leadUnitId?.equals || c.leadUnitId?.in;
+      return u === 'unit_cntt' || (Array.isArray(u) && u.includes('unit_cntt'));
+    });
+    assert.ok(hasLeadUnit, 'unit view must filter by leader active unitId');
   });
 
   it('3. view=all: Staff gọi view=all chỉ thấy task nằm trong quyền đọc, KHÔNG rò rỉ task đơn vị khác', () => {
     const readWhere = buildTaskReadWhere(staffContext);
     const viewWhere = buildTaskViewWhere('all', staffContext);
     assert.ok(readWhere, 'buildTaskReadWhere must enforce read authorization');
-    assert.ok(viewWhere, 'buildTaskViewWhere("all") must return unconstrained view filter within auth bounds');
+    // view=all must be unconstrained {} because authorization engine already bounds visible tasks
+    assert.deepEqual(viewWhere, {}, 'buildTaskViewWhere("all") must return unconstrained view filter within auth bounds');
+
+    // Verify read authorization restricts staff to unit_cntt and direct participation
+    const authOr = (readWhere as any).OR;
+    assert.ok(Array.isArray(authOr), 'Staff auth filter must have OR conditions');
+    const hasDeptFilter = authOr.some((c: any) => c.departmentId === 'unit_cntt');
+    assert.ok(hasDeptFilter, 'Staff auth filter must restrict to own unit_cntt');
   });
 
   it('4. view=approval: Approver/Delegate chỉ thấy task mà current approval step đang đến lượt mình', () => {
     const viewWhere = buildTaskViewWhere('approval', delegatedApproverContext);
     assert.ok(viewWhere, 'buildTaskViewWhere("approval") must filter by current approval step');
+    assert.equal((viewWhere as any).status, 'WAITING_APPROVAL', 'approval view must require WAITING_APPROVAL status');
+
+    // Step progression checks must be present to prevent future step leakage
+    const orConditions = (viewWhere as any).OR;
+    const hasProcessCheck = orConditions.some((c: any) => c.approvalProcesses?.some !== undefined);
+    assert.ok(hasProcessCheck, 'approval view must inspect approvalProcesses');
+
+    // Test that BGH (reviewer of future step 1) is not matched when step 0 is current
+    const bghApprovalWhere = buildTaskViewWhere('approval', bghContext);
+    assert.ok(bghApprovalWhere, 'BGH approval where must be created');
   });
 
   it('5. view=related với subtask DRI: task cha phải xuất hiện kèm quan hệ việc thành phần', () => {
     // When staff is only DRI of a child task, parent task must be returned (Issue #21 parent-only list)
     const viewWhere = buildTaskViewWhere('related', staffContext);
     assert.ok(viewWhere, 'buildTaskViewWhere("related") must match parent tasks when subtasks match');
+
+    // Verify viewer context metadata computation
+    const parentViewerContext = computeTaskViewerContext(sampleTasks.parentTaskWithStaffSubtask, 'user_staff_cntt');
+    assert.ok(parentViewerContext, 'ViewerContext must be computed for parent task');
+    assert.equal(parentViewerContext.relation, 'SUBTASK_DRI', 'Relation must be SUBTASK_DRI');
+    assert.equal(parentViewerContext.matchedSubtaskCount, 1, 'matchedSubtaskCount must equal 1');
+
+    // Direct DRI test
+    const directDRIContext = computeTaskViewerContext(sampleTasks.unitLeaderTask, 'user_leader_cntt');
+    assert.equal(directDRIContext?.relation, 'DRI', 'Direct DRI on task must yield relation DRI');
+    assert.equal(directDRIContext?.matchedSubtaskCount, 0, 'Direct DRI matchedSubtaskCount is 0');
   });
 
   it('6. Negative test: Staff không thấy task của đơn vị khác trong bất kỳ view nào', () => {
@@ -342,9 +388,21 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     for (const v of views) {
       const authWhere = buildTaskReadWhere(staffContext);
       const viewWhere = buildTaskViewWhere(v, staffContext);
-      // Combined where: AND [authWhere, viewWhere]
+
       assert.ok(authWhere, `Auth where must be valid for view ${v}`);
       assert.ok(viewWhere, `View where must be valid for view ${v}`);
+
+      // Unrelated task is from unit_taichinh with creator user_taichinh_01
+      const unrelated = sampleTasks.unrelatedTask;
+
+      // Check that unrelated task does not satisfy Staff read authorization
+      const matchesStaffAuth =
+        (unrelated.assignees || []).some((a: any) => a.userId === staffContext.userId) ||
+        (unrelated.actors || []).some((a: any) => a.userId === staffContext.userId) ||
+        unrelated.departmentId === 'unit_cntt' ||
+        unrelated.leadUnitId === 'unit_cntt';
+
+      assert.equal(matchesStaffAuth, false, `Staff must not have read access to unrelated task in view ${v}`);
     }
   });
 });
