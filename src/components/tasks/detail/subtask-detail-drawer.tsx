@@ -57,12 +57,10 @@ export function SubtaskDetailDrawer({
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
-  const [mobileView, setMobileView] = React.useState<"list" | "detail">("detail");
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
     setIsDeadlineEditorOpen(false);
-    setMobileView("detail");
   }, [initialSubtask]);
 
   // Dropdown states
@@ -128,9 +126,8 @@ export function SubtaskDetailDrawer({
   const handleResetWidth = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const defaultWidth = siblings.length > 1 ? DEFAULT_PEEK_WIDTH : SINGLE_PEEK_WIDTH;
-    onPeekWidthChange?.(defaultWidth);
-  }, [onPeekWidthChange, siblings.length]);
+    onPeekWidthChange?.(DEFAULT_PEEK_WIDTH);
+  }, [onPeekWidthChange]);
 
   React.useEffect(() => {
     if (!canEdit) return;
@@ -422,147 +419,100 @@ export function SubtaskDetailDrawer({
           className="hidden lg:block absolute -left-1 top-0 bottom-0 w-2 z-50 cursor-col-resize select-none focus-visible:outline-2 focus-visible:outline-ring"
         />
 
-        <div className="flex h-full w-full min-h-0 overflow-hidden divide-x divide-border/60">
-          {/* CỘT 1: DANH SÁCH VIỆC CON (MASTER LIST) */}
-          {siblings.length > 0 && (
-            <div
-              className={cn(
-                "w-72 sm:w-80 shrink-0 flex-col min-h-0 bg-muted/15",
-                mobileView === "detail" ? "hidden lg:flex" : "flex w-full"
-              )}
-            >
-              {/* Header cột danh sách việc con */}
-              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3.5 select-none bg-muted/20">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-foreground">Việc con</span>
-                  <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums">
-                    {siblingTotal}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  {onAddSubtask && (
-                    <button
-                      type="button"
-                      onClick={onAddSubtask}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      title="Thêm việc con"
-                      aria-label="Thêm việc con"
-                    >
-                      <Plus className="size-3.5" strokeWidth={1.5} />
-                      <span>Thêm</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="inline-flex size-7 items-center justify-center text-muted-foreground hover:text-foreground lg:hidden cursor-pointer"
-                    title="Đóng (Esc)"
-                    aria-label="Đóng chi tiết việc con"
-                  >
-                    <X className="size-4" strokeWidth={1.5} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Danh sách việc con dạng hàng (Master List Rows) */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
-                {siblings.map((sib) => {
-                  const isSelected = sib.id === subtask.id;
-                  const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
-                  const isCompleted = sib.status === "COMPLETED";
-                  const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
-                  const assigneeName = sib.assigneeName?.trim() || "Chưa phân công";
-
-                  return (
-                    <button
-                      key={sib.id}
-                      type="button"
-                      onClick={() => {
-                        if (!isSelected && onSelectSibling) onSelectSibling(sib);
-                        setMobileView("detail");
-                      }}
-                      className={cn(
-                        "w-full flex flex-col gap-1 p-2.5 rounded-lg text-left transition-colors cursor-pointer select-none",
-                        isSelected
-                          ? "bg-card border border-border/80 shadow-2xs font-medium text-foreground ring-1 ring-primary/20"
-                          : "hover:bg-muted/50 border border-transparent text-foreground/90"
-                      )}
-                    >
-                      {/* Dòng 1: Trạng thái + Tiêu đề */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={cn("size-2 shrink-0 rounded-full", statusObj.dotClass)} />
-                        <span
-                          className={cn(
-                            "text-xs truncate flex-1 font-medium",
-                            isCompleted && "line-through text-muted-foreground/70"
-                          )}
-                          title={sib.title}
-                        >
-                          {sib.title}
-                        </span>
-                      </div>
-
-                      {/* Dòng 2: Người làm + Hạn */}
-                      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground pl-4">
-                        <span className="truncate max-w-[130px]" title={`Phụ trách: ${assigneeName}`}>
-                          {assigneeName}
-                        </span>
-                        {formattedDueDate ? (
-                          <span
-                            className="shrink-0 font-mono tabular-nums"
-                            title={`Hạn: ${formatDisplayDate(sib.dueDate)}`}
-                          >
-                            Hạn {formattedDueDate}
-                          </span>
-                        ) : (
-                          <span className="shrink-0 text-[10px] text-muted-foreground/50">Không hạn</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* CỘT 2: CHI TIẾT VIỆC CON (DETAIL VIEW) */}
-          <div
-            className={cn(
-              "flex-1 min-w-0 flex-col min-h-0 bg-card",
-              siblings.length > 0 && mobileView === "list" ? "hidden lg:flex" : "flex"
+        {/* Header chi tiết việc con */}
+        <div className="group/peek-header flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-4 select-none">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-medium text-foreground truncate">
+              Chi tiết việc con
+            </span>
+            {siblingTotal > 0 && (
+              <span className="text-[11px] font-mono tabular-nums text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full">
+                {siblingPosition}/{siblingTotal}
+              </span>
             )}
-          >
-            {/* Header cột chi tiết */}
-            <div className="group/peek-header flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-4 select-none">
-              <div className="flex items-center gap-2 min-w-0">
-                {siblings.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setMobileView("list")}
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground lg:hidden cursor-pointer"
-                  >
-                    <ChevronLeft className="size-4" strokeWidth={1.5} />
-                    <span>Danh sách ({siblingPosition}/{siblingTotal})</span>
-                  </button>
-                )}
-                <span className="text-xs text-muted-foreground truncate hidden lg:inline">
-                  Chi tiết việc con {siblingTotal > 0 && `(${siblingPosition}/${siblingTotal})`}
-                </span>
-              </div>
+          </div>
 
-              {/* Nút đóng */}
+          <div className="flex items-center gap-1">
+            {onAddSubtask && (
               <button
                 type="button"
-                onClick={onClose}
-                className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                title="Đóng (Esc)"
-                aria-label="Đóng chi tiết việc con"
+                onClick={onAddSubtask}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+                title="Thêm việc con"
+                aria-label="Thêm việc con"
               >
-                <X className="size-4" strokeWidth={1.5} />
+                <Plus className="size-3.5" strokeWidth={1.5} />
+                <span>Thêm</span>
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title="Đóng (Esc)"
+              aria-label="Đóng chi tiết việc con"
+            >
+              <X className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
 
-            <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
+        {/* Dải danh sách việc con nhỏ gọn (Compact Horizontal Subtasks Bar) */}
+        {siblings.length > 0 && (
+          <div
+            role="tablist"
+            aria-label="Danh sách việc con"
+            className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/60 bg-muted/15 overflow-x-auto thin-scrollbar select-none shrink-0"
+          >
+            <span className="text-[11px] font-medium text-muted-foreground shrink-0 pl-1 pr-0.5">
+              Việc con:
+            </span>
+            {siblings.map((sib) => {
+              const isSelected = sib.id === subtask.id;
+              const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
+              const isCompleted = sib.status === "COMPLETED";
+              const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
+              const rawAssignee = sib.assigneeName?.trim();
+              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee) : "";
+
+              return (
+                <button
+                  key={sib.id}
+                  role="tab"
+                  aria-selected={isSelected}
+                  type="button"
+                  onClick={() => {
+                    if (!isSelected && onSelectSibling) onSelectSibling(sib);
+                  }}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs whitespace-nowrap transition-colors cursor-pointer shrink-0",
+                    isSelected
+                      ? "bg-background text-foreground font-medium shadow-2xs border border-border ring-1 ring-primary/25"
+                      : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent"
+                  )}
+                  title={`${sib.title}${rawAssignee ? ` • ${rawAssignee}` : ""}${formattedDueDate ? ` • Hạn ${formattedDueDate}` : ""}`}
+                >
+                  <span className={cn("size-1.5 shrink-0 rounded-full", statusObj.dotClass)} />
+                  <span
+                    className={cn(
+                      "max-w-[130px] sm:max-w-[170px] truncate",
+                      isCompleted && "line-through opacity-70"
+                    )}
+                  >
+                    {sib.title}
+                  </span>
+                  {(assigneeName || formattedDueDate) && (
+                    <span className="text-[10px] text-muted-foreground/70 font-normal">
+                      {formattedDueDate ? `· ${formattedDueDate}` : ""}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
               {/* Child title first */}
               <div className="space-y-1.5">
             <DirectInlineEditor
@@ -774,9 +724,7 @@ export function SubtaskDetailDrawer({
             />
           </section>
         </div>
-      </div>
-    </div>
-  </aside>
+      </aside>
     </>
   );
 }

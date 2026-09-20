@@ -1,4 +1,4 @@
-export const DEFAULT_PEEK_WIDTH = 760;
+export const DEFAULT_PEEK_WIDTH = 480;
 export const SINGLE_PEEK_WIDTH = 480;
 export const MIN_PEEK_WIDTH = 380;
 export const MAX_PEEK_WIDTH = 960;

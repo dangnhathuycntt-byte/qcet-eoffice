@@ -10,7 +10,7 @@ import {
 
 describe("Giới hạn chiều rộng việc con", () => {
   it("giữ nguyên các kích thước mặc định hiện tại", () => {
-    assert.equal(DEFAULT_PEEK_WIDTH, 760);
+    assert.equal(DEFAULT_PEEK_WIDTH, 480);
     assert.equal(SINGLE_PEEK_WIDTH, 480);
     assert.equal(MIN_PEEK_WIDTH, 380);
     assert.equal(MAX_PEEK_WIDTH, 960);
