@@ -32,11 +32,12 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
   const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
 
   const defaultRoleScope: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
-  const { queryState, setScope, setDept, setView } = useWorkspaceQuery({
+  const workspaceQuery = useWorkspaceQuery({
     defaultView: initialView,
     defaultScope: initialScope || defaultRoleScope,
     defaultMonth: currentAcademicMonth,
   });
+  const { queryState, setScope, setDept, setView } = workspaceQuery;
 
   const activeScope: WorkspaceScope =
     queryState.scope || initialScope || defaultRoleScope;
@@ -80,6 +81,7 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
       onViewModeChange={handleViewChange}
       onSelectTask={handleSelectTask}
       initialTasks={initialTasks}
+      workspaceQuery={workspaceQuery}
     />
   );
 }

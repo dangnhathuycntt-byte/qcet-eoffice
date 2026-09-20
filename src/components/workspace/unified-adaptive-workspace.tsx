@@ -632,7 +632,7 @@ function ExecutiveDashboardSections({
   );
 }
 
-export function UnifiedAdaptiveWorkspace({
+function UnifiedAdaptiveWorkspaceInner({
   user: initialUser,
   tasks: controlledTasks,
   initialTasks,
@@ -676,7 +676,8 @@ export function UnifiedAdaptiveWorkspace({
   enableSplitCockpit = false,
   disableInternalDetail = false,
   selectedTaskId: propSelectedTaskId,
-}: UnifiedAdaptiveWorkspaceProps) {
+  workspaceQuery,
+}: UnifiedAdaptiveWorkspaceProps & { workspaceQuery: UseWorkspaceQueryReturn }) {
   const auth = useAuth();
   const fallbackUser: AuthUser = React.useMemo(
     () => ({
@@ -784,11 +785,7 @@ export function UnifiedAdaptiveWorkspace({
 
   const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
 
-  // Canonical workspace query state manager
-  const workspaceQuery = useWorkspaceQuery({
-    defaultScope,
-    defaultMonth: currentAcademicMonth,
-  });
+  // workspaceQuery được truyền vào từ wrapper UnifiedAdaptiveWorkspace — không gọi hook ở đây.
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
@@ -971,35 +968,14 @@ export function UnifiedAdaptiveWorkspace({
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    setInternalDept(selectedDepartment);
-  }, [selectedDepartment]);
-
-  React.useEffect(() => {
-    setInternalStatus(activeStatus);
-  }, [activeStatus]);
-
-  React.useEffect(() => {
-    setInternalSearch(searchQuery);
-  }, [searchQuery]);
-
-  React.useEffect(() => {
-    setInternalOverdue(Boolean(isOverdueOnly));
-  }, [isOverdueOnly]);
-
-  React.useEffect(() => {
-    setInternalWorkbox(activeWorkbox);
-  }, [activeWorkbox]);
-
   const currentDept = internalDept ?? selectedDepartment;
   const currentStatus = internalStatus ?? activeStatus;
   const currentSearch = internalSearch ?? searchQuery;
   const currentOverdue = internalOverdue || Boolean(isOverdueOnly);
   const currentWorkbox = internalWorkbox ?? activeWorkbox;
 
-  // Synchronize state with canonical workspace query if not controlled by props
+  // Synchronize state with canonical workspace query (URL-driven navigation: back/forward)
   React.useEffect(() => {
-    if (!workspaceQuery) return;
     const { queryState } = workspaceQuery;
 
     if (!propScope && !forcedScope && queryState.scope) {
@@ -1080,21 +1056,21 @@ export function UnifiedAdaptiveWorkspace({
       }
     }
   }, [
-    workspaceQuery?.queryState.scope,
-    workspaceQuery?.queryState.unit,
-    workspaceQuery?.queryState.dept,
-    workspaceQuery?.queryState.status,
-    workspaceQuery?.queryState.query,
-    workspaceQuery?.queryState.q,
-    workspaceQuery?.queryState.month,
-    workspaceQuery?.queryState.time,
-    workspaceQuery?.queryState.dateFrom,
-    workspaceQuery?.queryState.dateTo,
-    workspaceQuery?.queryState.priority,
-    workspaceQuery?.queryState.category,
-    workspaceQuery?.queryState.deadline,
-    workspaceQuery?.queryState.attention,
-    workspaceQuery?.queryState.view,
+    workspaceQuery.queryState.scope,
+    workspaceQuery.queryState.unit,
+    workspaceQuery.queryState.dept,
+    workspaceQuery.queryState.status,
+    workspaceQuery.queryState.query,
+    workspaceQuery.queryState.q,
+    workspaceQuery.queryState.month,
+    workspaceQuery.queryState.time,
+    workspaceQuery.queryState.dateFrom,
+    workspaceQuery.queryState.dateTo,
+    workspaceQuery.queryState.priority,
+    workspaceQuery.queryState.category,
+    workspaceQuery.queryState.deadline,
+    workspaceQuery.queryState.attention,
+    workspaceQuery.queryState.view,
     propScope,
     forcedScope,
     selectedDepartment,
@@ -2632,6 +2608,37 @@ export function UnifiedAdaptiveWorkspace({
       )}
     </div>
   );
+}
+
+/**
+ * UnifiedAdaptiveWorkspace — standalone public export.
+ *
+ * Gọi useWorkspaceQuery nội bộ. Dùng khi không có canonical owner từ ngoài.
+ * Đây là entry point backward-compatible cho mọi nơi dùng UAW trực tiếp.
+ */
+export function UnifiedAdaptiveWorkspace(props: Omit<UnifiedAdaptiveWorkspaceProps, "workspaceQuery">) {
+  const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
+
+  const defaultScope: WorkspaceScope = React.useMemo(() => {
+    if (props.forcedScope) return props.forcedScope;
+    if (props.scope) return props.scope;
+    if (props.initialScope) return props.initialScope;
+    return "school";
+  }, [props.forcedScope, props.scope, props.initialScope]);
+
+  const ownQuery = useWorkspaceQuery({ defaultScope, defaultMonth: currentAcademicMonth });
+
+  return <UnifiedAdaptiveWorkspaceInner {...props} workspaceQuery={ownQuery} />;
+}
+
+/**
+ * UnifiedAdaptiveWorkspaceControlled — dùng khi caller (e.g. TasksPageClient) là canonical owner
+ * của useWorkspaceQuery. Không gọi hook nội bộ → không tạo listener popstate thứ hai.
+ */
+export function UnifiedAdaptiveWorkspaceControlled(
+  props: UnifiedAdaptiveWorkspaceProps & { workspaceQuery: UseWorkspaceQueryReturn }
+) {
+  return <UnifiedAdaptiveWorkspaceInner {...props} />;
 }
 
 export { useTaskFilters } from "@/hooks/use-task-filters";
