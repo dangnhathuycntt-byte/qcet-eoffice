@@ -597,7 +597,7 @@ function MentionInputElement({ attributes, children, element }: RenderElementPro
     <span {...attributes} className="relative inline">
       <span className="text-primary font-medium">@{query}</span>
       <div contentEditable={false} className="absolute left-0 top-full mt-1 z-50 w-64 rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
-        <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nhân sự QCET</div>
+        <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">Nhân sự QCET</div>
         <div className="max-h-48 overflow-y-scroll space-y-0.5">
           {filtered.map((staff) => (
             <button

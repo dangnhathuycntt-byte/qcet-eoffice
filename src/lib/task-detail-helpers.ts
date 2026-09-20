@@ -112,12 +112,12 @@ export const TASK_STATUS_CONFIG: Record<
 > = {
   NEW: {
     label: "Mới",
-    className: "border-slate-500/20 bg-slate-500/10 text-slate-700",
+    className: "border-border/60 bg-muted/40 text-muted-foreground",
     variant: "outline",
   },
   NOT_STARTED: {
     label: "Chưa bắt đầu",
-    className: "border-slate-500/20 bg-slate-500/10 text-slate-700",
+    className: "border-border/60 bg-muted/40 text-muted-foreground",
     variant: "outline",
   },
   IN_PROGRESS: {
@@ -157,7 +157,7 @@ export const TASK_STATUS_CONFIG: Record<
   },
   CANCELLED: {
     label: "Đã hủy",
-    className: "border-slate-400/20 bg-slate-400/10 text-slate-600",
+    className: "border-border/60 bg-muted/40 text-muted-foreground",
     variant: "outline",
   },
 };

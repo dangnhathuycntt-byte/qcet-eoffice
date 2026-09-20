@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { Inbox, AlertTriangle, Loader2, Layers, X, ChevronRight, CircleAlert, Clock } from "lucide-react";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode, UniversalActionQueueItems } from "./types";
 import {
@@ -116,6 +116,7 @@ export interface FilterDisplayedTasksOptions {
   overdue?: boolean;
   workbox?: string;
   user?: AuthUser | null;
+  referenceDate?: string;
 }
 
 /**
@@ -133,10 +134,12 @@ export function filterDisplayedTasks({
   overdue,
   workbox,
   user,
+  referenceDate,
 }: FilterDisplayedTasksOptions): SchoolTask[] {
   // Issue #21: Only show top-level (parent) tasks in the list.
   // Child tasks are still available as nested subTasks on each parent.
   let result = tasks.filter((t) => !t.parentTaskId);
+  const activeRefDate = referenceDate || getSystemReferenceDate();
 
   // 1. Search Query
   if (search && search.trim()) {
@@ -285,7 +288,7 @@ export function filterDisplayedTasks({
         return isTaskAssignedToUser(t, user);
       });
     } else if (wb === "overdue" || wb === "urgent_overdue") {
-      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
+      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
     } else if (wb === "completed") {
       result = result.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
     }
@@ -310,7 +313,7 @@ export function filterDisplayedTasks({
 
   // 7. Overdue flag
   if (overdue) {
-    result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
+    result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
   }
 
   // API payloads may contain the same child both flattened and nested. React rows
@@ -925,7 +928,7 @@ function UnifiedAdaptiveWorkspaceInner({
   // Action queue drawer open state for full-width layout mode
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
-  const router = useRouter();
+  const router = React.useContext(AppRouterContext);
   const { saveScrollAndParams } = useListScrollRestore();
 
   const handleSelectTask = React.useCallback(
@@ -940,7 +943,7 @@ function UnifiedAdaptiveWorkspaceInner({
       const taskIdOrCode =
         (task as any).code || (task as any).taskCode || task.id;
       workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
-      router.push(`/tasks/${task.id}`);
+      router?.push(`/tasks/${task.id}`);
     },
     [onSelectTask, workspaceQuery, router, saveScrollAndParams]
   );
@@ -955,12 +958,37 @@ function UnifiedAdaptiveWorkspaceInner({
   const [peekTask, setPeekTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
   // Filter state synchronized with props
-  const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
-  const [internalStatus, setInternalStatus] = React.useState<string | undefined>(activeStatus);
-  const [internalDeadline, setInternalDeadline] = React.useState<string | undefined>(undefined);
-  const [internalSearch, setInternalSearch] = React.useState<string | undefined>(searchQuery);
-  const [internalOverdue, setInternalOverdue] = React.useState<boolean>(Boolean(isOverdueOnly));
-  const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(activeWorkbox);
+  const [internalDept, setInternalDept] = React.useState<string | undefined>(() => {
+    if (selectedDepartment !== undefined) return selectedDepartment;
+    return workspaceQuery?.queryState.unit || workspaceQuery?.queryState.dept || undefined;
+  });
+  const [internalStatus, setInternalStatus] = React.useState<string | undefined>(() => {
+    if (activeStatus !== undefined) return activeStatus;
+    if (workspaceQuery?.queryState.status && workspaceQuery.queryState.status !== "ALL") {
+      return workspaceQuery.queryState.status;
+    }
+    return undefined;
+  });
+  const [internalDeadline, setInternalDeadline] = React.useState<string | undefined>(() => {
+    return workspaceQuery?.queryState.deadline || undefined;
+  });
+  const [internalSearch, setInternalSearch] = React.useState<string | undefined>(() => {
+    if (searchQuery !== undefined) return searchQuery;
+    return workspaceQuery?.queryState.query || workspaceQuery?.queryState.q || undefined;
+  });
+  const [internalOverdue, setInternalOverdue] = React.useState<boolean>(() => {
+    if (isOverdueOnly !== undefined) return Boolean(isOverdueOnly);
+    return workspaceQuery?.queryState.attention === "overdue" || workspaceQuery?.queryState.deadline === "overdue";
+  });
+  const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(() => {
+    if (activeWorkbox !== undefined) return activeWorkbox;
+    if (isOverdueOnly === false) return "ALL";
+    const att = workspaceQuery?.queryState.attention;
+    if (att === "overdue" || workspaceQuery?.queryState.deadline === "overdue") return "overdue";
+    if (att === "requires_my_approval") return "my_pending_approval";
+    if (att === "requires_my_action") return "my_pending_submission";
+    return "ALL";
+  });
   const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
   const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">(() => {
@@ -977,42 +1005,14 @@ function UnifiedAdaptiveWorkspaceInner({
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
-  const currentDept = internalDept ?? selectedDepartment;
-  const currentStatus = internalStatus ?? activeStatus;
-  const currentSearch = internalSearch ?? searchQuery;
-  const currentOverdue = internalOverdue || Boolean(isOverdueOnly);
-  const currentWorkbox = internalWorkbox ?? activeWorkbox;
-
-  // Prop synchronization for controlled filters
-  React.useEffect(() => {
-    if (selectedDepartment !== undefined) {
-      setInternalDept(selectedDepartment);
-    }
-  }, [selectedDepartment]);
-
-  React.useEffect(() => {
-    if (isOverdueOnly !== undefined) {
-      setInternalOverdue(Boolean(isOverdueOnly));
-    }
-  }, [isOverdueOnly]);
-
-  React.useEffect(() => {
-    if (activeStatus !== undefined) {
-      setInternalStatus(activeStatus);
-    }
-  }, [activeStatus]);
-
-  React.useEffect(() => {
-    if (searchQuery !== undefined) {
-      setInternalSearch(searchQuery);
-    }
-  }, [searchQuery]);
-
-  React.useEffect(() => {
-    if (activeWorkbox !== undefined) {
-      setInternalWorkbox(activeWorkbox);
-    }
-  }, [activeWorkbox]);
+  // Controlled props take absolute precedence when defined; undefined delegates to internal state (uncontrolled)
+  const currentDept = selectedDepartment !== undefined ? selectedDepartment : (internalDept ?? "ALL");
+  const currentStatus = activeStatus !== undefined ? activeStatus : internalStatus;
+  const currentSearch = searchQuery !== undefined ? searchQuery : internalSearch;
+  const currentOverdue = isOverdueOnly !== undefined ? Boolean(isOverdueOnly) : internalOverdue;
+  const currentWorkbox = activeWorkbox !== undefined
+    ? activeWorkbox
+    : (isOverdueOnly === false && internalWorkbox === "overdue" ? "ALL" : internalWorkbox);
 
   // Synchronize state with canonical workspace query (URL-driven navigation: back/forward)
   React.useEffect(() => {
@@ -1021,14 +1021,14 @@ function UnifiedAdaptiveWorkspaceInner({
     if (!propScope && !forcedScope && queryState.scope) {
       setActiveScope(queryState.scope);
     }
-    if (!selectedDepartment) {
+    if (selectedDepartment === undefined) {
       if (queryState.unit || queryState.dept) {
         setInternalDept(queryState.unit || queryState.dept);
       } else {
         setInternalDept("ALL");
       }
     }
-    if (!activeStatus) {
+    if (activeStatus === undefined) {
       if (queryState.status && queryState.status !== "ALL") {
         setInternalStatus(queryState.status);
       } else {
@@ -1036,7 +1036,7 @@ function UnifiedAdaptiveWorkspaceInner({
       }
     }
     const qVal = queryState.query || queryState.q;
-    if (!searchQuery) {
+    if (searchQuery === undefined) {
       setInternalSearch(qVal || undefined);
     }
     if (queryState.priority !== undefined) {
@@ -1068,18 +1068,23 @@ function UnifiedAdaptiveWorkspaceInner({
     } else {
       setTimeFilter(NO_TASK_TIME_FILTER);
     }
-    if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
-      setInternalOverdue(true);
-      setInternalWorkbox("overdue");
-    } else if (queryState.attention === "requires_my_approval") {
-      setInternalWorkbox("my_pending_approval");
-      setInternalOverdue(false);
-    } else if (queryState.attention === "requires_my_action") {
-      setInternalWorkbox("my_pending_submission");
-      setInternalOverdue(false);
-    } else {
-      setInternalOverdue(false);
-      setInternalWorkbox("ALL");
+    if (isOverdueOnly === undefined) {
+      if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
+        setInternalOverdue(true);
+      } else {
+        setInternalOverdue(false);
+      }
+    }
+    if (activeWorkbox === undefined) {
+      if (queryState.attention === "overdue" || queryState.deadline === "overdue") {
+        setInternalWorkbox("overdue");
+      } else if (queryState.attention === "requires_my_approval") {
+        setInternalWorkbox("my_pending_approval");
+      } else if (queryState.attention === "requires_my_action") {
+        setInternalWorkbox("my_pending_submission");
+      } else {
+        setInternalWorkbox("ALL");
+      }
     }
     // View sync: only sync from URL if URL explicitly contains the view parameter
     // (avoid resetting to "table" when URL has no view parameter or when queryState defaults)
@@ -1116,6 +1121,8 @@ function UnifiedAdaptiveWorkspaceInner({
     selectedDepartment,
     activeStatus,
     searchQuery,
+    isOverdueOnly,
+    activeWorkbox,
     initialViewMode,
     isExecutive,
   ]);

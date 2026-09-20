@@ -254,6 +254,26 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
     });
 
     await t.test("searchTasks with single word 'Subtask' executes keyword FTS search on title/description", async () => {
+      // Ensure at least one test task contains 'Subtask' in title/description
+      const anyUser = await prisma.user.findFirst({ select: { id: true } });
+      if (anyUser) {
+        await prisma.task.upsert({
+          where: { code: "TASK-TEST-SUBTASK-FTS" },
+          update: {},
+          create: {
+            code: "TASK-TEST-SUBTASK-FTS",
+            title: "Kiểm tra Subtask theo FTS",
+            description: "Mô tả kiểm thử tìm kiếm từ khóa Subtask",
+            status: TaskStatus.IN_PROGRESS,
+            scope: TaskScope.SCHOOL,
+            academicMonth: 9,
+            academicYear: "2026-2027",
+            dueDate: new Date("2026-10-15"),
+            createdById: anyUser.id,
+          },
+        });
+      }
+
       const results = await searchTasks(prisma, {
         query: "Subtask",
         limit: 5,

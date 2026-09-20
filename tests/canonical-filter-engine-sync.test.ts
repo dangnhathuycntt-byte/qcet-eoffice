@@ -2,6 +2,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import {
   UnifiedAdaptiveWorkspace,
   filterDisplayedTasks,
@@ -11,6 +13,33 @@ import {
 import { getSystemReferenceDate } from "../src/lib/academic-calendar";
 import type { SchoolTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
+
+const mockRouter = {
+  push: () => {},
+  replace: () => {},
+  prefetch: () => {},
+  back: () => {},
+  forward: () => {},
+  refresh: () => {},
+};
+
+function renderWorkspace(element: React.ReactElement): string {
+  return renderToStaticMarkup(
+    React.createElement(
+      AppRouterContext.Provider,
+      { value: mockRouter },
+      React.createElement(
+        PathnameContext.Provider,
+        { value: "/" },
+        React.createElement(
+          SearchParamsContext.Provider,
+          { value: new URLSearchParams() },
+          element
+        )
+      )
+    )
+  );
+}
 
 describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
   const testUser: AuthUser = {
@@ -33,7 +62,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
     departmentCode: "ĐT",
   };
 
-  const refDate = getSystemReferenceDate(); // Canonical reference date, e.g. "2026-09-09"
+  const refDate = "2026-09-09"; // Canonical reference date for mock test suite
 
   // Sample tasks fixture covering all conditions
   const mockTasks: SchoolTask[] = [
@@ -279,6 +308,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
         tasks: mockTasks,
         overdue: true,
         user: testUser,
+        referenceDate: refDate,
       });
 
       const filteredIds = filtered.map((t) => t.id);
@@ -431,6 +461,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
         tasks: mockTasks,
         workbox: "overdue",
         user: testUser,
+        referenceDate: refDate,
       });
 
       const filteredIds = filtered.map((t) => t.id);
@@ -457,7 +488,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
 
   describe("UnifiedAdaptiveWorkspace Component Integration", () => {
     test("renders correctly with activeWorkbox='my_pending_approval'", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: testUser,
           tasks: mockTasks,
@@ -481,7 +512,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
     });
 
     test("renders correctly with isOverdueOnly=true", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: testUser,
           tasks: mockTasks,
@@ -501,7 +532,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
     });
 
     test("renders all tasks when activeWorkbox='ALL' and isOverdueOnly=false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: testUser,
           tasks: mockTasks,
@@ -517,7 +548,7 @@ describe("Canonical Filter Engine & Workbox/Overdue Consistency", () => {
     });
 
     test("zero emojis in rendered markup", () => {
-      const html = renderToStaticMarkup(
+      const html = renderWorkspace(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: testUser,
           tasks: mockTasks,

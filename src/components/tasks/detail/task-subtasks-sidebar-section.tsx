@@ -47,7 +47,7 @@ export function TaskSubtasksSidebarSection({
             }`}
             title="Tạo việc con"
           >
-            <Plus className="size-3.5" strokeWidth={2} />
+            <Plus className="size-3.5" strokeWidth={1.5} />
           </button>
         )}
       </div>
