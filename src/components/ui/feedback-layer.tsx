@@ -250,10 +250,45 @@ export function FormValidationSummary({
 }
 
 // ============================================================================
-// 3. Toast — Base UI powered
+// 3. Toast — Base UI powered (Modern Top-Center Floating Island)
 // ============================================================================
 
 const toastManager = Toast.createToastManager();
+
+const TOAST_VARIANT_CONFIG: Record<
+  FeedbackVariant,
+  {
+    iconBg: string;
+    iconColor: string;
+    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+    accentBorder: string;
+  }
+> = {
+  info: {
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-600",
+    icon: Info,
+    accentBorder: "border-blue-500/20",
+  },
+  success: {
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-600",
+    icon: CheckCircle2,
+    accentBorder: "border-emerald-500/20",
+  },
+  warning: {
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-600",
+    icon: AlertTriangle,
+    accentBorder: "border-amber-500/20",
+  },
+  error: {
+    iconBg: "bg-rose-500/10",
+    iconColor: "text-rose-600",
+    icon: AlertOctagon,
+    accentBorder: "border-rose-500/25",
+  },
+};
 
 export interface FeedbackToastProps {
   toast: ToastItem;
@@ -261,36 +296,51 @@ export interface FeedbackToastProps {
   rawToast?: any;
 }
 
-export function FeedbackToast({ toast, onDismiss, rawToast }: FeedbackToastProps) {
-  const styles = VARIANT_STYLES[toast.variant];
+export function FeedbackToast({ toast, onDismiss: _onDismiss, rawToast }: FeedbackToastProps) {
+  const config = TOAST_VARIANT_CONFIG[toast.variant] || TOAST_VARIANT_CONFIG.info;
+  const IconComponent = config.icon;
+
   return (
     <Toast.Root
       toast={rawToast}
       className={cn(
-        "group pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border p-3 shadow-lg transition-colors min-h-[44px]",
-        styles.container,
+        "group pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-2xl border bg-card/95 backdrop-blur-md p-3.5 shadow-dropdown transition-all animate-in fade-in-0 slide-in-from-top-4 zoom-in-95 duration-200",
+        config.accentBorder
       )}
     >
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        {renderVariantIcon(toast.variant)}
-        <div className="min-w-0 flex-1 text-xs">
-          {toast.title && <Toast.Title className={cn("font-semibold", styles.titleColor)}>{toast.title}</Toast.Title>}
-          <Toast.Description className={cn("font-normal truncate", styles.textColor)}>{toast.message}</Toast.Description>
-        </div>
+      <div className={cn("size-6 rounded-full flex items-center justify-center shrink-0 mt-0.5", config.iconBg, config.iconColor)}>
+        <IconComponent className="size-3.5" strokeWidth={1.5} />
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {toast.action && (
-          <Toast.Action onClick={() => { toast.action?.onClick(); }}>
-            <button type="button" className={cn("px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors", styles.actionBtn)}>
-              {toast.action.label}
-            </button>
-          </Toast.Action>
+
+      <div className="min-w-0 flex-1 text-xs">
+        {toast.title && (
+          <Toast.Title className="font-semibold text-foreground text-[13px] leading-snug tracking-tight">
+            {toast.title}
+          </Toast.Title>
         )}
-        <Toast.Close aria-label="Đóng thông báo nổi"
-          className="size-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 cursor-pointer transition-colors">
-          <X className="size-3.5" strokeWidth={1.5} />
-        </Toast.Close>
+        <Toast.Description className="font-normal text-muted-foreground leading-relaxed line-clamp-3 break-words mt-0.5">
+          {toast.message}
+        </Toast.Description>
+        {toast.action && (
+          <div className="mt-2">
+            <Toast.Action onClick={() => { toast.action?.onClick(); }}>
+              <button
+                type="button"
+                className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shadow-2xs cursor-pointer"
+              >
+                {toast.action.label}
+              </button>
+            </Toast.Action>
+          </div>
+        )}
       </div>
+
+      <Toast.Close
+        aria-label="Đóng thông báo nổi"
+        className="size-6 inline-flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 -mr-1 -mt-0.5"
+      >
+        <X className="size-3.5" strokeWidth={1.5} />
+      </Toast.Close>
     </Toast.Root>
   );
 }
@@ -316,7 +366,7 @@ function ToastViewportRenderer({ dismissToast }: { dismissToast: (id: string) =>
   return (
     <Toast.Viewport
       aria-label="Thông báo hệ thống"
-      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none w-full max-w-[440px] px-4 sm:px-0"
     >
       {manager.toasts.map((t: any) => (
         <FeedbackToast
