@@ -705,26 +705,28 @@ export class TaskQueryService {
       ];
     }
 
-    const tasks = await prisma.task.findMany({
-      where,
-      select: {
-        id: true,
-        status: true,
-        dueDate: true,
-        parentTaskId: true,
-      },
-    });
+    // Run both queries concurrently: findMany for active tasks + count for cancelled
+    const [tasks, cancelledCount] = await Promise.all([
+      prisma.task.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          dueDate: true,
+          parentTaskId: true,
+        },
+      }),
+      prisma.task.count({
+        where: {
+          ...where,
+          status: TaskStatus.CANCELLED,
+        },
+      }),
+    ]);
 
     const metrics = calculateTaskMetrics(tasks, {
       referenceDate,
       onlyParentTasks: false,
-    });
-
-    const cancelledCount = await prisma.task.count({
-      where: {
-        ...where,
-        status: TaskStatus.CANCELLED,
-      },
     });
 
     return {

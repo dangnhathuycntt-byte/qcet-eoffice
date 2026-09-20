@@ -797,9 +797,9 @@ function BookmarkEl({ attributes, children, element }: any) {
         {url ? (
           <div className="flex items-center gap-3 p-3 my-1.5 rounded-xl bg-card border border-border/70 hover:border-primary/40 hover:bg-muted/30 transition-all text-xs shadow-2xs group/bm">
             {thumbnailUrl ? (
-              <img src={thumbnailUrl} alt="" className="size-10 rounded-lg object-cover shrink-0" />
+              <img src={thumbnailUrl} alt="" loading="lazy" width={40} height={40} className="size-10 rounded-lg object-cover shrink-0" />
             ) : favicon ? (
-              <img src={favicon} alt="" className="size-5 rounded shrink-0" />
+              <img src={favicon} alt="" loading="lazy" width={20} height={20} className="size-5 rounded shrink-0" />
             ) : (
               <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0"><Globe className="size-4" /></div>
             )}
