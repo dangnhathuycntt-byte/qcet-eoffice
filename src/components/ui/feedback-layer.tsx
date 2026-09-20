@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Toast } from "@base-ui/react/toast";
+import { Toaster, toast as sonnerToast } from "sonner";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -381,30 +382,82 @@ function ToastViewportRenderer({ dismissToast }: { dismissToast: (id: string) =>
 }
 
 // ============================================================================
-// 4. Feedback Context & Provider — Base UI Toast under the hood
+// 4. Feedback Context & Provider — Powered by Sonner
 // ============================================================================
 
 const FeedbackContext = React.createContext<FeedbackContextValue | null>(null);
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const dismissToast = React.useCallback((id: string) => {
+    sonnerToast.dismiss(id);
     toastManager.close(id);
   }, []);
 
   const showToast = React.useCallback(
     (item: Omit<ToastItem, "id">): string => {
-      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const toast = { ...item, id };
-      toastManager.add({ ...toast, timeout: item.durationMs ?? 4000 });
-      return id;
+      const fn =
+        item.variant === "success"
+          ? sonnerToast.success
+          : item.variant === "error"
+          ? sonnerToast.error
+          : item.variant === "warning"
+          ? sonnerToast.warning
+          : sonnerToast.info;
+
+      const toastId = fn(item.title || item.message, {
+        description: item.title ? item.message : undefined,
+        duration: item.durationMs ?? 4000,
+        action: item.action
+          ? {
+              label: item.action.label,
+              onClick: item.action.onClick,
+            }
+          : undefined,
+      });
+      return String(toastId);
     },
     [],
   );
 
-  const notifySuccess = React.useCallback((m: string, t?: string) => showToast({ variant: "success", message: m, title: t }), [showToast]);
-  const notifyError = React.useCallback((m: string, t?: string) => showToast({ variant: "error", message: m, title: t }), [showToast]);
-  const notifyWarning = React.useCallback((m: string, t?: string) => showToast({ variant: "warning", message: m, title: t }), [showToast]);
-  const notifyInfo = React.useCallback((m: string, t?: string) => showToast({ variant: "info", message: m, title: t }), [showToast]);
+  const notifySuccess = React.useCallback(
+    (m: string, t?: string) =>
+      String(
+        sonnerToast.success(t || m, {
+          description: t ? m : undefined,
+        })
+      ),
+    []
+  );
+
+  const notifyError = React.useCallback(
+    (m: string, t?: string) =>
+      String(
+        sonnerToast.error(t || m, {
+          description: t ? m : undefined,
+        })
+      ),
+    []
+  );
+
+  const notifyWarning = React.useCallback(
+    (m: string, t?: string) =>
+      String(
+        sonnerToast.warning(t || m, {
+          description: t ? m : undefined,
+        })
+      ),
+    []
+  );
+
+  const notifyInfo = React.useCallback(
+    (m: string, t?: string) =>
+      String(
+        sonnerToast.info(t || m, {
+          description: t ? m : undefined,
+        })
+      ),
+    []
+  );
 
   const contextValue = React.useMemo<FeedbackContextValue>(
     () => ({ toasts: [], showToast, dismissToast, notifySuccess, notifyError, notifyWarning, notifyInfo }),
@@ -413,13 +466,19 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <FeedbackContext.Provider value={contextValue}>
-      <Toast.Provider toastManager={toastManager}>
-        {children}
-        <ToastViewportRenderer dismissToast={dismissToast} />
-      </Toast.Provider>
+      {children}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          className:
+            "rounded-xl border border-border/80 bg-card text-foreground font-sans shadow-dropdown text-xs",
+        }}
+      />
     </FeedbackContext.Provider>
   );
 }
+
+export { sonnerToast as toast };
 
 export function useFeedback(): FeedbackContextValue {
   const context = React.useContext(FeedbackContext);

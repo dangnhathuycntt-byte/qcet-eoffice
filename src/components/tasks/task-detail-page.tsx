@@ -859,7 +859,7 @@ export function TaskDetailPage({
                 onReassignLead={handleReassignLead}
                 onAddDeliverable={handleAddDeliverable}
                 onDeleteDeliverable={handleDeleteDeliverable}
-                showInlineProperties={!showInspector && !activeSubtask}
+                showInlineProperties={!showInspector}
               />
 
               <TaskNotionBlockContent
