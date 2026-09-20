@@ -1,15 +1,11 @@
-import { test, describe } from "node:test";
+import { test, describe, before } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { GET } from "../src/app/api/search/route";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { prisma } from "../src/lib/prisma";
 
-const validToken = signSessionToken({
-  id: "test-user-id",
-  email: "admin@cdktcnqn.edu.vn",
-  name: "Quản trị hệ thống",
-  role: "ADMIN",
-});
+let validToken = "";
 
 function createAuthRequest(url: string) {
   return new NextRequest(url, {
@@ -20,6 +16,75 @@ function createAuthRequest(url: string) {
 }
 
 describe("Search API Endpoint (GET /api/search)", () => {
+  before(async () => {
+    // Seed/upsert test leadership user (HIEU_TRUONG / BAN_GIAM_HIEU) so resolveCurrentSession finds active DB user
+    // and canonical task authorization grants school-wide task read access.
+    const leaderUser = await prisma.user.upsert({
+      where: { email: "bgh.search.test@qcet.edu.vn" },
+      update: { isActive: true, role: "BAN_GIAM_HIEU" },
+      create: {
+        id: "test-bgh-search-id",
+        email: "bgh.search.test@qcet.edu.vn",
+        name: "Ban Giám Hiệu Search Test",
+        role: "BAN_GIAM_HIEU",
+        isActive: true,
+      },
+    });
+
+    // Ensure leadership position definition and active assignment exist
+    const posDef = await prisma.positionDefinition.upsert({
+      where: { code: "POS-BGH-SEARCH-TEST" },
+      update: { isLeadership: true },
+      create: {
+        code: "POS-BGH-SEARCH-TEST",
+        title: "Hiệu trưởng (Search Test)",
+        group: "LDPU",
+        isLeadership: true,
+      },
+    });
+
+    const anyUnit = await prisma.organizationalUnit.findFirst({ select: { id: true } });
+    if (anyUnit) {
+      await prisma.positionAssignment.upsert({
+        where: { id: "pos-assign-bgh-search-test" },
+        update: { status: "ACTIVE", unitId: anyUnit.id },
+        create: {
+          id: "pos-assign-bgh-search-test",
+          userId: leaderUser.id,
+          positionDefinitionId: posDef.id,
+          unitId: anyUnit.id,
+          type: "PRIMARY",
+          status: "ACTIVE",
+          effectiveFrom: new Date("2020-01-01"),
+        },
+      });
+    }
+
+    // Ensure at least one task with NV-2026 prefix exists
+    await prisma.task.upsert({
+      where: { code: "NV-2026-SEARCH-TEST" },
+      update: {},
+      create: {
+        code: "NV-2026-SEARCH-TEST",
+        title: "Nhiệm vụ kiểm thử tìm kiếm mã NV-2026",
+        status: "IN_PROGRESS",
+        priority: "NORMAL",
+        scope: "SCHOOL",
+        createdById: leaderUser.id,
+        dueDate: new Date("2027-01-01"),
+        academicMonth: 9,
+        academicYear: "2026-2027",
+      },
+    });
+
+    validToken = signSessionToken({
+      id: leaderUser.id,
+      email: leaderUser.email,
+      name: leaderUser.name,
+      role: leaderUser.role,
+    });
+  });
+
   test("returns 401 when no session cookie is provided", async () => {
     const req = new NextRequest("http://localhost:3001/api/search");
     const res = await GET(req);

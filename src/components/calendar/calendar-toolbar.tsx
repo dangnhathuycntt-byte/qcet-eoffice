@@ -164,8 +164,11 @@ export function CalendarToolbar({
   const resolvedDensity: CalendarDensity =
     density !== "comfortable" ? density : compactMode ? "compact" : density;
 
-  // Close menus on outside click
+  // Close menus on outside click or Escape key
   React.useEffect(() => {
+    const anyOpen = isFilterOpen || isDisplayOpen || isCreateOpen;
+    if (!anyOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       if (filterRef.current && !filterRef.current.contains(target)) {
@@ -178,9 +181,22 @@ export function CalendarToolbar({
         setIsCreateOpen(false);
       }
     };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsFilterOpen(false);
+        setIsDisplayOpen(false);
+        setIsCreateOpen(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFilterOpen, isDisplayOpen, isCreateOpen]);
 
   return (
     <div

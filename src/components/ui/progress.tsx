@@ -15,7 +15,10 @@ function Progress({
   children,
   ...props
 }: ProgressProps) {
-  const percentage = Math.min(Math.max((Number(value || 0) / max) * 100, 0), 100);
+  const isIndeterminate = value === null || value === undefined;
+  const percentage = isIndeterminate
+    ? undefined
+    : Math.min(Math.max((Number(value) / max) * 100, 0), 100);
 
   return (
     <div
@@ -23,14 +26,23 @@ function Progress({
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={max}
-      aria-valuenow={value ?? undefined}
+      aria-valuenow={isIndeterminate ? undefined : (value as number)}
+      aria-valuetext={
+        isIndeterminate ? "Đang tải..." : `${Math.round(percentage!)}%`
+      }
+      data-indeterminate={isIndeterminate ? "" : undefined}
       className={cn("flex flex-wrap gap-3", className)}
       {...props}
     >
       {children}
       <ProgressTrack>
         <ProgressIndicator
-          style={{ transform: `translateX(-${100 - percentage}%)` }}
+          style={
+            isIndeterminate
+              ? undefined
+              : { transform: `translateX(-${100 - percentage!}%)` }
+          }
+          data-indeterminate={isIndeterminate ? "" : undefined}
         />
       </ProgressTrack>
     </div>
@@ -60,6 +72,7 @@ function ProgressIndicator({
       data-slot="progress-indicator"
       className={cn(
         "h-full w-full flex-1 bg-primary transition-transform duration-500 ease-in-out will-change-transform",
+        "data-[indeterminate]:animate-[progress-indeterminate_1.5s_ease-in-out_infinite]",
         className
       )}
       style={style}

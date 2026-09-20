@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
 import { getStatusBadgeConfig } from "./table/constants";
@@ -48,16 +48,6 @@ export function formatMobileDueDate(dateStr?: string): string {
   } catch {
     return dateStr;
   }
-}
-
-/**
- * Lấy chữ viết tắt cho avatar tên người phụ trách
- */
-function getInitials(name?: string): string {
-  if (!name) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 /**

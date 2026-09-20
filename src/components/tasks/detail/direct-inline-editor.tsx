@@ -179,9 +179,9 @@ export function DirectInlineEditor({
         setTimeout(() => {
           setSaveStatus((prev) => (prev === "saved" ? "idle" : prev));
         }, 2000);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setSaveStatus("error");
-        setErrorMessage(err?.message || "Chưa lưu được. Nội dung vẫn được giữ lại.");
+        setErrorMessage(err instanceof Error ? err.message : "Chưa lưu được. Nội dung vẫn được giữ lại.");
       }
     },
     [onSave]

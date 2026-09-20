@@ -105,6 +105,7 @@ export interface TabsListProps
     VariantProps<typeof tabsListVariants> {
   motionIndicator?: boolean;
   layoutId?: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
 }
 
 function TabsList({
@@ -113,12 +114,56 @@ function TabsList({
   motionIndicator,
   layoutId,
   children,
+  onKeyDown,
   ...props
 }: TabsListProps) {
   const tabsContext = useTabsContext();
   const generatedId = React.useId();
   const effectiveMotionIndicator = motionIndicator ?? tabsContext.motionIndicator ?? false;
   const indicatorLayoutId = layoutId || `tabs-indicator-${generatedId}`;
+  const listRef = React.useRef<HTMLDivElement>(null);
+
+  // WAI-ARIA Tabs keyboard navigation: Arrow keys, Home, End
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      onKeyDown?.(e);
+      const list = listRef.current;
+      if (!list) return;
+      const tabs = Array.from(
+        list.querySelectorAll<HTMLButtonElement>('[role="tab"]:not([disabled])')
+      );
+      if (tabs.length === 0) return;
+      const focused = document.activeElement as HTMLButtonElement;
+      const idx = tabs.indexOf(focused);
+      const isHorizontal = tabsContext.orientation !== "vertical";
+
+      let next = -1;
+      if (
+        (isHorizontal && e.key === "ArrowRight") ||
+        (!isHorizontal && e.key === "ArrowDown")
+      ) {
+        e.preventDefault();
+        next = idx < 0 ? 0 : (idx + 1) % tabs.length;
+      } else if (
+        (isHorizontal && e.key === "ArrowLeft") ||
+        (!isHorizontal && e.key === "ArrowUp")
+      ) {
+        e.preventDefault();
+        next = idx < 0 ? tabs.length - 1 : (idx - 1 + tabs.length) % tabs.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        next = tabs.length - 1;
+      }
+      if (next >= 0) {
+        tabs[next].focus();
+        tabs[next].click();
+      }
+    },
+    [onKeyDown, tabsContext.orientation]
+  );
 
   return (
     <TabsListContext.Provider
@@ -129,10 +174,13 @@ function TabsList({
       }}
     >
       <div
+        ref={listRef}
         data-slot="tabs-list"
         data-variant={variant}
         data-motion-indicator={effectiveMotionIndicator ? "true" : undefined}
         role="tablist"
+        aria-orientation={tabsContext.orientation ?? "horizontal"}
+        onKeyDown={handleKeyDown}
         className={cn(tabsListVariants({ variant }), className)}
         {...props}
       >

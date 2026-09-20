@@ -46,7 +46,7 @@ import type {
   KanbanColumnId,
   DetailedKanbanProjection,
 } from "@/contracts/workspace-semantic";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 
@@ -525,13 +525,6 @@ function formatDate(dateStr?: string): string {
 function isOverdue(dueDateStr?: string, status?: TaskStatus, referenceDate: string = getSystemReferenceDate()): boolean {
   if (!dueDateStr || status === "COMPLETED" || status === "CANCELLED") return false;
   return isTaskPastDue(dueDateStr, referenceDate);
-}
-
-function getInitials(name?: string): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
 const STATUS_LABELS: Record<string, string> = {

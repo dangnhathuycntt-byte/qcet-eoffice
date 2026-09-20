@@ -428,9 +428,9 @@ export function LinearTaskDetailView({
             : "Không thể xóa tài liệu minh chứng. Vui lòng thử lại");
         throw new Error(errMsg);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setDeliverables(previousDeliverables);
-      notifyError(error?.message || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
+      notifyError(error instanceof Error ? error.message : "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
   };
 
@@ -562,4 +562,5 @@ export function LinearTaskDetailView({
     </div>
   );
 }
-import { AnimatePresence, m } from "motion/react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";

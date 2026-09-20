@@ -21,7 +21,7 @@ import type {
 } from "@/types/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import {
   getCategoryBadgeConfig,
   getStatusBadgeConfig,
@@ -437,13 +437,6 @@ export function getCategoryChipClass(category?: TaskCategory): string {
     default:
       return "border-border/60 bg-muted/60 text-muted-foreground";
   }
-}
-
-function getInitials(name: string): string {
-  if (!name) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function formatDateVi(dateStr: string): string {

@@ -8,7 +8,6 @@ import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';
 import { SearchQuerySchema } from '@/contracts/common';
 import { assertRateLimit } from '@/server/security/rate-limit';
-import { isAdmin } from '@/server/policies/document-policy';
 import {
   foldVietnamese,
   normalizeTelexQuery,
@@ -16,6 +15,8 @@ import {
   QCET_ACRONYMS,
 } from '@/lib/search/vietnamese-search';
 import { TaskScope } from '@prisma/client';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { buildTaskReadWhere } from '@/server/tasks/task-query-service';
 
 export interface SearchTaskResult {
   id: string;
@@ -116,6 +117,22 @@ export async function GET(request: NextRequest) {
     // Base query filter for tasks
     const andConditions: any[] = [];
 
+    // Optional user-specified narrowing scope for tasks
+    if (scope) {
+      if (scope === 'school') {
+        andConditions.push({ scope: TaskScope.SCHOOL });
+      } else if (scope === 'unit') {
+        andConditions.push({ scope: TaskScope.DEPARTMENT });
+      } else if (scope === 'personal') {
+        andConditions.push({
+          OR: [
+            { scope: TaskScope.INDIVIDUAL },
+            { assignees: { some: { userId: authUser.id } } },
+          ],
+        });
+      }
+    }
+
     if (q) {
       const taskOrConditions: any[] = [
         { title: { contains: q, mode: 'insensitive' } },
@@ -149,48 +166,13 @@ export async function GET(request: NextRequest) {
       andConditions.push({ OR: taskOrConditions });
     }
 
-    // Role and Scope authorization filter
-    const userIsAdmin = isAdmin(authUser);
-
-    if (scope === 'personal') {
-      andConditions.push({
-        OR: [
-          { createdById: authUser.id },
-          { assignees: { some: { userId: authUser.id } } },
-        ],
-      });
-    } else if (scope === 'unit') {
-      if (authUser.departmentId) {
-        andConditions.push({ departmentId: authUser.departmentId });
-      } else if (!userIsAdmin) {
-        // User with no department can only see their own tasks in unit scope
-        andConditions.push({
-          OR: [
-            { createdById: authUser.id },
-            { assignees: { some: { userId: authUser.id } } },
-          ],
-        });
-      }
-    } else if (scope === 'school') {
-      andConditions.push({ scope: TaskScope.SCHOOL });
-    } else if (!userIsAdmin) {
-      // Unscoped query for non-admin: restrict to assigned, created, own department, or school-wide tasks
-      const permittedConditions: any[] = [
-        { createdById: authUser.id },
-        { assignees: { some: { userId: authUser.id } } },
-        { scope: TaskScope.SCHOOL },
-      ];
-      if (authUser.departmentId) {
-        permittedConditions.push({ departmentId: authUser.departmentId });
-      }
-      andConditions.push({ OR: permittedConditions });
-    }
-
-    // Phase 9 & Section 31/43: Data classification filter for tasks
-    if (!userIsAdmin) {
-      andConditions.push({
-        dataClassification: { not: 'STATE_SECRET' as any },
-      });
+    // Canonical Task authorization (replaces legacy isAdmin + manual scope branching)
+    // Note: scope=school query param is intentionally IGNORED for authorization.
+    // buildTaskReadWhere() determines access based on canonical position assignments.
+    const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
+    const canonicalTaskAuthWhere = buildTaskReadWhere(authorizationContext);
+    if (Object.keys(canonicalTaskAuthWhere).length > 0) {
+      andConditions.push(canonicalTaskAuthWhere);
     }
 
     const tasksWhere = andConditions.length > 0 ? { AND: andConditions } : {};
@@ -254,7 +236,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Phase 9 & Section 31/43: Classification filter for documents
-    if (!userIsAdmin) {
+    // SYSTEM_ADMIN is denied operational access; apply classification filter to all users.
+    {
       const docAndConditions: any[] = [];
       if (documentsWhere.OR) {
         docAndConditions.push(documentsWhere);
@@ -429,20 +412,22 @@ export async function GET(request: NextRequest) {
       issuedDate: d.issuedDate ? d.issuedDate.toISOString() : "",
     }));
 
-    return apiSuccess(
-      {
-        query: q,
-        results: {
-          tasks: formattedTasks,
-          documents: formattedDocuments,
-          users: sortedUsers,
-        },
-        count: {
-          tasks: formattedTasks.length,
-          documents: formattedDocuments.length,
-          users: sortedUsers.length,
-        },
+    const searchPayload = {
+      query: q,
+      results: {
+        tasks: formattedTasks,
+        documents: formattedDocuments,
+        users: sortedUsers,
       },
+      count: {
+        tasks: formattedTasks.length,
+        documents: formattedDocuments.length,
+        users: sortedUsers.length,
+      },
+    };
+
+    return apiSuccess(
+      searchPayload,
       {
         requestId,
         headers: {

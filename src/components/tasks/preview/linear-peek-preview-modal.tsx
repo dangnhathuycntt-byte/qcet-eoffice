@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
-import { cn } from "@/lib/utils";
-import { formatDetailDate, getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
+import { cn, getInitials } from "@/lib/utils";
+import { formatDetailDate, getRelativeDueTime } from "@/lib/task-detail-helpers";
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 
@@ -25,13 +25,6 @@ export interface LinearPeekPreviewModalProps {
   onNavigatePrev?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
-}
-
-function getInitials(name: string): string {
-  if (!name) return "—";
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
 export function LinearPeekPreviewModal({

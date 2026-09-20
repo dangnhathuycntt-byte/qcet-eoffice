@@ -32,7 +32,7 @@ import {
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
@@ -448,8 +448,8 @@ export function TaskIdentityBlock({
                           await onReassignLead(p.id, p.name);
                         }
                         setIsLeadDropdownOpen(false);
-                      } catch (err: any) {
-                        setReassignError(err?.message || "Không thể chuyển giao người phụ trách");
+                      } catch (err: unknown) {
+                        setReassignError(err instanceof Error ? err.message : "Không thể chuyển giao người phụ trách");
                       } finally {
                         setIsReassigning(false);
                       }

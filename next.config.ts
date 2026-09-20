@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
   experimental: {
-    optimizePackageImports: ["lucide-react", "qrcode", "vaul"],
+    optimizePackageImports: ["lucide-react", "qrcode", "vaul", "motion", "@base-ui/react"],
   },
   images: {
     remotePatterns: [
@@ -74,6 +74,16 @@ const nextConfig: NextConfig = {
         source: "/unit-tasks",
         destination: "/tasks?scope=unit",
         permanent: true,
+      },
+      {
+        source: "/notifications",
+        destination: "/inbox",
+        permanent: false,
+      },
+      {
+        source: "/notifications/:path*",
+        destination: "/inbox/:path*",
+        permanent: false,
       },
     ];
   },

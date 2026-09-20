@@ -16,8 +16,10 @@ import {
   ValidationError,
 } from "@/server/api/errors";
 import { prisma } from "@/lib/prisma";
-import { canReadDocument, isAdmin } from "@/server/policies/document-policy";
-import { canReadTask } from "@/server/policies/task-policy";
+import { canReadDocument } from "@/server/policies/document-policy";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
+import { logger } from "@/server/observability/logger";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -119,26 +121,32 @@ export async function GET(req: NextRequest) {
       });
 
       if (matchingDeliverable?.task) {
-        if (!canReadTask(authUser, matchingDeliverable.task)) {
-          throw new ForbiddenError(
-            "Bạn không có quyền truy cập tệp của nhiệm vụ này"
-          );
+        // P1: Canonical authorization via buildTaskReadWhere (replaces legacy canReadTask)
+        const authCtx = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
+        const taskAuthWhere = buildTaskReadWhere(authCtx);
+        const authorizedDeliverable = await prisma.taskDeliverable.findFirst({
+          where: {
+            id: matchingDeliverable.id,
+            task: taskAuthWhere,
+          },
+        });
+        if (!authorizedDeliverable) {
+          throw new ForbiddenError("Bạn không có quyền truy cập tệp của nhiệm vụ này");
         }
       }
 
-      // If not registered in DB, verify sensitivity
+      // P0-1: Default deny (F07) — file không thuộc resource được cấp quyền
       if (!matchingAttachment && !matchingDeliverable) {
-        const lower = fileName.toLowerCase();
-        if (
-          (lower.includes("secret") ||
-            lower.includes("mat") ||
-            lower.startsWith(".")) &&
-          !isAdmin(authUser)
-        ) {
-          throw new ForbiddenError(
-            "Tệp nhạy cảm yêu cầu quyền Quản trị viên (Admin)"
-          );
-        }
+        logger.fileAccessDenied({
+          requestId,
+          userId: authUser.id,
+          filePath: filePathParam!,
+          fileName,
+          reason: "Unregistered orphan file not associated with any authorized resource",
+        });
+        throw new NotFoundError(
+          "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
+        );
       }
 
       downloadName = req.nextUrl.searchParams.get("name") || fileName;

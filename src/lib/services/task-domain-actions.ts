@@ -163,7 +163,7 @@ export type RemindInput = z.infer<typeof RemindInputSchema>;
 // ============================================================================
 
 async function buildUserContext(session: SessionPayload) {
-  return loadAuthorizationContext(session.id);
+  return loadAuthorizationContext(session.id, new Date(), { useCache: true, ttlMs: 10_000 });
 }
 
 export async function loadTaskAndBuildResource(

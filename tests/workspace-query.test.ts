@@ -1075,7 +1075,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.deepEqual(authWhere, { id: "__DENY_ANONYMOUS__" });
     });
 
-    test("Institutional leadership (ADMIN, HIEU_TRUONG) query filter is unconstrained by department but scoped by client view filters", () => {
+    test("Institutional leadership (HIEU_TRUONG) has school-wide read access; technical ADMIN is denied operational tasks by default", () => {
       const adminUser = {
         id: "admin-uuid-001",
         email: "admin@qcet.edu.vn",
@@ -1097,20 +1097,21 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const adminAuth = buildTaskReadWhere(adminUser);
       const leaderAuth = buildTaskReadWhere(leaderUser);
 
-      // Leadership has school-wide read access
-      assert.deepEqual(adminAuth, {});
+      // Canonical authorization: technical ADMIN (System Admin) is denied operational tasks
+      assert.deepEqual(adminAuth, { id: "__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__" });
+      // Statutory institutional leadership has school-wide read access
       assert.deepEqual(leaderAuth, {});
 
-      // Client view filter (e.g. ?scope=unit&dept=CNTT) acts purely as an aggregation/view filter
+      // Client view filter (e.g. ?scope=unit&dept=CNTT) acts purely as an aggregation/view filter for leadership
       const clientState = parseWorkspaceQuery("?scope=unit&dept=CNTT");
-      const combinedAdminWhere = {
+      const combinedLeaderWhere = {
         AND: [
-          adminAuth,
+          leaderAuth,
           { departmentId: clientState.dept },
         ],
       };
 
-      assert.equal(combinedAdminWhere.AND[1].departmentId, "CNTT");
+      assert.equal(combinedLeaderWhere.AND[1].departmentId, "CNTT");
     });
 
     test("Role is Not Scope invariant: TaskScope visual filter selection never alters or elevates user authority", () => {

@@ -16,8 +16,9 @@ import {
   ValidationError,
 } from "@/server/api/errors";
 import { prisma } from "@/lib/prisma";
-import { canReadDocument, isAdmin } from "@/server/policies/document-policy";
-import { canReadTask } from "@/server/policies/task-policy";
+import { canReadDocument } from "@/server/policies/document-policy";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
 import { canReadDossier } from "@/server/policies/dossier-policy";
 import { canViewMeeting } from "@/server/policies/meeting-policy";
 import { logger } from "@/server/observability/logger";
@@ -111,17 +112,19 @@ export async function GET(
       where: {
         fileUrl: { in: candidateUrls },
       },
-      include: {
-        task: {
-          include: {
-            assignees: true,
-          },
-        },
-      },
     });
 
     if (deliverable) {
-      if (!deliverable.task || !canReadTask(authUser, deliverable.task)) {
+      // P1: Canonical authorization via buildTaskReadWhere (replaces legacy canReadTask)
+      const authCtx = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true });
+      const taskAuthWhere = buildTaskReadWhere(authCtx);
+      const authorizedDeliverable = await prisma.taskDeliverable.findFirst({
+        where: {
+          id: deliverable.id,
+          task: taskAuthWhere,
+        },
+      });
+      if (!authorizedDeliverable) {
         logger.fileAccessDenied({
           requestId,
           userId: authUser.id,

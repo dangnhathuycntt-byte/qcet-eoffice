@@ -48,7 +48,7 @@ export async function GET(req: Request, routeContext: RouteContext) {
     const taskResource = buildTaskResource(taskSubject);
 
     // Canonical object authorization check (BOLA protection)
-    const authContext = await loadAuthorizationContext(authUser.id);
+    const authContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 });
     const readDecision = authorize(authContext, 'task.read', taskResource);
     if (!readDecision.allowed) {
       throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');

@@ -133,6 +133,7 @@ export interface StaffTask {
     status: TaskStatus;
   }[];
   progressPercent?: number;
+  version?: number;
 }
 
 export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
@@ -204,6 +205,7 @@ export interface SchoolTask {
   assignees?: any[];
   createdAt?: string;
   updatedAt?: string;
+  version?: number;
 }
 
 export function isSchoolTask(task: unknown): task is SchoolTask {

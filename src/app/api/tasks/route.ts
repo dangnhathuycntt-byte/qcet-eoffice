@@ -79,7 +79,7 @@ export async function GET(req: Request) {
       validatedQuery.limit === 'all' ||
       rawParams.limit === 'all';
 
-    const authorizationContext = await loadAuthorizationContext(authUser.id);
+    const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 });
     const result = await taskQueryService.queryTasks(authorizationContext, {
       all: isAll,
       page: validatedQuery.page,

@@ -180,8 +180,8 @@ export function TaskSubtasksSection({
       setNewAssigneeName("");
       setNewDueDate("");
       setIsAddingInline(false);
-    } catch (err: any) {
-      setInlineError(err?.message || "Không thể tạo việc thành phần. Vui lòng thử lại.");
+    } catch (err: unknown) {
+      setInlineError(err instanceof Error ? err.message : "Không thể tạo việc thành phần. Vui lòng thử lại.");
     } finally {
       setIsSaving(false);
     }

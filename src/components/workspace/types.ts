@@ -39,6 +39,7 @@ export interface UniversalActionQueueItems {
 }
 
 export interface UnifiedAdaptiveWorkspaceProps {
+  workspaceQuery?: import('@/hooks/use-workspace-query').UseWorkspaceQueryReturn;
   user?: AuthUser;
   tasks?: SchoolTask[];
   initialTasks?: SchoolTask[];

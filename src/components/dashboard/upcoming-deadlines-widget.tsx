@@ -6,7 +6,8 @@ import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, Chevron
 import type { UpcomingItem } from "@/types/dashboard";
 export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
+export { getInitials };
 import { formatDisplayDate } from "@/lib/format";
 
 export interface UpcomingDeadlinesWidgetProps {
@@ -107,15 +108,6 @@ export function formatDeadlineDistance(dateStr: string, referenceDate?: Date | s
 }
 
 export const formatRelativeDueDate = formatDeadlineDistance;
-
-export function getInitials(name: string): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
-}
 
 export function UpcomingDeadlinesWidget({
   items = [],

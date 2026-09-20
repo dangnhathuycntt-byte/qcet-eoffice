@@ -6,7 +6,7 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDetailDate } from "@/components/dashboard/task-detail-side-sheet";
+import { formatDetailDate } from "@/lib/task-detail-helpers";
 
 export interface ActivityEvent {
   id: string;

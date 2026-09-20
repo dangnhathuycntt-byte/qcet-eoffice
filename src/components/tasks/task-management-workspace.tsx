@@ -5,10 +5,12 @@ import type { SchoolTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import {
   UnifiedAdaptiveWorkspace,
+  UnifiedAdaptiveWorkspaceControlled,
   type ViewMode,
   type WorkspaceScope,
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
+import type { UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -32,6 +34,7 @@ export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWor
   className?: string;
   initialViewMode?: ViewMode;
   initialTasks?: SchoolTask[];
+  workspaceQuery?: UseWorkspaceQueryReturn;
 }
 
 /**
@@ -59,23 +62,29 @@ export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
     onScopeChange,
     className,
     initialTasks,
+    workspaceQuery,
     ...rest
   } = props;
   const { setIsProfileModalOpen } = useAuth();
   const effectiveScope = scope || forcedScope;
+  const sharedProps = {
+    initialScope: initialScope || effectiveScope || "school" as WorkspaceScope,
+    scope,
+    forcedScope,
+    onScopeChange,
+    className,
+    initialViewMode: props.initialViewMode ?? "table" as ViewMode,
+    initialTasks,
+    ...rest,
+  };
 
-  return (
-    <UnifiedAdaptiveWorkspace
-      initialScope={initialScope || effectiveScope || "school"}
-      scope={scope}
-      forcedScope={forcedScope}
-      onScopeChange={onScopeChange}
-      className={className}
-      initialViewMode={props.initialViewMode ?? "table"}
-      initialTasks={initialTasks}
-      {...rest}
-    />
-  );
+  // Dùng Controlled variant khi caller là canonical owner của workspaceQuery
+  // → không tạo listener popstate thứ hai bên trong UAW.
+  if (workspaceQuery) {
+    return <UnifiedAdaptiveWorkspaceControlled {...sharedProps} workspaceQuery={workspaceQuery} />;
+  }
+
+  return <UnifiedAdaptiveWorkspace {...sharedProps} />;
 }
 
 export default TaskManagementWorkspace;

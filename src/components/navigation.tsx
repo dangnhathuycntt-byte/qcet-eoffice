@@ -30,15 +30,8 @@ import {
 } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
-
-export function getInitials(name: string): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  const first = parts[0].charAt(0);
-  const last = parts[parts.length - 1].charAt(0);
-  return (first + last).toUpperCase();
-}
+import { getInitials } from "@/lib/format-helpers";
+export { getInitials };
 
 export { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 import { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";

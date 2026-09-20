@@ -231,20 +231,15 @@
 }
 
 @layer base {
+  /* Fade-in with slight upward slide */
   .animate-fade-in {
     animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes spin-slow {
@@ -254,6 +249,12 @@
 
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
+}
+
+@keyframes progress-indeterminate {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
 }
 
 @utility content-auto {

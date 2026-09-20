@@ -3,8 +3,16 @@ import assert from "node:assert/strict";
 import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
 
 test("getSystemReferenceDate returns standard 2026-09-09 default", () => {
-  const ref = getSystemReferenceDate();
-  assert.equal(ref, "2026-09-09");
+  const originalEnv = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  try {
+    const ref = getSystemReferenceDate();
+    assert.equal(ref, "2026-09-09");
+  } finally {
+    if (originalEnv !== undefined) {
+      process.env.NEXT_PUBLIC_REFERENCE_DATE = originalEnv;
+    }
+  }
 });
 
 test("isTaskPastDue compares lexicographical ISO dates accurately without UTC midnight skew", () => {
@@ -26,18 +34,26 @@ test("isTaskPastDue compares lexicographical ISO dates accurately without UTC mi
 });
 
 test("isTaskPastDue handles Date instances and default reference date correctly", () => {
-  // Using Date instances
-  assert.equal(isTaskPastDue(new Date("2026-09-08T12:00:00.000Z"), "2026-09-09"), true);
-  assert.equal(isTaskPastDue(new Date("2026-09-09T08:00:00.000Z"), "2026-09-09"), false);
-  assert.equal(isTaskPastDue(new Date("2026-09-10T00:00:00.000Z"), "2026-09-09"), false);
+  const originalEnv = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  try {
+    // Using Date instances
+    assert.equal(isTaskPastDue(new Date("2026-09-08T12:00:00.000Z"), "2026-09-09"), true);
+    assert.equal(isTaskPastDue(new Date("2026-09-09T08:00:00.000Z"), "2026-09-09"), false);
+    assert.equal(isTaskPastDue(new Date("2026-09-10T00:00:00.000Z"), "2026-09-09"), false);
 
-  // Invalid date instance
-  assert.equal(isTaskPastDue(new Date("invalid"), "2026-09-09"), false);
+    // Invalid date instance
+    assert.equal(isTaskPastDue(new Date("invalid"), "2026-09-09"), false);
 
-  // Default reference date (which defaults to 2026-09-09)
-  assert.equal(isTaskPastDue("2026-09-08"), true);
-  assert.equal(isTaskPastDue("2026-09-09"), false);
-  assert.equal(isTaskPastDue("2026-09-10"), false);
+    // Default reference date (which defaults to 2026-09-09)
+    assert.equal(isTaskPastDue("2026-09-08"), true);
+    assert.equal(isTaskPastDue("2026-09-09"), false);
+    assert.equal(isTaskPastDue("2026-09-10"), false);
+  } finally {
+    if (originalEnv !== undefined) {
+      process.env.NEXT_PUBLIC_REFERENCE_DATE = originalEnv;
+    }
+  }
 });
 
 test("getSystemReferenceDate respects NEXT_PUBLIC_REFERENCE_DATE env variable", () => {

@@ -11,13 +11,13 @@
 | Icon | `lucide-react` | SVG component thủ công |
 | Class merging | `tailwind-merge` + `clsx` (`cn()` helper) | Logic merge class tự viết |
 | Variant styling | `class-variance-authority` (cva) | Switch/if-else className |
-| Animations | `tw-animate-css` (CSS animation classes) | `@keyframes` thủ công |
+| Animations | `tw-animate-css` (utility classes) | `@keyframes` thủ công cho animation có sẵn |
 | Motion / transitions | `motion` (Framer Motion v13) | CSS transition phức tạp tự viết |
 | Drawer / Sheet (mobile) | `vaul` | Drawer component tự viết |
 | Resizable panels | `react-resizable-panels` | Resize logic tự viết |
-| Headless UI primitives | `@base-ui/react` (xem danh sách đầy đủ bên dưới) | Tự viết headless component |
+| Headless UI primitives | `@base-ui/react` (xem danh sách bên dưới) | Tự viết headless component |
 
-### `@base-ui/react` ^1.8.0 — Danh sách đầy đủ 37 components
+### `@base-ui/react` ^1.8.0 — Headless UI Primitives
 
 **Import pattern**: `import { ComponentName } from "@base-ui/react/component-name"`
 
@@ -25,37 +25,24 @@
 |-----------|-------|--------------|
 | **Accordion** | Collapsible panels | FAQ, settings, expandable sections |
 | **Alert Dialog** | Blocking modal | Destructive confirm, critical warnings |
-| **Autocomplete** | Input + filtered list | Search bars, lookup fields |
-| **Avatar** | Image + fallback | User avatars, profile pictures |
-| **Button** | Accessible button | Disabled-but-focusable buttons |
-| **Calendar** | Date picker calendar | Lịch chọn ngày |
 | **Checkbox** / **Checkbox Group** | Form checkboxes | Multi-select, bộ lọc, form fields |
 | **Collapsible** | Expand/collapse | Section visibility toggle |
 | **Combobox** | Input + dropdown list | Filterable select, tag input |
-| **Context Menu** | Right-click menu | Row actions, file actions |
 | **Dialog** | Modal overlay | **DÙNG CHO MỌI MODAL** — thay createPortal thủ công |
-| **Drawer** | Swipe-to-dismiss panel | Mobile panels, side sheets |
-| **Field** / **Fieldset** / **Form** | Form primitives | Label, validation, error messages |
-| **Input** / **Number Field** | Form inputs | Text input, numeric input với +/- |
+| **Field** / **Fieldset** | Form primitives | Label, validation, error messages |
 | **Menu** | Dropdown actions | Action menus, more-options dropdowns |
-| **Menubar** | App menu bar | Toolbar-style command menus |
 | **Meter** | Graphical display | Quota, capacity indicators |
-| **Navigation Menu** | Site navigation | Sidebar nav, header nav |
-| **OTP Field** | Verification code | Auth verification flows |
 | **Popover** | Floating content | Tooltips mở rộng, inline forms |
-| **Preview Card** | Link preview | Rich link hover cards |
 | **Progress** | Progress bar | Task progress, upload progress |
 | **Radio** | Radio buttons | Single-select in forms |
-| **Scroll Area** | Custom scrollbar | Long lists, sidebars |
 | **Select** | Dropdown select | Single-value selection |
-| **Separator** | HR divider | Visual section dividers |
 | **Slider** | Range input | Settings, filters |
 | **Switch** | Toggle switch | On/off settings |
 | **Tabs** | Tab panels | **DÙNG THAY custom Tabs** — tabs navigation |
-| **Toast** | Notifications | Feedback messages |
 | **Toggle** / **Toggle Group** | Toggle buttons | View modes, toolbar buttons |
-| **Toolbar** | Accessible toolbar | Editor toolbars, action bars |
 | **Tooltip** | Hover info | Icon labels, help text |
+
+> **Lưu ý**: Verify component có sẵn tại [base-ui.com/react/components](https://base-ui.com/react/components) trước khi dùng. `@base-ui/react` là successor chính thức của Radix UI primitives.
 
 ### Motion (`motion` ^13.2.0)
 
@@ -92,9 +79,6 @@ const componentVariants = cva("base-classes", {
     variant: { default: "...", secondary: "..." },
     size: { sm: "...", md: "...", lg: "..." },
   },
-  compoundVariants: [
-    { variant: "primary", size: "lg", class: "uppercase" },
-  ],
   defaultVariants: { variant: "default", size: "md" },
 });
 
@@ -127,8 +111,9 @@ interface Props extends VariantProps<typeof componentVariants> {}
 | Nhu cầu | Dùng |
 |---------|------|
 | Sortable list / Kanban | `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` |
-| ~~Generic DnD (legacy)~~ | ~~`react-dnd`~~ — **DEAD WEIGHT, zero imports, xóa** |
-| **Ưu tiên**: Dùng `@dnd-kit` cho mọi code mới |
+| Editor block DnD | `@platejs/dnd` (dùng `react-dnd` làm peer dep — **KHÔNG xóa**) |
+
+> ⚠️ **Quan trọng**: `react-dnd` + `react-dnd-html5-backend` là **peerDependencies bắt buộc** của `@platejs/dnd ^53.3.8`. Không gỡ hai package này dù không thấy import trực tiếp trong `src/`. Xóa chúng sẽ gây lỗi runtime khi mở editor.
 
 ### Data & Backend
 | Nhu cầu | Dùng |
@@ -150,24 +135,23 @@ interface Props extends VariantProps<typeof componentVariants> {}
 ## Quy tắc áp dụng
 
 1. **Trước khi tạo component mới**, kiểm tra:
-   - `@base-ui/react` có primitive phù hợp không? (**37 components** — xem danh sách trên)
+   - `@base-ui/react` có primitive phù hợp không? (xem danh sách trên, verify tại base-ui.com)
    - `lucide-react` có icon cần thiết không?
    - `vaul` đã cover drawer/sheet chưa?
    - `react-resizable-panels` có xử lý được layout resizable không?
 
 2. **Trước khi viết modal/dialog**, dùng `@base-ui/react/dialog` hoặc `@base-ui/react/alert-dialog`:
    - **KHÔNG** dùng `createPortal` + manual scroll lock + manual ESC handler
-   - **KHÔNG** tự viết backdrop overlay `fixed inset-0`
    - Base UI Dialog cung cấp: focus trapping, scroll lock, ESC dismiss, accessibility tự động
 
 3. **Trước khi viết animation**, kiểm tra:
    - `tw-animate-css` có class animation phù hợp không? (`animate-in`, `fade-in`, `zoom-in-*`, `slide-in-from-*`)
-   - `motion` variants sẵn có tại `src/lib/motion/variants.ts`?
+   - Các variants sẵn có tại `src/lib/motion/variants.ts`?
    - `motion` (Framer Motion) cho complex animation, layout animation, gesture.
 
 4. **Trước khi viết validation logic**, dùng `zod` schema.
 
-5. **Trước khi viết DnD**, dùng `@dnd-kit` (ưu tiên v2 API với `DragDropProvider`).
+5. **Trước khi viết DnD**, dùng `@dnd-kit` API hiện tại (`DndContext`, `useSortable`, `DragOverlay`).
 
 6. **Trước khi viết variant styling**, dùng `cva` pattern.
 
@@ -180,11 +164,10 @@ interface Props extends VariantProps<typeof componentVariants> {}
 - ❌ Tự viết `cn()` utility mới → Đã có sẵn (`clsx` + `tailwind-merge`)
 - ❌ Tự viết form validation bằng tay → Dùng `zod`
 - ❌ Tự viết modal với `createPortal` + manual ESC/scroll lock → Dùng `@base-ui/react/dialog`
-- ❌ Tự viết `@keyframes` animations → Dùng `tw-animate-css` classes hoặc `motion` variants
 - ❌ Tự viết variant className logic (if/switch) → Dùng `cva`
 - ❌ Cài thêm `framer-motion` → Đã có `motion` (cùng gói, tên mới)
-- ❌ Cài thêm `@radix-ui/*` → Đã có `@base-ui/react` (successor chính thức)
+- ❌ Cài thêm `@radix-ui/*` → Đã có `@base-ui/react`
 - ❌ Cài thêm `@headlessui/react` → Đã có `@base-ui/react`
 - ❌ Cài thêm `react-beautiful-dnd` → Đã có `@dnd-kit`
 - ❌ Cài thêm `joi` / `yup` → Đã có `zod`
-- ❌ Dùng `react-dnd` → **Dead weight**, zero imports, dùng `@dnd-kit`
+- ❌ Xóa `react-dnd` / `react-dnd-html5-backend` → peerDep bắt buộc của `@platejs/dnd`
