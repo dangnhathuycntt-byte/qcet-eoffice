@@ -91,6 +91,16 @@ export interface TaskMetricsResult {
   referenceDate: string;
 }
 
+/** Lightweight projection for list views — omits deliverables, dacumTaskDef, subTasks */
+const TASK_LIST_INCLUDE = {
+  department: { select: { id: true, name: true, shortName: true, color: true } },
+  assignees: {
+    include: {
+      user: { select: { id: true, name: true, avatarUrl: true } },
+    },
+  },
+} as const;
+
 const TASK_INCLUDE = {
   department: true,
   assignees: {
@@ -563,6 +573,183 @@ export class TaskQueryService {
       nextCursor,
       referenceDate: canonicalRefDateStr,
     };
+
+    return {
+      tasks: formattedTasks,
+      data: formattedTasks,
+      total,
+      totalCount: total,
+      page,
+      limit,
+      hasMore,
+      nextCursor,
+      pagination,
+      meta,
+    };
+  }
+
+  /**
+   * Lightweight list query dùng TASK_LIST_INCLUDE (bỏ deliverables, dacumTaskDef, subTasks).
+   * Dùng cho server-side initial load ở page.tsx để giảm tải DB.
+   */
+  async queryTasksForList(
+    ctx:
+      | ApiRequestContext
+      | { user?: AuthenticatedUser | null; authorizationContext?: AuthorizationContext }
+      | AuthorizationContext,
+    filters: TaskQueryFilters = {}
+  ): Promise<TaskQueryResult> {
+    // Build where clause (reuse queryTasks logic inline for auth + filters)
+    const user = isAuthorizationContext(ctx) ? ctx.user : ctx.user || null;
+    const userId = isAuthorizationContext(ctx) ? ctx.userId : ctx.user?.id;
+
+    const month = filters.academicMonth ?? filters.month;
+    const dept = filters.departmentId ?? filters.dept;
+    const year = filters.academicYear ?? filters.year;
+    const scope = filters.scope;
+    const status = filters.status;
+    const assignedTo = filters.assignedTo;
+    const parentTaskId = filters.parentTaskId;
+
+    const where: Prisma.TaskWhereInput = { archivedAt: null };
+
+    if (month !== undefined && String(month) !== 'all') {
+      where.academicMonth = parseInt(String(month), 10);
+    }
+    if (dept && dept !== 'all') {
+      where.departmentId = dept;
+    }
+    if (year && year !== 'all') {
+      where.academicYear = String(year);
+    }
+
+    const assigneeConditions: Prisma.TaskWhereInput[] = [];
+    if (scope && scope !== 'all') {
+      const s = scope.toLowerCase();
+      if (s === 'school') where.scope = TaskScope.SCHOOL;
+      else if (s === 'department' || s === 'unit') where.scope = TaskScope.DEPARTMENT;
+      else if (s === 'individual' || s === 'personal') where.scope = TaskScope.INDIVIDUAL;
+      else if (s === 'my' && (userId || user)) {
+        assigneeConditions.push({ assignees: { some: { userId: userId || user!.id } } });
+      }
+    }
+    if (assignedTo && assignedTo !== 'all') {
+      const targetUserId = assignedTo === 'me' ? (userId || user?.id) : assignedTo;
+      if (targetUserId) {
+        assigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
+      }
+    }
+    if (assigneeConditions.length === 1) {
+      where.assignees = assigneeConditions[0].assignees;
+    } else if (assigneeConditions.length > 1) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        ...assigneeConditions,
+      ];
+    }
+
+    if (parentTaskId !== undefined && parentTaskId !== 'all') {
+      if (parentTaskId === 'null' || parentTaskId === 'root' || parentTaskId === null) {
+        where.parentTaskId = null;
+      } else {
+        where.parentTaskId = parentTaskId;
+      }
+    }
+
+    if (status && status !== 'all') {
+      const st = status.toLowerCase();
+      if (st === 'overdue') {
+        const refDateVal = filters.referenceDate ?? getSystemReferenceDateStr();
+        const refDate = getIctReferenceDateStart(refDateVal);
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          { status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } },
+          { OR: [{ status: TaskStatus.OVERDUE }, { dueDate: { lt: refDate } }] },
+        ];
+      } else {
+        const statusMap: Record<string, TaskStatus> = {
+          not_started: TaskStatus.NOT_STARTED,
+          in_progress: TaskStatus.IN_PROGRESS,
+          waiting_approval: TaskStatus.WAITING_APPROVAL,
+          completed: TaskStatus.COMPLETED,
+          cancelled: TaskStatus.CANCELLED,
+        };
+        const mapped =
+          statusMap[st] ??
+          (Object.values(TaskStatus).includes(status.toUpperCase() as TaskStatus)
+            ? (status.toUpperCase() as TaskStatus)
+            : undefined);
+        if (mapped) {
+          where.status = mapped;
+        }
+      }
+    }
+
+    const rawSearch = filters.search ?? filters.q;
+    const searchTerm = typeof rawSearch === 'string' ? rawSearch.trim() : rawSearch ? String(rawSearch).trim() : '';
+    if (searchTerm) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        {
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { code: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    let authTarget: AuthorizationContext | AuthenticatedUser | null = null;
+    if (isAuthorizationContext(ctx)) {
+      authTarget = ctx;
+    } else if ((ctx as any).authorizationContext) {
+      authTarget = (ctx as any).authorizationContext;
+    } else if (ctx.user) {
+      authTarget = ctx.user;
+    }
+
+    if (authTarget) {
+      const authWhere = buildTaskReadWhere(authTarget);
+      if (authWhere && Object.keys(authWhere).length > 0) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          authWhere,
+        ];
+      }
+    }
+
+    const canonicalRefDateStr =
+      typeof filters.referenceDate === 'string'
+        ? filters.referenceDate
+        : filters.referenceDate?.toISOString() ?? getSystemReferenceDateStr();
+
+    const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
+    const page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
+    const limitRaw = filters.limit ?? filters.take ?? 50;
+    const limitNum = parseInt(String(limitRaw), 10);
+    const limit = Math.min(Math.max(isNaN(limitNum) ? 50 : limitNum, 1), 100);
+    const skip = (page - 1) * limit;
+
+    const [totalCount, rawTasks] = await Promise.all([
+      prisma.task.count({ where }),
+      prisma.task.findMany({
+        where,
+        include: TASK_LIST_INCLUDE,
+        orderBy: filters.orderBy || { dueDate: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const total = totalCount;
+    const totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
+    const hasMore = skip + rawTasks.length < total;
+    const nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
+    const formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+
+    const pagination: TaskPaginationMeta = { total, page, limit, totalPages, hasMore, nextCursor };
+    const meta = { total, page, limit, totalPages, hasMore, nextCursor, referenceDate: canonicalRefDateStr };
 
     return {
       tasks: formattedTasks,

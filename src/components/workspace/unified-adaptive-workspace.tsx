@@ -36,11 +36,20 @@ import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
-import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
+const TaskKanbanBoard = dynamic(
+  () => import("@/components/tasks/task-kanban-board").then((m) => ({ default: m.TaskKanbanBoard })),
+  { ssr: false }
+);
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { isSchoolTask } from "@/types/dashboard";
-import { LinearTaskDetailView } from "@/components/tasks/detail/linear-task-detail-view";
-import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
+const LinearTaskDetailView = dynamic(
+  () => import("@/components/tasks/detail/linear-task-detail-view").then((m) => ({ default: m.LinearTaskDetailView })),
+  { ssr: false }
+);
+const LinearPeekPreviewModal = dynamic(
+  () => import("@/components/tasks/preview/linear-peek-preview-modal").then((m) => ({ default: m.LinearPeekPreviewModal })),
+  { ssr: false }
+);
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";

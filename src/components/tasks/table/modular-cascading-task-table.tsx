@@ -403,6 +403,15 @@ export function ModularCascadingTaskTable({
   // 4c. Peek Preview Modal State (REQ-09 / REQ-10)
   const [previewTask, setPreviewTask] = React.useState<SchoolTask | null>(null);
   const [previewTriggerEl, setPreviewTriggerEl] = React.useState<HTMLElement | null>(null);
+  const [isDesktop, setIsDesktop] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const handleClosePeekPreview = React.useCallback(() => {
     setPreviewTask(null);
@@ -1108,7 +1117,8 @@ export function ModularCascadingTaskTable({
             {isBacklogExpanded && (
               <div className="border-t border-amber-200/60 bg-white/70">
                 {/* Desktop Backlog Table */}
-                <div className="hidden md:block overflow-x-auto thin-scrollbar">
+                {isDesktop !== false && (
+                <div className="overflow-x-auto thin-scrollbar">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="h-8 border-b border-amber-200/50 bg-amber-100/30 text-[11px] font-medium text-amber-900/80 uppercase">
@@ -1203,9 +1213,11 @@ export function ModularCascadingTaskTable({
                     </tbody>
                   </table>
                 </div>
+                )}
 
                 {/* Mobile Backlog Cards */}
-                <div className="md:hidden p-2 space-y-1.5">
+                {isDesktop === false && (
+                <div className="p-2 space-y-1.5">
                   {priorOverdueBacklog.map((task) => (
                     <div
                       key={task.id}
@@ -1232,6 +1244,7 @@ export function ModularCascadingTaskTable({
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
           </section>
@@ -1279,7 +1292,8 @@ export function ModularCascadingTaskTable({
       ) : (
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
           {/* Desktop Table View (>= 768px) - Linear Soft Rounded Rows */}
-          <div className="hidden md:block overflow-hidden bg-transparent">
+          {isDesktop !== false && (
+          <div className="overflow-hidden bg-transparent">
             <div className="overflow-x-auto thin-scrollbar px-0.5 sm:px-1">
               <table className="w-full text-left border-separate border-spacing-y-0">
                 <TaskTableHeader
@@ -1350,9 +1364,11 @@ export function ModularCascadingTaskTable({
               </table>
             </div>
           </div>
+          )}
 
           {/* Mobile Card Feed View (< 768px) */}
-          <div className="md:hidden space-y-2.5">
+          {isDesktop === false && (
+          <div className="space-y-2.5">
             {paginatedResult.items.map((task) => (
               <MobileTaskCard
                 key={task.id}
@@ -1371,6 +1387,7 @@ export function ModularCascadingTaskTable({
               />
             ))}
           </div>
+          )}
 
           {/* Pagination Controls - Show only when totalItems > pageSize and not explicitly hidden */}
           {!hidePagination && tableState.totalItems > tableState.pageSize && (

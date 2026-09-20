@@ -24,7 +24,7 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
     redirect(`/login?returnTo=${encodeURIComponent(returnUrl)}`);
   }
   const authorizationContext = await loadAuthorizationContext(session.id);
-  const { tasks } = await taskQueryService.queryTasks(authorizationContext, { all: true, parentTaskId: 'root' });
+  const { tasks } = await taskQueryService.queryTasksForList(authorizationContext, { page: 1, limit: 50, parentTaskId: 'root' });
   const authorizedTasks = tasks.map((task) => ({
     ...task,
     availableActions: computeAvailableActions(authorizationContext, buildTaskResource(task)),
