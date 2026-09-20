@@ -368,7 +368,7 @@
   }
 }
 
-/* Các block liền kề được chọn tạo thành một vùng, không có viền nội bộ. */
+/* Các block liền kề được chọn tạo thành một vùng, không có viền. */
 [data-slot="task-notion-block-content"] [data-slot="task-editor-block"]::before {
   content: "";
   position: absolute;
@@ -376,11 +376,11 @@
   pointer-events: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  transition: background-color 100ms ease, border-color 100ms ease;
+  transition: background-color 100ms ease;
 }
 [data-slot="task-notion-block-content"] [data-block-selected="true"]::before {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  border-color: transparent;
 }
 [data-slot="task-notion-block-content"] [data-block-selected="true"]:has(+ [data-block-selected="true"])::before {
   border-bottom: 0;

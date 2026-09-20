@@ -1421,10 +1421,22 @@ function SlashInputElement({ attributes, children, element }: any) {
     onSelectOption?.(option);
   }, [editor, element, onSelectOption]);
 
-  const inlineRef = React.useRef<HTMLSpanElement>(null);
+  const [anchorEl, setAnchorEl] = React.useState<HTMLSpanElement | null>(null);
+
+  const setMergedRef = React.useCallback(
+    (node: HTMLSpanElement | null) => {
+      if (typeof attributes?.ref === "function") {
+        attributes.ref(node);
+      } else if (attributes?.ref) {
+        (attributes.ref as any).current = node;
+      }
+      setAnchorEl(node);
+    },
+    [attributes]
+  );
 
   return (
-    <span {...attributes} ref={inlineRef}>
+    <span {...attributes} ref={setMergedRef}>
       <span contentEditable={false} className="inline">
         <SlashMenu
           isOpen={true}
@@ -1435,7 +1447,7 @@ function SlashInputElement({ attributes, children, element }: any) {
           onSelect={handleSelect}
           searchQuery={searchQuery}
           setSearchQuery={() => {}}
-          anchorElement={inlineRef.current}
+          anchorElement={anchorEl}
           filteredOptions={filteredOptions}
         />
       </span>
@@ -1483,8 +1495,21 @@ function SlashMenu({
     ],
   });
 
-  React.useEffect(() => {
-    if (anchorElement) refs.setPositionReference(anchorElement);
+  React.useLayoutEffect(() => {
+    if (anchorElement) {
+      refs.setReference(anchorElement);
+      return;
+    }
+    // Fallback: neo vào vị trí con trỏ văn bản hiện tại để không bị lệch về (0,0)
+    if (typeof window !== "undefined") {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        refs.setReference({
+          getBoundingClientRect: () => range.getBoundingClientRect(),
+        });
+      }
+    }
   }, [anchorElement, refs]);
 
   React.useEffect(() => {
@@ -1960,7 +1985,7 @@ export function TaskNotionBlockContent({
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}
         className={cn(
-          "relative flex-1 min-h-0 flex flex-col text-foreground [&_.slate-selection-area]:border-[1.5px] [&_.slate-selection-area]:border-primary/60 [&_.slate-selection-area]:bg-primary/15 [&_.slate-selection-area]:rounded-xs [&_.slate-selection-area]:pointer-events-none [&_.slate-selection-area]:z-50",
+          "relative flex-1 min-h-0 flex flex-col text-foreground [&_.slate-selection-area]:border-0 [&_.slate-selection-area]:bg-primary/20 [&_.slate-selection-area]:rounded-xs [&_.slate-selection-area]:pointer-events-none [&_.slate-selection-area]:z-50",
           className
         )}
       >
