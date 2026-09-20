@@ -17,6 +17,7 @@ import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block
 import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
+import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
@@ -42,8 +43,6 @@ export interface TaskDetailPageProps {
   peekTasks?: StaffTask[];
 }
 
-const DEFAULT_PEEK_WIDTH = 760;
-const MIN_PEEK_WIDTH = 380;
 const PEEK_STORAGE_KEY = "qcet_subtask_peek_width";
 
 export function TaskDetailPage({
@@ -119,15 +118,16 @@ export function TaskDetailPage({
       const saved = localStorage.getItem(PEEK_STORAGE_KEY);
       if (saved) {
         const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= MIN_PEEK_WIDTH && parsed <= 960) {
+        if (!isNaN(parsed) && parsed >= MIN_PEEK_WIDTH && parsed <= MAX_PEEK_WIDTH) {
           setPeekWidth(parsed);
         }
       }
     } catch {}
   }, []);
 
-  const handlePeekWidthChange = React.useCallback((width: number) => {
+  const handlePeekWidthChange = React.useCallback((width: number, persist = true) => {
     setPeekWidth(width);
+    if (!persist) return;
     try {
       localStorage.setItem(PEEK_STORAGE_KEY, String(width));
     } catch {}
@@ -934,7 +934,6 @@ export function TaskDetailPage({
       isOpen={Boolean(activeSubtask)}
       onClose={handleCloseSubtaskDrawer}
       subtask={activeSubtask}
-      parentTaskId={task.id}
       canEdit={canEdit}
       onSubtaskUpdated={handleSubtaskUpdated}
       siblings={subTasks}

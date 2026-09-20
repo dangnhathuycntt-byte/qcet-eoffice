@@ -1350,7 +1350,6 @@ function BlockRowDraggable({ children, element }: { children: React.ReactNode; e
           readOnly && "invisible"
         )}
         contentEditable={false}
-        data-qcet-block-selection-rail=""
         data-plate-selectable="true"
       >
         <button

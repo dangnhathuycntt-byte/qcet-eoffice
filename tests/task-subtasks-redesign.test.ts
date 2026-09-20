@@ -80,8 +80,7 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
         "Must use data-peek-open to toggle grid columns on desktop"
       );
       assert.ok(
-        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 760px))") ||
-        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 480px))"),
+        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 760px))"),
         "Cột việc con dùng độ rộng đã lưu và giới hạn theo viewport"
       );
       // No border-left divider
@@ -203,6 +202,19 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       assert.ok(drawerContent.includes('window.removeEventListener("blur", handleMouseUp)'));
     });
 
+    it("resize gom theo frame và chỉ lưu sau khi kết thúc kéo", () => {
+      assert.ok(drawerContent.includes("window.requestAnimationFrame"));
+      assert.ok(drawerContent.includes("window.cancelAnimationFrame(pendingFrame)"));
+      assert.ok(drawerContent.includes("onPeekWidthChange(latestWidth, false)"));
+      assert.ok(drawerContent.includes("onPeekWidthChange(latestWidth);"));
+      assert.ok(detailPageContent.includes("if (!persist) return;"));
+    });
+
+    it("không giữ prop nhiệm vụ cha hoặc placeholder trùng mặc định", () => {
+      assert.ok(!drawerContent.includes("parentTaskId"));
+      assert.ok(!drawerContent.includes('placeholder="Nhập nội dung hoặc gõ / để chèn..."'));
+    });
+
     it("drawer uses DirectInlineEditor and real API mutations", () => {
       assert.ok(drawerContent.includes("<DirectInlineEditor"));
       assert.ok(drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"));
@@ -233,7 +245,7 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
     });
 
     it("drawer master-detail list has '+ Thêm việc con' action", () => {
-      assert.ok(drawerContent.includes("Thêm việc con") || drawerContent.includes("Thêm"), "Must have add child action");
+      assert.ok(drawerContent.includes('aria-label="Thêm việc con"'), "Must have add child action");
     });
 
     it("drawer does NOT have Back/Previous/Next buttons", () => {

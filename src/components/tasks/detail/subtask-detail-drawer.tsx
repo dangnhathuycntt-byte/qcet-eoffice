@@ -25,12 +25,12 @@ import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
 import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
 
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   subtask: StaffTask | null;
-  parentTaskId: string;
   canEdit?: boolean;
   onSubtaskUpdated?: (updated: StaffTask) => void;
   /** All siblings of the current child (parent's subTasks) */
@@ -40,7 +40,7 @@ export interface SubtaskDetailDrawerProps {
   /** Open create-subtask flow */
   onAddSubtask?: () => void;
   peekWidth?: number;
-  onPeekWidthChange?: (width: number) => void;
+  onPeekWidthChange?: (width: number, persist?: boolean) => void;
 }
 
 export function SubtaskDetailDrawer({
@@ -52,7 +52,7 @@ export function SubtaskDetailDrawer({
   siblings = [],
   onSelectSibling,
   onAddSubtask,
-  peekWidth = 480,
+  peekWidth = SINGLE_PEEK_WIDTH,
   onPeekWidthChange,
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
@@ -88,14 +88,24 @@ export function SubtaskDetailDrawer({
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
 
+    let pendingFrame: number | null = null;
+    let latestWidth: number | null = null;
+    let renderedWidth: number | null = null;
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const maxAllowed = Math.min(window.innerWidth * 0.75, 960);
-      const rawWidth = paneRight - moveEvent.clientX;
-      const clamped = Math.round(Math.max(380, Math.min(maxAllowed, rawWidth)));
-      onPeekWidthChange?.(clamped);
+      latestWidth = Math.round(clampPeekWidth(paneRight - moveEvent.clientX, window.innerWidth));
+      if (pendingFrame !== null) return;
+      pendingFrame = window.requestAnimationFrame(() => {
+        pendingFrame = null;
+        if (latestWidth !== null && latestWidth !== renderedWidth) {
+          renderedWidth = latestWidth;
+          onPeekWidthChange(latestWidth, false);
+        }
+      });
     };
 
     const handleMouseUp = () => {
+      if (pendingFrame !== null) window.cancelAnimationFrame(pendingFrame);
+      if (latestWidth !== null) onPeekWidthChange(latestWidth);
       stopResizeRef.current = null;
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevUserSelect;
@@ -112,20 +122,15 @@ export function SubtaskDetailDrawer({
 
   React.useEffect(() => {
     if (!isOpen) stopResizeRef.current?.();
+    return () => stopResizeRef.current?.();
   }, [isOpen]);
 
   const handleResetWidth = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const defaultWidth = siblings.length > 1 ? 760 : 480;
+    const defaultWidth = siblings.length > 1 ? DEFAULT_PEEK_WIDTH : SINGLE_PEEK_WIDTH;
     onPeekWidthChange?.(defaultWidth);
   }, [onPeekWidthChange, siblings.length]);
-
-  React.useEffect(() => {
-    return () => {
-      stopResizeRef.current?.();
-    };
-  }, []);
 
   React.useEffect(() => {
     if (!canEdit) return;
@@ -402,14 +407,14 @@ export function SubtaskDetailDrawer({
           role="separator"
           aria-orientation="vertical"
           tabIndex={0}
-          aria-valuemin={380}
-          aria-valuemax={960}
+          aria-valuemin={MIN_PEEK_WIDTH}
+          aria-valuemax={MAX_PEEK_WIDTH}
           aria-valuenow={Math.round(peekWidth)}
           onKeyDown={(event) => {
             if (!["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
             event.preventDefault();
-            const width = event.key === "Home" ? 480 : peekWidth + (event.key === "ArrowLeft" ? 20 : -20);
-            onPeekWidthChange?.(Math.max(380, Math.min(window.innerWidth * 0.75, 960, width)));
+            const width = event.key === "Home" ? SINGLE_PEEK_WIDTH : peekWidth + (event.key === "ArrowLeft" ? 20 : -20);
+            onPeekWidthChange?.(clampPeekWidth(width, window.innerWidth));
           }}
           aria-label="Kéo để điều chỉnh độ rộng bảng phụ hoặc nhấp đúp để đặt lại"
           onMouseDown={handleResizeMouseDown}
@@ -763,7 +768,6 @@ export function SubtaskDetailDrawer({
               key={subtask.id}
               taskId={subtask.id}
               initialDescription={description}
-              placeholder="Nhập nội dung hoặc gõ / để chèn..."
               onSaveContent={handleDescriptionChange}
               canEdit={canEdit}
               globalFileDrop={false}
