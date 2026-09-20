@@ -21,7 +21,9 @@ import {
   ChevronDown,
   RotateCcw,
   Layers,
+  Clock,
 } from "lucide-react";
+import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
 import {
   getTaskTimeFilterLabel,
@@ -602,12 +604,23 @@ export function UnifiedTaskToolbar({
       ? propIsUnassigned
       : isUserUnassignedDepartment(user);
 
+  // Normalize current scope to canonical TaskView ("related" | "unit" | "all" | "approval")
+  const normalizedTaskView: TaskView = React.useMemo(() => {
+    if (!scope) return "all";
+    const s = String(scope).toLowerCase();
+    if (s === "my" || s === "personal" || s === "my_tasks" || s === "related" || s === "cua_toi") return "related";
+    if (s === "unit" || s === "unit_tasks" || s === "department" || s === "don_vi") return "unit";
+    if (s === "approval" || s === "waiting_approval") return "approval";
+    if (s === "school" || s === "school_tasks" || s === "all" || s === "toan_truong") return "all";
+    return "all";
+  }, [scope]);
+
   // Normalize current scope to "school" | "unit" | "my"
   const normalizedScope: WorkspaceScope = React.useMemo(() => {
-    if (scope === "SCHOOL_TASKS" || scope === "school") return "school";
-    if (scope === "UNIT_TASKS" || scope === "unit") return "unit";
-    return "my";
-  }, [scope]);
+    if (normalizedTaskView === "related") return "my";
+    if (normalizedTaskView === "unit") return "unit";
+    return "school";
+  }, [normalizedTaskView]);
 
   // Synthesize criteria for saved views if not explicitly provided
   const synthesizedCriteria: TaskViewCriteria = React.useMemo(() => {
@@ -641,25 +654,27 @@ export function UnifiedTaskToolbar({
   const effectiveCriteria = currentCriteria ?? synthesizedCriteria;
 
   // Handle scope change, preserving the caller's format preference
-  const handleScopeSelect = (scopeId: WorkspaceScope) => {
+  const handleScopeSelect = (scopeId: TaskView, legacyScope: WorkspaceScope) => {
+    if (!onScopeChange) return;
     if (typeof scope === "string" && scope.endsWith("_TASKS")) {
       const legacyMap: Record<WorkspaceScope, TaskScope> = {
         school: "SCHOOL_TASKS",
         unit: "UNIT_TASKS",
         my: "MY_TASKS",
       };
-      onScopeChange(legacyMap[scopeId]);
+      onScopeChange(legacyMap[legacyScope]);
     } else {
-      onScopeChange(scopeId);
+      onScopeChange(scopeId as any);
     }
   };
 
-  // 1. Authorized Scope Options (Semantic data scopes: Cá nhân → Đơn vị → Toàn trường)
+  // 1. Authorized Scope Options (Canonical Query Views: Issue #26)
   const canViewSchoolScope = true;
   const canViewUnitScope = true;
 
   const scopeOptions: Array<{
-    id: WorkspaceScope;
+    id: TaskView;
+    legacyScope: WorkspaceScope;
     legacyId: TaskScope;
     label: string;
     shortLabel: string;
@@ -667,27 +682,39 @@ export function UnifiedTaskToolbar({
     isAuthorized: boolean;
   }> = [
     {
-      id: "my",
+      id: "related",
+      legacyScope: "my",
       legacyId: "MY_TASKS",
-      label: "Cá nhân",
-      shortLabel: "Cá nhân",
+      label: "Liên quan đến tôi",
+      shortLabel: "Của tôi",
       icon: User,
       isAuthorized: true,
     },
     {
       id: "unit",
+      legacyScope: "unit",
       legacyId: "UNIT_TASKS",
-      label: "Đơn vị",
+      label: "Đơn vị tôi",
       shortLabel: "Đơn vị",
       icon: Building2,
-      isAuthorized: true,
+      isAuthorized: canViewUnitScope,
     },
     {
-      id: "school",
+      id: "all",
+      legacyScope: "school",
       legacyId: "SCHOOL_TASKS",
-      label: "Toàn trường",
-      shortLabel: "Trường",
+      label: "Tất cả",
+      shortLabel: "Tất cả",
       icon: School,
+      isAuthorized: canViewSchoolScope,
+    },
+    {
+      id: "approval",
+      legacyScope: "school",
+      legacyId: "SCHOOL_TASKS",
+      label: "Chờ duyệt",
+      shortLabel: "Chờ duyệt",
+      icon: Clock,
       isAuthorized: true,
     },
   ];
@@ -786,14 +813,18 @@ export function UnifiedTaskToolbar({
   const effectiveScopeBadgeCounts = React.useMemo(() => {
     const getCount = (val: any) => (typeof val === "number" && !isNaN(val) ? val : undefined);
 
-    const bMy = getCount(badgeCounts?.my) ?? getCount((badgeCounts as any)?.MY_TASKS);
+    const bRelated = getCount(badgeCounts?.related) ?? getCount(badgeCounts?.my) ?? getCount((badgeCounts as any)?.MY_TASKS);
     const bUnit = getCount(badgeCounts?.unit) ?? getCount((badgeCounts as any)?.UNIT_TASKS);
-    const bSchool = getCount(badgeCounts?.school) ?? getCount((badgeCounts as any)?.SCHOOL_TASKS);
+    const bAll = getCount(badgeCounts?.all) ?? getCount(badgeCounts?.school) ?? getCount((badgeCounts as any)?.SCHOOL_TASKS);
+    const bApproval = getCount(badgeCounts?.approval) ?? getCount(badgeCounts?.waiting_approval) ?? tabCounts?.waiting_approval;
 
     return {
-      my: bMy !== undefined ? bMy : tabCounts?.my ?? tabCounts?.my_tasks,
+      related: bRelated !== undefined ? bRelated : tabCounts?.my ?? tabCounts?.my_tasks,
       unit: bUnit !== undefined ? bUnit : tabCounts?.unit,
-      school: bSchool !== undefined ? bSchool : (tabCounts?.all ?? totalTasksCount),
+      all: bAll !== undefined ? bAll : (tabCounts?.all ?? totalTasksCount),
+      approval: bApproval !== undefined ? bApproval : tabCounts?.waiting_approval,
+      my: bRelated !== undefined ? bRelated : tabCounts?.my ?? tabCounts?.my_tasks,
+      school: bAll !== undefined ? bAll : (tabCounts?.all ?? totalTasksCount),
     };
   }, [badgeCounts, tabCounts, totalTasksCount]);
 
@@ -1126,9 +1157,9 @@ export function UnifiedTaskToolbar({
             >
               {authorizedScopes.map((opt) => {
                 const Icon = opt.icon;
-                const isActive = normalizedScope === opt.id;
-                const count = effectiveScopeBadgeCounts[opt.id];
-                const showBadge = typeof count === "number" && !isNaN(count);
+                const isActive = normalizedTaskView === opt.id;
+                const count = (effectiveScopeBadgeCounts as any)[opt.id];
+                const showBadge = typeof count === "number" && !isNaN(count) && (opt.id !== "approval" || count > 0);
 
                 return (
                   <button
@@ -1137,7 +1168,7 @@ export function UnifiedTaskToolbar({
                     role="tab"
                     data-scope={opt.id}
                     aria-selected={isActive}
-                    onClick={() => handleScopeSelect(opt.id)}
+                    onClick={() => handleScopeSelect(opt.id, opt.legacyScope)}
                     className={cn(
                       "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer select-none",
                       isActive

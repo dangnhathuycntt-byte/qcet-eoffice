@@ -19,6 +19,8 @@
 // 1. CANONICAL CAPABILITY MATRIX CONSTANTS & TYPES
 // ============================================================================
 
+export type { TaskView, TaskViewerContext } from './types';
+
 export const TaskCapability = {
   CAN_VIEW: 'CAN_VIEW',
   CAN_EDIT: 'CAN_EDIT',

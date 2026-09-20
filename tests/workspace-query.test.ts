@@ -688,56 +688,57 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
     });
   });
 
-  describe("12. useWorkspaceQuery Hook integration & Browser History Synchronization", () => {
-    function renderHookHarness(
-      searchParamsStr: string = "",
-      options?: any,
-      pathname: string = "/tasks"
-    ) {
-      let hookResult: UseWorkspaceQueryReturn | null = null;
-      let pushedUrl: string | null = null;
-      let replacedUrl: string | null = null;
+  function renderHookHarness(
+    searchParamsStr: string = "",
+    options?: any,
+    pathname: string = "/tasks"
+  ) {
+    let hookResult: UseWorkspaceQueryReturn | null = null;
+    let pushedUrl: string | null = null;
+    let replacedUrl: string | null = null;
 
-      const mockRouter = {
-        push: (url: string) => { pushedUrl = url; },
-        replace: (url: string) => { replacedUrl = url; },
-        prefetch: () => {},
-        back: () => {},
-        forward: () => {},
-        refresh: () => {},
-      };
+    const mockRouter = {
+      push: (url: string) => { pushedUrl = url; },
+      replace: (url: string) => { replacedUrl = url; },
+      prefetch: () => {},
+      back: () => {},
+      forward: () => {},
+      refresh: () => {},
+    };
 
-      function TestHookComponent() {
-        hookResult = useWorkspaceQuery(options);
-        return React.createElement("div", null, "rendered");
-      }
+    function TestHookComponent() {
+      hookResult = useWorkspaceQuery(options);
+      return React.createElement("div", null, "rendered");
+    }
 
-      const searchParams = new URLSearchParams(searchParamsStr);
+    const searchParams = new URLSearchParams(searchParamsStr);
 
-      renderToStaticMarkup(
+    renderToStaticMarkup(
+      React.createElement(
+        AppRouterContext.Provider,
+        { value: mockRouter },
         React.createElement(
-          AppRouterContext.Provider,
-          { value: mockRouter },
+          PathnameContext.Provider,
+          { value: pathname },
           React.createElement(
-            PathnameContext.Provider,
-            { value: pathname },
-            React.createElement(
-              SearchParamsContext.Provider,
-              { value: searchParams },
-              React.createElement(TestHookComponent)
-            )
+            SearchParamsContext.Provider,
+            { value: searchParams },
+            React.createElement(TestHookComponent)
           )
         )
-      );
+      )
+    );
 
-      return {
-        get hook() {
-          return hookResult!;
-        },
-        getPushedUrl: () => pushedUrl,
-        getReplacedUrl: () => replacedUrl,
-      };
-    }
+    return {
+      get hook() {
+        return hookResult!;
+      },
+      getPushedUrl: () => pushedUrl,
+      getReplacedUrl: () => replacedUrl,
+    };
+  }
+
+  describe("12. useWorkspaceQuery Hook integration & Browser History Synchronization", () => {
 
     test("initializes with parsed searchParams and default path /tasks", () => {
       const harness = renderHookHarness("scope=unit&dept=CNTT&month=10&status=IN_PROGRESS");
@@ -1156,6 +1157,62 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
     test("URL with ?view=table respects table view mode", () => {
       const state = parseWorkspaceQuery("/tasks?view=table");
       assert.equal(state.view, "table");
+    });
+  });
+
+  describe("15. Canonical Task Views & Backward-Compatibility (Issue #26)", () => {
+    test("parses canonical view parameters into taskView and maps legacy scope", () => {
+      assert.equal(parseWorkspaceQuery("view=related").taskView, "related");
+      assert.equal(parseWorkspaceQuery("view=related").scope, "my");
+
+      assert.equal(parseWorkspaceQuery("view=unit").taskView, "unit");
+      assert.equal(parseWorkspaceQuery("view=unit").scope, "unit");
+
+      assert.equal(parseWorkspaceQuery("view=all").taskView, "all");
+      assert.equal(parseWorkspaceQuery("view=all").scope, "school");
+
+      assert.equal(parseWorkspaceQuery("view=approval").taskView, "approval");
+      assert.equal(parseWorkspaceQuery("view=approval").scope, "school");
+    });
+
+    test("migrates legacy scope parameters to canonical taskView", () => {
+      assert.equal(parseWorkspaceQuery("scope=my").taskView, "related");
+      assert.equal(parseWorkspaceQuery("scope=personal").taskView, "related");
+      assert.equal(parseWorkspaceQuery("scope=individual").taskView, "related");
+
+      assert.equal(parseWorkspaceQuery("scope=unit").taskView, "unit");
+      assert.equal(parseWorkspaceQuery("scope=department").taskView, "unit");
+
+      assert.equal(parseWorkspaceQuery("scope=school").taskView, "all");
+      assert.equal(parseWorkspaceQuery("scope=all").taskView, "all");
+
+      assert.equal(parseWorkspaceQuery("scope=approval").taskView, "approval");
+    });
+
+    test("distinguishes canonical taskView from presentation layout viewMode", () => {
+      const state = parseWorkspaceQuery("view=related&viewMode=kanban");
+      assert.equal(state.taskView, "related");
+      assert.equal(state.view, "kanban");
+      assert.equal(state.scope, "my");
+    });
+
+    test("serializes canonical taskView into view= parameter with canonicalTaskView option", () => {
+      const params = serializeWorkspaceQuery({ taskView: "related" }, { canonicalTaskView: true });
+      assert.equal(params.get("view"), "related");
+      assert.equal(params.get("scope"), null);
+
+      const paramsApproval = serializeWorkspaceQuery({ taskView: "approval" }, { canonicalTaskView: true });
+      assert.equal(paramsApproval.get("view"), "approval");
+      assert.equal(paramsApproval.get("scope"), null);
+    });
+
+    test("setTaskView updates canonical view and synchronizes URL", () => {
+      const harness = renderHookHarness("view=all", { canonicalTaskView: true });
+      harness.hook.setTaskView("approval");
+      assert.equal(harness.getReplacedUrl(), "/tasks?view=approval");
+
+      harness.hook.setTaskView("related");
+      assert.equal(harness.getReplacedUrl(), "/tasks?view=related");
     });
   });
 });

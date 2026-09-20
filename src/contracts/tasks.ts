@@ -114,6 +114,8 @@ export const TaskQueryParamsSchema = PaginationQuerySchema.extend({
     .optional(),
   departmentId: z.string().trim().max(64, 'Department ID cannot exceed 64 characters').optional(),
   dept: z.string().trim().max(64).optional(),
+  view: z.enum(['related', 'unit', 'all', 'approval']).optional(),
+  // @deprecated Use view instead
   scope: z
     .enum([
       'school',

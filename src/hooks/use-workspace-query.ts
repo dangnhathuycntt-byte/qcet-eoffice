@@ -13,6 +13,7 @@ import {
   type TaskViewMode,
   type CalendarViewMode,
   type UserAttentionType,
+  type TaskView,
 } from "@/lib/workspace-query";
 
 export interface UseWorkspaceQueryOptions extends ParseWorkspaceQueryOptions {
@@ -41,6 +42,7 @@ export interface ResetFiltersOptions extends NavigationOptions {
 
 export interface UseWorkspaceQueryReturn {
   queryState: WorkspaceFilterState;
+  setTaskView: (view: TaskView, options?: NavigationOptions) => void;
   setScope: (scope: WorkspaceScopeType, options?: SetScopeOptions) => void;
   setUnit: (unitId?: string | null, options?: NavigationOptions) => void;
   setDept: (dept?: string | null, options?: NavigationOptions) => void;
@@ -108,6 +110,7 @@ export function useWorkspaceQuery(
   const defaultMonth = options?.defaultMonth;
   const omitDefaultScope = options?.omitDefaultScope;
   const unitParamKey = options?.unitParamKey;
+  const canonicalTaskView = options?.canonicalTaskView;
 
   // Track popstate events for browser back/forward history synchronization
   const [popstateCount, setPopstateCount] = React.useState(0);
@@ -131,8 +134,9 @@ export function useWorkspaceQuery(
       defaultView,
       defaultScope,
       defaultMonth,
+      canonicalTaskView,
     });
-  }, [searchParams, isCalendar, defaultView, defaultScope, defaultMonth, popstateCount]);
+  }, [searchParams, isCalendar, defaultView, defaultScope, defaultMonth, canonicalTaskView, popstateCount]);
 
   // Event handlers (including debounced search) must merge into the live URL,
   // not the render snapshot captured before another filter or scope changed.
@@ -143,8 +147,9 @@ export function useWorkspaceQuery(
       defaultView,
       defaultScope,
       defaultMonth,
+      canonicalTaskView,
     });
-  }, [queryState, isCalendar, defaultView, defaultScope, defaultMonth]);
+  }, [queryState, isCalendar, defaultView, defaultScope, defaultMonth, canonicalTaskView]);
 
   // Internal navigation dispatcher with unrelated param preservation and shallow routing support
   const dispatchUpdate = React.useCallback(
@@ -163,6 +168,7 @@ export function useWorkspaceQuery(
         unitParamKey: unitParamKey ?? nextState._unitParamKey,
         preserveParams: effectiveSearchParams || undefined,
         defaultMonth,
+        canonicalTaskView,
       });
 
       const queryStr = nextParams.toString();
@@ -220,13 +226,47 @@ export function useWorkspaceQuery(
     ]
   );
 
+  const setTaskView = React.useCallback(
+    (view: TaskView, navOptions?: NavigationOptions) => {
+      const queryState = readCurrentState();
+      const isViewChanging = view !== queryState.taskView;
+      const mappedScope: WorkspaceScopeType =
+        view === "related" ? "my" : view === "unit" ? "unit" : "school";
+
+      const patch: Partial<WorkspaceFilterState> = {
+        ...queryState,
+        taskView: view,
+        _urlHadTaskView: true,
+        scope: mappedScope,
+      };
+
+      if (isViewChanging) {
+        // Clear sticky filters when switching views
+        patch.status = "ALL";
+        patch.priority = undefined;
+        patch.category = undefined;
+        patch.deadline = undefined;
+        patch.attention = undefined;
+        patch.q = undefined;
+        patch.query = undefined;
+      }
+
+      dispatchUpdate(patch, { shallow: true, replace: true, ...navOptions });
+    },
+    [readCurrentState, dispatchUpdate]
+  );
+
   const setScope = React.useCallback(
     (scope: WorkspaceScopeType, navOptions?: SetScopeOptions) => {
       const queryState = readCurrentState();
       const isScopeChanging = scope !== queryState.scope;
+      const mappedTaskView: TaskView =
+        scope === "my" ? "related" : scope === "unit" ? "unit" : "all";
+
       const patch: Partial<WorkspaceFilterState> = {
         ...queryState,
         scope,
+        taskView: mappedTaskView,
       };
 
       if (isScopeChanging) {
@@ -600,6 +640,7 @@ export function useWorkspaceQuery(
 
   return {
     queryState,
+    setTaskView,
     setScope,
     setUnit,
     setDept,

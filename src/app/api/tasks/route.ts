@@ -79,6 +79,19 @@ export async function GET(req: Request) {
       validatedQuery.limit === 'all' ||
       rawParams.limit === 'all';
 
+    // Canonical view resolution with legacy scope fallback (Issue #26)
+    let canonicalView = validatedQuery.view;
+    if (!canonicalView && validatedQuery.scope) {
+      const s = validatedQuery.scope.toLowerCase();
+      if (s === 'my' || s === 'personal' || s === 'individual') {
+        canonicalView = 'related';
+      } else if (s === 'unit' || s === 'department') {
+        canonicalView = 'unit';
+      } else if (s === 'school' || s === 'all') {
+        canonicalView = 'all';
+      }
+    }
+
     const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 });
     const result = await taskQueryService.queryTasks(authorizationContext, {
       all: isAll,
@@ -88,6 +101,7 @@ export async function GET(req: Request) {
       cursor: validatedQuery.cursor,
       q: validatedQuery.q,
       search: validatedQuery.search,
+      view: canonicalView,
       scope: validatedQuery.scope,
       status: validatedQuery.status,
       dept: validatedQuery.dept || validatedQuery.departmentId,

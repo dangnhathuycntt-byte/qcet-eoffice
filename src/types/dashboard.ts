@@ -206,6 +206,10 @@ export interface SchoolTask {
   createdAt?: string;
   updatedAt?: string;
   version?: number;
+  viewerContext?: {
+    relation: 'DRI' | 'ASSIGNER' | 'FOLLOWER' | 'SUBTASK_DRI' | 'APPROVER' | null;
+    matchedSubtaskCount: number;
+  };
 }
 
 export function isSchoolTask(task: unknown): task is SchoolTask {

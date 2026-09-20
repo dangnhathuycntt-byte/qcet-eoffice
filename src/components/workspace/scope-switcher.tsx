@@ -39,36 +39,39 @@ export interface ScopeSwitcherProps {
 const DEFAULT_SCOPES: ScopeTabItem[] = [
   {
     id: "my",
-    label: "Cá nhân",
-    shortLabel: "Cá nhân",
+    label: "Liên quan đến tôi",
+    shortLabel: "Của tôi",
     icon: User,
-    description: "Nhiệm vụ trực tiếp phụ trách và cần xử lý cá nhân",
+    description: "Nhiệm vụ trực tiếp phụ trách và liên quan cá nhân",
   },
   {
     id: "unit",
-    label: "Đơn vị",
+    label: "Đơn vị tôi",
     shortLabel: "Đơn vị",
     icon: Building2,
     description: "Nhiệm vụ phân bổ và giám sát theo Khoa / Phòng / Ban",
   },
   {
     id: "school",
-    label: "Toàn trường",
-    shortLabel: "Trường",
+    label: "Tất cả",
+    shortLabel: "Tất cả",
     icon: School,
-    description: "Nhiệm vụ trọng tâm và chỉ đạo điều hành toàn trường",
+    description: "Tất cả nhiệm vụ trọng tâm và chỉ đạo điều hành",
   },
 ];
 
 /**
  * Synchronizes workspace scope state to the URL search parameters if enabled.
+ * Writes canonical view= parameter while stripping legacy scope= parameter (Issue #26).
  */
 export function syncScopeToUrl(scope: WorkspaceScope) {
   if (typeof window === "undefined") return;
   try {
     const url = new URL(window.location.href);
-    if (url.searchParams.get("scope") !== scope) {
-      url.searchParams.set("scope", scope);
+    const view = scope === "my" ? "related" : scope === "unit" ? "unit" : "all";
+    if (url.searchParams.get("view") !== view) {
+      url.searchParams.delete("scope");
+      url.searchParams.set("view", view);
       window.history.replaceState(window.history.state, "", url.toString());
     }
   } catch {

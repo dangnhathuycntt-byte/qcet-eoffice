@@ -13,6 +13,7 @@ import {
   type UserDepartmentDTO,
 } from './user-dto';
 import { isTaskOverdue } from '@/lib/academic-calendar';
+import type { TaskViewerContext } from '@/domain/tasks';
 
 export interface TaskSummaryDTO {
   id: string;
@@ -40,6 +41,7 @@ export interface TaskListDTO {
   assignees?: UserSummaryDTO[];
   version: number;
   isOverdue?: boolean;
+  viewerContext?: TaskViewerContext | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -501,6 +503,7 @@ export function toTaskListDTO(rawTask: unknown): TaskListDTO | null {
     assignees,
     version: extractVersion(task),
     isOverdue: isTaskOverdue(task.status, task.dueDate),
+    viewerContext: task.viewerContext ?? null,
     createdAt: toISOStringSafe(task.createdAt),
     updatedAt: toISOStringSafe(task.updatedAt),
   };

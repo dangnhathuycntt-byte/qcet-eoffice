@@ -325,6 +325,7 @@ describe("Controlled Filters Regression Suite (#24 Single Owner & Prop Priority)
           view: "table",
           month: 9,
         },
+        setTaskView: () => {},
         setScope: () => {},
         setUnit: () => {},
         setDept: () => {},
