@@ -23,6 +23,8 @@ type ElProps = RenderElementProps & {
 import {
   Plate,
   PlateContent,
+  PlateContainer,
+  usePluginOption,
   usePlateEditor,
   useEditorRef,
   createPlatePlugin,
@@ -62,6 +64,8 @@ import { LinkPlugin, triggerFloatingLinkInsert } from "@platejs/link/react";
 import { SlashPlugin, SlashInputPlugin } from "@platejs/slash-command/react";
 import { BlockSelectionPlugin, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
 import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
+import { DndContext, DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   TablePlugin,
   TableRowPlugin,
@@ -201,6 +205,7 @@ export { isMeaningfulBlock, parseContentToBlocks, serializeBlocksToContent };
 export interface TaskNotionBlockContentProps {
   taskId: string;
   initialDescription?: string | null;
+  placeholder?: string;
   subTasks?: StaffTask[];
   canEdit?: boolean;
   globalFileDrop?: boolean;
@@ -848,28 +853,18 @@ function InlineLinkEl({ attributes, children, element }: any) {
 
 function MultiBlockToolbar({ editor }: { editor: any }) {
   const readOnly = editor.api.isReadOnly();
-  const [hasSelection, setHasSelection] = React.useState(false);
-
-  React.useEffect(() => {
-    const check = () => {
-      try {
-        const ids = editor.api.blockSelection?.getSelectedIds?.() || editor.getOption?.(BlockSelectionPlugin, "selectedIds");
-        setHasSelection(ids && (ids instanceof Set ? ids.size > 1 : Object.keys(ids).length > 1));
-      } catch { setHasSelection(false); }
-    };
-    const timer = setInterval(check, 300);
-    return () => clearInterval(timer);
-  }, [editor]);
+  const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
+  const hasSelection = (selectedIds?.size ?? 0) > 1;
 
   if (!hasSelection || readOnly) return null;
 
   return (
-    <div className="sticky bottom-2 z-40 flex items-center justify-center pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-1.5 shadow-lg text-xs">
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.tf.duplicateSelection?.(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer">
+    <div className="absolute inset-x-0 bottom-2 z-40 flex items-center justify-center pointer-events-none">
+      <div data-plate-prevent-unselect="true" className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-1.5 shadow-lg text-xs">
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer">
           <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
         </button>
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.tf.deleteFragment?.(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
           <Trash2 className="size-3.5" /> Xóa
         </button>
         <div className="w-px h-4 bg-border/60 mx-0.5" />
@@ -1307,13 +1302,19 @@ function BlockMenu({ editor, element, onClose }: { editor: any; element: any; on
   );
 }
 
-function BlockRow({ children, element }: { children: React.ReactNode; element: any }) {
+function BlockRowDraggable({ children, element }: { children: React.ReactNode; element: any }) {
   const { props: selectableProps } = useBlockSelectable();
-  const isSelected = useBlockSelected();
+  const isSelected = useBlockSelected(element?.id);
   const editor = useEditorRef();
   const readOnly = editor.api.isReadOnly();
-  const { isDragging, previewRef, handleRef } = useDraggable({ element });
-  const { dropLine } = useDropLine({ id: element.id, orientation: "horizontal" });
+  const previewRef = React.useRef<HTMLDivElement>(null);
+  const { isDragging, nodeRef, handleRef } = useDraggable({
+    element,
+    orientation: "vertical",
+    preview: { ref: previewRef },
+    canDropNode: ({ dragItem }) => !("editorId" in dragItem) || dragItem.editorId === editor.id,
+  });
+  const { dropLine } = useDropLine({ id: element.id, orientation: "vertical" });
   const [showBlockMenu, setShowBlockMenu] = React.useState(false);
   const blockMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -1328,23 +1329,30 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showBlockMenu]);
 
-  // Don't render block drag handles for table inner elements (rows, cells)
-  if (element.type === PT.tableRow || element.type === PT.tableCell || element.type === PT.tableHeader) {
-    return <>{children}</>;
-  }
-
   return (
     <div
-      ref={previewRef}
+      ref={nodeRef}
       {...selectableProps}
       className={cn(
-        "group/block relative flex items-start -mx-2 px-2 py-0.5 transition-colors duration-75 outline-hidden select-auto rounded-md",
-        isSelected ? "bg-primary/[0.08]" : "hover:bg-muted/30",
+        "group/block relative flex items-start outline-hidden select-auto",
+        selectableProps.className,
         isDragging && "opacity-50",
       )}
       data-block-id={element.id}
+      data-slot="task-editor-block"
+      data-block-selected={isSelected ? "true" : undefined}
+      data-plate-selectable="true"
     >
-      <div ref={blockMenuRef} className={cn("w-5 shrink-0 -ml-6 mr-1 flex items-center justify-center h-6 mt-0.5 relative", readOnly && "invisible")} contentEditable={false} data-qcet-block-selection-rail="">
+      <div
+        ref={blockMenuRef}
+        className={cn(
+          "w-6 shrink-0 -ml-7 mr-1 flex items-center justify-center h-6 mt-0.5 relative select-none",
+          readOnly && "invisible"
+        )}
+        contentEditable={false}
+        data-qcet-block-selection-rail=""
+        data-plate-selectable="true"
+      >
         <button
           ref={handleRef}
           type="button"
@@ -1356,8 +1364,8 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
             "size-5 flex items-center justify-center rounded-md",
             "text-muted-foreground/50 hover:text-foreground hover:bg-muted",
             "cursor-grab active:cursor-grabbing transition-opacity duration-100",
-            "opacity-0 pointer-events-none",
-            "group-hover/block:opacity-100 group-hover/block:pointer-events-auto",
+            showBlockMenu ? "opacity-100" : "opacity-0 pointer-events-none",
+            "group-hover/block:opacity-100 group-hover/block:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
             "focus-visible:ring-2 focus-visible:ring-primary/40",
             "motion-reduce:transition-none",
           )}
@@ -1366,15 +1374,27 @@ function BlockRow({ children, element }: { children: React.ReactNode; element: a
         </button>
         {showBlockMenu && !readOnly && <BlockMenu editor={editor} element={element} onClose={() => setShowBlockMenu(false)} />}
       </div>
-      <div className="flex-1 min-w-0">{children}</div>
+      <div ref={previewRef} className="flex-1 min-w-0">{children}</div>
       {dropLine && (
-        <div className={cn(
-          "absolute left-0 right-0 h-0.5 bg-primary",
-          dropLine === "top" ? "-top-px" : "-bottom-px",
-        )} />
+        <div
+          aria-hidden="true"
+          data-slot="block-drop-indicator"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 z-20 h-0.5 bg-primary",
+            dropLine === "top" ? "top-0" : "bottom-0",
+          )}
+        />
       )}
     </div>
   );
+}
+
+function PlateDndContainer({ children }: { children: React.ReactNode }) {
+  const dndContext = React.useContext(DndContext);
+  if (dndContext?.dragDropManager) {
+    return <>{children}</>;
+  }
+  return <DndProvider backend={HTML5Backend}>{children}</DndProvider>;
 }
 
 // ---------------------------------------------------------------------------
@@ -1559,6 +1579,7 @@ function SlashMenu({
 export function TaskNotionBlockContent({
   taskId,
   initialDescription,
+  placeholder,
   subTasks = [],
   canEdit = true,
   globalFileDrop = true,
@@ -1588,6 +1609,7 @@ export function TaskNotionBlockContent({
 
   // Create Plate editor with full v53 plugins
   const editor = usePlateEditor({
+    id: taskId,
     value: initialValue as any,
     plugins: [
       BaseParagraphPlugin.withComponent(ParagraphEl),
@@ -1638,15 +1660,23 @@ export function TaskNotionBlockContent({
       NodeIdPlugin,
       BlockSelectionPlugin.configure({
         options: {
+          enableContextMenu: true,
           areaOptions: {
             behaviour: { startThreshold: 4, scrolling: { speedDivider: 1.5 } },
             features: { singleTap: { allow: false } },
-            startAreas: ["[data-qcet-block-selection-rail]"],
-            boundaries: ['[data-slot="task-notion-block-content"]'],
           },
         },
       }),
-      DndPlugin.configure({ options: { enableScroller: true } }),
+      DndPlugin.configure({
+        options: { enableScroller: true },
+        render: {
+          aboveNodes: ({ element, editor }) => {
+            const path = editor.api.findPath(element);
+            if (path?.length !== 1) return;
+            return (props) => <BlockRowDraggable {...props} />;
+          },
+        },
+      }),
       TrailingBlockPlugin.configure({ options: { type: "p" } }),
     ],
     override: {
@@ -1927,30 +1957,38 @@ export function TaskNotionBlockContent({
       <div
         ref={containerRef}
         data-slot="task-notion-block-content"
+        data-plate-selectable="true"
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}
         className={cn(
-          "relative flex-1 min-h-0 flex flex-col text-foreground",
+          "relative flex-1 min-h-0 flex flex-col text-foreground [&_.slate-selection-area]:border-[1.5px] [&_.slate-selection-area]:border-primary/60 [&_.slate-selection-area]:bg-primary/15 [&_.slate-selection-area]:rounded-xs [&_.slate-selection-area]:pointer-events-none [&_.slate-selection-area]:z-50",
           className
         )}
       >
         {showFixedToolbar && <FixedToolbar editor={editor} />}
 
-        <div className="flex-1 min-h-0 px-1 py-3">
-          <Plate
-            editor={editor}
-            onValueChange={({ value }) => {
-              if (canEdit) triggerAutoSave(value as PlateValue);
-            }}
-          >
-            <PlateContent
-              readOnly={!canEdit}
-              placeholder="Nhập nội dung hoặc gõ / để chèn"
-              className="outline-none text-sm leading-relaxed"
-            />
-            <FloatingToolbar editor={editor} />
-            <MultiBlockToolbar editor={editor} />
-          </Plate>
+        <div className="flex flex-1 min-h-0 flex-col px-1 py-1">
+          <PlateDndContainer>
+            <Plate
+              editor={editor}
+              onValueChange={({ value }) => {
+                if (canEdit) triggerAutoSave(value as PlateValue);
+              }}
+            >
+              <PlateContainer
+                data-plate-selectable="true"
+                className="relative flex-1 min-h-0"
+              >
+                <PlateContent
+                  readOnly={!canEdit}
+                  placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
+                  className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-8"
+                />
+                <FloatingToolbar editor={editor} />
+                <MultiBlockToolbar editor={editor} />
+              </PlateContainer>
+            </Plate>
+          </PlateDndContainer>
         </div>
 
         {/* Global File Drop Full-Viewport Overlay Portal */}

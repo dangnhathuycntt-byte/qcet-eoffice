@@ -6,7 +6,7 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
-  gap: calc(var(--spacing) * 3);
+  gap: calc(var(--spacing) * 1.5);
   padding: calc(var(--spacing) * 2);
 }
 
@@ -43,13 +43,13 @@
 /* Desktop: independent card in second grid column */
 @media (min-width: 1024px) {
   .splitWorkspace[data-peek-open='true'] {
-    grid-template-columns: minmax(0, 1fr) clamp(420px, 30vw, 500px);
+    grid-template-columns: minmax(0, 1fr) min(75vw, var(--qcet-subtask-peek-width, 760px));
   }
   .peekSurface {
     position: relative;
     inset: auto;
     z-index: auto;
-    overflow: hidden;
+    overflow: visible;
   }
 }
 
@@ -127,12 +127,13 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding-top: 48px;
+  padding-top: 24px;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-.content > * + * { margin-top: 24px; }
+.content > * + * { margin-top: 16px; }
+.content > [data-slot='task-notion-block-content'] { margin-top: 12px; }
 
 /* ── Inspector sidebar (properties) ───────────────────────────── */
 .workspace [data-slot='linear-properties-sidebar'] {
@@ -175,7 +176,7 @@
 .workspace [data-slot='linear-properties-sidebar'] :is(.font-semibold, .font-medium) { font-weight: 400; }
 
 /* ── Identity block ───────────────────────────────────────────── */
-.workspace [data-slot='task-identity-block'] { margin-bottom: 22px; }
+.workspace [data-slot='task-identity-block'] { margin-bottom: 0; }
 .workspace [data-slot='task-identity-block'] :is(h1, textarea) {
   font-family: inherit;
   font-size: 24px;
@@ -225,7 +226,7 @@
 }
 .inspector,
 .peekSurface {
-  animation: panel-reveal 180ms ease-out;
+  animation: panel-reveal 180ms ease-out forwards;
 }
 @keyframes panel-reveal {
   from { opacity: 0; transform: translateX(8px); }
@@ -245,7 +246,7 @@
 }
 @media (min-width: 1024px) and (max-width: 1439px) {
   .canvas { padding: 0 32px 56px; }
-  .content { padding-top: 40px; }
+  .content { padding-top: 24px; }
 }
 @media (max-width: 1023px) {
   .canvas { padding: 0 16px 40px; }

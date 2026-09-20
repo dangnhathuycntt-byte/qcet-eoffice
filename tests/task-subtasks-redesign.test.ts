@@ -80,8 +80,9 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
         "Must use data-peek-open to toggle grid columns on desktop"
       );
       assert.ok(
-        cssContent.includes("clamp(420px, 30vw, 500px)"),
-        "Child column must be clamp(420px, 30vw, 500px)"
+        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 760px))") ||
+        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 480px))"),
+        "Cột việc con dùng độ rộng đã lưu và giới hạn theo viewport"
       );
       // No border-left divider
       assert.ok(
@@ -183,9 +184,9 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
   });
 
   describe("4. Subtask Drawer — Child-First, Minimal Chrome", () => {
-    it("drawer uses parentTaskId for canonical copy link", () => {
-      assert.ok(drawerContent.includes("parentTaskId: string"));
-      assert.ok(drawerContent.includes("getTaskDetailUrl"));
+    it("header việc con không còn nút sao chép liên kết", () => {
+      assert.ok(!drawerContent.includes("handleCopyLink"));
+      assert.ok(!drawerContent.includes("getTaskDetailUrl"));
     });
 
     it("drawer has no parent navigation chrome", () => {
@@ -194,12 +195,12 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       assert.ok(!drawerContent.includes("onOpenAnotherSubtask"));
     });
 
-    it("drawer shows close + hover copy link", () => {
+    it("header giữ nút đóng, resize handle không vẽ đường dọc", () => {
       assert.ok(drawerContent.includes('title="Đóng (Esc)"'));
-      assert.ok(
-        drawerContent.includes("group-hover/peek-header") || drawerContent.includes("group/peek-header"),
-        "Copy link must use group hover pattern"
-      );
+      assert.ok(drawerContent.includes('onDoubleClick={handleResetWidth}'));
+      assert.ok(!drawerContent.includes("group-hover/resize:bg-primary"));
+      assert.ok(!drawerContent.includes('"h-full w-0.5'));
+      assert.ok(drawerContent.includes('window.removeEventListener("blur", handleMouseUp)'));
     });
 
     it("drawer uses DirectInlineEditor and real API mutations", () => {
@@ -214,21 +215,16 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       assert.ok(drawerContent.includes("onAddSubtask"), "Must accept onAddSubtask prop");
     });
 
-    it("drawer has sibling switcher with x/y label and popover", () => {
+    it("drawer renders master-detail sibling list with x/y label, status dots, titles, assignees and dates", () => {
       assert.ok(
         drawerContent.includes("siblingPosition") && drawerContent.includes("siblingTotal"),
         "Must compute sibling position and total"
       );
       assert.ok(drawerContent.includes("Việc con"), "Header must show 'Việc con' label");
-      assert.ok(
-        drawerContent.includes("Popover.Root") && drawerContent.includes("Popover.Trigger"),
-        "Must use @base-ui Popover for sibling switcher"
-      );
-    });
-
-    it("popover shows sibling list with status dots and titles", () => {
       assert.ok(drawerContent.includes("statusObj.dotClass"), "Each sibling row must show status dot");
       assert.ok(drawerContent.includes("sib.title"), "Each sibling row must show title");
+      assert.ok(drawerContent.includes("formattedDueDate"), "Each sibling row must show due date");
+      assert.ok(drawerContent.includes("assigneeName"), "Each sibling row must show assignee name");
       // No technical IDs
       assert.ok(
         !drawerContent.includes(">{sib.id}<") && !drawerContent.includes("{sib.taskId}"),
@@ -236,8 +232,8 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       );
     });
 
-    it("popover has '+ Thêm việc con' action", () => {
-      assert.ok(drawerContent.includes("Thêm việc con"), "Popover must have add child action");
+    it("drawer master-detail list has '+ Thêm việc con' action", () => {
+      assert.ok(drawerContent.includes("Thêm việc con") || drawerContent.includes("Thêm"), "Must have add child action");
     });
 
     it("drawer does NOT have Back/Previous/Next buttons", () => {

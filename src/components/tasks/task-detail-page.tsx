@@ -42,6 +42,10 @@ export interface TaskDetailPageProps {
   peekTasks?: StaffTask[];
 }
 
+const DEFAULT_PEEK_WIDTH = 760;
+const MIN_PEEK_WIDTH = 380;
+const PEEK_STORAGE_KEY = "qcet_subtask_peek_width";
+
 export function TaskDetailPage({
   task: initialTask,
   auditEvents: initialAuditEvents = [],
@@ -106,6 +110,28 @@ export function TaskDetailPage({
   // Subtask Drawer State (URL: ?subtaskId=...)
   const initialSubtaskId = searchParams.get("subtaskId");
   const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
+
+  // Persistent peek drawer width (Notion / Linear Resizable Side Peek)
+  const [peekWidth, setPeekWidth] = React.useState<number>(DEFAULT_PEEK_WIDTH);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PEEK_STORAGE_KEY);
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= MIN_PEEK_WIDTH && parsed <= 960) {
+          setPeekWidth(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handlePeekWidthChange = React.useCallback((width: number) => {
+    setPeekWidth(width);
+    try {
+      localStorage.setItem(PEEK_STORAGE_KEY, String(width));
+    } catch {}
+  }, []);
 
   // Sync with URL search params changes (e.g. reload or back/forward)
   React.useEffect(() => {
@@ -713,7 +739,17 @@ export function TaskDetailPage({
   };
 
   return (
-    <div className={styles.splitWorkspace} data-peek-open={Boolean(activeSubtask)}>
+    <div
+      className={styles.splitWorkspace}
+      data-peek-open={Boolean(activeSubtask)}
+      style={
+        activeSubtask
+          ? ({
+              "--qcet-subtask-peek-width": `${peekWidth}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
     {/* Parent pane */}
     <div
       data-slot="task-workspace"
@@ -904,6 +940,8 @@ export function TaskDetailPage({
       siblings={subTasks}
       onSelectSibling={handleOpenSubtaskDrawer}
       onAddSubtask={handleAddSubtask}
+      peekWidth={peekWidth}
+      onPeekWidthChange={handlePeekWidthChange}
     />
 
     {/* Modal Tạo việc con */}

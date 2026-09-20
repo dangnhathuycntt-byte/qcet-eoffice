@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { Popover } from "@base-ui/react/popover";
 import styles from "../task-detail-page.module.css";
 import {
   X,
@@ -11,8 +10,8 @@ import {
   UserPlus,
   Check,
   ChevronDown,
+  ChevronLeft,
   Clock3,
-  Link2,
   Users,
   Plus,
 } from "lucide-react";
@@ -20,12 +19,11 @@ import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { formatDisplayDate } from "@/lib/format/date";
+import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
 import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
-import { getTaskDetailUrl } from "@/lib/tasks/task-detail-navigation";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
 export interface SubtaskDetailDrawerProps {
@@ -41,36 +39,93 @@ export interface SubtaskDetailDrawerProps {
   onSelectSibling?: (st: StaffTask) => void;
   /** Open create-subtask flow */
   onAddSubtask?: () => void;
+  peekWidth?: number;
+  onPeekWidthChange?: (width: number) => void;
 }
 
 export function SubtaskDetailDrawer({
   isOpen,
   onClose,
   subtask: initialSubtask,
-  parentTaskId,
   canEdit = true,
   onSubtaskUpdated,
   siblings = [],
   onSelectSibling,
   onAddSubtask,
+  peekWidth = 480,
+  onPeekWidthChange,
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
+  const [mobileView, setMobileView] = React.useState<"list" | "detail">("detail");
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
     setIsDeadlineEditorOpen(false);
+    setMobileView("detail");
   }, [initialSubtask]);
 
   // Dropdown states
   const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const [copiedLink, setCopiedLink] = React.useState(false);
-  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const deadlineRef = React.useRef<HTMLDivElement>(null);
   const [personnelList, setPersonnelList] = React.useState<
     Array<{ id: string; name: string; email?: string; departmentName?: string }>
   >([]);
+
+  // Dọn sự kiện kéo cả khi pane đóng hoặc cửa sổ mất focus.
+  const stopResizeRef = React.useRef<(() => void) | null>(null);
+
+  const handleResizeMouseDown = React.useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0 || !onPeekWidthChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    stopResizeRef.current?.();
+    const paneRight = e.currentTarget.parentElement!.getBoundingClientRect().right;
+
+    const prevCursor = document.body.style.cursor;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const maxAllowed = Math.min(window.innerWidth * 0.75, 960);
+      const rawWidth = paneRight - moveEvent.clientX;
+      const clamped = Math.round(Math.max(380, Math.min(maxAllowed, rawWidth)));
+      onPeekWidthChange?.(clamped);
+    };
+
+    const handleMouseUp = () => {
+      stopResizeRef.current = null;
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevUserSelect;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleMouseUp);
+    };
+
+    stopResizeRef.current = handleMouseUp;
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleMouseUp);
+  }, [onPeekWidthChange]);
+
+  React.useEffect(() => {
+    if (!isOpen) stopResizeRef.current?.();
+  }, [isOpen]);
+
+  const handleResetWidth = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const defaultWidth = siblings.length > 1 ? 760 : 480;
+    onPeekWidthChange?.(defaultWidth);
+  }, [onPeekWidthChange, siblings.length]);
+
+  React.useEffect(() => {
+    return () => {
+      stopResizeRef.current?.();
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!canEdit) return;
@@ -87,12 +142,6 @@ export function SubtaskDetailDrawer({
       })
       .catch(() => {});
   }, [canEdit]);
-
-  React.useEffect(() => {
-    return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    };
-  }, []);
 
   // Close deadline popover on outside click
   React.useEffect(() => {
@@ -319,20 +368,6 @@ export function SubtaskDetailDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
-  const handleCopyLink = React.useCallback(async () => {
-    if (typeof window === "undefined" || !subtask) return;
-    try {
-      const url = getTaskDetailUrl(parentTaskId, subtask.id);
-      await navigator.clipboard.writeText(url);
-      setCopiedLink(true);
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = setTimeout(() => setCopiedLink(false), 2000);
-      notifySuccess("Đã sao chép liên kết việc thành phần");
-    } catch {
-      notifyError("Không thể sao chép liên kết", "Lỗi clipboard");
-    }
-  }, [notifySuccess, notifyError, subtask, parentTaskId]);
-
   if (!isOpen || !subtask) return null;
 
   // Sibling switcher data
@@ -340,7 +375,9 @@ export function SubtaskDetailDrawer({
   const siblingPosition = currentIndex >= 0 ? currentIndex + 1 : 1;
   const siblingTotal = siblings.length;
 
-  const description = (subtask as any).description || subtask.deliverableDescription || "";
+  const rawDescription = (subtask as any).description || subtask.deliverableDescription || "";
+  const description = rawDescription.replace(/^\[Tóm tắt\]\s*/i, "");
+
   const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
   const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
   const selectedAssignee = personnelList.find((person) =>
@@ -360,101 +397,169 @@ export function SubtaskDetailDrawer({
         aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
         className={styles.peekSurface}
       >
-        <div className="group/peek-header flex h-12 shrink-0 items-center gap-1 border-b border-border px-3 select-none">
-          {/* Sibling switcher trigger — left side */}
+        {/* Left Resize Handle for Desktop */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          tabIndex={0}
+          aria-valuemin={380}
+          aria-valuemax={960}
+          aria-valuenow={Math.round(peekWidth)}
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
+            event.preventDefault();
+            const width = event.key === "Home" ? 480 : peekWidth + (event.key === "ArrowLeft" ? 20 : -20);
+            onPeekWidthChange?.(Math.max(380, Math.min(window.innerWidth * 0.75, 960, width)));
+          }}
+          aria-label="Kéo để điều chỉnh độ rộng bảng phụ hoặc nhấp đúp để đặt lại"
+          onMouseDown={handleResizeMouseDown}
+          onDoubleClick={handleResetWidth}
+          className="hidden lg:block absolute -left-1 top-0 bottom-0 w-2 z-50 cursor-col-resize select-none focus-visible:outline-2 focus-visible:outline-ring"
+        />
+
+        <div className="flex h-full w-full min-h-0 overflow-hidden divide-x divide-border/60">
+          {/* CỘT 1: DANH SÁCH VIỆC CON (MASTER LIST) */}
           {siblings.length > 0 && (
-            <Popover.Root>
-              <Popover.Trigger
-                type="button"
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span>Việc con</span>
-                <span className="tabular-nums font-medium text-foreground">{siblingPosition}/{siblingTotal}</span>
-                <ChevronDown className="size-3 opacity-60" strokeWidth={1.5} />
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={8}>
-                  <Popover.Popup className="w-72 rounded-lg border border-border bg-popover shadow-lg animate-in fade-in-0 duration-150">
-                    {/* Popover header */}
-                    <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
-                      <span className="text-xs font-medium text-foreground">Việc con</span>
-                      <span className="text-[11px] tabular-nums text-muted-foreground">{siblingPosition}/{siblingTotal}</span>
-                    </div>
-                    {/* Sibling list */}
-                    <div className="max-h-64 overflow-y-auto overscroll-contain px-1 pb-1">
-                      {siblings.map((sib) => {
-                        const isSelected = sib.id === subtask.id;
-                        const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
-                        return (
-                          <Popover.Close
-                            key={sib.id}
-                            onClick={() => {
-                              if (!isSelected && onSelectSibling) onSelectSibling(sib);
-                            }}
-                            className={cn(
-                              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                              isSelected
-                                ? "bg-muted/60 font-medium"
-                                : "hover:bg-muted/40"
-                            )}
-                          >
-                            <span className={cn("size-2 shrink-0 rounded-full", statusObj.dotClass)} />
-                            <span className="min-w-0 truncate flex-1">{sib.title}</span>
-                            {isSelected && <Check className="size-3 shrink-0 text-muted-foreground" />}
-                          </Popover.Close>
-                        );
-                      })}
-                    </div>
-                    {/* Add subtask */}
-                    {onAddSubtask && (
-                      <div className="border-t border-border/40 px-1 py-1">
-                        <Popover.Close
-                          onClick={onAddSubtask}
-                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <div
+              className={cn(
+                "w-72 sm:w-80 shrink-0 flex-col min-h-0 bg-muted/15",
+                mobileView === "detail" ? "hidden lg:flex" : "flex w-full"
+              )}
+            >
+              {/* Header cột danh sách việc con */}
+              <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3.5 select-none bg-muted/20">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground">Việc con</span>
+                  <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums">
+                    {siblingTotal}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {onAddSubtask && (
+                    <button
+                      type="button"
+                      onClick={onAddSubtask}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      title="Thêm việc con"
+                      aria-label="Thêm việc con"
+                    >
+                      <Plus className="size-3.5" strokeWidth={1.5} />
+                      <span>Thêm</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex size-7 items-center justify-center text-muted-foreground hover:text-foreground lg:hidden cursor-pointer"
+                    title="Đóng (Esc)"
+                    aria-label="Đóng chi tiết việc con"
+                  >
+                    <X className="size-4" strokeWidth={1.5} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Danh sách việc con dạng hàng (Master List Rows) */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                {siblings.map((sib) => {
+                  const isSelected = sib.id === subtask.id;
+                  const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
+                  const isCompleted = sib.status === "COMPLETED";
+                  const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
+                  const assigneeName = sib.assigneeName?.trim() || "Chưa phân công";
+
+                  return (
+                    <button
+                      key={sib.id}
+                      type="button"
+                      onClick={() => {
+                        if (!isSelected && onSelectSibling) onSelectSibling(sib);
+                        setMobileView("detail");
+                      }}
+                      className={cn(
+                        "w-full flex flex-col gap-1 p-2.5 rounded-lg text-left transition-colors cursor-pointer select-none",
+                        isSelected
+                          ? "bg-card border border-border/80 shadow-2xs font-medium text-foreground ring-1 ring-primary/20"
+                          : "hover:bg-muted/50 border border-transparent text-foreground/90"
+                      )}
+                    >
+                      {/* Dòng 1: Trạng thái + Tiêu đề */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={cn("size-2 shrink-0 rounded-full", statusObj.dotClass)} />
+                        <span
+                          className={cn(
+                            "text-xs truncate flex-1 font-medium",
+                            isCompleted && "line-through text-muted-foreground/70"
+                          )}
+                          title={sib.title}
                         >
-                          <Plus className="size-3.5" strokeWidth={1.5} />
-                          <span>Thêm việc con</span>
-                        </Popover.Close>
+                          {sib.title}
+                        </span>
                       </div>
-                    )}
-                  </Popover.Popup>
-                </Popover.Positioner>
-              </Popover.Portal>
-            </Popover.Root>
+
+                      {/* Dòng 2: Người làm + Hạn */}
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground pl-4">
+                        <span className="truncate max-w-[130px]" title={`Phụ trách: ${assigneeName}`}>
+                          {assigneeName}
+                        </span>
+                        {formattedDueDate ? (
+                          <span
+                            className="shrink-0 font-mono tabular-nums"
+                            title={`Hạn: ${formatDisplayDate(sib.dueDate)}`}
+                          >
+                            Hạn {formattedDueDate}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-[10px] text-muted-foreground/50">Không hạn</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Copy link — subtle, visible on hover/focus */}
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="inline-flex size-8 items-center justify-center text-muted-foreground/0 group-hover/peek-header:text-muted-foreground/60 hover:!text-foreground active:!text-foreground transition-colors cursor-pointer focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title="Sao chép liên kết"
-            aria-label="Sao chép liên kết việc thành phần"
-          >
-            {copiedLink ? (
-              <Check className="size-3.5 text-emerald-600" />
-            ) : (
-              <Link2 className="size-3.5" />
+          {/* CỘT 2: CHI TIẾT VIỆC CON (DETAIL VIEW) */}
+          <div
+            className={cn(
+              "flex-1 min-w-0 flex-col min-h-0 bg-card",
+              siblings.length > 0 && mobileView === "list" ? "hidden lg:flex" : "flex"
             )}
-          </button>
-          {/* Close — always visible */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title="Đóng (Esc)"
-            aria-label="Đóng chi tiết việc con"
           >
-            <X className="size-4" />
-          </button>
-        </div>
+            {/* Header cột chi tiết */}
+            <div className="group/peek-header flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-4 select-none">
+              <div className="flex items-center gap-2 min-w-0">
+                {siblings.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setMobileView("list")}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground lg:hidden cursor-pointer"
+                  >
+                    <ChevronLeft className="size-4" strokeWidth={1.5} />
+                    <span>Danh sách ({siblingPosition}/{siblingTotal})</span>
+                  </button>
+                )}
+                <span className="text-xs text-muted-foreground truncate hidden lg:inline">
+                  Chi tiết việc con {siblingTotal > 0 && `(${siblingPosition}/${siblingTotal})`}
+                </span>
+              </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
-          {/* Child title first */}
-          <div className="space-y-1.5">
+              {/* Nút đóng */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:scale-[0.96] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title="Đóng (Esc)"
+                aria-label="Đóng chi tiết việc con"
+              >
+                <X className="size-4" strokeWidth={1.5} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
+              {/* Child title first */}
+              <div className="space-y-1.5">
             <DirectInlineEditor
               value={subtask.title}
               onSave={handleTitleChange}
@@ -653,18 +758,21 @@ export function SubtaskDetailDrawer({
             </div>
           </section>
 
-          <section className="mt-6">
+          <section className="mt-3 flex flex-1 flex-col">
             <TaskNotionBlockContent
               key={subtask.id}
               taskId={subtask.id}
               initialDescription={description}
+              placeholder="Nhập nội dung hoặc gõ / để chèn..."
               onSaveContent={handleDescriptionChange}
               canEdit={canEdit}
               globalFileDrop={false}
             />
           </section>
         </div>
-      </aside>
+      </div>
+    </div>
+  </aside>
     </>
   );
 }

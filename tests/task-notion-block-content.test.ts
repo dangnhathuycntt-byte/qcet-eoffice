@@ -21,6 +21,35 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
   const componentContent = fs.readFileSync(componentPath, "utf-8");
   const detailPageContent = fs.readFileSync(detailPagePath, "utf-8");
 
+  describe("Tích hợp chọn vùng và vị trí thả block", () => {
+    it("mỗi editor có PlateContainer và chỉ dùng selection lifecycle của plugin", () => {
+      assert.ok(componentContent.includes("<PlateContainer"));
+      assert.ok(componentContent.includes("id: taskId"));
+      assert.ok(!componentContent.includes("<BlockSelectionAfterEditable"));
+      assert.ok(!componentContent.includes("container: '[data-slot="));
+      assert.ok(componentContent.includes("selectableProps.className"));
+    });
+
+    it("drag hook gắn drop target, preview và chỉ báo top/bottom", () => {
+      assert.ok(componentContent.includes("ref={nodeRef}"));
+      assert.ok(componentContent.includes("preview: { ref: previewRef }"));
+      assert.ok(componentContent.includes('useDropLine({ id: element.id, orientation: "vertical" })'));
+      assert.ok(componentContent.includes('data-slot="block-drop-indicator"'));
+      assert.ok(componentContent.includes("aboveNodes:"));
+      assert.ok(!componentContent.includes("withBlockRow("));
+    });
+
+    it("vùng chọn cập nhật trực tiếp và nối các block liền nhau", () => {
+      assert.ok(componentContent.includes('usePluginOption(BlockSelectionPlugin, "selectedIds")'));
+      assert.ok(!componentContent.includes("setInterval(check, 300)"));
+      const css = fs.readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf-8");
+      assert.ok(css.includes('[data-block-selected="true"]:has(+ [data-block-selected="true"])'));
+      assert.ok(css.includes('[data-block-selected="true"] + [data-block-selected="true"]'));
+      assert.ok(css.includes("border-bottom: 0"));
+      assert.ok(css.includes("border-top: 0"));
+    });
+  });
+
   describe("1. Auto-Height Canvas & Elimination of Internal Scrollbar", () => {
     it("strictly eliminates internal scroll, large min-height, and fake blank area containers", () => {
       // 1. Must NOT contain an artificial large min-height on editor canvas
