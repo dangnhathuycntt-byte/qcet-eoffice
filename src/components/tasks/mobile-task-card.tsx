@@ -307,6 +307,18 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         {title}
       </h3>
 
+      {/* Matched Subtask Badge for SUBTASK_DRI (Issue #21 & Issue #26) */}
+      {"viewerContext" in task && (task as any).viewerContext?.relation === "SUBTASK_DRI" && ((task as any).viewerContext.matchedSubtaskCount ?? 0) > 0 && (
+        <div className="flex items-center gap-1">
+          <span
+            data-slot="subtask-dri-badge"
+            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums"
+          >
+            Phụ trách {(task as any).viewerContext.matchedSubtaskCount} việc con
+          </span>
+        </div>
+      )}
+
       {/* Lead Assignee: Assignee name with avatar/dot */}
       <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
         <span className="text-slate-500 shrink-0">Phụ trách:</span>

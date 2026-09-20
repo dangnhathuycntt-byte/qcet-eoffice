@@ -1156,6 +1156,17 @@ export class TaskQueryService {
       }
     }
 
+    // Canonical Task View resolution with authorization bound (Issue #26)
+    if (filters.view) {
+      const viewWhere = buildTaskViewWhere(filters.view, ctx);
+      if (viewWhere && Object.keys(viewWhere).length > 0) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          viewWhere,
+        ];
+      }
+    }
+
     const canonicalRefDateStr =
       typeof filters.referenceDate === 'string'
         ? filters.referenceDate
@@ -1175,6 +1186,16 @@ export class TaskQueryService {
     let nextCursor: string | null = null;
     let formattedTasks: SchoolTask[] = [];
 
+    const effectiveUserId = isAuthorizationContext(ctx) ? ctx.userId : ctx.user?.id;
+    const formatTaskWithViewer = (t: any) => {
+      const st = mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr);
+      const vc = computeTaskViewerContext(t, effectiveUserId);
+      if (vc) {
+        st.viewerContext = vc;
+      }
+      return st;
+    };
+
     if (isAll) {
       const rawTasks = await prisma.task.findMany({
         where,
@@ -1188,7 +1209,7 @@ export class TaskQueryService {
       totalPages = 1;
       hasMore = false;
       nextCursor = null;
-      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+      formattedTasks = rawTasks.map(formatTaskWithViewer);
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
@@ -1212,7 +1233,7 @@ export class TaskQueryService {
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
       hasMore = skip + rawTasks.length < total;
       nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
-      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+      formattedTasks = rawTasks.map(formatTaskWithViewer);
     }
 
     const pagination: TaskPaginationMeta = { total, page, limit, totalPages, hasMore, nextCursor };

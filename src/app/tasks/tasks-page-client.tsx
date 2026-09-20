@@ -12,16 +12,18 @@ import {
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { TaskView } from "@/domain/tasks";
 
-export type { ViewMode, WorkspaceScope };
+export type { ViewMode, WorkspaceScope, TaskView };
 
 export interface TasksPageClientProps {
   initialTasks?: SchoolTask[];
   initialScope?: WorkspaceScope;
   initialView?: ViewMode;
+  initialTaskView?: TaskView;
 }
 
-export function TasksPageClient({ initialTasks, initialScope, initialView }: TasksPageClientProps) {
+export function TasksPageClient({ initialTasks, initialScope, initialView, initialTaskView }: TasksPageClientProps) {
   const router = useRouter();
   const { user } = useAuth();
 
@@ -36,8 +38,9 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
     defaultView: initialView,
     defaultScope: initialScope || defaultRoleScope,
     defaultMonth: currentAcademicMonth,
+    canonicalTaskView: true,
   });
-  const { queryState, setScope, setDept, setView } = workspaceQuery;
+  const { queryState, setScope, setTaskView, setDept, setView } = workspaceQuery;
 
   const activeScope: WorkspaceScope =
     queryState.scope || initialScope || defaultRoleScope;
@@ -45,8 +48,12 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
   const currentDept =
     queryState.dept || queryState.unit || "ALL";
 
-  const onScopeChange = (s: WorkspaceScope) => {
-    setScope(s, { shallow: true, replace: true });
+  const onScopeChange = (s: WorkspaceScope | TaskView) => {
+    if (s === "related" || s === "unit" || s === "all" || s === "approval") {
+      setTaskView(s as TaskView, { shallow: true, replace: true });
+    } else {
+      setScope(s as WorkspaceScope, { shallow: true, replace: true });
+    }
   };
 
   const handleDepartmentChange = (dept?: string) => {

@@ -289,6 +289,8 @@ export function areTaskRowPropsEqual(
   if (prev.showTaskCode !== next.showTaskCode) return false;
   if (prev.selectionGroupPosition !== next.selectionGroupPosition) return false;
   if (prev.onContextMenu !== next.onContextMenu) return false;
+  if (prev.task.viewerContext?.relation !== next.task.viewerContext?.relation) return false;
+  if (prev.task.viewerContext?.matchedSubtaskCount !== next.task.viewerContext?.matchedSubtaskCount) return false;
   return true;
 }
 
@@ -511,6 +513,17 @@ export const TaskRow = React.memo(function TaskRow({
             >
               {task.title}
             </span>
+
+            {/* Matched Subtask Badge for SUBTASK_DRI (Issue #21 & Issue #26) */}
+            {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
+              <span
+                data-slot="subtask-dri-badge"
+                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-[10px] font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
+                title={`Bạn phụ trách ${task.viewerContext.matchedSubtaskCount} việc con trong nhiệm vụ này`}
+              >
+                Phụ trách {task.viewerContext.matchedSubtaskCount} việc con
+              </span>
+            )}
 
             {/* Due in month indicator */}
             {dueInMonthCount > 0 && (

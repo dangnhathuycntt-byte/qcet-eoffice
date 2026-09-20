@@ -7,6 +7,7 @@ import type {
   CalendarViewMode,
 } from "@/contracts/workspace-semantic";
 import type { TaskTimePreset } from "@/lib/task-time-filter";
+import type { TaskView } from "@/domain/tasks";
 
 export type {
   WorkspaceScopeType,
@@ -14,13 +15,15 @@ export type {
   UserAttentionType,
   TaskViewMode,
   CalendarViewMode,
+  TaskView,
 };
 
 /**
  * Canonical Workspace Filter State
  *
  * Fully typed representation of workspace dimensions:
- * - scope: 'school' | 'unit' | 'my'
+ * - taskView: canonical query view ('related' | 'unit' | 'all' | 'approval')
+ * - scope: legacy visual scope shim ('school' | 'unit' | 'my')
  * - unitId / dept / unit: department or organizational unit identifier
  * - month: academic month (1..12) or 'ALL'
  * - date: ISO date string (YYYY-MM-DD)
@@ -31,6 +34,8 @@ export type {
  * - taskId / selectedTaskId: selected task identifier for side sheet / modal deep-linking
  */
 export interface WorkspaceFilterState extends BaseWorkspaceFilterState {
+  taskView?: TaskView;
+  _urlHadTaskView?: boolean;
   dept?: string;
   unit?: string;
   q?: string;
@@ -58,6 +63,7 @@ export interface ParseWorkspaceQueryOptions {
   defaultView?: TaskViewMode | CalendarViewMode;
   defaultScope?: WorkspaceScopeType;
   defaultMonth?: number | "ALL";
+  canonicalTaskView?: boolean;
 }
 
 export interface SerializeWorkspaceQueryOptions {
@@ -66,9 +72,11 @@ export interface SerializeWorkspaceQueryOptions {
   preserveParams?: URLSearchParams | string | Record<string, unknown>;
   unitParamKey?: "dept" | "unit";
   defaultMonth?: number | "ALL";
+  canonicalTaskView?: boolean;
 }
 
 export const DEFAULT_WORKSPACE_FILTER_STATE: Readonly<WorkspaceFilterState> = Object.freeze({
+  taskView: "all",
   scope: "school",
   month: "ALL",
   status: "ALL",
@@ -101,6 +109,7 @@ const VALID_VIEW_MODES: Set<TaskViewMode | CalendarViewMode> = new Set([
 ]);
 
 const WORKSPACE_QUERY_KEYS = [
+  "taskView",
   "scope",
   "scopeType",
   "s",
@@ -198,22 +207,39 @@ export function parseWorkspaceQuery(
   params?: RawQueryParams,
   options?: ParseWorkspaceQueryOptions
 ): WorkspaceFilterState {
-  // 1. Scope resolution
+  // 1. Task View & Scope resolution (Issue #26 Canonical Views with backward-compat mapping)
+  const rawViewParam = extractParam(params, "view");
+  const rawTaskViewParam = extractParam(params, "taskView");
   const rawScope =
     extractParam(params, "scope") ||
     extractParam(params, "scopeType") ||
     extractParam(params, "s");
 
-  let scope: WorkspaceScopeType = options?.defaultScope || "school";
-  if (rawScope) {
+  const VALID_TASK_VIEWS = new Set<TaskView>(["related", "unit", "all", "approval"]);
+
+  let taskView: TaskView = "all";
+  let urlHadTaskView = Boolean(options?.canonicalTaskView);
+
+  if (options?.defaultScope) {
+    if (options.defaultScope === "my") taskView = "related";
+    else if (options.defaultScope === "unit") taskView = "unit";
+    else if (options.defaultScope === "school") taskView = "all";
+  }
+
+  const candidateTaskView = (rawTaskViewParam || rawViewParam || "").toLowerCase();
+  if (VALID_TASK_VIEWS.has(candidateTaskView as TaskView)) {
+    taskView = candidateTaskView as TaskView;
+    urlHadTaskView = true;
+  } else if (rawScope) {
     const normalized = rawScope.toLowerCase();
     if (
-      normalized === "school" ||
-      normalized === "all" ||
-      normalized === "school_tasks" ||
-      normalized === "toan_truong"
+      normalized === "my" ||
+      normalized === "personal" ||
+      normalized === "my_tasks" ||
+      normalized === "individual" ||
+      normalized === "cua_toi"
     ) {
-      scope = "school";
+      taskView = "related";
     } else if (
       normalized === "unit" ||
       normalized === "unit_tasks" ||
@@ -221,16 +247,30 @@ export function parseWorkspaceQuery(
       normalized === "dept" ||
       normalized === "don_vi"
     ) {
-      scope = "unit";
+      taskView = "unit";
     } else if (
-      normalized === "my" ||
-      normalized === "personal" ||
-      normalized === "my_tasks" ||
-      normalized === "individual" ||
-      normalized === "cua_toi"
+      normalized === "school" ||
+      normalized === "all" ||
+      normalized === "school_tasks" ||
+      normalized === "toan_truong"
     ) {
-      scope = "my";
+      taskView = "all";
+    } else if (
+      normalized === "approval" ||
+      normalized === "waiting_approval"
+    ) {
+      taskView = "approval";
     }
+  }
+
+  // Derive legacy scope from taskView (backward compatibility for components expecting scope)
+  let scope: WorkspaceScopeType = "school";
+  if (taskView === "related") {
+    scope = "my";
+  } else if (taskView === "unit") {
+    scope = "unit";
+  } else if (taskView === "all" || taskView === "approval") {
+    scope = "school";
   }
 
   // 2. Department / Unit resolution
@@ -324,11 +364,12 @@ export function parseWorkspaceQuery(
     }
   }
 
-  // 6. View Mode resolution
-  const rawView =
-    extractParam(params, "view") ||
+  // 6. View Mode resolution (presentation layout: table, kanban, month, agenda)
+  const rawViewMode =
     extractParam(params, "viewMode") ||
-    extractParam(params, "v");
+    extractParam(params, "layout") ||
+    extractParam(params, "v") ||
+    (rawViewParam && !VALID_TASK_VIEWS.has(rawViewParam.toLowerCase() as TaskView) ? rawViewParam : undefined);
 
   let view: TaskViewMode | CalendarViewMode = options?.defaultView
     ? options.defaultView
@@ -336,8 +377,8 @@ export function parseWorkspaceQuery(
     ? "month"
     : "table";
 
-  if (rawView && VALID_VIEW_MODES.has(rawView as TaskViewMode | CalendarViewMode)) {
-    view = rawView as TaskViewMode | CalendarViewMode;
+  if (rawViewMode && VALID_VIEW_MODES.has(rawViewMode as TaskViewMode | CalendarViewMode)) {
+    view = rawViewMode as TaskViewMode | CalendarViewMode;
   }
 
   // 7. Search Query resolution
@@ -390,6 +431,7 @@ export function parseWorkspaceQuery(
   );
 
   return {
+    taskView,
     scope,
     unitId,
     dept: unitId,
@@ -410,6 +452,7 @@ export function parseWorkspaceQuery(
     taskId,
     selectedTaskId: taskId,
     _unitParamKey: unitParamKey,
+    _urlHadTaskView: urlHadTaskView,
   };
 }
 
@@ -470,8 +513,21 @@ export function serializeWorkspaceQuery(
     }
   }
 
-  // 1. Scope
-  if (state.scope) {
+  // 1. Task View (canonical Issue #26) or Legacy Scope
+  const useCanonical = Boolean(options?.canonicalTaskView || state._urlHadTaskView);
+
+  if (useCanonical) {
+    const effectiveTaskView =
+      state.taskView ||
+      (state.scope === "my" ? "related" : state.scope === "unit" ? "unit" : "all");
+
+    if (options?.omitDefaultScope && effectiveTaskView === "all") {
+      params.delete("view");
+    } else {
+      params.set("view", effectiveTaskView);
+    }
+    params.delete("scope");
+  } else if (state.scope) {
     if (options?.omitDefaultScope && state.scope === "school") {
       params.delete("scope");
     } else {
@@ -540,11 +596,19 @@ export function serializeWorkspaceQuery(
   if (state.view) {
     if (isCalendar) {
       if (state.view !== "month") {
-        params.set("view", state.view);
+        if (params.has("view")) {
+          params.set("viewMode", state.view);
+        } else {
+          params.set("view", state.view);
+        }
       }
     } else {
       if (state.view !== "table") {
-        params.set("view", state.view);
+        if (params.has("view")) {
+          params.set("viewMode", state.view);
+        } else {
+          params.set("view", state.view);
+        }
       }
     }
   }
@@ -596,6 +660,10 @@ export function isWorkspaceQueryEqual(
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
+
+  const aTaskView = a.taskView || (a.scope === "my" ? "related" : a.scope === "unit" ? "unit" : "all");
+  const bTaskView = b.taskView || (b.scope === "my" ? "related" : b.scope === "unit" ? "unit" : "all");
+  if (aTaskView !== bTaskView) return false;
 
   const aScope = a.scope || "school";
   const bScope = b.scope || "school";
