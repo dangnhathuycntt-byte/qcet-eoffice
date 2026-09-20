@@ -91,15 +91,43 @@ export interface TaskMetricsResult {
   referenceDate: string;
 }
 
-/** Lightweight projection for list views — omits deliverables, dacumTaskDef, subTasks */
-const TASK_LIST_INCLUDE = {
+/** Lightweight projection for list views — includes summary subtasks for rollup and collaborators, omits deliverables, dacumTaskDef, description */
+const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   department: { select: { id: true, name: true, shortName: true, color: true } },
   assignees: {
     include: {
       user: { select: { id: true, name: true, avatarUrl: true } },
     },
   },
-} as const;
+  subTasks: {
+    where: { archivedAt: null },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      status: true,
+      progressPercent: true,
+      dueDate: true,
+      actors: {
+        where: { OR: [{ isPrimaryDRI: true }, { role: 'DRI' }] },
+        select: {
+          userId: true,
+          role: true,
+          isPrimaryDRI: true,
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      },
+      assignees: {
+        where: { roleInTask: 'PRIMARY_OWNER' },
+        select: {
+          userId: true,
+          roleInTask: true,
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
+      },
+    },
+  },
+};
 
 const TASK_INCLUDE = {
   department: true,
@@ -724,29 +752,61 @@ export class TaskQueryService {
         ? filters.referenceDate
         : filters.referenceDate?.toISOString() ?? getSystemReferenceDateStr();
 
-    const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
-    const page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
-    const limitRaw = filters.limit ?? filters.take ?? 50;
-    const limitNum = parseInt(String(limitRaw), 10);
-    const limit = Math.min(Math.max(isNaN(limitNum) ? 50 : limitNum, 1), 100);
-    const skip = (page - 1) * limit;
+    const isAll =
+      filters.all === true ||
+      filters.all === 'true' ||
+      filters.limit === 'all' ||
+      filters.take === 'all';
 
-    const [totalCount, rawTasks] = await Promise.all([
-      prisma.task.count({ where }),
-      prisma.task.findMany({
-        where,
-        include: TASK_LIST_INCLUDE,
-        orderBy: filters.orderBy || { dueDate: 'asc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+    let total = 0;
+    let page = 1;
+    let limit = 50;
+    let totalPages = 1;
+    let hasMore = false;
+    let nextCursor: string | null = null;
+    let formattedTasks: SchoolTask[] = [];
 
-    const total = totalCount;
-    const totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
-    const hasMore = skip + rawTasks.length < total;
-    const nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
-    const formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+    if (isAll) {
+      const [totalCount, rawTasks] = await Promise.all([
+        prisma.task.count({ where }),
+        prisma.task.findMany({
+          where,
+          include: TASK_LIST_INCLUDE,
+          orderBy: filters.orderBy || { dueDate: 'asc' },
+        }),
+      ]);
+      total = totalCount;
+      limit = Math.min(totalCount > 0 ? totalCount : 50, 100);
+      page = 1;
+      totalPages = 1;
+      hasMore = false;
+      nextCursor = null;
+      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+    } else {
+      const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
+      page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
+      const limitRaw = filters.limit ?? filters.take ?? 50;
+      const limitNum = parseInt(String(limitRaw), 10);
+      limit = Math.min(Math.max(isNaN(limitNum) ? 50 : limitNum, 1), 100);
+      const skip = (page - 1) * limit;
+
+      const [totalCount, rawTasks] = await Promise.all([
+        prisma.task.count({ where }),
+        prisma.task.findMany({
+          where,
+          include: TASK_LIST_INCLUDE,
+          orderBy: filters.orderBy || { dueDate: 'asc' },
+          skip,
+          take: limit,
+        }),
+      ]);
+
+      total = totalCount;
+      totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
+      hasMore = skip + rawTasks.length < total;
+      nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
+      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t as any, canonicalRefDateStr));
+    }
 
     const pagination: TaskPaginationMeta = { total, page, limit, totalPages, hasMore, nextCursor };
     const meta = { total, page, limit, totalPages, hasMore, nextCursor, referenceDate: canonicalRefDateStr };
