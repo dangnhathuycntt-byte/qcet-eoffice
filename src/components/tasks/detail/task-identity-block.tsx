@@ -448,8 +448,8 @@ export function TaskIdentityBlock({
                           await onReassignLead(p.id, p.name);
                         }
                         setIsLeadDropdownOpen(false);
-                      } catch (err: any) {
-                        setReassignError(err?.message || "Không thể chuyển giao người phụ trách");
+                      } catch (err: unknown) {
+                        setReassignError(err instanceof Error ? err.message : "Không thể chuyển giao người phụ trách");
                       } finally {
                         setIsReassigning(false);
                       }

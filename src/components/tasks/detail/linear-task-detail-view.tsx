@@ -428,9 +428,9 @@ export function LinearTaskDetailView({
             : "Không thể xóa tài liệu minh chứng. Vui lòng thử lại");
         throw new Error(errMsg);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setDeliverables(previousDeliverables);
-      notifyError(error?.message || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
+      notifyError(error instanceof Error ? error.message : "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
   };
 

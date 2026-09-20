@@ -96,8 +96,8 @@ export function TaskProgressComposer({
       setNote("");
       setIsEditing(false);
       setTimeout(() => setFeedback(null), 3000);
-    } catch (err: any) {
-      setFeedback({ type: "error", message: err?.message || "Có lỗi xảy ra. Vui lòng thử lại." });
+    } catch (err: unknown) {
+      setFeedback({ type: "error", message: err instanceof Error ? err.message : "Có lỗi xảy ra. Vui lòng thử lại." });
     } finally {
       setIsSubmitting(false);
     }

@@ -5,4 +5,4 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export { getInitials, formatTaskDate } from "./format-helpers";
+export { getInitials } from "./format-helpers";

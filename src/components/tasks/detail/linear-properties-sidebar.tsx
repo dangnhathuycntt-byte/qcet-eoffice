@@ -425,8 +425,8 @@ export function LinearPropertiesSidebar({
 
       setIsLeadMenuOpen(false);
       window.location.reload();
-    } catch (e: any) {
-      setReassignError(e?.message || "Lỗi kết nối khi chuyển giao người phụ trách");
+    } catch (e: unknown) {
+      setReassignError(e instanceof Error ? e.message : "Lỗi kết nối khi chuyển giao người phụ trách");
     } finally {
       setIsReassigning(false);
     }

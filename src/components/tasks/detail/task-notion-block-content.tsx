@@ -2,6 +2,24 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import type { RenderElementProps } from "@platejs/core";
+
+/** Props chung cho mọi element renderer trong QCET Plate editor */
+type ElProps = RenderElementProps & {
+  element: RenderElementProps["element"] & {
+    indent?: number;
+    listStyleType?: string;
+    listStart?: number;
+    checked?: boolean;
+    textAlign?: React.CSSProperties["textAlign"];
+    url?: string;
+    value?: string;
+    trigger?: string;
+    title?: string;
+    emoji?: string;
+    children?: Array<{ text?: string; [key: string]: unknown }>;
+  };
+};
 import {
   Plate,
   PlateContent,
@@ -374,7 +392,7 @@ const QcetAlignPlugin = createPlatePlugin({
 // Plate element render components
 // ---------------------------------------------------------------------------
 
-function ParagraphEl({ attributes, children, element }: any) {
+function ParagraphEl({ attributes, children, element }: RenderElementProps<any>) {
   const editor = useEditorRef();
   const indent = element.indent;
   const listStyle = element.listStyleType;
@@ -431,23 +449,23 @@ function ParagraphEl({ attributes, children, element }: any) {
   );
 }
 
-function H1El({ attributes, children, element }: any) {
+function H1El({ attributes, children, element }: RenderElementProps<any>) {
   return <h1 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-xl sm:text-2xl mt-2 mb-0.5 font-bold tracking-tight text-foreground">{children}</h1>;
 }
 
-function H2El({ attributes, children, element }: any) {
+function H2El({ attributes, children, element }: RenderElementProps<any>) {
   return <h2 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-base sm:text-lg font-semibold mt-1.5 mb-0.5 tracking-tight text-foreground">{children}</h2>;
 }
 
-function H3El({ attributes, children, element }: any) {
+function H3El({ attributes, children, element }: RenderElementProps<any>) {
   return <h3 {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="text-sm sm:text-base font-semibold mt-1 mb-0.5 tracking-tight text-foreground">{children}</h3>;
 }
 
-function BlockquoteEl({ attributes, children, element }: any) {
+function BlockquoteEl({ attributes, children, element }: RenderElementProps<any>) {
   return <blockquote {...attributes} style={element.textAlign ? { textAlign: element.textAlign } : undefined} className="border-l-2 border-primary/70 pl-3 py-1 my-0.5 italic text-foreground/90 text-sm leading-relaxed">{children}</blockquote>;
 }
 
-function CalloutEl({ attributes, children }: any) {
+function CalloutEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return (
     <div {...attributes} className="flex items-start gap-2 px-2.5 py-1.5 my-1 rounded-xl bg-primary/5 border border-primary/20 text-foreground text-sm leading-relaxed">
       <Info className="size-4 text-primary shrink-0 mt-0.5" />
@@ -456,7 +474,7 @@ function CalloutEl({ attributes, children }: any) {
   );
 }
 
-function HrEl({ attributes, children }: any) {
+function HrEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return (
     <div {...attributes} contentEditable={false} className="py-2 my-0.5 flex items-center">
       <div className="w-full h-px bg-border/80" />
@@ -469,7 +487,7 @@ function HrEl({ attributes, children }: any) {
 // Table Components
 // ---------------------------------------------------------------------------
 
-function TableEl({ attributes, children }: any) {
+function TableEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return (
     <div className="my-3 overflow-x-auto rounded-lg border border-border/50">
       <table {...attributes} className="w-full border-collapse text-sm text-left">
@@ -479,15 +497,15 @@ function TableEl({ attributes, children }: any) {
   );
 }
 
-function TableRowEl({ attributes, children }: any) {
+function TableRowEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return <tr {...attributes} className="border-b border-border/30 last:border-b-0">{children}</tr>;
 }
 
-function TableCellEl({ attributes, children }: any) {
+function TableCellEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return <td {...attributes} className="border-r border-border/30 last:border-r-0 px-3 py-2 min-w-[100px] min-h-[36px] align-top text-foreground leading-relaxed relative group/cell [&[data-selected]]:bg-primary/[0.06]">{children}</td>;
 }
 
-function TableCellHeaderEl({ attributes, children }: any) {
+function TableCellHeaderEl({ attributes, children }: Pick<ElProps, "attributes" | "children">) {
   return <th {...attributes} className="border-r border-border/30 last:border-r-0 bg-muted/30 px-3 py-2 min-w-[100px] min-h-[36px] align-top font-semibold text-foreground leading-relaxed select-none relative [&[data-selected]]:bg-primary/[0.06]">{children}</th>;
 }
 
@@ -495,7 +513,7 @@ function TableCellHeaderEl({ attributes, children }: any) {
 // Toggle (Collapsible) Component
 // ---------------------------------------------------------------------------
 
-function ToggleEl({ attributes, children, element }: any) {
+function ToggleEl({ attributes, children, element }: RenderElementProps<any>) {
   const editor = useEditorRef();
   const isOpen = element.open ?? true;
 
@@ -534,7 +552,7 @@ function ToggleEl({ attributes, children, element }: any) {
 // Mention Components
 // ---------------------------------------------------------------------------
 
-function MentionEl({ attributes, children, element }: any) {
+function MentionEl({ attributes, children, element }: ElProps) {
   return (
     <span
       {...attributes}
@@ -549,7 +567,7 @@ function MentionEl({ attributes, children, element }: any) {
   );
 }
 
-function MentionInputElement({ attributes, children, element }: any) {
+function MentionInputElement({ attributes, children, element }: RenderElementProps<any>) {
   const editor = useEditorRef();
   const query = (element.children?.[0]?.text || "").replace(/^@/, "").toLowerCase();
   const [filtered, setFiltered] = React.useState(QCET_STAFF_DIRECTORY);
@@ -1815,8 +1833,8 @@ export function TaskNotionBlockContent({
           await onSaveContent(payload);
           lastSavedContentRef.current = payload;
           setSaveError(null);
-        } catch (err: any) {
-          setSaveError(err?.message || "Lỗi lưu nội dung");
+        } catch (err: unknown) {
+          setSaveError(err instanceof Error ? err.message : "Lỗi lưu nội dung");
         }
       }, 800);
     },

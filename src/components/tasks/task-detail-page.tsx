@@ -438,10 +438,10 @@ export function TaskDetailPage({
 
       notifySuccess(`Đã chuyển trạng thái sang "${targetLabel}"`);
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setTask(previousTask);
       setAuditEvents(previousAudit);
-      notifyError(err?.message || "Lỗi kết nối máy chủ", "Lỗi thao tác");
+      notifyError(err instanceof Error ? err.message : String(err) || "Lỗi kết nối máy chủ", "Lỗi thao tác");
     } finally {
       setIsStatusUpdating(false);
     }
@@ -698,10 +698,10 @@ export function TaskDetailPage({
         },
         ...prev,
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Rollback on failure
       setDeliverables(previousDeliverables);
-      notifyError(error?.message || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
+      notifyError(error instanceof Error ? error.message : String(error) || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
   };
 
