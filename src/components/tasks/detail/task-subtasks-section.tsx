@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Check,
   CheckCircle2,
   Circle,
   CircleDot,
@@ -13,8 +14,11 @@ import {
   AlertCircle,
   ChevronDown,
   X,
+  Edit3,
+  Trash2,
+  Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
@@ -36,6 +40,7 @@ export interface TaskSubtasksSectionProps {
   personnel?: Array<{ id?: string; name: string; role?: string }>;
   onToggleSubtask?: (subtask: StaffTask) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
+  onDeleteSubtask?: (subtask: StaffTask) => Promise<void> | void;
   onAddSubTask?: (parentId: string) => void;
   onCreateSubTaskInline?: (title: string, assigneeName?: string, dueDate?: string, assigneeId?: string) => Promise<void> | void;
   className?: string;
@@ -49,6 +54,7 @@ export function TaskSubtasksSection({
   personnel,
   onToggleSubtask,
   onSelectSubtask,
+  onDeleteSubtask,
   onAddSubTask,
   onCreateSubTaskInline,
   className,
@@ -67,7 +73,7 @@ export function TaskSubtasksSection({
     return toCanonicalUnitCode(raw) || raw;
   }, [departmentCode, user]);
 
-  // Inline creation state
+  // Inline creation state (Full detailed modal/row)
   const [isAddingInline, setIsAddingInline] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
   const [newAssigneeName, setNewAssigneeName] = React.useState("");
@@ -75,6 +81,33 @@ export function TaskSubtasksSection({
   const [inlineError, setInlineError] = React.useState<string | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Quick add state (Bottom inline one-key creator)
+  const [quickAddTitle, setQuickAddTitle] = React.useState("");
+  const [isQuickAdding, setIsQuickAdding] = React.useState(false);
+  const quickAddInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleQuickAdd = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const trimmed = quickAddTitle.trim();
+    if (!trimmed || isQuickAdding) return;
+
+    setIsQuickAdding(true);
+    try {
+      if (onCreateSubTaskInline) {
+        await onCreateSubTaskInline(trimmed);
+      } else if (onAddSubTask) {
+        onAddSubTask(parentId);
+      }
+      setQuickAddTitle("");
+      setTimeout(() => quickAddInputRef.current?.focus(), 20);
+    } catch {
+      // ignore
+    } finally {
+      setIsQuickAdding(false);
+    }
+  };
 
   // Unit-scoped personnel list for assignee selector
   const [personnelList, setPersonnelList] = React.useState<Array<{ id?: string; name: string; role?: string }>>(() => {
@@ -194,17 +227,36 @@ export function TaskSubtasksSection({
     }
   };
 
+  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
     <section data-slot="task-subtasks-section" className={cn("space-y-2 select-none w-full", className)}>
-      {/* 1. Header: "Việc thành phần" + progress "0/0" + nút "+ Thêm việc con" */}
+      {/* 1. Header: "Việc thành phần" + progress "33% (1/3)" + mini progress bar + nút "+ Thêm chi tiết" */}
       <div className="flex items-center justify-between gap-2 py-1 select-none">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-xs font-semibold text-foreground tracking-tight">
             Việc thành phần
           </h2>
-          <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full tabular-nums">
-            {completedCount}/{totalCount}
-          </span>
+          {totalCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs font-medium text-muted-foreground tabular-nums">
+                {percent}% ({completedCount}/{totalCount})
+              </span>
+              <div
+                role="progressbar"
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Tiến độ hoàn thành việc thành phần"
+                className="w-16 sm:w-24 h-1.5 bg-muted rounded-full overflow-hidden"
+              >
+                <div
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {canEdit && (
@@ -212,28 +264,28 @@ export function TaskSubtasksSection({
             type="button"
             onClick={handleOpenInline}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-foreground hover:bg-muted border border-border/60 hover:border-border transition-colors cursor-pointer"
-            title="Thêm việc con"
-            aria-label="Thêm việc con"
+            title="Thêm chi tiết việc con"
+            aria-label="Thêm chi tiết việc con"
           >
             <Plus className="size-3.5" strokeWidth={1.5} />
-            <span>Thêm việc con</span>
+            <span>Thêm chi tiết</span>
           </button>
         )}
       </div>
 
       {/* 2. Empty State (Tối giản, không card/box lớn, không lặp nút thêm) */}
       {totalCount === 0 && !isAddingInline && (
-        <div className="py-8 px-3 text-center select-none">
+        <div className="py-6 px-3 text-center select-none">
           <p className="text-xs font-medium text-muted-foreground">
             Chưa có việc thành phần
           </p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Tạo việc con để phân rã nhiệm vụ này.
+            Gõ vào ô bên dưới hoặc nhấn &quot;Thêm chi tiết&quot; để phân rã nhiệm vụ này.
           </p>
         </div>
       )}
 
-      {/* 3. Inline Subtask Creation Row (Linear Style) */}
+      {/* 3. Inline Detailed Subtask Creation Row (Linear Style) */}
       {isAddingInline && (
         <div className="space-y-1.5">
           <form
@@ -321,21 +373,9 @@ export function TaskSubtasksSection({
         </div>
       )}
 
-      {/* 4. Danh sách khi có dữ liệu (Compact sub-issue list) */}
+      {/* 4. Danh sách việc con với layout chuẩn: [Checkbox] Title [Avatar] [Actions] / [Date] - Status */}
       {totalCount > 0 && (
-        <div className="flex flex-col gap-0.5">
-          {/* Header nhẹ chỉ hiển thị khi danh sách lớn (> 5 items) */}
-          {totalCount > 5 && (
-            <div className="flex items-center gap-3 px-3 py-1 text-[11px] font-medium text-muted-foreground/70 border-b border-border/30 select-none">
-              <div className="w-5 shrink-0" />
-              <div className="flex-1 min-w-0">Nhiệm vụ</div>
-              <div className="w-28 shrink-0 hidden sm:block">Phụ trách</div>
-              <div className="w-20 sm:w-24 shrink-0">Thời hạn</div>
-              <div className="w-24 sm:w-28 shrink-0 text-right pr-6">Tình trạng</div>
-            </div>
-          )}
-
-          {/* Subtask rows */}
+        <div className="flex flex-col gap-1">
           {subTasks.map((st, idx) => {
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
@@ -356,94 +396,154 @@ export function TaskSubtasksSection({
                   }
                 }}
                 className={cn(
-                  "group flex items-center gap-3 px-3 h-10 sm:h-11 rounded-lg transition-colors cursor-pointer border border-transparent hover:bg-muted/40 hover:border-border/40 focus-visible:outline-hidden focus-visible:bg-muted/50 select-none",
-                  isCompleted && "opacity-85"
+                  "group flex items-start gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:bg-muted/40 hover:border-border/40 focus-visible:outline-hidden focus-visible:bg-muted/50 select-none",
+                  isCompleted && "opacity-80"
                 )}
               >
-                {/* 1. Status icon (click to toggle) */}
-                <button
-                  type="button"
-                  onClick={(e) => handleToggle(e, st)}
-                  className="size-5 shrink-0 flex items-center justify-center rounded hover:bg-muted/80 transition-colors cursor-pointer focus-visible:outline-hidden"
-                  title={isCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
-                  aria-label={isCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
-                >
-                  {isCompleted ? (
-                    <CheckCircle2 className="size-4 text-emerald-600 transition-transform group-hover:scale-105" />
-                  ) : st.status === "IN_PROGRESS" ? (
-                    <CircleDot className="size-4 text-blue-600" />
-                  ) : st.status === "WAITING_APPROVAL" ? (
-                    <Clock className="size-4 text-amber-600" />
-                  ) : (
-                    <Circle className="size-4 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
-                  )}
-                </button>
-
-                {/* 2. Tên việc (chiếm phần lớn width) */}
-                <div className="flex-1 min-w-0 pr-2">
-                  <span
-                    className={cn(
-                      "text-xs font-normal text-foreground truncate block",
-                      isCompleted && "line-through text-muted-foreground/70"
-                    )}
-                    title={st.title}
+                {/* 1. Checkbox: click -> toggle status COMPLETED / IN_PROGRESS */}
+                <div className="pt-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggle(e, st)}
+                    className="size-4.5 rounded-[4px] border border-border/80 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none hover:border-primary"
+                    title={isCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
+                    aria-label={isCompleted ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
                   >
-                    {st.title}
-                  </span>
+                    {isCompleted ? (
+                      <div className="size-3.5 rounded-[3px] bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
+                        <Check className="size-2.5 text-white" strokeWidth={1.5} />
+                      </div>
+                    ) : (
+                      <div className="size-3.5 rounded-[3px] bg-background hover:bg-primary/5 transition-colors" />
+                    )}
+                  </button>
                 </div>
 
-                {/* 3. Phụ trách */}
-                <div className="shrink-0 w-28 hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-                  <User className="size-3 text-muted-foreground/60 shrink-0" />
-                  <span className="truncate" title={assigneeTitle}>
-                    {assigneeTitle}
-                  </span>
-                </div>
+                {/* 2. Content: 2-line layout */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  {/* Line 1: [Tiêu đề subtask] [Avatar DRI] [Hover action edit / delete] */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "text-xs font-medium text-foreground transition-all duration-200 truncate",
+                        isCompleted && "line-through text-muted-foreground/60"
+                      )}
+                      title={st.title}
+                    >
+                      {st.title}
+                    </span>
 
-                {/* 4. Hạn */}
-                <div className="shrink-0 w-20 sm:w-24 flex items-center gap-1.5 text-xs">
-                  {st.dueDate ? (
-                    <>
-                      <Calendar className="size-3 text-muted-foreground/60 shrink-0" />
-                      <span
-                        className={cn(
-                          "font-mono text-xs tabular-nums text-muted-foreground truncate",
-                          dueStatus.isOverdue && "text-rose-600 font-semibold"
+                    {/* Right side: Hover action icons + Avatar DRI 24px */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Hover action: Hiển thị icon edit / delete khi hover row */}
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectSubtask?.(st);
+                          }}
+                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Chỉnh sửa việc con"
+                          aria-label="Chỉnh sửa việc con"
+                        >
+                          <Edit3 className="size-3" strokeWidth={1.5} />
+                        </button>
+                        {onDeleteSubtask && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteSubtask(st);
+                            }}
+                            className="p-1 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Xóa việc con"
+                            aria-label="Xóa việc con"
+                          >
+                            <Trash2 className="size-3" strokeWidth={1.5} />
+                          </button>
                         )}
+                      </div>
+
+                      {/* Avatar tròn 24px + tooltip tên đầy đủ */}
+                      <div
+                        className="size-6 shrink-0 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-border/40"
+                        title={`Phụ trách: ${assigneeTitle}`}
                       >
-                        {formatDisplayDate(st.dueDate)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground/40 text-xs">—</span>
-                  )}
-                </div>
+                        {st.assigneeAvatar ? (
+                          <img
+                            src={st.assigneeAvatar}
+                            alt={assigneeTitle}
+                            width={24}
+                            height={24}
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex size-full items-center justify-center bg-muted text-[10px] font-semibold text-muted-foreground">
+                            {getInitials(st.assigneeName || "?")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* 5. Trạng thái */}
-                <div className="shrink-0 w-24 sm:w-28 flex items-center justify-end">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border leading-none",
-                      statusObj.colorClass
-                    )}
-                  >
-                    <span className={cn("size-1.5 rounded-full", statusObj.dotClass)} />
-                    <span className="truncate">{statusObj.label}</span>
-                  </span>
-                </div>
-
-                {/* Action "..." khi hover */}
-                <div className="w-5 shrink-0 flex items-center justify-end">
-                  <span
-                    className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-0.5 rounded text-muted-foreground hover:text-foreground transition-opacity"
-                    title="Chi tiết việc con"
-                  >
-                    <MoreHorizontal className="size-3.5" />
-                  </span>
+                  {/* Line 2: [Icon lịch] dd/mm/yyyy - Trạng thái */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Calendar
+                      className={cn(
+                        "size-3 shrink-0",
+                        dueStatus.isOverdue
+                          ? "text-rose-600"
+                          : "text-muted-foreground/60"
+                      )}
+                      strokeWidth={1.5}
+                    />
+                    <span
+                      className={cn(
+                        "font-mono tabular-nums",
+                        dueStatus.isOverdue && "text-rose-600 font-semibold"
+                      )}
+                    >
+                      {st.dueDate ? formatDisplayDate(st.dueDate) : "Chưa đặt hạn"}
+                    </span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium border leading-tight",
+                        statusObj.colorClass
+                      )}
+                    >
+                      <span className={cn("size-1.5 rounded-full", statusObj.dotClass)} />
+                      <span>{statusObj.label}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* 5. Inline Quick Add: Input ở cuối list "Thêm việc con... (Enter để tạo)" */}
+      {canEdit && (
+        <div className="pt-1">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/60 hover:border-border focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/20 bg-background transition-all">
+            <Plus className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+            <input
+              ref={quickAddInputRef}
+              type="text"
+              value={quickAddTitle}
+              onChange={(e) => setQuickAddTitle(e.target.value)}
+              onKeyDown={handleQuickAdd}
+              disabled={isQuickAdding}
+              placeholder="Thêm việc con... (Enter để tạo)"
+              className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+            {isQuickAdding && (
+              <Loader2 className="size-3.5 animate-spin text-muted-foreground shrink-0" />
+            )}
+          </div>
         </div>
       )}
     </section>
