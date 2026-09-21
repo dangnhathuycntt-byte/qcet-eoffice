@@ -22,6 +22,23 @@ services:
       retries: 5
       start_period: 10s
 
+  redis:
+    image: redis:7-alpine
+    container_name: qcet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - qcet-internal
+
   qcet-app:
     container_name: qcet-eoffice-app
     image: qcet-eoffice-app:latest
@@ -33,9 +50,12 @@ services:
     depends_on:
       qcet-db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--dns-result-order=ipv4first"
+      REDIS_URL: redis://redis:6379
       # Runtime credentials must be a dedicated least-privilege role. Never
       # fall back to the database owner used for bootstrap and migrations.
       DATABASE_URL: ${APP_DATABASE_URL:?Vui long cung cap APP_DATABASE_URL cho tai khoan ung dung it dac quyen}
@@ -82,4 +102,7 @@ networks:
 volumes:
   qcet_postgres_data:
     name: qcet_postgres_data
+    driver: local
+  redis-data:
+    name: qcet_redis_data
     driver: local
