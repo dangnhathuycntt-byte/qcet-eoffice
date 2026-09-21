@@ -20,7 +20,7 @@ export async function PATCH(req: Request) {
     const authUser = requireAuthenticated(context);
 
     // Rate limiting: MUTATIONS_SENSITIVE
-    assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     // Parse and validate body using UpdateOnboardingSchema
     const parsed = await parseAndValidateJson(req, UpdateOnboardingSchema);
@@ -93,7 +93,7 @@ export async function DELETE(req: Request) {
     const authUser = requireAuthenticated(context);
 
     // Rate limiting: MUTATIONS_SENSITIVE
-    assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     const updated = await prisma.user.update({
       where: { id: authUser.id },

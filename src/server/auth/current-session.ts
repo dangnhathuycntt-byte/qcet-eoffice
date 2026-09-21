@@ -1,19 +1,10 @@
-import jwt from 'jsonwebtoken';
-import { decode } from 'next-auth/jwt';
-import { prisma } from '@/lib/prisma';
 import {
-  getJwtSecret,
+  resolveCanonicalTokenSession,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
 } from '@/lib/jwt-session';
 import { AuthenticationError } from '@/server/api/errors';
-import { CurrentUser, loadCurrentUser } from './current-user';
-import {
-  isSessionExpired,
-  isSessionRevoked,
-  assertSessionPolicy,
-} from './session-policy';
 
 export interface CurrentSession {
   sessionId: string;
@@ -108,7 +99,14 @@ export function extractTokensFromRequest(request: RequestLike): string[] {
 
 /**
  * Resolves and strictly validates the current authenticated session and DB user.
- * Invariants:
+ *
+ * Delegates to the ONE canonical token-level resolver
+ * (`resolveCanonicalTokenSession` in `@/lib/jwt-session`) and maps success
+ * to the identity-only `CurrentSession` shape. The role snapshot is
+ * intentionally NOT exposed here: business authority must be evaluated via
+ * the canonical authorization engine, never from session claims.
+ *
+ * Invariants (enforced by the canonical resolver, fail-closed):
  * - Session exists in DB (or valid verified cryptographic token)
  * - Session not expired (session.expires > new Date())
  * - Session not revoked (session.revokedAt == null && isSessionRevoked() === false)
@@ -116,127 +114,15 @@ export function extractTokensFromRequest(request: RequestLike): string[] {
  * - Fail-closed on invalid token, expired session, disabled account, or DB failure
  */
 async function resolveTokenSession(token: string): Promise<CurrentSession> {
-  // 1. Primary path: Query database Session by sessionToken with included User
-  try {
-    const dbSession = await prisma.session.findUnique({
-      where: { sessionToken: token },
-      include: { user: true },
-    });
-
-    if (dbSession) {
-      if (isSessionExpired(dbSession.expires)) {
-        throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
-      }
-      if (
-        (dbSession as any).revokedAt != null ||
-        isSessionRevoked(dbSession.id, dbSession.userId) ||
-        isSessionRevoked(token, dbSession.userId)
-      ) {
-        throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
-      }
-      if (!dbSession.user.isActive) {
-        throw new AuthenticationError('Tài khoản đã bị vô hiệu hóa hoặc tạm khóa', 'ACCOUNT_DISABLED');
-      }
-
-      return {
-        sessionId: dbSession.id,
-        userId: dbSession.user.id,
-        user: {
-          id: dbSession.user.id,
-          email: dbSession.user.email,
-          name: dbSession.user.name,
-          isActive: dbSession.user.isActive,
-        },
-      };
-    }
-  } catch (err) {
-    if (err instanceof AuthenticationError) {
-      throw err;
-    }
-    // If not AuthenticationError, continue to token decode check
-  }
-
-  // 2. Secondary path: Cryptographic JWT / JWE validation with DB User verification
-  let decoded: any = null;
-  let isJwt = false;
-
-  try {
-    decoded = jwt.verify(token, getJwtSecret()) as any;
-    isJwt = true;
-  } catch (err: any) {
-    if (err?.name === 'TokenExpiredError') {
-      throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
-    }
-
-    // Try decoding as NextAuth / Auth.js JWE token
-    const secret = getJwtSecret();
-    for (const salt of [
-        SESSION_COOKIE_NAME,
-        SECURE_SESSION_COOKIE_NAME,
-        'next-auth.session-token',
-        '__Secure-next-auth.session-token',
-      ]) {
-      try {
-        const decodedJwe = await decode({
-          token: token.trim(),
-          secret,
-          salt,
-        });
-        if (decodedJwe && (decodedJwe.id || decodedJwe.sub || decodedJwe.email)) {
-          decoded = {
-            id: decodedJwe.id || decodedJwe.sub,
-            email: decodedJwe.email,
-            name: decodedJwe.name || '',
-            role: decodedJwe.role || 'CHUYEN_VIEN',
-            departmentId: decodedJwe.departmentId || null,
-            title: decodedJwe.title || null,
-            isActive: decodedJwe.isActive !== false,
-            exp: decodedJwe.exp,
-            iat: decodedJwe.iat,
-            jti: decodedJwe.jti,
-          };
-          isJwt = true;
-          break;
-        }
-      } catch {
-        // A token is encrypted for one cookie salt; continue trying the others.
-      }
-    }
-  }
-
-  if (!isJwt || !decoded) {
-    throw new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
-  }
-
-  const userId = decoded.id || decoded.userId;
-  if (!userId) {
-    throw new AuthenticationError('Phiên làm việc không hợp lệ', 'SESSION_INVALID');
-  }
-
-  const sessionId = decoded.sessionId || decoded.jti || `session_${decoded.id}`;
-  const expires = decoded.exp ? new Date(decoded.exp * 1000) : undefined;
-  const issuedAt = decoded.iat ? new Date(decoded.iat * 1000) : undefined;
-
-  // Check expiration and revocation
-  assertSessionPolicy({
-    sessionId,
-    expires,
-    userId,
-    issuedAt,
-    token,
-  });
-
-  // Verify DB user exists and is active
-  const user = await loadCurrentUser(userId);
-
+  const canonical = await resolveCanonicalTokenSession(token);
   return {
-    sessionId,
-    userId: user.id,
+    sessionId: canonical.sessionId,
+    userId: canonical.userId,
     user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      isActive: user.isActive,
+      id: canonical.user.id,
+      email: canonical.user.email,
+      name: canonical.user.name,
+      isActive: canonical.user.isActive,
     },
   };
 }

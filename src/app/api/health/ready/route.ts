@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { prisma } from '@/lib/prisma';
 import { isServerShuttingDown } from '@/server/lifecycle/shutdown';
 import { getPrivateStorageDir } from '@/storage/private-files';
+import { getRateLimitBackend, getRateLimitBackendInfo } from '@/server/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,7 +117,41 @@ export async function GET() {
     environment: process.env.NODE_ENV || 'development',
   };
 
-  const isOverallReady = dbHealthy && schemaHealthy && storageHealthy && configHealthy;
+  // 5. Rate-limit backend check (Issue #29, corrective review). The shared
+  // backend is mandatory in production: missing Redis config OR an
+  // unreachable Redis both yield 503, because the limiter fails closed
+  // without it. In development/test the process-local test double is
+  // reported explicitly as non-production mode (healthy) so local and CI
+  // deployments without Redis stay green.
+  const rateLimitInfo = getRateLimitBackendInfo();
+  const isProductionRuntime = process.env.NODE_ENV === 'production';
+  let rateLimitHealthy = true;
+  let rateLimitLatencyMs = 0;
+  let rateLimitError: string | undefined;
+  let rateLimitMode = rateLimitInfo.mode;
+  if (isProductionRuntime && !rateLimitInfo.redisConfigured) {
+    rateLimitHealthy = false;
+    rateLimitError = 'Shared rate-limit backend (REDIS_URL) is required in production';
+  } else if (rateLimitInfo.redisConfigured) {
+    try {
+      const rlStart = Date.now();
+      const pingWithTimeout = Promise.race([
+        getRateLimitBackend().ping(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Redis ping timeout after 3000ms')), 3000)
+        ),
+      ]);
+      await pingWithTimeout;
+      rateLimitLatencyMs = Date.now() - rlStart;
+    } catch {
+      rateLimitHealthy = false;
+      rateLimitError = 'Shared rate-limit backend unreachable';
+    }
+  } else {
+    rateLimitMode = 'memory-test-double';
+  }
+
+  const isOverallReady = dbHealthy && schemaHealthy && storageHealthy && configHealthy && rateLimitHealthy;
   const totalDurationMs = Date.now() - startTime;
 
   return NextResponse.json(
@@ -141,6 +176,13 @@ export async function GET() {
         config: {
           status: configHealthy ? 'healthy' : 'unhealthy',
           ...configChecks,
+        },
+        ratelimit: {
+          status: rateLimitHealthy ? 'healthy' : 'unhealthy',
+          mode: rateLimitMode,
+          redisConfigured: rateLimitInfo.redisConfigured,
+          latencyMs: rateLimitLatencyMs,
+          ...(rateLimitError ? { error: rateLimitError } : {}),
         },
       },
       durationMs: totalDurationMs,

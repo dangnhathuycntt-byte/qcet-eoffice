@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     assertCsrf(request);
-    assertRateLimit(authUser.id, 'PUSH_TEST');
+    await assertRateLimit(authUser.id, 'PUSH_TEST');
 
     let rawBody: unknown = {};
     const contentType = request.headers.get('content-type');

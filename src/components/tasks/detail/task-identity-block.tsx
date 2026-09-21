@@ -8,11 +8,8 @@ import {
   User,
   Building2,
   Edit2,
-  Check,
   X,
-  ChevronDown,
   Layers,
-  Calendar,
   Sparkles,
   Paperclip,
   Plus,
@@ -21,19 +18,13 @@ import {
   Trash2,
   Link as LinkIcon,
   FileText,
-  CircleDashed,
-  Signal,
-  UserPlus,
   ArrowRight,
   MoreHorizontal,
-  Loader2,
-  Search,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
-import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { DirectInlineEditor } from "./direct-inline-editor";
@@ -42,6 +33,12 @@ import {
   buildActorContext,
   buildTaskContext,
 } from "@/domain/tasks/state-machine";
+import {
+  TaskStatusSelect,
+  TaskAssigneePicker,
+  TaskDateRange,
+  type TaskPersonnelOption,
+} from "./task-property-controls";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;
@@ -78,30 +75,35 @@ export const STATUS_OPTIONS: Array<{
   label: string;
   colorClass: string;
   dotClass: string;
+  iconClass: string;
 }> = [
   {
     value: "NOT_STARTED",
     label: "Mới",
     colorClass: "text-muted-foreground bg-muted/60 border-border/60",
     dotClass: "bg-muted-foreground/60",
+    iconClass: "text-muted-foreground/60",
   },
   {
     value: "IN_PROGRESS",
     label: "Đang thực hiện",
     colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
     dotClass: "bg-blue-600",
+    iconClass: "text-blue-600",
   },
   {
     value: "WAITING_APPROVAL",
     label: "Chờ duyệt",
     colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
     dotClass: "bg-amber-600",
+    iconClass: "text-amber-600",
   },
   {
     value: "COMPLETED",
     label: "Hoàn thành",
     colorClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/80",
     dotClass: "bg-emerald-600",
+    iconClass: "text-emerald-600",
   },
 ];
 
@@ -199,23 +201,9 @@ export function TaskIdentityBlock({
 
   const dueInfo = computeDueStatus(task.dueDate);
 
-  // Status popover state
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = React.useState(false);
-  const statusMenuRef = React.useRef<HTMLDivElement>(null);
-
-  // Priority popover state
-  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = React.useState(false);
-  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
-
-  // Lead popover state on Properties line
-  const [isLeadDropdownOpen, setIsLeadDropdownOpen] = React.useState(false);
-  const [leadSearchQuery, setLeadSearchQuery] = React.useState("");
+  // Personnel list for shared assignee picker
+  const [personnelList, setPersonnelList] = React.useState<TaskPersonnelOption[]>([]);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const [reassignError, setReassignError] = React.useState<string | null>(null);
-  const [personnelList, setPersonnelList] = React.useState<
-    Array<{ id: string; name: string; email?: string; departmentName?: string }>
-  >([]);
-  const leadMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     fetch("/api/users")
@@ -246,41 +234,21 @@ export function TaskIdentityBlock({
       : "NOT_STARTED"
     : "NOT_STARTED";
 
-  const currentStatusObj =
-    STATUS_OPTIONS.find((s) => s.value === normalizedStatus) || STATUS_OPTIONS[0];
-
-  const rawPriority =
-    (task as any).priority || (isSchool ? schoolTask?.priority : "NORMAL") || "NORMAL";
-  const normalizedPriority =
-    typeof rawPriority === "string"
-      ? rawPriority.toUpperCase() === "MEDIUM"
-        ? "NORMAL"
-        : (rawPriority.toUpperCase() as TaskPriority)
-      : "NORMAL";
-  const currentPriorityObj =
-    PRIORITY_OPTIONS.find((p) => p.value === normalizedPriority) || PRIORITY_OPTIONS[2];
-
-  const filteredPersonnel = React.useMemo(() => {
-    if (!leadSearchQuery.trim()) return personnelList;
-    const q = leadSearchQuery.toLowerCase().trim();
-    return personnelList.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.email && p.email.toLowerCase().includes(q)) ||
-        (p.departmentName && p.departmentName.toLowerCase().includes(q))
-    );
-  }, [personnelList, leadSearchQuery]);
-
-  // Close dropdowns on outside click / Escape
-  React.useEffect(() => {
-    const refs = [statusMenuRef, priorityMenuRef, leadMenuRef];
-    const setters = [setIsStatusDropdownOpen, setIsPriorityDropdownOpen, setIsLeadDropdownOpen];
-    const onMouse = (e: MouseEvent) => { refs.forEach((r, i) => { if (r.current && !r.current.contains(e.target as Node)) setters[i](false); }); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setters.forEach((s) => s(false)); };
-    document.addEventListener("mousedown", onMouse);
-    window.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onMouse); window.removeEventListener("keydown", onKey); };
-  }, []);
+  // Build status options from FSM-allowed transitions
+  const statusOptions = React.useMemo(() => {
+    return STATUS_OPTIONS.map((opt) => {
+      const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
+      const isCurrent = normalizedStatus === opt.value;
+      return {
+        value: opt.value,
+        label: opt.label,
+        dotClass: opt.dotClass,
+        iconClass: opt.iconClass,
+        disabled: !isCurrent && !check.allowed,
+        reason: !isCurrent && !check.allowed ? check.reason : undefined,
+      };
+    });
+  }, [allowedMap, normalizedStatus]);
 
   return (
     <section data-slot="task-identity-block" className={cn("space-y-4 relative z-30", className)}>
@@ -311,196 +279,49 @@ export function TaskIdentityBlock({
       {showInlineProperties && (
       /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */
       <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-muted-foreground font-normal select-none">
-
-        {/* Status */}
-        <div className="relative" ref={statusMenuRef}>
-          <button
-            type="button"
-            onClick={() => {
-              if (canEdit) setIsStatusDropdownOpen((prev) => !prev);
-            }}
-            disabled={!canEdit}
-            className={cn(
-              "inline-flex items-center gap-1.5 py-0.5 rounded text-xs font-normal text-foreground transition-colors",
-              canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
-            )}
-          >
-            <CircleDashed className={cn("size-3.5", currentStatusObj.value === "COMPLETED" ? "text-emerald-600" : currentStatusObj.value === "IN_PROGRESS" ? "text-amber-500" : "text-amber-500")} strokeWidth={1.5} />
-            <span>{currentStatusObj.label}</span>
-          </button>
-
-          {isStatusDropdownOpen && canEdit && (
-            <div
-              role="listbox"
-              className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-            >
-              {STATUS_OPTIONS.map((opt) => {
-                const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
-                const isCurrent = normalizedStatus === opt.value;
-                const isOptionDisabled = !isCurrent && !check.allowed;
-
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    disabled={isOptionDisabled}
-                    title={isOptionDisabled ? check.reason : undefined}
-                    onClick={() => {
-                      if (!isOptionDisabled) {
-                        setIsStatusDropdownOpen(false);
-                        if (onStatusChange) onStatusChange(task.id, opt.value);
-                      }
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left",
-                      isOptionDisabled
-                        ? "opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent"
-                        : "cursor-pointer",
-                      isCurrent
-                        ? "bg-primary/10 text-primary font-medium"
-                        : !isOptionDisabled
-                        ? "text-foreground hover:bg-muted"
-                        : ""
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={cn("size-2 rounded-full", opt.dotClass)} />
-                      <span>{opt.label}</span>
-                    </div>
-                    {isCurrent && (
-                      <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <TaskStatusSelect
+          value={normalizedStatus}
+          options={statusOptions}
+          disabled={!canEdit}
+          onValueChange={(newStatus) => {
+            if (onStatusChange) onStatusChange(task.id, newStatus);
+          }}
+        />
 
         <span>·</span>
 
-        {/* Người phụ trách (Lead) với Popover lựa chọn / chuyển giao */}
-        <div className="relative" ref={leadMenuRef}>
-          <button
-            type="button"
-            onClick={() => {
-              if (canEdit) {
-                setIsStatusDropdownOpen(false);
-                setReassignError(null);
-                setIsLeadDropdownOpen((prev) => !prev);
+        <TaskAssigneePicker
+          items={personnelList}
+          assigneeId={isSchool ? (task as any).leadAssigneeId : (task as any).assigneeId}
+          assigneeName={rawLeadName}
+          displayName={leadName}
+          disabled={!canEdit}
+          pending={isReassigning}
+          onSelect={async (person) => {
+            setIsReassigning(true);
+            try {
+              if (onReassignLead) {
+                await onReassignLead(person.id, person.name);
               }
-            }}
-            disabled={!canEdit || isReassigning}
-            className={cn(
-              "inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 rounded text-xs font-normal text-foreground transition-colors select-none",
-              canEdit ? "cursor-pointer hover:bg-muted/40 hover:text-foreground" : "cursor-default"
-            )}
-            title={`Người phụ trách: ${leadName} (nhấp để thay đổi)`}
-          >
-            {isReassigning ? (
-              <Loader2 className="size-3.5 text-primary animate-spin shrink-0" />
-            ) : (
-              <UserPlus className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-            )}
-            <span className="font-normal whitespace-nowrap">{leadName}</span>
-          </button>
-
-          {isLeadDropdownOpen && canEdit && (
-            <div
-              role="listbox"
-              className="absolute left-0 top-full mt-1.5 w-64 max-h-72 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-            >
-              <div className="p-1 border-b border-border/40 mb-1">
-                <div className="relative">
-                  <Search className="size-3 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={leadSearchQuery}
-                    onChange={(e) => setLeadSearchQuery(e.target.value)}
-                    placeholder="Tìm kiếm cán bộ..."
-                    className="w-full pl-6 pr-2 py-1 text-xs rounded-md bg-muted/40 border border-transparent focus:border-border focus:bg-background focus:outline-hidden"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1 select-none">
-                Chọn người phụ trách
-              </div>
-
-              {filteredPersonnel.map((p) => {
-                const isSelected = p.name === leadName || p.id === (task as any).leadAssigneeId;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={async () => {
-                      setIsReassigning(true);
-                      setReassignError(null);
-                      try {
-                        if (onReassignLead) {
-                          await onReassignLead(p.id, p.name);
-                        }
-                        setIsLeadDropdownOpen(false);
-                      } catch (err: unknown) {
-                        setReassignError(err instanceof Error ? err.message : "Không thể chuyển giao người phụ trách");
-                      } finally {
-                        setIsReassigning(false);
-                      }
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                      isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold shrink-0">
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="truncate">
-                        <div className="truncate font-medium">{p.name}</div>
-                        {p.departmentName && (
-                          <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                  </button>
-                );
-              })}
-
-              {reassignError && (
-                <div className="p-2 text-[11px] text-rose-600 bg-rose-50 border border-rose-200 rounded-md m-1 flex items-start gap-1">
-                  <AlertCircle className="size-3 shrink-0 mt-0.5" />
-                  <span>{reassignError}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            } finally {
+              setIsReassigning(false);
+            }
+          }}
+        />
 
         <span>·</span>
 
-        {/* Due Date */}
-        <div className="inline-flex items-center gap-1 text-xs text-foreground">
-          {canEdit && onDueDateChange ? (
-            <VietnameseDatePicker
-              value={dueDateIso}
-              onChange={(newDate) => onDueDateChange(task.id, newDate)}
-              placeholder="Chọn hạn chót"
-              variant="chip"
-              icon={<Calendar className="size-3.5 text-rose-500 shrink-0" />}
-              showPresets={true}
-              align="left"
-              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
-            />
-          ) : (
-            <div className="inline-flex items-center gap-1 text-muted-foreground">
-              <Calendar className="size-3.5 text-rose-500 shrink-0" />
-              <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
-            </div>
-          )}
-        </div>
+        <TaskDateRange
+          startDateIso={startDateIso}
+          dueDateIso={dueDateIso}
+          canEdit={canEdit}
+          onStartDateChange={(newDate) => {
+            if (onStartDateChange) onStartDateChange(task.id, newDate);
+          }}
+          onDueDateChange={(newDate) => {
+            if (onDueDateChange) onDueDateChange(task.id, newDate);
+          }}
+        />
       </div>
       )}
     </section>

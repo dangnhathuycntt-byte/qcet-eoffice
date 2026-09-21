@@ -20,6 +20,10 @@ export async function GET(request: NextRequest) {
     requestId = ctx.requestId;
     requireAuthenticated(ctx);
 
+    // Intended visibility (Issue #28): this collection is an institution-
+    // internal directory (roster + meeting counts only, no meeting contents).
+    // Meeting contents on the detail endpoint additionally require body
+    // membership or body-management authority (see bodies/[id] GET).
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as any;
     const status = searchParams.get('status') as any;

@@ -1,29 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Select } from "@base-ui/react/select";
-import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
 import {
   X,
-  Signal,
-  UserPlus,
-  Check,
-  ChevronDown,
   ChevronLeft,
-  Clock3,
+  ChevronRight,
   Users,
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import type { StaffTask, TaskStatus } from "@/types/dashboard";
+import { STATUS_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
-import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { formatCompactDate } from "@/lib/format/date";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
-import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
+import { computeSubtaskStatusGuard } from "@/domain/tasks/subtask-status-guard";
+import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
 
@@ -32,6 +27,7 @@ export interface SubtaskDetailDrawerProps {
   onClose: () => void;
   subtask: StaffTask | null;
   canEdit?: boolean;
+  currentUser?: any;
   onSubtaskUpdated?: (updated: StaffTask) => void;
   /** All siblings of the current child (parent's subTasks) */
   siblings?: StaffTask[];
@@ -48,6 +44,7 @@ export function SubtaskDetailDrawer({
   onClose,
   subtask: initialSubtask,
   canEdit = true,
+  currentUser,
   onSubtaskUpdated,
   siblings = [],
   onSelectSibling,
@@ -60,13 +57,10 @@ export function SubtaskDetailDrawer({
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
-    setIsDeadlineEditorOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
-  const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const deadlineRef = React.useRef<HTMLDivElement>(null);
   const [personnelList, setPersonnelList] = React.useState<
     Array<{ id: string; name: string; email?: string; departmentName?: string }>
   >([]);
@@ -145,29 +139,6 @@ export function SubtaskDetailDrawer({
       .catch(() => {});
   }, [canEdit]);
 
-  // Close deadline popover on outside click
-  React.useEffect(() => {
-    if (!isDeadlineEditorOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (deadlineRef.current && !deadlineRef.current.contains(e.target as Node)) {
-        setIsDeadlineEditorOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isDeadlineEditorOpen]);
-
-  // Status & Priority objects
-  const currentStatusObj =
-    STATUS_OPTIONS.find((s) => s.value === subtask?.status) || STATUS_OPTIONS[0];
-
-  const currentPriorityVal =
-    (subtask as any)?.priority === "MEDIUM"
-      ? "NORMAL"
-      : (subtask as any)?.priority || "NORMAL";
-  const currentPriorityObj =
-    PRIORITY_OPTIONS.find((p) => p.value === currentPriorityVal) || PRIORITY_OPTIONS[2];
-
   const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
   // Dates
@@ -184,7 +155,30 @@ export function SubtaskDetailDrawer({
       : new Date(subtask.dueDate).toISOString().slice(0, 10)
     : "";
 
-  const dueInfo = computeDueStatus(subtask?.dueDate);
+
+  // Atomic clear of both dates
+  const handleClearDates = async () => {
+    if (!subtask) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
+    const [resStart, resDue] = await Promise.allSettled([
+      updateTaskStartDate(subtask.id, "", currentVersion),
+      updateTaskDueDate(subtask.id, "", currentVersion),
+    ]);
+    const startOk = resStart.status === "fulfilled" && resStart.value.ok;
+    const dueOk = resDue.status === "fulfilled" && resDue.value.ok;
+    if (!startOk && !dueOk) {
+      notifyError("Không thể xóa ngày", "Lỗi cập nhật");
+      return;
+    }
+    const nextVersion =
+      (dueOk ? (resDue as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
+      (startOk ? (resStart as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
+      currentVersion;
+    const updated = { ...subtask, startDate: "", dueDate: "", version: nextVersion } as StaffTask;
+    setSubtask(updated);
+    onSubtaskUpdated?.(updated);
+    notifySuccess("Đã xóa ngày");
+  };
 
   // Handlers
   const handleTitleChange = async (newTitle: string) => {
@@ -266,23 +260,6 @@ export function SubtaskDetailDrawer({
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
-  };
-
-  const handlePriorityChange = async (newPriority: TaskPriority) => {
-    if (!subtask) return;
-    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
-    const res = await updateTaskPriority(subtask.id, newPriority, currentVersion);
-    if (!res.ok) {
-      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
-      return;
-    }
-
-    const cleanPriority: TaskPriority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
-    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.version ?? (currentVersion ? currentVersion + 1 : 1);
-    const updated = { ...subtask, priority: cleanPriority, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
-    notifySuccess("Đã cập nhật độ ưu tiên việc thành phần");
   };
 
   const handleAssigneeChange = async (person: { id: string; name: string }) => {
@@ -370,6 +347,16 @@ export function SubtaskDetailDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
+  // Guard chuyển trạng thái — dùng quyền của chính việc con (hook phải ở trước early return)
+  const statusGuard = React.useMemo(() => {
+    if (!subtask) return null;
+    return computeSubtaskStatusGuard(
+      subtask as any,
+      currentUser,
+      (subtask as any).availableActions,
+    );
+  }, [subtask, currentUser]);
+
   if (!isOpen || !subtask) return null;
 
   // Sibling switcher data
@@ -379,12 +366,6 @@ export function SubtaskDetailDrawer({
 
   const rawDescription = (subtask as any).description || subtask.deliverableDescription || "";
   const description = rawDescription.replace(/^\[Tóm tắt\]\s*/i, "");
-
-  const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
-  const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
-  const selectedAssignee = personnelList.find((person) =>
-    person.id === (subtask as any).assigneeId || person.name === subtask.assigneeName
-  ) || null;
 
   return (
     <>
@@ -429,6 +410,30 @@ export function SubtaskDetailDrawer({
               <span className="text-[11px] font-mono tabular-nums text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded-full">
                 {siblingPosition}/{siblingTotal}
               </span>
+            )}
+            {onSelectSibling && siblingTotal > 1 && (
+              <>
+                <button
+                  type="button"
+                  disabled={currentIndex <= 0}
+                  onClick={() => currentIndex > 0 && onSelectSibling(siblings[currentIndex - 1])}
+                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  aria-label="Việc con trước"
+                  title="Việc con trước (↑)"
+                >
+                  <ChevronLeft className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  disabled={currentIndex >= siblingTotal - 1}
+                  onClick={() => currentIndex < siblingTotal - 1 && onSelectSibling(siblings[currentIndex + 1])}
+                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  aria-label="Việc con tiếp theo"
+                  title="Việc con tiếp theo (↓)"
+                >
+                  <ChevronRight className="size-3" />
+                </button>
+              </>
             )}
           </div>
 
@@ -493,9 +498,13 @@ export function SubtaskDetailDrawer({
                   title={`${sib.title}${rawAssignee ? ` • ${rawAssignee}` : ""}${formattedDueDate ? ` • Hạn ${formattedDueDate}` : ""}`}
                 >
                   <span className={cn("size-1.5 shrink-0 rounded-full", statusObj.dotClass)} />
+                  {computeDueStatus(sib.dueDate).isOverdue && (
+                    <span className="size-1 shrink-0 rounded-full bg-rose-500" aria-hidden="true" />
+                  )}
                   <span
                     className={cn(
-                      "max-w-[130px] sm:max-w-[170px] truncate",
+                      "truncate",
+                      isSelected ? "max-w-[200px] sm:max-w-[260px]" : "max-w-[130px] sm:max-w-[170px]",
                       isCompleted && "line-through opacity-70"
                     )}
                   >
@@ -529,134 +538,33 @@ export function SubtaskDetailDrawer({
             />
           </div>
 
-          <section aria-label="Thuộc tính việc thành phần" className="mt-4 space-y-0.5 text-xs select-none">
-            <Select.Root
+          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none">
+            <TaskStatusSelect
               value={subtask.status}
+              options={statusGuard?.options.map((opt) => ({
+                value: opt.status as TaskStatus,
+                label: opt.label,
+                dotClass: STATUS_OPTIONS.find((s) => s.value === opt.status)?.dotClass ?? "",
+                iconClass: STATUS_OPTIONS.find((s) => s.value === opt.status)?.iconClass ?? "",
+                disabled: opt.disabled,
+                reason: opt.reason,
+              })) ?? STATUS_OPTIONS.map((opt) => ({ ...opt, disabled: false }))}
+              disabled={!canEdit || statusGuard?.readonly}
               onValueChange={(value) => void handleStatusChange(value as TaskStatus)}
-              disabled={!canEdit}
-            >
-              <Select.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                <span className={cn("size-2 shrink-0 rounded-full", currentStatusObj.dotClass)} />
-                <Select.Value>{() => <span className="font-normal text-foreground">{currentStatusObj.label}</span>}</Select.Value>
-                {canEdit && <Select.Icon><ChevronDown className="ml-auto size-3 text-muted-foreground/60" /></Select.Icon>}
-              </Select.Trigger>
-              <Select.Portal>
-                <Select.Positioner className="z-50" align="start" sideOffset={4}>
-                  <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-                    <Select.List>
-                      {STATUS_OPTIONS.map((option) => (
-                        <Select.Item
-                          key={option.value}
-                          value={option.value}
-                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span className={cn("size-1.5 rounded-full", option.dotClass)} />
-                            <Select.ItemText>{option.label}</Select.ItemText>
-                          </span>
-                          <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
-                        </Select.Item>
-                      ))}
-                    </Select.List>
-                  </Select.Popup>
-                </Select.Positioner>
-              </Select.Portal>
-            </Select.Root>
+            />
 
-            <Select.Root
-              value={currentPriorityVal}
-              onValueChange={(value) => void handlePriorityChange(value as TaskPriority)}
-              disabled={!canEdit}
-            >
-              <Select.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                <Signal className={cn("size-3.5 shrink-0", currentPriorityObj.iconClass)} />
-                <Select.Value>{() => <span className="font-normal text-foreground">{currentPriorityObj.label}</span>}</Select.Value>
-                {canEdit && <Select.Icon><ChevronDown className="ml-auto size-3 text-muted-foreground/60" /></Select.Icon>}
-              </Select.Trigger>
-              <Select.Portal>
-                <Select.Positioner className="z-50" align="start" sideOffset={4}>
-                  <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-                    <Select.List>
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <Select.Item
-                          key={option.value}
-                          value={option.value}
-                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Signal className={cn("size-3", option.iconClass)} />
-                            <Select.ItemText>{option.label}</Select.ItemText>
-                          </span>
-                          <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
-                        </Select.Item>
-                      ))}
-                    </Select.List>
-                  </Select.Popup>
-                </Select.Positioner>
-              </Select.Portal>
-            </Select.Root>
-
-            <Combobox.Root
+            <TaskAssigneePicker
               items={personnelList}
-              value={selectedAssignee}
-              onValueChange={(person) => {
-                if (person) void handleAssigneeChange(person);
-              }}
-              itemToStringLabel={(person) => person.name}
-              itemToStringValue={(person) => person.id}
-              isItemEqualToValue={(person, value) => person.id === value.id}
-              filter={(person, query) => {
-                const normalized = query.trim().toLocaleLowerCase("vi");
-                if (!normalized) return true;
-                return [person.name, person.email, person.departmentName]
-                  .filter(Boolean)
-                  .some((text) => text!.toLocaleLowerCase("vi").includes(normalized));
-              }}
-              autoHighlight
-              disabled={!canEdit || isReassigning}
-            >
-              <Combobox.Trigger className="flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                {isReassigning ? (
-                  <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
-                ) : (
-                  <UserPlus className="size-3.5 shrink-0 text-muted-foreground" />
-                )}
-                <span className="truncate font-normal text-foreground">{assigneeDisplay}</span>
-              </Combobox.Trigger>
-              <Combobox.Portal>
-                <Combobox.Positioner className="z-50" align="start" sideOffset={4}>
-                  <Combobox.Popup className="w-64 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-                    <Combobox.InputGroup className="m-1 border-b border-border/40 pb-1.5">
-                      <Combobox.Input
-                        placeholder="Tìm cán bộ..."
-                        className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background"
-                      />
-                    </Combobox.InputGroup>
-                    <Combobox.Empty className="px-2 py-3 text-center text-[11px] text-muted-foreground">
-                      Không tìm thấy cán bộ phù hợp
-                    </Combobox.Empty>
-                    <Combobox.List className="max-h-64 overflow-y-auto overscroll-contain outline-none">
-                      {(person) => (
-                        <Combobox.Item
-                          key={person.id}
-                          value={person}
-                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate">{person.name}</span>
-                            {person.departmentName && <span className="block truncate text-[10px] text-muted-foreground">{person.departmentName}</span>}
-                          </span>
-                          <Combobox.ItemIndicator><Check className="size-3 text-primary" /></Combobox.ItemIndicator>
-                        </Combobox.Item>
-                      )}
-                    </Combobox.List>
-                  </Combobox.Popup>
-                </Combobox.Positioner>
-              </Combobox.Portal>
-            </Combobox.Root>
+              assigneeId={(subtask as any).assigneeId}
+              assigneeName={subtask.assigneeName}
+              displayName={assigneeDisplay}
+              disabled={!canEdit}
+              pending={isReassigning}
+              onSelect={handleAssigneeChange}
+            />
 
             {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
-              <div className="flex min-h-7 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+              <div className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted/40">
                 <Users className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate text-muted-foreground">
                   {subtask.coAssignees.map((co: any) => co.name).join(", ")}
@@ -664,56 +572,20 @@ export function SubtaskDetailDrawer({
               </div>
             )}
 
-            <div ref={deadlineRef} className="relative">
-              <button
-                type="button"
-                onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
-                disabled={!canEdit}
-                aria-expanded={isDeadlineEditorOpen}
-                className={cn(
-                  "flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors",
-                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default",
-                  dueInfo.isOverdue && "text-rose-700"
-                )}
-              >
-                <Clock3 className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="tabular-nums text-foreground font-normal">
-                  {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
-                </span>
-              </button>
-
-              {isDeadlineEditorOpen && canEdit && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Bắt đầu</span>
-                    <VietnameseDatePicker
-                      value={startDateIso}
-                      onChange={handleStartDateChange}
-                      placeholder="Bắt đầu"
-                      variant="chip"
-                      align="left"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Hạn chót</span>
-                    <VietnameseDatePicker
-                      value={dueDateIso}
-                      onChange={handleDueDateChange}
-                      placeholder="Hạn chót"
-                      variant="chip"
-                      align="right"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+            <TaskDateRange
+              startDateIso={startDateIso}
+              dueDateIso={dueDateIso}
+              canEdit={canEdit}
+              onStartDateChange={handleStartDateChange}
+              onDueDateChange={handleDueDateChange}
+              onClearDates={handleClearDates}
+            />
           </section>
 
           <section className="mt-3 flex flex-1 flex-col">
+            {!description && !canEdit && (
+              <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
+            )}
             <TaskNotionBlockContent
               key={subtask.id}
               taskId={subtask.id}

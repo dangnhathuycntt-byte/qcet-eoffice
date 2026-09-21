@@ -8,8 +8,7 @@ import {
   MAX_PAYLOAD_SIZE,
   assertJsonContentType,
 } from '@/server/api/validation';
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from '@/server/api/rate-limit';
-import { assertRateLimit } from '@/server/security/rate-limit';
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded, assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError } from '@/server/api/errors';
 import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
@@ -62,7 +61,7 @@ export async function GET(req: Request) {
 
     const searchQuery = validatedQuery.q || validatedQuery.search;
     if (searchQuery && searchQuery.trim().length > 0) {
-      assertRateLimit(authUser.id, 'SEARCH');
+      await assertRateLimit(authUser.id, 'SEARCH');
     }
 
     // Default pagination limit is 50, bounded to [1, 200]
@@ -166,16 +165,19 @@ export async function POST(req: Request) {
 
     const authUser = requireAuthenticated(context);
 
-    const rateResult = await checkRateLimit('MUTATION', authUser.id);
+    // Fix #4: restore MUTATIONS_SENSITIVE (30/min) consistent with tasks/[id]/actions
+    const rateResult = await checkRateLimit('MUTATIONS_SENSITIVE', authUser.id);
     if (!rateResult.success) {
-      await logRateLimitExceeded('MUTATION', authUser.id, req.url, authUser.id);
+      // Fix #5: capture retryAfter BEFORE any async call to avoid negative Retry-After
+      const retryAfter = rateResult.retryAfter;
+      logRateLimitExceeded('MUTATIONS_SENSITIVE', authUser.id, req.url, authUser.id).catch(() => undefined);
       return NextResponse.json(
-        { error: 'Too Many Requests', retryAt: rateResult.resetAt.toISOString() },
+        { error: 'Too Many Requests', code: 'RATE_LIMITED', retryAt: rateResult.resetAt.toISOString() },
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
-            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATION.limit),
+            'Retry-After': String(Math.max(1, retryAfter)),
+            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATIONS_SENSITIVE.limit),
             'X-RateLimit-Remaining': String(rateResult.remaining),
           },
         },

@@ -1,56 +1,107 @@
-import { test, describe, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert/strict';
-import { NextRequest } from 'next/server';
+import nextEnvPkg from '@next/env';
+const loadEnvConfig = (nextEnvPkg as any)?.loadEnvConfig || (nextEnvPkg as any)?.default?.loadEnvConfig || (nextEnvPkg as any);
+if (typeof loadEnvConfig === 'function') {
+  loadEnvConfig(process.cwd());
+}
+
+if (!process.env.QCET_ALLOW_DB_TESTS) {
+  process.env.QCET_ALLOW_DB_TESTS = '1';
+}
+if (!process.env.NODE_ENV) {
+  (process.env as any).NODE_ENV = 'test';
+}
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/qcet_eoffice')) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL.replace(/\/qcet_eoffice(\?.*)?$/, '/qcet_test$1');
+}
 
 const TEST_SECRET = 'test-secret-key-for-authjs-v5-validation-32chars';
 process.env.AUTH_SECRET = TEST_SECRET;
 process.env.JWT_SECRET = TEST_SECRET;
 
+import { test, describe, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
+
 import { middleware } from '../src/middleware';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 
 describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
-  const originalEnv = { ...process.env };
+  const runId = `mw-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  beforeEach(() => {
-    process.env.AUTH_SECRET = TEST_SECRET;
-    process.env.JWT_SECRET = TEST_SECRET;
+  let staffUser: any;
+  let adminUser: any;
+  let bghUser: any;
+
+  let staffToken: string;
+  let adminToken: string;
+  let bghToken: string;
+  let banGiamHieuToken: string;
+
+  before(async () => {
+    staffUser = await prisma.user.create({
+      data: {
+        email: `mw-staff-${runId}@cdktcnqn.edu.vn`,
+        name: 'Nguyen Van Chuyen Vien',
+        role: UserRole.CHUYEN_VIEN,
+        isActive: true,
+      },
+    });
+
+    adminUser = await prisma.user.create({
+      data: {
+        email: `mw-admin-${runId}@cdktcnqn.edu.vn`,
+        name: 'Quan tri vien He thong',
+        role: UserRole.ADMIN,
+        isActive: true,
+      },
+    });
+
+    bghUser = await prisma.user.create({
+      data: {
+        email: `mw-bgh-${runId}@cdktcnqn.edu.vn`,
+        name: 'Hieu truong',
+        role: UserRole.BAN_GIAM_HIEU,
+        isActive: true,
+      },
+    });
+
+    staffToken = signSessionToken({
+      id: staffUser.id,
+      email: staffUser.email,
+      name: staffUser.name,
+      role: staffUser.role,
+    });
+
+    adminToken = signSessionToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      name: adminUser.name,
+      role: adminUser.role,
+    });
+
+    bghToken = signSessionToken({
+      id: bghUser.id,
+      email: bghUser.email,
+      name: bghUser.name,
+      role: 'BGH',
+    });
+
+    banGiamHieuToken = signSessionToken({
+      id: bghUser.id,
+      email: bghUser.email,
+      name: bghUser.name,
+      role: bghUser.role,
+    });
   });
 
-  afterEach(() => {
-    process.env = { ...originalEnv };
-  });
-
-  const staffToken = signSessionToken({
-    id: 'user-chuyen-vien-1',
-    email: 'chuyenvien@cdktcnqn.edu.vn',
-    name: 'Nguyễn Văn Chuyên Viên',
-    role: 'CHUYEN_VIEN',
-    departmentId: 'PHONG_DAO_TAO',
-  });
-
-  const adminToken = signSessionToken({
-    id: 'user-admin-1',
-    email: 'admin@cdktcnqn.edu.vn',
-    name: 'Quản trị viên Hệ thống',
-    role: 'ADMIN',
-    departmentId: 'BGH',
-  });
-
-  const bghToken = signSessionToken({
-    id: 'user-bgh-1',
-    email: 'hieutruong@cdktcnqn.edu.vn',
-    name: 'Hiệu trưởng',
-    role: 'BGH',
-    departmentId: 'BGH',
-  });
-
-  const banGiamHieuToken = signSessionToken({
-    id: 'user-bgh-2',
-    email: 'phohieutruong@cdktcnqn.edu.vn',
-    name: 'Phó Hiệu trưởng',
-    role: 'BAN_GIAM_HIEU',
-    departmentId: 'BGH',
+  after(async () => {
+    const ids = [staffUser?.id, adminUser?.id, bghUser?.id].filter(Boolean);
+    if (ids.length > 0) {
+      await prisma.session.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.user.deleteMany({ where: { id: { in: ids } } });
+    }
   });
 
   const createApiRequest = (
@@ -111,6 +162,23 @@ describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
       const data = await res.json();
       assert.equal(data.error, 'Unauthorized');
     });
+
+    test('JWT for unknown user fails closed with 401', async () => {
+      const ghostToken = signSessionToken({
+        id: `ghost-${runId}`,
+        email: `ghost-${runId}@cdktcnqn.edu.vn`,
+        name: 'Ghost',
+        role: 'CHUYEN_VIEN',
+      });
+      const req = createApiRequest('https://eoffice.qcet.edu.vn/api/tasks', {
+        bearerToken: ghostToken,
+      });
+      const res = await middleware(req);
+
+      assert.equal(res.status, 401);
+      const data = await res.json();
+      assert.equal(data.error, 'Unauthorized');
+    });
   });
 
   describe('2. Role-based access control for /api/admin/*', () => {
@@ -147,8 +215,17 @@ describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
     });
   });
 
-  describe('3. Role-based access control for /api/executive/*', () => {
-    test('CHUYEN_VIEN accessing /api/executive/* returns 403 JSON', async () => {
+  describe('3. /api/executive/* defers business authority to canonical layer (Issue #27 §4)', () => {
+    test('request without session to /api/executive/* returns 401 JSON', async () => {
+      const req = createApiRequest('https://eoffice.qcet.edu.vn/api/executive/resolutions');
+      const res = await middleware(req);
+
+      assert.equal(res.status, 401);
+      const data = await res.json();
+      assert.equal(data.error, 'Unauthorized');
+    });
+
+    test('authenticated CHUYEN_VIEN passes middleware; business denial is enforced by route handler', async () => {
       const req = createApiRequest(
         'https://eoffice.qcet.edu.vn/api/executive/resolutions',
         {
@@ -157,12 +234,24 @@ describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
       );
       const res = await middleware(req);
 
-      assert.equal(res.status, 403);
-      const data = await res.json();
-      assert.equal(data.error, 'Forbidden');
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get('x-middleware-next'), '1');
     });
 
-    test('BGH role accessing /api/executive/* passes through', async () => {
+    test('authenticated ADMIN passes middleware without being granted statutory authority here', async () => {
+      const req = createApiRequest(
+        'https://eoffice.qcet.edu.vn/api/executive/resolutions',
+        {
+          bearerToken: adminToken,
+        }
+      );
+      const res = await middleware(req);
+
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get('x-middleware-next'), '1');
+    });
+
+    test('BAN_GIAM_HIEU role accessing /api/executive/* passes through', async () => {
       const req = createApiRequest(
         'https://eoffice.qcet.edu.vn/api/executive/resolutions',
         {
@@ -175,7 +264,7 @@ describe('QCET Centralized API Middleware Protection (Issue #27)', () => {
       assert.equal(res.headers.get('x-middleware-next'), '1');
     });
 
-    test('BAN_GIAM_HIEU role accessing /api/executive/* passes through', async () => {
+    test('BAN_GIAM_HIEU via cookie passes through', async () => {
       const req = createApiRequest(
         'https://eoffice.qcet.edu.vn/api/executive/resolutions',
         {

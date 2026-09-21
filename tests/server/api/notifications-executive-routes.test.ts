@@ -2,7 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { GET as getNotificationsRoute } from '@/app/api/notifications/route';
 import { POST as markAllReadRoute } from '@/app/api/notifications/read-all/route';
@@ -29,6 +29,8 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
   let testTaskId: string;
   let staffNotifId: string;
   let otherNotifId: string;
+  let execUnitId: string | null = null;
+  let execAssignmentId: string | null = null;
   const createdResolutionIds: string[] = [];
   const createdNotificationIds: string[] = [];
 
@@ -57,6 +59,32 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
     staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role });
     otherToken = signSessionToken({ id: otherUser.id, email: otherUser.email, name: otherUser.name, role: otherUser.role });
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
+
+    // 2b. Canonical statutory mandate (Issue #27): executive authority
+    // requires an ACTIVE executive PositionAssignment, never the role
+    // string. Equip the seed BGH user so this file keeps testing the
+    // authorized flows (CSRF/415/CRUD/audit) under the new contract.
+    let rectorDef = await prisma.positionDefinition.findUnique({ where: { code: 'HIEU_TRUONG' } });
+    if (!rectorDef) {
+      rectorDef = await prisma.positionDefinition.create({
+        data: { code: 'HIEU_TRUONG', title: 'Hieu truong', group: JobCatalogGroup.LDPU, isLeadership: true },
+      });
+    }
+    const execUnit = await prisma.organizationalUnit.create({
+      data: { code: `U-T12-${Date.now()}`, name: 'Unit Task12 Exec', type: UnitType.DEPARTMENT },
+    });
+    execUnitId = execUnit.id;
+    const execAssignment = await prisma.positionAssignment.create({
+      data: {
+        userId: executiveUser.id,
+        unitId: execUnit.id,
+        positionDefinitionId: rectorDef.id,
+        status: AssignmentStatus.ACTIVE,
+        type: AssignmentType.PRIMARY,
+        effectiveFrom: new Date('2020-01-01'),
+      },
+    });
+    execAssignmentId = execAssignment.id;
 
     // 3. Find or create a test task for executive resolutions
     let task = await prisma.task.findFirst();
@@ -117,6 +145,12 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
       await prisma.notification.deleteMany({
         where: { id: { in: createdNotificationIds } },
       });
+    }
+    if (execAssignmentId) {
+      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } });
+    }
+    if (execUnitId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
   });
 

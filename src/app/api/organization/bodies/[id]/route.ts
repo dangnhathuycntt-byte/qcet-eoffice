@@ -12,7 +12,7 @@ import { AddBodyMembershipSchema } from '@/contracts/meeting';
 import { logAuditEvent, AuditAction } from '@/lib/db/audit';
 import { NotFoundError } from '@/server/api/errors';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
-import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember } from '@/server/policies';
+import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember, canManageOrganizationalBodies } from '@/server/policies';
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +23,7 @@ export async function GET(
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
-    requireAuthenticated(ctx);
+    const authUser = requireAuthenticated(ctx);
 
     const body = await prisma.organizationalBody.findUnique({
       where: { id: params.id },
@@ -50,6 +50,21 @@ export async function GET(
 
     if (!body) {
       throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
+    }
+
+    // Intended visibility (Issue #28): the body roster is an institution-
+    // internal directory visible to any authenticated user, but the recent
+    // meetings payload is only disclosed to body members and users with
+    // body-management authority. Unaffiliated callers receive the roster
+    // with an empty meetings list instead of meeting contents.
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const isPrivileged =
+      canManageOrganizationalBodies(authContext) ||
+      body.memberships.some((m) => m.userId != null && m.userId === authUser.id);
+
+    if (!isPrivileged) {
+      const { meetings: _withheld, ...roster } = body;
+      return apiSuccess({ ...roster, meetings: [] }, { requestId, status: 200 });
     }
 
     return apiSuccess(body, { requestId, status: 200 });

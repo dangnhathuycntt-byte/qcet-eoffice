@@ -156,21 +156,19 @@ describe('Business Flow Rate Limiting Engine', () => {
   });
 
   describe('assertRateLimit', () => {
-    it('does not throw when request is within limit', () => {
-      assert.doesNotThrow(() => {
-        assertRateLimit('allowed-user', { limit: 5, windowMs: 10000 });
-      });
+    it('does not throw when request is within limit', async () => {
+      await assertRateLimit('allowed-user', { limit: 5, windowMs: 10000 });
     });
 
-    it('throws RateLimitError with 429 status and retryAfter property when limit exceeded', () => {
+    it('throws RateLimitError with 429 status and retryAfter property when limit exceeded', async () => {
       const config: RateLimitConfig = { limit: 1, windowMs: 10000 };
       const key = 'test:assert:user';
       const baseTime = 5000000;
 
-      assertRateLimit(key, config, undefined, baseTime);
+      await assertRateLimit(key, config, undefined, baseTime);
 
-      assert.throws(
-        () => assertRateLimit(key, config, 'Custom rate limit message', baseTime + 1000),
+      await assert.rejects(
+        async () => assertRateLimit(key, config, 'Custom rate limit message', baseTime + 1000),
         (err: unknown) => {
           assert.ok(err instanceof RateLimitError);
           assert.ok(err instanceof ApiError);

@@ -9,8 +9,7 @@ import {
   assertQueryStringLength,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/api/rate-limit";
-import { assertRateLimit } from "@/server/security/rate-limit";
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded, assertRateLimit } from "@/server/security/rate-limit";
 import { canReadDocument, canCreateDocument } from "@/server/policies/document-policy";
 import { toDocumentListDTOArray, toDocumentDetailDTO } from "@/server/dto/document-dto";
 import { DocumentQuerySchema, CreateDocumentSchema } from "@/contracts/documents";
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const searchQuery = query.search || query.q;
     if (searchQuery && searchQuery.trim().length > 0) {
-      assertRateLimit(authUser.id, "SEARCH");
+      await assertRateLimit(authUser.id, "SEARCH");
     }
 
     let docType: DocumentType | undefined;
@@ -109,13 +108,14 @@ export async function POST(request: NextRequest) {
     // 3. Rate limiting on mutations
     const rateResult = await checkRateLimit('MUTATION', authUser.id);
     if (!rateResult.success) {
-      await logRateLimitExceeded('MUTATION', authUser.id, request.url, authUser.id);
+      const retryAfter = rateResult.retryAfter;
+      logRateLimitExceeded('MUTATION', authUser.id, request.url, authUser.id).catch(() => undefined);
       return NextResponse.json(
-        { error: 'Too Many Requests', retryAt: rateResult.resetAt.toISOString() },
+        { error: 'Too Many Requests', code: 'RATE_LIMITED', retryAt: rateResult.resetAt.toISOString() },
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'Retry-After': String(Math.max(1, retryAfter)),
             'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATION.limit),
             'X-RateLimit-Remaining': String(rateResult.remaining),
           },
