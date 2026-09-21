@@ -934,7 +934,8 @@ export function TaskDetailPage({
       isOpen={Boolean(activeSubtask)}
       onClose={handleCloseSubtaskDrawer}
       subtask={activeSubtask}
-      canEdit={canEdit}
+      canEdit={Boolean(activeSubtask && (activeSubtask as any).availableActions?.includes('task.update_execution'))}
+      currentUser={currentUser}
       onSubtaskUpdated={handleSubtaskUpdated}
       siblings={subTasks}
       onSelectSibling={handleOpenSubtaskDrawer}
