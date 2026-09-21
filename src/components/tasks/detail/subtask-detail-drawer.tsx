@@ -11,9 +11,14 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   Users,
   Plus,
+  CircleDashed,
+  Activity,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -185,6 +190,45 @@ export function SubtaskDetailDrawer({
     : "";
 
   const dueInfo = computeDueStatus(subtask?.dueDate);
+
+  // nearDue: reuse computeDueStatus text to detect ≤2-day window without re-parsing
+  const nearDue = !dueInfo.isOverdue && dueDateIso && (
+    dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" ||
+    dueInfo.text === "Còn 2 ngày"
+  );
+
+  // Status icon map (static, no spinners)
+  const STATUS_ICONS: Record<string, React.ElementType> = {
+    NOT_STARTED: CircleDashed,
+    IN_PROGRESS: Activity,
+    WAITING_APPROVAL: Clock,
+    COMPLETED: CheckCircle2,
+  };
+  const StatusIcon = STATUS_ICONS[currentStatusObj.value] ?? CircleDashed;
+
+  // Atomic clear of both dates
+  const handleClearDates = async () => {
+    if (!subtask) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
+    const [resStart, resDue] = await Promise.allSettled([
+      updateTaskStartDate(subtask.id, "", currentVersion),
+      updateTaskDueDate(subtask.id, "", currentVersion),
+    ]);
+    const startOk = resStart.status === "fulfilled" && resStart.value.ok;
+    const dueOk = resDue.status === "fulfilled" && resDue.value.ok;
+    if (!startOk && !dueOk) {
+      notifyError("Không thể xóa ngày", "Lỗi cập nhật");
+      return;
+    }
+    const nextVersion =
+      (dueOk ? (resDue as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
+      (startOk ? (resStart as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
+      currentVersion;
+    const updated = { ...subtask, startDate: "", dueDate: "", version: nextVersion } as StaffTask;
+    setSubtask(updated);
+    onSubtaskUpdated?.(updated);
+    notifySuccess("Đã xóa ngày");
+  };
 
   // Handlers
   const handleTitleChange = async (newTitle: string) => {
@@ -430,6 +474,30 @@ export function SubtaskDetailDrawer({
                 {siblingPosition}/{siblingTotal}
               </span>
             )}
+            {onSelectSibling && siblingTotal > 1 && (
+              <>
+                <button
+                  type="button"
+                  disabled={currentIndex <= 0}
+                  onClick={() => currentIndex > 0 && onSelectSibling(siblings[currentIndex - 1])}
+                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  aria-label="Việc con trước"
+                  title="Việc con trước (↑)"
+                >
+                  <ChevronLeft className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  disabled={currentIndex >= siblingTotal - 1}
+                  onClick={() => currentIndex < siblingTotal - 1 && onSelectSibling(siblings[currentIndex + 1])}
+                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  aria-label="Việc con tiếp theo"
+                  title="Việc con tiếp theo (↓)"
+                >
+                  <ChevronRight className="size-3" />
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -493,9 +561,13 @@ export function SubtaskDetailDrawer({
                   title={`${sib.title}${rawAssignee ? ` • ${rawAssignee}` : ""}${formattedDueDate ? ` • Hạn ${formattedDueDate}` : ""}`}
                 >
                   <span className={cn("size-1.5 shrink-0 rounded-full", statusObj.dotClass)} />
+                  {computeDueStatus(sib.dueDate).isOverdue && (
+                    <span className="size-1 shrink-0 rounded-full bg-rose-500" aria-hidden="true" />
+                  )}
                   <span
                     className={cn(
-                      "max-w-[130px] sm:max-w-[170px] truncate",
+                      "truncate",
+                      isSelected ? "max-w-[200px] sm:max-w-[260px]" : "max-w-[130px] sm:max-w-[170px]",
                       isCompleted && "line-through opacity-70"
                     )}
                   >
@@ -536,7 +608,7 @@ export function SubtaskDetailDrawer({
               disabled={!canEdit}
             >
               <Select.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                <span className={cn("size-2 shrink-0 rounded-full", currentStatusObj.dotClass)} />
+                <StatusIcon className={cn("size-3.5 shrink-0", currentStatusObj.iconClass)} />
                 <Select.Value>{() => <span className="font-normal text-foreground">{currentStatusObj.label}</span>}</Select.Value>
                 {canEdit && <Select.Icon><ChevronDown className="ml-auto size-3 text-muted-foreground/60" /></Select.Icon>}
               </Select.Trigger>
@@ -619,9 +691,15 @@ export function SubtaskDetailDrawer({
                 {isReassigning ? (
                   <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
                 ) : (
-                  <UserPlus className="size-3.5 shrink-0 text-muted-foreground" />
+                  <UserPlus className={cn(
+                    "size-3.5 shrink-0",
+                    selectedAssignee ? "text-muted-foreground" : "text-primary/60"
+                  )} />
                 )}
-                <span className="truncate font-normal text-foreground">{assigneeDisplay}</span>
+                <span className={cn(
+                  "truncate font-normal",
+                  selectedAssignee ? "text-foreground" : "text-muted-foreground"
+                )}>{assigneeDisplay}</span>
               </Combobox.Trigger>
               <Combobox.Portal>
                 <Combobox.Positioner className="z-50" align="start" sideOffset={4}>
@@ -664,7 +742,7 @@ export function SubtaskDetailDrawer({
               </div>
             )}
 
-            <div ref={deadlineRef} className="relative">
+            <div ref={deadlineRef} className="relative group/date-row">
               <button
                 type="button"
                 onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
@@ -676,11 +754,28 @@ export function SubtaskDetailDrawer({
                   dueInfo.isOverdue && "text-rose-700"
                 )}
               >
-                <Clock3 className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="tabular-nums text-foreground font-normal">
+                <Clock3 className={cn(
+                  "size-3.5 shrink-0",
+                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  "tabular-nums font-normal",
+                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "text-foreground"
+                )}>
                   {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
                 </span>
               </button>
+              {canEdit && (startDateIso || dueDateIso) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); void handleClearDates(); }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  aria-label="Xóa ngày"
+                  title="Xóa ngày"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
 
               {isDeadlineEditorOpen && canEdit && (
                 <div className="absolute left-0 right-0 top-full z-30 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
@@ -714,6 +809,9 @@ export function SubtaskDetailDrawer({
           </section>
 
           <section className="mt-3 flex flex-1 flex-col">
+            {!description && !canEdit && (
+              <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
+            )}
             <TaskNotionBlockContent
               key={subtask.id}
               taskId={subtask.id}

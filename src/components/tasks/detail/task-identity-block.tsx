@@ -78,30 +78,35 @@ export const STATUS_OPTIONS: Array<{
   label: string;
   colorClass: string;
   dotClass: string;
+  iconClass: string;
 }> = [
   {
     value: "NOT_STARTED",
     label: "Mới",
     colorClass: "text-muted-foreground bg-muted/60 border-border/60",
     dotClass: "bg-muted-foreground/60",
+    iconClass: "text-muted-foreground/60",
   },
   {
     value: "IN_PROGRESS",
     label: "Đang thực hiện",
     colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
     dotClass: "bg-blue-600",
+    iconClass: "text-blue-600",
   },
   {
     value: "WAITING_APPROVAL",
     label: "Chờ duyệt",
     colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
     dotClass: "bg-amber-600",
+    iconClass: "text-amber-600",
   },
   {
     value: "COMPLETED",
     label: "Hoàn thành",
     colorClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/80",
     dotClass: "bg-emerald-600",
+    iconClass: "text-emerald-600",
   },
 ];
 
