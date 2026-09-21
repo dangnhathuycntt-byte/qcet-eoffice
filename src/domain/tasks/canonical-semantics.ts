@@ -78,6 +78,37 @@ export function mapDbStatusToLifecycle(dbStatus: string): TaskLifecycleStatus {
 }
 
 /**
+ * Map any raw database status to the 4 canonical UI display statuses.
+ *
+ * Unlike `mapDbStatusToLifecycle` (7 lifecycle values), this collapses into the
+ * 4 statuses the UI presents in dropdowns and property controls:
+ *   NOT_STARTED | IN_PROGRESS | WAITING_APPROVAL | COMPLETED
+ *
+ * CANCELLED maps to itself because it is a valid display state in some views
+ * (table badges, batch actions). Consumers that only show the 4 core states
+ * should filter it out explicitly.
+ */
+export function normalizeDisplayStatus(
+  raw: string | null | undefined,
+): 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING_APPROVAL' | 'COMPLETED' | 'CANCELLED' {
+  const lifecycle = mapDbStatusToLifecycle(raw ?? '');
+  switch (lifecycle) {
+    case 'COMPLETED':
+      return 'COMPLETED';
+    case 'IN_PROGRESS':
+    case 'OVERDUE':
+      return 'IN_PROGRESS';
+    case 'WAITING_APPROVAL':
+    case 'PENDING_EXECUTIVE_APPROVAL':
+      return 'WAITING_APPROVAL';
+    case 'CANCELLED':
+      return 'CANCELLED';
+    default:
+      return 'NOT_STARTED';
+  }
+}
+
+/**
  * Lifecycle-only completion invariant.
  *
  * Completion is a lifecycle property derived SOLELY from the canonical
@@ -350,3 +381,4 @@ export function reconcileTaskCounts(
     },
   };
 }
+

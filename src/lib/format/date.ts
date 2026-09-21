@@ -249,3 +249,22 @@ export function formatDateTime(
   if (!p || !p.hasTime) return fallback;
   return `${pad2(p.day)}/${pad2(p.month)}/${p.year} ${pad2(p.hour)}:${pad2(p.minute)}`;
 }
+
+/**
+ * Extract an ISO date string (`YYYY-MM-DD`) from any date-like input, returning
+ * an empty string when the input is missing or invalid.
+ *
+ * This is a convenience alias for `formatIsoDate(input, '')` — use it in UI
+ * components where an empty string (rather than the `"-"` fallback) is the
+ * correct sentinel for "no date set".
+ *
+ * All calendar arithmetic goes through `toIctDateTimeParts` so the extracted
+ * day is always the ICT (UTC+7) day, not the UTC day.  This fixes a prior bug
+ * where inline code did `.slice(0, 10)` on a UTC ISO string, which could
+ * produce the wrong calendar date after midnight ICT.
+ */
+export function extractDateIso(
+  input: Date | string | number | null | undefined,
+): string {
+  return formatIsoDate(input, '');
+}

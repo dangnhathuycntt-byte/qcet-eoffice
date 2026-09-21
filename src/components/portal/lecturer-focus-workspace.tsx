@@ -47,6 +47,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { SubmitDeliverableModal } from "./submit-deliverable-modal";
 import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
 import { StaffAttentionHub } from "@/components/workspace";
@@ -369,65 +370,17 @@ export function sortStaffTasks(
 // ============================================================================
 
 export function renderStatusBadge(
-  status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL"
+  status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL" | string
 ) {
-  switch (status) {
-    case "PENDING_EXECUTIVE_APPROVAL":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-xs font-medium"
-        >
-          Chờ BGH duyệt
-        </Badge>
-      );
-    case "IN_PROGRESS":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-blue-500/10 text-blue-700 border-blue-500/30 text-xs font-medium"
-        >
-          Đang thực hiện
-        </Badge>
-      );
-    case "NEEDS_REVIEW":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-purple-500/10 text-purple-700 border-purple-500/30 text-xs font-medium"
-        >
-          Chờ thẩm định
-        </Badge>
-      );
-    case "BLOCKED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-rose-500/10 text-rose-700 border-rose-500/30 text-xs font-medium"
-        >
-          Bị nghẽn
-        </Badge>
-      );
-    case "COMPLETED":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-xs font-medium"
-        >
-          Đã hoàn thành
-        </Badge>
-      );
-    case "NEW":
-    default:
-      return (
-        <Badge
-          variant="outline"
-          className="bg-muted text-muted-foreground border-border text-xs font-medium"
-        >
-          Mới tiếp nhận
-        </Badge>
-      );
-  }
+  const config = getStatusDisplay(status);
+  return (
+    <Badge
+      variant="outline"
+      className={cn(config.badgeClassName || config.colorClass, "text-xs font-medium")}
+    >
+      {config.label}
+    </Badge>
+  );
 }
 
 export function getPageNumbers(current: number, total: number): (number | string)[] {

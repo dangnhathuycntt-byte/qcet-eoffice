@@ -6,7 +6,6 @@ import {
   Star,
   Clock,
   CheckCircle2,
-  Circle,
   AlertTriangle,
   User,
   Calendar,
@@ -31,6 +30,7 @@ import {
   updateTaskDueDate,
   deleteTask,
 } from "@/lib/tasks/task-actions";
+import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -216,13 +216,6 @@ export function TaskContextMenu({
     }
   };
 
-  const STATUS_OPTIONS: Array<{ status: TaskStatus; label: string; icon: typeof Circle; color: string }> = [
-    { status: "NOT_STARTED", label: "Chưa bắt đầu", icon: Circle, color: "text-slate-400" },
-    { status: "IN_PROGRESS", label: "Đang làm", icon: Clock, color: "text-blue-600" },
-    { status: "WAITING_APPROVAL", label: "Chờ duyệt", icon: AlertTriangle, color: "text-amber-500" },
-    { status: "COMPLETED", label: "Hoàn thành", icon: CheckCircle2, color: "text-emerald-600" },
-  ];
-
   const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: typeof Signal; color: string }> = [
     { priority: "URGENT", label: "Khẩn cấp", icon: AlertTriangle, color: "text-rose-600" },
     { priority: "HIGH", label: "Ưu tiên cao", icon: SignalHigh, color: "text-amber-600" },
@@ -309,22 +302,22 @@ export function TaskContextMenu({
             role="menu"
             className="absolute left-full top-0 ml-1 w-44 rounded-lg border border-border/80 bg-white p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
           >
-            {STATUS_OPTIONS.map((opt) => {
+            {CORE_STATUS_OPTIONS.map((opt) => {
               const Icon = opt.icon;
-              const isSelected = currentStatus === opt.status;
+              const isSelected = currentStatus === opt.value;
               return (
                 <button
-                  key={opt.status}
+                  key={opt.value}
                   type="button"
                   role="menuitem"
-                  onClick={() => handleStatusSelect(opt.status)}
+                  onClick={() => handleStatusSelect(opt.value)}
                   className={cn(
                     "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer",
                     isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-slate-100/80 text-slate-700"
                   )}
                 >
                   <span className="flex items-center gap-2">
-                    <Icon className={cn("size-3.5", opt.color)} strokeWidth={1.5} />
+                    <Icon className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
                     <span>{opt.label}</span>
                   </span>
                   {isSelected && <Check className="size-3 text-primary" strokeWidth={2} />}

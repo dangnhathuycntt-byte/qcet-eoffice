@@ -3,13 +3,14 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { Calendar, Check, CheckCircle2, ChevronDown, CircleDashed, Clock, Loader2, UserPlus, X } from "lucide-react";
-import type { TaskStatus } from "@/types/dashboard";
+import { Calendar, Check, CheckCircle2, ChevronDown, CircleDashed, Clock, Loader2, Signal, UserPlus, X } from "lucide-react";
+import type { TaskStatus, TaskPriority } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { computeDueStatus } from "./task-identity-block";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { formatDisplayDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { propertyMotionStyle, propertyPopupClassName, propertyTriggerVariants } from "@/components/ui/property-control-styles";
+import type { PriorityDisplayConfig } from "@/domain/tasks/display-config";
 
 export interface TaskStatusChoice {
   value: TaskStatus;
@@ -63,21 +64,17 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
   );
 }
 
-export interface TaskPersonnelOption {
-  id: string;
-  name: string;
-  email?: string;
-  departmentName?: string;
-}
+export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
+import type { PersonnelOption } from "@/hooks/use-personnel-list";
 
 export function TaskAssigneePicker({ items, assigneeId, assigneeName, displayName, disabled, pending, onSelect }: {
-  items: TaskPersonnelOption[];
+  items: PersonnelOption[];
   assigneeId?: string;
   assigneeName?: string;
   displayName: string;
   disabled?: boolean;
   pending?: boolean;
-  onSelect: (person: TaskPersonnelOption) => Promise<void>;
+  onSelect: (person: PersonnelOption) => Promise<void>;
 }) {
   const [open, setOpen] = React.useState(false);
   const selected = items.find((person) => assigneeId ? person.id === assigneeId : person.name === assigneeName) ?? null;
@@ -194,5 +191,46 @@ export function TaskDateRange({
         </button>
       )}
     </div>
+  );
+}
+
+/* ── TaskPrioritySelect ── */
+
+export function TaskPrioritySelect({ value, options, disabled, onValueChange }: {
+  value: TaskPriority;
+  options: PriorityDisplayConfig[];
+  disabled?: boolean;
+  onValueChange: (value: TaskPriority) => void;
+}) {
+  const selected = options.find((opt) => opt.value === value);
+
+  return (
+    <Select.Root value={value} disabled={disabled} onValueChange={(next) => {
+      if (next && next !== value) onValueChange(next as TaskPriority);
+    }}>
+      <Select.Trigger aria-label="Ưu tiên" className={propertyTriggerVariants()} style={propertyMotionStyle}>
+        <Signal className={cn("size-3.5 shrink-0", selected?.iconClass)} strokeWidth={1.5} aria-hidden="true" />
+        <Select.Value>{() => <span>{selected?.label ?? value}</span>}</Select.Value>
+        {!disabled && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" strokeWidth={1.5} /></Select.Icon>}
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
+          <Select.Popup className={cn(propertyPopupClassName, "w-44 max-h-[var(--available-height)] overflow-y-auto")} style={propertyMotionStyle}>
+            <Select.List>
+              {options.map((option) => (
+                <Select.Item key={option.value} value={option.value}
+                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary">
+                  <span className="flex items-center gap-1.5">
+                    <Signal className={cn("size-3.5", option.iconClass)} strokeWidth={1.5} aria-hidden="true" />
+                    <Select.ItemText>{option.label}</Select.ItemText>
+                  </span>
+                  <Select.ItemIndicator><Check className="size-3 text-primary" strokeWidth={1.5} /></Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.List>
+          </Select.Popup>
+        </Select.Positioner>
+      </Select.Portal>
+    </Select.Root>
   );
 }

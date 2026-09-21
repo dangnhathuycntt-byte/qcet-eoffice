@@ -22,7 +22,8 @@ import { cn, getInitials } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { computeDueStatus, STATUS_OPTIONS } from "./task-identity-block";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
+import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import {
   QCET_DEPARTMENT_GROUPS,
@@ -379,8 +380,7 @@ export function TaskSubtasksSection({
           {subTasks.map((st, idx) => {
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
-            const statusObj =
-              STATUS_OPTIONS.find((s) => s.value === st.status) || STATUS_OPTIONS[0];
+            const statusObj = getStatusDisplay(st.status);
             const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName) || "Chưa giao";
 
             return (

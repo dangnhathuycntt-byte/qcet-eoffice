@@ -30,7 +30,10 @@ import {
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
+import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, getStatusDisplay, getPriorityDisplay } from "@/domain/tasks/display-config";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
@@ -181,25 +184,8 @@ export function LinearPropertiesSidebar({
   const [isLeadMenuOpen, setIsLeadMenuOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
   const [reassignError, setReassignError] = React.useState<string | null>(null);
-  const [personnelList, setPersonnelList] = React.useState<Array<{ id: string; name: string; email?: string; departmentName?: string }>>([]);
+  const { personnel: personnelList } = usePersonnelList();
   const leadMenuRef = React.useRef<HTMLDivElement>(null);
-
-  // Collaborators popover state
-  React.useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.users)) {
-          setPersonnelList(data.users.map((u: any) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            departmentName: u.department?.name || u.departmentName || "Đơn vị",
-          })));
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // Close dropdowns on outside click / Escape (lightweight per-menu)
   React.useEffect(() => {
@@ -219,27 +205,16 @@ export function LinearPropertiesSidebar({
   }, []);
 
   // Status mapping
-  const rawStatus = (task.status || "NOT_STARTED") as string;
-  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
-    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
-      ? "COMPLETED"
-      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
-      ? "IN_PROGRESS"
-      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "PENDING_EXECUTIVE_APPROVAL"
-      ? "WAITING_APPROVAL"
-      : "NOT_STARTED"
-    : "NOT_STARTED";
+  const normalizedStatus = normalizeDisplayStatus(task.status);
 
-  const activeStatusOption =
-    STATUS_OPTIONS.find((opt) => opt.value === normalizedStatus) || STATUS_OPTIONS[0];
+  const activeStatusOption = getStatusDisplay(normalizedStatus);
 
   // Priority mapping
   const currentPriority: TaskPriority =
     (task as any).priority || (isSchool ? schoolTask?.priority : "NORMAL") || "NORMAL";
   const normalizedPriority =
     currentPriority === "MEDIUM" ? "NORMAL" : currentPriority;
-  const activePriorityOption =
-    PRIORITY_OPTIONS.find((opt) => opt.value === normalizedPriority) || PRIORITY_OPTIONS[2];
+  const activePriorityOption = getPriorityDisplay(normalizedPriority);
 
   // Lead / DRI
   const leadName = isSchool
@@ -493,7 +468,7 @@ export function LinearPropertiesSidebar({
                   role="menu"
                   className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
                 >
-                  {STATUS_OPTIONS.map((opt) => {
+                  {CORE_STATUS_OPTIONS.map((opt) => {
                     const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
                     const isCurrent = normalizedStatus === opt.value;
                     const isOptionDisabled = !isCurrent && !check.allowed;
@@ -568,7 +543,7 @@ export function LinearPropertiesSidebar({
                   role="menu"
                   className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
                 >
-                  {PRIORITY_OPTIONS.map((opt) => (
+                  {PRIORITY_DISPLAY_CONFIG.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"

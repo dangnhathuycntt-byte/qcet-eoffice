@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plus, User } from "lucide-react";
 import type { StaffTask } from "@/types/dashboard";
-import { STATUS_OPTIONS } from "./task-identity-block";
+import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { cn, getInitials } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
 
@@ -128,7 +128,7 @@ export function TaskSubtasksSidebarSection({
         <div className="mt-1.5 space-y-0.5">
           {visible.map((st) => {
             const isActive = st.id === activeSubtaskId;
-            const statusOpt = STATUS_OPTIONS.find((o) => o.value === st.status);
+            const statusOpt = getStatusDisplay(st.status);
             const dotClass = statusOpt?.dotClass ?? "bg-muted-foreground/60";
             const isCompleted = st.status === "COMPLETED";
             const formattedDueDate = st.dueDate ? formatCompactDate(st.dueDate, "") : "";

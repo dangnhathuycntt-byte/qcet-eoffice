@@ -25,7 +25,7 @@ import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/da
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
-import { formatDisplayDate } from "@/lib/format/date";
+import { formatDisplayDate, extractDateIso } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import {
@@ -33,12 +33,21 @@ import {
   buildActorContext,
   buildTaskContext,
 } from "@/domain/tasks/state-machine";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
+import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import {
   TaskStatusSelect,
   TaskAssigneePicker,
   TaskDateRange,
   type TaskPersonnelOption,
 } from "./task-property-controls";
+
+// Backward-compat re-exports — prefer direct imports from domain layer
+export { computeDueStatus } from "@/domain/tasks/deadlines";
+export { CORE_STATUS_OPTIONS as STATUS_OPTIONS } from "@/domain/tasks/display-config";
+export { PRIORITY_DISPLAY_CONFIG as PRIORITY_OPTIONS } from "@/domain/tasks/display-config";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;
@@ -56,88 +65,6 @@ export interface TaskIdentityBlockProps {
   showInlineProperties?: boolean;
   className?: string;
 }
-
-export function computeDueStatus(dueDate?: string | Date | null): { text: string; isOverdue: boolean } {
-  if (!dueDate) return { text: "Chưa đặt hạn", isOverdue: false };
-  const target = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
-  if (isNaN(target.getTime())) return { text: "Chưa đặt hạn", isOverdue: false };
-  const now = new Date();
-  const diffMs = target.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { text: `Quá hạn ${Math.abs(diffDays)} ngày`, isOverdue: true };
-  if (diffDays === 0) return { text: "Hôm nay", isOverdue: false };
-  if (diffDays === 1) return { text: "Ngày mai", isOverdue: false };
-  return { text: `Còn ${diffDays} ngày`, isOverdue: false };
-}
-
-export const STATUS_OPTIONS: Array<{
-  value: TaskStatus;
-  label: string;
-  colorClass: string;
-  dotClass: string;
-  iconClass: string;
-}> = [
-  {
-    value: "NOT_STARTED",
-    label: "Mới",
-    colorClass: "text-muted-foreground bg-muted/60 border-border/60",
-    dotClass: "bg-muted-foreground/60",
-    iconClass: "text-muted-foreground/60",
-  },
-  {
-    value: "IN_PROGRESS",
-    label: "Đang thực hiện",
-    colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
-    dotClass: "bg-blue-600",
-    iconClass: "text-blue-600",
-  },
-  {
-    value: "WAITING_APPROVAL",
-    label: "Chờ duyệt",
-    colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
-    dotClass: "bg-amber-600",
-    iconClass: "text-amber-600",
-  },
-  {
-    value: "COMPLETED",
-    label: "Hoàn thành",
-    colorClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/80",
-    dotClass: "bg-emerald-600",
-    iconClass: "text-emerald-600",
-  },
-];
-
-export const PRIORITY_OPTIONS: Array<{
-  value: TaskPriority;
-  label: string;
-  colorClass: string;
-  iconClass: string;
-}> = [
-  {
-    value: "URGENT",
-    label: "Khẩn cấp",
-    colorClass: "text-rose-700 bg-rose-50/80 border-rose-200/80",
-    iconClass: "text-rose-600",
-  },
-  {
-    value: "HIGH",
-    label: "Cao",
-    colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
-    iconClass: "text-amber-600",
-  },
-  {
-    value: "NORMAL",
-    label: "Bình thường",
-    colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
-    iconClass: "text-blue-600",
-  },
-  {
-    value: "LOW",
-    label: "Thấp",
-    colorClass: "text-muted-foreground bg-muted/60 border-border/60",
-    iconClass: "text-muted-foreground",
-  },
-];
 
 export function TaskIdentityBlock({
   task,
@@ -182,18 +109,10 @@ export function TaskIdentityBlock({
   const rawStartDate = isSchool
     ? (schoolTask?.startDate || schoolTask?.assignedDate)
     : ((task as any).startDate || (task as any).assignedDate);
-  const startDateIso = rawStartDate
-    ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
-      ? rawStartDate.slice(0, 10)
-      : new Date(rawStartDate).toISOString().slice(0, 10)
-    : "";
+  const startDateIso = extractDateIso(rawStartDate);
 
   const rawDueDate = task.dueDate || (isSchool ? schoolTask?.dueDate : staffTask?.dueDate);
-  const dueDateIso = rawDueDate
-    ? typeof rawDueDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawDueDate)
-      ? rawDueDate.slice(0, 10)
-      : new Date(rawDueDate).toISOString().slice(0, 10)
-    : "";
+  const dueDateIso = extractDateIso(rawDueDate);
 
   const departmentName = isSchool
     ? schoolTask?.leadDepartment || schoolTask?.department || schoolTask?.departmentName || "Ban Giám hiệu"
@@ -202,41 +121,14 @@ export function TaskIdentityBlock({
   const dueInfo = computeDueStatus(task.dueDate);
 
   // Personnel list for shared assignee picker
-  const [personnelList, setPersonnelList] = React.useState<TaskPersonnelOption[]>([]);
+  const { personnel: personnelList } = usePersonnelList();
   const [isReassigning, setIsReassigning] = React.useState(false);
 
-  React.useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.users)) {
-          setPersonnelList(
-            data.users.map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              departmentName: u.department?.name || u.departmentName || "Đơn vị",
-            }))
-          );
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const rawStatus = (task as any).status || "NOT_STARTED";
-  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
-    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
-      ? "COMPLETED"
-      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
-      ? "IN_PROGRESS"
-      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "CHO_DUYET"
-      ? "WAITING_APPROVAL"
-      : "NOT_STARTED"
-    : "NOT_STARTED";
+  const normalizedStatus = normalizeDisplayStatus(task.status);
 
   // Build status options from FSM-allowed transitions
   const statusOptions = React.useMemo(() => {
-    return STATUS_OPTIONS.map((opt) => {
+    return CORE_STATUS_OPTIONS.map((opt) => {
       const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
       const isCurrent = normalizedStatus === opt.value;
       return {

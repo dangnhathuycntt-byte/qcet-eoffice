@@ -41,6 +41,28 @@ export function getIctReferenceDateStart(refDateVal?: string | Date | null): Dat
 }
 
 /**
+ * Compute a human-readable due-status label and overdue flag from a due date.
+ *
+ * Pure presentation helper — previously lived in `task-identity-block.tsx` but
+ * is domain-level date arithmetic, not a UI concern.  All calendar comparisons
+ * use the runtime's local clock (ICT in production).
+ */
+export function computeDueStatus(
+  dueDate?: string | Date | null,
+): { text: string; isOverdue: boolean } {
+  if (!dueDate) return { text: 'Chưa đặt hạn', isOverdue: false };
+  const target = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
+  if (isNaN(target.getTime())) return { text: 'Chưa đặt hạn', isOverdue: false };
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { text: `Quá hạn ${Math.abs(diffDays)} ngày`, isOverdue: true };
+  if (diffDays === 0) return { text: 'Hôm nay', isOverdue: false };
+  if (diffDays === 1) return { text: 'Ngày mai', isOverdue: false };
+  return { text: `Còn ${diffDays} ngày`, isOverdue: false };
+}
+
+/**
  * Returns whether a task is overdue given its lifecycle status, due date, and optional reference date.
  * Reconciles status bifurcation by evaluating both persisted OVERDUE status and dynamic calendar deadline.
  */

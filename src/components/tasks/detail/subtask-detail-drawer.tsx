@@ -11,13 +11,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus } from "@/types/dashboard";
-import { STATUS_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
+import { CORE_STATUS_OPTIONS as STATUS_OPTIONS, getStatusDisplay } from "@/domain/tasks/display-config";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { formatCompactDate } from "@/lib/format/date";
+import { formatCompactDate, extractDateIso } from "@/lib/format/date";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
 import { computeSubtaskStatusGuard } from "@/domain/tasks/subtask-status-guard";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
@@ -61,9 +63,7 @@ export function SubtaskDetailDrawer({
 
   // Dropdown states
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const [personnelList, setPersonnelList] = React.useState<
-    Array<{ id: string; name: string; email?: string; departmentName?: string }>
-  >([]);
+  const { personnel: personnelList } = usePersonnelList({ enabled: canEdit });
 
   // Dọn sự kiện kéo cả khi pane đóng hoặc cửa sổ mất focus.
   const stopResizeRef = React.useRef<(() => void) | null>(null);
@@ -123,38 +123,11 @@ export function SubtaskDetailDrawer({
     onPeekWidthChange?.(DEFAULT_PEEK_WIDTH);
   }, [onPeekWidthChange]);
 
-  React.useEffect(() => {
-    if (!canEdit) return;
-    fetch("/api/users")
-      .then((response) => response.json())
-      .then((data) => {
-        if (!data.success || !Array.isArray(data.users)) return;
-        setPersonnelList(data.users.map((user: any) => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          departmentName: user.department?.name || user.departmentName || "Đơn vị",
-        })));
-      })
-      .catch(() => {});
-  }, [canEdit]);
-
   const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
   // Dates
-  const rawStartDate = (subtask as any)?.startDate;
-  const startDateIso = rawStartDate
-    ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
-      ? rawStartDate.slice(0, 10)
-      : new Date(rawStartDate).toISOString().slice(0, 10)
-    : "";
-
-  const dueDateIso = subtask?.dueDate
-    ? typeof subtask.dueDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(subtask.dueDate)
-      ? subtask.dueDate.slice(0, 10)
-      : new Date(subtask.dueDate).toISOString().slice(0, 10)
-    : "";
-
+  const startDateIso = extractDateIso((subtask as any)?.startDate);
+  const dueDateIso = extractDateIso(subtask?.dueDate);
 
   // Atomic clear of both dates
   const handleClearDates = async () => {
@@ -474,7 +447,7 @@ export function SubtaskDetailDrawer({
             </span>
             {siblings.map((sib) => {
               const isSelected = sib.id === subtask.id;
-              const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
+              const statusObj = getStatusDisplay(sib.status);
               const isCompleted = sib.status === "COMPLETED";
               const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
               const rawAssignee = sib.assigneeName?.trim();
@@ -544,8 +517,8 @@ export function SubtaskDetailDrawer({
               options={statusGuard?.options.map((opt) => ({
                 value: opt.status as TaskStatus,
                 label: opt.label,
-                dotClass: STATUS_OPTIONS.find((s) => s.value === opt.status)?.dotClass ?? "",
-                iconClass: STATUS_OPTIONS.find((s) => s.value === opt.status)?.iconClass ?? "",
+                dotClass: getStatusDisplay(opt.status).dotClass,
+                iconClass: getStatusDisplay(opt.status).iconClass,
                 disabled: opt.disabled,
                 reason: opt.reason,
               })) ?? STATUS_OPTIONS.map((opt) => ({ ...opt, disabled: false }))}

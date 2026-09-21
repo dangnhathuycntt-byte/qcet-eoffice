@@ -15,6 +15,7 @@ import type { TaskStatus } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
+import { CORE_STATUS_OPTIONS, STATUS_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
 
 /**
  * Tính ngày gia hạn hạn chót an toàn theo chuẩn UTC
@@ -105,13 +106,10 @@ const APPROVAL_BEARING_TARGETS: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
 ]);
 
 /** Lifecycle targets the status dropdown may offer, in display order. */
-const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: TaskStatus; label: string }> = [
-  { value: "IN_PROGRESS", label: "Đang thực hiện" },
-  { value: "WAITING_APPROVAL", label: "Chờ phê duyệt" },
-  { value: "NEEDS_REVIEW", label: "Cần chỉnh sửa" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "CANCELLED", label: "Hủy nhiệm vụ" },
-];
+const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: TaskStatus; label: string }> =
+  STATUS_DISPLAY_CONFIG.filter((c) =>
+    (['IN_PROGRESS', 'WAITING_APPROVAL', 'NEEDS_REVIEW', 'COMPLETED', 'CANCELLED'] as string[]).includes(c.value),
+  );
 
 export type TaskBulkActionBarProps = BatchActionBarProps;
 
