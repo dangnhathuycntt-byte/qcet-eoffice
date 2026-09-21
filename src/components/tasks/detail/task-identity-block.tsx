@@ -487,6 +487,7 @@ export function TaskIdentityBlock({
               onChange={(newDate) => onStartDateChange(task.id, newDate)}
               placeholder="Bắt đầu"
               variant="chip"
+              icon={null}
               align="left"
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
             />
@@ -500,6 +501,7 @@ export function TaskIdentityBlock({
               onChange={(newDate) => onDueDateChange(task.id, newDate)}
               placeholder="Hạn chót"
               variant="chip"
+              icon={null}
               showPresets={true}
               align="left"
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"

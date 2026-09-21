@@ -588,7 +588,7 @@ export function SubtaskDetailDrawer({
                 {canEdit && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" /></Select.Icon>}
               </Select.Trigger>
               <Select.Portal>
-                <Select.Positioner className="z-50" align="start" sideOffset={4}>
+                <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8}>
                   <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
                     <Select.List>
                       {STATUS_OPTIONS.map((option) => (
@@ -644,7 +644,7 @@ export function SubtaskDetailDrawer({
                 )}>{assigneeDisplay}</span>
               </Combobox.Trigger>
               <Combobox.Portal>
-                <Combobox.Positioner className="z-50" align="start" sideOffset={4}>
+                <Combobox.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8}>
                   <Combobox.Popup className="w-64 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
                     <Combobox.InputGroup className="m-1 border-b border-border/40 pb-1.5">
                       <Combobox.Input

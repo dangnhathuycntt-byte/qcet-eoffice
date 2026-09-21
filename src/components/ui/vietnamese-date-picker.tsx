@@ -47,6 +47,8 @@ export interface VietnameseDatePickerProps {
   showPresets?: boolean;
   /** Vị trí căn lề của Popover ("left" | "right" | "auto") */
   align?: "left" | "right" | "auto";
+  /** Cạnh ưu tiên mở Popover ("bottom" | "top", mặc định "bottom") */
+  side?: "bottom" | "top";
   /** ClassName bổ sung cho container */
   className?: string;
   /** ClassName bổ sung cho trigger button */
@@ -95,6 +97,7 @@ export function VietnameseDatePicker({
   maxDate,
   showPresets = true,
   align = "auto",
+  side = "bottom",
   className,
   triggerClassName,
   id,
@@ -291,11 +294,11 @@ export function VietnameseDatePicker({
             triggerClassName
           )}
         >
-          {icon || (
+          {icon !== null && (icon || (
             <div className="size-4 shrink-0 flex items-center justify-center">
               <CalendarIcon className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
             </div>
-          )}
+          ))}
           <span className="tabular-nums font-normal">
             {hasValue ? displayDate : placeholder}
           </span>
@@ -321,7 +324,7 @@ export function VietnameseDatePicker({
             triggerClassName
           )}
         >
-          {icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+          {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
           {label && <span className={cn(error ? "text-rose-600" : "text-muted-foreground font-normal")}>{label}</span>}
           <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
             {hasValue ? displayDate : placeholder}
@@ -344,7 +347,7 @@ export function VietnameseDatePicker({
           )}
         >
           <div className="flex items-center gap-2">
-            {icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />}
+            {icon !== null && (icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
             <span>{hasValue ? displayDate : placeholder}</span>
           </div>
           {hasValue && !disabled && (
@@ -363,7 +366,7 @@ export function VietnameseDatePicker({
       {/* 2. Linear-Style Date Picker Popover Portal */}
 
       <Popover.Portal>
-      <Popover.Positioner className="z-50" align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
+      <Popover.Positioner className="z-50" side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
       <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
         aria-label="Chọn ngày trên lịch"
         className="w-[290px] p-3 text-foreground rounded-xl border border-border bg-popover shadow-2xl"
