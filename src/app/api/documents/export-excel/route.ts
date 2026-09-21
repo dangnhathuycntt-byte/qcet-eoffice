@@ -9,8 +9,7 @@ import {
   assertRequestBodySize,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/api/rate-limit";
-import { assertRateLimit } from "@/server/security/rate-limit";
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/security/rate-limit";
 import { ExportDocumentQuerySchema } from "@/contracts/documents";
 import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
@@ -29,7 +28,8 @@ export async function GET(request: NextRequest) {
     // Rate limiting: strict bulk export tier limit
     const rateResult = await checkRateLimit('BULK_EXPORT', authUser.id);
     if (!rateResult.success) {
-      await logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id);
+      const retryAfter = rateResult.retryAfter;
+      logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id).catch(() => undefined);
       return NextResponse.json(
         {
           error: 'Too Many Requests',
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'Retry-After': String(Math.max(1, retryAfter)),
             'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.BULK_EXPORT.limit),
             'X-RateLimit-Remaining': String(rateResult.remaining),
           },
@@ -132,7 +132,8 @@ export async function POST(request: NextRequest) {
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
     const rateResult = await checkRateLimit('BULK_EXPORT', authUser.id);
     if (!rateResult.success) {
-      await logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id);
+      const retryAfter = rateResult.retryAfter;
+      logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id).catch(() => undefined);
       return NextResponse.json(
         {
           error: 'Too Many Requests',
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'Retry-After': String(Math.max(1, retryAfter)),
             'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.BULK_EXPORT.limit),
             'X-RateLimit-Remaining': String(rateResult.remaining),
           },

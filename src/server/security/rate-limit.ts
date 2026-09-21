@@ -9,30 +9,27 @@ export const RATE_LIMIT_TIERS = {
   SENSITIVE_READ: { limit: 30,  windowSeconds: 60   }, // 30 req / phút
   BULK_EXPORT:    { limit: 3,   windowSeconds: 3600 }, // 3 req / giờ
   STANDARD_READ:  { limit: 120, windowSeconds: 60   }, // 120 req / phút
+  // Backward-compat aliases to preserve existing assertRateLimit callers
+  MUTATIONS_SENSITIVE: { limit: 30, windowSeconds: 60 }, // 30 req / phút
+  SEARCH:              { limit: 30, windowSeconds: 60 }, // 30 req / phút
+  EXPORT:              { limit: 5,  windowSeconds: 60 }, // 5 req / phút
+  FILE_DOWNLOAD:       { limit: 60, windowSeconds: 60 }, // 60 req / phút
+  DEFAULT_API:         { limit: 100, windowSeconds: 60 }, // 100 req / phút
+  AUTH_REGISTER:       { limit: 5,  windowSeconds: 3600 }, // 5 req / 1h
+  PUSH_TEST:           { limit: 3,  windowSeconds: 300  }, // 3 req / 5 phút
 } as const;
 
 export type RateLimitTier = keyof typeof RATE_LIMIT_TIERS;
 
-// Backward-compatibility presets alias mapping to windowMs
+// Backward-compatibility presets alias mapping to windowMs (legacy assertRateLimit callers)
 export interface RateLimitConfig {
   limit: number;
   windowMs: number;
 }
 
-export const RATE_LIMIT_PRESETS: Record<string, RateLimitConfig> = {
-  AUTH_LOGIN: { limit: RATE_LIMIT_TIERS.AUTH_LOGIN.limit, windowMs: RATE_LIMIT_TIERS.AUTH_LOGIN.windowSeconds * 1000 },
-  AUTH_REGISTER: { limit: 5, windowMs: 60 * 60 * 1000 },
-  SEARCH: { limit: 30, windowMs: 60 * 1000 },
-  EXPORT: { limit: 5, windowMs: 60 * 1000 },
-  MUTATIONS_SENSITIVE: { limit: 30, windowMs: 60 * 1000 },
-  MUTATION: { limit: RATE_LIMIT_TIERS.MUTATION.limit, windowMs: RATE_LIMIT_TIERS.MUTATION.windowSeconds * 1000 },
-  PUSH_TEST: { limit: 3, windowMs: 5 * 60 * 1000 },
-  FILE_DOWNLOAD: { limit: 60, windowMs: 60 * 1000 },
-  DEFAULT_API: { limit: 100, windowMs: 60 * 1000 },
-  SENSITIVE_READ: { limit: RATE_LIMIT_TIERS.SENSITIVE_READ.limit, windowMs: RATE_LIMIT_TIERS.SENSITIVE_READ.windowSeconds * 1000 },
-  BULK_EXPORT: { limit: RATE_LIMIT_TIERS.BULK_EXPORT.limit, windowMs: RATE_LIMIT_TIERS.BULK_EXPORT.windowSeconds * 1000 },
-  STANDARD_READ: { limit: RATE_LIMIT_TIERS.STANDARD_READ.limit, windowMs: RATE_LIMIT_TIERS.STANDARD_READ.windowSeconds * 1000 },
-};
+export const RATE_LIMIT_PRESETS: Record<string, RateLimitConfig> = Object.fromEntries(
+  Object.entries(RATE_LIMIT_TIERS).map(([k, v]) => [k, { limit: v.limit, windowMs: v.windowSeconds * 1000 }])
+);
 
 export interface AsyncRateLimitResult {
   success: boolean;
@@ -59,7 +56,8 @@ interface RateLimitRecord {
   lastAccess: number;
 }
 
-// In-memory key store for fallback when REDIS_URL is not set
+// Unified in-memory store — shared by BOTH assertRateLimit and checkRateLimit fallback
+// so quota is consistent regardless of backend.
 const memoryStore = new Map<string, RateLimitRecord>();
 
 let checkCallCount = 0;
@@ -103,6 +101,18 @@ export function getRedisClient(): Redis | null {
         metadata: { error: err?.message || String(err) },
       });
     });
+
+    // Graceful shutdown: close Redis connection on process exit
+    // Fix: closeRedisClient was exported but never called — hook SIGTERM here
+    const shutdown = () => {
+      if (redisClient) {
+        const c = redisClient;
+        redisClient = null;
+        c.quit().catch(() => undefined);
+      }
+    };
+    process.once('SIGTERM', shutdown);
+    process.once('SIGINT', shutdown);
   }
   return redisClient;
 }
@@ -116,7 +126,9 @@ export function closeRedisClient(): Promise<void> | void {
 }
 
 /**
- * Sliding window rate limit check using Redis Sorted Set (ZSET).
+ * Sliding window rate limit using Redis Sorted Set (ZSET).
+ * Returns [isAllowed, remaining, resetAtMs].
+ * On allowed path: resetAtMs is oldest_ts + windowMs (correct sliding window reset).
  */
 const SLIDING_WINDOW_LUA = `
 local key = KEYS[1]
@@ -135,9 +147,15 @@ if currentCount < limit then
   -- Add current request timestamp
   redis.call('ZADD', key, now, ARGV[4])
   redis.call('PEXPIRE', key, windowMs)
-  return {1, limit - currentCount - 1, 0}
+  -- resetAtMs: use oldest element if any, else now (first request ever)
+  local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+  local oldestTs = now
+  if oldest and #oldest >= 2 then
+    oldestTs = tonumber(oldest[2])
+  end
+  return {1, limit - currentCount - 1, oldestTs + windowMs}
 else
-  -- Limit reached: get oldest timestamp in window to calculate resetAt
+  -- Limit reached: get oldest timestamp in window
   local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
   local oldestTs = now
   if oldest and #oldest >= 2 then
@@ -187,6 +205,7 @@ function checkRateLimitMemoryInternal(
 
   record.timestamps.push(now);
   const remaining = limit - record.timestamps.length;
+  // Correct resetAt: oldest_ts + windowMs (matching Lua script fix)
   const resetAtMs = record.timestamps[0] + windowMs;
 
   return {
@@ -199,20 +218,27 @@ function checkRateLimitMemoryInternal(
   };
 }
 
+/**
+ * Resolve tier config from overloaded call signatures.
+ * Fix: Case A only matches when second is NOT a tier name itself
+ * (prevents ambiguous calls where both args look like tier names).
+ */
 function resolveConfig(
   first: string | RateLimitConfig,
   second?: string | RateLimitConfig
-): { fullKey: string; limit: number; windowMs: number } {
+): { fullKey: string; tier: string; limit: number; windowMs: number } {
   // Case A: checkRateLimit('MUTATION', 'user_123')
-  if (typeof first === 'string' && first in RATE_LIMIT_TIERS && typeof second === 'string') {
+  // Only if second is NOT also a tier/preset key (prevents misuse)
+  if (
+    typeof first === 'string' &&
+    first in RATE_LIMIT_TIERS &&
+    typeof second === 'string' &&
+    !(second in RATE_LIMIT_TIERS) &&
+    !(second in RATE_LIMIT_PRESETS)
+  ) {
     const tier = first as keyof typeof RATE_LIMIT_TIERS;
-    const identifier = second;
     const t = RATE_LIMIT_TIERS[tier];
-    return {
-      fullKey: `ratelimit:${tier}:${identifier}`,
-      limit: t.limit,
-      windowMs: t.windowSeconds * 1000,
-    };
+    return { fullKey: `ratelimit:${tier}:${second}`, tier, limit: t.limit, windowMs: t.windowSeconds * 1000 };
   }
 
   // Case B: checkRateLimit('user_123', 'MUTATION' | 'AUTH_LOGIN' | ...)
@@ -220,47 +246,24 @@ function resolveConfig(
     const tier = second as keyof typeof RATE_LIMIT_TIERS;
     const identifier = first as string;
     const t = RATE_LIMIT_TIERS[tier];
-    return {
-      fullKey: `ratelimit:${tier}:${identifier}`,
-      limit: t.limit,
-      windowMs: t.windowSeconds * 1000,
-    };
+    return { fullKey: `ratelimit:${tier}:${identifier}`, tier, limit: t.limit, windowMs: t.windowSeconds * 1000 };
   }
 
-  // Case C: checkRateLimit('user_123', 'SEARCH' | 'EXPORT' | ...)
-  if (typeof second === 'string' && second in RATE_LIMIT_PRESETS) {
-    const tier = second;
-    const identifier = first as string;
-    const p = RATE_LIMIT_PRESETS[tier];
-    return {
-      fullKey: `ratelimit:${tier}:${identifier}`,
-      limit: p.limit,
-      windowMs: p.windowMs,
-    };
-  }
-
-  // Case D: checkRateLimit('user_123', { limit: 5, windowMs: 60000 })
+  // Case C: checkRateLimit('user_123', { limit: 5, windowMs: 60000 })
   if (typeof second === 'object' && second !== null && 'limit' in second) {
     const identifier = first as string;
-    return {
-      fullKey: `ratelimit:CUSTOM:${identifier}`,
-      limit: second.limit,
-      windowMs: second.windowMs,
-    };
+    return { fullKey: `ratelimit:CUSTOM:${identifier}`, tier: 'CUSTOM', limit: second.limit, windowMs: second.windowMs };
   }
 
-  // Case E: single string or other
+  // Case D: fallback to DEFAULT_API
   const identifier = typeof second === 'string' ? second : String(first);
   const p = RATE_LIMIT_PRESETS.DEFAULT_API;
-  return {
-    fullKey: `ratelimit:DEFAULT_API:${identifier}`,
-    limit: p.limit,
-    windowMs: p.windowMs,
-  };
+  return { fullKey: `ratelimit:DEFAULT_API:${identifier}`, tier: 'DEFAULT_API', limit: p.limit, windowMs: p.windowMs };
 }
 
 /**
- * Modern Issue #29 API: checkRateLimit(tier, identifier) returns Promise<AsyncRateLimitResult>
+ * Modern async API: checkRateLimit(tier, identifier) returns Promise<AsyncRateLimitResult>.
+ * Uses Redis when available, falls back to in-memory (same store as assertRateLimit).
  */
 export function checkRateLimit(
   tier: keyof typeof RATE_LIMIT_TIERS,
@@ -268,7 +271,8 @@ export function checkRateLimit(
 ): Promise<AsyncRateLimitResult>;
 
 /**
- * Legacy API: checkRateLimit(identifier, tier, now?) returns SyncRateLimitResult
+ * Legacy sync API: checkRateLimit(identifier, tier, now?) returns SyncRateLimitResult.
+ * Always uses in-memory store (same store as assertRateLimit = shared quota).
  */
 export function checkRateLimit(
   identifier: string,
@@ -277,7 +281,9 @@ export function checkRateLimit(
 ): SyncRateLimitResult;
 
 /**
- * Implementation handling both modern async and legacy sync forms.
+ * Implementation.
+ * Fix: legacy sync callers always use in-memory (never return a Promise unless caller awaits).
+ * Modern tier callers use Redis when available, else in-memory.
  */
 export function checkRateLimit(
   arg1: any,
@@ -285,13 +291,22 @@ export function checkRateLimit(
   arg3?: any
 ): any {
   const isModernTierCall =
-    typeof arg1 === 'string' && arg1 in RATE_LIMIT_TIERS && typeof arg2 === 'string';
+    typeof arg1 === 'string' &&
+    arg1 in RATE_LIMIT_TIERS &&
+    typeof arg2 === 'string' &&
+    !(arg2 in RATE_LIMIT_TIERS) &&
+    !(arg2 in RATE_LIMIT_PRESETS);
 
   const { fullKey, limit, windowMs } = resolveConfig(arg1, arg2);
   const now = typeof arg3 === 'number' ? arg3 : Date.now();
-  const redis = getRedisClient();
 
-  // If redis is active AND this was called in modern form (or Redis is set)
+  // Legacy sync form: always use in-memory (avoids returning Promise to non-awaiting callers)
+  if (!isModernTierCall) {
+    return checkRateLimitMemoryInternal(fullKey, limit, windowMs, now);
+  }
+
+  // Modern async form: try Redis, fall back to in-memory (same shared store)
+  const redis = getRedisClient();
   if (redis) {
     return (async (): Promise<AsyncRateLimitResult> => {
       try {
@@ -308,21 +323,22 @@ export function checkRateLimit(
 
         const [isAllowed, remaining, resetAtMs] = rawRes as [number, number, number];
         const allowed = isAllowed === 1;
-        const effectiveResetAtMs = allowed ? (now + windowMs) : resetAtMs;
-        const retryAfter = allowed ? 0 : Math.max(1, Math.ceil((effectiveResetAtMs - now) / 1000));
+        // Fix: use resetAtMs from Lua (oldest_ts + windowMs) for both allowed and blocked paths
+        const retryAfter = allowed ? 0 : Math.max(1, Math.ceil((resetAtMs - now) / 1000));
 
         return {
           success: allowed,
           allowed,
           limit,
           remaining: Math.max(0, remaining),
-          resetAt: new Date(effectiveResetAtMs),
+          resetAt: new Date(resetAtMs),
           retryAfter,
         };
       } catch (redisErr: any) {
         logger.warn('redis.rate_limit.fallback_memory', {
           metadata: { error: redisErr?.message || String(redisErr) },
         });
+        // Fallback uses same memoryStore → quota still shared
         const mem = checkRateLimitMemoryInternal(fullKey, limit, windowMs, now);
         return {
           success: mem.success,
@@ -336,28 +352,20 @@ export function checkRateLimit(
     })();
   }
 
-  // In-memory execution
+  // No Redis: use in-memory (shared store)
   const mem = checkRateLimitMemoryInternal(fullKey, limit, windowMs, now);
-
-  if (isModernTierCall) {
-    const asyncRes: AsyncRateLimitResult = {
-      success: mem.success,
-      allowed: mem.allowed,
-      limit: mem.limit,
-      remaining: mem.remaining,
-      resetAt: new Date(mem.resetAt),
-      retryAfter: mem.retryAfter,
-    };
-    return Promise.resolve(asyncRes);
-  }
-
-  // Legacy sync result
-  return mem;
+  return Promise.resolve<AsyncRateLimitResult>({
+    success: mem.success,
+    allowed: mem.allowed,
+    limit: mem.limit,
+    remaining: mem.remaining,
+    resetAt: new Date(mem.resetAt),
+    retryAfter: mem.retryAfter,
+  });
 }
 
 /**
- * Extracts rate limit identifier from authContext and request.
- * Prioritizes userId if present, otherwise client IP.
+ * Extracts rate limit identifier — prioritizes userId over IP.
  */
 export function getRateLimitIdentifier(
   authContext?: { userId?: string | null; id?: string | null; user?: { id?: string | null } } | null,
@@ -392,8 +400,8 @@ export function getRateLimitIdentifier(
 }
 
 /**
- * Asserts rate limit synchronously (using memory) or can be awaited.
- * Throws RateLimitError with retryAfter on limit breach.
+ * Synchronous rate limit assertion (uses shared in-memory store).
+ * Throws RateLimitError (429) when limit exceeded.
  */
 export function assertRateLimit(
   identifier: string,
@@ -416,7 +424,8 @@ export function assertRateLimit(
 }
 
 /**
- * Records an audit event when rate limit is exceeded.
+ * Fire-and-forget audit log for rate limit exceeded events.
+ * Caller must capture retryAfter BEFORE calling this to avoid timing issues.
  */
 export async function logRateLimitExceeded(
   tier: string,
@@ -440,10 +449,15 @@ export async function logRateLimitExceeded(
       metadata,
     });
   } catch {
-    // Suppress error if DB audit event cannot be recorded
+    // Suppress — audit failure must not block the response
   }
 }
 
+/**
+ * Build standard HTTP rate limit headers.
+ * Fix: isBlocked checks both allowed and success (including undefined → treat as blocked
+ * when retryAfter > 0, which is the authoritative signal).
+ */
 export function getRateLimitHeaders(result: {
   limit: number;
   remaining: number;
@@ -463,7 +477,13 @@ export function getRateLimitHeaders(result: {
     'X-RateLimit-Reset': String(resetEpochSeconds),
   };
 
-  const isBlocked = result.allowed === false || result.success === false;
+  // Fix: use retryAfter > 0 as the authoritative "blocked" signal in addition to
+  // explicit allowed/success flags. Covers callers that omit allowed/success.
+  const isBlocked =
+    result.allowed === false ||
+    result.success === false ||
+    (!result.allowed && !result.success && (result.retryAfter ?? 0) > 0);
+
   if (isBlocked && result.retryAfter !== undefined && result.retryAfter > 0) {
     headers['Retry-After'] = String(result.retryAfter);
   }

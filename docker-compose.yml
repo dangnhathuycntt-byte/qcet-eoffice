@@ -30,7 +30,7 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-ttl
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
