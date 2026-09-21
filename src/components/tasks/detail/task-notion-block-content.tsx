@@ -1548,6 +1548,25 @@ function SlashMenu({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, activeIndex, filteredOptions, onSelect, onClose]);
 
+  // Đóng menu khi click bên ngoài
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      const floating = refs.floating.current;
+      if (floating && !floating.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    // Delay thêm 1 frame để tránh conflict với event tạo menu
+    const id = requestAnimationFrame(() => {
+      document.addEventListener("pointerdown", handlePointerDown);
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isOpen, refs.floating, onClose]);
+
   if (!isOpen || typeof document === "undefined") return null;
 
   return createPortal(
@@ -2007,6 +2026,31 @@ export function TaskNotionBlockContent({
                   readOnly={!canEdit}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
                   className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-8"
+                  onBlur={() => {
+                    // Xoá block rỗng (heading, list, etc.) khi editor mất focus
+                    // Giữ lại paragraph rỗng vì đó là block mặc định
+                    if (!canEdit) return;
+                    const children = editor.children as any[];
+                    const toRemove: number[] = [];
+                    for (let i = children.length - 1; i >= 0; i--) {
+                      const node = children[i];
+                      if (!node || node.type === PT.paragraph) continue;
+                      // Skip void/structural nodes (image, table, media, etc.)
+                      if (node.type === PT.image || node.type === PT.attachment || node.type === PT.mediaEmbed || node.type === PT.table || node.type === PT.toggle) continue;
+                      // Check if block is empty (only has empty text children)
+                      const texts = (node.children || []) as any[];
+                      const isEmpty = texts.length === 0 || texts.every((t: any) => typeof t.text === "string" && t.text.trim() === "" && !t.type);
+                      if (isEmpty) toRemove.push(i);
+                    }
+                    // Giữ ít nhất 1 node trong editor
+                    if (toRemove.length > 0 && toRemove.length < children.length) {
+                      (editor as any).withoutNormalizing(() => {
+                        for (const idx of toRemove) {
+                          editor.tf.removeNodes({ at: [idx] });
+                        }
+                      });
+                    }
+                  }}
                 />
                 <FloatingToolbar editor={editor} />
                 <MultiBlockToolbar editor={editor} />
