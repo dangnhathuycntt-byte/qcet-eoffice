@@ -27,6 +27,7 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
         NODE_ENV: "production",
         DATABASE_URL: "postgresql://qcet_admin:super_secret_pw@qcet-db:5432/qcet_eoffice?schema=public",
         AUTH_SECRET: "qcet_production_master_secret_key_2026_at_least_32_chars",
+        REDIS_URL: "redis://redis:6379",
         PORT: "3001",
         GOOGLE_CLIENT_ID: "google-client-id-123",
         GOOGLE_CLIENT_SECRET: "google-client-secret-xyz",
@@ -40,6 +41,7 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
       assert.strictEqual(parsed.PORT, 3001);
       assert.strictEqual(parsed.DATABASE_URL, validProdConfig.DATABASE_URL);
       assert.strictEqual(parsed.AUTH_SECRET, validProdConfig.AUTH_SECRET);
+      assert.strictEqual(parsed.REDIS_URL, validProdConfig.REDIS_URL);
       assert.strictEqual(parsed.GOOGLE_CLIENT_ID, "google-client-id-123");
       assert.strictEqual(parsed.GOOGLE_CLIENT_SECRET, "google-client-secret-xyz");
     });
@@ -49,10 +51,46 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
         NODE_ENV: "production",
         DATABASE_URL: "postgresql://localhost:5432/qcet_eoffice",
         JWT_SECRET: "qcet_production_jwt_master_secret_key_2026_min_32_chars",
+        REDIS_URL: "redis://localhost:6379",
       };
 
       const parsed = ServerEnvSchema.parse(configWithJwtSecret);
       assert.strictEqual(parsed.AUTH_SECRET, configWithJwtSecret.JWT_SECRET);
+    });
+
+    it("throws on missing REDIS_URL in production (shared rate-limit backend)", () => {
+      const missingRedisUrl = {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://localhost:5432/qcet_eoffice",
+        AUTH_SECRET: "super_secret_production_key_2026_safe_min_32_chars",
+      };
+
+      assert.throws(
+        () => ServerEnvSchema.parse(missingRedisUrl),
+        (err: unknown) => {
+          assert.ok(err instanceof Error);
+          assert.ok((err as Error).message.includes("REDIS_URL"));
+          return true;
+        }
+      );
+    });
+
+    it("throws on malformed REDIS_URL scheme", () => {
+      const badScheme = {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://localhost:5432/qcet_eoffice",
+        AUTH_SECRET: "super_secret_production_key_2026_safe_min_32_chars",
+        REDIS_URL: "http://localhost:6379",
+      };
+
+      assert.throws(
+        () => ServerEnvSchema.parse(badScheme),
+        (err: unknown) => {
+          assert.ok(err instanceof Error);
+          assert.ok((err as Error).message.includes("REDIS_URL"));
+          return true;
+        }
+      );
     });
 
     it("applies development fallbacks when variables are omitted in dev/test", () => {

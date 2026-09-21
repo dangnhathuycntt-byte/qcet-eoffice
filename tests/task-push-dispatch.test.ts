@@ -12,7 +12,7 @@ import {
 } from '../src/lib/push-dispatch';
 import { POST as createTaskRoute } from '../src/app/api/tasks/route';
 import { POST as createResolutionRoute } from '../src/app/api/executive/resolutions/route';
-import { UserRole, TaskPriority, TaskScope, ResolutionType } from '@prisma/client';
+import { UserRole, TaskPriority, TaskScope, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Task Push Dispatch & Background after() Integration', () => {
   let adminUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
@@ -24,6 +24,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
   let sentPushCalls: Array<{ subscription: any; payload: any }> = [];
   const createdTaskIds: string[] = [];
   const createdNotificationIds: string[] = [];
+  let execUnitId: string | null = null;
+  let execAssignmentId: string | null = null;
 
   before(async () => {
     // Intercept push notifications
@@ -147,6 +149,32 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       role: adminUser.role,
       departmentId: adminUser.departmentId,
     });
+
+    // Canonical statutory mandate (Issue #27): the executive-resolution
+    // integration below requires an ACTIVE executive PositionAssignment on
+    // the calling BGH user, never the role string. Equip it here (scoped
+    // cleanup in after()).
+    let rectorDef = await prisma.positionDefinition.findUnique({ where: { code: 'HIEU_TRUONG' } });
+    if (!rectorDef) {
+      rectorDef = await prisma.positionDefinition.create({
+        data: { code: 'HIEU_TRUONG', title: 'Hieu truong', group: JobCatalogGroup.LDPU, isLeadership: true },
+      });
+    }
+    const execUnit = await prisma.organizationalUnit.create({
+      data: { code: `U-PUSH-${Date.now()}`, name: 'Unit Push Exec', type: UnitType.DEPARTMENT },
+    });
+    execUnitId = execUnit.id;
+    const execAssignment = await prisma.positionAssignment.create({
+      data: {
+        userId: adminUser.id,
+        unitId: execUnit.id,
+        positionDefinitionId: rectorDef.id,
+        status: AssignmentStatus.ACTIVE,
+        type: AssignmentType.PRIMARY,
+        effectiveFrom: new Date('2020-01-01'),
+      },
+    });
+    execAssignmentId = execAssignment.id;
   });
 
   after(async () => {
@@ -170,6 +198,14 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       await prisma.notification.deleteMany({
         where: { id: { in: createdNotificationIds } },
       }).catch(() => {});
+    }
+
+    // Cleanup scoped executive mandate fixture
+    if (execAssignmentId) {
+      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } }).catch(() => {});
+    }
+    if (execUnitId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } }).catch(() => {});
     }
   });
 

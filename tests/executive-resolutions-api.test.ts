@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { GET, POST } from '../src/app/api/executive/resolutions/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, UserRole, ResolutionType } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, UserRole, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Executive Resolutions API Persistence & Authorization Tests', () => {
   let bghUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
@@ -16,6 +16,8 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
   let testDeptId: string;
   let targetDeptId: string;
   let testTaskId: string;
+  let execUnitId: string | null = null;
+  let execAssignmentId: string | null = null;
   const createdTaskIds: string[] = [];
 
   before(async () => {
@@ -38,6 +40,32 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       role: bgh.role,
       departmentId: bgh.departmentId,
     });
+
+    // Canonical statutory mandate (Issue #27): executive authority requires
+    // an ACTIVE executive PositionAssignment, never the role string. Equip
+    // the seed BGH user so the authorized flows below exercise the new
+    // contract instead of the legacy role gate.
+    let rectorDef = await prisma.positionDefinition.findUnique({ where: { code: 'HIEU_TRUONG' } });
+    if (!rectorDef) {
+      rectorDef = await prisma.positionDefinition.create({
+        data: { code: 'HIEU_TRUONG', title: 'Hieu truong', group: JobCatalogGroup.LDPU, isLeadership: true },
+      });
+    }
+    const execUnit = await prisma.organizationalUnit.create({
+      data: { code: `U-EXECAPI-${Date.now()}`, name: 'Unit ExecAPI', type: UnitType.DEPARTMENT },
+    });
+    execUnitId = execUnit.id;
+    const execAssignment = await prisma.positionAssignment.create({
+      data: {
+        userId: bgh.id,
+        unitId: execUnit.id,
+        positionDefinitionId: rectorDef.id,
+        status: AssignmentStatus.ACTIVE,
+        type: AssignmentType.PRIMARY,
+        effectiveFrom: new Date('2020-01-01'),
+      },
+    });
+    execAssignmentId = execAssignment.id;
 
     // 3. Fetch non-BGH staff user (TRUONG_PHONG or CHUYEN_VIEN)
     const staff = await prisma.user.findFirst({
@@ -102,6 +130,12 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       await prisma.task.deleteMany({
         where: { id: { in: createdTaskIds } },
       });
+    }
+    if (execAssignmentId) {
+      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } });
+    }
+    if (execUnitId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
   });
 
@@ -250,7 +284,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
     assert.strictEqual(updatedTask.resolutions.length >= 1, true);
   });
 
-  test('POST /api/executive/resolutions allows ADMIN to issue REASSIGN_OWNER and updates task departmentId', async () => {
+  test('POST /api/executive/resolutions denies ADMIN without statutory mandate (403) and mutates nothing', async () => {
     const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {
       method: 'POST',
       headers: {
@@ -266,16 +300,9 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       }),
     });
     const res = await POST(req);
-    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.status, 403);
     const json = await res.json();
-    assert.strictEqual(json.success, true);
-    assert.strictEqual(json.resolution.resolutionType, 'REASSIGN_OWNER');
-    assert.strictEqual(json.resolution.newOwnerId, targetDeptId);
-
-    const updatedTask = await prisma.task.findUnique({
-      where: { id: testTaskId },
-    });
-    assert.strictEqual(updatedTask?.departmentId, targetDeptId);
+    assert.strictEqual(json.success, false);
   });
 
   test('POST /api/executive/resolutions allows BGH to issue DIRECTIVE_NOTE and sets priority to URGENT', async () => {
