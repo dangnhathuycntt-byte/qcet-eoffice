@@ -1,5 +1,6 @@
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
+import { NextResponse } from 'next/server';
 import {
   assertQueryStringLength,
   parseAndValidateJson,
@@ -7,6 +8,7 @@ import {
   MAX_PAYLOAD_SIZE,
   assertJsonContentType,
 } from '@/server/api/validation';
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from '@/server/api/rate-limit';
 import { assertRateLimit } from '@/server/security/rate-limit';
 import { assertCsrf } from '@/server/security/csrf';
 import { ForbiddenError } from '@/server/api/errors';
@@ -164,7 +166,21 @@ export async function POST(req: Request) {
 
     const authUser = requireAuthenticated(context);
 
-    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+    const rateResult = await checkRateLimit('MUTATION', authUser.id);
+    if (!rateResult.success) {
+      await logRateLimitExceeded('MUTATION', authUser.id, req.url, authUser.id);
+      return NextResponse.json(
+        { error: 'Too Many Requests', retryAt: rateResult.resetAt.toISOString() },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATION.limit),
+            'X-RateLimit-Remaining': String(rateResult.remaining),
+          },
+        },
+      );
+    }
 
     const validatedBody = await parseAndValidateJson(req, CreateTaskSchema);
 

@@ -9,6 +9,7 @@ import {
   assertRequestBodySize,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/api/rate-limit";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { ExportDocumentQuerySchema } from "@/contracts/documents";
 import { listDocuments } from "@/lib/documents/document-service";
@@ -25,8 +26,27 @@ export async function GET(request: NextRequest) {
     requestId = context.requestId;
     const authUser = requireAuthenticated(context);
 
-    // Rate limiting: strict export tier limit
-    assertRateLimit(authUser.id, "EXPORT");
+    // Rate limiting: strict bulk export tier limit
+    const rateResult = await checkRateLimit('BULK_EXPORT', authUser.id);
+    if (!rateResult.success) {
+      await logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id);
+      return NextResponse.json(
+        {
+          error: 'Too Many Requests',
+          code: 'RATE_LIMITED',
+          message: 'Too many requests',
+          retryAt: rateResult.resetAt.toISOString(),
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.BULK_EXPORT.limit),
+            'X-RateLimit-Remaining': String(rateResult.remaining),
+          },
+        },
+      );
+    }
 
     // Operational kill switch: largeExcelExport
     if (!isFeatureEnabled("largeExcelExport")) {
@@ -110,7 +130,26 @@ export async function POST(request: NextRequest) {
     assertCsrf(request);
     assertJsonContentType(request);
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
-    assertRateLimit(authUser.id, "EXPORT");
+    const rateResult = await checkRateLimit('BULK_EXPORT', authUser.id);
+    if (!rateResult.success) {
+      await logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id);
+      return NextResponse.json(
+        {
+          error: 'Too Many Requests',
+          code: 'RATE_LIMITED',
+          message: 'Too many requests',
+          retryAt: rateResult.resetAt.toISOString(),
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((rateResult.resetAt.getTime() - Date.now()) / 1000)),
+            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.BULK_EXPORT.limit),
+            'X-RateLimit-Remaining': String(rateResult.remaining),
+          },
+        },
+      );
+    }
 
     if (!isFeatureEnabled("largeExcelExport")) {
       return NextResponse.json(
