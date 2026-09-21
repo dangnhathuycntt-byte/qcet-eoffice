@@ -136,7 +136,7 @@ export async function POST(
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
     // 4. Rate limiting on mutations
-    assertRateLimit(authUser.id, "MUTATION");
+    await assertRateLimit(authUser.id, "MUTATION");
 
     const { id } = await Promise.resolve(context.params);
 

@@ -3,7 +3,8 @@ import { decode } from "next-auth/jwt";
 import { UserRole } from "@/types/auth";
 import { serverEnv } from "@/config/env.server";
 import { prisma } from "@/lib/prisma";
-import { isSessionExpired, isSessionRevoked } from "@/server/auth/session-policy";
+import { AuthenticationError } from "@/server/api/errors";
+import { isSessionExpired, isSessionRevoked, assertSessionPolicy } from "@/server/auth/session-policy";
 
 export const SESSION_COOKIE_NAME = "authjs.session-token";
 export const SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token";
@@ -51,146 +52,221 @@ export function verifySessionToken(token: string): SessionPayload | null {
   }
 }
 
-export async function verifySessionTokenAsync(token: string): Promise<SessionPayload | null> {
-  if (!token || typeof token !== "string" || token.trim().length === 0) return null;
+// ---------------------------------------------------------------------------
+// Canonical token-level session resolver (Issue #27, corrective review).
+//
+// This is the SINGLE implementation of token -> authenticated-session
+// decision logic. It resolves, in order:
+//   1. opaque Auth.js/PrismaAdapter database session (`sessions` table,
+//      with expires / revokedAt / revocation-store / user.isActive checks);
+//   2. HMAC-SHA256 JWT (crypto verify + session-policy + DB user refresh);
+//   3. Auth.js JWE (all cookie salts + session-policy + DB user refresh).
+// It throws `AuthenticationError` (fail-closed) with `SESSION_INVALID` or
+// `ACCOUNT_DISABLED`; it never returns a session for an invalid, expired,
+// revoked, or disabled-account token.
+//
+// Consumers:
+// - `verifySessionTokenAsync()` (this module) maps success to
+//   `SessionPayload` and any `AuthenticationError` to `null` — used by
+//   Next.js Node middleware and Server Components;
+// - `resolveTokenSession()` in `src/server/auth/current-session.ts`
+//   delegates here and maps success to identity-only `CurrentSession`
+//   (request handlers must not treat the role snapshot as authority).
+// Do NOT copy these rules a third time: extract-then-delegate.
+// ---------------------------------------------------------------------------
+
+export interface CanonicalTokenUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  departmentId: string | null;
+  title: string | null;
+  isActive: true;
+}
+
+export interface CanonicalTokenSession {
+  sessionId: string;
+  userId: string;
+  user: CanonicalTokenUser;
+  tokenKind: "database" | "jwt" | "jwe";
+}
+
+const JWE_COOKIE_SALTS = [
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+] as const;
+
+export async function resolveCanonicalTokenSession(token: string): Promise<CanonicalTokenSession> {
+  if (!token || typeof token !== "string" || token.trim().length === 0) {
+    throw new AuthenticationError("Phiên làm việc không hợp lệ", "SESSION_INVALID");
+  }
   const trimmed = token.trim();
 
-  // 1. Try database Session lookup if token is a database sessionToken in prisma.session
+  // 1. Primary path: opaque database Session by sessionToken with User.
   try {
-    if (prisma?.session?.findUnique) {
-      const dbSession = await prisma.session.findUnique({
-        where: { sessionToken: trimmed },
-        include: { user: true },
-      });
+    const dbSession = await prisma.session.findUnique({
+      where: { sessionToken: trimmed },
+      include: { user: true },
+    });
 
-      if (dbSession) {
-        if (isSessionExpired(dbSession.expires)) {
-          return null;
-        }
-        if (
-          (dbSession as any).revokedAt != null ||
-          isSessionRevoked(dbSession.id, dbSession.userId) ||
-          isSessionRevoked(trimmed, dbSession.userId)
-        ) {
-          return null;
-        }
-        if (!dbSession.user || !dbSession.user.isActive) {
-          return null;
-        }
+    if (dbSession) {
+      if (isSessionExpired(dbSession.expires)) {
+        throw new AuthenticationError("Phiên làm việc đã hết hạn", "SESSION_INVALID");
+      }
+      if (
+        (dbSession as any).revokedAt != null ||
+        isSessionRevoked(dbSession.id, dbSession.userId) ||
+        isSessionRevoked(trimmed, dbSession.userId)
+      ) {
+        throw new AuthenticationError("Phiên làm việc đã bị thu hồi", "SESSION_INVALID");
+      }
+      if (!dbSession.user || !dbSession.user.isActive) {
+        throw new AuthenticationError("Tài khoản đã bị vô hiệu hóa hoặc tạm khóa", "ACCOUNT_DISABLED");
+      }
 
-        return {
+      return {
+        sessionId: dbSession.id,
+        userId: dbSession.user.id,
+        user: {
           id: dbSession.user.id,
           email: dbSession.user.email,
           name: dbSession.user.name,
           role: dbSession.user.role,
           departmentId: dbSession.user.departmentId ?? null,
           title: dbSession.user.title ?? null,
-          isActive: dbSession.user.isActive,
-          sessionId: dbSession.id,
-        };
-      }
-    }
-  } catch {
-    // If Prisma is unavailable or query fails, fall through to JWT / JWE
-  }
-
-  // 2. Try standard HMAC-SHA256 JWT
-  const syncVerified = verifySessionToken(trimmed);
-  if (syncVerified) {
-    if (
-      isSessionRevoked(trimmed, syncVerified.id, (syncVerified as any).iat) ||
-      (syncVerified.sessionId &&
-        isSessionRevoked(syncVerified.sessionId, syncVerified.id, (syncVerified as any).iat))
-    ) {
-      return null;
-    }
-    try {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: syncVerified.id },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          departmentId: true,
-          title: true,
           isActive: true,
         },
-      });
-      if (!currentUser?.isActive) return null;
-      return {
-        ...syncVerified,
-        id: currentUser.id,
-        email: currentUser.email,
-        name: currentUser.name,
-        role: currentUser.role,
-        departmentId: currentUser.departmentId ?? null,
-        title: currentUser.title ?? null,
-        isActive: true,
+        tokenKind: "database",
       };
-    } catch {
-      // Server session truth is unavailable, so fail closed instead of trusting stale claims.
-      return null;
     }
+  } catch (err) {
+    if (err instanceof AuthenticationError) {
+      throw err;
+    }
+    // Prisma unavailable / query failed: fall through to JWT / JWE paths.
   }
 
-  // 3. Try NextAuth / Auth.js JWE token
-  try {
-    const secret = getJwtSecret();
-    for (const salt of [
-      SESSION_COOKIE_NAME,
-      SECURE_SESSION_COOKIE_NAME,
-      "next-auth.session-token",
-      "__Secure-next-auth.session-token",
-    ]) {
-      try {
-        const decodedJwe = await decode({
-          token: trimmed,
-          secret,
-          salt,
-        });
+  // 2. Secondary path: HMAC-SHA256 JWT, then Auth.js JWE.
+  let decoded: any = null;
+  let tokenKind: "jwt" | "jwe" = "jwt";
 
+  try {
+    decoded = jwt.verify(trimmed, getJwtSecret()) as any;
+    tokenKind = "jwt";
+  } catch (err: any) {
+    if (err?.name === "TokenExpiredError") {
+      throw new AuthenticationError("Phiên làm việc đã hết hạn", "SESSION_INVALID");
+    }
+
+    // Try decoding as NextAuth / Auth.js JWE token (one salt matches).
+    const secret = getJwtSecret();
+    for (const salt of JWE_COOKIE_SALTS) {
+      try {
+        const decodedJwe = await decode({ token: trimmed, secret, salt });
         if (decodedJwe && (decodedJwe.id || decodedJwe.sub) && decodedJwe.email) {
-          const now = Math.floor(Date.now() / 1000);
-          if (decodedJwe.exp && typeof decodedJwe.exp === "number" && now > decodedJwe.exp) {
-            return null;
-          }
-          const userId = (decodedJwe.id || decodedJwe.sub) as string;
-          if (isSessionRevoked(trimmed, userId, decodedJwe.iat as number | undefined)) {
-            return null;
-          }
-          const currentUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              role: true,
-              departmentId: true,
-              title: true,
-              isActive: true,
-            },
-          });
-          if (!currentUser?.isActive) return null;
-          return {
-            id: currentUser.id,
-            email: currentUser.email,
-            name: currentUser.name,
-            role: currentUser.role,
-            departmentId: currentUser.departmentId ?? null,
-            title: currentUser.title ?? null,
-            isActive: true,
+          decoded = {
+            id: decodedJwe.id || decodedJwe.sub,
+            email: decodedJwe.email,
+            name: decodedJwe.name || "",
+            role: decodedJwe.role || "CHUYEN_VIEN",
+            departmentId: decodedJwe.departmentId || null,
+            title: decodedJwe.title || null,
+            isActive: decodedJwe.isActive !== false,
+            exp: decodedJwe.exp,
+            iat: decodedJwe.iat,
+            jti: decodedJwe.jti,
+            sessionId: (decodedJwe as any).sessionId,
           };
+          tokenKind = "jwe";
+          break;
         }
       } catch {
-        // Continue to next salt
+        // A token is encrypted for one cookie salt; continue trying the others.
       }
     }
-  } catch {
-    // ignore
   }
 
-  return null;
+  if (!decoded) {
+    throw new AuthenticationError("Phiên làm việc không hợp lệ", "SESSION_INVALID");
+  }
+
+  const userId = decoded.id || decoded.userId;
+  if (!userId) {
+    throw new AuthenticationError("Phiên làm việc không hợp lệ", "SESSION_INVALID");
+  }
+
+  const sessionId = decoded.sessionId || decoded.jti || `session_${decoded.id}`;
+  const expires = decoded.exp ? new Date(decoded.exp * 1000) : undefined;
+  const issuedAt = decoded.iat ? new Date(decoded.iat * 1000) : undefined;
+
+  // Expiry + revocation policy (covers JWT exp/iat and JWE exp/iat uniformly).
+  assertSessionPolicy({ sessionId, expires, userId, issuedAt, token: trimmed });
+
+  // DB user truth: missing user -> SESSION_INVALID, inactive -> ACCOUNT_DISABLED.
+  // Role/department/title are refreshed from DB (never trusted from claims).
+  let profile;
+  try {
+    profile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        departmentId: true,
+        title: true,
+        isActive: true,
+      },
+    });
+  } catch {
+    // Server session truth unavailable: fail closed instead of stale claims.
+    throw new AuthenticationError("Phiên làm việc không hợp lệ", "SESSION_INVALID");
+  }
+  if (!profile) {
+    throw new AuthenticationError("Phiên làm việc không hợp lệ", "SESSION_INVALID");
+  }
+  if (!profile.isActive) {
+    throw new AuthenticationError("Tài khoản đã bị vô hiệu hóa hoặc tạm khóa", "ACCOUNT_DISABLED");
+  }
+
+  return {
+    sessionId,
+    userId: profile.id,
+    user: {
+      id: profile.id,
+      email: profile.email,
+      name: profile.name,
+      role: profile.role,
+      departmentId: profile.departmentId ?? null,
+      title: profile.title ?? null,
+      isActive: true,
+    },
+    tokenKind,
+  };
+}
+
+export async function verifySessionTokenAsync(token: string): Promise<SessionPayload | null> {
+  if (!token || typeof token !== "string" || token.trim().length === 0) return null;
+  try {
+    const canonical = await resolveCanonicalTokenSession(token);
+    return {
+      id: canonical.user.id,
+      email: canonical.user.email,
+      name: canonical.user.name,
+      role: canonical.user.role,
+      departmentId: canonical.user.departmentId,
+      title: canonical.user.title,
+      isActive: true,
+      sessionId: canonical.sessionId,
+    };
+  } catch {
+    // Any AuthenticationError (invalid / expired / revoked / disabled) or
+    // infrastructure failure resolves to unauthenticated: fail closed.
+    return null;
+  }
 }
 
 export async function getSessionFromRequest(request: {

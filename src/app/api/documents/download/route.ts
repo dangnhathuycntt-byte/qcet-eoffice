@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     requestId = context.requestId;
 
     const authUser = requireAuthenticated(context);
-    assertRateLimit(authUser.id, "FILE_DOWNLOAD");
+    await assertRateLimit(authUser.id, "FILE_DOWNLOAD");
 
     const attachmentId =
       req.nextUrl.searchParams.get("attachmentId") ||

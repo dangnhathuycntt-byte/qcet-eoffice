@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { ApiError, ForbiddenError, ValidationError } from '@/server/api/errors';
-import { DelegationStatus, Prisma } from '@prisma/client';
+import { DelegationStatus, AssignmentStatus, Prisma } from '@prisma/client';
 import { NON_DELEGABLE_CAPABILITIES } from '@/server/authorization/capability';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { isExecutivePosition } from '@/server/authorization/authorization-engine';
@@ -91,6 +91,23 @@ export async function GET(request: NextRequest) {
     const authContext = await loadAuthorizationContext(authUser.id);
     const isExecutive = isExecutiveAdministrator(authContext);
 
+    // Visibility policy (Issue #28, corrective review): non-executive callers
+    // see delegations involving themselves OR their own organizational units
+    // (self + own-unit scope). `User.departmentId` references the Department
+    // table while delegation assignments reference OrganizationalUnit, so the
+    // authorized unit scope is resolved ONCE here from the caller's active
+    // PositionAssignments (OrganizationalUnit id-space) and reused for the
+    // default listing and for every `unitId` query filter below.
+    // Client-controlled params may only intersect/narrow this scope.
+    let allowedUnitIds: string[] = [];
+    if (!isExecutive) {
+      const ownAssignments = await prisma.positionAssignment.findMany({
+        where: { userId: authUser.id, status: AssignmentStatus.ACTIVE },
+        select: { unitId: true },
+      });
+      allowedUnitIds = [...new Set(ownAssignments.map((a) => a.unitId))];
+    }
+
     const where: Prisma.DelegationGrantWhereInput = {};
 
     if (statusParam) {
@@ -102,26 +119,43 @@ export async function GET(request: NextRequest) {
     }
 
     if (userIdParam) {
+      // BOLA guard (Issue #28): client-controlled `userId` must only narrow
+      // the caller's authorized scope, never widen it. Non-executive callers
+      // may only query their own delegations; executive/statutory authority
+      // keeps full query capability per policy.
+      if (!isExecutive && userIdParam !== authUser.id) {
+        throw new ForbiddenError(
+          'Bạn không có quyền liệt kê văn bản ủy quyền của người dùng khác'
+        );
+      }
       where.OR = [
         { grantorAssignment: { userId: userIdParam } },
         { granteeAssignment: { userId: userIdParam } },
       ];
     } else if (!isExecutive) {
-      // Non-executive users only see delegations involving themselves or their unit
+      // Default non-executive scope: self + own organizational units.
       const conditions: Prisma.DelegationGrantWhereInput[] = [
         { grantorAssignment: { userId: authUser.id } },
         { granteeAssignment: { userId: authUser.id } },
       ];
-      if (authUser.departmentId) {
+      if (allowedUnitIds.length > 0) {
         conditions.push(
-          { grantorAssignment: { unitId: authUser.departmentId } },
-          { granteeAssignment: { unitId: authUser.departmentId } }
+          { grantorAssignment: { unitId: { in: allowedUnitIds } } },
+          { granteeAssignment: { unitId: { in: allowedUnitIds } } }
         );
       }
       where.OR = conditions;
     }
 
     if (unitIdParam) {
+      // BOLA guard (Issue #28): client-controlled `unitId` must only narrow
+      // the already-resolved authorized scope. Non-executive callers may only
+      // narrow to one of their own units; any other unit is denied fail-closed.
+      if (!isExecutive && !allowedUnitIds.includes(unitIdParam)) {
+        throw new ForbiddenError(
+          'Bạn không có quyền liệt kê văn bản ủy quyền của đơn vị khác'
+        );
+      }
       const unitFilter: Prisma.DelegationGrantWhereInput = {
         OR: [
           { grantorAssignment: { unitId: unitIdParam } },

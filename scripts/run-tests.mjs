@@ -55,7 +55,7 @@ const PATTERN_RULES = {
     concurrency: os.cpus().length,
   },
   security: {
-    include: /security|auth|permission|rbac/,
+    include: /security|auth|permission|rbac|rate-limit|ratelimit|middleware|idor/,
     exclude: null,
     contentFilter: false,
     concurrency: os.cpus().length,
@@ -67,7 +67,7 @@ const PATTERN_RULES = {
     concurrency: os.cpus().length,
   },
   critical: {
-    include: /security|auth|permission|rbac|task-state|domain|workflow|state-machine/,
+    include: /security|auth|permission|rbac|rate-limit|ratelimit|middleware|idor|task-state|domain|workflow|state-machine/,
     exclude: null,
     contentFilter: false,
     concurrency: os.cpus().length,

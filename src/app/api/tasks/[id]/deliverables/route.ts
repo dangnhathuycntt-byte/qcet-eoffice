@@ -32,7 +32,7 @@ export async function POST(req: Request, routeContext: RouteContext) {
 
     const authUser = requireAuthenticated(context);
 
-    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
@@ -97,7 +97,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const authUser = requireAuthenticated(context);
 
-    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
@@ -151,7 +151,7 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     requestId = context.requestId;
 
     const authUser = requireAuthenticated(context);
-    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 

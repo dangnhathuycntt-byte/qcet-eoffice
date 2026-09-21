@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest) {
     const authUser = context.user!;
 
     assertCsrf(request);
-    assertRateLimit(authUser.id, 'MUTATION');
+    await assertRateLimit(authUser.id, 'MUTATION');
 
     const result = await prisma.notification.updateMany({
       where: {

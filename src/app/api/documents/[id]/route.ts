@@ -117,7 +117,7 @@ export async function PATCH(
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
     // 3. Rate limiting on mutations
-    assertRateLimit(authUser.id, "MUTATION");
+    await assertRateLimit(authUser.id, "MUTATION");
 
     const { id } = await Promise.resolve(context.params);
 
@@ -233,7 +233,7 @@ export async function DELETE(
     assertCsrf(request);
 
     // 2. Rate limiting on mutations
-    assertRateLimit(authUser.id, "MUTATION");
+    await assertRateLimit(authUser.id, "MUTATION");
 
     const { id } = await Promise.resolve(context.params);
 

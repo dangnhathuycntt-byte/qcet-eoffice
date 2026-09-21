@@ -208,10 +208,6 @@ export function TaskIdentityBlock({
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = React.useState(false);
   const statusMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Priority popover state
-  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = React.useState(false);
-  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
-
   // Lead popover state on Properties line
   const [isLeadDropdownOpen, setIsLeadDropdownOpen] = React.useState(false);
   const [leadSearchQuery, setLeadSearchQuery] = React.useState("");
@@ -254,16 +250,12 @@ export function TaskIdentityBlock({
   const currentStatusObj =
     STATUS_OPTIONS.find((s) => s.value === normalizedStatus) || STATUS_OPTIONS[0];
 
-  const rawPriority =
-    (task as any).priority || (isSchool ? schoolTask?.priority : "NORMAL") || "NORMAL";
-  const normalizedPriority =
-    typeof rawPriority === "string"
-      ? rawPriority.toUpperCase() === "MEDIUM"
-        ? "NORMAL"
-        : (rawPriority.toUpperCase() as TaskPriority)
-      : "NORMAL";
-  const currentPriorityObj =
-    PRIORITY_OPTIONS.find((p) => p.value === normalizedPriority) || PRIORITY_OPTIONS[2];
+  const currentPriorityObj = PRIORITY_OPTIONS.find((p) => p.value === (
+    typeof ((task as any).priority || "NORMAL") === "string"
+      ? ((task as any).priority || "NORMAL").toUpperCase() === "MEDIUM" ? "NORMAL" : ((task as any).priority || "NORMAL").toUpperCase()
+      : "NORMAL"
+  )) || PRIORITY_OPTIONS[2];
+  void currentPriorityObj; // retained for external consumers, not rendered here
 
   const filteredPersonnel = React.useMemo(() => {
     if (!leadSearchQuery.trim()) return personnelList;
@@ -278,8 +270,8 @@ export function TaskIdentityBlock({
 
   // Close dropdowns on outside click / Escape
   React.useEffect(() => {
-    const refs = [statusMenuRef, priorityMenuRef, leadMenuRef];
-    const setters = [setIsStatusDropdownOpen, setIsPriorityDropdownOpen, setIsLeadDropdownOpen];
+    const refs = [statusMenuRef, leadMenuRef];
+    const setters = [setIsStatusDropdownOpen, setIsLeadDropdownOpen];
     const onMouse = (e: MouseEvent) => { refs.forEach((r, i) => { if (r.current && !r.current.contains(e.target as Node)) setters[i](false); }); };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setters.forEach((s) => s(false)); };
     document.addEventListener("mousedown", onMouse);
@@ -486,24 +478,34 @@ export function TaskIdentityBlock({
 
         <span>·</span>
 
-        {/* Due Date */}
+        {/* Ngày bắt đầu → Hạn chót */}
         <div className="inline-flex items-center gap-1 text-xs text-foreground">
+          <Calendar className="size-3.5 text-muted-foreground shrink-0" />
+          {canEdit && onStartDateChange ? (
+            <VietnameseDatePicker
+              value={startDateIso}
+              onChange={(newDate) => onStartDateChange(task.id, newDate)}
+              placeholder="Bắt đầu"
+              variant="chip"
+              align="left"
+              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+            />
+          ) : (
+            <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "—"}</span>
+          )}
+          <span className="text-muted-foreground/60 px-0.5">→</span>
           {canEdit && onDueDateChange ? (
             <VietnameseDatePicker
               value={dueDateIso}
               onChange={(newDate) => onDueDateChange(task.id, newDate)}
-              placeholder="Chọn hạn chót"
+              placeholder="Hạn chót"
               variant="chip"
-              icon={<Calendar className="size-3.5 text-rose-500 shrink-0" />}
               showPresets={true}
               align="left"
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
             />
           ) : (
-            <div className="inline-flex items-center gap-1 text-muted-foreground">
-              <Calendar className="size-3.5 text-rose-500 shrink-0" />
-              <span>{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
-            </div>
+            <span className="text-muted-foreground">{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
           )}
         </div>
       </div>

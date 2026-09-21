@@ -17,7 +17,7 @@ export async function GET(request?: NextRequest | Request): Promise<Response> {
       const context = await getApiContext(request);
       requestId = context.requestId;
       const authUser = requireAuthenticated(context);
-      assertRateLimit(authUser.id, "DEFAULT_API");
+      await assertRateLimit(authUser.id, "DEFAULT_API");
     }
 
     const [total, incoming, outgoing, internal, pending, urgent] = await Promise.all([

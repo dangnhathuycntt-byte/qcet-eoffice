@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const searchQuery = query.search || query.q;
     if (searchQuery && searchQuery.trim().length > 0) {
-      assertRateLimit(authUser.id, "SEARCH");
+      await assertRateLimit(authUser.id, "SEARCH");
     }
 
     let docType: DocumentType | undefined;

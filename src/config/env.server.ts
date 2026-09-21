@@ -54,6 +54,18 @@ export const ServerEnvSchema = z
     UPLOADS_DIR: z.string().optional(),
     PRIVATE_STORAGE_DIR: z.string().optional(),
     TEMP_STORAGE_DIR: z.string().optional(),
+    // Shared rate-limit backend (Issue #29, corrective review: mandatory in
+    // production). Optional in development/test where the process-local test
+    // double applies. Production deployments MUST set it to a shared
+    // self-hosted Redis, otherwise limits do not hold across
+    // instances/restarts and the limiter fails closed (503).
+    // A set but malformed value is rejected in every environment.
+    REDIS_URL: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^(redis|rediss):\/\//.test(val.trim()), {
+        message: "REDIS_URL must be a redis:// or rediss:// URL when set",
+      }),
   })
   .transform((raw) => {
     // Resolve aliases and development fallbacks immutably
@@ -85,6 +97,24 @@ export const ServerEnvSchema = z
           code: z.ZodIssueCode.custom,
           message: "DATABASE_URL is required in production",
           path: ["DATABASE_URL"],
+        });
+      }
+
+      // REDIS_URL is strictly required in production: the distributed
+      // rate limiter fails closed (503) without its shared backend, so a
+      // production boot without it must fail fast instead of silently
+      // running single-instance limits. Only redis:// / rediss:// accepted.
+      if (!data.REDIS_URL || data.REDIS_URL.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "REDIS_URL (redis:// or rediss://) is required in production",
+          path: ["REDIS_URL"],
+        });
+      } else if (!/^(redis|rediss):\/\//.test(data.REDIS_URL.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "REDIS_URL must be a redis:// or rediss:// URL",
+          path: ["REDIS_URL"],
         });
       }
 
@@ -159,6 +189,10 @@ export function validateServerEnv(
           (rawEnv.AUTH_SECRET as string) ||
           (rawEnv.JWT_SECRET as string) ||
           "qcet_build_placeholder_secret_key_2026_min_32_chars",
+        // Build-time only: the compiler never contacts Redis. Runtime
+        // production validation stays strict (REDIS_URL required).
+        REDIS_URL:
+          (rawEnv.REDIS_URL as string) || "redis://localhost:6379",
       }
     : rawEnv;
 

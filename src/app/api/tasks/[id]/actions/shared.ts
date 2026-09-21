@@ -165,7 +165,7 @@ export async function resolveActionContext(
 
   const apiContext = await getApiContext(request);
   const user = requireAuthenticated(apiContext);
-  assertRateLimit(user.id, "MUTATIONS_SENSITIVE");
+  await assertRateLimit(user.id, "MUTATIONS_SENSITIVE");
 
   const { id: taskId } = await Promise.resolve(context.params);
   if (!taskId || !taskId.trim()) {

@@ -61,7 +61,7 @@ export async function GET(req: Request) {
 
     const searchQuery = validatedQuery.q || validatedQuery.search;
     if (searchQuery && searchQuery.trim().length > 0) {
-      assertRateLimit(authUser.id, 'SEARCH');
+      await assertRateLimit(authUser.id, 'SEARCH');
     }
 
     // Default pagination limit is 50, bounded to [1, 200]

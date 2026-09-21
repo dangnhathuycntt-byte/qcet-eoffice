@@ -33,7 +33,7 @@ export async function GET(
     requestId = context.requestId;
 
     const authUser = requireAuthenticated(context);
-    assertRateLimit(authUser.id, "FILE_DOWNLOAD");
+    await assertRateLimit(authUser.id, "FILE_DOWNLOAD");
 
     const resolvedParams = await Promise.resolve(params);
     const pathSegments = resolvedParams?.path;

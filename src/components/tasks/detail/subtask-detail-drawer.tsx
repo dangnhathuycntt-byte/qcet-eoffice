@@ -6,7 +6,6 @@ import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
 import {
   X,
-  Signal,
   UserPlus,
   Check,
   ChevronDown,
@@ -21,14 +20,14 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import type { StaffTask, TaskStatus } from "@/types/dashboard";
+import { STATUS_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskNotionBlockContent } from "./task-notion-block-content";
-import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
 
@@ -165,13 +164,6 @@ export function SubtaskDetailDrawer({
   // Status & Priority objects
   const currentStatusObj =
     STATUS_OPTIONS.find((s) => s.value === subtask?.status) || STATUS_OPTIONS[0];
-
-  const currentPriorityVal =
-    (subtask as any)?.priority === "MEDIUM"
-      ? "NORMAL"
-      : (subtask as any)?.priority || "NORMAL";
-  const currentPriorityObj =
-    PRIORITY_OPTIONS.find((p) => p.value === currentPriorityVal) || PRIORITY_OPTIONS[2];
 
   const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
@@ -310,23 +302,6 @@ export function SubtaskDetailDrawer({
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
-  };
-
-  const handlePriorityChange = async (newPriority: TaskPriority) => {
-    if (!subtask) return;
-    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
-    const res = await updateTaskPriority(subtask.id, newPriority, currentVersion);
-    if (!res.ok) {
-      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
-      return;
-    }
-
-    const cleanPriority: TaskPriority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
-    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.version ?? (currentVersion ? currentVersion + 1 : 1);
-    const updated = { ...subtask, priority: cleanPriority, version: nextVersion };
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
-    notifySuccess("Đã cập nhật độ ưu tiên việc thành phần");
   };
 
   const handleAssigneeChange = async (person: { id: string; name: string }) => {
@@ -601,16 +576,16 @@ export function SubtaskDetailDrawer({
             />
           </div>
 
-          <section aria-label="Thuộc tính việc thành phần" className="mt-4 space-y-0.5 text-xs select-none">
+          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none">
             <Select.Root
               value={subtask.status}
               onValueChange={(value) => void handleStatusChange(value as TaskStatus)}
               disabled={!canEdit}
             >
-              <Select.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
+              <Select.Trigger className="group inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
                 <StatusIcon className={cn("size-3.5 shrink-0", currentStatusObj.iconClass)} />
                 <Select.Value>{() => <span className="font-normal text-foreground">{currentStatusObj.label}</span>}</Select.Value>
-                {canEdit && <Select.Icon><ChevronDown className="ml-auto size-3 text-muted-foreground/60" /></Select.Icon>}
+                {canEdit && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" /></Select.Icon>}
               </Select.Trigger>
               <Select.Portal>
                 <Select.Positioner className="z-50" align="start" sideOffset={4}>
@@ -624,39 +599,6 @@ export function SubtaskDetailDrawer({
                         >
                           <span className="flex items-center gap-1.5">
                             <span className={cn("size-1.5 rounded-full", option.dotClass)} />
-                            <Select.ItemText>{option.label}</Select.ItemText>
-                          </span>
-                          <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
-                        </Select.Item>
-                      ))}
-                    </Select.List>
-                  </Select.Popup>
-                </Select.Positioner>
-              </Select.Portal>
-            </Select.Root>
-
-            <Select.Root
-              value={currentPriorityVal}
-              onValueChange={(value) => void handlePriorityChange(value as TaskPriority)}
-              disabled={!canEdit}
-            >
-              <Select.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                <Signal className={cn("size-3.5 shrink-0", currentPriorityObj.iconClass)} />
-                <Select.Value>{() => <span className="font-normal text-foreground">{currentPriorityObj.label}</span>}</Select.Value>
-                {canEdit && <Select.Icon><ChevronDown className="ml-auto size-3 text-muted-foreground/60" /></Select.Icon>}
-              </Select.Trigger>
-              <Select.Portal>
-                <Select.Positioner className="z-50" align="start" sideOffset={4}>
-                  <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-                    <Select.List>
-                      {PRIORITY_OPTIONS.map((option) => (
-                        <Select.Item
-                          key={option.value}
-                          value={option.value}
-                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Signal className={cn("size-3", option.iconClass)} />
                             <Select.ItemText>{option.label}</Select.ItemText>
                           </span>
                           <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
@@ -687,7 +629,7 @@ export function SubtaskDetailDrawer({
               autoHighlight
               disabled={!canEdit || isReassigning}
             >
-              <Combobox.Trigger className="flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
+              <Combobox.Trigger className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
                 {isReassigning ? (
                   <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
                 ) : (
@@ -734,7 +676,7 @@ export function SubtaskDetailDrawer({
             </Combobox.Root>
 
             {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
-              <div className="flex min-h-7 items-center gap-2 rounded-md px-1.5 py-1 hover:bg-muted/40">
+              <div className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted/40">
                 <Users className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate text-muted-foreground">
                   {subtask.coAssignees.map((co: any) => co.name).join(", ")}
