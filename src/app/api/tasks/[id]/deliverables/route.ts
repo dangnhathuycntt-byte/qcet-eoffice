@@ -101,6 +101,21 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
 
+    const taskResult = await taskQueryService.getTaskById(taskId);
+    if (!taskResult) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
+    }
+    const existingTask = taskResult.task;
+
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const reviewDecision = authorize(authContext, 'task.review', taskResource);
+    if (!reviewDecision.allowed) {
+      throw new ForbiddenError(
+        reviewDecision.reason || 'Bạn không có quyền đánh giá minh chứng cho nhiệm vụ này'
+      );
+    }
+
     const validatedInput = await parseAndValidateJson(req, ReviewDeliverableInputSchema);
 
     // Atomic review transaction: checks SoD, updates deliverable & task status, logs audit
@@ -139,6 +154,22 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id: taskId } = await Promise.resolve(routeContext.params);
+
+    const taskResult = await taskQueryService.getTaskById(taskId);
+    if (!taskResult) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
+    }
+    const existingTask = taskResult.task;
+
+    const taskResource = buildTaskResource(existingTask);
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const deleteDecision = authorize(authContext, 'task.update_execution', taskResource);
+    if (!deleteDecision.allowed) {
+      throw new ForbiddenError(
+        deleteDecision.reason || 'Bạn không có quyền xóa minh chứng của nhiệm vụ này'
+      );
+    }
+
     const url = new URL(req.url);
     const deliverableId =
       url.searchParams.get('deliverableId') || url.searchParams.get('id');

@@ -26,12 +26,14 @@ import { validateDocumentUpdatePayload } from "@/lib/documents/document-validato
 import {
   NotFoundError,
   AuthorizationError,
+  ForbiddenError,
   ValidationError,
 } from "@/server/api/errors";
 import {
   loadAuthorizationContext,
   computeAvailableActions,
   buildDocumentResource,
+  authorize,
 } from "@/server/authorization";
 
 interface RouteContext {
@@ -55,18 +57,18 @@ export async function GET(
       throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
     }
 
-    // Object-level authorization check (BOLA prevention)
-    if (!canReadDocument(authUser, document)) {
-      throw new AuthorizationError(
-        "Bạn không có quyền truy cập văn bản này (Forbidden)",
-        "FORBIDDEN"
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const docResource = buildDocumentResource(document);
+    const readDecision = authorize(authContext, 'document.read', docResource);
+    if (!readDecision.allowed || !canReadDocument(authUser, document)) {
+      throw new ForbiddenError(
+        readDecision.reason || "Bạn không có quyền truy cập văn bản này (Forbidden)"
       );
     }
 
-    const authContext = await loadAuthorizationContext(authUser.id);
     const availableActions = computeAvailableActions(
       authContext,
-      buildDocumentResource(document)
+      docResource
     );
 
     const documentDTO = toDocumentDetailDTO(document);
@@ -134,10 +136,12 @@ export async function PATCH(
     }
 
     // 5. Object-level authorization check (BOLA prevention)
-    if (!canUpdateDocument(authUser, existing)) {
-      throw new AuthorizationError(
-        "Bạn không có quyền cập nhật văn bản này (Forbidden)",
-        "FORBIDDEN"
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const docResource = buildDocumentResource(existing);
+    const updateDecision = authorize(authContext, 'document.review_content', docResource);
+    if ((!updateDecision.allowed && !canUpdateDocument(authUser, existing)) || !canUpdateDocument(authUser, existing)) {
+      throw new ForbiddenError(
+        updateDecision.reason || "Bạn không có quyền cập nhật văn bản này (Forbidden)"
       );
     }
 
@@ -248,10 +252,12 @@ export async function DELETE(
     }
 
     // 3. Object-level authorization check (BOLA prevention)
-    if (!canDeleteDocument(authUser, existing)) {
-      throw new AuthorizationError(
-        "Bạn không có quyền xóa văn bản này (Forbidden)",
-        "FORBIDDEN"
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const docResource = buildDocumentResource(existing);
+    const deleteDecision = authorize(authContext, 'document.archive', docResource);
+    if ((!deleteDecision.allowed && !canDeleteDocument(authUser, existing)) || !canDeleteDocument(authUser, existing)) {
+      throw new ForbiddenError(
+        deleteDecision.reason || "Bạn không có quyền xóa văn bản này (Forbidden)"
       );
     }
 
