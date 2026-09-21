@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Calendar,
   Users,
   Plus,
   CircleDashed,
@@ -64,13 +65,10 @@ export function SubtaskDetailDrawer({
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
-    setIsDeadlineEditorOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
-  const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const deadlineRef = React.useRef<HTMLDivElement>(null);
   const [personnelList, setPersonnelList] = React.useState<
     Array<{ id: string; name: string; email?: string; departmentName?: string }>
   >([]);
@@ -148,18 +146,6 @@ export function SubtaskDetailDrawer({
       })
       .catch(() => {});
   }, [canEdit]);
-
-  // Close deadline popover on outside click
-  React.useEffect(() => {
-    if (!isDeadlineEditorOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (deadlineRef.current && !deadlineRef.current.contains(e.target as Node)) {
-        setIsDeadlineEditorOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isDeadlineEditorOpen]);
 
   // Status & Priority objects
   const currentStatusObj =
@@ -633,10 +619,7 @@ export function SubtaskDetailDrawer({
                 {isReassigning ? (
                   <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
                 ) : (
-                  <UserPlus className={cn(
-                    "size-3.5 shrink-0",
-                    selectedAssignee ? "text-muted-foreground" : "text-primary/60"
-                  )} />
+                  <UserPlus className="size-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className={cn(
                   "truncate font-normal",
@@ -655,7 +638,7 @@ export function SubtaskDetailDrawer({
                     <Combobox.Empty className="px-2 py-3 text-center text-[11px] text-muted-foreground">
                       Không tìm thấy cán bộ phù hợp
                     </Combobox.Empty>
-                    <Combobox.List className="max-h-64 overflow-y-auto overscroll-contain outline-none">
+                    <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none empty:hidden">
                       {(person) => (
                         <Combobox.Item
                           key={person.id}
@@ -684,68 +667,58 @@ export function SubtaskDetailDrawer({
               </div>
             )}
 
-            <div ref={deadlineRef} className="relative group/date-row">
-              <button
-                type="button"
-                onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
-                disabled={!canEdit}
-                aria-expanded={isDeadlineEditorOpen}
-                className={cn(
-                  "flex min-h-7 w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors",
-                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default",
-                  dueInfo.isOverdue && "text-rose-700"
-                )}
-              >
-                <Clock3 className={cn(
-                  "size-3.5 shrink-0",
-                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground"
-                )} />
+            <div className="relative group/date-row inline-flex items-center gap-1">
+              <Calendar className={cn(
+                "size-3.5 shrink-0",
+                dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground"
+              )} />
+              {canEdit ? (
+                <>
+                  <VietnameseDatePicker
+                    value={startDateIso}
+                    onChange={handleStartDateChange}
+                    placeholder="Bắt đầu"
+                    variant="chip"
+                    icon={null}
+                    side="bottom"
+                    align="left"
+                    className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent",
+                      dueInfo.isOverdue ? "[&_span]:text-rose-700" : nearDue ? "[&_span]:text-amber-600" : ""
+                    )}
+                  />
+                  <span className="text-muted-foreground/60">→</span>
+                  <VietnameseDatePicker
+                    value={dueDateIso}
+                    onChange={handleDueDateChange}
+                    placeholder="Hạn chót"
+                    variant="chip"
+                    icon={null}
+                    side="bottom"
+                    align="left"
+                    showPresets={true}
+                    className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent",
+                      dueInfo.isOverdue ? "[&_span]:text-rose-700" : nearDue ? "[&_span]:text-amber-600" : ""
+                    )}
+                  />
+                  {(startDateIso || dueDateIso) && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); void handleClearDates(); }}
+                      className="opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                      aria-label="Xóa ngày"
+                      title="Xóa ngày"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </>
+              ) : (
                 <span className={cn(
-                  "tabular-nums font-normal",
+                  "tabular-nums text-xs font-normal",
                   dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "text-foreground"
                 )}>
-                  {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
+                  {startDateLabel} <span className="text-muted-foreground/60">→</span> {dueDateLabel}
                 </span>
-              </button>
-              {canEdit && (startDateIso || dueDateIso) && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); void handleClearDates(); }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="Xóa ngày"
-                  title="Xóa ngày"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-
-              {isDeadlineEditorOpen && canEdit && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Bắt đầu</span>
-                    <VietnameseDatePicker
-                      value={startDateIso}
-                      onChange={handleStartDateChange}
-                      placeholder="Bắt đầu"
-                      variant="chip"
-                      align="left"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Hạn chót</span>
-                    <VietnameseDatePicker
-                      value={dueDateIso}
-                      onChange={handleDueDateChange}
-                      placeholder="Hạn chót"
-                      variant="chip"
-                      align="right"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                </div>
               )}
             </div>
           </section>
