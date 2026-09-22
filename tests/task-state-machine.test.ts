@@ -67,9 +67,10 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
 
   describe('1. Normalization & Synonym Handling', () => {
     it('normalizes status synonyms correctly', () => {
-      assert.strictEqual(normalizeTaskStatus('NEW'), 'NEW');
-      assert.strictEqual(normalizeTaskStatus('TODO'), 'NEW');
-      assert.strictEqual(normalizeTaskStatus('NOT_STARTED'), 'NEW');
+      assert.strictEqual(normalizeTaskStatus('NEW'), 'NOT_STARTED');
+      assert.strictEqual(normalizeTaskStatus('TODO'), 'NOT_STARTED');
+      assert.strictEqual(normalizeTaskStatus('NOT_STARTED'), 'NOT_STARTED');
+      assert.strictEqual(normalizeTaskStatus('OVERDUE'), 'IN_PROGRESS');
       assert.strictEqual(normalizeTaskStatus('IN_PROGRESS'), 'IN_PROGRESS');
       assert.strictEqual(normalizeTaskStatus('WAITING_APPROVAL'), 'WAITING_APPROVAL');
       assert.strictEqual(normalizeTaskStatus('NEEDS_REVIEW'), 'WAITING_APPROVAL');
@@ -222,15 +223,24 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       assert.strictEqual(res.code, 'INVALID_TRANSITION');
     });
 
-    it('prohibits moving backwards: WAITING_APPROVAL -> NEW', () => {
+    it('prohibits moving backwards: WAITING_APPROVAL -> NOT_STARTED / NEW', () => {
       const res = taskStateMachine.canTransition(
+        managerActor,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'NOT_STARTED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'INVALID_TRANSITION');
+
+      const resNew = taskStateMachine.canTransition(
         managerActor,
         baseDepartmentTask,
         'WAITING_APPROVAL',
         'NEW'
       );
-      assert.strictEqual(res.allowed, false);
-      assert.strictEqual(res.code, 'INVALID_TRANSITION');
+      assert.strictEqual(resNew.allowed, false);
+      assert.strictEqual(resNew.code, 'INVALID_TRANSITION');
     });
   });
 

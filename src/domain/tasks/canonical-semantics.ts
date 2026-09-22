@@ -16,8 +16,10 @@ import type {
   KanbanColumnMapping,
   DetailedKanbanProjection,
 } from '../../contracts/workspace-semantic';
+import { normalizeTaskStatus } from './state-machine';
 
 export type { TaskLifecycleStatus, KanbanColumnId, KanbanColumnMapping, DetailedKanbanProjection };
+export { normalizeTaskStatus };
 
 export const KANBAN_COLUMNS = ['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED'] as const;
 

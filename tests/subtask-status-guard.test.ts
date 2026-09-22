@@ -299,7 +299,7 @@ describe('computeSubtaskStatusGuard', () => {
 
     assert.equal(result.options.length, 5);
     const statuses = result.options.map(o => o.status);
-    assert.ok(statuses.includes('NEW'));
+    assert.ok(statuses.includes('NOT_STARTED'));
     assert.ok(statuses.includes('IN_PROGRESS'));
     assert.ok(statuses.includes('WAITING_APPROVAL'));
     assert.ok(statuses.includes('COMPLETED'));
@@ -335,18 +335,18 @@ describe('Alias status normalization trong guard', () => {
     assert.equal(result.currentStatus, 'CANCELLED');
   });
 
-  it('NOT_STARTED normalize thành NEW', () => {
+  it('NOT_STARTED normalize thành NOT_STARTED', () => {
     const subtask = { ...baseSubtask, status: 'NOT_STARTED' };
     const result = computeSubtaskStatusGuard(subtask, managerActor, fullActions);
 
-    assert.equal(result.currentStatus, 'NEW');
+    assert.equal(result.currentStatus, 'NOT_STARTED');
   });
 
-  it('TODO normalize thành NEW', () => {
+  it('TODO normalize thành NOT_STARTED', () => {
     const subtask = { ...baseSubtask, status: 'TODO' };
     const result = computeSubtaskStatusGuard(subtask, managerActor, fullActions);
 
-    assert.equal(result.currentStatus, 'NEW');
+    assert.equal(result.currentStatus, 'NOT_STARTED');
   });
 
   it('NEEDS_REVIEW normalize thành WAITING_APPROVAL', () => {
