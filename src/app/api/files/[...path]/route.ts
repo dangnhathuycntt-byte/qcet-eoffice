@@ -19,7 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { canReadDocument } from "@/server/policies/document-policy";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
-import { canReadDossier } from "@/server/policies/dossier-policy";
+import { canReadDossier, canReadDossierItem } from "@/server/policies/dossier-policy";
 import { canViewMeeting } from "@/server/policies/meeting-policy";
 import { logger } from "@/server/observability/logger";
 
@@ -160,7 +160,7 @@ export async function GET(
     });
 
     if (dossierItem) {
-      if (!dossierItem.dossier || !canReadDossier(authUser, dossierItem.dossier)) {
+      if (!dossierItem.dossier || !canReadDossierItem(authUser, dossierItem, dossierItem.dossier)) {
         logger.fileAccessDenied({
           requestId,
           userId: authUser.id,
@@ -168,7 +168,7 @@ export async function GET(
           fileName,
           resourceType: "DossierItem",
           resourceId: dossierItem.dossierId,
-          reason: "User lacks permission to read associated work dossier",
+          reason: "User lacks permission to read associated work dossier item",
         });
         throw new ForbiddenError(
           "Bạn không có quyền truy cập tệp đính kèm của hồ sơ công việc này"

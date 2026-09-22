@@ -38,6 +38,7 @@ import {
   ValidationError,
   ForbiddenError,
 } from "@/server/api/errors";
+import { canReadDossier } from "@/server/policies/dossier-policy";
 import type { SessionPayload } from "@/lib/jwt-session";
 
 // ============================================================================
@@ -1129,17 +1130,35 @@ export class DossierService {
 
     const where: Prisma.WorkDossierWhereInput = {};
 
-    // Scoping enforcement:
-    // If not school-wide authority, restrict to user's unit or dossiers where user is responsible
-    if (!hasSchoolWideArchivalAccess(user)) {
-      if (user.departmentId) {
+    // Scoping enforcement (RFC-09 Option B):
+    if (hasSchoolWideArchivalAccess(user)) {
+      const pos = (user.activePositionCode || "").toUpperCase();
+      const isRector = user.systemRole === "RECTOR" || pos === "HIEU_TRUONG" || user.role === "ADMIN";
+      if (!isRector) {
         where.OR = [
-          { owningUnitId: user.departmentId },
+          { classification: { notIn: [DataClassification.RESTRICTED, DataClassification.PERSONAL_DATA] } },
           { responsiblePersonId: user.id },
+          { submittedById: user.id },
+          { archivedById: user.id },
         ];
-      } else {
-        where.responsiblePersonId = user.id;
       }
+    } else {
+      const activeUnits = [user.departmentId, user.activeUnitId].filter(Boolean) as string[];
+      where.OR = [
+        { responsiblePersonId: user.id },
+        { submittedById: user.id },
+        { archivedById: user.id },
+        ...(activeUnits.length > 0
+          ? [
+              {
+                owningUnitId: { in: activeUnits },
+                classification: {
+                  notIn: [DataClassification.RESTRICTED, DataClassification.PERSONAL_DATA],
+                },
+              },
+            ]
+          : []),
+      ];
     }
 
     if (filter.status) {
@@ -1225,15 +1244,9 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${id}`);
     }
 
-    // Read access check
-    if (!hasSchoolWideArchivalAccess(user)) {
-      const isOwner = dossier.responsiblePersonId === user.id;
-      const isSameUnit =
-        (user.departmentId && dossier.owningUnitId === user.departmentId) ||
-        (user.activeUnitId && dossier.owningUnitId === user.activeUnitId);
-      if (!isOwner && !isSameUnit) {
-        throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
-      }
+    // Read access check (RFC-09 Option B Canonical Policy)
+    if (!canReadDossier(user, dossier)) {
+      throw new ForbiddenError("Bạn không có quyền truy cập hồ sơ công việc này");
     }
 
     return dossier as WorkDossierWithDetails;
