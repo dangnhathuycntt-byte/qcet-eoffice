@@ -2488,6 +2488,12 @@ async function main() {
     const finalTaskData = {
       ...taskData,
       startDate: computedStartDate,
+      // Constraint chk_tasks_completion_lifecycle: COMPLETED → completedAt NOT NULL
+      ...(taskData.status === TaskStatus.COMPLETED && {
+        completedAt: taskData.dueDate
+          ? new Date((taskData.dueDate as Date).getTime() - 24 * 60 * 60 * 1000)
+          : new Date(),
+      }),
     };
     const task = await prisma.task.upsert({
       where: { code: t.code },
