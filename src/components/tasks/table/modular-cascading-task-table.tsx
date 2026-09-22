@@ -51,7 +51,7 @@ import { useTaskKeyboardNav } from "./hooks/use-task-keyboard-nav";
 import { TaskTableHeader } from "./components/task-table-header";
 import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
-import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
+import { TaskPeekPreviewModal } from "@/components/tasks/preview/task-peek-preview-modal";
 import { shouldIgnoreSpaceKey, isInteractiveInput } from "@/lib/shortcuts/guards";
 import { SubtaskRowGroup } from "./components/subtask-row-group";
 import { TaskPaginationBar } from "./components/task-pagination-bar";
@@ -369,7 +369,7 @@ export function ModularCascadingTaskTable({
   // 4. Backlog State
   const [isBacklogExpanded, setIsBacklogExpanded] = React.useState<boolean>(true);
 
-  // 4b. Context Menu State (Linear Image #7)
+  // 4b. Context Menu State
   const [contextMenu, setContextMenu] = React.useState<{
     isOpen: boolean;
     position: { x: number; y: number } | null;
@@ -857,7 +857,7 @@ export function ModularCascadingTaskTable({
     onRefresh: onRefresh ? async () => { await onRefresh(); } : undefined,
   });
 
-  // 11b. Linear Mouse-Hover & Keyboard Space Peek Preview (REQ-09 / REQ-10)
+  // 11b. Mouse-Hover & Keyboard Space Peek Preview (REQ-09 / REQ-10)
   const hoveredTaskIdRef = React.useRef<string | null>(null);
 
   const updateHoveredTaskFromEvent = React.useCallback((target: EventTarget | null) => {
@@ -912,7 +912,7 @@ export function ModularCascadingTaskTable({
         if (!isInteractiveInput(e.target as HTMLElement | null)) {
           let targetTask: SchoolTask | undefined = undefined;
 
-          // 1. Ưu tiên 1: Nhiệm vụ đang được con trỏ chuột rê/hover vào (Linear hover peek)
+          // 1. Ưu tiên 1: Nhiệm vụ đang được con trỏ chuột rê/hover vào (hover peek)
           if (hoveredTaskIdRef.current) {
             targetTask = findTaskById(hoveredTaskIdRef.current);
           }
@@ -958,7 +958,7 @@ export function ModularCascadingTaskTable({
     [keyboardNav, paginatedResult.items, findTaskById, previewTask]
   );
 
-  // Global listener: Nhấn Space để mở Peek Preview (Linear / macOS Quick Look style)
+  // Global listener: Nhấn Space để mở Peek Preview (macOS Quick Look style)
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === " " && !e.repeat && !previewTask) {
@@ -1068,7 +1068,7 @@ export function ModularCascadingTaskTable({
         </div>
       )}
 
-      {/* 2. Prior Overdue Backlog Collapsible Section (Linear streamlined hairline group) */}
+      {/* 2. Prior Overdue Backlog Collapsible Section (Streamlined hairline group) */}
       {selectedAcademicMonth !== "ALL" &&
         priorOverdueBacklog &&
         priorOverdueBacklog.length > 0 && (
@@ -1278,7 +1278,7 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
-          {/* Desktop Table View (>= 768px) - Linear Soft Rounded Rows */}
+          {/* Desktop Table View (>= 768px) — Soft rounded rows */}
           <div className="hidden md:block overflow-hidden bg-transparent">
             <div className="overflow-x-auto thin-scrollbar px-0.5 sm:px-1">
               <table className="w-full text-left border-separate border-spacing-y-0">
@@ -1402,7 +1402,7 @@ export function ModularCascadingTaskTable({
         allowedLifecycleTargets={allowedLifecycleTargets}
       />
 
-      {/* 6. Context Menu (Linear Image #7) */}
+      {/* 6. Context Menu */}
       <TaskContextMenu
         task={contextMenu.task}
         position={contextMenu.position}
@@ -1417,7 +1417,7 @@ export function ModularCascadingTaskTable({
       />
 
       {/* 7. Peek Preview Modal (REQ-09 / REQ-10 / REQ-23) */}
-      <LinearPeekPreviewModal
+      <TaskPeekPreviewModal
         task={previewTask}
         isOpen={Boolean(previewTask)}
         onClose={handleClosePeekPreview}

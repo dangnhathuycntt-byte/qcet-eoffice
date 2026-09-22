@@ -1,8 +1,10 @@
 "use client";
 
-// Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
+// Task Detail Workspace Component — Canvas with ReBAC & Progress Integration
 import * as React from "react";
 import styles from "./task-detail-page.module.css";
+import { DndProvider, DndContext } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
@@ -18,10 +20,10 @@ import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-edit
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
-import { TaskNotionBlockContent } from "@/components/tasks/detail/task-notion-block-content";
+import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
-import { LinearPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/linear-properties-sidebar";
-import { LinearCreateTaskModal } from "@/components/tasks/create/linear-create-task-modal";
+import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
+import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -44,6 +46,7 @@ export interface TaskDetailPageProps {
 }
 
 const PEEK_STORAGE_KEY = "qcet_subtask_peek_width";
+const EMPTY_SUBTASKS: StaffTask[] = [];
 
 export function TaskDetailPage({
   task: initialTask,
@@ -65,9 +68,9 @@ export function TaskDetailPage({
   // Task local state
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
   const [isStatusUpdating, setIsStatusUpdating] = React.useState(false);
-  React.useEffect(() => {
-    setTask(initialTask);
-  }, [initialTask]);
+  const isStatusUpdatingRef = React.useRef(false);
+  const taskIdRef = React.useRef(task.id);
+  taskIdRef.current = task.id;
 
   // Inspector visibility state
   const [inspectorExpanded, setShowInspector] = React.useState(true);
@@ -89,10 +92,10 @@ export function TaskDetailPage({
     }
   }, [tabParam]);
 
-  const handleTabChange = (newTab: DetailTab) => {
+  const handleTabChange = React.useCallback((newTab: DetailTab) => {
     setActiveTab(newTab);
     try {
-      const currentParams = new URLSearchParams(searchParams.toString());
+      const currentParams = new URLSearchParams(window.location.search);
       if (newTab === "overview") {
         currentParams.delete("tab");
       } else {
@@ -104,13 +107,13 @@ export function TaskDetailPage({
     } catch {
       // Fallback safe
     }
-  };
+  }, [pathname]);
 
   // Subtask Drawer State (URL: ?subtaskId=...)
   const initialSubtaskId = searchParams.get("subtaskId");
   const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
 
-  // Persistent peek drawer width (Notion / Linear Resizable Side Peek)
+  // Persistent peek drawer width (Resizable side peek)
   const [peekWidth, setPeekWidth] = React.useState<number>(DEFAULT_PEEK_WIDTH);
 
   React.useEffect(() => {
@@ -209,7 +212,7 @@ export function TaskDetailPage({
       if (
         e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
         isEditable(target) || isEditable(focused) ||
-        target?.closest?.('[data-slot="task-notion-block-content"]')
+        target?.closest?.('[data-slot="task-block-editor"]')
       ) return;
 
       // Phím Cmd/Ctrl + I
@@ -234,9 +237,6 @@ export function TaskDetailPage({
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
-  React.useEffect(() => {
-    setAuditEvents(initialAuditEvents);
-  }, [initialAuditEvents]);
 
   // Consolidated activity feed: gộp các lần autosave/sửa đổi văn bản liên tiếp trong 60s
   const feedActivityEvents = React.useMemo(() => {
@@ -249,10 +249,12 @@ export function TaskDetailPage({
     Array<{ id: string; title: string; fileUrl?: string; notes?: string }>
   >(initialDeliverables);
   React.useEffect(() => {
-    if (Array.isArray((task as any).deliverables)) {
-      setDeliverables((task as any).deliverables);
+    setTask(initialTask);
+    setAuditEvents(initialAuditEvents);
+    if (Array.isArray((initialTask as any).deliverables)) {
+      setDeliverables((initialTask as any).deliverables);
     }
-  }, [task]);
+  }, [initialTask, initialAuditEvents]);
 
   // Description inline edit state
   const isSchool = isSchoolTask(task);
@@ -291,7 +293,7 @@ export function TaskDetailPage({
     return () => setBreadcrumbItems(null);
   }, [setBreadcrumbItems, officialCode, task.title, parentTaskId, parentTaskCode, parentTaskTitle]);
 
-  const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
+  const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : EMPTY_SUBTASKS;
 
   const activeSubtask = React.useMemo(() => {
     if (!selectedSubtaskId) return null;
@@ -302,17 +304,16 @@ export function TaskDetailPage({
 
   const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
     setTask((prev) => {
-      if (!isSchool || !schoolTask) return prev;
-      const updatedSubtasks = schoolTask.subTasks.map((s) =>
+      if (!isSchoolTask(prev)) return prev;
+      const school = prev as SchoolTask;
+      if (!Array.isArray(school.subTasks)) return prev;
+      const updatedSubtasks = school.subTasks.map((s) =>
         s.id === updated.id ? { ...s, ...updated } : s
       );
-      return {
-        ...prev,
-        subTasks: updatedSubtasks,
-      } as SchoolTask;
+      return { ...prev, subTasks: updatedSubtasks } as SchoolTask;
     });
 
-  }, [isSchool, schoolTask, subTasks, task.status, task.id]);
+  }, []);
 
   const completedSubtasks = subTasks.filter((subTask) => subTask.status === "COMPLETED").length;
   const currentProgressPercent = subTasks.length > 0
@@ -324,29 +325,26 @@ export function TaskDetailPage({
       : 0;
 
   // Return to task list with preserved scroll & filters (REQ-12)
-  const handleBackToList = () => {
+  const handleBackToList = React.useCallback(() => {
     restoreScrollAndNavigateBack("/tasks");
-  };
+  }, [restoreScrollAndNavigateBack]);
 
   // Title inline change handler
-  const handleTitleChange = async (taskId: string, newTitle: string) => {
+  const handleTitleChange = React.useCallback(async (taskId: string, newTitle: string) => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle, expectedVersion: (task as any).version }),
+        body: JSON.stringify({ title: newTitle }),
       });
 
       if (!res.ok) throw new Error("Không thể lưu tiêu đề");
       if (res.ok) {
         const payload = await res.json().catch(() => null);
-        setTask((prev) => ({ ...prev, title: newTitle }));
-        if (payload?.data?.version ?? payload?.task?.version) {
-          setTask((prev) => ({
-            ...prev,
-            version: payload?.data?.version ?? payload?.task?.version,
-          } as any));
-        }
+        setTask((prev) => {
+          const newVersion = payload?.data?.version ?? payload?.task?.version ?? (prev as any).version;
+          return { ...prev, title: newTitle, version: newVersion } as any;
+        });
         setAuditEvents((prev) => [
           {
             id: `audit-title-${Date.now()}`,
@@ -357,20 +355,19 @@ export function TaskDetailPage({
           },
           ...prev,
         ]);
-        router.refresh();
       }
     } catch (error) {
       throw error;
     }
-  };
+  }, [currentUser?.name]);
 
   // Description save handler
-  const handleSaveDescription = async (newDescription: string) => {
+  const handleSaveDescription = React.useCallback(async (newDescription: string) => {
     const trimmed = newDescription.trim();
-    const res = await fetch(`/api/tasks/${task.id}`, {
+    const res = await fetch(`/api/tasks/${taskIdRef.current}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: trimmed, expectedVersion: (task as any).version }),
+      body: JSON.stringify({ description: trimmed }),
     });
 
     if (!res.ok) {
@@ -381,14 +378,15 @@ export function TaskDetailPage({
 
     const payload = await res.json().catch(() => null);
     setTask((prev) => {
-      if (isSchool && schoolTask) {
-        return { ...prev, description: trimmed, version: payload?.data?.version ?? payload?.task?.version ?? (prev as any).version } as any;
+      const newVersion = payload?.data?.version ?? payload?.task?.version ?? (prev as any).version;
+      if (isSchoolTask(prev)) {
+        return { ...prev, description: trimmed, version: newVersion } as any;
       }
       return {
         ...prev,
         deliverableDescription: trimmed,
         description: trimmed,
-        version: payload?.data?.version ?? payload?.task?.version ?? (prev as any).version,
+        version: newVersion,
       } as any;
     });
 
@@ -403,15 +401,16 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
-  };
+  }, [currentUser?.name, currentUser?.id]);
 
   // Status change handler (REQ-20 & State Machine Integration)
-  const handleStatusChange = async (taskId: string, newStatus: TaskStatus, note?: string) => {
-    if (isStatusUpdating) return;
+  const handleStatusChange = React.useCallback(async (taskId: string, newStatus: TaskStatus, note?: string) => {
+    if (isStatusUpdatingRef.current) return;
+    isStatusUpdatingRef.current = true;
     setIsStatusUpdating(true);
 
-    const previousTask = task;
-    const previousAudit = auditEvents;
+    let previousTask: (SchoolTask | StaffTask) | null = null;
+    let previousAudit: AuditLogItem[] = [];
 
     const statusMap: Record<string, string> = {
       NOT_STARTED: "Mới",
@@ -421,7 +420,16 @@ export function TaskDetailPage({
       CANCELLED: "Đã hủy",
     };
     const targetLabel = statusMap[newStatus] || newStatus;
-    const fromLabel = statusMap[previousTask.status] || previousTask.status;
+
+    // Capture previous state for rollback
+    setTask((prev) => {
+      previousTask = prev;
+      return prev;
+    });
+    setAuditEvents((prev) => {
+      previousAudit = prev;
+      return prev;
+    });
 
     // Optimistic Update
     setTask((prev) => ({
@@ -435,10 +443,10 @@ export function TaskDetailPage({
     }));
 
     try {
-      const res = await updateTaskStatus(taskId, newStatus, note, (task as any).version);
+      const res = await updateTaskStatus(taskId, newStatus, note);
       if (!res.ok) {
         // Rollback state
-        setTask(previousTask);
+        if (previousTask) setTask(previousTask);
         setAuditEvents(previousAudit);
 
         const errorReason = res.reason || res.error || "Không thể chuyển trạng thái nhiệm vụ";
@@ -458,6 +466,7 @@ export function TaskDetailPage({
         }));
       }
 
+      const fromLabel = previousTask ? statusMap[(previousTask as SchoolTask | StaffTask).status] || (previousTask as SchoolTask | StaffTask).status : "";
       setAuditEvents((prev) => [
         {
           id: `audit-${Date.now()}`,
@@ -470,19 +479,19 @@ export function TaskDetailPage({
       ]);
 
       notifySuccess(`Đã chuyển trạng thái sang "${targetLabel}"`);
-      router.refresh();
     } catch (err: unknown) {
-      setTask(previousTask);
+      if (previousTask) setTask(previousTask);
       setAuditEvents(previousAudit);
       notifyError(err instanceof Error ? err.message : String(err) || "Lỗi kết nối máy chủ", "Lỗi thao tác");
     } finally {
+      isStatusUpdatingRef.current = false;
       setIsStatusUpdating(false);
     }
-  };
+  }, [currentUser?.name, notifySuccess, notifyError]);
 
   // Priority change handler (REQ-20)
-  const handlePriorityChange = async (taskId: string, newPriority: TaskPriority) => {
-    const res = await updateTaskPriority(taskId, newPriority, (task as any).version);
+  const handlePriorityChange = React.useCallback(async (taskId: string, newPriority: TaskPriority) => {
+    const res = await updateTaskPriority(taskId, newPriority);
     if (!res.ok) {
       notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
       return;
@@ -495,12 +504,11 @@ export function TaskDetailPage({
       version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
     }));
     notifySuccess("Đã cập nhật độ ưu tiên");
-    router.refresh();
-  };
+  }, [notifySuccess, notifyError]);
 
   // Start date change handler
-  const handleStartDateChange = async (taskId: string, newStartDate: string) => {
-    const res = await updateTaskStartDate(taskId, newStartDate, (task as any).version);
+  const handleStartDateChange = React.useCallback(async (taskId: string, newStartDate: string) => {
+    const res = await updateTaskStartDate(taskId, newStartDate);
     if (!res.ok) {
       notifyError(res.error || "Không thể cập nhật ngày bắt đầu", "Lỗi cập nhật");
       return;
@@ -524,12 +532,11 @@ export function TaskDetailPage({
       ...prev,
     ]);
     notifySuccess("Đã cập nhật ngày bắt đầu");
-    router.refresh();
-  };
+  }, [currentUser?.name, notifySuccess, notifyError]);
 
   // Due date change handler (REQ-20)
-  const handleDueDateChange = async (taskId: string, newDueDate: string) => {
-    const res = await updateTaskDueDate(taskId, newDueDate, (task as any).version);
+  const handleDueDateChange = React.useCallback(async (taskId: string, newDueDate: string) => {
+    const res = await updateTaskDueDate(taskId, newDueDate);
     if (!res.ok) {
       notifyError(res.error || "Không thể cập nhật hạn hoàn thành", "Lỗi cập nhật");
       return;
@@ -552,12 +559,11 @@ export function TaskDetailPage({
       ...prev,
     ]);
     notifySuccess("Đã cập nhật hạn hoàn thành");
-    router.refresh();
-  };
+  }, [currentUser?.name, notifySuccess, notifyError]);
 
   // Reassign Lead / DRI handler
-  const handleReassignLead = async (personId: string, personName: string) => {
-    const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
+  const handleReassignLead = React.useCallback(async (personId: string, personName: string) => {
+    const res = await fetch(`/api/tasks/${taskIdRef.current}/actions/reassign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -596,12 +602,10 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
-
-    router.refresh();
-  };
+  }, [currentUser?.name]);
 
   // Progress updated handler
-  const handleProgressUpdated = async (newProgress: number, note?: string) => {
+  const handleProgressUpdated = React.useCallback(async (newProgress: number, note?: string) => {
     const derivedStatus: TaskStatus =
       newProgress === 100
         ? "WAITING_APPROVAL"
@@ -626,12 +630,10 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
-
-    router.refresh();
-  };
+  }, [currentUser?.name]);
 
   // Deliverables add handler
-  const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
+  const handleAddDeliverable = React.useCallback(async (title: string, fileUrl?: string, notes?: string) => {
     const trimmedTitle = title.trim();
     const trimmedUrl = fileUrl?.trim();
 
@@ -642,7 +644,7 @@ export function TaskDetailPage({
       throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
     }
 
-    const res = await fetch(`/api/tasks/${task.id}/deliverables`, {
+    const res = await fetch(`/api/tasks/${taskIdRef.current}/deliverables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -692,17 +694,19 @@ export function TaskDetailPage({
       },
       ...prev,
     ]);
-  };
+  }, [currentUser?.name]);
 
   // Deliverables delete handler
-  const handleDeleteDeliverable = async (deliverableId: string) => {
-    const previousDeliverables = deliverables;
-    // Optimistic remove from local list
-    setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
+  const handleDeleteDeliverable = React.useCallback(async (deliverableId: string) => {
+    let previousDeliverables: Array<{ id: string; title: string; fileUrl?: string; notes?: string }> = [];
+    setDeliverables((prev) => {
+      previousDeliverables = prev;
+      return prev.filter((d) => d.id !== deliverableId);
+    });
 
     try {
       const res = await fetch(
-        `/api/tasks/${task.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+        `/api/tasks/${taskIdRef.current}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
         {
           method: "DELETE",
         }
@@ -736,19 +740,73 @@ export function TaskDetailPage({
       setDeliverables(previousDeliverables);
       notifyError(error instanceof Error ? error.message : String(error) || "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
-  };
+  }, [currentUser?.name, notifyError]);
 
-  return (
+  // Click canvas padding (empty space below content) → focus editor at end
+  const handleCanvasClick = React.useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!canEdit) return;
+      const target = e.target as HTMLElement;
+      if (target !== canvasRef.current && !target.classList.contains(styles.content)) return;
+      e.preventDefault();
+      const editable = canvasRef.current?.querySelector<HTMLElement>(
+        "[data-slot='task-block-editor'] [contenteditable='true']"
+      );
+      if (!editable) return;
+      editable.focus();
+      const sel = window.getSelection();
+      if (sel && editable.lastChild) {
+        const range = document.createRange();
+        range.selectNodeContents(editable);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    },
+    [canEdit],
+  );
+
+  // Shared DndProvider for parent editor + subtask drawer to prevent
+  // "Cannot have two HTML5 backends at the same time" error
+  const dndContext = React.useContext(DndContext);
+  const needsDndProvider = !dndContext?.dragDropManager;
+
+  // Memoized wrappers for inline JSX callbacks
+  const handleNavigateTab = React.useCallback(
+    (tab: string) => handleTabChange(tab as DetailTab),
+    [handleTabChange]
+  );
+
+  const handleProgressModalUpdate = React.useCallback(
+    async (p: number, note?: string) => {
+      await handleProgressUpdated(p, note);
+      setIsProgressModalOpen(false);
+    },
+    [handleProgressUpdated]
+  );
+
+  const handleProgressModalStatusChange = React.useCallback(
+    async (id: string, st: TaskStatus, note?: string) => {
+      await handleStatusChange(id, st, note);
+      setIsProgressModalOpen(false);
+    },
+    [handleStatusChange]
+  );
+
+  // Memoized style object for split workspace
+  const splitWorkspaceStyle = React.useMemo(
+    () =>
+      activeSubtask
+        ? ({ "--subtask-peek-width": `${peekWidth}px` } as React.CSSProperties)
+        : undefined,
+    [activeSubtask, peekWidth]
+  );
+
+  const content = (
     <div
       className={styles.splitWorkspace}
       data-peek-open={Boolean(activeSubtask)}
-      style={
-        activeSubtask
-          ? ({
-              "--qcet-subtask-peek-width": `${peekWidth}px`,
-            } as React.CSSProperties)
-          : undefined
-      }
+      style={splitWorkspaceStyle}
     >
     {/* Parent pane */}
     <div
@@ -811,13 +869,13 @@ export function TaskDetailPage({
       </nav>
 
       {/* Main Workspace Canvas */}
-      <div ref={canvasRef} className={styles.canvas}>
+      <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
         <TaskDetailSplitLayout
           inspectorOpen={showInspector}
           onToggleInspector={handleToggleInspector}
           inspector={
             <aside aria-label="Cột thuộc tính nhiệm vụ" style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
-              <LinearPropertiesSidebar
+              <TaskPropertiesSidebar
                 task={task}
                 currentUser={currentUser}
                 canEdit={canEdit}
@@ -826,7 +884,7 @@ export function TaskDetailPage({
                 onDueDateChange={handleDueDateChange}
                 onStartDateChange={handleStartDateChange}
                 onReassignLead={handleReassignLead}
-                onNavigateTab={(tab) => handleTabChange(tab as DetailTab)}
+                onNavigateTab={handleNavigateTab}
                 auditEvents={feedActivityEvents}
                 isMobileAccordion={true}
                 showRelatedSections={true}
@@ -862,14 +920,14 @@ export function TaskDetailPage({
                 showInlineProperties={!showInspector}
               />
 
-              <TaskNotionBlockContent
+              <TaskBlockEditor
                 globalFileDrop={!activeSubtask}
                 taskId={task.id}
                 initialDescription={currentDescription}
                 subTasks={subTasks}
                 canEdit={canEdit}
                 onSaveContent={handleSaveDescription}
-                onSelectSubtask={(st) => handleOpenSubtaskDrawer(st)}
+                onSelectSubtask={handleOpenSubtaskDrawer}
               />
             </>
           )}
@@ -931,11 +989,11 @@ export function TaskDetailPage({
 
     {/* Child peek — independent card beside parent */}
     <SubtaskDetailDrawer
+      currentUser={currentUser}
       isOpen={Boolean(activeSubtask)}
       onClose={handleCloseSubtaskDrawer}
       subtask={activeSubtask}
       canEdit={Boolean(activeSubtask && (activeSubtask as any).availableActions?.includes('task.update_execution'))}
-      currentUser={currentUser}
       onSubtaskUpdated={handleSubtaskUpdated}
       siblings={subTasks}
       onSelectSibling={handleOpenSubtaskDrawer}
@@ -945,7 +1003,7 @@ export function TaskDetailPage({
     />
 
     {/* Modal Tạo việc con */}
-    <LinearCreateTaskModal
+    <CreateTaskModal
       isOpen={isCreateSubtaskOpen}
       onClose={() => setIsCreateSubtaskOpen(false)}
       initialParentTaskId={task.id}
@@ -979,18 +1037,16 @@ export function TaskDetailPage({
             completedSubtasks={completedSubtasks}
             totalSubtasks={subTasks.length}
             canEdit={canEdit}
-            onProgressUpdated={async (p, note) => {
-              await handleProgressUpdated(p, note);
-              setIsProgressModalOpen(false);
-            }}
-            onStatusChange={async (id, st, note) => {
-              await handleStatusChange(id, st, note);
-              setIsProgressModalOpen(false);
-            }}
+            onProgressUpdated={handleProgressModalUpdate}
+            onStatusChange={handleProgressModalStatusChange}
           />
         </div>
       </div>
     )}
     </div>
   );
+
+  return needsDndProvider
+    ? <DndProvider backend={HTML5Backend}>{content}</DndProvider>
+    : content;
 }

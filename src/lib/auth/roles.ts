@@ -1,5 +1,4 @@
 import { AuthUser, UserRole } from "@/types/auth";
-import { DEFAULT_DEMO_USERS } from "../role-task-filter";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 
 export { isExecutiveUser, isManagerUser };
@@ -44,5 +43,4 @@ export function isScopeAllowed(role: UserRole | undefined | null, scope: "school
   return false;
 }
 
-export const DEMO_USERS = DEFAULT_DEMO_USERS;
 export * from "@/types/auth";

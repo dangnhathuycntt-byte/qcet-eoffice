@@ -1,6 +1,6 @@
 /**
  * Shared priority configuration for task creation forms.
- * Source of truth: extracted from linear-create-task-modal.tsx (PRIORITY_CONFIG)
+ * Source of truth: extracted from create-task-modal.tsx (PRIORITY_CONFIG)
  * and create-task-modal.tsx (PRIORITY_OPTIONS).
  */
 

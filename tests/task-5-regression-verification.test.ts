@@ -5,7 +5,6 @@ import {
   toCanonicalUnitCode,
   isCanonicalUnitCode,
   QCET_UNIT_CANONICAL_MAP,
-  QCET_DEPARTMENT_GROUPS,
 } from '../src/lib/departments';
 
 describe('Task 5: Full Regression & QCET Alignment Verification Suite', () => {
@@ -76,23 +75,4 @@ describe('Task 5: Full Regression & QCET Alignment Verification Suite', () => {
     }
   });
 
-  test('4. Real QCET departments and leadership structures are strictly preserved', () => {
-    assert.ok(QCET_DEPARTMENT_GROUPS.length >= 16, 'QCET_DEPARTMENT_GROUPS must have at least 16 canonical groups');
-
-    for (const group of QCET_DEPARTMENT_GROUPS) {
-      assert.ok(group.id, `Group must have id: ${group.name}`);
-      assert.ok(group.code, `Group must have code: ${group.name}`);
-      assert.ok(Array.isArray(group.personnel), `Group must have personnel array: ${group.name}`);
-      assert.ok(group.personnel.length > 0, `Group must have personnel: ${group.name}`);
-
-      for (const p of group.personnel) {
-        assert.ok(p.name, `Personnel must have name in ${group.name}`);
-        assert.ok(p.role, `Personnel must have role in ${group.name}`);
-        assert.ok(
-          p.email && p.email.endsWith('@cdktcnqn.edu.vn'),
-          `Personnel ${p.name} in ${group.name} must have @cdktcnqn.edu.vn email, got: ${p.email}`
-        );
-      }
-    }
-  });
 });

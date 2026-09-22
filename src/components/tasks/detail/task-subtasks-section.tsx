@@ -26,12 +26,10 @@ import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import {
-  QCET_DEPARTMENT_GROUPS,
-  getDepartmentByCode,
-  getDepartmentForMember,
   toCanonicalUnitCode,
 } from "@/lib/departments";
 import { useAuth } from "@/lib/auth-context";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
@@ -64,12 +62,13 @@ export function TaskSubtasksSection({
   const completedCount = subTasks.filter((s) => s.status === "COMPLETED").length;
 
   const { user } = useAuth();
+  const { personnel: hookPersonnel } = usePersonnelList();
   const effectiveDeptCode = React.useMemo(() => {
     const raw =
       departmentCode ||
       user?.departmentCode ||
       user?.department ||
-      (user?.name ? getDepartmentForMember(user.name)?.code : undefined) ||
+      (user as any)?.departmentId ||
       "BGH";
     return toCanonicalUnitCode(raw) || raw;
   }, [departmentCode, user]);
@@ -113,10 +112,11 @@ export function TaskSubtasksSection({
   // Unit-scoped personnel list for assignee selector
   const [personnelList, setPersonnelList] = React.useState<Array<{ id?: string; name: string; role?: string }>>(() => {
     if (personnel && personnel.length > 0) return personnel;
-    const dept = getDepartmentByCode(effectiveDeptCode) || QCET_DEPARTMENT_GROUPS[0];
-    return (dept?.personnel || dept?.members || []).map((m) => ({
+    // Use hookPersonnel as initial fallback (flat list, no dept grouping needed)
+    return hookPersonnel.map((m) => ({
+      id: m.id,
       name: m.name,
-      role: m.role || (m as any).title,
+      role: m.title || m.departmentName,
     }));
   });
 
@@ -125,12 +125,14 @@ export function TaskSubtasksSection({
       setPersonnelList(personnel);
       return;
     }
-    const dept = getDepartmentByCode(effectiveDeptCode) || QCET_DEPARTMENT_GROUPS[0];
-    const initialList = (dept?.personnel || dept?.members || []).map((m) => ({
-      name: m.name,
-      role: m.role || (m as any).title,
-    }));
-    setPersonnelList(initialList);
+    // If hookPersonnel loaded, use it as initial list
+    if (hookPersonnel.length > 0) {
+      setPersonnelList(hookPersonnel.map((m) => ({
+        id: m.id,
+        name: m.name,
+        role: m.title || m.departmentName,
+      })));
+    }
 
     // Fetch users for this department with search fallback to attach real DB user IDs
     fetch(`/api/users?departmentId=${encodeURIComponent(effectiveDeptCode)}&limit=100`)
@@ -286,7 +288,7 @@ export function TaskSubtasksSection({
         </div>
       )}
 
-      {/* 3. Inline Detailed Subtask Creation Row (Linear Style) */}
+      {/* 3. Inline Detailed Subtask Creation Row */}
       {isAddingInline && (
         <div className="space-y-1.5">
           <form
@@ -381,7 +383,7 @@ export function TaskSubtasksSection({
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
             const statusObj = getStatusDisplay(st.status);
-            const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName) || "Chưa giao";
+            const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName, hookPersonnel) || "Chưa giao";
 
             return (
               <div

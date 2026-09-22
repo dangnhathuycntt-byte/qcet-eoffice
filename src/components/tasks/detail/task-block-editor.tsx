@@ -117,8 +117,6 @@ import {
   FileText,
   Bookmark,
   Globe,
-  IndentIncrease,
-  IndentDecrease,
   UploadCloud,
   Highlighter,
   Table as TableIcon,
@@ -132,25 +130,26 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePersonnelList, type PersonnelOption } from "@/hooks/use-personnel-list";
 import type { StaffTask } from "@/types/dashboard";
 import {
   type PlateElement as PlateElemT,
   type PlateValue,
   parseToPlateValue,
   serializePlateValue,
-  plateToQcet,
-  qcetToPlate,
+  plateToBlocks,
+  blocksToPlate,
   parseContentToBlocks,
   serializeBlocksToContent,
   isMeaningfulBlock,
   PLATE_NODE_TYPES as PT,
-} from "./plate-qcet-codec";
+} from "./plate-block-codec";
 
 // ---------------------------------------------------------------------------
 // Re-exports (public API unchanged)
 // ---------------------------------------------------------------------------
 
-export type NotionBlockType =
+export type ContentBlockType =
   | "text"
   | "heading"
   | "bulleted_list"
@@ -167,9 +166,9 @@ export type NotionBlockType =
   | "toggle"
   | "media_embed";
 
-export interface NotionBlockItem {
+export interface ContentBlockItem {
   id: string;
-  type: NotionBlockType;
+  type: ContentBlockType;
   content: string;
   checked?: boolean;
   level?: 1 | 2 | 3;
@@ -190,7 +189,7 @@ export interface NotionBlockItem {
   providerType?: string;
 }
 
-export function moveBlock(blocks: NotionBlockItem[], activeId: string, overId: string) {
+export function moveBlock(blocks: ContentBlockItem[], activeId: string, overId: string) {
   const from = blocks.findIndex((block) => block.id === activeId);
   const to = blocks.findIndex((block) => block.id === overId);
   if (from < 0 || to < 0 || from === to) return blocks;
@@ -202,7 +201,7 @@ export function moveBlock(blocks: NotionBlockItem[], activeId: string, overId: s
 
 export { isMeaningfulBlock, parseContentToBlocks, serializeBlocksToContent };
 
-export interface TaskNotionBlockContentProps {
+export interface TaskBlockEditorProps {
   taskId: string;
   initialDescription?: string | null;
   placeholder?: string;
@@ -312,7 +311,7 @@ export function resolveUrlMetadata(rawUrl: string, currentTaskTitle?: string): U
 
 interface MenuItemOption {
   id: string;
-  type: NotionBlockType;
+  type: ContentBlockType;
   group: "Soạn thảo" | "Danh sách" | "Tiêu đề" | "Trích dẫn & Ghi chú" | "Bảng biểu & Cấu trúc" | "Phương tiện & Tệp" | "Liên kết" | "Phân cách";
   title: string;
   description: string;
@@ -339,15 +338,6 @@ const MENU_OPTIONS: MenuItemOption[] = [
   { id: "opt-bookmark", type: "bookmark", group: "Liên kết", title: "Dấu trang web", description: "Thẻ xem trước trực quan cho liên kết", icon: Bookmark, shortcut: "/bookmark" },
   { id: "opt-link", type: "link", group: "Liên kết", title: "Liên kết", description: "Đường dẫn liên kết web hoặc tài liệu ngoài", icon: Link2, shortcut: "/link" },
   { id: "opt-divider", type: "divider", group: "Phân cách", title: "Đường phân cách", description: "Đường kẻ chia tách phân đoạn", icon: Minus, shortcut: "---" },
-];
-
-// Mock QCET staff directory for @mention combobox
-const QCET_STAFF_DIRECTORY = [
-  { id: "u-1", name: "TS. Nguyễn Văn A", role: "Hiệu trưởng", email: "nva@qcet.edu.vn" },
-  { id: "u-2", name: "ThS. Trần Thị B", role: "Trưởng phòng Đào tạo", email: "ttb@qcet.edu.vn" },
-  { id: "u-3", name: "ThS. Lê Văn C", role: "Trưởng khoa CNTT", email: "lvc@qcet.edu.vn" },
-  { id: "u-4", name: "CN. Đặng Nhật Huy", role: "Chuyên viên CNTT", email: "dnhhuy@qcet.edu.vn" },
-  { id: "u-5", name: "ThS. Phạm Thu D", role: "Phó Trưởng phòng TCHC", email: "ptd@qcet.edu.vn" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -575,15 +565,17 @@ function MentionEl({ attributes, children, element }: ElProps) {
 
 function MentionInputElement({ attributes, children, element }: RenderElementProps<any>) {
   const editor = useEditorRef();
+  const { personnel } = usePersonnelList();
   const query = (element.children?.[0]?.text || "").replace(/^@/, "").toLowerCase();
-  const [filtered, setFiltered] = React.useState(QCET_STAFF_DIRECTORY);
+  const filtered = React.useMemo(() => {
+    if (!query) return personnel;
+    return personnel.filter((s) =>
+      s.name.toLowerCase().includes(query) ||
+      (s.email && s.email.toLowerCase().includes(query))
+    );
+  }, [query, personnel]);
 
-  React.useEffect(() => {
-    if (!query) setFiltered(QCET_STAFF_DIRECTORY);
-    else setFiltered(QCET_STAFF_DIRECTORY.filter((s) => s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query)));
-  }, [query]);
-
-  const selectStaff = React.useCallback((staff: typeof QCET_STAFF_DIRECTORY[0]) => {
+  const selectStaff = React.useCallback((staff: PersonnelOption) => {
     const path = editor.api.findPath(element);
     if (path) {
       editor.tf.removeNodes({ at: path });
@@ -614,7 +606,7 @@ function MentionInputElement({ attributes, children, element }: RenderElementPro
             >
               <div>
                 <div className="font-medium text-foreground">{staff.name}</div>
-                <div className="text-[10px] text-muted-foreground">{staff.role}</div>
+                <div className="text-[10px] text-muted-foreground">{staff.departmentName || ""}</div>
               </div>
             </button>
           ))}
@@ -850,34 +842,6 @@ function InlineLinkEl({ attributes, children, element }: any) {
 // ---------------------------------------------------------------------------
 // Multi-block selection toolbar
 // ---------------------------------------------------------------------------
-
-function MultiBlockToolbar({ editor }: { editor: any }) {
-  const readOnly = editor.api.isReadOnly();
-  const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
-  const hasSelection = (selectedIds?.size ?? 0) > 1;
-
-  if (!hasSelection || readOnly) return null;
-
-  return (
-    <div className="absolute inset-x-0 bottom-2 z-40 flex items-center justify-center pointer-events-none">
-      <div data-plate-prevent-unselect="true" className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border/80 bg-card px-2 py-1.5 shadow-lg text-xs">
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer">
-          <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
-        </button>
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes(); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
-          <Trash2 className="size-3.5" /> Xóa
-        </button>
-        <div className="w-px h-4 bg-border/60 mx-0.5" />
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); plateIndent(editor); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer" title="Thụt vào">
-          <IndentIncrease className="size-3.5 text-muted-foreground" />
-        </button>
-        <button type="button" onMouseDown={(e) => { e.preventDefault(); plateOutdent(editor); }} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer" title="Giảm thụt">
-          <IndentDecrease className="size-3.5 text-muted-foreground" />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Toolbar Dropdown primitive (click-to-toggle, closes on outside click)
@@ -1132,27 +1096,33 @@ function FloatingToolbar({ editor }: { editor: any }) {
 
   React.useEffect(() => {
     if (readOnly) { setVisible(false); return; }
-    const sel = editor.selection;
-    if (!sel || editor.api.isCollapsed?.(sel)) {
-      setVisible(false);
-      return;
-    }
-    const domSel = window.getSelection();
-    if (!domSel || domSel.rangeCount === 0) {
-      setVisible(false);
-      return;
-    }
-    const range = domSel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      setVisible(false);
-      return;
-    }
-    refs.setPositionReference({
-      getBoundingClientRect: () => rect,
-    });
-    setVisible(true);
-  }, [editor, editor.selection, readOnly, refs]);
+
+    const handleSelectionChange = () => {
+      const sel = editor.selection;
+      if (!sel || editor.api.isCollapsed?.(sel)) {
+        setVisible(false);
+        return;
+      }
+      const domSel = window.getSelection();
+      if (!domSel || domSel.rangeCount === 0) {
+        setVisible(false);
+        return;
+      }
+      const range = domSel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        setVisible(false);
+        return;
+      }
+      refs.setPositionReference({
+        getBoundingClientRect: () => rect,
+      });
+      setVisible(true);
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, [editor, readOnly, refs]);
 
   if (!visible || typeof document === "undefined") return null;
 
@@ -1225,42 +1195,69 @@ const TURN_INTO_OPTIONS = [
   { type: "callout", label: "Ghi chú", icon: Info },
 ] as const;
 
-function BlockMenu({ editor, element, onClose }: { editor: any; element: any; onClose: () => void }) {
+function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; element: any; onClose: () => void; contextMode?: boolean }) {
   const [showTurnInto, setShowTurnInto] = React.useState(false);
+  const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
+  const isMulti = contextMode && (selectedIds?.size ?? 0) > 1;
+
+  const getSelectedElements = React.useCallback(() => {
+    if (!isMulti) return [element];
+    try {
+      const entries = editor.getApi(BlockSelectionPlugin).blockSelection.getNodes();
+      return entries.map(([node]: [any]) => node);
+    } catch { return [element]; }
+  }, [editor, element, isMulti]);
 
   const turnInto = React.useCallback((opt: typeof TURN_INTO_OPTIONS[number]) => {
-    const path = editor.api.findPath(element);
-    if (!path) return;
-    const qcetBlock = plateToQcet([element])[0];
-    const converted: any = { id: qcetBlock.id, type: opt.type, content: qcetBlock.content };
-    if (opt.type === "heading") converted.level = (opt as any).level;
-    if (opt.type === "checklist") converted.checked = false;
-    const [plateNode] = qcetToPlate([converted]);
-    const richChildren = element.children;
-    const finalNode = { ...plateNode, children: richChildren };
-    editor.tf.removeNodes({ at: path });
-    editor.tf.insertNodes([finalNode] as any, { at: path });
+    const elements = getSelectedElements();
+    (editor as any).withoutNormalizing(() => {
+      // Process in reverse order to preserve paths
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        const path = editor.api.findPath(el);
+        if (!path) continue;
+        const contentBlock = plateToBlocks([el])[0];
+        const converted: any = { id: contentBlock.id, type: opt.type, content: contentBlock.content };
+        if (opt.type === "heading") converted.level = (opt as any).level;
+        if (opt.type === "checklist") converted.checked = false;
+        const [plateNode] = blocksToPlate([converted]);
+        const finalNode = { ...plateNode, children: el.children };
+        editor.tf.removeNodes({ at: path });
+        editor.tf.insertNodes([finalNode] as any, { at: path });
+      }
+    });
     onClose();
-  }, [editor, element, onClose]);
+  }, [editor, getSelectedElements, onClose]);
 
   const duplicateBlock = React.useCallback(() => {
-    const path = editor.api.findPath(element);
-    if (!path) return;
-    const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const clone = { ...JSON.parse(JSON.stringify(element)), id };
-    editor.tf.insertNodes([clone] as any, { at: [path[0] + 1] });
+    if (isMulti) {
+      editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate();
+    } else {
+      const path = editor.api.findPath(element);
+      if (!path) return;
+      const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const clone = { ...JSON.parse(JSON.stringify(element)), id };
+      editor.tf.insertNodes([clone] as any, { at: [path[0] + 1] });
+    }
     onClose();
-  }, [editor, element, onClose]);
+  }, [editor, element, isMulti, onClose]);
 
   const deleteBlock = React.useCallback(() => {
-    const path = editor.api.findPath(element);
-    if (!path) return;
-    editor.tf.removeNodes({ at: path });
+    if (isMulti) {
+      editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes();
+    } else {
+      const path = editor.api.findPath(element);
+      if (!path) return;
+      editor.tf.removeNodes({ at: path });
+    }
     onClose();
-  }, [editor, element, onClose]);
+  }, [editor, element, isMulti, onClose]);
 
   return (
-    <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-lg border border-border/80 bg-card p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+    <div className={cn(
+      "w-44 rounded-lg border border-border/80 bg-card p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
+      contextMode ? "relative" : "absolute left-0 top-full mt-1 z-50"
+    )}>
       <button
         type="button"
         onClick={() => setShowTurnInto(!showTurnInto)}
@@ -1289,14 +1286,8 @@ function BlockMenu({ editor, element, onClose }: { editor: any; element: any; on
       <button type="button" onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
         <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
       </button>
-      <button type="button" onClick={() => { plateIndent(editor); onClose(); }} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
-        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
-      </button>
-      <button type="button" onClick={() => { plateOutdent(editor); onClose(); }} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
-        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
-      </button>
       <button type="button" onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left">
-        <Trash2 className="size-3.5" /> Xóa block
+        <Trash2 className="size-3.5" /> {isMulti ? `Xóa ${selectedIds?.size} blocks` : "Xóa block"}
       </button>
     </div>
   );
@@ -1616,10 +1607,10 @@ function SlashMenu({
 }
 
 // ---------------------------------------------------------------------------
-// Main Component: TaskNotionBlockContent
+// Main Component: TaskBlockEditor
 // ---------------------------------------------------------------------------
 
-export function TaskNotionBlockContent({
+export function TaskBlockEditor({
   taskId,
   initialDescription,
   placeholder,
@@ -1631,7 +1622,7 @@ export function TaskNotionBlockContent({
   onSelectSubtask,
   onOpenCreateSubtask,
   className,
-}: TaskNotionBlockContentProps) {
+}: TaskBlockEditorProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
@@ -1897,12 +1888,12 @@ export function TaskNotionBlockContent({
 
   const triggerAutoSave = React.useCallback(
     (plateValue: PlateValue) => {
-      const qcetBlocks = plateToQcet(plateValue);
-      if (qcetBlocks.some((b) => b.url?.startsWith("blob:"))) return;
+      const contentBlocks = plateToBlocks(plateValue);
+      if (contentBlocks.some((b) => b.url?.startsWith("blob:"))) return;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(async () => {
         try {
-          const payload = serializeBlocksToContent(qcetBlocks);
+          const payload = serializeBlocksToContent(contentBlocks);
           // Skip save if content unchanged from last saved or initial state
           if (payload === lastSavedContentRef.current) return;
           await onSaveContent(payload);
@@ -1983,28 +1974,63 @@ export function TaskNotionBlockContent({
         return;
       }
 
-      const qcetBlock: NotionBlockItem = {
+      const contentBlock: ContentBlockItem = {
         id,
         type: option.type,
         content: "",
         ...(option.level ? { level: option.level } : {}),
       };
-      const [plateNode] = qcetToPlate([qcetBlock]);
+      const [plateNode] = blocksToPlate([contentBlock]);
       editor.tf.insertNodes([plateNode] as any);
     },
     [editor],
+  );
+
+  // Context menu state: right-click on selected blocks shows BlockMenu at cursor
+  const [ctxMenu, setCtxMenu] = React.useState<{ x: number; y: number; element: any } | null>(null);
+
+  React.useEffect(() => {
+    if (!ctxMenu) return;
+    const close = (e: MouseEvent) => {
+      // Close when clicking outside the context menu
+      const menuEl = document.querySelector("[data-context-block-menu]");
+      if (menuEl && menuEl.contains(e.target as Node)) return;
+      setCtxMenu(null);
+    };
+    const closeEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setCtxMenu(null); };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("keydown", closeEsc);
+    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("keydown", closeEsc); };
+  }, [ctxMenu]);
+
+  const handleEditorContextMenu = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (!canEdit || editor.api.isReadOnly()) return;
+      // Find the block element from the right-click target
+      const target = e.target as HTMLElement;
+      const blockEl = target.closest<HTMLElement>("[data-block-id]");
+      if (!blockEl) return;
+      const blockId = blockEl.getAttribute("data-block-id");
+      if (!blockId) return;
+      // Find the Plate element by id
+      const node = editor.children.find((n: any) => n.id === blockId);
+      if (!node) return;
+      e.preventDefault();
+      setCtxMenu({ x: e.clientX, y: e.clientY, element: node });
+    },
+    [canEdit, editor],
   );
 
   return (
     <SlashSelectContext.Provider value={handleSlashSelect}>
       <div
         ref={containerRef}
-        data-slot="task-notion-block-content"
+        data-slot="task-block-editor"
         data-plate-selectable="true"
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}
         className={cn(
-          "relative flex-1 min-h-0 flex flex-col text-foreground [&_.slate-selection-area]:border-0 [&_.slate-selection-area]:bg-primary/20 [&_.slate-selection-area]:rounded-xs [&_.slate-selection-area]:pointer-events-none [&_.slate-selection-area]:z-50",
+          "relative flex-1 min-h-0 flex flex-col text-foreground cursor-text [&_.slate-selection-area]:border-0 [&_.slate-selection-area]:bg-primary/20 [&_.slate-selection-area]:rounded-xs [&_.slate-selection-area]:pointer-events-none [&_.slate-selection-area]:z-50",
           className
         )}
       >
@@ -2020,12 +2046,13 @@ export function TaskNotionBlockContent({
             >
               <PlateContainer
                 data-plate-selectable="true"
-                className="relative flex-1 min-h-0"
+                className="relative flex-1 min-h-0 flex flex-col"
+                onContextMenu={handleEditorContextMenu}
               >
                 <PlateContent
                   readOnly={!canEdit}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
-                  className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-8"
+                  className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-32 flex-1"
                   onBlur={() => {
                     // Xoá block rỗng (heading, list, etc.) khi editor mất focus
                     // Giữ lại paragraph rỗng vì đó là block mặc định
@@ -2053,13 +2080,21 @@ export function TaskNotionBlockContent({
                   }}
                 />
                 <FloatingToolbar editor={editor} />
-                <MultiBlockToolbar editor={editor} />
               </PlateContainer>
             </Plate>
           </PlateDndContainer>
         </div>
 
-        {/* Global File Drop Full-Viewport Overlay Portal */}
+        {/* Right-click context menu portal */}
+        {ctxMenu && typeof document !== "undefined" && createPortal(
+          <div
+            data-context-block-menu
+            style={{ position: "fixed", top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
+          >
+            <BlockMenu editor={editor} element={ctxMenu.element} onClose={() => setCtxMenu(null)} contextMode />
+          </div>,
+          document.body,
+        )}
         {isGlobalDragging && typeof document !== "undefined" && createPortal(
           <div
             data-testid="global-file-drop-overlay"

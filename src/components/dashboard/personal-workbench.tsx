@@ -169,7 +169,7 @@ export function isTaskAssignedByMe(task: SchoolTask | StaffTask, user?: AuthUser
 
 /**
  * Pure builder function extracting attention items adapted by role.
- * Standardizes the "What needs my attention?" model (aligned with Linear / Plane 'Your Work').
+ * Standardizes the "What needs my attention?" model.
  * Role ONLY changes priority, order, and data — not the underlying UI card architecture.
  *
  * CRITICAL POLICY: Must NOT let monthly filters hide overdue tasks from prior months!

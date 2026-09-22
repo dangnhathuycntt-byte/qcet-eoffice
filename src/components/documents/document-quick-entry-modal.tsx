@@ -24,7 +24,6 @@ import type {
   DocumentSecurityLevel,
   DocumentItem
 } from "@/types/document";
-import { DEFAULT_QCET_DEPARTMENTS } from "./directive-action-panel";
 import { useAuth } from "@/lib/auth-context";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 
@@ -62,7 +61,7 @@ export function DocumentQuickEntryModal({
   onClose,
   onSuccess,
   defaultType = "VAN_BAN_DEN",
-  departments = DEFAULT_QCET_DEPARTMENTS,
+  departments = [],
 }: DocumentQuickEntryModalProps) {
   const { user } = useAuth();
   const [docType, setDocType] = React.useState<DocumentType>(defaultType);

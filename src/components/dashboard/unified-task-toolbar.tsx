@@ -1,6 +1,6 @@
 "use client";
 
-// Unified Task Toolbar Component - Linear-inspired unified control toolbar for task views
+// Unified Task Toolbar Component — Unified control toolbar for task views
 import * as React from "react";
 import {
   Search,

@@ -60,7 +60,7 @@ export interface KanbanDisplaySettings {
   showAssignee: boolean;     // Avatar + Tên phụ trách (mặc định: bật)
   showDueDate: boolean;      // Hạn hoàn thành (mặc định: bật)
   showParentTask: boolean;   // Nhiệm vụ cha (mặc định: bật)
-  showProgress: boolean;     // Tiến độ % (mặc định: tắt, theo yêu cầu Linear)
+  showProgress: boolean;     // Tiến độ % (mặc định: tắt)
   showSubtaskCount: boolean; // Số nhiệm vụ con (mặc định: tắt)
   // Các tùy chọn cũ giữ optional để tương thích ngược interface
   showCategory?: boolean;
@@ -100,7 +100,7 @@ function saveDisplaySettings(settings: KanbanDisplaySettings): void {
 }
 
 // ============================================================================
-// Column Config (Linear Flat Style - No Container Accents)
+// Column Config (Minimal flat style — no container accents)
 // ============================================================================
 
 export interface KanbanColumnConfig {
@@ -535,7 +535,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // ============================================================================
-// Kanban Card (Linear Minimal / Flat Style)
+// Kanban Card (Minimal flat style)
 // ============================================================================
 
 interface KanbanCardProps {
@@ -983,7 +983,7 @@ function DroppableColumn({
         isOver && "bg-accent/25 ring-1 ring-primary/20"
       )}
     >
-      {/* Linear Column Header (Compact: icon + name + count, hover: "..." & "+") */}
+      {/* Column Header (Compact: icon + name + count, hover: "..." & "+") */}
       <div className="flex items-center justify-between h-8 px-1 mb-1.5 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <IconComponent
@@ -1031,7 +1031,7 @@ function DroppableColumn({
           ))}
         </SortableContext>
 
-        {/* Minimal Linear Empty State: single lightweight "+" button */}
+        {/* Minimal empty state: single lightweight "+" button */}
         {tasks.length === 0 && (
           <button
             type="button"
@@ -1487,7 +1487,7 @@ export function TaskKanbanBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {/* Horizontal Scrolling Board Surface (Linear Style - Full Width Span) */}
+        {/* Horizontal Scrolling Board Surface (Full width span) */}
         <div
           ref={carouselRef}
           onScroll={handleScroll}

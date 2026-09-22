@@ -32,7 +32,7 @@ export function TaskDetailSplitLayout({
   if (isMobile) {
     return (
       <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
-        <div className="flex-1 min-h-0">{children}</div>
+        <div className="flex-1 min-h-0 flex flex-col">{children}</div>
         {inspectorOpen && (
           <div className="w-full border-t border-border/40 pt-4">{inspector}</div>
         )}
@@ -42,7 +42,7 @@ export function TaskDetailSplitLayout({
 
   return (
     <div className={cn("flex flex-1 min-h-0 min-w-0", className)}>
-      <div className="flex-1 min-h-0 min-w-0">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         {children}
       </div>
       {inspectorOpen && (

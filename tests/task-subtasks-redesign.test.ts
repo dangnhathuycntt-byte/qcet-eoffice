@@ -4,10 +4,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", () => {
-  const sidebarPath = path.join(process.cwd(), "src/components/tasks/detail/linear-properties-sidebar.tsx");
+  const sidebarPath = path.join(process.cwd(), "src/components/tasks/detail/task-properties-sidebar.tsx");
   const drawerPath = path.join(process.cwd(), "src/components/tasks/detail/subtask-detail-drawer.tsx");
   const detailPagePath = path.join(process.cwd(), "src/components/tasks/task-detail-page.tsx");
-  const sharedEditorPath = path.join(process.cwd(), "src/components/tasks/detail/task-notion-block-content.tsx");
+  const sharedEditorPath = path.join(process.cwd(), "src/components/tasks/detail/task-block-editor.tsx");
   const headerPath = path.join(process.cwd(), "src/components/tasks/detail/task-detail-header-nav.tsx");
   const cssPath = path.join(process.cwd(), "src/components/tasks/task-detail-page.module.css");
 
@@ -218,7 +218,7 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
     it("drawer uses DirectInlineEditor and real API mutations", () => {
       assert.ok(drawerContent.includes("<DirectInlineEditor"));
       assert.ok(drawerContent.includes("fetch(`/api/tasks/${subtask.id}`"));
-      assert.ok(drawerContent.includes("<TaskNotionBlockContent"));
+      assert.ok(drawerContent.includes("<TaskBlockEditor"));
     });
 
     it("drawer accepts siblings, onSelectSibling, onAddSubtask props", () => {

@@ -42,12 +42,12 @@ const TaskKanbanBoard = dynamic(
 );
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { isSchoolTask } from "@/types/dashboard";
-const LinearTaskDetailView = dynamic(
-  () => import("@/components/tasks/detail/linear-task-detail-view").then((m) => ({ default: m.LinearTaskDetailView })),
+const TaskDetailView = dynamic(
+  () => import("@/components/tasks/detail/task-detail-view").then((m) => ({ default: m.TaskDetailView })),
   { ssr: false }
 );
-const LinearPeekPreviewModal = dynamic(
-  () => import("@/components/tasks/preview/linear-peek-preview-modal").then((m) => ({ default: m.LinearPeekPreviewModal })),
+const TaskPeekPreviewModal = dynamic(
+  () => import("@/components/tasks/preview/task-peek-preview-modal").then((m) => ({ default: m.TaskPeekPreviewModal })),
   { ssr: false }
 );
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
@@ -56,11 +56,11 @@ import { Button } from "@/components/ui/button";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
-import { useLinearTaskShortcuts } from "@/hooks/use-linear-task-shortcuts";
+import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 
-const LinearCreateTaskModal = dynamic(
-  () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
+const CreateTaskModal = dynamic(
+  () => import("@/components/tasks/create/create-task-modal").then((mod) => mod.CreateTaskModal),
   { ssr: false }
 );
 
@@ -954,7 +954,7 @@ function UnifiedAdaptiveWorkspaceInner({
     workspaceQuery?.setSelectedTask(null, { replace: true });
   }, [workspaceQuery]);
 
-  // Peek preview modal state (Linear Image #8)
+  // Peek preview modal state
   const [peekTask, setPeekTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
   // Filter state synchronized with props
@@ -1636,7 +1636,7 @@ function UnifiedAdaptiveWorkspaceInner({
     }
   }, [peekTask, displayedTasks]);
 
-  // Hook Space key on table row to open LinearPeekPreviewModal
+  // Hook Space key on table row to open TaskPeekPreviewModal
   React.useEffect(() => {
     const handleGlobalSpaceKeyDown = (e: KeyboardEvent) => {
       if (e.key !== " " && e.key !== "Spacebar") return;
@@ -1937,7 +1937,7 @@ function UnifiedAdaptiveWorkspaceInner({
   }, [onCreateTask, onAction, isStaff, activeScope, openCreateModal]);
 
   // Keyboard shortcut 'C' / 'N P' to trigger task creation when modal is closed
-  useLinearTaskShortcuts({
+  useTaskShortcuts({
     enabled: !isCreateModalOpen,
     onOpen: handleCreateTaskClick,
   });
@@ -2088,10 +2088,10 @@ function UnifiedAdaptiveWorkspaceInner({
         </aside>
       )}
 
-      {/* Main Canvas Surface: Linear Task Detail (when task selected) OR Workspace List/Table View */}
+      {/* Main Canvas Surface: Task Detail (when task selected) OR Workspace List/Table View */}
       {!disableInternalDetail && isDetailOpen && internalSelectedTask ? (
-        <div data-slot="in-canvas-linear-detail" className="w-full">
-          <LinearTaskDetailView
+        <div data-slot="in-canvas-task-detail" className="w-full">
+          <TaskDetailView
             task={internalSelectedTask}
             taskId={internalSelectedTask.id}
             onStatusChange={handleStatusChange}
@@ -2586,8 +2586,8 @@ function UnifiedAdaptiveWorkspaceInner({
         </>
       )}
 
-      {/* 3. Linear Peek Preview Modal (Spacebar Quick Look) */}
-      <LinearPeekPreviewModal
+      {/* 3. Peek Preview Modal (Spacebar Quick Look) */}
+      <TaskPeekPreviewModal
         task={peekTask}
         isOpen={Boolean(peekTask)}
         onClose={() => setPeekTask(null)}
@@ -2609,8 +2609,8 @@ function UnifiedAdaptiveWorkspaceInner({
         }
       />
 
-      {/* 4. Linear Task Creation Modal */}
-      <LinearCreateTaskModal
+      {/* 4. Task Creation Modal */}
+      <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmitSuccess={async () => {

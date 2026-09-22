@@ -34,11 +34,7 @@ import type { UserRole, AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
-import {
-  type DepartmentPersonnelGroup,
-  QCET_DEPARTMENT_GROUPS,
-  getDepartmentForMember,
-} from "@/lib/departments";
+import { useDepartmentList, type DepartmentOption } from "@/hooks/use-department-list";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { Popover } from "@base-ui/react/popover";
@@ -146,11 +142,38 @@ export interface ApiPersonnel {
   avatarUrl: string | null;
 }
 
-export {
-  type DepartmentPersonnelGroup,
-  QCET_DEPARTMENT_GROUPS,
-  getDepartmentForMember,
-};
+/** Lookup department by member name from the departments list. */
+function findDeptForMember(
+  memberName: string,
+  departments: DepartmentOption[],
+): DepartmentOption | undefined {
+  if (!memberName) return undefined;
+  const clean = memberName
+    .replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/i, "")
+    .trim()
+    .toLowerCase();
+  return departments.find((dept) =>
+    dept.personnel?.some((m) => {
+      const mClean = m.name
+        .replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/i, "")
+        .trim()
+        .toLowerCase();
+      return m.name.toLowerCase() === memberName.toLowerCase() || mClean === clean;
+    }),
+  );
+}
+
+/** Local enriched department group shape used within this modal. */
+interface DepartmentGroupLocal {
+  id: string;
+  name: string;
+  department: string;
+  code: string;
+  icon: string;
+  personnel: { name: string; title?: string; role?: string; email?: string; id?: string }[];
+  members: { name: string; title: string; role: string; email?: string }[];
+  aliases?: string[];
+}
 
 export function canRoleSelectAssignee(
   user: AuthUser,
@@ -378,7 +401,8 @@ export function validateTaskForm(
   data: CreateTaskFormData,
   parentSchoolTask?: SchoolTask,
   currentUser?: AuthUser,
-  explicitParentDueDate?: string
+  explicitParentDueDate?: string,
+  departments?: DepartmentOption[],
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!data.title || data.title.trim().length === 0) {
@@ -393,7 +417,7 @@ export function validateTaskForm(
         errors.leadAssigneeName = "Giảng viên / Nhân sự chỉ có thể tự tạo công việc cho chính mình.";
       }
     } else {
-      const dept = getDepartmentForMember(data.leadAssigneeName);
+      const dept = findDeptForMember(data.leadAssigneeName, departments || []);
       if (dept) {
         const check = canRoleSelectAssignee(currentUser, dept.code, false, data.leadAssigneeName);
         if (!check.allowed) {
@@ -596,6 +620,7 @@ export function CreateTaskModal({
   initialLeadAssigneeName,
 }: CreateTaskModalProps) {
   const { user } = useAuth();
+  const { departments: deptList } = useDepartmentList({ includePersonnel: true });
   const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
   const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
   const allowedLevels = createPolicy.institutionalLevels;
@@ -680,28 +705,28 @@ export function CreateTaskModal({
       .catch((err) => console.error("Error loading assignees:", err));
   }, []);
 
-  const departmentGroups = React.useMemo<DepartmentPersonnelGroup[]>(() => {
+  const departmentGroups = React.useMemo<DepartmentGroupLocal[]>(() => {
     if (personnelList.length === 0) {
-      return QCET_DEPARTMENT_GROUPS.map((g) => {
-        const seen = new Set<string>();
-        const uniqueMembers = g.members.filter((m) => {
-          const key = m.name.trim().toLowerCase();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        const uniquePersonnel = g.personnel.filter((p) => {
-          const key = p.name.trim().toLowerCase();
-          return seen.has(key);
-        });
+      // Fallback: convert DepartmentOption[] from hook to local enriched shape
+      return deptList.map((d) => {
+        const personnel = d.personnel ?? [];
+        const members = personnel.map((p) => ({
+          name: p.name,
+          title: p.title || p.name,
+          role: p.role || "",
+        }));
         return {
-          ...g,
-          members: uniqueMembers,
-          personnel: uniquePersonnel,
+          id: d.id,
+          name: d.name,
+          department: d.name,
+          code: d.code,
+          icon: "",
+          personnel,
+          members,
         };
       });
     }
-    const groupMap = new Map<string, DepartmentPersonnelGroup>();
+    const groupMap = new Map<string, DepartmentGroupLocal>();
     for (const p of personnelList) {
       const deptName = p.department?.name || "Đơn vị khác";
       const deptCode = p.department?.shortName || p.departmentId || "KHAC";
@@ -714,7 +739,7 @@ export function CreateTaskModal({
           icon: "",
           personnel: [],
           members: [],
-        });
+        } satisfies DepartmentGroupLocal);
       }
       const grp = groupMap.get(deptCode)!;
       const isDuplicate = grp.members.some(
@@ -734,7 +759,7 @@ export function CreateTaskModal({
       }
     }
     return Array.from(groupMap.values());
-  }, [personnelList]);
+  }, [personnelList, deptList]);
 
   // Filter department groups based on deptFilter
   const filteredGroups = React.useMemo(() => {
@@ -779,22 +804,21 @@ export function CreateTaskModal({
   }, [assigneeSearchQuery, isComboboxOpen]);
 
   // Selected assignee department & delegation checks
-  const selectedAssigneeDept = React.useMemo(() => {
+  const selectedAssigneeDept = React.useMemo((): DepartmentOption | undefined => {
     if (personnelList.length > 0) {
       const p = personnelList.find(
         (u) => u.name.trim().toLowerCase() === formData.leadAssigneeName.trim().toLowerCase()
       );
       if (p && p.department) {
         return {
-          department: p.department.name,
+          id: p.departmentId || p.department.id,
+          name: p.department.name,
           code: p.department.shortName || p.departmentId || "KHAC",
-          icon: "",
-          members: [],
         };
       }
     }
-    return getDepartmentForMember(formData.leadAssigneeName);
-  }, [personnelList, formData.leadAssigneeName]);
+    return findDeptForMember(formData.leadAssigneeName, deptList);
+  }, [personnelList, formData.leadAssigneeName, deptList]);
 
   const isExternalDeptBlocked = React.useMemo(() => {
     if (isStaff) {
@@ -828,12 +852,12 @@ export function CreateTaskModal({
       }
 
       if (!targetDeptCode) {
-        const targetDept = getDepartmentForMember(assigneeName);
+        const targetDept = findDeptForMember(assigneeName, deptList);
         if (targetDept) {
           targetDeptCode = targetDept.code;
-          const member = targetDept.members.find((m) => m.name === assigneeName);
+          const member = targetDept.personnel?.find((m) => m.name === assigneeName);
           if (member && (!formData.vtvlRole || formData.vtvlRole.trim().length === 0)) {
-            autoVtvl = member.role;
+            autoVtvl = member.title || member.role;
           }
         }
       }
@@ -861,7 +885,7 @@ export function CreateTaskModal({
         });
       }
     },
-    [personnelList, formData.vtvlRole, user?.role, errors.leadAssigneeName]
+    [personnelList, formData.vtvlRole, user?.role, errors.leadAssigneeName, deptList]
   );
 
   // Sync state on open
@@ -1025,7 +1049,8 @@ export function CreateTaskModal({
       formData,
       parentTask,
       user || undefined,
-      effectiveParentDueDate
+      effectiveParentDueDate,
+      deptList
     );
 
     if (Object.keys(validationErrors).length > 0) {
@@ -1064,7 +1089,7 @@ export function CreateTaskModal({
       }
     }
     if (!targetDeptCode) {
-      const targetDept = getDepartmentForMember(formData.leadAssigneeName);
+      const targetDept = findDeptForMember(formData.leadAssigneeName, deptList);
       if (targetDept) {
         targetDeptCode = targetDept.code;
       }
@@ -1213,7 +1238,7 @@ export function CreateTaskModal({
             aria-hidden="true"
           />
 
-          {/* Modal Container: Linear-style fast task composer */}
+          {/* Modal Container: Fast task composer */}
           <m.div
             key="create-task-dialog"
             variants={dialogVariants}
@@ -1228,12 +1253,12 @@ export function CreateTaskModal({
             className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-2xl max-h-[100dvh] sm:max-h-[90dvh] flex flex-col rounded-none sm:rounded-xl border-0 sm:border border-border/80 bg-card shadow-xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Header Bar: Linear-style breadcrumb */}
+            {/* Top Header Bar */}
             <header className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3 border-b border-border/60 bg-muted/20 shrink-0 select-none">
               <div className="flex items-center gap-1.5 text-xs min-w-0">
                 <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 <span className="font-semibold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
-                  {selectedAssigneeDept?.department || (user?.department || "Phòng Quản lý Đào tạo")}
+                  {selectedAssigneeDept?.name || (user?.department || "Đơn vị")}
                 </span>
 
                 {isSubtaskMode && effectiveParentTitle ? (
@@ -1306,7 +1331,7 @@ export function CreateTaskModal({
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Scrollable Form Body */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 thin-scrollbar">
-                {/* 1. Title Input (Linear-style: prominent, borderless) */}
+                {/* 1. Title Input (Prominent, borderless) */}
                 <div className="space-y-0.5 shrink-0">
                   <label htmlFor="task-title-input" className="sr-only">
                     {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}
@@ -1354,8 +1379,8 @@ export function CreateTaskModal({
                     <label id="task-assignee-label" htmlFor="task-assignee-field" className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                       <span>Phụ trách <span className="text-destructive">*</span></span>
                       {selectedAssigneeDept && (
-                        <span className="text-[11px] text-muted-foreground/70 truncate max-w-[140px]" title={selectedAssigneeDept.department}>
-                          {selectedAssigneeDept.department}
+                        <span className="text-[11px] text-muted-foreground/70 truncate max-w-[140px]" title={selectedAssigneeDept.name}>
+                          {selectedAssigneeDept.name}
                         </span>
                       )}
                     </label>
@@ -1577,7 +1602,7 @@ export function CreateTaskModal({
                       <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 p-2 text-xs text-amber-800 mt-1.5 space-y-1">
                         <p className="font-semibold">Không thể giao việc trực tiếp ngoài đơn vị</p>
                         <p className="opacity-90">
-                          Theo quy chế, Trưởng phòng không được giao việc trực tiếp cho nhân sự thuộc {selectedAssigneeDept.department}.
+                          Theo quy chế, Trưởng phòng không được giao việc trực tiếp cho nhân sự thuộc {selectedAssigneeDept.name}.
                         </p>
                         {onOpenCollaborationRequest && (
                           <button
@@ -1598,7 +1623,7 @@ export function CreateTaskModal({
                     {/* Admin Direct Assignment Note */}
                     {isAdminBypassActive && selectedAssigneeDept && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Chỉ đạo trực tiếp: Sẽ gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.department}.
+                        Chỉ đạo trực tiếp: Sẽ gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.name}.
                       </p>
                     )}
                   </div>

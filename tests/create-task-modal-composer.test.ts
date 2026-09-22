@@ -1,7 +1,7 @@
 /**
- * tests/linear-create-task-modal-composer.test.ts
+ * tests/create-task-modal-composer.test.ts
  *
- * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI:
+ * Kiểm thử toàn diện Compact Task Composer & Modal UX/UI:
  * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description Canvas -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
  * 3. Scope integrity: No fake AI Agent or "+ Thêm đầu việc" in create modal (subtasks created at task detail)
@@ -17,18 +17,18 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  LinearCreateTaskModal,
+  CreateTaskModal,
   ENABLE_TASK_AGENT_ASSISTANT,
-} from "../src/components/tasks/create/linear-create-task-modal";
-import { LinearTaskAgentPanel } from "../src/components/tasks/create/linear-task-agent-panel";
+} from "../src/components/tasks/create/create-task-modal";
+import { TaskAgentPanel } from "../src/components/tasks/create/task-agent-panel";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
 
-describe("Linear Compact Composer Modal - Production Specification", () => {
-  test("Renders modal with correct Linear hierarchy & accessible dialog attributes", () => {
+describe("Compact Composer Modal - Production Specification", () => {
+  test("Renders modal with correct hierarchy & accessible dialog attributes", () => {
     const html = renderToStaticMarkup(
-      React.createElement(LinearCreateTaskModal, {
+      React.createElement(CreateTaskModal, {
         isOpen: true,
         onClose: () => {},
         initialDepartmentCode: "P_QLDT",
@@ -111,7 +111,7 @@ describe("Linear Compact Composer Modal - Production Specification", () => {
 
   test("When closed (isOpen=false), modal renders nothing (null)", () => {
     const html = renderToStaticMarkup(
-      React.createElement(LinearCreateTaskModal, {
+      React.createElement(CreateTaskModal, {
         isOpen: false,
         onClose: () => {},
       })
@@ -124,7 +124,7 @@ describe("Linear Compact Composer Modal - Production Specification", () => {
 describe("Agent Panel UX & Standalone Component", () => {
   test("Agent Panel header contains only 'Trợ lý soạn thảo' text when isolated", () => {
     const html = renderToStaticMarkup(
-      React.createElement(LinearTaskAgentPanel, {
+      React.createElement(TaskAgentPanel, {
         isOpen: true,
         onApplySuggestion: () => {},
       })

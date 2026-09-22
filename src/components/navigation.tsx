@@ -386,7 +386,7 @@ export function Navigation() {
           <LiveClock />
           <ZoomToggle />
 
-          {/* Sleek Linear-style Quick Create Task Button */}
+          {/* Quick Create Task Button */}
           <Button
             type="button"
             size="sm"

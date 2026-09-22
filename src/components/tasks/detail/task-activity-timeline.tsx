@@ -81,7 +81,7 @@ export function TaskActivityTimeline({
   }
 
   return (
-    <section data-slot="task-activity-timeline" className={cn("space-y-3", className)}>
+    <section data-slot="task-activity-timeline" className={cn("space-y-3 cursor-default", className)}>
       <div className="flex items-center gap-2">
         <Activity className="size-4 text-primary shrink-0" strokeWidth={1.5} />
         <h2 className="text-xs font-semibold text-foreground">

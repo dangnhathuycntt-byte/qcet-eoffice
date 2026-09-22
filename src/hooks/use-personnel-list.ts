@@ -13,6 +13,10 @@ export interface PersonnelOption {
   name: string;
   email?: string;
   departmentName?: string;
+  /** Academic title, e.g. "ThS. Nguyễn Văn A" */
+  title?: string;
+  /** UserRole from DB */
+  role?: string;
 }
 
 /**
@@ -35,6 +39,8 @@ async function fetchPersonnel(): Promise<PersonnelOption[]> {
           name: u.name,
           email: u.email,
           departmentName: u.department?.name || u.departmentName || "Đơn vị",
+          title: u.position || u.title || null,
+          role: u.role || null,
         }));
       } else {
         _cache = [];
@@ -57,7 +63,7 @@ async function fetchPersonnel(): Promise<PersonnelOption[]> {
  *
  * Replaces 5+ identical `useState + useEffect(fetch("/api/users"))` blocks
  * scattered across task-identity-block, subtask-detail-drawer,
- * linear-properties-sidebar, linear-create-task-modal, and create-task-modal.
+ * task-properties-sidebar, and create-task-modal.
  *
  * @param options.enabled - When false the fetch is skipped (default: true).
  *   Pass `canEdit` so read-only views never fire the request.

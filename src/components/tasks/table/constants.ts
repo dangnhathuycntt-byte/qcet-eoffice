@@ -256,7 +256,7 @@ export const DEPARTMENT_OPTIONS: DepartmentOption[] = [
 ];
 
 /**
- * Thẻ lọc thông minh chuẩn Linear UX (Smart Filter Pills)
+ * Thẻ lọc thông minh (Smart Filter Pills)
  */
 export const SMART_FILTER_TABS: SmartFilterTabOption[] = [
   { id: "all", label: "Tất cả", description: "Toàn bộ danh sách nhiệm vụ" },
@@ -291,7 +291,7 @@ export const DENSITY_CONFIGS: Record<TableDensity, TableDensityConfig> = {
 export const DEFAULT_DENSITY: TableDensity = "compact";
 
 /**
- * Cấu hình phân trang mặc định (Linear Standard: 20 rows/page on desktop)
+ * Cấu hình phân trang mặc định (20 rows/page on desktop)
  */
 export const DEFAULT_PAGE_SIZE = 20;
 export const PAGE_SIZE_OPTIONS = [20, 50, 100];

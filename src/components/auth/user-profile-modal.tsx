@@ -17,11 +17,12 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
+import { useDepartmentList } from "@/hooks/use-department-list";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
+  const { departments } = useDepartmentList();
 
   const [name, setName] = React.useState(user?.name || "");
   const [department, setDepartment] = React.useState(user?.department || "");
@@ -63,9 +64,9 @@ export function UserProfileModal() {
 
   const handleDepartmentChange = (code: string) => {
     setDepartmentCode(code);
-    const found = QCET_DEPARTMENT_GROUPS.find((g) => g.code === code);
+    const found = departments.find((g) => g.code === code);
     if (found) {
-      setDepartment(found.name || found.department || "");
+      setDepartment(found.name || "");
     }
   };
 
@@ -245,9 +246,9 @@ export function UserProfileModal() {
                   className="block w-full rounded-xl border border-border/80 bg-background py-2.5 pl-9 pr-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
                 >
                   <option value="QCET">-- Chọn đơn vị trực thuộc trường --</option>
-                  {QCET_DEPARTMENT_GROUPS.map((g) => (
+                  {departments.map((g) => (
                     <option key={g.code} value={g.code}>
-                      {g.name || g.department}
+                      {g.name}
                     </option>
                   ))}
                 </select>

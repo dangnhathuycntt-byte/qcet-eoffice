@@ -2,26 +2,26 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  qcetToPlate,
-  plateToQcet,
+  blocksToPlate,
+  plateToBlocks,
   parseContentToBlocks,
   serializeBlocksToContent,
   parseToPlateValue,
   serializePlateValue,
   isMeaningfulBlock,
   PLATE_NODE_TYPES as PT,
-} from "../src/components/tasks/detail/plate-qcet-codec";
-import type { NotionBlockItem } from "../src/components/tasks/detail/task-notion-block-content";
+} from "../src/components/tasks/detail/plate-block-codec";
+import type { ContentBlockItem } from "../src/components/tasks/detail/task-block-editor";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function roundTrip(blocks: NotionBlockItem[]): NotionBlockItem[] {
-  return plateToQcet(qcetToPlate(blocks));
+function roundTrip(blocks: ContentBlockItem[]): ContentBlockItem[] {
+  return plateToBlocks(blocksToPlate(blocks));
 }
 
-function makeBlock(partial: Partial<NotionBlockItem> & { type: NotionBlockItem["type"] }): NotionBlockItem {
+function makeBlock(partial: Partial<ContentBlockItem> & { type: ContentBlockItem["type"] }): ContentBlockItem {
   return { id: `test-${Date.now()}`, content: "", ...partial };
 }
 
@@ -29,8 +29,8 @@ function makeBlock(partial: Partial<NotionBlockItem> & { type: NotionBlockItem["
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("plate-qcet-codec", () => {
-  describe("qcetToPlate → plateToQcet round-trip", () => {
+describe("plate-block-codec", () => {
+  describe("blocksToPlate → plateToBlocks round-trip", () => {
     it("text block round-trips", () => {
       const blocks = [makeBlock({ type: "text", content: "Hello" })];
       const result = roundTrip(blocks);
@@ -154,7 +154,7 @@ describe("plate-qcet-codec", () => {
     });
 
     it("all 12 types together round-trip", () => {
-      const blocks: NotionBlockItem[] = [
+      const blocks: ContentBlockItem[] = [
         makeBlock({ type: "text", content: "p" }),
         makeBlock({ type: "heading", content: "h", level: 1 }),
         makeBlock({ type: "bulleted_list", content: "b" }),
@@ -331,21 +331,21 @@ describe("plate-qcet-codec", () => {
 
   describe("Plate node type mapping", () => {
     it("text → p", () => {
-      const [el] = qcetToPlate([makeBlock({ type: "text", content: "x" })]);
+      const [el] = blocksToPlate([makeBlock({ type: "text", content: "x" })]);
       assert.equal(el.type, "p");
     });
     it("heading 1 → h1", () => {
-      const [el] = qcetToPlate([makeBlock({ type: "heading", content: "x", level: 1 })]);
+      const [el] = blocksToPlate([makeBlock({ type: "heading", content: "x", level: 1 })]);
       assert.equal(el.type, "h1");
     });
     it("bulleted_list → p with listStyleType disc", () => {
-      const [el] = qcetToPlate([makeBlock({ type: "bulleted_list", content: "x" })]);
+      const [el] = blocksToPlate([makeBlock({ type: "bulleted_list", content: "x" })]);
       assert.equal(el.type, "p");
       assert.equal(el.listStyleType, "disc");
       assert.equal(el.indent, 1);
     });
     it("checklist → p with listStyleType disc + checked", () => {
-      const [el] = qcetToPlate([makeBlock({ type: "checklist", content: "x", checked: true })]);
+      const [el] = blocksToPlate([makeBlock({ type: "checklist", content: "x", checked: true })]);
       assert.equal(el.type, "p");
       assert.equal(el.checked, true);
     });

@@ -58,7 +58,7 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
   { id: "reminders", label: "Nhắc hạn", icon: AlertTriangle },
 ];
 
-export function LinearInboxView() {
+export function InboxView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setBadgeCounts } = useSidebar();
@@ -424,7 +424,7 @@ export function LinearInboxView() {
               </div>
             </div>
 
-            {/* Linear Pill Tabs: Tất cả / Chưa đọc */}
+            {/* Pill Tabs: Tất cả / Chưa đọc */}
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -597,7 +597,7 @@ export function LinearInboxView() {
           )}
         >
           {!selectedNotification ? (
-            /* Empty Selection State (Linear Image #11 aesthetics) */
+            /* Empty Selection State */
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
               <div className="size-16 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-center text-muted-foreground/50 mb-3 shadow-2xs">
                 <InboxIcon size={32} strokeWidth={1.2} />

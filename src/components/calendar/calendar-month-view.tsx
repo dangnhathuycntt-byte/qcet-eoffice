@@ -740,7 +740,7 @@ export function CalendarMonthView({
   return (
     <div
       className={cn("flex flex-col gap-6", className)}
-      data-slot="twenty-calendar-view"
+      data-slot="calendar-month-view"
     >
       {/* ========================================================================= */}
       {/* 1. Header Toolbar: Month Navigation, Today, Filters, and New Task         */}

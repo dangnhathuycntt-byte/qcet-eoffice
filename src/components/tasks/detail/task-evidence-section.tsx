@@ -80,7 +80,7 @@ export function TaskEvidenceSection({
   };
 
   return (
-    <section data-slot="task-evidence-section" className={cn("space-y-3", className)}>
+    <section data-slot="task-evidence-section" className={cn("space-y-3 cursor-default", className)}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">

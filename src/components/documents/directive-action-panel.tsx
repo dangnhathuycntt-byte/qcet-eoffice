@@ -81,17 +81,6 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
   },
 ];
 
-export const DEFAULT_QCET_DEPARTMENTS = [
-  { id: "DT", name: "Phòng Đào tạo", shortName: "P.ĐT" },
-  { id: "TCHC", name: "Phòng Tổ chức - Hành chính", shortName: "P.TCHC" },
-  { id: "KHTC", name: "Phòng Kế hoạch - Tài chính", shortName: "P.KHTC" },
-  { id: "CNTT", name: "Khoa Công nghệ Thông tin", shortName: "K.CNTT" },
-  { id: "KTCN", name: "Khoa Kỹ thuật Công nghệ", shortName: "K.KTCN" },
-  { id: "QLCL", name: "Phòng Quản lý chất lượng", shortName: "P.QLCL" },
-  { id: "CTHSSV", name: "Phòng Công tác HSSV", shortName: "P.CTHSSV" },
-  { id: "HTDN", name: "Trung tâm Đào tạo & HTDN", shortName: "TT.HTDN" },
-];
-
 export interface AppliedDirectivePreset {
   instruction: string;
   assignedDeptId: string;
@@ -140,7 +129,7 @@ export interface DirectiveActionPanelProps {
 export function DirectiveActionPanel({
   document,
   currentUser,
-  departments = DEFAULT_QCET_DEPARTMENTS,
+  departments = [],
   onDirectiveSuccess,
   onSuccess,
   onCancel,

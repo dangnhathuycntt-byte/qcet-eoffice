@@ -92,9 +92,7 @@ export const QCET_TOKENS = {
   },
 } as const;
 
-// Alias for convenience
 export const qcetTokens = QCET_TOKENS;
-export const twentyTokens = QCET_TOKENS;
 
 // Backward-compatible alias
 const LIGHT_DESIGN_TOKENS = {

@@ -52,57 +52,6 @@ export interface TodayAgendaWidgetProps {
   viewAllHref?: string;
 }
 
-/**
- * Danh sách mock events mặc định phong phú cho ngày hiện tại thiết kế riêng cho trường học:
- * Ban Giám hiệu, Trưởng đơn vị, Chuyên viên và Giảng viên.
- */
-export const DEFAULT_MOCK_AGENDA_EVENTS: AgendaEventItem[] = [
-  {
-    id: "agenda-evt-01",
-    title: "Họp giao ban Ban Giám hiệu đầu tuần & Đánh giá công tác tuyển sinh",
-    startTime: "08:00",
-    endTime: "09:30",
-    location: "Phòng họp 1 - Nhà Hiệu bộ",
-    chairPerson: "Hiệu trưởng",
-    status: "COMPLETED",
-    type: "TRUONG",
-    isOnline: false,
-  },
-  {
-    id: "agenda-evt-02",
-    title: "Hội đồng nghiệm thu đề tài Nghiên cứu khoa học cấp Trường năm 2026",
-    startTime: "09:45",
-    endTime: "11:30",
-    location: "Phòng Hội thảo 2 - Tòa A",
-    chairPerson: "Phó Hiệu trưởng phụ trách NCKH",
-    status: "IN_PROGRESS",
-    type: "TRUONG",
-    isOnline: true,
-    meetingLink: "https://meet.google.com/qce-meet-demo",
-  },
-  {
-    id: "agenda-evt-03",
-    title: "Làm việc với Đoàn Đánh giá ngoài kiểm định chất lượng CTĐT",
-    startTime: "14:00",
-    endTime: "16:00",
-    location: "Hội trường B - Nhà Đa năng",
-    chairPerson: "Hiệu trưởng & Trưởng các Khoa",
-    status: "UPCOMING",
-    type: "TRUONG",
-    isOnline: false,
-  },
-  {
-    id: "agenda-evt-04",
-    title: "Họp chuyên môn Khoa CNTT & Duyệt đề cương chi tiết học phần Học kỳ I",
-    startTime: "16:15",
-    endTime: "17:30",
-    location: "Văn phòng Khoa CNTT (Phòng 402 - Nhà C)",
-    chairPerson: "Trưởng khoa CNTT",
-    status: "UPCOMING",
-    type: "DON_VI",
-    isOnline: false,
-  },
-];
 
 /**
  * Định dạng ngày hiển thị tiếng Việt chuẩn hành chính sư phạm ICT (UTC+7).
@@ -316,7 +265,7 @@ export function TodayAgendaWidget({
       if (matchedItems.length > 0) return matchedItems;
     }
 
-    return events ?? DEFAULT_MOCK_AGENDA_EVENTS;
+    return events ?? [];
   }, [events, tasks]);
 
   const sortedEvents = React.useMemo(() => sortAgendaEvents(resolvedEvents), [resolvedEvents]);

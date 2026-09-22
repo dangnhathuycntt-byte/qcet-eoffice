@@ -107,11 +107,11 @@ export function TaskProgressComposer({
     <div
       data-slot="task-progress-composer"
       className={cn(
-        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none",
+        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none cursor-default",
         className
       )}
     >
-      {/* 1. Header (Linear Project Overview style: "Latest update" · "[Update]") */}
+      {/* 1. Header ("Latest update" · "[Update]") */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-foreground tracking-tight">
           Tiến độ mới nhất
@@ -129,7 +129,7 @@ export function TaskProgressComposer({
         )}
       </div>
 
-      {/* 2. Latest Update Body (Linear card style) */}
+      {/* 2. Latest Update Body */}
       {!isEditing ? (
         <div className="space-y-2">
           {/* Status badge + Lead Author + Timestamp */}

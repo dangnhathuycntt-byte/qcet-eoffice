@@ -457,10 +457,10 @@ export const TaskRow = React.memo(function TaskRow({
         className
       )}
     >
-      {/* 1. Nhiệm vụ Column: Linear Leading Integrated Selector + Title */}
+      {/* 1. Nhiệm vụ Column: Leading integrated selector + title */}
       <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, getCellClasses(true, false))}>
         <div className="flex items-center gap-1.5">
-          {/* Linear Integrated Leading Selector: Accessible keyboard + large hit area (~32px) */}
+          {/* Integrated leading selector: Accessible keyboard + large hit area (~32px) */}
           <div
             role="checkbox"
             aria-checked={isSelected}
