@@ -929,10 +929,22 @@ export class DossierService {
 
     assertTransition(dossier.status, DossierStatus.ARCHIVED);
 
+    // Invariant: Separation of Duties (SoD)
+    if (
+      dossier.responsiblePersonId === user.id ||
+      (dossier.submittedById && dossier.submittedById === user.id)
+    ) {
+      throw new ForbiddenError(
+        "Người nộp lưu hồ sơ không được tự thao tác đưa vào kho lưu trữ (Vi phạm nguyên tắc phân công độc lập SoD)"
+      );
+    }
+
     const resource: AuthorizationResource = {
       type: "dossier",
       id: dossier.id,
       owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+      submittedByUserId: dossier.submittedById || dossier.responsiblePersonId,
     };
     await assertAuthorized(user, "dossier.accept_archive", resource);
 
@@ -973,6 +985,81 @@ export class DossierService {
           archivedAt: updated.archivedAt,
           archivedById: updated.archivedById,
           storageLocation: updated.storageLocation,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * 6d. Reject / Return submitted archive (Lưu trữ viên trả lại hồ sơ yêu cầu bổ sung/chỉnh lý tài liệu).
+   * Transition: SUBMITTED_TO_ARCHIVE -> READY_FOR_ARCHIVE (under RFC-11)
+   */
+  static async rejectArchive(
+    actor: AuthenticatedUserContext | SessionPayload,
+    input: { dossierId: string; returnReason: string }
+  ): Promise<WorkDossier> {
+    const user = await resolveUserContext(actor);
+
+    const dossier = await prisma.workDossier.findUnique({
+      where: { id: input.dossierId },
+    });
+    if (!dossier) {
+      throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+    }
+
+    assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
+
+    if (
+      dossier.responsiblePersonId === user.id ||
+      (dossier.submittedById && dossier.submittedById === user.id)
+    ) {
+      throw new ForbiddenError(
+        "Người nộp lưu hồ sơ không được tự thao tác duyệt/từ chối hồ sơ lưu trữ (Vi phạm nguyên tắc phân công độc lập SoD)"
+      );
+    }
+
+    const resource: AuthorizationResource = {
+      type: "dossier",
+      id: dossier.id,
+      owningUnitId: dossier.owningUnitId,
+      dossierOwnerId: dossier.responsiblePersonId,
+      submittedByUserId: dossier.submittedById || dossier.responsiblePersonId,
+    };
+    await assertAuthorized(user, "dossier.accept_archive", resource);
+
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        select: { id: true, status: true },
+      });
+      if (!current) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      assertTransition(current.status, DossierStatus.READY_FOR_ARCHIVE);
+
+      const updated = await tx.workDossier.update({
+        where: { id: dossier.id },
+        data: {
+          status: DossierStatus.READY_FOR_ARCHIVE,
+          notes: input.returnReason
+            ? dossier.notes
+              ? `${dossier.notes}\n[Lưu trữ viên trả lại]: ${input.returnReason}`
+              : `[Lưu trữ viên trả lại]: ${input.returnReason}`
+            : dossier.notes,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DOSSIER_UPDATED,
+        entityType: AuditEntityType.WORK_DOSSIER,
+        entityId: dossier.id,
+        beforeData: { status: dossier.status },
+        afterData: {
+          status: updated.status,
+          returnReason: input.returnReason,
         },
       });
 
