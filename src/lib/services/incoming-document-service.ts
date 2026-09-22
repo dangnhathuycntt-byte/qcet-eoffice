@@ -50,6 +50,10 @@ import {
   IncomingDocumentStateMachine,
   mapIncomingWorkflowStatusToDocumentStatus,
 } from "@/lib/documents/state-machine";
+import {
+  UnitWorkAssignmentStatusValues,
+  assertUnitAssignmentTransition,
+} from "@/domain/documents/unit-assignment-status";
 
 // ============================================================================
 // Types & Input Interfaces
@@ -802,7 +806,9 @@ export async function assignUnitWork(
         instruction: input.instruction,
         deadline,
         taskId: createdTaskId,
-        status: "ASSIGNED",
+        status: input.createTask
+          ? UnitWorkAssignmentStatusValues.IN_PROGRESS
+          : UnitWorkAssignmentStatusValues.ASSIGNED,
       },
     });
 
@@ -951,7 +957,7 @@ export async function resolveDocument(
     // 2. Update assignments status
     await tx.unitWorkAssignment.updateMany({
       where: { workflowId: doc.incomingWorkflow!.id },
-      data: { status: "RESOLVED" },
+      data: { status: UnitWorkAssignmentStatusValues.RESOLVED },
     });
 
     const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(
