@@ -73,11 +73,17 @@ export interface SoDEvaluationContext {
   createdById?: string | null;
   primaryOwnerId?: string | null;
   driId?: string | null;
+  leadUserId?: string | null;
   assigneeIds?: string[];
-  assignees?: Array<{ userId: string; roleInTask?: string }>;
+  assignees?: Array<{ userId?: string; id?: string; roleInTask?: string } | string>;
+  collaboratorIds?: string[];
+  collaborators?: Array<{ userId?: string; id?: string } | string>;
+  coAssigneeIds?: string[];
+  coAssignees?: Array<{ userId?: string; id?: string } | string>;
   submittedByUserId?: string | null;
-  deliverables?: Array<{ uploadedById?: string | null }>;
+  deliverables?: Array<{ uploadedById?: string | null; uploadedByUserId?: string | null }>;
   deliverableUploadedByIds?: string[];
+  uploadedById?: string | null;
 }
 
 export interface SoDCheckResult {
@@ -87,7 +93,12 @@ export interface SoDCheckResult {
 }
 
 /**
- * Strictly verifies the Separation of Duties (SoD) anti-self-approval rule.
+ * Strictly verifies the Separation of Duties (SoD) anti-self-approval rule across all 5 role categories:
+ * 1. Creator (creatorId / createdById)
+ * 2. Primary Owner / DRI (primaryOwnerId / driId)
+ * 3. Assignee / Collaborator (assigneeIds / assignees[].userId)
+ * 4. Submitter (submittedByUserId)
+ * 5. Deliverable Uploader (deliverableUploadedByIds / deliverables[].uploadedById / uploadedById)
  *
  * Invariant:
  * An actor who created, was assigned to execute (as primary owner DRI or collaborator),
@@ -100,11 +111,17 @@ export function checkAntiSelfApproval(context: SoDEvaluationContext): SoDCheckRe
     createdById,
     primaryOwnerId,
     driId,
+    leadUserId,
     assigneeIds,
     assignees,
+    collaboratorIds,
+    collaborators,
+    coAssigneeIds,
+    coAssignees,
     submittedByUserId,
     deliverables,
     deliverableUploadedByIds,
+    uploadedById,
   } = context;
 
   if (!userId) {
@@ -129,7 +146,9 @@ export function checkAntiSelfApproval(context: SoDEvaluationContext): SoDCheckRe
 
   // 2. Primary Owner (DRI) anti-self-approval guard
   const isDRI =
-    (primaryOwnerId && primaryOwnerId === userId) || (driId && driId === userId);
+    (primaryOwnerId && primaryOwnerId === userId) ||
+    (driId && driId === userId) ||
+    (leadUserId && leadUserId === userId);
   if (isDRI) {
     return {
       allowed: false,
@@ -142,7 +161,20 @@ export function checkAntiSelfApproval(context: SoDEvaluationContext): SoDCheckRe
   // 3. Executor / Assignee anti-self-approval guard
   const isAssignee =
     (assigneeIds && assigneeIds.includes(userId)) ||
-    (assignees && assignees.some((a) => a.userId === userId));
+    (assignees &&
+      assignees.some((a) =>
+        typeof a === 'string' ? a === userId : (a?.userId === userId || a?.id === userId)
+      )) ||
+    (collaboratorIds && collaboratorIds.includes(userId)) ||
+    (collaborators &&
+      collaborators.some((c) =>
+        typeof c === 'string' ? c === userId : (c?.userId === userId || c?.id === userId)
+      )) ||
+    (coAssigneeIds && coAssigneeIds.includes(userId)) ||
+    (coAssignees &&
+      coAssignees.some((ca) =>
+        typeof ca === 'string' ? ca === userId : (ca?.userId === userId || ca?.id === userId)
+      ));
   if (isAssignee) {
     return {
       allowed: false,
@@ -152,17 +184,31 @@ export function checkAntiSelfApproval(context: SoDEvaluationContext): SoDCheckRe
     };
   }
 
-  // 4. Submitter / Deliverable uploader anti-self-approval guard
-  const isSubmitter =
-    (submittedByUserId && submittedByUserId === userId) ||
-    (deliverableUploadedByIds && deliverableUploadedByIds.includes(userId)) ||
-    (deliverables && deliverables.some((d) => d.uploadedById === userId));
+  // 4. Submitter anti-self-approval guard
+  const isSubmitter = Boolean(submittedByUserId && submittedByUserId === userId);
   if (isSubmitter) {
     return {
       allowed: false,
       violationCode: 'SOD_SUBMITTER_CANNOT_APPROVE',
       reason:
-        'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Cán bộ nộp báo cáo hoặc tài liệu kết quả không được tự phê duyệt.',
+        'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Cán bộ nộp báo cáo kết quả không được tự phê duyệt.',
+    };
+  }
+
+  // 5. Deliverable Uploader anti-self-approval guard
+  const isDeliverableUploader =
+    (uploadedById && uploadedById === userId) ||
+    (deliverableUploadedByIds && deliverableUploadedByIds.includes(userId)) ||
+    (deliverables &&
+      deliverables.some(
+        (d) => d?.uploadedById === userId || d?.uploadedByUserId === userId
+      ));
+  if (isDeliverableUploader) {
+    return {
+      allowed: false,
+      violationCode: 'SOD_DELIVERABLE_UPLOADER_CANNOT_APPROVE',
+      reason:
+        'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Cán bộ tải lên tài liệu kết quả không được tự phê duyệt.',
     };
   }
 
@@ -170,6 +216,11 @@ export function checkAntiSelfApproval(context: SoDEvaluationContext): SoDCheckRe
     allowed: true,
   };
 }
+
+/**
+ * Canonical alias for checkAntiSelfApproval
+ */
+export const checkSeparationOfDuties = checkAntiSelfApproval;
 
 /**
  * Asserts anti-self-approval, throwing an Error if the invariant is violated.
@@ -184,6 +235,8 @@ export function assertAntiSelfApproval(context: SoDEvaluationContext): void {
     throw error;
   }
 }
+
+export const assertSeparationOfDuties = assertAntiSelfApproval;
 
 // ============================================================================
 // 3. TASK CAPABILITY MATRIX EVALUATION

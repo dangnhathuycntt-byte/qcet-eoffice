@@ -23,6 +23,7 @@ import {
   getSystemReferenceDate,
   parseDateParts,
 } from '../../lib/academic-calendar';
+import { checkAntiSelfApproval } from './contract';
 
 export type { UserAttentionType, UserAttentionContext, AttentionResolverFn };
 export type UserContext = UserAttentionContext;
@@ -177,7 +178,10 @@ export function canUserReviewTask(task: any, userContext: UserContext): boolean 
 }
 
 /**
- * Evaluates whether the user is a maker (creator, lead assignee, co-assignee, submitter).
+ * Evaluates whether the user is a maker (creator, lead assignee, co-assignee, submitter, deliverable uploader).
+ *
+ * Canonical adapter wrapping the unified checkAntiSelfApproval SoD guard,
+ * preserving 100% parity for all recognized task maker shapes.
  *
  * Separation of Duties Invariant:
  * Any maker is strictly prohibited from approving their own task.
@@ -185,77 +189,86 @@ export function canUserReviewTask(task: any, userContext: UserContext): boolean 
 export function isTaskMaker(task: any, userId: string): boolean {
   if (!userId || !task) return false;
 
-  // 1. Creator check
-  if (task.createdById === userId || task.creatorId === userId) {
-    return true;
-  }
+  // 1. Resolve Creator
+  const creatorId =
+    task.creatorId ||
+    (typeof task.creator === 'string'
+      ? task.creator
+      : task.creator?.userId || task.creator?.id) ||
+    null;
+  const createdById = task.createdById || null;
 
-  // 2. Lead Assignee / DRI / Primary Owner check
-  if (
-    task.assigneeId === userId ||
-    task.leadAssigneeId === userId ||
-    task.primaryOwnerId === userId ||
-    task.driId === userId ||
-    task.assignedToId === userId ||
-    (typeof task.assignedTo === 'string' && task.assignedTo === userId) ||
-    task.assignedTo?.userId === userId ||
-    task.assignedTo?.id === userId ||
-    task.primaryOwner?.userId === userId ||
-    task.primaryOwner?.id === userId
-  ) {
-    return true;
-  }
+  // 2. Resolve Primary Owner / DRI & assignedTo variants
+  const primaryOwnerId =
+    task.primaryOwnerId ||
+    task.driId ||
+    task.assigneeId ||
+    task.leadAssigneeId ||
+    task.assignedToId ||
+    (typeof task.assignedTo === 'string'
+      ? task.assignedTo
+      : task.assignedTo?.userId || task.assignedTo?.id) ||
+    (typeof task.primaryOwner === 'string'
+      ? task.primaryOwner
+      : task.primaryOwner?.userId || task.primaryOwner?.id) ||
+    null;
+  const driId = task.driId || null;
 
-  // 3. Assignees & Collaborators check
-  if (Array.isArray(task.assigneeIds) && task.assigneeIds.includes(userId)) {
-    return true;
+  // 3. Resolve Assignees, Collaborators & Co-Assignees
+  const assigneeIds: string[] = [];
+  if (Array.isArray(task.assigneeIds)) {
+    for (const id of task.assigneeIds) {
+      if (typeof id === 'string') assigneeIds.push(id);
+    }
   }
-  if (
-    Array.isArray(task.assignees) &&
-    task.assignees.some((a: any) =>
-      typeof a === 'string' ? a === userId : (a?.userId || a?.id) === userId
-    )
-  ) {
-    return true;
+  // Include assignedTo variants into assigneeIds to ensure complete coverage
+  if (typeof task.assigneeId === 'string') assigneeIds.push(task.assigneeId);
+  if (typeof task.leadAssigneeId === 'string') assigneeIds.push(task.leadAssigneeId);
+  if (typeof task.assignedToId === 'string') assigneeIds.push(task.assignedToId);
+  if (typeof task.assignedTo === 'string') {
+    assigneeIds.push(task.assignedTo);
+  } else if (task.assignedTo?.userId) {
+    assigneeIds.push(task.assignedTo.userId);
+  } else if (task.assignedTo?.id) {
+    assigneeIds.push(task.assignedTo.id);
   }
-  if (
-    Array.isArray(task.collaborators) &&
-    task.collaborators.some((c: any) =>
-      typeof c === 'string' ? c === userId : (c?.userId || c?.id) === userId
-    )
-  ) {
-    return true;
-  }
-  if (Array.isArray(task.coAssigneeIds) && task.coAssigneeIds.includes(userId)) {
-    return true;
-  }
-  if (
-    Array.isArray(task.coAssignees) &&
-    task.coAssignees.some((ca: any) =>
-      typeof ca === 'string' ? ca === userId : (ca?.userId || ca?.id) === userId
-    )
-  ) {
-    return true;
-  }
+  if (task.primaryOwner?.userId) assigneeIds.push(task.primaryOwner.userId);
+  if (task.primaryOwner?.id) assigneeIds.push(task.primaryOwner.id);
+  if (typeof task.primaryOwner === 'string') assigneeIds.push(task.primaryOwner);
 
-  // 4. Submitter / Deliverable Uploader check
-  if (task.submittedByUserId === userId) {
-    return true;
-  }
-  if (
-    Array.isArray(task.deliverableUploadedByIds) &&
-    task.deliverableUploadedByIds.includes(userId)
-  ) {
-    return true;
-  }
-  if (
-    Array.isArray(task.deliverables) &&
-    task.deliverables.some((d: any) => d?.uploadedById === userId)
-  ) {
-    return true;
-  }
+  const assignees = Array.isArray(task.assignees) ? task.assignees : undefined;
+  const collaborators = Array.isArray(task.collaborators) ? task.collaborators : undefined;
+  const coAssigneeIds = Array.isArray(task.coAssigneeIds) ? task.coAssigneeIds : undefined;
+  const coAssignees = Array.isArray(task.coAssignees) ? task.coAssignees : undefined;
 
-  return false;
+  // 4. Resolve Submitter
+  const submittedByUserId = task.submittedByUserId || null;
+
+  // 5. Resolve Deliverables & Uploaders
+  const deliverableUploadedByIds = Array.isArray(task.deliverableUploadedByIds)
+    ? task.deliverableUploadedByIds
+    : undefined;
+  const deliverables = Array.isArray(task.deliverables) ? task.deliverables : undefined;
+  const uploadedById = task.uploadedById || null;
+
+  const result = checkAntiSelfApproval({
+    userId,
+    creatorId,
+    createdById,
+    primaryOwnerId,
+    driId,
+    assigneeIds,
+    assignees,
+    collaborators,
+    coAssigneeIds,
+    coAssignees,
+    submittedByUserId,
+    deliverables,
+    deliverableUploadedByIds,
+    uploadedById,
+  });
+
+  return !result.allowed;
 }
 
 /**

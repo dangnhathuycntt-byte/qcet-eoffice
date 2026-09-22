@@ -69,6 +69,7 @@ import {
 } from './errors';
 import { canAccessClassification } from './document-classification';
 import { logger } from '../observability/logger';
+import { checkSeparationOfDuties } from '@/domain/tasks/contract';
 
 // ============================================================================
 // HELPERS
@@ -1343,21 +1344,34 @@ export function authorize(
     }
   }
 
-  // Rule 10.3: Creator / Primary Owner != Approver
+  // Rule 10.3: Creator / Primary Owner / Assignee / Submitter / Deliverable Uploader != Approver (Maker-Checker SoD)
   if (action === 'task.approve') {
-    if (
-      resource?.creatorId === userId ||
-      resource?.createdById === userId ||
-      resource?.primaryOwnerId === userId ||
-      resource?.leadUserId === userId
-    ) {
+    const sodResult = checkSeparationOfDuties({
+      userId,
+      creatorId: (resource?.creatorId as string) || null,
+      createdById: (resource?.createdById as string) || null,
+      primaryOwnerId: (resource?.primaryOwnerId as string) || null,
+      driId: (resource?.driId as string) || null,
+      leadUserId: (resource?.leadUserId as string) || null,
+      assigneeIds: Array.isArray(resource?.assigneeIds) ? (resource.assigneeIds as string[]) : undefined,
+      assignees: Array.isArray(resource?.assignees) ? (resource.assignees as any[]) : undefined,
+      submittedByUserId: (resource?.submittedByUserId as string) || null,
+      deliverables: Array.isArray(resource?.deliverables) ? (resource.deliverables as any[]) : undefined,
+      deliverableUploadedByIds: Array.isArray(resource?.deliverableUploadedByIds)
+        ? (resource.deliverableUploadedByIds as string[])
+        : undefined,
+      uploadedById: (resource?.uploadedById as string) || null,
+    });
+
+    if (!sodResult.allowed) {
       return {
         allowed: false,
         granted: false,
         rejectionCode: 'SOD_VIOLATION',
         statusCode: 'SOD_VIOLATION',
         reason:
-          'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập hoặc người chịu trách nhiệm chính không được tự phê duyệt nhiệm vụ của mình.',
+          sodResult.reason ||
+          'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người tạo lập, người chịu trách nhiệm chính, cán bộ thực thi hoặc nộp minh chứng không được tự phê duyệt nhiệm vụ của mình.',
         auditRecord: {
           ...baseAuditRecord,
           decision: 'DENY',
@@ -1370,17 +1384,31 @@ export function authorize(
 
   // Rule 10.4: Executor != Reviewer
   if (action === 'task.review') {
-    if (
-      resource?.primaryOwnerId === userId ||
-      resource?.submittedByUserId === userId ||
-      resource?.uploadedById === userId
-    ) {
+    const sodResult = checkSeparationOfDuties({
+      userId,
+      creatorId: (resource?.creatorId as string) || null,
+      createdById: (resource?.createdById as string) || null,
+      primaryOwnerId: (resource?.primaryOwnerId as string) || null,
+      driId: (resource?.driId as string) || null,
+      leadUserId: (resource?.leadUserId as string) || null,
+      assigneeIds: Array.isArray(resource?.assigneeIds) ? (resource.assigneeIds as string[]) : undefined,
+      assignees: Array.isArray(resource?.assignees) ? (resource.assignees as any[]) : undefined,
+      submittedByUserId: (resource?.submittedByUserId as string) || null,
+      deliverables: Array.isArray(resource?.deliverables) ? (resource.deliverables as any[]) : undefined,
+      deliverableUploadedByIds: Array.isArray(resource?.deliverableUploadedByIds)
+        ? (resource.deliverableUploadedByIds as string[])
+        : undefined,
+      uploadedById: (resource?.uploadedById as string) || null,
+    });
+
+    if (!sodResult.allowed) {
       return {
         allowed: false,
         granted: false,
         rejectionCode: 'SOD_VIOLATION',
         statusCode: 'SOD_VIOLATION',
         reason:
+          sodResult.reason ||
           'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Cán bộ thực thi hoặc nộp minh chứng không được tự thẩm tra sản phẩm của mình.',
         auditRecord: {
           ...baseAuditRecord,
