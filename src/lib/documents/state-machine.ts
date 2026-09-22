@@ -234,6 +234,111 @@ export class OutgoingDocumentStateMachine {
 }
 
 // ============================================================================
+// ADR-004 CANONICAL STATUS SYNCHRONIZATION MAPPING
+// ============================================================================
+
+/**
+ * ADR-004 Canonical Synchronization Mapping:
+ * Maps IncomingDocumentStatus (Tier 2a) to persisted DocumentStatus (Tier 1).
+ *
+ * Canonical Mapping Rules:
+ * - RECEIVED, REGISTERED, PRESENTED, DIRECTED, ASSIGNED_TO_LEAD_UNIT, UNIT_ASSIGNED_PERSON -> CHO_PHAN_CONG
+ * - IN_PROGRESS -> DANG_XU_LY
+ * - RESOLVED -> DA_HOAN_THANH
+ * - FILED, ARCHIVED -> LUU_THEO_DOI
+ */
+export function mapIncomingWorkflowStatusToDocumentStatus(
+  status: IncomingDocumentStatus | string
+): DocumentStatus {
+  switch (status) {
+    case IncomingDocumentStatus.RECEIVED:
+    case IncomingDocumentStatus.REGISTERED:
+    case IncomingDocumentStatus.PRESENTED:
+    case IncomingDocumentStatus.DIRECTED:
+    case IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT:
+    case IncomingDocumentStatus.UNIT_ASSIGNED_PERSON:
+    case "RECEIVED":
+    case "REGISTERED":
+    case "PRESENTED":
+    case "DIRECTED":
+    case "ASSIGNED_TO_LEAD_UNIT":
+    case "UNIT_ASSIGNED_PERSON":
+      return DocumentStatus.CHO_PHAN_CONG;
+
+    case IncomingDocumentStatus.IN_PROGRESS:
+    case "IN_PROGRESS":
+      return DocumentStatus.DANG_XU_LY;
+
+    case IncomingDocumentStatus.RESOLVED:
+    case "RESOLVED":
+      return DocumentStatus.DA_HOAN_THANH;
+
+    case IncomingDocumentStatus.FILED:
+    case IncomingDocumentStatus.ARCHIVED:
+    case "FILED":
+    case "ARCHIVED":
+      return DocumentStatus.LUU_THEO_DOI;
+
+    default:
+      throw new InvalidTransitionError(
+        `Không xác định được trạng thái hành chính DocumentStatus tương ứng với IncomingWorkflowStatus '${status}'.`
+      );
+  }
+}
+
+/**
+ * ADR-004 Canonical Synchronization Mapping:
+ * Maps OutgoingDocumentStatus (Tier 2b) to persisted DocumentStatus (Tier 1).
+ *
+ * Canonical Mapping Rules:
+ * - DRAFT, CONTENT_REVIEW, FORMAT_CHECK -> DANG_XU_LY
+ * - AUTHORIZED_SIGN -> CHO_PHE_DUYET
+ * - NUMBERED, ORGANIZATION_SIGNED -> DANG_XU_LY
+ * - ISSUED, DELIVERED -> DA_HOAN_THANH
+ * - FILED, ARCHIVED -> LUU_THEO_DOI
+ */
+export function mapOutgoingWorkflowStatusToDocumentStatus(
+  status: OutgoingDocumentStatus | string
+): DocumentStatus {
+  switch (status) {
+    case OutgoingDocumentStatus.DRAFT:
+    case OutgoingDocumentStatus.CONTENT_REVIEW:
+    case OutgoingDocumentStatus.FORMAT_CHECK:
+    case "DRAFT":
+    case "CONTENT_REVIEW":
+    case "FORMAT_CHECK":
+      return DocumentStatus.DANG_XU_LY;
+
+    case OutgoingDocumentStatus.AUTHORIZED_SIGN:
+    case "AUTHORIZED_SIGN":
+      return DocumentStatus.CHO_PHE_DUYET;
+
+    case OutgoingDocumentStatus.NUMBERED:
+    case OutgoingDocumentStatus.ORGANIZATION_SIGNED:
+    case "NUMBERED":
+    case "ORGANIZATION_SIGNED":
+      return DocumentStatus.DANG_XU_LY;
+
+    case OutgoingDocumentStatus.ISSUED:
+    case OutgoingDocumentStatus.DELIVERED:
+    case "ISSUED":
+    case "DELIVERED":
+      return DocumentStatus.DA_HOAN_THANH;
+
+    case OutgoingDocumentStatus.FILED:
+    case OutgoingDocumentStatus.ARCHIVED:
+    case "FILED":
+    case "ARCHIVED":
+      return DocumentStatus.LUU_THEO_DOI;
+
+    default:
+      throw new InvalidTransitionError(
+        `Không xác định được trạng thái hành chính DocumentStatus tương ứng với OutgoingWorkflowStatus '${status}'.`
+      );
+  }
+}
+
+// ============================================================================
 // DOCUMENT IMMUTABILITY AUDITOR
 // ============================================================================
 
@@ -253,14 +358,23 @@ export interface DocumentImmutabilityTarget {
 /**
  * Checks whether a document is legally sealed / signed / finalized and therefore IMMUTABLE.
  * When immutable, no content, metadata, or attachments can be modified via generic update.
+ * Invariant (ADR-004): Must freeze documents when DA_HOAN_THANH / ISSUED / ARCHIVED.
  */
 export function isDocumentImmutable(doc: DocumentImmutabilityTarget): boolean {
   if (!doc) return false;
 
-  // 1. Canonical document status is DA_HOAN_THANH or completed
+  // 1. Canonical document status is DA_HOAN_THANH, LUU_THEO_DOI, or final status string
   if (
     doc.status === DocumentStatus.DA_HOAN_THANH ||
-    doc.status === "completed"
+    doc.status === "DA_HOAN_THANH" ||
+    doc.status === DocumentStatus.LUU_THEO_DOI ||
+    doc.status === "LUU_THEO_DOI" ||
+    doc.status === "completed" ||
+    doc.status === "ISSUED" ||
+    doc.status === "ARCHIVED" ||
+    doc.status === "FILED" ||
+    doc.status === "DELIVERED" ||
+    doc.status === "RESOLVED"
   ) {
     return true;
   }
@@ -273,14 +387,20 @@ export function isDocumentImmutable(doc: DocumentImmutabilityTarget): boolean {
   // 3. Outgoing workflow is signed, numbered, org-signed, issued, or filed
   if (doc.outgoingWorkflow) {
     if (doc.outgoingWorkflow.authorizedSignedAt) return true;
-    const status = doc.outgoingWorkflow.status as OutgoingDocumentStatus | undefined;
-    const finalOutgoingStatuses: OutgoingDocumentStatus[] = [
+    const status = doc.outgoingWorkflow.status as OutgoingDocumentStatus | string | undefined;
+    const finalOutgoingStatuses: (OutgoingDocumentStatus | string)[] = [
       OutgoingDocumentStatus.NUMBERED,
       OutgoingDocumentStatus.ORGANIZATION_SIGNED,
       OutgoingDocumentStatus.ISSUED,
       OutgoingDocumentStatus.DELIVERED,
       OutgoingDocumentStatus.FILED,
       OutgoingDocumentStatus.ARCHIVED,
+      "NUMBERED",
+      "ORGANIZATION_SIGNED",
+      "ISSUED",
+      "DELIVERED",
+      "FILED",
+      "ARCHIVED",
     ];
     if (status && finalOutgoingStatuses.includes(status)) {
       return true;
@@ -289,11 +409,14 @@ export function isDocumentImmutable(doc: DocumentImmutabilityTarget): boolean {
 
   // 4. Incoming workflow is resolved or filed
   if (doc.incomingWorkflow) {
-    const status = doc.incomingWorkflow.status as IncomingDocumentStatus | undefined;
-    const finalIncomingStatuses: IncomingDocumentStatus[] = [
+    const status = doc.incomingWorkflow.status as IncomingDocumentStatus | string | undefined;
+    const finalIncomingStatuses: (IncomingDocumentStatus | string)[] = [
       IncomingDocumentStatus.RESOLVED,
       IncomingDocumentStatus.FILED,
       IncomingDocumentStatus.ARCHIVED,
+      "RESOLVED",
+      "FILED",
+      "ARCHIVED",
     ];
     if (status && finalIncomingStatuses.includes(status)) {
       return true;

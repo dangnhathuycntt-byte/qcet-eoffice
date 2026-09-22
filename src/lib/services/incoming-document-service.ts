@@ -46,7 +46,10 @@ import {
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
-import { IncomingDocumentStateMachine } from "@/lib/documents/state-machine";
+import {
+  IncomingDocumentStateMachine,
+  mapIncomingWorkflowStatusToDocumentStatus,
+} from "@/lib/documents/state-machine";
 
 // ============================================================================
 // Types & Input Interfaces
@@ -322,7 +325,7 @@ export async function registerIncomingDocument(
         summary,
         urgency: input.urgency || DocumentUrgency.THUONG,
         securityLevel: input.securityLevel || DocumentSecurityLevel.THUONG,
-        status: DocumentStatus.CHO_PHAN_CONG,
+        status: mapIncomingWorkflowStatusToDocumentStatus(IncomingDocumentStatus.REGISTERED),
         notes: input.notes,
         registeredById: user.id,
       },
@@ -436,6 +439,16 @@ export async function presentDocument(
       },
     });
 
+    const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(
+      IncomingDocumentStatus.PRESENTED
+    );
+    await tx.document.update({
+      where: { id: input.documentId },
+      data: {
+        status: targetDocStatus,
+      },
+    });
+
     await auditService.logEvent(tx, {
       actorId: user.id,
       action: AuditAction.DOCUMENT_PRESENTED,
@@ -469,7 +482,7 @@ export async function presentDocument(
       document: {
         id: doc.id,
         summary: doc.summary,
-        status: doc.status,
+        status: targetDocStatus,
       },
     } as any;
   });
@@ -538,13 +551,15 @@ export async function directDocument(
   const deadline = input.deadline ? new Date(input.deadline) : null;
 
   return prisma.$transaction(async (tx) => {
+    const targetWorkflowStatus = input.leadUnitId
+      ? IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT
+      : IncomingDocumentStatus.DIRECTED;
+
     // 1. Update workflow
     const updatedWorkflow = await tx.documentIncomingWorkflow.update({
       where: { documentId: input.documentId },
       data: {
-        status: input.leadUnitId
-          ? IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT
-          : IncomingDocumentStatus.DIRECTED,
+        status: targetWorkflowStatus,
         directedAt: new Date(),
         leaderId: user.id,
         leadUnitId: input.leadUnitId,
@@ -560,10 +575,12 @@ export async function directDocument(
       where: { id: input.leadUnitId },
     });
 
+    const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetWorkflowStatus);
+
     await tx.document.update({
       where: { id: input.documentId },
       data: {
-        status: DocumentStatus.DANG_XU_LY,
+        status: targetDocStatus,
         dueDate: deadline,
         ...(legacyDept ? { leadDepartmentId: input.leadUnitId } : {}),
       },
@@ -627,7 +644,7 @@ export async function directDocument(
       document: {
         id: doc.id,
         summary: doc.summary,
-        status: doc.status,
+        status: targetDocStatus,
       },
     } as any;
   });
@@ -801,11 +818,13 @@ export async function assignUnitWork(
       },
     });
 
-    // 3. Update document lead user
+    // 3. Update document lead user and synchronize status
+    const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetStatus);
     await tx.document.update({
       where: { id: input.documentId },
       data: {
         leadUserId: input.driUserId,
+        status: targetDocStatus,
       },
     });
 
@@ -935,11 +954,15 @@ export async function resolveDocument(
       data: { status: "RESOLVED" },
     });
 
+    const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(
+      IncomingDocumentStatus.RESOLVED
+    );
+
     // 3. Update canonical document status
     await tx.document.update({
       where: { id: input.documentId },
       data: {
-        status: DocumentStatus.DA_HOAN_THANH,
+        status: targetDocStatus,
       },
     });
 
@@ -979,7 +1002,7 @@ export async function resolveDocument(
       document: {
         id: doc.id,
         summary: doc.summary,
-        status: doc.status,
+        status: targetDocStatus,
       },
     } as any;
   });
@@ -1058,10 +1081,11 @@ export async function fileDocument(
     });
 
     // 2. Update canonical document
+    const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetStatus);
     await tx.document.update({
       where: { id: input.documentId },
       data: {
-        status: DocumentStatus.LUU_THEO_DOI,
+        status: targetDocStatus,
         archivedAt: now,
         archivedById: user.id,
         archiveReason: input.filingNotes || `Lưu trữ hồ sơ ${dossierId}`,
@@ -1108,7 +1132,7 @@ export async function fileDocument(
       document: {
         id: doc.id,
         summary: doc.summary,
-        status: doc.status,
+        status: targetDocStatus,
       },
     } as any;
   });

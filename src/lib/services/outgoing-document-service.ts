@@ -50,6 +50,7 @@ import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
+  mapOutgoingWorkflowStatusToDocumentStatus,
 } from "@/lib/documents/state-machine";
 
 // ============================================================================
@@ -226,7 +227,7 @@ export class OutgoingDocumentService {
           summary,
           urgency: input.urgency || DocumentUrgency.THUONG,
           securityLevel: input.securityLevel || DocumentSecurityLevel.THUONG,
-          status: DocumentStatus.CHO_PHE_DUYET,
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DRAFT),
           notes: input.notes,
           registeredById: user.id,
           draftingDeptId: input.draftingDeptId || user.departmentId,
@@ -343,6 +344,13 @@ export class OutgoingDocumentService {
         },
       });
 
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.CONTENT_REVIEW),
+        },
+      });
+
       await auditService.logEvent(tx, {
         actorId: user.id,
         action: "DOCUMENT_CONTENT_REVIEW_REQUESTED",
@@ -435,6 +443,13 @@ export class OutgoingDocumentService {
         },
       });
 
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.FORMAT_CHECK),
+        },
+      });
+
       await auditService.logEvent(tx, {
         actorId: user.id,
         action: "DOCUMENT_CONTENT_APPROVED",
@@ -516,6 +531,13 @@ export class OutgoingDocumentService {
         },
       });
 
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.FORMAT_CHECK),
+        },
+      });
+
       await auditService.logEvent(tx, {
         actorId: user.id,
         action: "DOCUMENT_FORMAT_CHECK_REQUESTED",
@@ -578,6 +600,13 @@ export class OutgoingDocumentService {
           formatApprovedAt: now,
           formatReviewerId: user.id,
           formatReviewNotes: input.notes || existing.formatReviewNotes,
+        },
+      });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.AUTHORIZED_SIGN),
         },
       });
 
@@ -714,6 +743,7 @@ export class OutgoingDocumentService {
         data: {
           signerName: user.name,
           signerTitle: signingCapacity,
+          status: mapOutgoingWorkflowStatusToDocumentStatus(existing.status),
         },
       });
 
@@ -826,7 +856,7 @@ export class OutgoingDocumentService {
           originalNumber: outgoingNumberStr,
           registrationNumber: allocatedNumber,
           issuedDate: input.issuedDate ? new Date(input.issuedDate) : now,
-          status: DocumentStatus.CHO_PHE_DUYET,
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.NUMBERED),
           securityLevel: input.securityLevel || existing.document.securityLevel,
           urgency: input.urgency || existing.document.urgency,
         },
@@ -949,6 +979,14 @@ export class OutgoingDocumentService {
         },
       });
 
+      // 2b. Synchronize Document.status under ADR-004
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.ORGANIZATION_SIGNED),
+        },
+      });
+
       // 3. Audit log
       await auditService.logEvent(tx, {
         actorId: user.id,
@@ -1040,7 +1078,7 @@ export class OutgoingDocumentService {
       await tx.document.update({
         where: { id: input.documentId },
         data: {
-          status: DocumentStatus.DA_HOAN_THANH,
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.ISSUED),
           recipientList,
         },
       });
@@ -1166,7 +1204,7 @@ export class OutgoingDocumentService {
         data: {
           version: newVersion,
           summary: input.summary || existing.document.summary,
-          status: DocumentStatus.CHO_PHE_DUYET,
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DRAFT),
           notes: `Phiên bản ${newVersion} - Lý do: ${input.changeReason}`,
         },
       });
@@ -1258,5 +1296,147 @@ export class OutgoingDocumentService {
         issuer: { select: { id: true, name: true, email: true } },
       },
     }) as unknown as OutgoingWorkflowWithDetails | null;
+  }
+
+  /**
+   * 11. DELIVER DOCUMENT (Chuyển phát văn bản đến nơi nhận)
+   * Transition: ISSUED -> DELIVERED
+   * Synchronizes Document.status -> DA_HOAN_THANH under ADR-004.
+   */
+  static async deliverDocument(
+    input: { documentId: string; deliveryNotes?: string },
+    actor: AuthenticatedUserContext | SessionPayload,
+    context?: { requestId?: string }
+  ) {
+    const user = await resolveUserContext(actor);
+    const requestId = context?.requestId || `req_${Date.now()}`;
+
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId: input.documentId },
+      include: { document: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    }
+
+    OutgoingDocumentStateMachine.assertTransition(
+      existing.status,
+      OutgoingDocumentStatus.DELIVERED,
+      input.documentId
+    );
+
+    const resource: AuthorizationResource = {
+      id: input.documentId,
+      type: "document",
+      scope: "school",
+      primaryOwnerId: existing.document.registeredById,
+      createdById: existing.document.registeredById,
+    };
+
+    await assertAuthorized(user, "document.outgoing.issue", resource);
+
+    return prisma.$transaction(async (tx) => {
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
+        where: { documentId: input.documentId },
+        data: {
+          status: OutgoingDocumentStatus.DELIVERED,
+        },
+      });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DELIVERED),
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "OUTGOING_DOCUMENT_DELIVERED",
+        entityType: AuditEntityType.DOCUMENT,
+        entityId: input.documentId,
+        requestId,
+        beforeData: { status: existing.status },
+        afterData: { status: updatedWorkflow.status },
+      });
+
+      return updatedWorkflow;
+    });
+  }
+
+  /**
+   * 12. FILE / ARCHIVE OUTGOING DOCUMENT (Lưu trữ hồ sơ văn bản đi)
+   * Transition: ISSUED | DELIVERED -> FILED | ARCHIVED
+   * Synchronizes Document.status -> LUU_THEO_DOI under ADR-004.
+   */
+  static async fileOutgoingDocument(
+    input: { documentId: string; archiveNow?: boolean; filingNotes?: string },
+    actor: AuthenticatedUserContext | SessionPayload,
+    context?: { requestId?: string }
+  ) {
+    const user = await resolveUserContext(actor);
+    const requestId = context?.requestId || `req_${Date.now()}`;
+
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId: input.documentId },
+      include: { document: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    }
+
+    const targetStatus = input.archiveNow
+      ? OutgoingDocumentStatus.ARCHIVED
+      : OutgoingDocumentStatus.FILED;
+
+    OutgoingDocumentStateMachine.assertTransition(
+      existing.status,
+      targetStatus,
+      input.documentId
+    );
+
+    const resource: AuthorizationResource = {
+      id: input.documentId,
+      type: "document",
+      scope: "school",
+      primaryOwnerId: existing.document.registeredById,
+      createdById: existing.document.registeredById,
+    };
+
+    await assertAuthorized(user, "document.outgoing.issue", resource);
+
+    return prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
+        where: { documentId: input.documentId },
+        data: {
+          status: targetStatus,
+        },
+      });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(targetStatus),
+          archivedAt: now,
+          archivedById: user.id,
+          archiveReason: input.filingNotes,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "OUTGOING_DOCUMENT_FILED",
+        entityType: AuditEntityType.DOCUMENT,
+        entityId: input.documentId,
+        requestId,
+        beforeData: { status: existing.status },
+        afterData: { status: updatedWorkflow.status },
+      });
+
+      return updatedWorkflow;
+    });
   }
 }

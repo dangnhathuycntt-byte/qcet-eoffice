@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, IncomingDocumentStatus, OutgoingDocumentStatus } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type {
   DocumentItem,
@@ -13,10 +13,18 @@ import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { canReadDocument, buildDocumentReadWhere } from "@/server/policies/document-policy";
-import { isDocumentImmutable } from "./state-machine";
+import {
+  isDocumentImmutable,
+  mapIncomingWorkflowStatusToDocumentStatus,
+  mapOutgoingWorkflowStatusToDocumentStatus,
+} from "./state-machine";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
 
-export { buildDocumentReadWhere };
+export {
+  buildDocumentReadWhere,
+  mapIncomingWorkflowStatusToDocumentStatus,
+  mapOutgoingWorkflowStatusToDocumentStatus,
+};
 
 export interface CreateDocumentPayload {
   type: DocumentType;
@@ -490,6 +498,36 @@ export async function registerIncomingDocument(
   client?: any
 ): Promise<DocumentItem> {
   return createDocument({ ...payload, type: "VAN_BAN_DEN" }, client);
+}
+
+/**
+ * Synchronizes Document.status with the corresponding workflow status within a transaction.
+ * Invariant (ADR-004): Must be executed in the same prisma.$transaction as the workflow transition.
+ */
+export async function syncDocumentStatusFromIncomingWorkflow(
+  tx: Prisma.TransactionClient,
+  documentId: string,
+  workflowStatus: IncomingDocumentStatus | string
+): Promise<DocumentStatus> {
+  const targetStatus = mapIncomingWorkflowStatusToDocumentStatus(workflowStatus);
+  await tx.document.update({
+    where: { id: documentId },
+    data: { status: targetStatus },
+  });
+  return targetStatus;
+}
+
+export async function syncDocumentStatusFromOutgoingWorkflow(
+  tx: Prisma.TransactionClient,
+  documentId: string,
+  workflowStatus: OutgoingDocumentStatus | string
+): Promise<DocumentStatus> {
+  const targetStatus = mapOutgoingWorkflowStatusToDocumentStatus(workflowStatus);
+  await tx.document.update({
+    where: { id: documentId },
+    data: { status: targetStatus },
+  });
+  return targetStatus;
 }
 
 export { getNextRegistrationNumber };
