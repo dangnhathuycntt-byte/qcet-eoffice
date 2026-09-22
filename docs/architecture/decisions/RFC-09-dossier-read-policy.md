@@ -1,9 +1,13 @@
 # RFC-09: Canonical Dossier Read Policy Reconciliation (Hợp nhất Chính sách Đọc Hồ sơ Công việc)
 
-- **Status**: PROPOSED (Chờ Quyết định Chính sách Chủ quản cho Phạm vi Cán bộ Đóng góp — xem §4.4)
+- **Status**: ACCEPTED with Option B — Scoped Item-Level Read Only
 - **Date**: 2026-09-22
 - **Author**: Security Architecture Team (WI-1.5a / Issue #38)
+- **Deciders**: Owner (Approved at Architecture Review Gate — 2026-09-22)
 - **Target Implementation**: WI-1.5b
+- **Canonical Invariant (Owner Gate Decision)**:
+  - **`DossierItem.addedById` TUYỆT ĐỐI KHÔNG TỰ NÓ cấp quyền đọc toàn bộ hồ sơ (`WorkDossier`)**.
+  - Cán bộ đóng góp tài liệu có quyền đọc chính tài liệu do mình đóng góp (Scoped Item-Level Read Only), nhưng việc tiếp cận toàn bộ hồ sơ bắt buộc phải có một mối quan hệ/năng lực hợp lệ độc lập khác (người chịu trách nhiệm chính, ranh giới đơn vị sở hữu được phép, trách nhi���m lưu trữ, thẩm quyền lãnh đạo BGH, hoặc giấy ủy quyền hợp lệ).
 - **Affects**:
   - `src/server/policies/dossier-policy.ts` (`canReadDossier`)
   - `src/lib/services/dossier-service.ts` (`getDossierDetail`, `listDossiers`, `hasSchoolWideArchivalAccess`)
@@ -256,9 +260,9 @@ export function buildDossierReadWhere(
         { responsiblePersonId: user.id },
         { submittedById: user.id },
         { archivedById: user.id },
-        // [OWNER DECISION PLACEHOLDER]: Nhánh truy vấn cấp hồ sơ cho Item Contributor
-        // CHƯA ĐƯỢC KÍCH HOẠT ở baseline. Chỉ bổ sung { items: { some: { addedById: user.id } } }
-        // nếu Owner chính thức phê chuẩn Phương án A tại Architecture Review Gate.
+        // [OWNER DECISION: OPTION B ACCEPTED]:
+        // DossierItem.addedById KHÔNG cấp quyền đọc cấp hồ sơ. Item Contributor chỉ đọc/tải
+        // item do mình đóng góp qua cơ chế phân quyền cấp item (canReadDossierItem).
       ],
     };
   }
@@ -272,10 +276,9 @@ export function buildDossierReadWhere(
       { responsiblePersonId: user.id },
       { submittedById: user.id },
       { archivedById: user.id },
-      // [OWNER DECISION PLACEHOLDER]: Quyền truy cập của Item Contributor
-      // Mặc định KHÔNG cấp quyền đọc cấp hồ sơ cho contributor tại baseline query.
-      // - Nếu Owner chọn Option A: bổ sung { items: { some: { addedById: user.id } } }
-      // - Nếu Owner chọn Option B: áp dụng Item-level authorization filtering độc lập.
+      // [OWNER DECISION: OPTION B ACCEPTED]:
+      // DossierItem.addedById KHÔNG đưa vào baseline query của hồ sơ.
+      // Quyền đọc cấp item được kiểm soát độc lập tại API items và file route.
       // Thành viên trong đơn vị sở hữu (chỉ đối với hồ sơ không bị RESTRICTED/PERSONAL_DATA)
       ...(activeUnits.length > 0
         ? [
@@ -357,22 +360,25 @@ export function buildDossierReadWhere(
 | **Độ phức tạp mã nguồn (Code Complexity)** | **Thấp** — Boolean check đơn giản trên mảng items của hồ sơ. | **Trung bình - Cao** — Cần lọc danh sách item trả về ở tầng Service và SQL query. |
 | **Khuyến nghị của Security Team** | Không khuyến nghị cho môi trường sản xuất. | **KHUYẾN NGHỊ CHÍNH THỨC** (Trình Owner phê chuẩn). |
 
-#### 4.4.4. Quyết định Chính thức của Chủ quản Hệ thống (Owner Decision Sign-off Placeholder)
+#### 4.4.4. Quyết định Chính thức của Chủ quản Hệ thống (Owner Policy Decision Sign-off)
 
-Trạng thái quyết định: **CHƯA GIẢI QUYẾT (UNRESOLVED)** — Bắt buộc phải được ký duyệt tại Cổng Đánh giá Kiến trúc (Architecture Review Gate) trước khi bắt đầu triển khai WI-1.5b.
+Trạng thái quyết định: **ĐÃ PHÊ DUYỆT (ACCEPTED WITH OPTION B)** — Phê duyệt chính thức tại Cổng Đánh giá Kiến trúc (Architecture Review Gate) ngày 2026-09-22.
 
 ```markdown
 ┌────────────────────────────────────────────────────────────────────────┐
 │ PHÊ DUYỆT CHÍNH SÁCH CHỦ QUẢN (OWNER POLICY DECISION SIGN-OFF)         │
 │                                                                        │
 │ [ ] PHƯƠNG ÁN A: Trao quyền đọc toàn bộ hồ sơ cho Item Contributor     │
-│ [ ] PHƯƠNG ÁN B: Chỉ cho phép đọc tài liệu do chính mình đóng góp       │
-│                  (Item-level Read Only - Security Recommendation)      │
+│ [X] PHƯƠNG ÁN B: Chỉ cho phép đọc tài liệu do chính mình đóng góp       │
+│                  (Scoped Item-Level Read Only)                         │
 │                                                                        │
-│ Người phê duyệt: ___________________________                           │
-│ Vai trò/Chức danh: Chủ quản Hệ thống / Lead Architect                   │
-│ Ngày phê chuẩn:   ____ / ____ / 2026                                   │
-│ Ghi chú chỉ đạo:  ___________________________________________________  │
+│ Người phê duyệt: Owner / Lead Architect                                │
+│ Ngày phê chuẩn:  22 / 09 / 2026                                        │
+│ Bất biến chuẩn tắc (Canonical Invariant):                              │
+│ DossierItem.addedById TUYỆT ĐỐI KHÔNG TỰ NÓ cấp quyền đọc toàn bộ     │
+│ hồ sơ (WorkDossier). Contributor chỉ được đọc/tải chính item của mình. │
+│ Đọc toàn bộ hồ sơ bắt buộc phải có quan hệ/năng lực độc lập khác       │
+│ (responsiblePersonId, owningUnitId, archival, Executive, delegation).  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
