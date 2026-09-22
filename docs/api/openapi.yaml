@@ -1,587 +1,1123 @@
-openapi: 3.1.0
+# =============================================================================
+# QCET E-Office — OpenAPI 3.1 Architecture Contract Skeleton
+# Issue #34 Phase 0 Deliverable 3
+#
+# STATUS: SKELETON — structural contracts and schema shapes only.
+# This file is NOT a complete production API specification.
+# Endpoint bodies, query parameters, and response payloads are intentionally
+# minimal; they establish the TARGET contract pattern that implementation
+# work items will flesh out.
+# =============================================================================
+
+openapi: "3.1.0"
+
 info:
-  title: QCET E-Office Canonical API Contract
-  version: 1.0.0
-  description: >
-    Canonical OpenAPI 3.1 contract for QCET E-Office (Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn ).
-    Documents public, authenticated, and privileged endpoints with strict authorization rules,
-    standard error contracts, and DTO schemas.
+  title: QCET E-Office API Architecture Skeleton
+  version: 0.1.0-architecture
+  description: |
+    Architecture-level API contract skeleton for the QCET E-Office system.
+
+    **Purpose**: Establish structural conventions — resource paths, error format,
+    pagination, security schemes, and business-command patterns — before any
+    implementation work item begins. This is NOT a runnable specification.
+
+    **Conventions encoded here**:
+    - RESTful resource-oriented paths (`/api/{resource}`)
+    - Explicit business commands via `POST /api/{resource}/{id}/actions/{verb}`
+      — state transitions are NEVER performed through generic `PATCH {status}`
+    - Cursor-based pagination on every list endpoint
+    - Optimistic concurrency via `ETag` / `If-Match` on mutations
+    - RFC 9457 Problem Details (`application/problem+json`) for ALL errors
+    - Deny-by-default authorization enforced server-side
+
+    **Scope**: Core resources only — Tasks, Documents, Delegations, Meetings,
+    Dossiers. Auth, notifications, push, health, and platform routes are
+    documented in the route inventory (`docs/architecture/migration-map.md`)
+    but omitted from this skeleton.
+  contact:
+    name: QCET Architecture Team
+  license:
+    name: Proprietary
+    identifier: LicenseRef-QCET
+
 servers:
   - url: http://localhost:3000
-    description: Local development / test server
-  - url: https://eoffice.qcet.edu.vn
-    description: Institutional on-premise production server
+    description: Local development
 
+# =============================================================================
+# Security
+# =============================================================================
 security:
   - sessionCookie: []
+  - bearerAuth: []
 
+# =============================================================================
+# Paths — Core Resource Skeletons
+# =============================================================================
 paths:
-  /api/health/live:
+  # ---------------------------------------------------------------------------
+  # TASKS
+  # ---------------------------------------------------------------------------
+  /api/tasks:
+    x-architecture-notes: |
+      Skeleton. Full query filters (status, scope, assignee, dueDate, priority,
+      parentId) and request body shape will be specified per WI-7.6.
     get:
-      summary: Liveness health check
-      operationId: getLivenessHealth
-      security: []
+      operationId: listTasks
+      summary: List tasks (cursor-paginated)
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
-        '200':
-          description: Process is running and responsive
+        "200":
+          description: Paginated task list
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                    example: alive
-                  timestamp:
-                    type: string
-                    format: date-time
-                  uptimeSeconds:
-                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TaskSummary"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /api/health/ready:
-    get:
-      summary: Readiness health check
-      operationId: getReadinessHealth
-      security: []
-      responses:
-        '200':
-          description: Service and database are ready
-        '503':
-          description: Service or database is degraded/unreachable
-
-  /api/auth/login:
     post:
-      summary: Authenticate user session
-      operationId: login
-      security: []
+      operationId: createTask
+      summary: Create a new task
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginInput'
+              $ref: "#/components/schemas/CreateTaskCommand"
       responses:
-        '200':
-          description: Login successful, session cookie set
+        "201":
+          description: Task created
           headers:
-            Set-Cookie:
+            Location:
               schema:
                 type: string
-                description: HttpOnly, Secure, SameSite=Lax session token
+                format: uri
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthSuccessResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '415':
-          $ref: '#/components/responses/UnsupportedMediaTypeError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-
-  /api/auth/register:
-    post:
-      summary: Register self-service account
-      operationId: register
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterInput'
-      responses:
-        '201':
-          description: Account created successfully (CHUYEN_VIEN default role)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthSuccessResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-
-  /api/auth/me:
-    get:
-      summary: Get active session context
-      operationId: getCurrentSession
-      responses:
-        '200':
-          description: Authenticated user context or guest state
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MeResponse'
-
-  /api/auth/logout:
-    post:
-      summary: Terminate session
-      operationId: logout
-      responses:
-        '200':
-          description: Session terminated, cookie cleared
-
-  /api/tasks:
-    get:
-      summary: List tasks with role and scope filtering
-      operationId: listTasks
-      parameters:
-        - name: scope
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [school, unit, personal]
-            default: personal
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: pageSize
-          in: query
-          required: false
-          schema:
-            type: integer
-            maximum: 100
-            default: 20
-        - name: q
-          in: query
-          required: false
-          schema:
-            type: string
-            maxLength: 100
-      responses:
-        '200':
-          description: Paginated tasks list
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskListResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-    post:
-      summary: Create new task (Creator / Assignee)
-      operationId: createTask
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTaskInput'
-      responses:
-        '201':
-          description: Task created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaskDetailResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
+                $ref: "#/components/schemas/TaskDetail"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /api/tasks/{id}:
     parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ResourceId"
     get:
-      summary: Get task details by ID with object-level authorization
-      operationId: getTaskById
+      operationId: getTask
+      summary: Get task detail
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Task detail
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskDetailResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/TaskDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-    patch:
-      summary: Update task metadata or advance workflow state
-      operationId: updateTask
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTaskInput'
-      responses:
-        '200':
-          description: Task updated successfully
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          description: Optimistic Concurrency Conflict (version mismatch)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiErrorBody'
-
-    delete:
-      summary: Delete task (Creator or Administrator only)
-      operationId: deleteTask
-      responses:
-        '200':
-          description: Task removed
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/tasks/{id}/deliverables:
+  /api/tasks/{id}/actions/start:
+    x-architecture-notes: |
+      Business command. Transitions task lifecycle from NOT_STARTED → IN_PROGRESS.
+      Guarded by State Machine (ADR-003) and authorization engine.
     parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ResourceId"
     post:
-      summary: Submit work deliverable for task
-      operationId: submitDeliverable
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubmitDeliverableInput'
-      responses:
-        '201':
-          description: Deliverable recorded and task advanced to WAITING_APPROVAL
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-  /api/documents:
-    get:
-      summary: List incoming and outgoing official documents
-      operationId: listDocuments
+      operationId: startTask
+      summary: Start a task (business command)
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
       parameters:
-        - name: type
-          in: query
-          schema:
-            type: string
-            enum: [INCOMING, OUTGOING]
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: pageSize
-          in: query
-          schema:
-            type: integer
-            maximum: 100
-            default: 20
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                  description: Optional note when starting the task
       responses:
-        '200':
-          description: Document list
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+        "200":
+          description: Task started
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
+  /api/tasks/{id}/actions/submit-result:
+    x-architecture-notes: |
+      Business command. Submits deliverables/result for review.
+      Transitions IN_PROGRESS → WAITING_APPROVAL.
+      Subject to Maker-Checker SoD (ADR-001): submitter cannot approve.
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
     post:
-      summary: Register incoming/outgoing official document (Clerk/Admin/Manager)
-      operationId: createDocument
+      operationId: submitTaskResult
+      summary: Submit task result for review (business command)
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDocumentInput'
+              type: object
+              properties:
+                summary:
+                  type: string
+                attachmentIds:
+                  type: array
+                  items:
+                    type: string
+              required: [summary]
       responses:
-        '201':
+        "200":
+          description: Result submitted
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/tasks/{id}/actions/approve:
+    x-architecture-notes: |
+      Business command. Approves a submitted task result.
+      Transitions WAITING_APPROVAL → COMPLETED.
+      Subject to Maker-Checker SoD (ADR-001): approver ≠ maker.
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: approveTask
+      summary: Approve task result (business command)
+      tags: [Tasks]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        "200":
+          description: Task approved
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # DOCUMENTS
+  # ---------------------------------------------------------------------------
+  /api/documents:
+    x-architecture-notes: |
+      Skeleton. Documents follow NĐ 30/2020 lifecycle with 2-tier status
+      synchronization (ADR-004). Full query filters TBD.
+    get:
+      operationId: listDocuments
+      summary: List documents (cursor-paginated)
+      tags: [Documents]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated document list
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DocumentSummary"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createDocument
+      summary: Register a new document
+      tags: [Documents]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Skeleton — full schema TBD per WI-7.6"
+      responses:
+        "201":
           description: Document registered
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /api/documents/{id}:
     parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ResourceId"
     get:
-      summary: Get document details
-      operationId: getDocumentById
+      operationId: getDocument
+      summary: Get document detail
+      tags: [Documents]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
       responses:
-        '200':
-          description: Document details
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+        "200":
+          description: Document detail
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /api/documents/{id}/directives:
+  /api/documents/{id}/actions/present:
+    x-architecture-notes: |
+      Business command — Incoming document workflow.
+      Trình lãnh đạo (present to leader for directive).
+      Part of NĐ 30/2020 incoming document processing flow.
     parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ResourceId"
     post:
-      summary: Issue leadership directive for an official document
-      operationId: createDirective
+      operationId: presentDocument
+      summary: Present document to leader (business command)
+      tags: [Documents]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDirectiveInput'
+              type: object
+              properties:
+                leaderId:
+                  type: string
+                  description: ID of the leader to present to
+                note:
+                  type: string
+              required: [leaderId]
       responses:
-        '201':
-          description: Directive recorded and linked
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
+        "200":
+          description: Document presented to leader
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /api/notifications:
-    get:
-      summary: List notifications for authenticated user
-      operationId: listNotifications
-      responses:
-        '200':
-          description: Notifications list
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /api/notifications/{id}/read:
+  /api/documents/{id}/actions/sign:
+    x-architecture-notes: |
+      Business command — Outgoing document workflow.
+      Ký nháy / Ký chính thức (sign or initial).
+      Part of NĐ 30/2020 outgoing document issuance flow.
     parameters:
-      - name: id
-        in: path
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: signDocument
+      summary: Sign document (business command)
+      tags: [Documents]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
         required: true
-        schema:
-          type: string
-    post:
-      summary: Mark notification as read (Owner only)
-      operationId: markNotificationRead
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signatureType:
+                  type: string
+                  enum: [INITIAL, AUTHORIZED, ORGANIZATION]
+                comment:
+                  type: string
+              required: [signatureType]
       responses:
-        '200':
-          description: Notification marked read
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+        "200":
+          description: Document signed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /api/notifications/read-all:
-    post:
-      summary: Mark all personal notifications as read
-      operationId: markAllNotificationsRead
+  # ---------------------------------------------------------------------------
+  # DELEGATIONS
+  # ---------------------------------------------------------------------------
+  /api/delegations:
+    x-architecture-notes: |
+      Skeleton. Current system has dual delegation models (DacumDelegation and
+      DelegationGrant). Unification is RFC_REQUIRED (RFC-03). This skeleton
+      targets the DelegationGrant-based model.
+    get:
+      operationId: listDelegations
+      summary: List active delegations (cursor-paginated)
+      tags: [Delegations]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
-        '200':
-          description: All user notifications marked read
+        "200":
+          description: Paginated delegation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DelegationSummary"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
+    post:
+      operationId: createDelegation
+      summary: Grant a new delegation
+      tags: [Delegations]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Skeleton — full schema TBD per RFC-03"
+      responses:
+        "201":
+          description: Delegation granted
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/delegations/{id}/revoke:
+    x-architecture-notes: |
+      Business command. Revokes an active delegation.
+      Produces domain event: delegation.revoked
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      operationId: revokeDelegation
+      summary: Revoke a delegation (business command)
+      tags: [Delegations]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Delegation revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # MEETINGS
+  # ---------------------------------------------------------------------------
+  /api/meetings:
+    x-architecture-notes: |
+      Skeleton. Meetings follow a lifecycle: SCHEDULED → IN_PROGRESS →
+      MINUTES_DRAFTED → CONFIRMED. Business commands advance this lifecycle.
+    get:
+      operationId: listMeetings
+      summary: List meetings (cursor-paginated)
+      tags: [Meetings]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated meeting list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MeetingSummary"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createMeeting
+      summary: Schedule a new meeting
+      tags: [Meetings]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Skeleton — full schema TBD"
+      responses:
+        "201":
+          description: Meeting scheduled
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/meetings/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: getMeeting
+      summary: Get meeting detail
+      tags: [Meetings]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meeting detail
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ---------------------------------------------------------------------------
+  # DOSSIERS (Hồ sơ công việc)
+  # ---------------------------------------------------------------------------
+  /api/dossiers:
+    x-architecture-notes: |
+      Skeleton. Work Dossiers follow NĐ 30/2020 archival lifecycle:
+      OPEN → ACTIVE → CLOSED → READY_FOR_ARCHIVE → SUBMITTED_TO_ARCHIVE →
+      ACCEPTED → ARCHIVED. Business commands advance this lifecycle.
+    get:
+      operationId: listDossiers
+      summary: List dossiers (cursor-paginated)
+      tags: [Dossiers]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated dossier list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DossierSummary"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createDossier
+      summary: Open a new work dossier
+      tags: [Dossiers]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Skeleton — full schema TBD"
+      responses:
+        "201":
+          description: Dossier opened
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DossierSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/dossiers/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      operationId: getDossier
+      summary: Get dossier detail
+      tags: [Dossiers]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dossier detail
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DossierSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+# =============================================================================
+# Components
+# =============================================================================
 components:
+  # ---------------------------------------------------------------------------
+  # Security Schemes
+  # ---------------------------------------------------------------------------
   securitySchemes:
     sessionCookie:
       type: apiKey
       in: cookie
-      name: qcet_session
+      name: next-auth.session-token
+      description: |
+        NextAuth.js v5 session cookie. Set automatically on browser login.
+        Secure; HttpOnly; SameSite=Lax.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token for programmatic / service-to-service access.
+        Not yet implemented — reserved for future API client auth.
 
+  # ---------------------------------------------------------------------------
+  # Parameters
+  # ---------------------------------------------------------------------------
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Resource identifier (cuid or uuid depending on entity)
+
+    CursorParam:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: |
+        Opaque pagination cursor returned by a previous response's
+        `pagination.nextCursor`. Omit for the first page.
+
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Maximum items per page
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      schema:
+        type: string
+      description: |
+        ETag from a prior GET. When present, the server rejects the mutation
+        with 409 Conflict if the resource has been modified since that ETag
+        was issued (optimistic concurrency control).
+
+  # ---------------------------------------------------------------------------
+  # Headers
+  # ---------------------------------------------------------------------------
+  headers:
+    ETag:
+      schema:
+        type: string
+      description: |
+        Entity tag for optimistic concurrency. Pass back as `If-Match`
+        on subsequent mutations.
+
+  # ---------------------------------------------------------------------------
+  # Reusable Responses
+  # ---------------------------------------------------------------------------
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Valid session or bearer token required."
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/forbidden"
+            title: "Forbidden"
+            status: 403
+            detail: "You do not have permission to perform this action."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/not-found"
+            title: "Not Found"
+            status: 404
+            detail: "The requested resource does not exist."
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/validation-error"
+            title: "Bad Request"
+            status: 400
+            detail: "Request body failed schema validation."
+            errors:
+              - field: "title"
+                message: "Required"
+
+    Conflict:
+      description: Conflict — stale ETag or invalid state transition
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/conflict"
+            title: "Conflict"
+            status: 409
+            detail: "Resource was modified by another request. Re-fetch and retry."
+
+    UnprocessableEntity:
+      description: Business rule violation
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/business-rule-violation"
+            title: "Unprocessable Entity"
+            status: 422
+            detail: "State transition not permitted: task is not in WAITING_APPROVAL state."
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetail"
+          example:
+            type: "https://qcet.edu.vn/problems/internal-error"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected error occurred. A correlation ID has been logged."
+
+  # ---------------------------------------------------------------------------
+  # Schemas
+  # ---------------------------------------------------------------------------
   schemas:
-    LoginInput:
+    # ·········································································
+    # RFC 9457 Problem Details
+    # ·········································································
+    ProblemDetail:
       type: object
-      required: [email, password]
+      description: |
+        RFC 9457 Problem Details for HTTP APIs.
+        Every error response in this API uses this envelope.
+      required:
+        - type
+        - title
+        - status
       properties:
-        email:
+        type:
           type: string
-          format: email
-        password:
+          format: uri
+          description: A URI reference identifying the problem type
+          example: "https://qcet.edu.vn/problems/business-rule-violation"
+        title:
           type: string
-          minLength: 6
-          maxLength: 128
+          description: Short human-readable summary of the problem type
+          example: "Unprocessable Entity"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 422
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+          example: "Task is not in a state that allows approval."
+        instance:
+          type: string
+          format: uri
+          description: URI reference identifying this specific occurrence
+        errors:
+          type: array
+          description: Field-level validation errors (optional extension)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+            required:
+              - field
+              - message
 
-    RegisterInput:
+    # ·········································································
+    # Cursor Pagination
+    # ·········································································
+    CursorPaginationMeta:
       type: object
-      required: [email, password, name]
+      description: |
+        Cursor-based pagination metadata. Clients pass `nextCursor` as the
+        `cursor` query parameter to fetch the next page. `hasMore` indicates
+        whether additional pages exist.
+      required:
+        - hasMore
+        - total
       properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 6
-          maxLength: 128
-        name:
-          type: string
-          minLength: 2
-          maxLength: 100
-        departmentId:
-          type: string
-
-    AuthSuccessResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        user:
-          $ref: '#/components/schemas/UserPublicDTO'
-
-    MeResponse:
-      type: object
-      properties:
-        authenticated:
-          type: boolean
-        user:
-          $ref: '#/components/schemas/UserPublicDTO'
-
-    UserPublicDTO:
-      type: object
-      properties:
-        id:
-          type: string
-        email:
-          type: string
-        name:
-          type: string
-        role:
-          type: string
-          enum: [ADMIN, BAN_GIAM_HIEU, TRUONG_PHONG, PHO_PHONG, CHUYEN_VIEN, VAN_THU]
-        departmentId:
+        nextCursor:
           type: string
           nullable: true
-
-    CreateTaskInput:
-      type: object
-      required: [title]
-      properties:
-        title:
-          type: string
-          minLength: 3
-          maxLength: 300
-        description:
-          type: string
-          maxLength: 5000
-        priority:
-          type: string
-          enum: [LOW, MEDIUM, HIGH, URGENT]
-        assigneeId:
-          type: string
-        deadline:
-          type: string
-          format: date-time
-
-    UpdateTaskInput:
-      type: object
-      properties:
-        expectedVersion:
+          description: Opaque cursor for the next page, or null if no more pages
+        hasMore:
+          type: boolean
+          description: Whether more items exist beyond this page
+        total:
           type: integer
-          description: Optimistic concurrency control check
-        title:
-          type: string
-          minLength: 3
-          maxLength: 300
-        description:
-          type: string
-          maxLength: 5000
-        status:
-          type: string
-          enum: [NEW, IN_PROGRESS, WAITING_APPROVAL, COMPLETED, REJECTED, CANCELLED]
-        priority:
-          type: string
-          enum: [LOW, MEDIUM, HIGH, URGENT]
-        deadline:
-          type: string
-          format: date-time
+          description: Total count of items matching the query (when available)
 
-    SubmitDeliverableInput:
+    # ·········································································
+    # Task Schemas
+    # ·········································································
+    CreateTaskCommand:
       type: object
-      required: [title]
+      description: "Skeleton — full field set TBD per WI-7.6"
+      required:
+        - title
       properties:
         title:
           type: string
-          minLength: 3
-          maxLength: 300
-        content:
+          maxLength: 500
+        description:
           type: string
-          maxLength: 10000
-        fileUrls:
+        priority:
+          type: string
+          enum: [URGENT, HIGH, NORMAL, LOW]
+        dueDate:
+          type: string
+          format: date-time
+        parentId:
+          type: string
+          description: Parent task ID for subtask creation
+        assigneeIds:
           type: array
           items:
             type: string
-            format: uri
 
-    CreateDocumentInput:
+    TaskSummary:
       type: object
-      required: [title, documentNumber]
-      properties:
-        title:
-          type: string
-          maxLength: 300
-        documentNumber:
-          type: string
-          maxLength: 100
-        documentType:
-          type: string
-          enum: [INCOMING, OUTGOING]
-        issuingAuthority:
-          type: string
-
-    CreateDirectiveInput:
-      type: object
-      required: [content]
-      properties:
-        content:
-          type: string
-          minLength: 5
-          maxLength: 2000
-        deadline:
-          type: string
-          format: date-time
-
-    TaskListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/TaskSummaryDTO'
-        pagination:
-          type: object
-          properties:
-            page:
-              type: integer
-            pageSize:
-              type: integer
-            total:
-              type: integer
-            totalPages:
-              type: integer
-
-    TaskSummaryDTO:
-      type: object
+      description: |
+        Compact task representation for list views.
+        Skeleton — additional fields TBD.
       properties:
         id:
           type: string
@@ -589,99 +1125,218 @@ components:
           type: string
         status:
           type: string
+          description: "Canonical lifecycle status (ADR-003)"
+          enum: [NOT_STARTED, IN_PROGRESS, WAITING_APPROVAL, COMPLETED, CANCELLED]
         priority:
           type: string
-        deadline:
+          enum: [URGENT, HIGH, NORMAL, LOW]
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
           type: string
           format: date-time
 
-    TaskDetailResponse:
+    TaskDetail:
       type: object
+      description: |
+        Full task representation including relations.
+        Skeleton — additional fields (actors, deliverables, approval process,
+        hierarchy) TBD.
+      allOf:
+        - $ref: "#/components/schemas/TaskSummary"
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            createdBy:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+            parentId:
+              type: string
+              nullable: true
+            childCount:
+              type: integer
+              description: Number of subtasks
+            version:
+              type: integer
+              description: Optimistic concurrency version
+
+    # ·········································································
+    # Document Schema
+    # ·········································································
+    DocumentSummary:
+      type: object
+      description: |
+        Document representation. Covers both incoming (văn bản đến) and
+        outgoing (văn bản đi) documents. Skeleton — full field set TBD.
       properties:
-        success:
-          type: boolean
-        data:
+        id:
+          type: string
+        documentNumber:
+          type: string
+          nullable: true
+        title:
+          type: string
+        type:
+          type: string
+          enum: [VAN_BAN_DEN, VAN_BAN_DI, TO_TRINH_NOI_BO]
+        status:
+          type: string
+          description: "Administrative status (Tier 1, NĐ 30/2020)"
+        urgency:
+          type: string
+          enum: [THUONG, KHAN, THUONG_KHAN, HOA_TOC]
+        securityLevel:
+          type: string
+          enum: [THUONG, MAT, TOI_MAT, TUYET_MAT]
+        issuedDate:
+          type: string
+          format: date
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # ·································································��·······
+    # Delegation Schema
+    # ·········································································
+    DelegationSummary:
+      type: object
+      description: |
+        Delegation grant representation. Target model is position-based
+        DelegationGrant (RFC-03 pending for unification with DacumDelegation).
+        Skeleton.
+      properties:
+        id:
+          type: string
+        grantor:
           type: object
           properties:
             id:
               type: string
-            title:
+            name:
               type: string
-            description:
+        delegate:
+          type: object
+          properties:
+            id:
               type: string
-            status:
+            name:
               type: string
-            priority:
-              type: string
-            version:
-              type: integer
-            deadline:
-              type: string
-              format: date-time
+        status:
+          type: string
+          enum: [ACTIVE, REVOKED, EXPIRED, PENDING]
+        effectiveFrom:
+          type: string
+          format: date-time
+        effectiveTo:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
 
-    ApiErrorBody:
+    # ·········································································
+    # Meeting Schema
+    # ·········································································
+    MeetingSummary:
       type: object
-      required: [code, message, requestId]
+      description: |
+        Meeting representation. Skeleton — full field set including
+        participants, agenda, resolutions TBD.
       properties:
-        success:
-          type: boolean
-          example: false
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          description: "Meeting lifecycle status"
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        organizerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ·········································································
+    # Dossier Schema
+    # ·········································································
+    DossierSummary:
+      type: object
+      description: |
+        Work Dossier (Hồ sơ công việc) representation.
+        Follows NĐ 30/2020 archival lifecycle.
+        Skeleton — full field set including items, retention rules TBD.
+      properties:
+        id:
+          type: string
         code:
           type: string
-          example: FORBIDDEN
-        message:
+        title:
           type: string
-          example: Access denied to requested resource
-        fieldErrors:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
-        requestId:
+        status:
           type: string
-          example: req-12345-67890
+          enum:
+            - OPEN
+            - ACTIVE
+            - CLOSED
+            - READY_FOR_ARCHIVE
+            - SUBMITTED_TO_ARCHIVE
+            - ACCEPTED
+            - ARCHIVED
+        owningUnitId:
+          type: string
+        responsiblePersonId:
+          type: string
+        openedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
 
-  responses:
-    ValidationError:
-      description: Bad Request / Input validation failure
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    UnauthorizedError:
-      description: Authentication required or invalid session
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    ForbiddenError:
-      description: Authenticated but unauthorized for this object/action
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    NotFoundError:
-      description: Target resource was not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    ConflictError:
-      description: Conflict or state machine violation
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    UnsupportedMediaTypeError:
-      description: Content-Type must be application/json
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
-    RateLimitError:
-      description: Rate limit exceeded
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiErrorBody'
+  # ---------------------------------------------------------------------------
+  # Tags
+  # ---------------------------------------------------------------------------
+tags:
+  - name: Tasks
+    description: |
+      Work management — task CRUD and lifecycle business commands.
+      Governed by ADR-001 (Maker-Checker SoD) and ADR-003 (Lifecycle semantics).
+  - name: Documents
+    description: |
+      Document management — registration, incoming/outgoing workflows,
+      and NĐ 30/2020 compliant lifecycle commands.
+      Governed by ADR-004 (Document 2-tier status sync).
+  - name: Delegations
+    description: |
+      Authority delegation grants and revocations.
+      Target model: position-based DelegationGrant (RFC-03 pending).
+  - name: Meetings
+    description: |
+      Meeting scheduling, lifecycle commands, and resolution management.
+  - name: Dossiers
+    description: |
+      Work dossier (Hồ sơ công việc) management and NĐ 30/2020 archival lifecycle.
