@@ -8,6 +8,7 @@ import {
   normalizeScope,
   type ActorContext,
   type TaskContext,
+  type TaskAuthorizationDecision,
 } from '../src/domain/tasks/state-machine';
 
 describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phase 21)', () => {
@@ -679,6 +680,237 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       );
       assert.strictEqual(res.allowed, false);
       assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+  });
+
+  describe('9. Pure Domain Authority via TaskAuthorizationDecision Interface (WI-3.3 / ADR-002)', () => {
+    // Non-maker task for approval testing
+    const nonMakerDeptTask: TaskContext = {
+      id: 'task-auth-dec-01',
+      scope: 'DEPARTMENT',
+      departmentId: 'dept-cntt',
+      createdById: 'user-creator-99',
+      primaryOwnerId: 'user-staff-99',
+      assigneeIds: ['user-staff-99'],
+    };
+
+    const nonMakerSchoolTask: TaskContext = {
+      id: 'task-auth-dec-02',
+      scope: 'SCHOOL',
+      departmentId: 'dept-cntt',
+      createdById: 'user-creator-99',
+      primaryOwnerId: 'user-staff-99',
+      assigneeIds: ['user-staff-99'],
+    };
+
+    it('allows Staff (CHUYEN_VIEN) to approve when authDecision.canApprove is true and non-maker (Role is not scope)', () => {
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: true }
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('allows Giang Vien to approve SCHOOL task when authDecision.canApprove is true', () => {
+      const res = taskStateMachine.canTransition(
+        giangVienActor,
+        nonMakerSchoolTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: true }
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('prohibits Unit Manager from approving when authDecision.canApprove is false (capability revoked)', () => {
+      const res = taskStateMachine.canTransition(
+        managerActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_APPROVER');
+    });
+
+    it('prohibits Executive (BAN_GIAM_HIEU) from approving when authDecision.canApprove is false', () => {
+      const res = taskStateMachine.canTransition(
+        executiveActor,
+        nonMakerSchoolTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_APPROVER');
+    });
+
+    it('HARD INVARIANT: Maker CANNOT approve even if authDecision.canApprove is true (Creator)', () => {
+      const taskCreatedByStaff: TaskContext = {
+        ...nonMakerDeptTask,
+        createdById: staffActor.id,
+      };
+
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        taskCreatedByStaff,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: true }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('HARD INVARIANT: Maker CANNOT approve even if authDecision.canApprove is true (DRI / Primary Owner)', () => {
+      const taskWhereStaffIsDri: TaskContext = {
+        ...nonMakerDeptTask,
+        primaryOwnerId: staffActor.id,
+        assigneeIds: [staffActor.id],
+      };
+
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        taskWhereStaffIsDri,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: true }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('HARD INVARIANT: Maker CANNOT approve even if authDecision.canApprove is true (Executive is maker)', () => {
+      const taskWhereExecutiveIsCreator: TaskContext = {
+        ...nonMakerSchoolTask,
+        createdById: executiveActor.id,
+      };
+
+      const res = taskStateMachine.canTransition(
+        executiveActor,
+        taskWhereExecutiveIsCreator,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        { canApprove: true }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('allows Staff to reject when authDecision.canReject is true', () => {
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'IN_PROGRESS',
+        { canReject: true }
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('prohibits rejection when authDecision.canReject is false', () => {
+      const res = taskStateMachine.canTransition(
+        managerActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'IN_PROGRESS',
+        { canReject: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_APPROVER');
+    });
+
+    it('allows cancellation when authDecision.canCancel is true for non-creator Staff', () => {
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'IN_PROGRESS',
+        'CANCELLED',
+        { canCancel: true }
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('prohibits cancellation when authDecision.canCancel is false even for creator', () => {
+      const taskCreatedByManager: TaskContext = {
+        ...nonMakerDeptTask,
+        createdById: managerActor.id,
+      };
+
+      const res = taskStateMachine.canTransition(
+        managerActor,
+        taskCreatedByManager,
+        'IN_PROGRESS',
+        'CANCELLED',
+        { canCancel: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_CANCELLATION');
+    });
+
+    it('enforces canStart: false blocking task start from NOT_STARTED', () => {
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'NOT_STARTED',
+        'IN_PROGRESS',
+        { canStart: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_ACTION');
+    });
+
+    it('enforces canSubmit: false blocking task review submission from IN_PROGRESS', () => {
+      const res = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'IN_PROGRESS',
+        'WAITING_APPROVAL',
+        { canSubmit: false }
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'UNAUTHORIZED_ACTION');
+    });
+
+    it('getAllowedTransitions respects authDecision pure capabilities', () => {
+      const staffTransitions = taskStateMachine.getAllowedTransitions(
+        staffActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        { canApprove: true, canReject: true }
+      );
+
+      const completedT = staffTransitions.find((t) => t.status === 'COMPLETED');
+      const inProgressT = staffTransitions.find((t) => t.status === 'IN_PROGRESS');
+
+      assert.strictEqual(completedT?.allowed, true);
+      assert.strictEqual(inProgressT?.allowed, true);
+    });
+
+    it('backward compatibility: falls back to role checks when authDecision fields are undefined', () => {
+      // Empty authDecision -> should behave identically to legacy role checks
+      const emptyDecisionRes = taskStateMachine.canTransition(
+        staffActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        {}
+      );
+      assert.strictEqual(emptyDecisionRes.allowed, false);
+      assert.strictEqual(emptyDecisionRes.code, 'UNAUTHORIZED_APPROVER');
+
+      const managerRes = taskStateMachine.canTransition(
+        managerActor,
+        nonMakerDeptTask,
+        'WAITING_APPROVAL',
+        'COMPLETED',
+        {}
+      );
+      assert.strictEqual(managerRes.allowed, true);
     });
   });
 });

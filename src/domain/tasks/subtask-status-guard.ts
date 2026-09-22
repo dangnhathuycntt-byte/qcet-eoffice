@@ -17,6 +17,7 @@ import {
   type TaskContext,
   type CanonicalTaskStatus,
   type TransitionResult,
+  type TaskAuthorizationDecision,
   normalizeTaskStatus,
   buildActorContext,
   buildTaskContext,
@@ -223,14 +224,22 @@ export function computeSubtaskStatusGuard(
   const actorCtx = buildSubtaskActorContext(actor);
   const taskCtx = buildSubtaskContext(subtask);
 
-  // 5. Lấy tất cả transitions từ FSM
+  // 5. Construct TaskAuthorizationDecision từ availableActions (ADR-002 Pure Domain Authority)
+  const authDecision: TaskAuthorizationDecision = {
+    canApprove: actions.includes('task.approve' as CapabilityAction) ? true : undefined,
+    canReject: (actions.includes('task.reject' as CapabilityAction) || actions.includes('task.review' as CapabilityAction)) ? true : undefined,
+    canCancel: actions.includes('task.cancel' as CapabilityAction) ? true : undefined,
+  };
+
+  // 6. Lấy tất cả transitions từ FSM với pure authority decision
   const transitions = taskStateMachine.getAllowedTransitions(
     actorCtx,
     taskCtx,
     currentStatus,
+    authDecision,
   );
 
-  // 6. Build options list
+  // 7. Build options list
   const options: StatusOption[] = transitions.map((t) => ({
     status: t.status,
     label: getStatusLabel(t.status),
@@ -305,11 +314,18 @@ export function canSubtaskTransition(
 
   const actorCtx = buildSubtaskActorContext(actor);
   const taskCtx = buildSubtaskContext(subtask);
+  const authDecision: TaskAuthorizationDecision = {
+    canApprove: actions.includes('task.approve' as CapabilityAction) ? true : undefined,
+    canReject: (actions.includes('task.reject' as CapabilityAction) || actions.includes('task.review' as CapabilityAction)) ? true : undefined,
+    canCancel: actions.includes('task.cancel' as CapabilityAction) ? true : undefined,
+  };
+
   const result = taskStateMachine.canTransition(
     actorCtx,
     taskCtx,
     subtask.status,
     targetStatus,
+    authDecision,
   );
 
   return { ...result, canUpdateExecution: true };
