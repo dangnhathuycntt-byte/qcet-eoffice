@@ -185,6 +185,8 @@ export const HR_CAPABILITIES = [
   'hr.view',
   'payroll.view',
   'user.view_sensitive_personal_data',
+  'user.personal.read_sensitive',
+  'user.directory.browse',
   'position.manage_leadership',
   'hr.disciplinary_action',
 ] as const;

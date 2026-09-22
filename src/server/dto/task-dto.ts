@@ -485,9 +485,13 @@ export function toTaskListDTO(rawTask: unknown): TaskListDTO | null {
 
   const leadAssignee = extractLeadAssignee(task);
   const derivedCollaborators = extractDerivedCollaborators(task);
-  const assignees = leadAssignee
-    ? [leadAssignee, ...derivedCollaborators]
-    : derivedCollaborators;
+  const directAssignees = extractAssignees(task);
+  const assignees =
+    directAssignees.length > 0
+      ? directAssignees
+      : leadAssignee
+      ? [leadAssignee, ...derivedCollaborators]
+      : derivedCollaborators;
 
   return {
     id: String(task.id ?? ''),

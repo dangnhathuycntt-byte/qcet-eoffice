@@ -6,6 +6,21 @@
  * session tokens, or internal account information to client responses.
  */
 
+import {
+  canReadSensitivePersonalData,
+  type DirectoryViewerContext,
+  type TargetUserDescriptor,
+} from '@/server/policies/user-directory-policy';
+import type { AuthenticatedUser } from '@/server/api/request-context';
+import type { AuthorizationContext } from '@/server/authorization/authorization-context';
+
+export type UserViewerContext =
+  | DirectoryViewerContext
+  | AuthenticatedUser
+  | AuthorizationContext
+  | null
+  | undefined;
+
 export interface UserSummaryDTO {
   id: string;
   name: string;
@@ -100,11 +115,31 @@ export function toUserSummaryDTO(rawUser: unknown): UserSummaryDTO | null {
 
 /**
  * Maps raw user entity to UserPublicDTO for profile views and public directory.
+ * If viewer is provided, checks canReadSensitivePersonalData(viewer, user).
+ * If false, sets phone to null.
+ * If viewer is undefined/null, keeps user.phone ?? null for backward compatibility.
  * Returns null if raw user is null, undefined, or not an object.
  */
-export function toUserPublicDTO(rawUser: unknown): UserPublicDTO | null {
+export function toUserPublicDTO(
+  rawUser: unknown,
+  viewer?: UserViewerContext
+): UserPublicDTO | null {
   if (!rawUser || typeof rawUser !== 'object') return null;
   const user = rawUser as Record<string, any>;
+
+  let phone: string | null = user.phone ?? null;
+  if (viewer !== undefined && viewer !== null) {
+    const targetDescriptor: TargetUserDescriptor = {
+      id: String(user.id ?? ''),
+      departmentId: user.departmentId ?? user.department?.id ?? null,
+      phone: user.phone ?? null,
+      email: user.email ?? null,
+    };
+    const canRead = canReadSensitivePersonalData(viewer, targetDescriptor);
+    if (!canRead) {
+      phone = null;
+    }
+  }
 
   return {
     id: String(user.id ?? ''),
@@ -112,7 +147,7 @@ export function toUserPublicDTO(rawUser: unknown): UserPublicDTO | null {
     email: String(user.email ?? ''),
     role: String(user.role ?? ''),
     position: user.position ?? user.title ?? null,
-    phone: user.phone ?? null,
+    phone,
     avatarUrl: user.avatarUrl ?? user.avatar ?? null,
     departmentId: user.departmentId ?? user.department?.id ?? null,
     department: extractDepartment(user),
@@ -151,9 +186,12 @@ export function toUserSummaryDTOArray(rawUsers: unknown[]): UserSummaryDTO[] {
     .filter((u): u is UserSummaryDTO => u !== null);
 }
 
-export function toUserPublicDTOArray(rawUsers: unknown[]): UserPublicDTO[] {
+export function toUserPublicDTOArray(
+  rawUsers: unknown[],
+  viewer?: UserViewerContext
+): UserPublicDTO[] {
   if (!Array.isArray(rawUsers)) return [];
   return rawUsers
-    .map(toUserPublicDTO)
+    .map((u) => toUserPublicDTO(u, viewer))
     .filter((u): u is UserPublicDTO => u !== null);
 }
