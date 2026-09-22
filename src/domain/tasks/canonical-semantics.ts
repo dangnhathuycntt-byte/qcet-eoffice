@@ -10,18 +10,16 @@
  * 3. Light-only token alignment, zero emojis.
  */
 
-import type { TaskLifecycleStatus, KanbanColumnId, KanbanColumnMapping } from '../../contracts/workspace-semantic';
+import type {
+  TaskLifecycleStatus,
+  KanbanColumnId,
+  KanbanColumnMapping,
+  DetailedKanbanProjection,
+} from '../../contracts/workspace-semantic';
 
-export type { TaskLifecycleStatus, KanbanColumnId, KanbanColumnMapping };
+export type { TaskLifecycleStatus, KanbanColumnId, KanbanColumnMapping, DetailedKanbanProjection };
 
 export const KANBAN_COLUMNS = ['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED'] as const;
-
-export interface DetailedKanbanProjection {
-  column: KanbanColumnId;
-  isOverdue: boolean;
-  isExcluded: boolean;
-  exclusionReason?: 'CANCELLED' | 'ARCHIVED' | null;
-}
 
 /**
  * Maps any raw database status or legacy alias into the canonical TaskLifecycleStatus.
