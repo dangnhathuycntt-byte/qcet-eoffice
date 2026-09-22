@@ -49,7 +49,7 @@ export type UpdateUserRoleInput = z.infer<typeof UpdateUserRoleSchema>;
 
 /**
  * Onboarding input contract.
- * Harmonized with src/lib/onboarding-schema.ts, augmented with strict bounds and mass-assignment protection.
+ * Strict bounds and mass-assignment protection.
  */
 export const OnboardingInputSchema = z
   .object({

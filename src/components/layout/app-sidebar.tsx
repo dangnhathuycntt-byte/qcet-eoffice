@@ -22,7 +22,7 @@ import {
   User,
   LogOut,
   Smartphone,
-  Compass,
+
   CheckCircle2,
   MoreHorizontal,
   SquarePen,
@@ -500,20 +500,6 @@ export function AppSidebar() {
                   >
                     <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
                     <span>Cài đặt ứng dụng di động</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      if (typeof window !== "undefined") {
-                        window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
-                      }
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left"
-                  >
-                    <Compass size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                    <span>Hướng dẫn sử dụng</span>
                   </button>
                 </div>
 

@@ -35,20 +35,7 @@ export function canUpdateUserRole(
   return isAdmin(currentUser);
 }
 
-/**
- * Checks if user can complete the onboarding process for target user.
- * Restricted to the user themselves or BAN_GIAM_HIEU / ADMIN.
- */
-export function canOnboardUser(
-  currentUser: AuthenticatedUser,
-  targetUserId: string
-): boolean {
-  if (!currentUser || !currentUser.id || !targetUserId) return false;
-  return isAdmin(currentUser) || currentUser.id === targetUserId;
-}
-
 export const userPolicy = {
   canViewUser,
   canUpdateUserRole,
-  canOnboardUser,
 };

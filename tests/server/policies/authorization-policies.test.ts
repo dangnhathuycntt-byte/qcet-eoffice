@@ -27,7 +27,6 @@ import {
 import {
   canViewUser,
   canUpdateUserRole,
-  canOnboardUser,
 } from '@/server/policies/user-policy';
 import {
   canAccessExecutiveResolutions,
@@ -505,22 +504,6 @@ describe('User Authorization Policy (user-policy.ts)', () => {
       assert.strictEqual(canUpdateUserRole(staffDeptA, 'u-staff-a2'), false);
     });
   });
-
-  describe('canOnboardUser', () => {
-    it('allows users to onboard themselves', () => {
-      assert.strictEqual(canOnboardUser(staffDeptA, 'u-staff-a1'), true);
-    });
-
-    it('allows ADMIN to onboard any user', () => {
-      assert.strictEqual(canOnboardUser(adminUser, 'u-staff-a1'), true);
-      assert.strictEqual(canOnboardUser(bghUser, 'u-staff-a1'), true);
-    });
-
-    it('rejects non-admin user from onboarding other users', () => {
-      assert.strictEqual(canOnboardUser(staffDeptA, 'u-staff-a2'), false);
-      assert.strictEqual(canOnboardUser(managerDeptA, 'u-staff-b1'), false);
-    });
-  });
 });
 
 describe('Executive Authorization Policy (executive-policy.ts)', () => {
@@ -583,7 +566,6 @@ describe('Central Policies Index (policies/index.ts)', () => {
 
     assert.strictEqual(typeof PoliciesIndex.canViewUser, 'function');
     assert.strictEqual(typeof PoliciesIndex.canUpdateUserRole, 'function');
-    assert.strictEqual(typeof PoliciesIndex.canOnboardUser, 'function');
 
     assert.strictEqual(typeof PoliciesIndex.canAccessExecutiveResolutions, 'function');
     assert.strictEqual(typeof PoliciesIndex.canCreateResolution, 'function');

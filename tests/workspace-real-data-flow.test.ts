@@ -8,13 +8,6 @@ import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-ad
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
 import { UniversalActionQueue } from "../src/components/workspace/components/universal-action-queue";
 import { validateDeliverableSubmission } from "../src/components/portal/submit-deliverable-modal";
-import {
-  getRoleTourSteps,
-  getRoleChecklist,
-  getOnboardingStorageKey,
-  resolveOnboardingState,
-  DEFAULT_ONBOARDING_STATE,
-} from "../src/lib/onboarding-constants";
 import type { AuthUser } from "../src/types/auth";
 import type { SchoolTask } from "../src/types/dashboard";
 
@@ -225,94 +218,6 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
     });
   });
 
-  describe("3. Real Onboarding Workflows & DB Sync", () => {
-    test("getOnboardingStorageKey scopes keys by authentic user id", () => {
-      assert.strictEqual(
-        getOnboardingStorageKey("usr-12345"),
-        "qcet_onboarding_state_usr-12345"
-      );
-      assert.strictEqual(
-        getOnboardingStorageKey(null),
-        "qcet_onboarding_state_guest"
-      );
-    });
-
-    test("resolveOnboardingState prioritizes database onboardedAt", () => {
-      const userWithDbOnboarded = {
-        id: "usr-done",
-        onboardedAt: "2026-09-01T10:00:00Z",
-        onboardingData: {
-          hasSeenWelcome: true,
-          hasCompletedTour: true,
-          completedSteps: ["step-profile", "step-push", "step-action"],
-          isDismissed: true,
-          snoozedUntil: null,
-        },
-      };
-
-      const resolved = resolveOnboardingState(userWithDbOnboarded, null);
-      assert.strictEqual(resolved.hasSeenWelcome, true);
-      assert.strictEqual(resolved.hasCompletedTour, true);
-      assert.strictEqual(resolved.isDismissed, true);
-    });
-
-    test("resolveOnboardingState resets to default when database indicates reset", () => {
-      const userReset = {
-        id: "usr-fresh",
-        onboardedAt: null,
-        onboardingData: null,
-      };
-
-      const staleStored = {
-        hasSeenWelcome: true,
-        hasCompletedTour: true,
-        completedSteps: ["step-1", "step-2"],
-        isDismissed: true,
-      };
-
-      const resolved = resolveOnboardingState(userReset, staleStored);
-      assert.strictEqual(resolved.hasSeenWelcome, false);
-      assert.strictEqual(resolved.hasCompletedTour, false);
-      assert.strictEqual(resolved.isDismissed, false);
-    });
-
-    test("getRoleTourSteps returns authentic QCET workflows for each role", () => {
-      const bghSteps = getRoleTourSteps("ADMIN", "BAN_GIAM_HIEU");
-      assert.ok(bghSteps.some((s) => s.id === "bgh-scope"));
-      assert.ok(bghSteps.some((s) => s.id === "bgh-radar"));
-
-      const mgrSteps = getRoleTourSteps("MANAGER", "TRUONG_PHONG");
-      assert.ok(mgrSteps.some((s) => s.id === "manager-scope"));
-      assert.ok(mgrSteps.some((s) => s.id === "manager-assign"));
-
-      const staffSteps = getRoleTourSteps("STAFF", "CHUYEN_VIEN");
-      assert.ok(staffSteps.some((s) => s.id === "staff-workspace"));
-      assert.ok(staffSteps.some((s) => s.id === "staff-deliverable"));
-    });
-
-    test("getRoleChecklist returns official DACUM & administrative milestones", () => {
-      const bghChecklist = getRoleChecklist("ADMIN", "BAN_GIAM_HIEU");
-      assert.ok(
-        bghChecklist.some((item) =>
-          item.title.includes("Radar điểm nghẽn đơn vị")
-        )
-      );
-
-      const mgrChecklist = getRoleChecklist("MANAGER", "TRUONG_PHONG");
-      assert.ok(
-        mgrChecklist.some((item) =>
-          item.title.includes("Phân công hoặc duyệt việc")
-        )
-      );
-
-      const staffChecklist = getRoleChecklist("STAFF", "CHUYEN_VIEN");
-      assert.ok(
-        staffChecklist.some((item) =>
-          item.title.includes("Nộp minh chứng hoặc tạo tờ trình")
-        )
-      );
-    });
-  });
 });
 
 
@@ -391,33 +296,8 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
     assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
   });
 
-  test("2. Trạng thái onboarding gắn theo ID người dùng thật trong CSDL", () => {
-    const keyUser1 = getOnboardingStorageKey("usr-admin-real");
-    const keyUser2 = getOnboardingStorageKey("usr-mgr-real");
-    assert.notStrictEqual(keyUser1, keyUser2);
-    assert.ok(keyUser1.includes("usr-admin-real"));
-    assert.ok(keyUser2.includes("usr-mgr-real"));
 
-    const userWithDbData = {
-      id: "usr-admin-real",
-      onboardedAt: "2026-09-01T08:00:00Z",
-      onboardingData: {
-        hasSeenWelcome: true,
-        hasCompletedTour: true,
-        completedSteps: ["step-profile", "step-push", "step-action", "step-search"],
-        isDismissed: true,
-        snoozedUntil: null,
-      },
-    };
-
-    const resolved = resolveOnboardingState(userWithDbData, null);
-    assert.strictEqual(resolved.hasSeenWelcome, true);
-    assert.strictEqual(resolved.hasCompletedTour, true);
-    assert.strictEqual(resolved.isDismissed, true);
-    assert.strictEqual(resolved.completedSteps.length, 4);
-  });
-
-  test("3. Không fallback về mock payload khi API trả về lỗi hoặc rỗng", () => {
+  test("2. Không fallback về mock payload khi API trả về lỗi hoặc rỗng", () => {
     const emptyTasks: SchoolTask[] = [];
 
     const htmlOffline = renderWorkspace(

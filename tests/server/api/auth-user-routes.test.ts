@@ -8,7 +8,6 @@ import { POST as loginPost } from '@/app/api/auth/login/route';
 import { POST as registerPost } from '@/app/api/auth/register/route';
 import { GET as meGet } from '@/app/api/auth/me/route';
 import { GET as usersGet } from '@/app/api/users/route';
-import { PATCH as onboardingPatch, DELETE as onboardingDelete } from '@/app/api/users/onboarding/route';
 
 describe('Authentication and User API Routes Hardening', () => {
   const testRunId = Date.now();
@@ -313,98 +312,6 @@ describe('Authentication and User API Routes Hardening', () => {
       const json = await res.json();
       assert.strictEqual(json.success, true);
       assert.ok(json.users.some((u: any) => u.email === testUserEmail));
-    });
-  });
-
-  describe('5. /api/users/onboarding', () => {
-    test('PATCH requires CSRF protection and updates onboarding state', async () => {
-      const token = signSessionToken({
-        id: testUserId,
-        email: testUserEmail,
-        name: 'Nguyễn Văn Kiểm Thử',
-        role: 'CHUYEN_VIEN',
-      });
-
-      // Request with valid CSRF origin
-      const req = new Request('http://localhost:3000/api/users/onboarding', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          origin: 'http://localhost:3000',
-          cookie: `${SESSION_COOKIE_NAME}=${token}`,
-        },
-        body: JSON.stringify({
-          hasSeenWelcome: true,
-          completedSteps: ['step-profile', 'step-push'],
-        }),
-      });
-
-      const res = await onboardingPatch(req);
-      assert.strictEqual(res.status, 200);
-      assert.strictEqual(res.headers.get('cache-control'), 'private, no-store');
-
-      const json = await res.json();
-      assert.strictEqual(json.success, true);
-      assert.ok(json.user);
-      assert.strictEqual(json.user.onboardingData.hasSeenWelcome, true);
-      assert.deepStrictEqual(json.user.onboardingData.completedSteps, [
-        'step-profile',
-        'step-push',
-      ]);
-    });
-
-    test('PATCH blocks cross-origin CSRF attack', async () => {
-      const token = signSessionToken({
-        id: testUserId,
-        email: testUserEmail,
-        name: 'Nguyễn Văn Kiểm Thử',
-        role: 'CHUYEN_VIEN',
-      });
-
-      // Request from untrusted external origin
-      const req = new Request('http://localhost:3000/api/users/onboarding', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          origin: 'https://evil-attacker-site.com',
-          cookie: `${SESSION_COOKIE_NAME}=${token}`,
-        },
-        body: JSON.stringify({
-          isDismissed: true,
-        }),
-      });
-
-      const res = await onboardingPatch(req);
-      assert.strictEqual(res.status, 403);
-
-      const json = await res.json();
-      assert.ok(json.error || json.code);
-      assert.strictEqual(json.code || json.error?.code, 'CSRF_VALIDATION_FAILED');
-    });
-
-    test('DELETE resets onboarding state', async () => {
-      const token = signSessionToken({
-        id: testUserId,
-        email: testUserEmail,
-        name: 'Nguyễn Văn Kiểm Thử',
-        role: 'CHUYEN_VIEN',
-      });
-
-      const req = new Request('http://localhost:3000/api/users/onboarding', {
-        method: 'DELETE',
-        headers: {
-          origin: 'http://localhost:3000',
-          cookie: `${SESSION_COOKIE_NAME}=${token}`,
-        },
-      });
-
-      const res = await onboardingDelete(req);
-      assert.strictEqual(res.status, 200);
-
-      const json = await res.json();
-      assert.strictEqual(json.success, true);
-      assert.strictEqual(json.user.onboardedAt, null);
-      assert.strictEqual(json.user.onboardingData, null);
     });
   });
 });

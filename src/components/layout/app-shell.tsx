@@ -12,11 +12,6 @@ import { AppTopbar, DesktopTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
-import { useOnboarding } from "@/hooks/use-onboarding";
-import {
-  pwaOnboardingCoordinator,
-  usePWAOnboardingCoordinator,
-} from "@/lib/pwa/onboarding-coordinator";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
@@ -45,115 +40,6 @@ const MobileAppInstallModal = dynamic(
   () => import("@/components/pwa/mobile-app-install-modal").then((m) => m.MobileAppInstallModal),
   { ssr: false }
 );
-
-const WelcomeModal = dynamic(
-  () => import("@/components/onboarding/welcome-modal").then((m) => m.WelcomeModal),
-  { ssr: false }
-);
-
-const SpotlightTour = dynamic(
-  () => import("@/components/onboarding/spotlight-tour").then((m) => m.SpotlightTour),
-  { ssr: false }
-);
-
-const OnboardingChecklistWidget = dynamic(
-  () => import("@/components/onboarding/onboarding-checklist-widget").then((m) => m.OnboardingChecklistWidget),
-  { ssr: false }
-);
-
-export function OnboardingHub() {
-  const { user } = useAuth();
-  const onboarding = useOnboarding();
-  const {
-    canShowWelcome,
-    completeWelcome,
-    recordInterruptionShown,
-    recordAction,
-  } = usePWAOnboardingCoordinator(user?.id);
-
-  React.useEffect(() => {
-    if (onboarding.state.hasSeenWelcome) {
-      completeWelcome();
-    }
-  }, [onboarding.state.hasSeenWelcome, completeWelcome]);
-
-  React.useEffect(() => {
-    const handleRestart = () => {
-      onboarding.restartOnboarding();
-      onboarding.setIsChecklistExpanded(true);
-    };
-
-    window.addEventListener("qcet:restart-onboarding", handleRestart);
-    return () => {
-      window.removeEventListener("qcet:restart-onboarding", handleRestart);
-    };
-  }, [onboarding.restartOnboarding, onboarding.setIsChecklistExpanded]);
-
-  const shouldShowWelcome =
-    onboarding.isMounted &&
-    !onboarding.state.hasSeenWelcome &&
-    !onboarding.state.isDismissed &&
-    !onboarding.isSnoozed &&
-    canShowWelcome;
-
-  React.useEffect(() => {
-    if (shouldShowWelcome) {
-      recordInterruptionShown("WELCOME");
-    }
-  }, [shouldShowWelcome, recordInterruptionShown]);
-
-  return (
-    <>
-      <WelcomeModal
-        isOpen={shouldShowWelcome}
-        onStartTour={() => {
-          completeWelcome();
-          onboarding.startTour({ force: true });
-        }}
-        onDismiss={() => {
-          onboarding.dismissOnboarding();
-          completeWelcome();
-        }}
-      />
-      <SpotlightTour
-        isActive={onboarding.isTourActive}
-        steps={onboarding.tourSteps}
-        currentIndex={onboarding.currentTourIndex}
-        onNext={() => {
-          if (onboarding.currentTourIndex < onboarding.tourSteps.length - 1) {
-            onboarding.setCurrentTourIndex((i) => i + 1);
-          } else {
-            onboarding.endTour();
-            recordAction("tour_completed");
-          }
-        }}
-        onPrev={() => onboarding.setCurrentTourIndex((i) => Math.max(0, i - 1))}
-        onClose={() => {
-          onboarding.endTour();
-          recordAction("tour_closed");
-        }}
-      />
-      {onboarding.isMounted && (
-        <OnboardingChecklistWidget
-          tasks={onboarding.checklistTasks}
-          completedSteps={onboarding.state.completedSteps}
-          percentage={onboarding.progress.percentage}
-          isExpanded={onboarding.isChecklistExpanded && !shouldShowWelcome}
-          isDismissed={onboarding.state.isDismissed || onboarding.isSnoozed}
-          snoozedUntil={onboarding.state.snoozedUntil}
-          onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
-          onDismiss={onboarding.dismissOnboarding}
-          onSnooze={() => onboarding.snoozeOnboarding(24)}
-          onCompleteStep={(stepId) => {
-            onboarding.completeStep(stepId);
-            recordAction(`step_${stepId}`);
-          }}
-          onStartTour={onboarding.startTour}
-        />
-      )}
-    </>
-  );
-}
 
 function MobileAppInstallModalContainer() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -280,7 +166,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <PWAInstallPrompt userId={user?.id} />
       <PushOnboardingSheet userId={user?.id} />
       <MobileAppInstallModalContainer />
-      <OnboardingHub />
       <CommandSearchModal />
       <GlobalShortcutsModal />
     </div>
