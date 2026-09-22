@@ -57,7 +57,7 @@ export async function GET(req: Request) {
     return apiSuccess(
       {
         success: true,
-        users: toUserPublicDTOArray(users),
+        users: toUserPublicDTOArray(users, authUser),
       },
       {
         headers: { "Cache-Control": "private, no-store" },
