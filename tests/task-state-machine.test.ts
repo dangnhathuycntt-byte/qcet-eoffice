@@ -568,4 +568,107 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       assert.strictEqual(res.code, 'UNAUTHORIZED_CANCELLATION');
     });
   });
+
+  describe('8. Unit Leader Roles Compatibility Shim (WI-1.2)', () => {
+    const deanActor: ActorContext = {
+      id: 'user-dean-01',
+      role: 'TRUONG_KHOA',
+      departmentId: 'dept-cntt',
+    };
+
+    const viceDeanActor: ActorContext = {
+      id: 'user-vice-dean-01',
+      role: 'PHO_TRUONG_KHOA',
+      departmentId: 'dept-cntt',
+    };
+
+    const centerDirectorActor: ActorContext = {
+      id: 'user-dir-01',
+      role: 'GIAM_DOC_TRUNG_TAM',
+      departmentId: 'dept-cntt',
+    };
+
+    const viceDirectorActor: ActorContext = {
+      id: 'user-vice-dir-01',
+      role: 'PHO_GIAM_DOC_TRUNG_TAM',
+      departmentId: 'dept-cntt',
+    };
+
+    it('categorizes TRUONG_KHOA, PHO_TRUONG_KHOA, GIAM_DOC_TRUNG_TAM, PHO_GIAM_DOC_TRUNG_TAM as MANAGER', () => {
+      assert.strictEqual(categorizeRole('TRUONG_KHOA'), 'MANAGER');
+      assert.strictEqual(categorizeRole('PHO_TRUONG_KHOA'), 'MANAGER');
+      assert.strictEqual(categorizeRole('GIAM_DOC_TRUNG_TAM'), 'MANAGER');
+      assert.strictEqual(categorizeRole('PHO_GIAM_DOC_TRUNG_TAM'), 'MANAGER');
+    });
+
+    it('allows TRUONG_KHOA to approve department tasks when not maker', () => {
+      const res = taskStateMachine.canTransition(
+        deanActor,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('allows PHO_TRUONG_KHOA to approve department tasks when not maker', () => {
+      const res = taskStateMachine.canTransition(
+        viceDeanActor,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('allows GIAM_DOC_TRUNG_TAM to approve department tasks when not maker', () => {
+      const res = taskStateMachine.canTransition(
+        centerDirectorActor,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('allows PHO_GIAM_DOC_TRUNG_TAM to approve department tasks when not maker', () => {
+      const res = taskStateMachine.canTransition(
+        viceDirectorActor,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, true);
+    });
+
+    it('prohibits TRUONG_KHOA from approving department tasks of a different department', () => {
+      const otherDean: ActorContext = {
+        ...deanActor,
+        departmentId: 'dept-dien-tu',
+      };
+      const res = taskStateMachine.canTransition(
+        otherDean,
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'DEPARTMENT_MISMATCH');
+    });
+
+    it('prohibits TRUONG_KHOA from approving tasks where they are the maker (SoD enforcement)', () => {
+      const taskWhereDeanIsDRI: TaskContext = {
+        ...baseDepartmentTask,
+        driId: deanActor.id,
+      };
+      const res = taskStateMachine.canTransition(
+        deanActor,
+        taskWhereDeanIsDRI,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+  });
 });
