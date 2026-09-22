@@ -1,5 +1,24 @@
 import { z } from 'zod';
 import { PaginationQuerySchema } from './common';
+import {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_TYPES,
+  normalizeNotificationCategory,
+} from '@/domain/notifications';
+
+/**
+ * Controlled schemas for notification category and type (RFC-07 / WI-7.2)
+ */
+export const NotificationCategorySchema = z
+  .string()
+  .trim()
+  .transform((val) => normalizeNotificationCategory(val) || val)
+  .pipe(z.string().max(50));
+
+export const NotificationTypeSchema = z
+  .string()
+  .trim()
+  .max(50, 'Type cannot exceed 50 characters');
 
 /**
  * Notification query filtering schema with boolean coercion for read status.
@@ -25,8 +44,8 @@ export const NotificationQuerySchema = PaginationQuerySchema.extend({
       return val;
     }, z.boolean())
     .optional(),
-  category: z.string().trim().max(50).optional(),
-  type: z.string().trim().max(50, 'Type cannot exceed 50 characters').optional(),
+  category: NotificationCategorySchema.optional(),
+  type: NotificationTypeSchema.optional(),
 });
 
 export type NotificationQuery = z.infer<typeof NotificationQuerySchema>;
