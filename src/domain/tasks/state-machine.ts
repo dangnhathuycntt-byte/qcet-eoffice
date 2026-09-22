@@ -11,7 +11,7 @@
 import { checkAntiSelfApproval } from './contract';
 
 export type CanonicalTaskStatus =
-  | 'NEW'
+  | 'NOT_STARTED'
   | 'IN_PROGRESS'
   | 'WAITING_APPROVAL'
   | 'COMPLETED'
@@ -19,11 +19,12 @@ export type CanonicalTaskStatus =
 
 export type TaskStatus =
   | CanonicalTaskStatus
-  | 'NOT_STARTED'
+  | 'NEW'
   | 'TODO'
   | 'NEEDS_REVIEW'
   | 'DONE'
-  | 'CANCELED';
+  | 'CANCELED'
+  | 'OVERDUE';
 
 export interface TransitionResult {
   allowed: boolean;
@@ -95,11 +96,11 @@ const STAFF_ROLES = new Set([
 
 export function normalizeTaskStatus(status: TaskStatus | string): CanonicalTaskStatus {
   const s = (status || '').toString().trim().toUpperCase();
-  if (s === 'NOT_STARTED' || s === 'TODO' || s === 'NEW') return 'NEW';
-  if (s === 'IN_PROGRESS') return 'IN_PROGRESS';
-  if (s === 'WAITING_APPROVAL' || s === 'NEEDS_REVIEW') return 'WAITING_APPROVAL';
+  if (s === 'NOT_STARTED' || s === 'TODO' || s === 'NEW') return 'NOT_STARTED';
+  if (s === 'IN_PROGRESS' || s === 'DOING' || s === 'BLOCKED' || s === 'OVERDUE') return 'IN_PROGRESS';
+  if (s === 'WAITING_APPROVAL' || s === 'NEEDS_REVIEW' || s === 'PENDING_EXECUTIVE_APPROVAL') return 'WAITING_APPROVAL';
   if (s === 'COMPLETED' || s === 'DONE') return 'COMPLETED';
-  if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
+  if (s === 'CANCELLED' || s === 'CANCELED' || s === 'ARCHIVED') return 'CANCELLED';
   return s as CanonicalTaskStatus;
 }
 
@@ -214,8 +215,8 @@ export class TaskStateMachine {
     // 3. State Transition Graph Validation
     // ------------------------------------------------------------------------
 
-    // A. From NEW
-    if (from === 'NEW') {
+    // A. From NOT_STARTED
+    if (from === 'NOT_STARTED') {
       if (to === 'COMPLETED') {
         return {
           allowed: false,
@@ -254,7 +255,7 @@ export class TaskStateMachine {
         };
       }
 
-      if (to === 'NEW') {
+      if (to === 'NOT_STARTED') {
         return {
           allowed: false,
           reason: 'Nhiệm vụ đã thực hiện không thể chuyển ngược về Chưa bắt đầu.',
@@ -276,7 +277,7 @@ export class TaskStateMachine {
 
     // C. From WAITING_APPROVAL
     if (from === 'WAITING_APPROVAL') {
-      if (to === 'NEW') {
+      if (to === 'NOT_STARTED') {
         return {
           allowed: false,
           reason: 'Nhiệm vụ đang chờ duyệt không thể chuyển về Chưa bắt đầu.',
@@ -414,7 +415,7 @@ export class TaskStateMachine {
     fromStatus: TaskStatus | string
   ): Array<{ status: CanonicalTaskStatus; allowed: boolean; reason?: string; code?: string }> {
     const canonicalTargets: CanonicalTaskStatus[] = [
-      'NEW',
+      'NOT_STARTED',
       'IN_PROGRESS',
       'WAITING_APPROVAL',
       'COMPLETED',
@@ -441,7 +442,7 @@ export const taskStateMachine = new TaskStateMachine();
 export function getStatusLabel(status: TaskStatus | string): string {
   const norm = normalizeTaskStatus(status);
   switch (norm) {
-    case 'NEW':
+    case 'NOT_STARTED':
       return 'Mới';
     case 'IN_PROGRESS':
       return 'Đang thực hiện';
