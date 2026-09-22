@@ -51,7 +51,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     id: 'task-dept-01',
     scope: 'DEPARTMENT',
     departmentId: 'dept-cntt',
-    createdById: 'user-mgr-01',
+    createdById: 'user-creator-99',
     primaryOwnerId: 'user-staff-99',
     assigneeIds: ['user-staff-99'],
   };
@@ -60,7 +60,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     id: 'task-school-01',
     scope: 'SCHOOL',
     departmentId: 'dept-cntt',
-    createdById: 'user-bgh-01',
+    createdById: 'user-creator-99',
     primaryOwnerId: 'user-staff-99',
     assigneeIds: ['user-staff-99'],
   };
@@ -311,6 +311,73 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const res = taskStateMachine.canTransition(
         managerActor,
         taskWithAssigneeObj,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('rejects task creator attempting to approve their own task (Creator cannot self-approve)', () => {
+      const taskCreatedByManager: TaskContext = {
+        id: 'task-created-by-mgr',
+        scope: 'DEPARTMENT',
+        departmentId: 'dept-cntt',
+        createdById: managerActor.id,
+        primaryOwnerId: 'user-staff-99',
+        assigneeIds: ['user-staff-99'],
+      };
+
+      const res = taskStateMachine.canTransition(
+        managerActor,
+        taskCreatedByManager,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('rejects submitter attempting to approve their own task (Submitter cannot self-approve)', () => {
+      const taskSubmittedByManager: TaskContext = {
+        id: 'task-submitted-by-mgr',
+        scope: 'DEPARTMENT',
+        departmentId: 'dept-cntt',
+        createdById: 'user-admin-01',
+        primaryOwnerId: 'user-staff-99',
+        assigneeIds: ['user-staff-99'],
+        submittedByUserId: managerActor.id,
+      };
+
+      const res = taskStateMachine.canTransition(
+        managerActor,
+        taskSubmittedByManager,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(res.allowed, false);
+      assert.strictEqual(res.code, 'MAKER_CANNOT_BE_CHECKER');
+    });
+
+    it('enforces delegation invariant: Actor with delegation who is a Maker CANNOT approve', () => {
+      const delegatedManagerAsMaker: ActorContext = {
+        ...managerActor,
+        isDelegated: true,
+        delegatedTaskIds: ['task-delegated-maker'],
+      };
+
+      const taskWhereActorIsDri: TaskContext = {
+        id: 'task-delegated-maker',
+        scope: 'DEPARTMENT',
+        departmentId: 'dept-cntt',
+        createdById: 'user-admin-01',
+        primaryOwnerId: managerActor.id,
+        assigneeIds: [managerActor.id],
+      };
+
+      const res = taskStateMachine.canTransition(
+        delegatedManagerAsMaker,
+        taskWhereActorIsDri,
         'WAITING_APPROVAL',
         'COMPLETED'
       );

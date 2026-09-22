@@ -8,6 +8,8 @@
  * - Enforces Terminal State Protection (COMPLETED / CANCELLED).
  */
 
+import { checkAntiSelfApproval } from './contract';
+
 export type CanonicalTaskStatus =
   | 'NEW'
   | 'IN_PROGRESS'
@@ -49,12 +51,14 @@ export interface TaskDeliverableInfo {
 export interface TaskContext {
   id: string;
   scope?: string;
-  createdById?: string;
+  creatorId?: string | null;
+  createdById?: string | null;
   departmentId?: string | null;
   primaryOwnerId?: string | null;
   driId?: string | null;
   assigneeIds?: string[];
   assignees?: TaskAssigneeInfo[];
+  submittedByUserId?: string | null;
   deliverableUploadedByIds?: string[];
   deliverables?: TaskDeliverableInfo[];
 }
@@ -110,47 +114,26 @@ export function normalizeScope(scope?: string): 'SCHOOL' | 'DEPARTMENT' | 'INDIV
 
 export class TaskStateMachine {
   /**
-   * Determine if an actor is a Maker (DRI or deliverable submitter) for the task.
+   * Determine if an actor is a Maker (creator, DRI, assignee, submitter, deliverable uploader) for the task.
+   * Delegates to the canonical checkAntiSelfApproval SoD guard.
    */
   public isMaker(actor: ActorContext, task: TaskContext): boolean {
     if (!actor.id) return false;
 
-    // 1. Explicit DRI ID
-    if (task.driId && task.driId === actor.id) return true;
+    const sodResult = checkAntiSelfApproval({
+      userId: actor.id,
+      creatorId: task.creatorId,
+      createdById: task.createdById,
+      primaryOwnerId: task.primaryOwnerId,
+      driId: task.driId,
+      assigneeIds: task.assigneeIds,
+      assignees: task.assignees,
+      submittedByUserId: task.submittedByUserId,
+      deliverableUploadedByIds: task.deliverableUploadedByIds,
+      deliverables: task.deliverables,
+    });
 
-    // 2. Explicit Primary Owner ID
-    if (task.primaryOwnerId && task.primaryOwnerId === actor.id) return true;
-
-    // 3. Primary Owner in assignees array
-    if (
-      task.assignees?.some(
-        (a) => a.userId === actor.id && a.roleInTask?.toUpperCase() === 'PRIMARY_OWNER'
-      )
-    ) {
-      return true;
-    }
-
-    // 4. Sole assignee in assigneeIds
-    if (task.assigneeIds && task.assigneeIds.length === 1 && task.assigneeIds[0] === actor.id) {
-      return true;
-    }
-
-    // 5. Sole assignee in assignees objects
-    if (task.assignees && task.assignees.length === 1 && task.assignees[0].userId === actor.id) {
-      return true;
-    }
-
-    // 6. Deliverable creator in uploaded IDs list
-    if (task.deliverableUploadedByIds?.includes(actor.id)) {
-      return true;
-    }
-
-    // 7. Deliverable creator in deliverables objects
-    if (task.deliverables?.some((d) => d.uploadedById === actor.id)) {
-      return true;
-    }
-
-    return false;
+    return !sodResult.allowed;
   }
 
   /**
@@ -342,11 +325,12 @@ export class TaskStateMachine {
       // Approval (WAITING_APPROVAL -> COMPLETED)
       if (to === 'COMPLETED') {
         // 1. Maker-Checker / Segregation of Duties (SoD) Invariant:
-        // The person who created the deliverable or is the sole DRI cannot approve the task unless delegated.
-        if (this.isMaker(actor, task) && !hasDelegation) {
+        // A maker (creator, DRI, assignee, submitter, deliverable uploader) MUST NEVER approve the task.
+        // Delegation MUST NEVER bypass Maker-Checker SoD.
+        if (this.isMaker(actor, task)) {
           return {
             allowed: false,
-            reason: 'Người thực hiện chính (DRI) hoặc người tạo minh chứng không thể tự phê duyệt nghiệm thu nhiệm vụ (Vi phạm Maker-Checker / Segregation of Duties).',
+            reason: 'Người tạo, người thực hiện chính (DRI), thành viên thực hiện hoặc người nộp minh chứng không thể tự phê duyệt nghiệm thu nhiệm vụ (Vi phạm Maker-Checker / Segregation of Duties).',
             code: 'MAKER_CANNOT_BE_CHECKER',
           };
         }
@@ -507,13 +491,24 @@ export function buildTaskContext(task: any): TaskContext {
 
   if (Array.isArray(task.assignees)) {
     for (const a of task.assignees) {
-      const uId = a.userId || a.id || a.user?.id;
+      const uId = typeof a === 'string' ? a : (a.userId || a.id || a.user?.id);
       if (uId) {
-        assigneeIds.push(uId);
+        if (!assigneeIds.includes(uId)) {
+          assigneeIds.push(uId);
+        }
         assignees.push({
           userId: uId,
-          roleInTask: a.roleInTask || a.role,
+          roleInTask: typeof a === 'object' ? (a.roleInTask || a.role) : undefined,
         });
+      }
+    }
+  }
+
+  if (Array.isArray(task.assigneeIds)) {
+    for (const id of task.assigneeIds) {
+      if (typeof id === 'string' && !assigneeIds.includes(id)) {
+        assigneeIds.push(id);
+        assignees.push({ userId: id });
       }
     }
   }
@@ -521,9 +516,17 @@ export function buildTaskContext(task: any): TaskContext {
   const deliverableUploadedByIds: string[] = [];
   if (Array.isArray(task.deliverables)) {
     for (const d of task.deliverables) {
-      const uId = d.uploadedById || d.uploadedBy?.id;
-      if (uId) {
+      const uId = d.uploadedById || d.uploadedBy?.id || d.uploadedByUserId;
+      if (uId && !deliverableUploadedByIds.includes(uId)) {
         deliverableUploadedByIds.push(uId);
+      }
+    }
+  }
+
+  if (Array.isArray(task.deliverableUploadedByIds)) {
+    for (const id of task.deliverableUploadedByIds) {
+      if (typeof id === 'string' && !deliverableUploadedByIds.includes(id)) {
+        deliverableUploadedByIds.push(id);
       }
     }
   }
@@ -531,7 +534,8 @@ export function buildTaskContext(task: any): TaskContext {
   return {
     id: task.id || '',
     scope: task.scope,
-    createdById: task.createdById,
+    creatorId: task.creatorId || task.createdById || null,
+    createdById: task.createdById || task.creatorId || null,
     departmentId: task.departmentId || task.department?.id || null,
     primaryOwnerId:
       task.primaryOwnerId ||
@@ -542,6 +546,8 @@ export function buildTaskContext(task: any): TaskContext {
     driId: task.driId || null,
     assigneeIds,
     assignees,
+    submittedByUserId: task.submittedByUserId || null,
     deliverableUploadedByIds,
+    deliverables: task.deliverables,
   };
 }
