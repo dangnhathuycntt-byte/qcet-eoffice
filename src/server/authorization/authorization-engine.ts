@@ -1474,6 +1474,37 @@ export function authorize(
     }
   }
 
+  // Rule 10.7: Meeting Secretary / Minutes Drafter != Meeting Minutes Confirmer (RFC-10 / WI-6.1c)
+  if (action === 'meeting.confirm_minutes') {
+    const isSecretary =
+      resource?.secretaryIds?.includes(userId) ||
+      resource?.secretaryId === userId ||
+      resource?.minutesDrafterId === userId ||
+      Boolean(
+        resource?.bodyId &&
+          context.bodyMemberships?.some(
+            (bm) => bm.bodyId === resource.bodyId && bm.role === 'SECRETARY'
+          )
+      );
+
+    if (isSecretary) {
+      return {
+        allowed: false,
+        granted: false,
+        rejectionCode: 'SOD_VIOLATION',
+        statusCode: 'SOD_VIOLATION',
+        reason:
+          'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Thư ký hoặc người soạn thảo biên bản không được tự xác nhận biên bản cuộc họp.',
+        auditRecord: {
+          ...baseAuditRecord,
+          decision: 'DENY',
+          rejectionCode: 'SOD_VIOLATION',
+          policyMatched: 'STEP_10_SECRETARY_NOT_CONFIRMER',
+        },
+      };
+    }
+  }
+
   // --------------------------------------------------------------------------
   // GRANTED
   // --------------------------------------------------------------------------

@@ -468,7 +468,19 @@ export class MeetingService {
         ? await loadAuthorizationContext(contextOrUserId)
         : contextOrUserId;
 
-    const authResult = authorize(authContext, 'meeting.confirm_minutes', buildMeetingResource(meeting));
+    // Fail-safe Maker-Checker SoD check under RFC-10: Secretary cannot confirm minutes
+    const meetingResource = buildMeetingResource(meeting);
+    if (
+      meetingResource.secretaryId === authContext.userId ||
+      meetingResource.secretaryIds?.includes(authContext.userId)
+    ) {
+      throw new AuthorizationError(
+        'Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Thư ký lập biên bản không được tự xác nhận biên bản cuộc họp.',
+        'SOD_VIOLATION'
+      );
+    }
+
+    const authResult = authorize(authContext, 'meeting.confirm_minutes', meetingResource);
     if (!authResult.allowed) {
       await recordAuthorizationDecision(
         extractAuditFromDecision(
