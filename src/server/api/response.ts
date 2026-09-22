@@ -1,10 +1,25 @@
 import { NextResponse } from 'next/server';
 import { toApiErrorResponse, type ApiErrorResponse } from './errors';
 import { logger } from '@/server/observability/logger';
+import {
+  toProblemDetails,
+  problemResponse,
+  PROBLEM_DETAILS_CONTENT_TYPE,
+  type ProblemDetails,
+  type ProblemResponseOptions,
+} from './problem-details';
+import {
+  paginatedResponse,
+  buildPaginationHeaders,
+  type PaginatedEnvelope,
+  type CreatePaginatedResponseOptions,
+} from './pagination';
 
 export interface ApiErrorOptions {
   headers?: HeadersInit;
   legacyCompat?: boolean;
+  rfc9457?: boolean;
+  instance?: string;
 }
 
 export function apiError(
@@ -15,19 +30,29 @@ export function apiError(
 ): NextResponse<any> {
   let headers: HeadersInit | undefined;
   let legacyCompat = false;
+  let rfc9457 = false;
+  let instance: string | undefined;
 
   if (
     headersOrOptions &&
     typeof headersOrOptions === 'object' &&
     !('append' in headersOrOptions) &&
     !Array.isArray(headersOrOptions) &&
-    ('headers' in headersOrOptions || 'legacyCompat' in headersOrOptions)
+    ('headers' in headersOrOptions ||
+      'legacyCompat' in headersOrOptions ||
+      'rfc9457' in headersOrOptions ||
+      'instance' in headersOrOptions)
   ) {
-    headers = (headersOrOptions as ApiErrorOptions).headers;
-    legacyCompat = Boolean((headersOrOptions as ApiErrorOptions).legacyCompat);
+    const opts = headersOrOptions as ApiErrorOptions;
+    headers = opts.headers;
+    legacyCompat = Boolean(opts.legacyCompat);
+    rfc9457 = Boolean(opts.rfc9457);
+    instance = opts.instance;
   } else {
     headers = headersOrOptions as HeadersInit | undefined;
     legacyCompat = Boolean(options?.legacyCompat);
+    rfc9457 = Boolean(options?.rfc9457);
+    instance = options?.instance;
   }
 
   const { status, body } = toApiErrorResponse(error, requestId);
@@ -132,6 +157,14 @@ export function apiError(
     });
   }
 
+  if (rfc9457) {
+    return problemResponse(error, {
+      requestId,
+      instance,
+      headers: responseHeaders,
+    });
+  }
+
   return NextResponse.json(body, {
     status,
     headers: responseHeaders,
@@ -171,3 +204,25 @@ export function apiSuccess<T>(
 
 export { toApiErrorResponse };
 export type { ApiErrorResponse };
+
+// RFC 9457 Problem Details exports
+export {
+  toProblemDetails,
+  problemResponse,
+  PROBLEM_DETAILS_CONTENT_TYPE,
+  DEFAULT_ERROR_URI_BASE,
+  type ProblemDetails,
+  type ProblemInvalidParam,
+  type ProblemResponseOptions,
+  type ToProblemDetailsOptions,
+} from './problem-details';
+
+// ADR-007 Pagination exports
+export {
+  paginatedResponse,
+  buildPaginationHeaders,
+  type PaginatedEnvelope,
+  type PaginationMetadata,
+  type CreatePaginatedResponseOptions,
+} from './pagination';
+
