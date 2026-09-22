@@ -1,26 +1,34 @@
 "use client";
 
 import * as React from "react";
+import { Select } from "@base-ui/react/select";
+import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
 import {
   X,
+  Signal,
+  UserPlus,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Users,
   Plus,
+  CircleDashed,
+  Activity,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StaffTask, TaskStatus } from "@/types/dashboard";
-import { computeDueStatus } from "@/domain/tasks/deadlines";
-import { CORE_STATUS_OPTIONS as STATUS_OPTIONS, getStatusDisplay } from "@/domain/tasks/display-config";
+import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { formatCompactDate, extractDateIso } from "@/lib/format/date";
+import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskBlockEditor } from "./task-block-editor";
-import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
-import { computeSubtaskStatusGuard } from "@/domain/tasks/subtask-status-guard";
-import { usePersonnelList } from "@/hooks/use-personnel-list";
-import { updateTaskStatus, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
+import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
 
@@ -29,7 +37,6 @@ export interface SubtaskDetailDrawerProps {
   onClose: () => void;
   subtask: StaffTask | null;
   canEdit?: boolean;
-  currentUser?: any;
   onSubtaskUpdated?: (updated: StaffTask) => void;
   /** All siblings of the current child (parent's subTasks) */
   siblings?: StaffTask[];
@@ -46,7 +53,6 @@ export function SubtaskDetailDrawer({
   onClose,
   subtask: initialSubtask,
   canEdit = true,
-  currentUser,
   onSubtaskUpdated,
   siblings = [],
   onSelectSibling,
@@ -56,15 +62,19 @@ export function SubtaskDetailDrawer({
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
-  const peekContentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
+    setIsDeadlineEditorOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
+  const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const { personnel: personnelList } = usePersonnelList({ enabled: canEdit });
+  const deadlineRef = React.useRef<HTMLDivElement>(null);
+  const [personnelList, setPersonnelList] = React.useState<
+    Array<{ id: string; name: string; email?: string; departmentName?: string }>
+  >([]);
 
   // Dọn sự kiện kéo cả khi pane đóng hoặc cửa sổ mất focus.
   const stopResizeRef = React.useRef<(() => void) | null>(null);
@@ -124,11 +134,77 @@ export function SubtaskDetailDrawer({
     onPeekWidthChange?.(DEFAULT_PEEK_WIDTH);
   }, [onPeekWidthChange]);
 
-  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName, personnelList);
+  React.useEffect(() => {
+    if (!canEdit) return;
+    fetch("/api/users")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.success || !Array.isArray(data.users)) return;
+        setPersonnelList(data.users.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          departmentName: user.department?.name || user.departmentName || "Đơn vị",
+        })));
+      })
+      .catch(() => {});
+  }, [canEdit]);
+
+  // Close deadline popover on outside click
+  React.useEffect(() => {
+    if (!isDeadlineEditorOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (deadlineRef.current && !deadlineRef.current.contains(e.target as Node)) {
+        setIsDeadlineEditorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isDeadlineEditorOpen]);
+
+  // Status & Priority objects
+  const currentStatusObj =
+    STATUS_OPTIONS.find((s) => s.value === subtask?.status) || STATUS_OPTIONS[0];
+
+  const currentPriorityVal =
+    (subtask as any)?.priority === "MEDIUM"
+      ? "NORMAL"
+      : (subtask as any)?.priority || "NORMAL";
+  const currentPriorityObj =
+    PRIORITY_OPTIONS.find((p) => p.value === currentPriorityVal) || PRIORITY_OPTIONS[2];
+
+  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
   // Dates
-  const startDateIso = extractDateIso((subtask as any)?.startDate);
-  const dueDateIso = extractDateIso(subtask?.dueDate);
+  const rawStartDate = (subtask as any)?.startDate;
+  const startDateIso = rawStartDate
+    ? typeof rawStartDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawStartDate)
+      ? rawStartDate.slice(0, 10)
+      : new Date(rawStartDate).toISOString().slice(0, 10)
+    : "";
+
+  const dueDateIso = subtask?.dueDate
+    ? typeof subtask.dueDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(subtask.dueDate)
+      ? subtask.dueDate.slice(0, 10)
+      : new Date(subtask.dueDate).toISOString().slice(0, 10)
+    : "";
+
+  const dueInfo = computeDueStatus(subtask?.dueDate);
+
+  // nearDue: reuse computeDueStatus text to detect ≤2-day window without re-parsing
+  const nearDue = !dueInfo.isOverdue && dueDateIso && (
+    dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" ||
+    dueInfo.text === "Còn 2 ngày"
+  );
+
+  // Status icon map (static, no spinners)
+  const STATUS_ICONS: Record<string, React.ElementType> = {
+    NOT_STARTED: CircleDashed,
+    IN_PROGRESS: Activity,
+    WAITING_APPROVAL: Clock,
+    COMPLETED: CheckCircle2,
+  };
+  const StatusIcon = STATUS_ICONS[currentStatusObj.value] ?? CircleDashed;
 
   // Atomic clear of both dates
   const handleClearDates = async () => {
@@ -236,6 +312,23 @@ export function SubtaskDetailDrawer({
     notifySuccess("Đã cập nhật trạng thái việc thành phần");
   };
 
+  const handlePriorityChange = async (newPriority: TaskPriority) => {
+    if (!subtask) return;
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
+    const res = await updateTaskPriority(subtask.id, newPriority, currentVersion);
+    if (!res.ok) {
+      notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
+      return;
+    }
+
+    const cleanPriority: TaskPriority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
+    const nextVersion = (res.data as any)?.data?.version ?? (res.data as any)?.version ?? (currentVersion ? currentVersion + 1 : 1);
+    const updated = { ...subtask, priority: cleanPriority, version: nextVersion };
+    setSubtask(updated);
+    onSubtaskUpdated?.(updated);
+    notifySuccess("Đã cập nhật độ ưu tiên việc thành phần");
+  };
+
   const handleAssigneeChange = async (person: { id: string; name: string }) => {
     if (!subtask) return;
     setIsReassigning(true);
@@ -321,16 +414,6 @@ export function SubtaskDetailDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
-  // Guard chuyển trạng thái — dùng quyền của chính việc con (hook phải ở trước early return)
-  const statusGuard = React.useMemo(() => {
-    if (!subtask) return null;
-    return computeSubtaskStatusGuard(
-      subtask as any,
-      currentUser,
-      (subtask as any).availableActions,
-    );
-  }, [subtask, currentUser]);
-
   if (!isOpen || !subtask) return null;
 
   // Sibling switcher data
@@ -340,6 +423,12 @@ export function SubtaskDetailDrawer({
 
   const rawDescription = (subtask as any).description || subtask.deliverableDescription || "";
   const description = rawDescription.replace(/^\[Tóm tắt\]\s*/i, "");
+
+  const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
+  const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
+  const selectedAssignee = personnelList.find((person) =>
+    person.id === (subtask as any).assigneeId || person.name === subtask.assigneeName
+  ) || null;
 
   return (
     <>
@@ -448,11 +537,11 @@ export function SubtaskDetailDrawer({
             </span>
             {siblings.map((sib) => {
               const isSelected = sib.id === subtask.id;
-              const statusObj = getStatusDisplay(sib.status);
+              const statusObj = STATUS_OPTIONS.find((s) => s.value === sib.status) || STATUS_OPTIONS[0];
               const isCompleted = sib.status === "COMPLETED";
               const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
               const rawAssignee = sib.assigneeName?.trim();
-              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee, personnelList) : "";
+              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee) : "";
 
               return (
                 <button
@@ -495,29 +584,7 @@ export function SubtaskDetailDrawer({
           </div>
         )}
 
-        <div
-          ref={peekContentRef}
-          className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain cursor-text"
-          onClick={(e) => {
-            if (!canEdit) return;
-            const target = e.target as HTMLElement;
-            if (target !== peekContentRef.current) return;
-            // Click on content padding → focus editor at end
-            const editable = peekContentRef.current?.querySelector<HTMLElement>(
-              "[data-slot='task-block-editor'] [contenteditable='true']"
-            );
-            if (!editable) return;
-            editable.focus();
-            const sel = window.getSelection();
-            if (sel && editable.lastChild) {
-              const range = document.createRange();
-              range.selectNodeContents(editable);
-              range.collapse(false);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-          }}
-        >
+        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
               {/* Child title first */}
               <div className="space-y-1.5">
             <DirectInlineEditor
@@ -534,30 +601,104 @@ export function SubtaskDetailDrawer({
             />
           </div>
 
-          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none cursor-default">
-            <TaskStatusSelect
+          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none">
+            <Select.Root
               value={subtask.status}
-              options={statusGuard?.options.map((opt) => ({
-                value: opt.status as TaskStatus,
-                label: opt.label,
-                dotClass: getStatusDisplay(opt.status).dotClass,
-                iconClass: getStatusDisplay(opt.status).iconClass,
-                disabled: opt.disabled,
-                reason: opt.reason,
-              })) ?? STATUS_OPTIONS.map((opt) => ({ ...opt, disabled: false }))}
-              disabled={!canEdit || statusGuard?.readonly}
               onValueChange={(value) => void handleStatusChange(value as TaskStatus)}
-            />
-
-            <TaskAssigneePicker
-              items={personnelList}
-              assigneeId={(subtask as any).assigneeId}
-              assigneeName={subtask.assigneeName}
-              displayName={assigneeDisplay}
               disabled={!canEdit}
-              pending={isReassigning}
-              onSelect={handleAssigneeChange}
-            />
+            >
+              <Select.Trigger className="group inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
+                <StatusIcon className={cn("size-3.5 shrink-0", currentStatusObj.iconClass)} />
+                <Select.Value>{() => <span className="font-normal text-foreground">{currentStatusObj.label}</span>}</Select.Value>
+                {canEdit && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" /></Select.Icon>}
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Positioner className="z-50" align="start" sideOffset={4}>
+                  <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                    <Select.List>
+                      {STATUS_OPTIONS.map((option) => (
+                        <Select.Item
+                          key={option.value}
+                          value={option.value}
+                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className={cn("size-1.5 rounded-full", option.dotClass)} />
+                            <Select.ItemText>{option.label}</Select.ItemText>
+                          </span>
+                          <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
+                        </Select.Item>
+                      ))}
+                    </Select.List>
+                  </Select.Popup>
+                </Select.Positioner>
+              </Select.Portal>
+            </Select.Root>
+
+            <Combobox.Root
+              items={personnelList}
+              value={selectedAssignee}
+              onValueChange={(person) => {
+                if (person) void handleAssigneeChange(person);
+              }}
+              itemToStringLabel={(person) => person.name}
+              itemToStringValue={(person) => person.id}
+              isItemEqualToValue={(person, value) => person.id === value.id}
+              filter={(person, query) => {
+                const normalized = query.trim().toLocaleLowerCase("vi");
+                if (!normalized) return true;
+                return [person.name, person.email, person.departmentName]
+                  .filter(Boolean)
+                  .some((text) => text!.toLocaleLowerCase("vi").includes(normalized));
+              }}
+              autoHighlight
+              disabled={!canEdit || isReassigning}
+            >
+              <Combobox.Trigger className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
+                {isReassigning ? (
+                  <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
+                ) : (
+                  <UserPlus className={cn(
+                    "size-3.5 shrink-0",
+                    selectedAssignee ? "text-muted-foreground" : "text-primary/60"
+                  )} />
+                )}
+                <span className={cn(
+                  "truncate font-normal",
+                  selectedAssignee ? "text-foreground" : "text-muted-foreground"
+                )}>{assigneeDisplay}</span>
+              </Combobox.Trigger>
+              <Combobox.Portal>
+                <Combobox.Positioner className="z-50" align="start" sideOffset={4}>
+                  <Combobox.Popup className="w-64 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                    <Combobox.InputGroup className="m-1 border-b border-border/40 pb-1.5">
+                      <Combobox.Input
+                        placeholder="Tìm cán bộ..."
+                        className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background"
+                      />
+                    </Combobox.InputGroup>
+                    <Combobox.Empty className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+                      Không tìm thấy cán bộ phù hợp
+                    </Combobox.Empty>
+                    <Combobox.List className="max-h-64 overflow-y-auto overscroll-contain outline-none">
+                      {(person) => (
+                        <Combobox.Item
+                          key={person.id}
+                          value={person}
+                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">{person.name}</span>
+                            {person.departmentName && <span className="block truncate text-[10px] text-muted-foreground">{person.departmentName}</span>}
+                          </span>
+                          <Combobox.ItemIndicator><Check className="size-3 text-primary" /></Combobox.ItemIndicator>
+                        </Combobox.Item>
+                      )}
+                    </Combobox.List>
+                  </Combobox.Popup>
+                </Combobox.Positioner>
+              </Combobox.Portal>
+            </Combobox.Root>
 
             {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
               <div className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted/40">
@@ -568,17 +709,73 @@ export function SubtaskDetailDrawer({
               </div>
             )}
 
-            <TaskDateRange
-              startDateIso={startDateIso}
-              dueDateIso={dueDateIso}
-              canEdit={canEdit}
-              onStartDateChange={handleStartDateChange}
-              onDueDateChange={handleDueDateChange}
-              onClearDates={handleClearDates}
-            />
+            <div ref={deadlineRef} className="relative group/date-row">
+              <button
+                type="button"
+                onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
+                disabled={!canEdit}
+                aria-expanded={isDeadlineEditorOpen}
+                className={cn(
+                  "inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors",
+                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default",
+                  dueInfo.isOverdue && "text-rose-700"
+                )}
+              >
+                <Clock3 className={cn(
+                  "size-3.5 shrink-0",
+                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground"
+                )} />
+                <span className={cn(
+                  "tabular-nums font-normal",
+                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "text-foreground"
+                )}>
+                  {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
+                </span>
+              </button>
+              {canEdit && (startDateIso || dueDateIso) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); void handleClearDates(); }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  aria-label="Xóa ngày"
+                  title="Xóa ngày"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+
+              {isDeadlineEditorOpen && canEdit && (
+                <div className="absolute left-0 right-0 top-full z-30 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Bắt đầu</span>
+                    <VietnameseDatePicker
+                      value={startDateIso}
+                      onChange={handleStartDateChange}
+                      placeholder="Bắt đầu"
+                      variant="chip"
+                      align="left"
+                      className="w-full"
+                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-muted-foreground">Hạn chót</span>
+                    <VietnameseDatePicker
+                      value={dueDateIso}
+                      onChange={handleDueDateChange}
+                      placeholder="Hạn chót"
+                      variant="chip"
+                      align="right"
+                      className="w-full"
+                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
-          <section className="mt-3 flex flex-1 flex-col cursor-text">
+          <section className="mt-3 flex flex-1 flex-col">
             {!description && !canEdit && (
               <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
             )}
