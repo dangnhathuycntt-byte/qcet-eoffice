@@ -22,8 +22,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
+import type { AuthUser } from "@/types/auth";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DirectInlineEditor } from "./direct-inline-editor";
@@ -31,12 +33,18 @@ import { TaskBlockEditor } from "./task-block-editor";
 import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
+import {
+  taskStateMachine,
+  buildActorContext,
+  buildTaskContext,
+} from "@/domain/tasks/state-machine";
 
 export interface SubtaskDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   subtask: StaffTask | null;
   canEdit?: boolean;
+  currentUser?: AuthUser | null;
   onSubtaskUpdated?: (updated: StaffTask) => void;
   /** All siblings of the current child (parent's subTasks) */
   siblings?: StaffTask[];
@@ -53,6 +61,7 @@ export function SubtaskDetailDrawer({
   onClose,
   subtask: initialSubtask,
   canEdit = true,
+  currentUser,
   onSubtaskUpdated,
   siblings = [],
   onSelectSibling,
@@ -72,9 +81,22 @@ export function SubtaskDetailDrawer({
   const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
   const deadlineRef = React.useRef<HTMLDivElement>(null);
-  const [personnelList, setPersonnelList] = React.useState<
-    Array<{ id: string; name: string; email?: string; departmentName?: string }>
-  >([]);
+  const { personnel: personnelList } = usePersonnelList();
+
+  // FSM guard: compute allowed status transitions
+  const actorContext = React.useMemo(() => buildActorContext(currentUser), [currentUser]);
+  const subtaskContext = React.useMemo(() => subtask ? buildTaskContext(subtask) : null, [subtask]);
+  const allowedTransitions = React.useMemo(() => {
+    if (!subtaskContext) return [];
+    return taskStateMachine.getAllowedTransitions(actorContext, subtaskContext, subtask?.status || "NOT_STARTED");
+  }, [actorContext, subtaskContext, subtask?.status]);
+  const allowedStatusMap = React.useMemo(() => {
+    const map = new Map<string, { allowed: boolean; reason?: string }>();
+    for (const t of allowedTransitions) {
+      map.set(t.status, { allowed: t.allowed, reason: t.reason });
+    }
+    return map;
+  }, [allowedTransitions]);
 
   // Dọn sự kiện kéo cả khi pane đóng hoặc cửa sổ mất focus.
   const stopResizeRef = React.useRef<(() => void) | null>(null);
@@ -134,21 +156,6 @@ export function SubtaskDetailDrawer({
     onPeekWidthChange?.(DEFAULT_PEEK_WIDTH);
   }, [onPeekWidthChange]);
 
-  React.useEffect(() => {
-    if (!canEdit) return;
-    fetch("/api/users")
-      .then((response) => response.json())
-      .then((data) => {
-        if (!data.success || !Array.isArray(data.users)) return;
-        setPersonnelList(data.users.map((user: any) => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          departmentName: user.department?.name || user.departmentName || "Đơn vị",
-        })));
-      })
-      .catch(() => {});
-  }, [canEdit]);
 
   // Close deadline popover on outside click
   React.useEffect(() => {
@@ -173,7 +180,7 @@ export function SubtaskDetailDrawer({
   const currentPriorityObj =
     PRIORITY_OPTIONS.find((p) => p.value === currentPriorityVal) || PRIORITY_OPTIONS[2];
 
-  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
+  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName, personnelList);
 
   // Dates
   const rawStartDate = (subtask as any)?.startDate;
@@ -541,7 +548,7 @@ export function SubtaskDetailDrawer({
               const isCompleted = sib.status === "COMPLETED";
               const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
               const rawAssignee = sib.assigneeName?.trim();
-              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee) : "";
+              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee, personnelList) : "";
 
               return (
                 <button
@@ -616,11 +623,16 @@ export function SubtaskDetailDrawer({
                 <Select.Positioner className="z-50" align="start" sideOffset={4}>
                   <Select.Popup className="w-48 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
                     <Select.List>
-                      {STATUS_OPTIONS.map((option) => (
+                      {STATUS_OPTIONS.map((option) => {
+                        const isCurrent = option.value === (subtask?.status || "NOT_STARTED");
+                        const check = allowedStatusMap.get(option.value === "NOT_STARTED" ? "NEW" : option.value) || { allowed: true };
+                        const isDisabled = !isCurrent && !check.allowed;
+                        return (
                         <Select.Item
                           key={option.value}
                           value={option.value}
-                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary"
+                          disabled={isDisabled}
+                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:font-medium data-[selected]:text-primary data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
                         >
                           <span className="flex items-center gap-1.5">
                             <span className={cn("size-1.5 rounded-full", option.dotClass)} />
@@ -628,7 +640,8 @@ export function SubtaskDetailDrawer({
                           </span>
                           <Select.ItemIndicator><Check className="size-3 text-primary" /></Select.ItemIndicator>
                         </Select.Item>
-                      ))}
+                        );
+                      })}
                     </Select.List>
                   </Select.Popup>
                 </Select.Positioner>

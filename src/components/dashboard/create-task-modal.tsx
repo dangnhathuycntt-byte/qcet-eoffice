@@ -1049,7 +1049,8 @@ export function CreateTaskModal({
       formData,
       parentTask,
       user || undefined,
-      effectiveParentDueDate
+      effectiveParentDueDate,
+      deptList
     );
 
     if (Object.keys(validationErrors).length > 0) {

@@ -23,13 +23,18 @@ export interface DepartmentOption {
  * simultaneously. Keyed by includePersonnel flag.
  */
 const _cache: Record<string, DepartmentOption[] | null> = {};
+const _cacheTimestamp: Record<string, number> = {};
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const _inflight: Record<string, Promise<DepartmentOption[]> | null> = {};
 
 async function fetchDepartments(
   includePersonnel: boolean,
 ): Promise<DepartmentOption[]> {
   const key = includePersonnel ? "with-personnel" : "basic";
-  if (_cache[key]) return _cache[key]!;
+  const now = Date.now();
+  if (_cache[key] && (now - (_cacheTimestamp[key] || 0)) < CACHE_TTL_MS) {
+    return _cache[key]!;
+  }
   if (_inflight[key]) return _inflight[key]!;
 
   const url = includePersonnel
@@ -41,13 +46,16 @@ async function fetchDepartments(
     .then((data): DepartmentOption[] => {
       if (data.success && Array.isArray(data.departments)) {
         _cache[key] = data.departments;
+        _cacheTimestamp[key] = Date.now();
       } else {
         _cache[key] = [];
+        _cacheTimestamp[key] = Date.now();
       }
       return _cache[key]!;
     })
     .catch((): DepartmentOption[] => {
       _cache[key] = [];
+      _cacheTimestamp[key] = Date.now();
       return _cache[key]!;
     })
     .finally(() => {

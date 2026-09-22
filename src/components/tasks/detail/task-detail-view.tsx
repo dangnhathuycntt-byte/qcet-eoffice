@@ -59,6 +59,8 @@ export function TaskDetailView({
 }: TaskDetailViewProps) {
   const { notifyError, notifySuccess } = useFeedback();
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
+  const taskRef = React.useRef(task);
+  taskRef.current = task;
   React.useEffect(() => {
     setTask(initialTask);
   }, [initialTask]);
@@ -172,7 +174,7 @@ export function TaskDetailView({
     if (onStartDateChange) {
       await onStartDateChange(taskId, newStartDate);
     } else {
-      const res = await updateTaskStartDate(taskId, newStartDate, (task as any).version);
+      const res = await updateTaskStartDate(taskId, newStartDate, (taskRef.current as any).version);
       if (!res.ok) {
         notifyError(res.error || "Không thể cập nhật ngày bắt đầu", "Lỗi cập nhật");
         return;
@@ -183,7 +185,7 @@ export function TaskDetailView({
         version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
       } as any));
     }
-  }, [onStartDateChange, task, notifyError]);
+  }, [onStartDateChange, notifyError]);
 
   const handleTitleChangeInternal = React.useCallback(async (taskId: string, newTitle: string) => {
     if (onTitleChange) {
@@ -204,9 +206,9 @@ export function TaskDetailView({
   const handleSaveDescription = React.useCallback(async (newDesc: string) => {
     const trimmed = newDesc.trim();
     if (onDescriptionChange) {
-      await onDescriptionChange(task.id, trimmed);
+      await onDescriptionChange(taskRef.current.id, trimmed);
     } else {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`/api/tasks/${taskRef.current.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: trimmed }),
@@ -219,7 +221,7 @@ export function TaskDetailView({
       ...prev,
       description: trimmed,
     }));
-  }, [onDescriptionChange, task.id]);
+  }, [onDescriptionChange]);
 
   const handleProgressUpdated = React.useCallback(async (newProgress: number, note?: string) => {
     setTask((prev) => ({
@@ -266,21 +268,21 @@ export function TaskDetailView({
       }
     }
 
-    const resolvedDueDate = dueDate || (task as any).dueDate || new Date().toISOString().split("T")[0];
+    const resolvedDueDate = dueDate || (taskRef.current as any).dueDate || new Date().toISOString().split("T")[0];
 
     // Payload adhering strictly to CreateTaskInputSchema
     const payload: Record<string, unknown> = {
       title: trimmedTitle,
-      parentTaskId: task.id,
+      parentTaskId: taskRef.current.id,
       dueDate: resolvedDueDate,
       priority: "NORMAL",
-      scope: isSchool ? "DEPARTMENT" : "INDIVIDUAL",
+      scope: isSchoolTask(taskRef.current) ? "DEPARTMENT" : "INDIVIDUAL",
     };
 
     if (resolvedAssigneeId) {
       payload.assigneeId = resolvedAssigneeId;
     }
-    const deptId = (task as any).departmentId || (task as any).leadDepartmentId;
+    const deptId = (taskRef.current as any).departmentId || (taskRef.current as any).leadDepartmentId;
     if (deptId) {
       payload.departmentId = deptId;
     }
@@ -308,7 +310,8 @@ export function TaskDetailView({
 
     if (created) {
       setTask((prev) => {
-        if (!isSchool || !schoolTask) return prev;
+        if (!isSchoolTask(prev)) return prev;
+        const prevSchool = prev as SchoolTask;
         const resolvedName =
           created.assigneeName ||
           created.assignee?.name ||
@@ -323,22 +326,22 @@ export function TaskDetailView({
           assigneeId: created.assigneeId || resolvedAssigneeId,
           status: "NEW",
           dueDate: created.dueDate || resolvedDueDate,
-          parentSchoolTaskId: task.id,
-          parentSchoolTaskTitle: task.title,
-          parentSchoolTaskCode: task.code,
+          parentSchoolTaskId: prev.id,
+          parentSchoolTaskTitle: prev.title,
+          parentSchoolTaskCode: prev.code,
           priority: "NORMAL",
           progress: 0,
           updatedAt: new Date().toISOString(),
         } as StaffTask;
         return {
           ...prev,
-          subTasks: [...(schoolTask.subTasks || []), newSubtask],
-          totalSubTasks: (schoolTask.totalSubTasks || 0) + 1,
+          subTasks: [...(prevSchool.subTasks || []), newSubtask],
+          totalSubTasks: (prevSchool.totalSubTasks || 0) + 1,
         } as SchoolTask;
       });
       notifySuccess("Tạo việc thành phần thành công", "Thành công");
     }
-  }, [task, isSchool, schoolTask, notifySuccess]);
+  }, [notifySuccess]);
 
   const handleToggleSubtaskStatus = React.useCallback(async (st: StaffTask) => {
     const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
@@ -346,8 +349,9 @@ export function TaskDetailView({
       await onStatusChange(st.id, newStatus);
     }
     setTask((prev) => {
-      if (!isSchool || !schoolTask) return prev;
-      const updatedSubtasks = schoolTask.subTasks.map((s) =>
+      if (!isSchoolTask(prev)) return prev;
+      const prevSchool = prev as SchoolTask;
+      const updatedSubtasks = prevSchool.subTasks.map((s) =>
         s.id === st.id ? { ...s, status: newStatus } : s
       );
       return {
@@ -355,7 +359,7 @@ export function TaskDetailView({
         subTasks: updatedSubtasks,
       } as SchoolTask;
     });
-  }, [onStatusChange, isSchool, schoolTask]);
+  }, [onStatusChange]);
 
   const handleAddDeliverable = React.useCallback(async (title: string, fileUrl?: string, notes?: string) => {
     const trimmedTitle = title.trim();
@@ -368,7 +372,7 @@ export function TaskDetailView({
       throw new Error("Đường dẫn liên kết tài liệu minh chứng là bắt buộc");
     }
 
-    const res = await fetch(`/api/tasks/${task.id}/deliverables`, {
+    const res = await fetch(`/api/tasks/${taskRef.current.id}/deliverables`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -407,7 +411,7 @@ export function TaskDetailView({
     };
 
     setDeliverables((prev) => [newDeliv, ...prev]);
-  }, [task.id, currentUser]);
+  }, [currentUser]);
 
   const handleDeleteDeliverable = React.useCallback(async (deliverableId: string) => {
     const previousDeliverables = deliverables;
@@ -415,7 +419,7 @@ export function TaskDetailView({
 
     try {
       const res = await fetch(
-        `/api/tasks/${task.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
+        `/api/tasks/${taskRef.current.id}/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,
         {
           method: "DELETE",
         }
@@ -437,7 +441,7 @@ export function TaskDetailView({
       setDeliverables(previousDeliverables);
       notifyError(error instanceof Error ? error.message : "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
-  }, [task.id, deliverables, notifyError]);
+  }, [deliverables, notifyError]);
 
   return (
     <div

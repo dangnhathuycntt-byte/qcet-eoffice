@@ -989,6 +989,7 @@ export function TaskDetailPage({
 
     {/* Child peek — independent card beside parent */}
     <SubtaskDetailDrawer
+      currentUser={currentUser}
       isOpen={Boolean(activeSubtask)}
       onClose={handleCloseSubtaskDrawer}
       subtask={activeSubtask}

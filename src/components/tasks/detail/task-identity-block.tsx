@@ -36,12 +36,15 @@ import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
+import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import {
   taskStateMachine,
   buildActorContext,
   buildTaskContext,
 } from "@/domain/tasks/state-machine";
+import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG } from "@/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 
 export interface TaskIdentityBlockProps {
   task: SchoolTask | StaffTask;
@@ -60,87 +63,42 @@ export interface TaskIdentityBlockProps {
   className?: string;
 }
 
-export function computeDueStatus(dueDate?: string | Date | null): { text: string; isOverdue: boolean } {
-  if (!dueDate) return { text: "Chưa đặt hạn", isOverdue: false };
-  const target = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
-  if (isNaN(target.getTime())) return { text: "Chưa đặt hạn", isOverdue: false };
-  const now = new Date();
-  const diffMs = target.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { text: `Quá hạn ${Math.abs(diffDays)} ngày`, isOverdue: true };
-  if (diffDays === 0) return { text: "Hôm nay", isOverdue: false };
-  if (diffDays === 1) return { text: "Ngày mai", isOverdue: false };
-  return { text: `Còn ${diffDays} ngày`, isOverdue: false };
-}
+import { computeDueStatus } from "@/domain/tasks/deadlines";
 
-export const STATUS_OPTIONS: Array<{
-  value: TaskStatus;
-  label: string;
-  colorClass: string;
-  dotClass: string;
-  iconClass: string;
-}> = [
-  {
-    value: "NOT_STARTED",
-    label: "Mới",
-    colorClass: "text-muted-foreground bg-muted/60 border-border/60",
-    dotClass: "bg-muted-foreground/60",
-    iconClass: "text-muted-foreground/60",
-  },
-  {
-    value: "IN_PROGRESS",
-    label: "Đang thực hiện",
-    colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
-    dotClass: "bg-blue-600",
-    iconClass: "text-blue-600",
-  },
-  {
-    value: "WAITING_APPROVAL",
-    label: "Chờ duyệt",
-    colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
-    dotClass: "bg-amber-600",
-    iconClass: "text-amber-600",
-  },
-  {
-    value: "COMPLETED",
-    label: "Hoàn thành",
-    colorClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/80",
-    dotClass: "bg-emerald-600",
-    iconClass: "text-emerald-600",
-  },
-];
+// Re-export for backward compat (subtask-detail-drawer imports it)
+export { computeDueStatus } from "@/domain/tasks/deadlines";
 
-export const PRIORITY_OPTIONS: Array<{
-  value: TaskPriority;
-  label: string;
-  colorClass: string;
-  iconClass: string;
-}> = [
-  {
-    value: "URGENT",
-    label: "Khẩn cấp",
-    colorClass: "text-rose-700 bg-rose-50/80 border-rose-200/80",
-    iconClass: "text-rose-600",
-  },
-  {
-    value: "HIGH",
-    label: "Cao",
-    colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80",
-    iconClass: "text-amber-600",
-  },
-  {
-    value: "NORMAL",
-    label: "Bình thường",
-    colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80",
-    iconClass: "text-blue-600",
-  },
-  {
-    value: "LOW",
-    label: "Thấp",
-    colorClass: "text-muted-foreground bg-muted/60 border-border/60",
-    iconClass: "text-muted-foreground",
-  },
-];
+const STATUS_COLOR_MAP: Record<string, string> = {
+  NOT_STARTED: "text-muted-foreground bg-muted/60 border-border/60",
+  IN_PROGRESS: "text-blue-700 bg-blue-50/80 border-blue-200/80",
+  WAITING_APPROVAL: "text-amber-700 bg-amber-50/80 border-amber-200/80",
+  NEEDS_REVIEW: "text-amber-700 bg-amber-50/80 border-amber-200/80",
+  COMPLETED: "text-emerald-700 bg-emerald-50/80 border-emerald-200/80",
+  CANCELLED: "text-rose-700 bg-rose-50/80 border-rose-200/80",
+};
+
+export const STATUS_OPTIONS = CORE_STATUS_OPTIONS.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  colorClass: STATUS_COLOR_MAP[opt.value] || "text-muted-foreground bg-muted/60 border-border/60",
+  dotClass: opt.dotClass,
+  iconClass: opt.iconClass,
+}));
+
+const PRIORITY_COLOR_MAP: Record<string, { colorClass: string; iconClass: string }> = {
+  URGENT: { colorClass: "text-rose-700 bg-rose-50/80 border-rose-200/80", iconClass: "text-rose-600" },
+  HIGH: { colorClass: "text-amber-700 bg-amber-50/80 border-amber-200/80", iconClass: "text-amber-600" },
+  NORMAL: { colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80", iconClass: "text-blue-600" },
+  MEDIUM: { colorClass: "text-blue-700 bg-blue-50/80 border-blue-200/80", iconClass: "text-blue-600" },
+  LOW: { colorClass: "text-muted-foreground bg-muted/60 border-border/60", iconClass: "text-muted-foreground" },
+};
+
+export const PRIORITY_OPTIONS = PRIORITY_DISPLAY_CONFIG.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  colorClass: PRIORITY_COLOR_MAP[opt.value]?.colorClass || "text-muted-foreground bg-muted/60 border-border/60",
+  iconClass: PRIORITY_COLOR_MAP[opt.value]?.iconClass || "text-muted-foreground",
+}));
 
 export function TaskIdentityBlock({
   task,
@@ -176,11 +134,13 @@ export function TaskIdentityBlock({
     return map;
   }, [allowedTransitions]);
 
+  const { personnel: personnelList } = usePersonnelList();
+
   const rawLeadName = isSchool
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
 
-  const leadName = formatAssigneeNameWithTitle(rawLeadName);
+  const leadName = formatAssigneeNameWithTitle(rawLeadName, personnelList);
 
   const rawStartDate = isSchool
     ? (schoolTask?.startDate || schoolTask?.assignedDate)
@@ -213,39 +173,9 @@ export function TaskIdentityBlock({
   const [leadSearchQuery, setLeadSearchQuery] = React.useState("");
   const [isReassigning, setIsReassigning] = React.useState(false);
   const [reassignError, setReassignError] = React.useState<string | null>(null);
-  const [personnelList, setPersonnelList] = React.useState<
-    Array<{ id: string; name: string; email?: string; departmentName?: string }>
-  >([]);
   const leadMenuRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.users)) {
-          setPersonnelList(
-            data.users.map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              departmentName: u.department?.name || u.departmentName || "Đơn vị",
-            }))
-          );
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const rawStatus = (task as any).status || "NOT_STARTED";
-  const normalizedStatus: TaskStatus = typeof rawStatus === "string"
-    ? rawStatus.toUpperCase() === "COMPLETED" || rawStatus.toUpperCase() === "DONE" || rawStatus.toUpperCase() === "HOAN_THANH"
-      ? "COMPLETED"
-      : rawStatus.toUpperCase() === "IN_PROGRESS" || rawStatus.toUpperCase() === "DANG_THUC_HIEN"
-      ? "IN_PROGRESS"
-      : rawStatus.toUpperCase() === "WAITING_APPROVAL" || rawStatus.toUpperCase() === "NEEDS_REVIEW" || rawStatus.toUpperCase() === "CHO_DUYET"
-      ? "WAITING_APPROVAL"
-      : "NOT_STARTED"
-    : "NOT_STARTED";
+  const normalizedStatus = normalizeDisplayStatus(task.status) as TaskStatus;
 
   const currentStatusObj =
     STATUS_OPTIONS.find((s) => s.value === normalizedStatus) || STATUS_OPTIONS[0];
