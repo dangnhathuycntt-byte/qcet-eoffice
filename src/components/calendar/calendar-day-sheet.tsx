@@ -356,7 +356,7 @@ export function CalendarDaySheet({
             className
           )}
         >
-          {/* Sticky Notion-like Side Peek Header */}
+          {/* Sticky Side Peek Header */}
           <header className="sticky top-0 z-10 border-b border-border/60 bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-2">
             <div className="min-w-0">
               <h2

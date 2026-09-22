@@ -363,7 +363,7 @@ export function AppSidebar() {
         {/* ========================================================= */}
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
-          {/* Linear Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
+          {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
           <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
             <Menu.Trigger

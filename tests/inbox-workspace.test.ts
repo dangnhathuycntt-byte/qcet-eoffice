@@ -15,7 +15,7 @@ import {
   type QCETNotification,
 } from "../src/lib/notification-triage";
 
-describe("QCET App Shell & Linear Inbox Test Suite", () => {
+describe("QCET App Shell & Inbox Test Suite", () => {
   describe("1. Canonical Navigation Registry & Inbox Route", () => {
     test("defines /inbox with label 'Hộp thư' and Inbox icon", () => {
       const inboxRoute = CANONICAL_ROUTES.find((r) => r.href === "/inbox");

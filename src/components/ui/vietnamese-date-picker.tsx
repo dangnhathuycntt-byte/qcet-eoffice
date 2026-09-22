@@ -31,7 +31,7 @@ export interface VietnameseDatePickerProps {
   placeholder?: string;
   /** Icon hiển thị phía trước */
   icon?: React.ReactNode;
-  /** Chế độ hiển thị: "chip" (Linear style), "input" (Standard form style) hoặc "inline" (Minimalist text link) */
+  /** Chế độ hiển thị: "chip" (compact style), "input" (Standard form style) hoặc "inline" (Minimalist text link) */
   variant?: "chip" | "input" | "inline";
   /** Bắt buộc chọn hay không */
   required?: boolean;
@@ -166,7 +166,7 @@ export function VietnameseDatePicker({
     setIsOpen(false);
   };
 
-  // Calendar cells generation (Full 35 hoặc 42 ô chuẩn Linear/Apple)
+  // Calendar cells generation (Full 35 hoặc 42 ô)
   const calendarCells = React.useMemo(() => {
     const totalDaysInMonth = getDaysInMonth(viewYear, viewMonth);
     const firstDayOffset = getFirstDayOfWeekIndexSunday(viewYear, viewMonth);
@@ -363,7 +363,7 @@ export function VietnameseDatePicker({
         </Popover.Trigger>
       )}
 
-      {/* 2. Linear-Style Date Picker Popover Portal */}
+      {/* 2. Date Picker Popover Portal */}
 
       <Popover.Portal>
       <Popover.Positioner className="z-50" side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
@@ -399,7 +399,7 @@ export function VietnameseDatePicker({
           )}
         </div>
 
-        {/* Granularity Segmented Control (Linear / Apple Style Capsule) */}
+        {/* Granularity Segmented Control (Capsule style) */}
         <div className="flex items-center p-0.5 bg-muted/40 rounded-full mb-3 border border-border/40 select-none text-[11px]">
           {(
             [
@@ -427,7 +427,7 @@ export function VietnameseDatePicker({
           ))}
         </div>
 
-        {/* MODE 1: DAY CALENDAR (Linear Style) */}
+        {/* MODE 1: DAY CALENDAR */}
         {mode === "day" && (
           <div className="space-y-2">
             {/* Month Navigator Header */}

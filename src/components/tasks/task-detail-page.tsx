@@ -1,6 +1,6 @@
 "use client";
 
-// Task Detail Workspace Component - Full Linear & Notion-style Canvas with ReBAC & Progress Integration
+// Task Detail Workspace Component — Canvas with ReBAC & Progress Integration
 import * as React from "react";
 import styles from "./task-detail-page.module.css";
 import { DndProvider, DndContext } from "react-dnd";
@@ -23,7 +23,7 @@ import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/sub
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
-import { LinearCreateTaskModal } from "@/components/tasks/create/linear-create-task-modal";
+import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -113,7 +113,7 @@ export function TaskDetailPage({
   const initialSubtaskId = searchParams.get("subtaskId");
   const [selectedSubtaskId, setSelectedSubtaskId] = React.useState<string | null>(initialSubtaskId);
 
-  // Persistent peek drawer width (Notion / Linear Resizable Side Peek)
+  // Persistent peek drawer width (Resizable side peek)
   const [peekWidth, setPeekWidth] = React.useState<number>(DEFAULT_PEEK_WIDTH);
 
   React.useEffect(() => {
@@ -797,7 +797,7 @@ export function TaskDetailPage({
   const splitWorkspaceStyle = React.useMemo(
     () =>
       activeSubtask
-        ? ({ "--qcet-subtask-peek-width": `${peekWidth}px` } as React.CSSProperties)
+        ? ({ "--subtask-peek-width": `${peekWidth}px` } as React.CSSProperties)
         : undefined,
     [activeSubtask, peekWidth]
   );
@@ -1003,7 +1003,7 @@ export function TaskDetailPage({
     />
 
     {/* Modal Tạo việc con */}
-    <LinearCreateTaskModal
+    <CreateTaskModal
       isOpen={isCreateSubtaskOpen}
       onClose={() => setIsCreateSubtaskOpen(false)}
       initialParentTaskId={task.id}

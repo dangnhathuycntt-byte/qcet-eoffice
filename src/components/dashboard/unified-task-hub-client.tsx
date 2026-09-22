@@ -12,8 +12,8 @@ import { useAuthRole } from "@/hooks/use-auth-role";
 import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
 import { TasksZone } from "@/components/dashboard/zones/tasks-zone";
 import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
-import { useLinearTaskShortcuts } from "@/hooks/use-linear-task-shortcuts";
-import { LinearCreateTaskModal } from "@/components/tasks/create/linear-create-task-modal";
+import { useTaskShortcuts } from "@/hooks/use-task-shortcuts";
+import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import type { DashboardPayload } from "@/types/dashboard";
 
 const FallbackCalendarZone = dynamic(
@@ -46,7 +46,7 @@ function UnifiedTaskHubContent({
 }) {
   const { activeZone, scope, handleScopeChange } = useDashboardNav();
   const { handleManualRefresh } = useDashboardActions();
-  const { isNewTaskOpen, closeNewTask } = useLinearTaskShortcuts();
+  const { isNewTaskOpen, closeNewTask } = useTaskShortcuts();
   const { isExecutive, isManager } = useAuthRole();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,7 +81,7 @@ function UnifiedTaskHubContent({
   return (
     <div
       className="w-full space-y-4 md:space-y-5 pb-4 md:pb-6"
-      data-slot="twenty-dashboard"
+      data-slot="task-hub-dashboard"
       data-hub="unified-task-hub"
       data-active-zone={activeZone}
     >
@@ -93,7 +93,7 @@ function UnifiedTaskHubContent({
 
       <DashboardModalsHost />
 
-      <LinearCreateTaskModal
+      <CreateTaskModal
         isOpen={isNewTaskOpen}
         onClose={closeNewTask}
         onSubmitSuccess={() => {

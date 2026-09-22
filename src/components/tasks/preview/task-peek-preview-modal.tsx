@@ -137,7 +137,7 @@ export function TaskPeekPreviewModal({
     };
   }, [isOpen, task, onClose, onOpenDetail, onNavigateNext, onNavigatePrev]);
 
-  // Linear Hold-to-Peek & Quick Look:
+  // Hold-to-Peek & Quick Look:
   // Nếu người dùng đè giữ phím Space (> 400ms) rồi thả ra -> tự động đóng (hold-to-peek).
   // Nếu chỉ bấm nhả nhanh (< 400ms) -> xem như toggle, giữ modal mở để điều hướng.
   React.useEffect(() => {
@@ -251,7 +251,7 @@ export function TaskPeekPreviewModal({
         aria-hidden="true"
       />
 
-      {/* Surface: Linear Peek Card gọn, nhẹ, không viền nặng */}
+      {/* Surface: Peek card gọn, nhẹ, không viền nặng */}
       <div
         ref={modalRef}
         className="relative w-full max-w-[560px] bg-card rounded-xl border border-border/70 shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-120 text-foreground p-5 space-y-3.5"

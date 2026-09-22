@@ -288,7 +288,7 @@ export function TaskSubtasksSection({
         </div>
       )}
 
-      {/* 3. Inline Detailed Subtask Creation Row (Linear Style) */}
+      {/* 3. Inline Detailed Subtask Creation Row */}
       {isAddingInline && (
         <div className="space-y-1.5">
           <form

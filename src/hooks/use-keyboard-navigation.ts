@@ -270,7 +270,7 @@ export function handleKeyboardNavigation(
     return true;
   }
 
-  // 4. x / X: Chọn / bỏ chọn dòng hiện tại (Linear standard: x for selection)
+  // 4. x / X: Chọn / bỏ chọn dòng hiện tại (x for selection)
   if (key === "x" || key === "X") {
     if (activeIndex >= 0 && activeIndex < itemCount) {
       if (event.preventDefault) event.preventDefault();
@@ -282,7 +282,7 @@ export function handleKeyboardNavigation(
     }
   }
 
-  // 4b. Space: Xem nhanh dòng hiện tại (Linear Peek / macOS Quick Look) hoặc Chọn / Bỏ chọn dòng
+  // 4b. Space: Xem nhanh dòng hiện tại (Peek / macOS Quick Look) hoặc Chọn / Bỏ chọn dòng
   if (key === " " || event.code === "Space") {
     if (activeIndex >= 0 && activeIndex < itemCount) {
       if (event.preventDefault) event.preventDefault();

@@ -1237,7 +1237,7 @@ export function CreateTaskModal({
             aria-hidden="true"
           />
 
-          {/* Modal Container: Linear-style fast task composer */}
+          {/* Modal Container: Fast task composer */}
           <m.div
             key="create-task-dialog"
             variants={dialogVariants}
@@ -1252,7 +1252,7 @@ export function CreateTaskModal({
             className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-2xl max-h-[100dvh] sm:max-h-[90dvh] flex flex-col rounded-none sm:rounded-xl border-0 sm:border border-border/80 bg-card shadow-xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Header Bar: Linear-style breadcrumb */}
+            {/* Top Header Bar */}
             <header className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3 border-b border-border/60 bg-muted/20 shrink-0 select-none">
               <div className="flex items-center gap-1.5 text-xs min-w-0">
                 <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
@@ -1330,7 +1330,7 @@ export function CreateTaskModal({
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Scrollable Form Body */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 thin-scrollbar">
-                {/* 1. Title Input (Linear-style: prominent, borderless) */}
+                {/* 1. Title Input (Prominent, borderless) */}
                 <div className="space-y-0.5 shrink-0">
                   <label htmlFor="task-title-input" className="sr-only">
                     {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}

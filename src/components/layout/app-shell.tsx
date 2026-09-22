@@ -231,7 +231,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
-      {/* Desktop Sidebar (Fixed Linear width) */}
+      {/* Desktop Sidebar (Fixed width) */}
       <React.Suspense fallback={<aside className="hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
         <AppSidebar />
       </React.Suspense>
@@ -247,14 +247,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <AppTopbar />
         </React.Suspense>
 
-        {/* Desktop Top Header Bar (Linear-style matching sidebar top header) */}
+        {/* Desktop Top Header Bar (Matching sidebar top header) */}
         <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
           <DesktopTopbar />
         </React.Suspense>
 
         <OfflineBanner />
 
-        {/* Inner Content Panel: Linear white canvas with rounded top-left corner */}
+        {/* Inner Content Panel: White canvas with rounded top-left corner */}
         <main
           id="main-content"
           tabIndex={-1}

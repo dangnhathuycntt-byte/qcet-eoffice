@@ -1,7 +1,7 @@
 /**
- * tests/linear-create-task-modal-composer.test.ts
+ * tests/create-task-modal-composer.test.ts
  *
- * Kiểm thử toàn diện Linear-inspired Compact Task Composer & Modal UX/UI:
+ * Kiểm thử toàn diện Compact Task Composer & Modal UX/UI:
  * 1. Modal layout hierarchy: Breadcrumb -> Title -> Summary -> Property Chips -> Description Canvas -> Footer
  * 2. Visual density & restraint: No redundant sections, compact properties bar (wrap max 2 rows)
  * 3. Scope integrity: No fake AI Agent or "+ Thêm đầu việc" in create modal (subtasks created at task detail)
@@ -25,8 +25,8 @@ import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picke
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
 
-describe("Linear Compact Composer Modal - Production Specification", () => {
-  test("Renders modal with correct Linear hierarchy & accessible dialog attributes", () => {
+describe("Compact Composer Modal - Production Specification", () => {
+  test("Renders modal with correct hierarchy & accessible dialog attributes", () => {
     const html = renderToStaticMarkup(
       React.createElement(CreateTaskModal, {
         isOpen: true,

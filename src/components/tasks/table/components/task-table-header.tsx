@@ -41,7 +41,7 @@ interface ColumnDefinition {
   widthClass?: string;
 }
 
-// Linear Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
+// Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
 const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
   { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-48 lg:w-56 min-w-[160px]" },
@@ -140,7 +140,7 @@ export function TaskTableHeader({
           const isFirstColumn = !showSelection && colIdx === 0;
           const titlePaddingClass = isFirstColumn ? "pl-3.5 sm:pl-4 pr-2.5 py-1.5" : paddingClass;
 
-          // Special alignment for Title column: Linear Header Leading Selector + Label
+          // Special alignment for Title column: Header leading selector + label
           if (col.id === "title") {
             return (
               <th
@@ -154,7 +154,7 @@ export function TaskTableHeader({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  {/* Linear Header Selector: Accessible keyboard + hit area */}
+                  {/* Header selector: Accessible keyboard + hit area */}
                   <div
                     role="checkbox"
                     aria-checked={indeterminate ? "mixed" : allSelected}

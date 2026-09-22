@@ -111,7 +111,7 @@ export function TaskProgressComposer({
         className
       )}
     >
-      {/* 1. Header (Linear Project Overview style: "Latest update" · "[Update]") */}
+      {/* 1. Header ("Latest update" · "[Update]") */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-foreground tracking-tight">
           Tiến độ mới nhất
@@ -129,7 +129,7 @@ export function TaskProgressComposer({
         )}
       </div>
 
-      {/* 2. Latest Update Body (Linear card style) */}
+      {/* 2. Latest Update Body */}
       {!isEditing ? (
         <div className="space-y-2">
           {/* Status badge + Lead Author + Timestamp */}

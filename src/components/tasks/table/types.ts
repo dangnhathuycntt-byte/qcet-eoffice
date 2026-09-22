@@ -15,7 +15,7 @@ import type {
 export type TableDensity = "compact" | "comfortable";
 
 /**
- * Thẻ lọc thông minh (Smart Filter Tabs) theo chuẩn Linear / công quyền hiện đại
+ * Thẻ lọc thông minh (Smart Filter Tabs) theo chuẩn UX hiện đại
  */
 export type SmartFilterTab =
   | "all"        // Tất cả nhiệm vụ
