@@ -73,11 +73,18 @@ const EXECUTIVE_ROLES = new Set([
   'PHO_HIEU_TRUONG',
 ]);
 
+// TEMPORARY COMPAT SHIM — remove after WI-3.3 authority delegation
+// Syncs unit leader roles with attention-resolver.ts:UNIT_HEAD_ROLES to prevent
+// deans (TRUONG_KHOA) and center directors (GIAM_DOC_TRUNG_TAM) from being misclassified as OTHER.
 const MANAGER_ROLES = new Set([
   'MANAGER',
   'TRUONG_PHONG',
   'TRUONG_DON_VI',
   'PHO_TRUONG_PHONG',
+  'TRUONG_KHOA',
+  'PHO_TRUONG_KHOA',
+  'GIAM_DOC_TRUNG_TAM',
+  'PHO_GIAM_DOC_TRUNG_TAM',
 ]);
 
 const STAFF_ROLES = new Set([
