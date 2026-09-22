@@ -40,6 +40,10 @@ import {
 } from "@/server/api/errors";
 import { canReadDossier } from "@/server/policies/dossier-policy";
 import type { SessionPayload } from "@/lib/jwt-session";
+import {
+  assertTransition,
+  assertDossierNotImmutable,
+} from "@/domain/dossiers/state-machine";
 
 // ============================================================================
 // Types & Interfaces
@@ -329,17 +333,7 @@ export class DossierService {
     }
 
     // Invariant: Cannot add items to closed or archived dossiers
-    if (
-      dossier.status === DossierStatus.CLOSED ||
-      dossier.status === DossierStatus.READY_FOR_ARCHIVE ||
-      dossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-      dossier.status === DossierStatus.ACCEPTED ||
-      dossier.status === DossierStatus.ARCHIVED
-    ) {
-      throw new InvalidTransitionError(
-        `Không thể thêm tài liệu vào hồ sơ đã đóng hoặc đã nộp lưu trữ (Trạng thái: ${dossier.status})`
-      );
-    }
+    assertDossierNotImmutable(dossier.status, "thêm tài liệu vào");
 
     if (!input.title || input.title.trim() === "") {
       throw new ValidationError("Tiêu đề tài liệu không được để trống", {
@@ -382,17 +376,7 @@ export class DossierService {
       if (!currentDossier) {
         throw new NotFoundError(`Không tìm thấy hồ sơ: ${dossier.id}`);
       }
-      if (
-        currentDossier.status === DossierStatus.CLOSED ||
-        currentDossier.status === DossierStatus.READY_FOR_ARCHIVE ||
-        currentDossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-        currentDossier.status === DossierStatus.ACCEPTED ||
-        currentDossier.status === DossierStatus.ARCHIVED
-      ) {
-        throw new InvalidTransitionError(
-          `Không thể thêm tài liệu vào hồ sơ đã đóng hoặc đã nộp lưu trữ (Trạng thái: ${currentDossier.status})`
-        );
-      }
+      assertDossierNotImmutable(currentDossier.status, "thêm tài liệu vào");
 
       const item = await tx.dossierItem.create({
         data: {
@@ -412,6 +396,7 @@ export class DossierService {
 
       // Update dossier status from OPEN to ACTIVE if adding first item
       if (currentDossier.status === DossierStatus.OPEN) {
+        assertTransition(currentDossier.status, DossierStatus.ACTIVE);
         await tx.workDossier.update({
           where: { id: dossier.id },
           data: { status: DossierStatus.ACTIVE },
@@ -456,17 +441,7 @@ export class DossierService {
     const dossier = item.dossier;
 
     // Invariant: Cannot remove items from closed or archived dossiers
-    if (
-      dossier.status === DossierStatus.CLOSED ||
-      dossier.status === DossierStatus.READY_FOR_ARCHIVE ||
-      dossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-      dossier.status === DossierStatus.ACCEPTED ||
-      dossier.status === DossierStatus.ARCHIVED
-    ) {
-      throw new InvalidTransitionError(
-        `Không thể xóa tài liệu khỏi hồ sơ đã đóng hoặc đã nộp lưu trữ (Trạng thái: ${dossier.status})`
-      );
-    }
+    assertDossierNotImmutable(dossier.status, "xóa tài liệu khỏi");
 
     // Authorization check
     const resource: AuthorizationResource = {
@@ -485,17 +460,7 @@ export class DossierService {
       if (!currentItem || currentItem.dossierId !== input.dossierId) {
         throw new NotFoundError(`Không tìm thấy tài liệu trong hồ sơ: ${input.itemId}`);
       }
-      if (
-        currentItem.dossier.status === DossierStatus.CLOSED ||
-        currentItem.dossier.status === DossierStatus.READY_FOR_ARCHIVE ||
-        currentItem.dossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-        currentItem.dossier.status === DossierStatus.ACCEPTED ||
-        currentItem.dossier.status === DossierStatus.ARCHIVED
-      ) {
-        throw new InvalidTransitionError(
-          `Không thể xóa tài liệu khỏi hồ sơ đã đóng hoặc đã nộp lưu trữ (Trạng thái: ${currentItem.dossier.status})`
-        );
-      }
+      assertDossierNotImmutable(currentItem.dossier.status, "xóa tài liệu khỏi");
 
       await tx.dossierItem.delete({
         where: { id: item.id },
@@ -535,14 +500,7 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
     }
 
-    if (
-      dossier.status !== DossierStatus.OPEN &&
-      dossier.status !== DossierStatus.ACTIVE
-    ) {
-      throw new InvalidTransitionError(
-        `Chỉ có thể đóng hồ sơ đang mở hoặc đang hoạt động (Trạng thái hiện tại: ${dossier.status})`
-      );
-    }
+    assertTransition(dossier.status, DossierStatus.CLOSED);
 
     // Authorization check
     const resource: AuthorizationResource = {
@@ -561,14 +519,7 @@ export class DossierService {
       if (!currentDossier) {
         throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
       }
-      if (
-        currentDossier.status !== DossierStatus.OPEN &&
-        currentDossier.status !== DossierStatus.ACTIVE
-      ) {
-        throw new InvalidTransitionError(
-          `Chỉ có thể đóng hồ sơ đang mở hoặc đang hoạt động (Trạng thái hiện tại: ${currentDossier.status})`
-        );
-      }
+      assertTransition(currentDossier.status, DossierStatus.CLOSED);
       if (!currentDossier.items || currentDossier.items.length === 0) {
         throw new ValidationError("Không thể đóng hồ sơ rỗng chưa có tài liệu, văn bản");
       }
@@ -655,11 +606,7 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
     }
 
-    if (dossier.status !== DossierStatus.CLOSED) {
-      throw new InvalidTransitionError(
-        `Chỉ có thể chuẩn bị nộp lưu cho hồ sơ đã đóng (Trạng thái hiện tại: ${dossier.status})`
-      );
-    }
+    assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
 
     const resource: AuthorizationResource = {
       type: "dossier",
@@ -675,6 +622,7 @@ export class DossierService {
         include: { items: true },
       });
       if (!current) throw new NotFoundError(`Không tìm thấy hồ sơ`);
+      assertTransition(current.status, DossierStatus.READY_FOR_ARCHIVE);
 
       if (!current.retentionRuleId) {
         throw new ValidationError("Hồ sơ phải xác định Bảng thời hạn bảo quản (RetentionRule) trước khi chuẩn bị lưu trữ");
@@ -724,23 +672,11 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
     }
 
-    if (
-      dossier.status === DossierStatus.OPEN ||
-      dossier.status === DossierStatus.ACTIVE
-    ) {
-      throw new InvalidTransitionError(
-        "Hồ sơ công việc phải được đóng trước khi nộp lưu trữ cơ quan"
-      );
-    }
-
-    if (
-      dossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-      dossier.status === DossierStatus.ACCEPTED ||
-      dossier.status === DossierStatus.ARCHIVED
-    ) {
-      throw new InvalidTransitionError(
-        `Hồ sơ đã ở trạng thái ${dossier.status}, không thể nộp lại`
-      );
+    if (dossier.status === DossierStatus.CLOSED) {
+      assertTransition(dossier.status, DossierStatus.READY_FOR_ARCHIVE);
+      assertTransition(DossierStatus.READY_FOR_ARCHIVE, DossierStatus.SUBMITTED_TO_ARCHIVE);
+    } else {
+      assertTransition(dossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
     }
 
     // Authorization check
@@ -760,22 +696,11 @@ export class DossierService {
       if (!currentDossier) {
         throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
       }
-      if (
-        currentDossier.status === DossierStatus.OPEN ||
-        currentDossier.status === DossierStatus.ACTIVE
-      ) {
-        throw new InvalidTransitionError(
-          "Hồ sơ công việc phải được đóng trước khi nộp lưu trữ cơ quan"
-        );
-      }
-      if (
-        currentDossier.status === DossierStatus.SUBMITTED_TO_ARCHIVE ||
-        currentDossier.status === DossierStatus.ACCEPTED ||
-        currentDossier.status === DossierStatus.ARCHIVED
-      ) {
-        throw new InvalidTransitionError(
-          `Hồ sơ đã ở trạng thái ${currentDossier.status}, không thể nộp lại`
-        );
+      if (currentDossier.status === DossierStatus.CLOSED) {
+        assertTransition(currentDossier.status, DossierStatus.READY_FOR_ARCHIVE);
+        assertTransition(DossierStatus.READY_FOR_ARCHIVE, DossierStatus.SUBMITTED_TO_ARCHIVE);
+      } else {
+        assertTransition(currentDossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
       }
       if (!currentDossier.retentionRuleId) {
         throw new ValidationError(
@@ -848,13 +773,18 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
     }
 
-    if (
-      dossier.status !== DossierStatus.SUBMITTED_TO_ARCHIVE &&
-      dossier.status !== DossierStatus.READY_FOR_ARCHIVE
-    ) {
-      throw new InvalidTransitionError(
-        `Chỉ có thể tiếp nhận hồ sơ đã nộp lưu trữ (Trạng thái hiện tại: ${dossier.status})`
-      );
+    const targetStatus = input.status === DossierStatus.ACCEPTED ? DossierStatus.ACCEPTED : DossierStatus.ARCHIVED;
+    if (dossier.status === DossierStatus.READY_FOR_ARCHIVE) {
+      assertTransition(dossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+      assertTransition(DossierStatus.SUBMITTED_TO_ARCHIVE, DossierStatus.ACCEPTED);
+      if (targetStatus === DossierStatus.ARCHIVED) {
+        assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+      }
+    } else if (targetStatus === DossierStatus.ARCHIVED) {
+      assertTransition(dossier.status, DossierStatus.ACCEPTED);
+      assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+    } else {
+      assertTransition(dossier.status, targetStatus);
     }
 
     // Invariant: Separation of Duties (SoD)
@@ -886,13 +816,20 @@ export class DossierService {
       if (!currentDossier) {
         throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
       }
-      if (
-        currentDossier.status !== DossierStatus.SUBMITTED_TO_ARCHIVE &&
-        currentDossier.status !== DossierStatus.READY_FOR_ARCHIVE
-      ) {
-        throw new InvalidTransitionError(
-          `Chỉ có thể tiếp nhận hồ sơ đã nộp lưu trữ (Trạng thái hiện tại: ${currentDossier.status})`
-        );
+      const targetStatus = input.status === DossierStatus.ACCEPTED ? DossierStatus.ACCEPTED : DossierStatus.ARCHIVED;
+      const isFinalArchived = targetStatus === DossierStatus.ARCHIVED;
+
+      if (currentDossier.status === DossierStatus.READY_FOR_ARCHIVE) {
+        assertTransition(currentDossier.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
+        assertTransition(DossierStatus.SUBMITTED_TO_ARCHIVE, DossierStatus.ACCEPTED);
+        if (targetStatus === DossierStatus.ARCHIVED) {
+          assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+        }
+      } else if (targetStatus === DossierStatus.ARCHIVED) {
+        assertTransition(currentDossier.status, DossierStatus.ACCEPTED);
+        assertTransition(DossierStatus.ACCEPTED, DossierStatus.ARCHIVED);
+      } else {
+        assertTransition(currentDossier.status, targetStatus);
       }
       if (
         currentDossier.responsiblePersonId === user.id ||
@@ -910,9 +847,6 @@ export class DossierService {
       if (!currentDossier.items || currentDossier.items.length === 0) {
         throw new ValidationError("Không thể tiếp nhận lưu trữ hồ sơ rỗng");
       }
-
-      const targetStatus = input.status === DossierStatus.ACCEPTED ? DossierStatus.ACCEPTED : DossierStatus.ARCHIVED;
-      const isFinalArchived = targetStatus === DossierStatus.ARCHIVED;
 
       const updated = await tx.workDossier.update({
         where: { id: currentDossier.id },
@@ -993,11 +927,7 @@ export class DossierService {
       throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
     }
 
-    if (dossier.status !== DossierStatus.ACCEPTED) {
-      throw new InvalidTransitionError(
-        `Chỉ có thể hoàn tất lưu trữ cho hồ sơ đã được tiếp nhận nghiệm thu (Trạng thái hiện tại: ${dossier.status})`
-      );
-    }
+    assertTransition(dossier.status, DossierStatus.ARCHIVED);
 
     const resource: AuthorizationResource = {
       type: "dossier",
@@ -1007,6 +937,15 @@ export class DossierService {
     await assertAuthorized(user, "dossier.accept_archive", resource);
 
     return await prisma.$transaction(async (tx) => {
+      const current = await tx.workDossier.findUnique({
+        where: { id: input.dossierId },
+        select: { id: true, status: true },
+      });
+      if (!current) {
+        throw new NotFoundError(`Không tìm thấy hồ sơ: ${input.dossierId}`);
+      }
+      assertTransition(current.status, DossierStatus.ARCHIVED);
+
       const now = new Date();
       const updated = await tx.workDossier.update({
         where: { id: dossier.id },
