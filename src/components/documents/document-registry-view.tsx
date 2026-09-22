@@ -1369,7 +1369,7 @@ export function DocumentRegistryView() {
           {/* Fullscreen PDF Content */}
           <div className="flex-1 overflow-hidden p-2 sm:p-4 bg-muted/20">
             <DocumentPdfViewer
-              fileUrl={fullscreenPdfDoc.fileAttachment?.url || "/sample-document.pdf"}
+              fileUrl={fullscreenPdfDoc.fileAttachment?.url || ""}
               fileName={
                 fullscreenPdfDoc.fileAttachment?.name ||
                 `${fullscreenPdfDoc.documentNumber || "van-ban"}.pdf`

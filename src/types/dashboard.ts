@@ -291,7 +291,7 @@ export interface DashboardPayload {
   tasks: SchoolTask[];
   upcoming: UpcomingItem[];
   activities: ActivityEvent[];
-  source?: 'notion-live' | 'mock-fallback' | 'mock' | 'database';
+  source?: 'notion-live' | 'database';
   departmentHealth?: any[];
   syncTimestamp?: string;
 }

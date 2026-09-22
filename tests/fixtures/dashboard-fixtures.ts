@@ -817,7 +817,7 @@ export function getMockDashboardPayload(): DashboardPayload & { schoolTasks: Sch
     const data = generateQCETDataset();
     cachedPayload = {
       ...data,
-      source: "mock",
+      source: "database",
     };
   }
   return cachedPayload;

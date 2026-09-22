@@ -24,8 +24,8 @@ import {
 import { resolveCreateTaskPolicy } from "@/components/dashboard/create-task-modal";
 import { isTaskPastDue, getSystemReferenceDate, getSystemReferenceDateStr } from "@/lib/unified-task-hub";
 import { isTaskWaitingApproval } from "@/lib/workspace-metrics-aggregator";
-import { DEFAULT_MOCK_AGENDA_EVENTS } from "@/components/dashboard/today-agenda-widget";
 import { cn } from "@/lib/utils";
+import type { AgendaEventItem } from "@/components/dashboard/today-agenda-widget";
 import type { TaskScope } from "@/components/dashboard/unified-task-toolbar";
 import type { SchoolTask } from "@/types/dashboard";
 
@@ -205,7 +205,7 @@ export function DashboardZone() {
   }, [tasks, refDateStr]);
 
   // Today's schedule events
-  const todayEvents = DEFAULT_MOCK_AGENDA_EVENTS.slice(0, 4);
+  const todayEvents: AgendaEventItem[] = [];
 
   // Recent meaningful activities
   const recentActivities = (activities || []).slice(0, 5);
