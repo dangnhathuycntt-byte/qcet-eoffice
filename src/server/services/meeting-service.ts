@@ -1,3 +1,9 @@
+import {
+  assertTransition,
+  assertMeetingNotFinalized,
+  isMeetingFinalized,
+  canTransition,
+} from "@/domain/meetings";
 /**
  * QCET E-Office — Meeting & Institutional Resolutions Domain Service (Phase 8 / Task 5)
  * Implements workflow: DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED
@@ -251,6 +257,8 @@ export class MeetingService {
       );
     }
 
+    assertMeetingNotFinalized(meeting.status, "mời thành viên tham gia");
+
     return prisma.$transaction(async (tx) => {
       const participant = await tx.meetingParticipant.upsert({
         where: {
@@ -273,6 +281,7 @@ export class MeetingService {
       });
 
       if (meeting.status === MeetingStatus.DRAFT_AGENDA) {
+        assertTransition(meeting.status, MeetingStatus.INVITED);
         await tx.meeting.update({
           where: { id: meetingId },
           data: { status: MeetingStatus.INVITED },
@@ -333,10 +342,6 @@ export class MeetingService {
       throw new NotFoundError('Cuộc họp không tồn tại');
     }
 
-    if (meeting.status !== MeetingStatus.INVITED && meeting.status !== MeetingStatus.DRAFT_AGENDA) {
-      throw new ValidationError(`Không thể chuyển sang HELD từ trạng thái ${meeting.status}`);
-    }
-
     const authContext =
       typeof contextOrUserId === 'string'
         ? await loadAuthorizationContext(contextOrUserId)
@@ -349,6 +354,8 @@ export class MeetingService {
         authResult.rejectionCode
       );
     }
+
+    assertTransition(meeting.status, MeetingStatus.HELD);
 
     return prisma.$transaction(async (tx) => {
       const updated = await tx.meeting.update({
@@ -410,6 +417,8 @@ export class MeetingService {
         authResult.rejectionCode
       );
     }
+
+    assertTransition(meeting.status, MeetingStatus.MINUTES_DRAFT);
 
     return prisma.$transaction(async (tx) => {
       const updated = await tx.meeting.update({
@@ -481,6 +490,8 @@ export class MeetingService {
         authResult.rejectionCode
       );
     }
+
+    assertTransition(meeting.status, MeetingStatus.MINUTES_CONFIRMED);
 
     return prisma.$transaction(async (tx) => {
       const updated = await tx.meeting.update({
@@ -667,6 +678,64 @@ export class MeetingService {
       });
 
       return resolution;
+    });
+  }
+
+  /**
+   * Hủy cuộc họp (-> CANCELLED)
+   */
+  static async cancelMeeting(
+    meetingId: string,
+    contextOrUserId: AuthorizationContext | string,
+    reason?: string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError("Cuộc họp không tồn tại");
+    }
+
+    const authContext =
+      typeof contextOrUserId === "string"
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, "meeting.update", buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || "Không có quyền hủy cuộc họp.",
+        authResult.rejectionCode
+      );
+    }
+
+    assertTransition(meeting.status, MeetingStatus.CANCELLED);
+
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.meeting.update({
+        where: { id: meetingId },
+        data: {
+          status: MeetingStatus.CANCELLED,
+        },
+      });
+
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
+        action: AuditAction.TASK_STATUS_CHANGED,
+        entityType: "Meeting",
+        entityId: meetingId,
+        requestId,
+        beforeData: { status: meeting.status },
+        afterData: { status: MeetingStatus.CANCELLED, reason },
+      });
+
+      return updated;
     });
   }
 
