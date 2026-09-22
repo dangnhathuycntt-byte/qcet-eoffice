@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import { Network } from "lucide-react";
-import {
-  OrganizationTree,
-  QCET_DEPARTMENTS,
-} from "@/components/org/organization-tree";
+import { OrganizationTree } from "@/components/org/organization-tree";
+import { useOrgDepartments } from "@/hooks/use-org-departments";
 
 /**
  * Org / Directory surface contract (C7 / C15 / D12 / T56).
@@ -19,12 +17,9 @@ import {
  *                    and no timeout-only "refresh" control.
  *
  * Data-source audit (T57):
- * There is no client-facing organizational-units API. The canonical server registry
- * (OrganizationalUnitService over Prisma OrganizationalUnit + UnitClosurePath) is
- * gated behind `org.manage` and is not exposed to the browser. The directory dataset
- * therefore lives in exactly one in-surface source — QCET_DEPARTMENTS — consumed here
- * and rendered by <OrganizationTree/>. The counts below are derived from that same
- * dataset; nothing on this page is fabricated.
+ * Organizational metadata comes from QCET_ORG_UNITS (static config) merged
+ * with personnel from the /api/departments endpoint via useOrgDepartments().
+ * The counts below are derived from that merged dataset.
  *
  * Removed by this migration:
  * - the hard-coded digital-identity coverage claim (T61 — unproven static metric);
@@ -32,15 +27,17 @@ import {
  * - the page-level duplicate print/export actions (single control point, rule ui.md #7).
  */
 export default function OrgPage() {
+  const { departments } = useOrgDepartments();
+
   const totals = React.useMemo(
     () => ({
-      units: QCET_DEPARTMENTS.length,
-      staff: QCET_DEPARTMENTS.reduce(
+      units: departments.length,
+      staff: departments.reduce(
         (acc, dept) => acc + dept.members.length,
         0
       ),
     }),
-    []
+    [departments]
   );
 
   return (

@@ -24,19 +24,24 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { MobileOrgDrillDown } from "./mobile-org-drilldown";
+import {
+  QCET_ORG_UNITS,
+  type DepartmentCategory,
+  type OrgUnitConfig,
+} from "@/lib/org/org-structure";
+import {
+  useDepartmentList,
+  type DepartmentOption,
+  type DepartmentPersonnel,
+} from "@/hooks/use-department-list";
+import { toCanonicalUnitCode } from "@/lib/departments";
 
 export { MobileOrgDrillDown };
+export type { DepartmentCategory } from "@/lib/org/org-structure";
 
 // ============================================================================
 // 1. Data Types & Interfaces
 // ============================================================================
-
-export type DepartmentCategory =
-  | "BGH"
-  | "PHONG_CHUC_NANG"
-  | "KHOA_CHUYEN_MON"
-  | "TRUNG_TAM";
-
 export interface StaffMember {
   id: string;
   name: string;
@@ -71,1078 +76,42 @@ export interface DepartmentNode {
 }
 
 // ============================================================================
-// 2. Comprehensive QCET Institutional Structure (17 Units)
+// 2. Build DepartmentNode[] from static config + API personnel
 // ============================================================================
 
-export const QCET_DEPARTMENTS: DepartmentNode[] = [
-  // --------------------------------------------------------------------------
-  // 1. Ban Giám hiệu
-  // --------------------------------------------------------------------------
-  {
-    id: "dept-bgh",
-    code: "BGH",
-    name: "Ban Giám hiệu",
-    shortName: "Ban Giám hiệu",
-    category: "BGH",
-    categoryLabel: "Lãnh đạo nhà trường",
-    description:
-      "Tập thể lãnh đạo cao nhất trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn, chỉ đạo chiến lược phát triển, chuyển đổi số toàn diện và quản trị chất lượng giáo dục nghề nghiệp.",
-    location: "Tòa nhà Hiệu bộ - Tầng 3",
-    phone: "0256 3846 478",
-    email: "bgh@cdktcnqn.edu.vn",
-    leaderName: "ThS. Đặng Nhật Huy",
-    leaderRole: "Hiệu trưởng",
-    groupField: "Nhóm",
-    members: [
-      {
-        id: "staff-huy-dnh",
-        name: "Đặng Nhật Huy",
-        titlePrefix: "ThS.",
-        role: "Hiệu trưởng",
-        email: "dangnhathuy@cdktcnqn.edu.vn",
-        phone: "0256.3846.478",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-bgh",
-        departmentName: "Ban Giám hiệu",
-        status: "ACTIVE",
-        room: "P.301",
-        responsibilities: [
-          "Phụ trách chung toàn bộ hoạt động nhà trường",
-          "Chỉ đạo chiến lược chuyển đổi số, tổ chức bộ máy và tài chính",
-          "Ký duyệt các quyết định, văn bản QPPL và quy chế nội bộ",
-        ],
-      },
-      {
-        id: "staff-tuong-pv",
-        name: "Phạm Văn Tường",
-        titlePrefix: "ThS.",
-        role: "Phó Hiệu trưởng",
-        email: "tuongpv@cdktcnqn.edu.vn",
-        phone: "0913 400 111",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-bgh",
-        departmentName: "Ban Giám hiệu",
-        status: "ACTIVE",
-        room: "P.302",
-        responsibilities: [
-          "Phụ trách công tác tổ chức cán bộ và hành chính",
-        ],
-      },
-      {
-        id: "staff-kiem-tt",
-        name: "Trần Trọng Kiệm",
-        titlePrefix: "ThS.",
-        role: "Phó Hiệu trưởng phụ trách Đào tạo & NCKH",
-        email: "kiemtt@cdktcnqn.edu.vn",
-        phone: "0903 500 222",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-bgh",
-        departmentName: "Ban Giám hiệu",
-        status: "ACTIVE",
-        room: "P.302",
-        responsibilities: [
-          "Chỉ đạo công tác đào tạo, tuyển sinh và hợp tác doanh nghiệp",
-          "Phụ trách hoạt động nghiên cứu khoa học và chuyển giao công nghệ",
-        ],
-      },
-      {
-        id: "staff-nguyen-lx",
-        name: "Lê Xuân Nguyên",
-        titlePrefix: "ThS.",
-        role: "Phó Hiệu trưởng phụ trách Hành chính & Cơ sở vật chất",
-        email: "nguyenlx@cdktcnqn.edu.vn",
-        phone: "0914 600 333",
-        avatar:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-bgh",
-        departmentName: "Ban Giám hiệu",
-        status: "ACTIVE",
-        room: "P.303",
-        responsibilities: [
-          "Phụ trách công tác hành chính quản trị, quy hoạch cơ sở vật chất",
-          "Chỉ đạo công tác kiểm định chất lượng GDNN và chuyển đổi số hành chính",
-        ],
-      },
-    ],
-  },
-
-  // --------------------------------------------------------------------------
-  // 2. Phòng ban chức năng (6 units matching dashboard-chamcong)
-  // --------------------------------------------------------------------------
-  {
-    id: "dept-p-hcqt",
-    code: "P_HCQT",
-    name: "Phòng Hành chính - Quản trị",
-    shortName: "Hành chính - Quản trị",
-    category: "PHONG_CHUC_NANG",
-    categoryLabel: "Phòng chức năng",
-    description:
-      "Chịu trách nhiệm quản lý văn thư lưu trữ, công tác hành chính tổng hợp, an ninh trật tự, quản trị tài sản và cơ sở vật chất.",
-    location: "Tòa nhà Hiệu bộ - Tầng 1, P.101",
-    phone: "0256 3846 479",
-    email: "hanhchinh@cdktcnqn.edu.vn",
-    leaderName: "ThS. Phan Văn Thanh",
-    leaderRole: "Trưởng phòng",
-    groupField: "Nhóm",
-    notionDbKey: "hanh_chinh_quan_tri",
-    members: [
-      {
-        id: "staff-thanh-pv",
-        name: "Phan Văn Thanh",
-        titlePrefix: "ThS.",
-        role: "Trưởng phòng Hành chính - Quản trị",
-        email: "thanh.phan@cdktcnqn.edu.vn",
-        phone: "0912 333 444",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-hcqt",
-        departmentName: "Phòng Hành chính - Quản trị",
-        status: "ACTIVE",
-        room: "P.101",
-        responsibilities: [
-          "Quản lý điều hành toàn diện công tác hành chính, quản trị",
-          "Đảm bảo an ninh trật tự, xe công vụ và lễ tân đối ngoại",
-        ],
-      },
-      {
-        id: "staff-nam-lh",
-        name: "Lê Hoàng Nam",
-        titlePrefix: "KS.",
-        role: "Chuyên viên tổng hợp HCQT",
-        email: "nam.le@cdktcnqn.edu.vn",
-        phone: "0935 456 789",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-hcqt",
-        departmentName: "Phòng Hành chính - Quản trị",
-        status: "ACTIVE",
-        room: "P.101",
-        responsibilities: [
-          "Quản lý cơ sở vật chất, hệ thống điện nước hội trường",
-          "Điều phối mua sắm vật tư tiêu hao và tài sản công",
-        ],
-      },
-      {
-        id: "staff-nhung-tth",
-        name: "Trương Thị Hồng Nhung",
-        titlePrefix: "CN.",
-        role: "Cán bộ Văn thư - Lưu trữ",
-        email: "nhung.truong@cdktcnqn.edu.vn",
-        phone: "0905 777 888",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-hcqt",
-        departmentName: "Phòng Hành chính - Quản trị",
-        status: "ACTIVE",
-        room: "P.101",
-        responsibilities: [
-          "Tiếp nhận và phát hành văn bản đi/đến điện tử",
-          "Quản lý con dấu nhà trường và lưu trữ văn thư",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-p-tcdbcl",
-    code: "P_TCDBCL",
-    name: "Phòng Tổ chức - Đảm bảo chất lượng",
-    shortName: "Tổ chức - ĐBCL",
-    category: "PHONG_CHUC_NANG",
-    categoryLabel: "Phòng chức năng",
-    description:
-      "Tham mưu kiện toàn tổ chức cán bộ, bổ nhiệm, thi đua khen thưởng, thực hiện tự đánh giá kiểm định cơ sở giáo dục nghề nghiệp và khảo thí.",
-    location: "Tòa nhà Hiệu bộ - Tầng 2, P.202",
-    phone: "0256 3846 481",
-    email: "tochuc@cdktcnqn.edu.vn",
-    leaderName: "ThS. Nguyễn Tiến Phong",
-    leaderRole: "Trưởng phòng",
-    groupField: "Nhóm",
-    notionDbKey: "to_chuc_dbcl",
-    members: [
-      {
-        id: "staff-minh-nc",
-        name: "Nguyễn Tiến Phong",
-        titlePrefix: "ThS.",
-        role: "Trưởng phòng",
-        email: "phongnt@cdktcnqn.edu.vn",
-        phone: "0916 444 555",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tcdbcl",
-        departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        status: "ACTIVE",
-        room: "P.202",
-        responsibilities: [
-          "Chỉ đạo công tác tổ chức cán bộ, đào tạo bồi dưỡng giảng viên",
-          "Lãnh đạo công tác tự đánh giá kiểm định chất lượng GDNN",
-        ],
-      },
-      {
-        id: "staff-hau-dv",
-        name: "Đặng Văn Hậu",
-        titlePrefix: "ThS.",
-        role: "Chuyên viên Khảo thí & ĐBCL",
-        email: "hau.dang@cdktcnqn.edu.vn",
-        phone: "0977 123 456",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tcdbcl",
-        departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        status: "ACTIVE",
-        room: "P.202",
-        responsibilities: [
-          "Quản lý ngân hàng câu hỏi trắc nghiệm và chấm thi điện tử",
-          "Thu thập khảo sát ý kiến doanh nghiệp và người học",
-        ],
-      },
-      {
-        id: "staff-my-ltd",
-        name: "Lê Thị Diễm My",
-        titlePrefix: "ThS.",
-        role: "Chuyên viên Đảm bảo chất lượng",
-        email: "my.le@cdktcnqn.edu.vn",
-        phone: "0989 333 777",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tcdbcl",
-        departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        status: "ACTIVE",
-        room: "P.202",
-        responsibilities: [
-          "Lập báo cáo tự đánh giá chất lượng chương trình đào tạo",
-          "Tổng hợp minh chứng phục vụ đoàn đánh giá ngoài",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-p-qldt",
-    code: "P_QLDT",
-    name: "Phòng Quản lý Đào tạo",
-    shortName: "Quản lý Đào tạo",
-    category: "PHONG_CHUC_NANG",
-    categoryLabel: "Phòng chức năng",
-    description:
-      "Xây dựng kế hoạch giảng dạy, thời khóa biểu, quản lý tiến độ đào tạo, liên kết doanh nghiệp và theo dõi đề tài nghiên cứu khoa học.",
-    location: "Tòa nhà Hiệu bộ - Tầng 1, P.102",
-    phone: "0256 3846 477",
-    email: "daotao@cdktcnqn.edu.vn",
-    leaderName: "ThS. Lê Văn Thí",
-    leaderRole: "Trưởng phòng",
-    groupField: "Nhóm",
-    notionDbKey: "quan_ly_dao_tao",
-    members: [
-      {
-        id: "staff-hung-tv",
-        name: "Lê Văn Thí",
-        titlePrefix: "ThS.",
-        role: "Trưởng phòng",
-        email: "levanthi@cdktcnqn.edu.vn",
-        phone: "0914 111 222",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-qldt",
-        departmentName: "Phòng Quản lý Đào tạo",
-        status: "ACTIVE",
-        room: "P.102",
-        responsibilities: [
-          "Chỉ đạo toàn diện công tác kế hoạch đào tạo, thời khóa biểu",
-          "Phê duyệt hồ sơ mở ngành mới và liên kết đào tạo",
-        ],
-      },
-      {
-        id: "staff-tri-vm",
-        name: "Võ Minh Trí",
-        titlePrefix: "KS.",
-        role: "Chuyên viên Quản lý Đào tạo & E-Office",
-        email: "tri.vo@cdktcnqn.edu.vn",
-        phone: "0905 123 456",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-qldt",
-        departmentName: "Phòng Quản lý Đào tạo",
-        status: "ACTIVE",
-        room: "P.102",
-        responsibilities: [
-          "Quản lý phần mềm đào tạo và cơ sở dữ liệu điểm thi",
-          "Hỗ trợ kỹ thuật E-Office và phân bổ lịch giảng đường",
-        ],
-      },
-      {
-        id: "staff-thuy-ntb",
-        name: "Nguyễn Thị Bích Thủy",
-        titlePrefix: "ThS.",
-        role: "Chuyên viên QLKH & Hợp tác Quốc tế",
-        email: "thuy.nguyen@cdktcnqn.edu.vn",
-        phone: "0976 555 666",
-        avatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-qldt",
-        departmentName: "Phòng Quản lý Đào tạo",
-        status: "ACTIVE",
-        room: "P.102",
-        responsibilities: [
-          "Theo dõi đề tài NCKH, sáng kiến kinh nghiệm cấp trường",
-          "Quản lý hồ sơ dự án hợp tác quốc tế GIZ",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-p-tshtqt",
-    code: "P_TSHTQT",
-    name: "Phòng Tuyển sinh - Hợp tác quốc tế",
-    shortName: "Tuyển sinh - HTQT",
-    category: "PHONG_CHUC_NANG",
-    categoryLabel: "Phòng chức năng",
-    description:
-      "Đầu mối tổ chức công tác tư vấn tuyển sinh các hệ đào tạo, quản lý ký túc xá, chế độ chính sách sinh viên và phát triển dự án hợp tác quốc tế.",
-    location: "Tòa nhà Hiệu bộ - Tầng 1, P.103",
-    phone: "0256 3846 482",
-    email: "tuyensinh@cdktcnqn.edu.vn",
-    leaderName: "ThS. Nguyễn Quốc Vỹ",
-    leaderRole: "Trưởng phòng",
-    groupField: "Nhóm",
-    notionDbKey: "tuyen_sinh_htqt",
-    members: [
-      {
-        id: "staff-tuan-hc",
-        name: "Huỳnh Công Tuấn",
-        titlePrefix: "ThS.",
-        role: "Trưởng phòng Tuyển sinh - HTQT",
-        email: "vynq@cdktcnqn.edu.vn",
-        phone: "0917 888 111",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tshtqt",
-        departmentName: "Phòng Tuyển sinh - Hợp tác quốc tế",
-        status: "ACTIVE",
-        room: "P.103",
-        responsibilities: [
-          "Chỉ đạo đề án truyền thông và chỉ tiêu tuyển sinh năm học",
-          "Điều phối quan hệ quốc tế và liên kết doanh nghiệp tuyển dụng",
-        ],
-      },
-      {
-        id: "staff-ha-ntt",
-        name: "Nguyễn Thị Thanh Hà",
-        titlePrefix: "CN.",
-        role: "Chuyên viên Chính sách & Tuyển sinh",
-        email: "ha.nguyen@cdktcnqn.edu.vn",
-        phone: "0945 666 222",
-        avatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tshtqt",
-        departmentName: "Phòng Tuyển sinh - Hợp tác quốc tế",
-        status: "ACTIVE",
-        room: "P.103",
-        responsibilities: [
-          "Thẩm định hồ sơ tuyển sinh online và học bổng khuyến học",
-          "Tư vấn trực tuyến ngày hội hướng nghiệp cho học sinh THPT",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-p-tc",
-    code: "P_TC",
-    name: "Phòng Tài chính",
-    shortName: "Tài chính",
-    category: "PHONG_CHUC_NANG",
-    categoryLabel: "Phòng chức năng",
-    description:
-      "Tham mưu và thực hiện công tác quản lý tài chính, phân bổ dự toán ngân sách nhà nước, kế toán tiền lương, học phí và giải ngân đầu tư công.",
-    location: "Tòa nhà Hiệu bộ - Tầng 1, P.104",
-    phone: "0256 3846 480",
-    email: "taichinh@cdktcnqn.edu.vn",
-    leaderName: "ThS. Lê Phương Thúy Oanh",
-    leaderRole: "Trưởng phòng / Kế toán trưởng",
-    groupField: "Nhóm",
-    notionDbKey: "tai_chinh",
-    members: [
-      {
-        id: "staff-loan-ttm",
-        name: "Lê Phương Thúy Oanh",
-        titlePrefix: "ThS.",
-        role: "Kế toán trưởng / Trưởng phòng",
-        email: "lephuongthuyoanh@cdktcnqn.edu.vn",
-        phone: "0915 222 333",
-        avatar:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tc",
-        departmentName: "Phòng Tài chính",
-        status: "ACTIVE",
-        room: "P.104",
-        responsibilities: [
-          "Chịu trách nhiệm toàn bộ công tác tài chính, ngân sách",
-          "Lập dự toán tài chính năm và giám sát quy chế chi tiêu nội bộ",
-        ],
-      },
-      {
-        id: "staff-van-ht",
-        name: "Hà Thanh Vân",
-        titlePrefix: "CN.",
-        role: "Kế toán viên Tổng hợp",
-        email: "van.ha@cdktcnqn.edu.vn",
-        phone: "0934 888 999",
-        avatar:
-          "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-p-tc",
-        departmentName: "Phòng Tài chính",
-        status: "ACTIVE",
-        room: "P.104",
-        responsibilities: [
-          "Thực hiện kế toán tiền lương, phụ cấp giảng dạy",
-          "Báo cáo thuế và thanh quyết toán chế độ cán bộ",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-tt-stt",
-    code: "TT_STT",
-    name: "Trung tâm Số - Truyền thông",
-    shortName: "Số - Truyền thông",
-    category: "TRUNG_TAM",
-    categoryLabel: "Trung tâm trực thuộc",
-    description:
-      "Đầu mối kỹ thuật vận hành hệ thống E-Office, máy chủ, cổng thông tin trường, mạng viễn thông và sản xuất ấn phẩm truyền thông số hóa.",
-    location: "Tòa nhà Thư viện & TT Số - Tầng 2, P.204",
-    phone: "0256 3846 486",
-    email: "quantrimang@cdktcnqn.edu.vn",
-    leaderName: "ThS. Mai Đinh Thị Xuân",
-    leaderRole: "Giám đốc Trung tâm",
-    groupField: "Nhóm",
-    notionDbKey: "so_truyen_thong",
-    members: [
-      {
-        id: "staff-xuan-mdt",
-        name: "Mai Đinh Thị Xuân",
-        titlePrefix: "ThS.",
-        role: "Giám đốc Trung tâm Số - Truyền thông",
-        email: "xuan.mai@cdktcnqn.edu.vn",
-        phone: "0918 345 678",
-        avatar:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-tt-stt",
-        departmentName: "Trung tâm Số - Truyền thông",
-        status: "ACTIVE",
-        room: "P.204",
-        responsibilities: [
-          "Chỉ đạo chiến lược truyền thông thương hiệu QCET",
-          "Quản trị cổng tin điện tử, sản xuất video & ấn phẩm số hóa",
-          "Điều phối vận hành ứng dụng văn phòng điện tử E-Office",
-        ],
-      },
-      {
-        id: "staff-huy-dq",
-        name: "Dương Quang Huy",
-        titlePrefix: "KS.",
-        role: "Kỹ sư Quản trị mạng & An toàn thông tin",
-        email: "huy.duong@cdktcnqn.edu.vn",
-        phone: "0938 123 888",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-tt-stt",
-        departmentName: "Trung tâm Số - Truyền thông",
-        status: "ACTIVE",
-        room: "P.204",
-        responsibilities: [
-          "Quản trị hạ tầng máy chủ, WiFi trường và tường lửa",
-          "Hỗ trợ kỹ thuật ứng dụng số hóa nội bộ và sao lưu dữ liệu",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-tt-nnth",
-    code: "TT_NNTH",
-    name: "Trung tâm Ngoại ngữ - Tin học",
-    shortName: "TT Ngoại ngữ - Tin học",
-    category: "TRUNG_TAM",
-    categoryLabel: "Trung tâm trực thuộc",
-    description:
-      "Tổ chức đào tạo, bồi dưỡng và sát hạch cấp chứng chỉ Ngoại ngữ chuẩn quốc tế (TOEIC, IELTS) và Tin học chuẩn kỹ năng quốc gia.",
-    location: "Tòa nhà Thư viện & TT Số - Tầng 1, P.105",
-    phone: "0256 3846 487",
-    email: "nnth@cdktcnqn.edu.vn",
-    leaderName: "ThS. Chu Đình Thắng",
-    leaderRole: "Giám đốc Trung tâm",
-    groupField: "Nhóm",
-    members: [
-      {
-        id: "staff-thang-cd",
-        name: "Chu Đình Thắng",
-        titlePrefix: "ThS.",
-        role: "Giám đốc Trung tâm Ngoại ngữ - Tin học",
-        email: "thang.chu@cdktcnqn.edu.vn",
-        phone: "0913 888 777",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-tt-nnth",
-        departmentName: "Trung tâm Ngoại ngữ - Tin học",
-        status: "ACTIVE",
-        room: "P.105",
-        responsibilities: [
-          "Chỉ đạo điều hành công tác đào tạo chứng chỉ chuẩn đầu ra",
-          "Hợp tác với các tổ chức khảo thí quốc tế (IIG Việt Nam, British Council)",
-        ],
-      },
-      {
-        id: "staff-thu-pt",
-        name: "Phạm Thị Thu",
-        titlePrefix: "ThS.",
-        role: "Chuyên viên Thư viện & Học liệu số",
-        email: "thu.pham@cdktcnqn.edu.vn",
-        phone: "0912 678 901",
-        avatar:
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-tt-nnth",
-        departmentName: "Trung tâm Ngoại ngữ - Tin học",
-        status: "ACTIVE",
-        room: "P.105",
-        responsibilities: [
-          "Quản lý kho học liệu giáo trình điện tử, thư viện số DSpace",
-          "Hỗ trợ sinh viên tra cứu tài liệu học tập và thi chứng chỉ",
-        ],
-      },
-    ],
-  },
-
-  // --------------------------------------------------------------------------
-  // 3. Khoa chuyên môn (9 faculties matching dashboard-chamcong)
-  // --------------------------------------------------------------------------
-  {
-    id: "dept-k-dtth",
-    code: "K_CNTT",
-    name: "Khoa Công nghệ thông tin (Điện tử - Tin học)",
-    shortName: "Khoa CNTT",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo kỹ sư thực hành các chuyên ngành Công nghệ thông tin, Kỹ thuật Phần mềm, An toàn mạng, Thiết kế đồ họa số và Trí tuệ nhân tạo.",
-    location: "Khu Giảng đường C - Tầng 3, P.302",
-    phone: "0256 3846 483",
-    email: "khoadientutinhoc@cdktcnqn.edu.vn",
-    leaderName: "TS. Nguyễn Ngọc Vinh",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dien_tu_tin_hoc",
-    members: [
-      {
-        id: "staff-vinh-nn",
-        name: "Nguyễn Ngọc Vinh",
-        titlePrefix: "TS.",
-        role: "Trưởng khoa / Phụ trách Chuyển đổi số",
-        email: "vinhnn@cdktcnqn.edu.vn",
-        phone: "0909 234 567",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dtth",
-        departmentName: "Khoa Công nghệ thông tin",
-        status: "ACTIVE",
-        room: "C.302",
-        responsibilities: [
-          "Quản lý toàn diện chuyên môn và nhân sự khoa Công nghệ thông tin",
-          "Chủ nhiệm đề án Chuyển đổi số và triển khai E-Office nhà trường",
-          "Giảng dạy chuyên sâu Kiến trúc phần mềm & Cơ sở dữ liệu",
-        ],
-      },
-      {
-        id: "staff-hung-t",
-        name: "Trần Hùng",
-        titlePrefix: "ThS.",
-        role: "Phó Trưởng khoa / An ninh mạng & ATTT",
-        email: "hung.tran@cdktcnqn.edu.vn",
-        phone: "0908 123 456",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dtth",
-        departmentName: "Khoa Công nghệ thông tin",
-        status: "ACTIVE",
-        room: "C.303",
-        responsibilities: [
-          "Phụ trách chuyên môn An toàn thông tin và Quản trị mạng QCET",
-          "Trưởng nhóm ứng cứu sự cố máy tính và bảo mật dữ liệu",
-        ],
-      },
-      {
-        id: "staff-khoi-pd",
-        name: "Phan Đình Khôi",
-        titlePrefix: "ThS.",
-        role: "Giảng viên Bộ môn Phát triển phần mềm",
-        email: "khoi.phan@cdktcnqn.edu.vn",
-        phone: "0983 999 111",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dtth",
-        departmentName: "Khoa Công nghệ thông tin",
-        status: "ACTIVE",
-        room: "C.304",
-        responsibilities: [
-          "Giảng dạy Lập trình Web Full-Stack và Lập trình Di động",
-          "Cố vấn học tập các lớp cao đẳng CNTT K48",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-ck",
-    code: "K_CK",
-    name: "Khoa Cơ khí",
-    shortName: "Khoa Cơ khí",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo kỹ sư thực hành chuyên ngành Cắt gọt kim loại CNC, Công nghệ Hàn công nghệ cao và Thiết kế chế tạo máy công nghiệp.",
-    location: "Khu Xưởng Thực hành A - P.101",
-    phone: "0256 3846 488",
-    email: "khoacokhi@cdktcnqn.edu.vn",
-    leaderName: "TS. Đinh Quốc Cường",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_co_khi",
-    members: [
-      {
-        id: "staff-cuong-dq",
-        name: "Đinh Quốc Cường",
-        titlePrefix: "TS.",
-        role: "Trưởng khoa Cơ khí",
-        email: "cuong.dinh@cdktcnqn.edu.vn",
-        phone: "0919 111 444",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ck",
-        departmentName: "Khoa Cơ khí",
-        status: "ACTIVE",
-        room: "Xưởng A - P.101",
-        responsibilities: [
-          "Lãnh đạo toàn diện các bộ môn cơ khí chế tạo và tự động hóa",
-          "Chủ nhiệm chương trình hiện đại hóa xưởng thực hành kỹ thuật",
-        ],
-      },
-      {
-        id: "staff-nghiep-vv",
-        name: "Vũ Văn Nghiệp",
-        titlePrefix: "ThS.",
-        role: "Phó Trưởng khoa / Kỹ thuật Gia công CNC",
-        email: "nghiep.vu@cdktcnqn.edu.vn",
-        phone: "0906 888 444",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ck",
-        departmentName: "Khoa Cơ khí",
-        status: "ACTIVE",
-        room: "Xưởng A - P.102",
-        responsibilities: [
-          "Quản lý dây chuyền máy phay tiện CNC trung tâm",
-          "Huấn luyện đội tuyển sinh viên thi tay nghề Nghề Tiện/Phay CNC",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-cnoto",
-    code: "K_CNOTO",
-    name: "Khoa Công nghệ Ô tô (Ô tô & Chế tạo máy)",
-    shortName: "Khoa KTCN",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo kỹ sư thực hành chuyên ngành Công nghệ kỹ thuật ô tô, Hệ thống điều khiển điện tử ô tô và Xe điện thông minh (EV).",
-    location: "Khu Xưởng Thực hành D - P.102",
-    phone: "0256 3846 489",
-    email: "khoaoto@cdktcnqn.edu.vn",
-    leaderName: "KS. Vũ Mạnh Hùng",
-    leaderRole: "Phó Trưởng khoa phụ trách",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_cong_nghe_o_to",
-    members: [
-      {
-        id: "staff-hung-vm",
-        name: "Vũ Mạnh Hùng",
-        titlePrefix: "KS.",
-        role: "Phó Trưởng khoa phụ trách Xưởng Ô tô",
-        email: "hung.vu@cdktcnqn.edu.vn",
-        phone: "0906 333 999",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-cnoto",
-        departmentName: "Khoa Công nghệ ô tô",
-        status: "ACTIVE",
-        room: "Xưởng D - P.102",
-        responsibilities: [
-          "Quản lý dây chuyền chẩn đoán điện tử ô tô hiện đại",
-          "Huấn luyện đội tuyển sinh viên thi tay nghề Quốc gia nghề Ô tô",
-        ],
-      },
-      {
-        id: "staff-loc-tb",
-        name: "Trần Bá Lộc",
-        titlePrefix: "ThS.",
-        role: "Giảng viên Điện ô tô & Cơ điện tử",
-        email: "loc.tran@cdktcnqn.edu.vn",
-        phone: "0978 222 111",
-        avatar:
-          "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-cnoto",
-        departmentName: "Khoa Công nghệ ô tô",
-        status: "ACTIVE",
-        room: "Xưởng D - P.103",
-        responsibilities: [
-          "Giảng dạy Chẩn đoán lỗi hộp ECU và mạng truyền thông CAN bus",
-          "Phụ trách phòng thực hành xe điện mô phỏng hybrid",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-dien",
-    code: "K_DIEN",
-    name: "Khoa Điện",
-    shortName: "Khoa Điện",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo chuyên ngành Điện công nghiệp, Kỹ thuật lắp đặt điện tử công suất, Hệ thống pin năng lượng mặt trời và Tự động hóa trạm biến áp.",
-    location: "Khu Giảng đường B - Tầng 1, P.108",
-    phone: "0256 3846 490",
-    email: "khoadien@cdktcnqn.edu.vn",
-    leaderName: "ThS. Nguyễn Văn Thắng",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dien",
-    members: [
-      {
-        id: "staff-thang-nv",
-        name: "Nguyễn Văn Thắng",
-        titlePrefix: "ThS.",
-        role: "Trưởng khoa Điện",
-        email: "thang.nguyen@cdktcnqn.edu.vn",
-        phone: "0915 777 333",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dien",
-        departmentName: "Khoa Điện",
-        status: "ACTIVE",
-        room: "B.108",
-        responsibilities: [
-          "Lãnh đạo chuyên môn đào tạo kỹ sư thực hành nghề Điện công nghiệp",
-          "Quản lý dự án năng lượng mặt trời áp mái nhà trường",
-        ],
-      },
-      {
-        id: "staff-quy-bd",
-        name: "Bùi Đình Quý",
-        titlePrefix: "ThS.",
-        role: "Giảng viên Tự động hóa & PLC",
-        email: "quy.bui@cdktcnqn.edu.vn",
-        phone: "0934 222 111",
-        avatar:
-          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dien",
-        departmentName: "Khoa Điện",
-        status: "ACTIVE",
-        room: "B.109",
-        responsibilities: [
-          "Giảng dạy PLC Siemens S7-1200 và biến tần công nghiệp",
-          "Phụ trách phòng thực hành khí nén Festo",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-dulich",
-    code: "K_DULICH",
-    name: "Khoa Du lịch",
-    shortName: "Khoa Du lịch",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo các ngành Quản trị Khách sạn, Quản trị Nhà hàng & Dịch vụ ăn uống, Kỹ thuật chế biến món ăn và Hướng dẫn viên du lịch quốc tế.",
-    location: "Khu Giảng đường D - Tầng 2, P.201",
-    phone: "0256 3846 491",
-    email: "khoadulich@cdktcnqn.edu.vn",
-    leaderName: "ThS. Phan Thị Phương Thảo",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_du_lich",
-    members: [
-      {
-        id: "staff-thao-ptp",
-        name: "Phan Thị Phương Thảo",
-        titlePrefix: "ThS.",
-        role: "Trưởng khoa Du lịch",
-        email: "thao.phan@cdktcnqn.edu.vn",
-        phone: "0918 555 999",
-        avatar:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dulich",
-        departmentName: "Khoa Du lịch",
-        status: "ACTIVE",
-        room: "D.201",
-        responsibilities: [
-          "Quản lý điều hành đào tạo ngành khách sạn, ẩm thực và du lịch",
-          "Ký kết hợp tác thực tập sinh với chuỗi resort 5 sao tại Quy Nhơn",
-        ],
-      },
-      {
-        id: "staff-nam-hn",
-        name: "Hoàng Nhật Nam",
-        titlePrefix: "ThS.",
-        role: "Giảng viên Quản trị Khách sạn",
-        email: "nam.hoang@cdktcnqn.edu.vn",
-        phone: "0905 666 444",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-dulich",
-        departmentName: "Khoa Du lịch",
-        status: "ACTIVE",
-        room: "D.202",
-        responsibilities: [
-          "Giảng dạy Nghiệp vụ Lễ tân và Quản trị Buồng phòng tiêu chuẩn VTOS",
-          "Quản lý phòng thực hành buồng mẫu khách sạn 4 sao",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-ktth",
-    code: "K_KTQT",
-    name: "Khoa Kinh tế - Quản trị (Kinh tế tổng hợp)",
-    shortName: "Khoa KTQT",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo Kế toán doanh nghiệp, Quản trị kinh doanh số, Logistics & Quản lý chuỗi cung ứng, Thương mại điện tử chất lượng cao.",
-    location: "Khu Giảng đường B - Tầng 2, P.205",
-    phone: "0256 3846 484",
-    email: "khoaktth@cdktcnqn.edu.vn",
-    leaderName: "TS. Lê Thị Ánh Tuyết",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_kinh_te_tong_hop",
-    members: [
-      {
-        id: "staff-tuyet-lta",
-        name: "Lê Thị Ánh Tuyết",
-        titlePrefix: "TS.",
-        role: "Trưởng khoa Kinh tế - Tổng hợp",
-        email: "tuyet.le@cdktcnqn.edu.vn",
-        phone: "0918 222 666",
-        avatar:
-          "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ktth",
-        departmentName: "Khoa Kinh tế - Tổng hợp",
-        status: "ACTIVE",
-        room: "B.205",
-        responsibilities: [
-          "Quản lý điều hành đào tạo các ngành khối kinh tế và quản trị",
-          "Kết nối doanh nghiệp thực tập sinh khối tài chính - kế toán",
-        ],
-      },
-      {
-        id: "staff-son-dh",
-        name: "Đỗ Hoàng Sơn",
-        titlePrefix: "ThS.",
-        role: "Phó Trưởng khoa / Trưởng bộ môn Kế toán",
-        email: "son.do@cdktcnqn.edu.vn",
-        phone: "0932 777 555",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ktth",
-        departmentName: "Khoa Kinh tế - Tổng hợp",
-        status: "ACTIVE",
-        room: "B.206",
-        responsibilities: [
-          "Quản lý chuyên môn Kế toán tài chính, Kế toán quản trị",
-          "Tổ chức hội thi tay nghề Kế toán sinh viên cấp trường",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-ktnn",
-    code: "K_KTNN",
-    name: "Khoa Kỹ thuật nông nghiệp",
-    shortName: "Khoa Kỹ thuật nông nghiệp",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo Nông nghiệp công nghệ cao, Trồng trọt thông minh, Bảo vệ thực vật và Thú y ứng dụng phục vụ kinh tế nông nghiệp miền Trung.",
-    location: "Khu Giảng đường Nông nghiệp & Trại thực nghiệm",
-    phone: "0256 3846 492",
-    email: "khoann@cdktcnqn.edu.vn",
-    leaderName: "ThS. Nguyễn Hữu Dũng",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_ky_thuat_nong_nghiep",
-    members: [
-      {
-        id: "staff-dung-nh",
-        name: "Nguyễn Hữu Dũng",
-        titlePrefix: "ThS.",
-        role: "Trưởng khoa Kỹ thuật nông nghiệp",
-        email: "dung.nguyenhuu@cdktcnqn.edu.vn",
-        phone: "0913 999 123",
-        avatar:
-          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ktnn",
-        departmentName: "Khoa Kỹ thuật nông nghiệp",
-        status: "ACTIVE",
-        room: "NN.101",
-        responsibilities: [
-          "Lãnh đạo hoạt động đào tạo và nghiên cứu ứng dụng nông nghiệp công nghệ cao",
-          "Quản lý khu trại thực nghiệm nhà lưới thủy canh thông minh",
-        ],
-      },
-      {
-        id: "staff-lan-pn",
-        name: "Phạm Ngọc Lan",
-        titlePrefix: "KS.",
-        role: "Giảng viên Trồng trọt & Công nghệ sinh học",
-        email: "lan.pham@cdktcnqn.edu.vn",
-        phone: "0987 654 321",
-        avatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-ktnn",
-        departmentName: "Khoa Kỹ thuật nông nghiệp",
-        status: "ACTIVE",
-        room: "NN.102",
-        responsibilities: [
-          "Giảng dạy Sinh học cây trồng, Kỹ thuật nhân giống vô tính",
-          "Hướng dẫn đề tài nghiên cứu vườn ươm dược liệu",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-vhnt",
-    code: "K_VHNT",
-    name: "Khoa Văn hóa nghệ thuật",
-    shortName: "Khoa Văn hóa nghệ thuật",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Đào tạo Thanh nhạc, Biểu diễn nhạc cụ truyền thống, Biên đạo múa, Quản lý văn hóa cơ sở và Thiết kế mỹ thuật ứng dụng.",
-    location: "Khu Giảng đường Nghệ thuật - Tòa E",
-    phone: "0256 3846 493",
-    email: "khoavhnt@cdktcnqn.edu.vn",
-    leaderName: "ThS. Đặng Thị Bích Hạnh",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_van_hoa_nghe_thuat",
-    members: [
-      {
-        id: "staff-hanh-dtb",
-        name: "Đặng Thị Bích Hạnh",
-        titlePrefix: "ThS.",
-        role: "Trưởng khoa Văn hóa nghệ thuật",
-        email: "hanh.dang@cdktcnqn.edu.vn",
-        phone: "0912 888 222",
-        avatar:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-vhnt",
-        departmentName: "Khoa Văn hóa nghệ thuật",
-        status: "ACTIVE",
-        room: "E.101",
-        responsibilities: [
-          "Chỉ đạo nghệ thuật các chương trình biểu diễn giao lưu văn hóa nhà trường",
-          "Quản lý đào tạo các bộ môn nghệ thuật biểu diễn dân gian và đương đại",
-        ],
-      },
-      {
-        id: "staff-long-nt",
-        name: "Nguyễn Thanh Long",
-        titlePrefix: "CN.",
-        role: "Giảng viên Bộ môn Thanh nhạc & Nhạc cụ",
-        email: "long.nguyen@cdktcnqn.edu.vn",
-        phone: "0935 999 888",
-        avatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-vhnt",
-        departmentName: "Khoa Văn hóa nghệ thuật",
-        status: "ACTIVE",
-        room: "E.102",
-        responsibilities: [
-          "Giảng dạy kỹ thuật luyện thanh, piano và hòa tấu dàn nhạc",
-          "Dàn dựng các tiết mục biểu diễn hội thi văn nghệ học sinh sinh viên",
-        ],
-      },
-    ],
-  },
-  {
-    id: "dept-k-daicuong",
-    code: "K_DAICUONG",
-    name: "Khoa Đại cương",
-    shortName: "Khoa Đại cương",
-    category: "KHOA_CHUYEN_MON",
-    categoryLabel: "Khoa chuyên môn",
-    description:
-      "Giảng dạy các học phần khoa học cơ bản (Toán cao cấp, Vật lý đại cương), Lý luận chính trị, Giáo dục quốc phòng và Giáo dục thể chất cho toàn trường.",
-    location: "Khu Giảng đường B - Tầng 3, P.305",
-    phone: "0256 3846 494",
-    email: "khoadaicuong@cdktcnqn.edu.vn",
-    leaderName: "ThS. Trịnh Văn Minh",
-    leaderRole: "Trưởng khoa",
-    groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dai_cuong",
-    members: [
-      {
-        id: "staff-minh-tv",
-        name: "Trịnh Văn Minh",
-        titlePrefix: "ThS.",
-        role: "Trưởng khoa Đại cương",
-        email: "minh.trinh@cdktcnqn.edu.vn",
-        phone: "0916 333 777",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-daicuong",
-        departmentName: "Khoa Đại cương",
-        status: "ACTIVE",
-        room: "B.305",
-        responsibilities: [
-          "Lãnh đạo phân bổ giảng viên các bộ môn khoa học cơ bản và chính trị",
-          "Giám sát chất lượng giảng dạy đại cương các khóa K47, K48",
-        ],
-      },
-      {
-        id: "staff-oanh-ttk",
-        name: "Trần Thị Kim Oanh",
-        titlePrefix: "ThS.",
-        role: "Giảng viên Bộ môn Toán & Thống kê",
-        email: "oanh.tran@cdktcnqn.edu.vn",
-        phone: "0982 123 456",
-        avatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
-        departmentId: "dept-k-daicuong",
-        departmentName: "Khoa Đại cương",
-        status: "ACTIVE",
-        room: "B.306",
-        responsibilities: [
-          "Giảng dạy Toán cao cấp, Thống kê ứng dụng cho khối kỹ thuật và kinh tế",
-          "Cố vấn học tập và rèn luyện kỹ năng tư duy logic cho sinh viên",
-        ],
-      },
-    ],
-  },
-];
-
-// Compatibility aliases for legacy test suites
-// Ensure old test codes resolve seamlessly
-export const LEGACY_CODE_MAP: Record<string, string> = {
-  P_DTQLKH: "P_QLDT",
-  P_KTDBCL: "P_TCDBCL",
-  P_CTHSSV: "P_TSHTQT",
-  P_KHTC: "P_TC",
-  TT_DCC: "TT_STT",
-  K_CNTT: "K_DTTH",
-  K_KTQT: "K_KTTH",
-  K_KTCN: "K_CNOTO",
-};
+export function buildDepartmentNodes(
+  orgUnits: OrgUnitConfig[],
+  apiDepartments: DepartmentOption[],
+): DepartmentNode[] {
+  return orgUnits.map((unit) => {
+    const apiDept = apiDepartments.find(
+      (d) => d.code === unit.code || d.id === unit.code,
+    );
+    const members: StaffMember[] = (apiDept?.personnel ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      titlePrefix:
+        p.title?.match(
+          /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.)\s*/i,
+        )?.[1] || "",
+      role: p.role || "",
+      email: p.email || "",
+      departmentId: unit.id,
+      departmentName: unit.name,
+      status: "ACTIVE" as const,
+    }));
+    const leader =
+      members.find((m) =>
+        ["TRUONG_DON_VI", "BAN_GIAM_HIEU", "ADMIN"].includes(m.role),
+      ) || members[0];
+    return {
+      ...unit,
+      leaderName: leader ? `${leader.titlePrefix} ${leader.name}`.trim() : "",
+      leaderRole: leader?.role || "",
+      members,
+    };
+  });
+}
 
 // ============================================================================
 // 3. Search & Filter Helpers
@@ -1322,6 +291,13 @@ export function OrganizationTree({
   // first commit can never overwrite an already-stored position.
   const orgContextHydratedRef = React.useRef(false);
 
+  // Merge static org-unit config with API personnel data
+  const { departments: apiDepts } = useDepartmentList({ includePersonnel: true });
+  const departments = React.useMemo(
+    () => buildDepartmentNodes(QCET_ORG_UNITS, apiDepts),
+    [apiDepts],
+  );
+
   React.useEffect(() => {
     if (!persistContext || !orgContextHydratedRef.current || typeof window === "undefined") return;
     const payload: PersistedOrgTreeState = {
@@ -1371,23 +347,23 @@ export function OrganizationTree({
   };
 
   // Categories list
-  const categoriesList: {
+  const categoriesList = React.useMemo<{
     category: DepartmentCategory;
     label: string;
     icon: typeof Building2;
     departments: DepartmentNode[];
-  }[] = [
+  }[]>(() => [
     {
       category: "BGH",
       label: "Ban Giám hiệu",
       icon: Building2,
-      departments: QCET_DEPARTMENTS.filter((d) => d.category === "BGH"),
+      departments: departments.filter((d) => d.category === "BGH"),
     },
     {
       category: "PHONG_CHUC_NANG",
       label: "Phòng chức năng",
       icon: Briefcase,
-      departments: QCET_DEPARTMENTS.filter(
+      departments: departments.filter(
         (d) => d.category === "PHONG_CHUC_NANG"
       ),
     },
@@ -1395,7 +371,7 @@ export function OrganizationTree({
       category: "KHOA_CHUYEN_MON",
       label: "Khoa chuyên môn",
       icon: GraduationCap,
-      departments: QCET_DEPARTMENTS.filter(
+      departments: departments.filter(
         (d) => d.category === "KHOA_CHUYEN_MON"
       ),
     },
@@ -1403,21 +379,21 @@ export function OrganizationTree({
       category: "TRUNG_TAM",
       label: "Trung tâm trực thuộc",
       icon: Globe,
-      departments: QCET_DEPARTMENTS.filter((d) => d.category === "TRUNG_TAM"),
+      departments: departments.filter((d) => d.category === "TRUNG_TAM"),
     },
-  ];
+  ], [departments]);
 
   // Current selected department
-  const selectedDepartment = QCET_DEPARTMENTS.find(
+  const selectedDepartment = departments.find(
     (d) =>
       d.code === selectedDeptCode ||
-      LEGACY_CODE_MAP[selectedDeptCode || ""] === d.code
+      toCanonicalUnitCode(selectedDeptCode || "") === d.code
   );
 
   // Total school staff count — derived from the directory's own members (T61).
   const totalHeadcount = React.useMemo(() => {
-    return QCET_DEPARTMENTS.reduce((acc, d) => acc + d.members.length, 0);
-  }, []);
+    return departments.reduce((acc, d) => acc + d.members.length, 0);
+  }, [departments]);
 
 
 
@@ -1426,9 +402,9 @@ export function OrganizationTree({
     let list: StaffMember[] = [];
 
     if (searchQuery.trim()) {
-      list = filterStaffMembers(QCET_DEPARTMENTS, searchQuery);
+      list = filterStaffMembers(departments, searchQuery);
     } else if (selectedDeptCode === null || selectedDeptCode === "ALL") {
-      list = QCET_DEPARTMENTS.flatMap((d) => d.members);
+      list = departments.flatMap((d) => d.members);
     } else if (selectedDepartment) {
       list = selectedDepartment.members;
     }
@@ -1455,7 +431,7 @@ export function OrganizationTree({
     }
 
     return list;
-  }, [searchQuery, selectedDeptCode, selectedDepartment, roleFilter]);
+  }, [departments, searchQuery, selectedDeptCode, selectedDepartment, roleFilter]);
 
   const handleOpenStaff = (staff: StaffMember) => {
     setActiveProfileStaff(staff);
@@ -1496,7 +472,7 @@ export function OrganizationTree({
             <Users className="size-3.5 text-indigo-500" strokeWidth={1.5} />
             <span>Danh bạ & Cây tổ chức</span>
             <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
-              {QCET_DEPARTMENTS.reduce((sum, d) => sum + d.members.length, 0)}
+              {departments.reduce((sum, d) => sum + d.members.length, 0)}
             </Badge>
           </button>
           <button
@@ -1512,7 +488,7 @@ export function OrganizationTree({
             <LayoutGrid className="size-3.5 text-primary" strokeWidth={1.5} />
             <span>Sơ đồ đơn vị</span>
             <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
-              {QCET_DEPARTMENTS.length}
+              {departments.length}
             </Badge>
           </button>
         </div>
@@ -1521,7 +497,7 @@ export function OrganizationTree({
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <button
             type="button"
-            onClick={() => exportDirectoryToCSV(QCET_DEPARTMENTS)}
+            onClick={() => exportDirectoryToCSV(departments)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-muted/70 shadow-2xs transition-all cursor-pointer"
             title="Xuất file CSV danh bạ"
           >
@@ -1560,7 +536,7 @@ export function OrganizationTree({
                   : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
-              Toàn trường ({QCET_DEPARTMENTS.length})
+              Toàn trường ({departments.length})
             </button>
             {categoriesList.map((cat) => {
               const count = cat.departments.length;
@@ -1587,7 +563,7 @@ export function OrganizationTree({
 
           {/* Bento Grid Layout of All 17 Departments */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {QCET_DEPARTMENTS.map((dept) => {
+            {departments.map((dept) => {
               const Icon = getCategoryIcon(dept.category);
               const isSelected = selectedDeptCode === dept.code;
 
@@ -1823,14 +799,14 @@ export function OrganizationTree({
                       <Building2 className="size-3.5" strokeWidth={1.5} />
                     </span>
                     <span className="text-xs font-bold text-foreground">
-                      Cơ cấu {QCET_DEPARTMENTS.length} đơn vị QCET
+                      Cơ cấu {departments.length} đơn vị QCET
                     </span>
                   </div>
                   <Badge
                     variant="secondary"
                     className="text-xs h-5 px-2 font-semibold rounded-full font-mono tabular-nums"
                   >
-                    {QCET_DEPARTMENTS.length} đơn vị
+                    {departments.length} đơn vị
                   </Badge>
                 </div>
 

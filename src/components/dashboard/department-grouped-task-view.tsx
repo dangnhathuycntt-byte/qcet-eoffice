@@ -24,7 +24,7 @@ import {
   type DepartmentTaskGroup,
   type DepartmentRAGStatus,
 } from "@/lib/department-task-aggregator";
-import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
+import { useOrgDepartments } from "@/hooks/use-org-departments";
 import { toCanonicalUnitCode } from "@/lib/departments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,12 +141,14 @@ export function DepartmentGroupedTaskView({
   initialExpandedDeptIds,
   initialVisibleCounts,
 }: DepartmentGroupedTaskViewProps) {
+  const { departments: allDepartments } = useOrgDepartments();
+
   const [expandedDeptIds, setExpandedDeptIds] = React.useState<Set<string>>(() => {
     if (initialExpandedDeptIds) {
       return new Set(initialExpandedDeptIds);
     }
     if (selectedDepartmentFilter && selectedDepartmentFilter !== "ALL") {
-      const matched = QCET_DEPARTMENTS.find(
+      const matched = allDepartments.find(
         (d) =>
           d.code.toUpperCase() === selectedDepartmentFilter.toUpperCase() ||
           d.id.toUpperCase() === selectedDepartmentFilter.toUpperCase()
@@ -154,7 +156,7 @@ export function DepartmentGroupedTaskView({
       if (matched) return new Set([matched.id]);
     }
     // Mặc định mở rộng 3 đơn vị đầu tiên
-    return new Set(QCET_DEPARTMENTS.slice(0, 3).map((d) => d.id));
+    return new Set(allDepartments.slice(0, 3).map((d) => d.id));
   });
 
   const [visibleCounts, setVisibleCounts] = React.useState<Record<string, number>>(
@@ -192,7 +194,7 @@ export function DepartmentGroupedTaskView({
   };
 
   const departmentGroups = React.useMemo(() => {
-    let groups = aggregateTasksByDepartment(tasks, QCET_DEPARTMENTS);
+    let groups = aggregateTasksByDepartment(tasks, allDepartments);
 
     // Lọc theo selectedDepartmentFilter nếu có
     if (selectedDepartmentFilter && selectedDepartmentFilter !== "ALL") {

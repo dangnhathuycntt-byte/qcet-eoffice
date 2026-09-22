@@ -6,18 +6,22 @@ import {
   matchesDepartmentSearch,
   DEPARTMENT_TIERS,
 } from "../src/components/layout/scope-switcher";
-import { QCET_DEPARTMENTS } from "../src/components/org/organization-tree";
+import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
+import { buildDepartmentNodes } from "../src/components/org/organization-tree";
+
+/** Build DepartmentNode[] from static config for testing. */
+const allDepartments = buildDepartmentNodes(QCET_ORG_UNITS, []);
 
 describe("ScopeSwitcher Ergonomics & Zero-Hardcode Suite", () => {
   test("formatDepartmentLabel outputs clean non-truncating labels", () => {
-    const cntt = QCET_DEPARTMENTS.find((d) => d.code === "K_CNTT");
+    const cntt = allDepartments.find((d) => d.code === "K_CNTT");
     assert.ok(cntt);
     const label = formatDepartmentLabel(cntt);
     assert.strictEqual(label, "Khoa Công nghệ thông tin");
   });
 
   test("DEPARTMENT_TIERS correctly partitions all 16 non-BGH operational units", () => {
-    const standardDepartments = QCET_DEPARTMENTS.filter(
+    const standardDepartments = allDepartments.filter(
       (dept) => dept.code !== "BGH" && dept.category !== "BGH"
     );
     assert.strictEqual(
@@ -63,7 +67,7 @@ describe("ScopeSwitcher Ergonomics & Zero-Hardcode Suite", () => {
   });
 
   test("matchesDepartmentSearch correctly matches unaccented queries (cntt, dao tao, dien)", () => {
-    const standardDepartments = QCET_DEPARTMENTS.filter(
+    const standardDepartments = allDepartments.filter(
       (dept) => dept.code !== "BGH" && dept.category !== "BGH"
     );
 
@@ -79,19 +83,19 @@ describe("ScopeSwitcher Ergonomics & Zero-Hardcode Suite", () => {
       "Query 'cntt' must match K_CNTT"
     );
 
-    // 'dao tao' query matches Phòng Đào tạo & Quản lý khoa học
+    // 'dao tao' query matches Phòng Quản lý Đào tạo
     const daoTaoMatches = standardDepartments.filter((d) => matchesDepartmentSearch(d, "dao tao"));
     assert.ok(daoTaoMatches.length >= 1, "Query 'dao tao' must find at least one match");
     assert.ok(
-      daoTaoMatches.some((d) => d.code === "P_DTQLKH" || d.name.includes("Đào tạo")),
+      daoTaoMatches.some((d) => d.name.includes("Đào tạo")),
       "Query 'dao tao' must match đào tạo department"
     );
 
-    // 'dien' query matches Khoa Điện - Điện tử
+    // 'dien' query matches Khoa Điện
     const dienMatches = standardDepartments.filter((d) => matchesDepartmentSearch(d, "dien"));
     assert.ok(dienMatches.length >= 1, "Query 'dien' must find at least one match");
     assert.ok(
-      dienMatches.some((d) => d.code === "K_DDT" || d.name.includes("Điện")),
+      dienMatches.some((d) => d.name.includes("Điện")),
       "Query 'dien' must match Khoa Điện"
     );
 

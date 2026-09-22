@@ -6,7 +6,7 @@ import {
   toCanonicalUnitCode,
   isCanonicalUnitCode,
 } from '../src/lib/departments';
-import { QCET_DEPARTMENTS } from '../src/components/org/organization-tree';
+import { QCET_ORG_UNITS } from '../src/lib/org/org-structure';
 import { DEFAULT_DEMO_USERS } from '../src/lib/role-task-filter';
 
 describe('QCET Real Organization & Seed Alignment Suite', () => {
@@ -129,9 +129,9 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
     assert.strictEqual(isCanonicalUnitCode('INVALID_NON_EXISTENT_UNIT'), false);
   });
 
-  test('3. QCET_DEPARTMENTS in organization-tree has 15+ units and 100% @cdktcnqn.edu.vn emails', () => {
-    assert.ok(QCET_DEPARTMENTS.length >= 15);
-    const codes = QCET_DEPARTMENTS.map((d) => d.code);
+  test('3. QCET_ORG_UNITS has 15+ units and 100% @cdktcnqn.edu.vn emails', () => {
+    assert.ok(QCET_ORG_UNITS.length >= 15);
+    const codes = QCET_ORG_UNITS.map((d) => d.code);
 
     // Verify key units exist
     assert.ok(codes.includes('BGH'), 'BGH must exist in organization tree');
@@ -152,28 +152,16 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
     assert.ok(codes.includes('K_DAICUONG'), 'K_DAICUONG must exist in organization tree');
 
     // All department emails must use @cdktcnqn.edu.vn and none use @qcet.edu.vn
-    for (const dept of QCET_DEPARTMENTS) {
+    for (const unit of QCET_ORG_UNITS) {
       assert.ok(
-        dept.email.endsWith('@cdktcnqn.edu.vn'),
-        `Department email ${dept.email} must end with @cdktcnqn.edu.vn`
+        unit.email.endsWith('@cdktcnqn.edu.vn'),
+        `Department email ${unit.email} must end with @cdktcnqn.edu.vn`
       );
       assert.strictEqual(
-        dept.email.includes('@qcet.edu.vn'),
+        unit.email.includes('@qcet.edu.vn'),
         false,
-        `Department email ${dept.email} must not use @qcet.edu.vn`
+        `Department email ${unit.email} must not use @qcet.edu.vn`
       );
-
-      for (const member of dept.members) {
-        assert.ok(
-          member.email.endsWith('@cdktcnqn.edu.vn'),
-          `Member email ${member.email} must end with @cdktcnqn.edu.vn`
-        );
-        assert.strictEqual(
-          member.email.includes('@qcet.edu.vn'),
-          false,
-          `Member email ${member.email} must not use @qcet.edu.vn`
-        );
-      }
     }
   });
 

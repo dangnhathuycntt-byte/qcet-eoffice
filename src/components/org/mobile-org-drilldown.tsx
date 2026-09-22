@@ -17,12 +17,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
-  QCET_DEPARTMENTS,
   type DepartmentNode,
   type DepartmentCategory,
   type StaffMember,
   filterStaffMembers,
 } from "@/components/org/organization-tree";
+import { useOrgDepartments } from "@/hooks/use-org-departments";
 
 export type MobileOrgLevel = "root" | "group" | "dept";
 
@@ -57,15 +57,17 @@ export function MobileOrgDrillDown({
   className,
   persistContext = false,
 }: MobileOrgDrillDownProps) {
+  const { departments: allDepartments } = useOrgDepartments();
+
   // Find initial department if provided
   const initialDept = React.useMemo(() => {
     if (!initialDepartmentCode || initialDepartmentCode === "ALL") return null;
     return (
-      QCET_DEPARTMENTS.find(
+      allDepartments.find(
         (d) => d.code.toLowerCase() === initialDepartmentCode.toLowerCase() || d.id === initialDepartmentCode
       ) || null
     );
-  }, [initialDepartmentCode]);
+  }, [initialDepartmentCode, allDepartments]);
 
   const [currentLevel, setCurrentLevel] = React.useState<MobileOrgLevel>(
     initialDept ? "dept" : "root"
@@ -110,7 +112,7 @@ export function MobileOrgDrillDown({
         if (raw) {
           const persisted = JSON.parse(raw) as PersistedMobileOrgState;
           const dept = persisted.deptCode
-            ? (QCET_DEPARTMENTS.find((d) => d.code === persisted.deptCode) ?? null)
+            ? (allDepartments.find((d) => d.code === persisted.deptCode) ?? null)
             : null;
           if (persisted.level === "dept" && dept) {
             setSelectedDept(dept);
@@ -134,11 +136,11 @@ export function MobileOrgDrillDown({
   }, [persistContext, initialDepartmentCode]);
 
   // Metrics for groups
-  const bghDept = QCET_DEPARTMENTS.find((d) => d.category === "BGH");
+  const bghDept = allDepartments.find((d) => d.category === "BGH");
   const bghMembersCount = bghDept?.members.length ?? 5;
-  const phongCount = QCET_DEPARTMENTS.filter((d) => d.category === "PHONG_CHUC_NANG").length;
-  const khoaCount = QCET_DEPARTMENTS.filter((d) => d.category === "KHOA_CHUYEN_MON").length;
-  const ttCount = QCET_DEPARTMENTS.filter((d) => d.category === "TRUNG_TAM").length;
+  const phongCount = allDepartments.filter((d) => d.category === "PHONG_CHUC_NANG").length;
+  const khoaCount = allDepartments.filter((d) => d.category === "KHOA_CHUYEN_MON").length;
+  const ttCount = allDepartments.filter((d) => d.category === "TRUNG_TAM").length;
 
   const orgGroups: OrgGroupMeta[] = [
     {
@@ -227,14 +229,14 @@ export function MobileOrgDrillDown({
   // Filtered search results
   const searchResults = React.useMemo(() => {
     if (!isSearching) return [];
-    return filterStaffMembers(QCET_DEPARTMENTS, searchQuery);
-  }, [isSearching, searchQuery]);
+    return filterStaffMembers(allDepartments, searchQuery);
+  }, [isSearching, searchQuery, allDepartments]);
 
   // Departments in selected group
   const groupDepartments = React.useMemo(() => {
     if (!selectedGroup) return [];
-    return QCET_DEPARTMENTS.filter((d) => d.category === selectedGroup);
-  }, [selectedGroup]);
+    return allDepartments.filter((d) => d.category === selectedGroup);
+  }, [selectedGroup, allDepartments]);
 
   return (
     <div

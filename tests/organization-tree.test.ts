@@ -1,29 +1,29 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
-  QCET_DEPARTMENTS,
   filterStaffMembers,
+  buildDepartmentNodes,
   type DepartmentNode,
   type StaffMember,
 } from "../src/components/org/organization-tree";
+import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("OrganizationTree Helpers", () => {
-  test("QCET_DEPARTMENTS contains BGH, Functional Rooms, Faculties, and Centers", () => {
-    assert.ok(QCET_DEPARTMENTS.length >= 4);
-    const bgh = QCET_DEPARTMENTS.find((d) => d.code === "BGH");
+  test("QCET_ORG_UNITS contains BGH, Functional Rooms, Faculties, and Centers", () => {
+    assert.ok(QCET_ORG_UNITS.length >= 4);
+    const bgh = QCET_ORG_UNITS.find((d) => d.code === "BGH");
     assert.ok(bgh);
-    assert.ok(bgh!.members.length > 0);
 
     // Verify groups/categories
-    const categories = new Set(QCET_DEPARTMENTS.map((d) => d.category));
+    const categories = new Set(QCET_ORG_UNITS.map((d) => d.category));
     assert.ok(categories.has("BGH"));
     assert.ok(categories.has("PHONG_CHUC_NANG"));
     assert.ok(categories.has("KHOA_CHUYEN_MON"));
     assert.ok(categories.has("TRUNG_TAM"));
   });
 
-  test("QCET_DEPARTMENTS includes all authentic QCET units", () => {
-    const codes = QCET_DEPARTMENTS.map((d) => d.code);
+  test("QCET_ORG_UNITS includes all authentic QCET units", () => {
+    const codes = QCET_ORG_UNITS.map((d) => d.code);
     // Functional rooms
     assert.ok(codes.includes("P_QLDT") || codes.includes("P_DTQLKH"), "Phòng Quản lý Đào tạo should exist");
     assert.ok(codes.includes("P_HCQT"), "Phòng Hành chính - Quản trị should exist");
@@ -41,64 +41,42 @@ describe("OrganizationTree Helpers", () => {
     assert.ok(codes.includes("TT_NNTH"), "Trung tâm Ngoại ngữ - Tin học should exist");
   });
 
-  test("QCET_DEPARTMENTS includes all key personnel from earlier tasks", () => {
-    const allStaff: StaffMember[] = QCET_DEPARTMENTS.flatMap((d) => d.members);
-    const staffNames = allStaff.map((s) => s.name);
-
-    assert.ok(staffNames.includes("Trần Hùng"), "Trần Hùng should exist");
-    assert.ok(staffNames.includes("Nguyễn Ngọc Vinh"), "Nguyễn Ngọc Vinh should exist");
-    assert.ok(staffNames.includes("Mai Đinh Thị Xuân"), "Mai Đinh Thị Xuân should exist");
-    assert.ok(staffNames.includes("Lê Hoàng Nam"), "Lê Hoàng Nam should exist");
-    assert.ok(staffNames.includes("Phạm Thị Thu"), "Phạm Thị Thu should exist");
-    assert.ok(staffNames.includes("Đặng Văn Hậu"), "Đặng Văn Hậu should exist");
-    assert.ok(staffNames.includes("Võ Minh Trí"), "Võ Minh Trí should exist");
-  });
-
-  test("filterStaffMembers searches by name, email, and department", () => {
-    // Search by full name
-    const resultsName = filterStaffMembers(QCET_DEPARTMENTS, "Trần Hùng");
-    assert.ok(resultsName.length >= 1);
-    assert.equal(resultsName[0].name, "Trần Hùng");
-
-    // Search case-insensitive and partial
-    const resultsPartial = filterStaffMembers(QCET_DEPARTMENTS, "ngọc vinh");
-    assert.ok(resultsPartial.length >= 1);
-    assert.equal(resultsPartial[0].name, "Nguyễn Ngọc Vinh");
-
-    // Search by email
-    const resultsEmail = filterStaffMembers(QCET_DEPARTMENTS, "@qcet.edu.vn");
-    assert.ok(resultsEmail.length >= 7);
-
-    // Search by department name
-    const resultsDept = filterStaffMembers(QCET_DEPARTMENTS, "Công nghệ thông tin");
-    assert.ok(resultsDept.length >= 1);
-
-    // Empty query returns all staff
-    const allStaff = QCET_DEPARTMENTS.flatMap((d) => d.members);
-    const resultsEmpty = filterStaffMembers(QCET_DEPARTMENTS, "");
-    assert.equal(resultsEmpty.length, allStaff.length);
-  });
-
-  test("Each StaffMember has required directory properties and clean academic title prefixes", () => {
-    const allStaff = QCET_DEPARTMENTS.flatMap((d) => d.members);
-    for (const member of allStaff) {
-      assert.ok(member.id, "Staff should have id");
-      assert.ok(member.name, "Staff should have name");
-      assert.ok(member.role, "Staff should have role");
-      assert.ok(member.email, "Staff should have email");
-      assert.ok(member.departmentName, "Staff should have departmentName");
-      assert.ok(member.avatar, "Staff should have avatar");
-      // T61: the directory carries no fabricated per-person task counts — only
-      // counts the payload actually holds may be asserted here.
-
-      // Verify academic titles if present are authentic QCET standards without emojis
-      if (member.titlePrefix) {
-        assert.match(
-          member.titlePrefix,
-          /^(TS\.|ThS\.|KS\.|CN\.|GVC\.)$/,
-          `Title prefix ${member.titlePrefix} must follow official academic abbreviations`
-        );
-      }
+  test("Each OrgUnitConfig has required directory metadata", () => {
+    for (const unit of QCET_ORG_UNITS) {
+      assert.ok(unit.id, "Unit should have id");
+      assert.ok(unit.code, "Unit should have code");
+      assert.ok(unit.name, "Unit should have name");
+      assert.ok(unit.category, "Unit should have category");
+      assert.ok(unit.categoryLabel, "Unit should have categoryLabel");
+      assert.ok(unit.description, "Unit should have description");
+      assert.ok(unit.location, "Unit should have location");
+      assert.ok(unit.phone, "Unit should have phone");
+      assert.ok(unit.email, "Unit should have email");
+      assert.ok(
+        unit.email.endsWith("@cdktcnqn.edu.vn"),
+        `Email ${unit.email} must be @cdktcnqn.edu.vn domain`,
+      );
     }
+  });
+
+  test("buildDepartmentNodes merges config with empty API data gracefully", () => {
+    const nodes = buildDepartmentNodes(QCET_ORG_UNITS, []);
+    assert.equal(nodes.length, QCET_ORG_UNITS.length);
+    for (const node of nodes) {
+      assert.ok(node.id);
+      assert.ok(node.code);
+      assert.ok(node.name);
+      assert.ok(Array.isArray(node.members));
+      assert.equal(typeof node.leaderName, "string");
+      assert.equal(typeof node.leaderRole, "string");
+    }
+  });
+
+  test("filterStaffMembers with empty departments returns empty", () => {
+    const nodes = buildDepartmentNodes(QCET_ORG_UNITS, []);
+    // No API data → no members
+    const results = filterStaffMembers(nodes, "");
+    // All members are empty since no API data
+    assert.equal(results.length, 0);
   });
 });

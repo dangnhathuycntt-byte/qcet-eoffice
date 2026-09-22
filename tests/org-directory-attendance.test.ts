@@ -1,19 +1,14 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import {
-  QCET_DEPARTMENTS,
-  filterStaffMembers,
-  type DepartmentNode,
-  type StaffMember,
-} from "../src/components/org/organization-tree";
+import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("QCET Organization Structure & Administrative Directory", () => {
-  test("QCET_DEPARTMENTS encompasses authentic 15 units plus BGH", () => {
+  test("QCET_ORG_UNITS encompasses authentic 15 units plus BGH", () => {
     // Must have at least 15 units
-    assert.ok(QCET_DEPARTMENTS.length >= 15, `Expected >= 15 departments, got ${QCET_DEPARTMENTS.length}`);
+    assert.ok(QCET_ORG_UNITS.length >= 15, `Expected >= 15 departments, got ${QCET_ORG_UNITS.length}`);
 
     // Check functional rooms & centers
-    const codes = QCET_DEPARTMENTS.map((d) => d.code);
+    const codes = QCET_ORG_UNITS.map((d) => d.code);
     assert.ok(codes.includes("BGH"), "Must have BGH");
     assert.ok(codes.includes("P_HCQT"), "Must have Phòng Hành chính - Quản trị");
     assert.ok(codes.includes("P_TCDBCL") || codes.includes("P_KTDBCL"), "Must have Phòng Tổ chức - ĐBCL");
@@ -22,38 +17,27 @@ describe("QCET Organization Structure & Administrative Directory", () => {
     assert.ok(codes.includes("TT_STT") || codes.includes("TT_DCC"), "Must have Trung tâm Số - Truyền thông");
 
     // Check authentic faculties
-    assert.ok(codes.includes("K_DTTH") || codes.includes("K_CNTT"), "Must have Khoa Điện tử - Tin học");
-    assert.ok(codes.includes("K_CK") || codes.includes("K_KTCN"), "Must have Khoa Cơ khí");
-    assert.ok(codes.includes("K_CNOTO") || codes.includes("K_KTCN"), "Must have Khoa Công nghệ ô tô");
+    assert.ok(codes.includes("K_CNTT"), "Must have Khoa Điện tử - Tin học");
+    assert.ok(codes.includes("K_CK"), "Must have Khoa Cơ khí");
+    assert.ok(codes.includes("K_CNOTO"), "Must have Khoa Công nghệ ô tô");
     assert.ok(codes.includes("K_DIEN"), "Must have Khoa Điện");
     assert.ok(codes.includes("K_DULICH"), "Must have Khoa Du lịch");
-    assert.ok(codes.includes("K_KTTH") || codes.includes("K_KTQT"), "Must have Khoa Kinh tế - Tổng hợp");
+    assert.ok(codes.includes("K_KTQT"), "Must have Khoa Kinh tế - Tổng hợp");
     assert.ok(codes.includes("K_KTNN"), "Must have Khoa Kỹ thuật nông nghiệp");
     assert.ok(codes.includes("K_VHNT"), "Must have Khoa Văn hóa nghệ thuật");
     assert.ok(codes.includes("K_DAICUONG"), "Must have Khoa Đại cương");
   });
 
-  test("QCET_DEPARTMENTS contains clean administrative and directory metadata with zero attendance/timekeeping slop", () => {
-    for (const dept of QCET_DEPARTMENTS) {
-      assert.ok(typeof dept.name === "string" && dept.name.length > 0, `Dept ${dept.code} must have valid name`);
-      assert.ok(typeof dept.location === "string" && dept.location.length > 0, `Dept ${dept.code} must have location`);
-      assert.ok(dept.email.endsWith("@cdktcnqn.edu.vn") || dept.email.includes("@"), `Dept ${dept.code} must have valid email`);
-      assert.ok(dept.members.length > 0, `Dept ${dept.code} must have registered personnel`);
+  test("QCET_ORG_UNITS contains clean administrative and directory metadata", () => {
+    for (const unit of QCET_ORG_UNITS) {
+      assert.ok(typeof unit.name === "string" && unit.name.length > 0, `Unit ${unit.code} must have valid name`);
+      assert.ok(typeof unit.location === "string" && unit.location.length > 0, `Unit ${unit.code} must have location`);
+      assert.ok(unit.email.endsWith("@cdktcnqn.edu.vn") || unit.email.includes("@"), `Unit ${unit.code} must have valid email`);
 
       // Verify zero attendance telemetry
-      assert.equal((dept as any).presentToday, undefined, `Dept ${dept.code} must not contain presentToday`);
-      assert.equal((dept as any).presentRate, undefined, `Dept ${dept.code} must not contain presentRate`);
-      assert.equal((dept as any).timekeeperSync, undefined, `Dept ${dept.code} must not contain timekeeperSync`);
-
-      for (const member of dept.members) {
-        assert.equal((member as any).checkInTime, undefined, `Member ${member.name} must not have checkInTime`);
-        assert.equal((member as any).workStatus, undefined, `Member ${member.name} must not have workStatus`);
-      }
+      assert.equal((unit as any).presentToday, undefined, `Unit ${unit.code} must not contain presentToday`);
+      assert.equal((unit as any).presentRate, undefined, `Unit ${unit.code} must not contain presentRate`);
+      assert.equal((unit as any).timekeeperSync, undefined, `Unit ${unit.code} must not contain timekeeperSync`);
     }
-  });
-
-  test("Export CSV helper formats valid RFC4180 CSV without broken accents", () => {
-    const allStaff = QCET_DEPARTMENTS.flatMap((d) => d.members);
-    assert.ok(allStaff.length > 20, "Should have rich staff list");
   });
 });

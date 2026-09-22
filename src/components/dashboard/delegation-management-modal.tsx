@@ -12,7 +12,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type { DelegationRule, DelegationScope } from "@/types/delegation";
-import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organization-tree";
+import { type DepartmentNode } from "@/components/org/organization-tree";
+import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
 import { QCET_UNIT_CANONICAL_MAP } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,27 +52,32 @@ export const DELEGATION_SCOPES: DelegationScopeConfig[] = [
   },
 ];
 
+/** Converts an OrgUnitConfig to a DepartmentNode with empty personnel. */
+function unitToDeptNode(unit: OrgUnitConfig): DepartmentNode {
+  return { ...unit, leaderName: "", leaderRole: "", members: [] };
+}
+
 export function findDepartment(code: string): DepartmentNode | undefined {
   if (!code) return undefined;
   const norm = code.trim().toUpperCase();
   const canonical = QCET_UNIT_CANONICAL_MAP[code] || QCET_UNIT_CANONICAL_MAP[norm];
-  return (
-    QCET_DEPARTMENTS.find((d) => d.code.toUpperCase() === norm) ||
-    (canonical ? QCET_DEPARTMENTS.find((d) => d.code === canonical) : undefined) ||
-    QCET_DEPARTMENTS.find((d) => d.id.toUpperCase() === norm) ||
-    QCET_DEPARTMENTS.find((d) => {
+  const match =
+    QCET_ORG_UNITS.find((d) => d.code.toUpperCase() === norm) ||
+    (canonical ? QCET_ORG_UNITS.find((d) => d.code === canonical) : undefined) ||
+    QCET_ORG_UNITS.find((d) => d.id.toUpperCase() === norm) ||
+    QCET_ORG_UNITS.find((d) => {
       const pureCode = d.code.toUpperCase().replace(/^(K_|P_|TT_)/, "");
       const pureNorm = norm.replace(/^(K_|P_|TT_)/, "");
       return (
         pureCode === pureNorm ||
         (norm === "CNTT" && d.code === "K_CNTT") ||
         (norm === "KHOA_CNTT" && d.code === "K_CNTT") ||
-        (norm === "DCC" && (d.code === "TT_STT" || d.code === "TT_DCC")) ||
+        (norm === "DCC" && (d.code === "TT_STT")) ||
         d.code.toUpperCase().includes(norm) ||
         norm.includes(d.code.toUpperCase())
       );
-    })
-  );
+    });
+  return match ? unitToDeptNode(match) : undefined;
 }
 
 export interface DelegationFormData {
@@ -144,7 +150,7 @@ export function DelegationManagementModal({
 
   // Department metadata
   const dept = React.useMemo(() => {
-    return findDepartment(departmentCode) ?? QCET_DEPARTMENTS.find((d) => d.code === departmentCode);
+    return findDepartment(departmentCode);
   }, [departmentCode]);
 
   const effectiveDeptCode = dept?.code || departmentCode;

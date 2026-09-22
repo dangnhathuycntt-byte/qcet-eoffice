@@ -23,7 +23,9 @@ import {
   BottomSheetClose,
 } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
-import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organization-tree";
+import { QCET_ORG_UNITS, type OrgUnitConfig } from "@/lib/org/org-structure";
+import { useOrgDepartments } from "@/hooks/use-org-departments";
+import { type DepartmentNode } from "@/components/org/organization-tree";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { popoverVariants } from "@/lib/motion/variants";
 
@@ -125,7 +127,21 @@ export function matchesDepartmentSearch(dept: DepartmentNode, query: string): bo
 }
 
 /**
- * Resolves a department from QCET_DEPARTMENTS by code, id, or normalized string.
+ * Converts an OrgUnitConfig to a DepartmentNode with empty personnel.
+ * Used by resolveDepartment for pure-config lookups that don't need API data.
+ */
+function toDepartmentNode(unit: OrgUnitConfig): DepartmentNode {
+  return {
+    ...unit,
+    leaderName: "",
+    leaderRole: "",
+    members: [],
+  };
+}
+
+/**
+ * Resolves a department from QCET_ORG_UNITS by code, id, or normalized string.
+ * Returns a DepartmentNode with empty personnel (config-only lookup).
  */
 export function resolveDepartment(codeOrId?: string | null): DepartmentNode | undefined {
   if (!codeOrId) return undefined;
@@ -138,27 +154,29 @@ export function resolveDepartment(codeOrId?: string | null): DepartmentNode | un
     norm === "BAN_GIAM_HIEU" ||
     norm === "TOAN_TRUONG"
   ) {
-    return QCET_DEPARTMENTS.find((d) => d.code === "BGH");
+    const found = QCET_ORG_UNITS.find((d) => d.code === "BGH");
+    return found ? toDepartmentNode(found) : undefined;
   }
 
-  return (
-    QCET_DEPARTMENTS.find((d) => d.code.toUpperCase() === norm) ||
-    QCET_DEPARTMENTS.find((d) => d.id.toUpperCase() === norm) ||
-    QCET_DEPARTMENTS.find((d) => d.shortName?.toUpperCase() === norm) ||
-    QCET_DEPARTMENTS.find((d) => {
+  const match =
+    QCET_ORG_UNITS.find((d) => d.code.toUpperCase() === norm) ||
+    QCET_ORG_UNITS.find((d) => d.id.toUpperCase() === norm) ||
+    QCET_ORG_UNITS.find((d) => d.shortName?.toUpperCase() === norm) ||
+    QCET_ORG_UNITS.find((d) => {
       const pureCode = d.code.toUpperCase().replace(/^(K_|P_|TT_)/, "");
       const pureNorm = norm.replace(/^(K_|P_|TT_|DEPT_)/, "");
       return (
         pureCode === pureNorm ||
-        (norm === "DAO_TAO" && (d.code === "P_QLDT" || d.code === "P_DTQLKH" || d.name.includes("Đào tạo"))) ||
+        (norm === "DAO_TAO" && (d.code === "P_QLDT" || d.name.includes("Đào tạo"))) ||
         (norm === "CNTT" && d.code === "K_CNTT") ||
         (norm === "TCHC" && (d.code === "P_TCDBCL" || d.code === "P_HCQT")) ||
         d.code.toUpperCase().includes(pureNorm) ||
         pureNorm.includes(pureCode)
       );
     }) ||
-    QCET_DEPARTMENTS.find((d) => d.name.toUpperCase().includes(norm))
-  );
+    QCET_ORG_UNITS.find((d) => d.name.toUpperCase().includes(norm));
+
+  return match ? toDepartmentNode(match) : undefined;
 }
 
 export function isExecutiveUser(
@@ -440,7 +458,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
   // Primary user department context resolved dynamically
   const resolvedPrimaryDept = React.useMemo(() => {
     if (isExecutive) {
-      return resolveDepartment("BGH") || QCET_DEPARTMENTS.find((d) => d.code === "BGH");
+      return resolveDepartment("BGH");
     }
     return resolveDepartment(user?.departmentCode || user?.department);
   }, [isExecutive, user?.departmentCode, user?.department]);
@@ -487,9 +505,9 @@ export function ScopeSwitcher({ className }: { className?: string }) {
 
   // Standard non-BGH operational units (16 units)
   const standardDepartments = React.useMemo(() => {
-    return QCET_DEPARTMENTS.filter(
-      (dept) => dept.code !== "BGH" && dept.category !== "BGH"
-    );
+    return QCET_ORG_UNITS
+      .filter((u) => u.code !== "BGH" && u.category !== "BGH")
+      .map(toDepartmentNode);
   }, []);
 
   // Filtered department tiers based on instant search

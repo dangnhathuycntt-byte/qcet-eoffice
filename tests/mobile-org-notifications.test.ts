@@ -9,31 +9,29 @@ import {
   formatNotificationContent,
   type QCETNotification,
 } from "../src/lib/notification-triage";
-import { QCET_DEPARTMENTS } from "../src/components/org/organization-tree";
+import { QCET_ORG_UNITS } from "../src/lib/org/org-structure";
 
 describe("Sprint M5: Mobile Org Drill-Down & Actionable Notification Inbox", () => {
   // =========================================================================
   // 1. Organization Data Verification
   // =========================================================================
   describe("1. Organization Data", () => {
-    test("QCET_DEPARTMENTS correctly maps to the 4 org categories", () => {
-      const bgh = QCET_DEPARTMENTS.filter((d) => d.category === "BGH");
-      const phong = QCET_DEPARTMENTS.filter((d) => d.category === "PHONG_CHUC_NANG");
-      const khoa = QCET_DEPARTMENTS.filter((d) => d.category === "KHOA_CHUYEN_MON");
-      const trungTam = QCET_DEPARTMENTS.filter((d) => d.category === "TRUNG_TAM");
+    test("QCET_ORG_UNITS correctly maps to the 4 org categories", () => {
+      const bgh = QCET_ORG_UNITS.filter((d) => d.category === "BGH");
+      const phong = QCET_ORG_UNITS.filter((d) => d.category === "PHONG_CHUC_NANG");
+      const khoa = QCET_ORG_UNITS.filter((d) => d.category === "KHOA_CHUYEN_MON");
+      const trungTam = QCET_ORG_UNITS.filter((d) => d.category === "TRUNG_TAM");
 
       assert.ok(bgh.length >= 1, "Must have BGH department");
       assert.ok(phong.length >= 5, "Must have at least 5 functional rooms");
       assert.ok(khoa.length >= 3, "Must have at least 3 faculties");
       assert.ok(trungTam.length >= 2, "Must have at least 2 centers");
 
-      // Verify members have required contact and role information
-      const allMembers = QCET_DEPARTMENTS.flatMap((d) => d.members);
-      assert.ok(allMembers.length >= 15, "Must have sufficient staff members");
-      for (const m of allMembers) {
-        assert.ok(m.name, `Member ${m.id} must have a name`);
-        assert.ok(m.role, `Member ${m.id} must have a role`);
-        assert.ok(m.email, `Member ${m.id} must have an email`);
+      // Verify each unit has required contact info
+      for (const u of QCET_ORG_UNITS) {
+        assert.ok(u.name, `Unit ${u.code} must have a name`);
+        assert.ok(u.email, `Unit ${u.code} must have an email`);
+        assert.ok(u.phone, `Unit ${u.code} must have a phone`);
       }
     });
   });

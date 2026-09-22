@@ -38,7 +38,7 @@ import { GlobalMonthSelector } from "@/components/layout/global-month-selector";
 import { UpcomingDeadlinesWidget, type UpcomingItem } from "@/components/dashboard/upcoming-deadlines-widget";
 import { ActivityFeedWidget, type ActivityEvent } from "@/components/dashboard/activity-feed-widget";
 import { DepartmentProgressMatrix, type DepartmentHealthSummary } from "@/components/dashboard/department-progress-matrix";
-import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
+import { QCET_ORG_UNITS } from "@/lib/org/org-structure";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -594,7 +594,7 @@ export function PersonalWorkbench({
       ? "unit"
       : "my";
 
-  const operationalUnitCount = QCET_DEPARTMENTS.filter((d) => d.category !== "BGH").length;
+  const operationalUnitCount = QCET_ORG_UNITS.filter((d) => d.category !== "BGH").length;
 
   // Role labels
   const roleBadge =
