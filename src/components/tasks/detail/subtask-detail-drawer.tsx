@@ -16,7 +16,7 @@ import { CORE_STATUS_OPTIONS as STATUS_OPTIONS, getStatusDisplay } from "@/domai
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { formatCompactDate, extractDateIso } from "@/lib/format/date";
 import { DirectInlineEditor } from "./direct-inline-editor";
-import { TaskNotionBlockContent } from "./task-notion-block-content";
+import { TaskBlockEditor } from "./task-block-editor";
 import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
 import { computeSubtaskStatusGuard } from "@/domain/tasks/subtask-status-guard";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
@@ -56,6 +56,7 @@ export function SubtaskDetailDrawer({
 }: SubtaskDetailDrawerProps) {
   const { notifySuccess, notifyError } = useFeedback();
   const [subtask, setSubtask] = React.useState<StaffTask | null>(initialSubtask);
+  const peekContentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
@@ -123,7 +124,7 @@ export function SubtaskDetailDrawer({
     onPeekWidthChange?.(DEFAULT_PEEK_WIDTH);
   }, [onPeekWidthChange]);
 
-  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
+  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName, personnelList);
 
   // Dates
   const startDateIso = extractDateIso((subtask as any)?.startDate);
@@ -451,7 +452,7 @@ export function SubtaskDetailDrawer({
               const isCompleted = sib.status === "COMPLETED";
               const formattedDueDate = sib.dueDate ? formatCompactDate(sib.dueDate, "") : "";
               const rawAssignee = sib.assigneeName?.trim();
-              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee) : "";
+              const assigneeName = rawAssignee ? formatAssigneeNameWithTitle(rawAssignee, personnelList) : "";
 
               return (
                 <button
@@ -494,7 +495,29 @@ export function SubtaskDetailDrawer({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain">
+        <div
+          ref={peekContentRef}
+          className="min-h-0 flex-1 flex flex-col overflow-y-auto overflow-x-hidden break-words px-6 pt-5 pb-6 overscroll-contain cursor-text"
+          onClick={(e) => {
+            if (!canEdit) return;
+            const target = e.target as HTMLElement;
+            if (target !== peekContentRef.current) return;
+            // Click on content padding → focus editor at end
+            const editable = peekContentRef.current?.querySelector<HTMLElement>(
+              "[data-slot='task-block-editor'] [contenteditable='true']"
+            );
+            if (!editable) return;
+            editable.focus();
+            const sel = window.getSelection();
+            if (sel && editable.lastChild) {
+              const range = document.createRange();
+              range.selectNodeContents(editable);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }}
+        >
               {/* Child title first */}
               <div className="space-y-1.5">
             <DirectInlineEditor
@@ -511,7 +534,7 @@ export function SubtaskDetailDrawer({
             />
           </div>
 
-          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none">
+          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none cursor-default">
             <TaskStatusSelect
               value={subtask.status}
               options={statusGuard?.options.map((opt) => ({
@@ -555,11 +578,11 @@ export function SubtaskDetailDrawer({
             />
           </section>
 
-          <section className="mt-3 flex flex-1 flex-col">
+          <section className="mt-3 flex flex-1 flex-col cursor-text">
             {!description && !canEdit && (
               <p className="text-xs text-muted-foreground/50 italic px-1 mb-1.5">Chưa có mô tả.</p>
             )}
-            <TaskNotionBlockContent
+            <TaskBlockEditor
               key={subtask.id}
               taskId={subtask.id}
               initialDescription={description}

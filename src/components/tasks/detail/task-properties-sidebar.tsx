@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Popover } from "@base-ui/react/popover";
 import {
   User,
   Users,
@@ -26,14 +25,16 @@ import {
   formatDisplayDate,
   formatDateTime,
   formatIsoDate,
+  extractDateIso,
 } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
-import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, getStatusDisplay, getPriorityDisplay } from "@/domain/tasks/display-config";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
+import { PropertyRow } from "@/components/ui/property-row";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
@@ -50,7 +51,7 @@ export interface AuditLogItem {
   description?: string;
 }
 
-export interface LinearPropertiesSidebarProps {
+export interface TaskPropertiesSidebarProps {
   task: SchoolTask | StaffTask;
   currentUser?: AuthUser | null;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
@@ -115,7 +116,7 @@ function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: 
 }
 
 
-function LinearStartDateIcon({ className }: { className?: string }) {
+function StartDateIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 16 16"
@@ -133,7 +134,7 @@ function LinearStartDateIcon({ className }: { className?: string }) {
   );
 }
 
-function LinearTargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
+function TargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
   return (
     <svg
       viewBox="0 0 16 16"
@@ -151,7 +152,7 @@ function LinearTargetDateIcon({ className, isOverdue }: { className?: string; is
   );
 }
 
-export function LinearPropertiesSidebar({
+export function TaskPropertiesSidebar({
   task,
   currentUser,
   onStatusChange,
@@ -169,52 +170,26 @@ export function LinearPropertiesSidebar({
   activeSubtaskId,
   onSelectSubtask,
   onAddSubtask,
-}: LinearPropertiesSidebarProps) {
+}: TaskPropertiesSidebarProps) {
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
 
-  // Dropdown states
-  const [isStatusMenuOpen, setIsStatusMenuOpen] = React.useState(false);
-  const [isPriorityMenuOpen, setIsPriorityMenuOpen] = React.useState(false);
-
-  const statusMenuRef = React.useRef<HTMLDivElement>(null);
-  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
-  // Lead popover state
-  const [isLeadMenuOpen, setIsLeadMenuOpen] = React.useState(false);
+  // Reassign state (kept — used by handleSelectLead)
   const [isReassigning, setIsReassigning] = React.useState(false);
   const [reassignError, setReassignError] = React.useState<string | null>(null);
+
+  // Shared personnel list via hook (replaces local useState + useEffect fetch)
   const { personnel: personnelList } = usePersonnelList();
-  const leadMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on outside click / Escape (lightweight per-menu)
-  React.useEffect(() => {
-    const refs = [statusMenuRef, priorityMenuRef, leadMenuRef];
-    const setters = [setIsStatusMenuOpen, setIsPriorityMenuOpen, setIsLeadMenuOpen];
-    const handler = (e: MouseEvent) => {
-      refs.forEach((ref, i) => {
-        if (ref.current && !ref.current.contains(e.target as Node)) setters[i](false);
-      });
-    };
-    const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setters.forEach((s) => s(false));
-    };
-    document.addEventListener("mousedown", handler);
-    window.addEventListener("keydown", keyHandler);
-    return () => { document.removeEventListener("mousedown", handler); window.removeEventListener("keydown", keyHandler); };
-  }, []);
-
-  // Status mapping
+  // Status normalization via canonical-semantics (replaces inline if/else chain)
   const normalizedStatus = normalizeDisplayStatus(task.status);
-
-  const activeStatusOption = getStatusDisplay(normalizedStatus);
 
   // Priority mapping
   const currentPriority: TaskPriority =
     (task as any).priority || (isSchool ? schoolTask?.priority : "NORMAL") || "NORMAL";
   const normalizedPriority =
     currentPriority === "MEDIUM" ? "NORMAL" : currentPriority;
-  const activePriorityOption = getPriorityDisplay(normalizedPriority);
 
   // Lead / DRI
   const leadName = isSchool
@@ -245,23 +220,24 @@ export function LinearPropertiesSidebar({
     let role = parsed.role || "";
     let academicPrefix = parsed.prefix || "";
 
-    for (const group of QCET_DEPARTMENT_GROUPS) {
-      for (const m of group.members) {
-        if (
-          m.name.toLowerCase() === parsed.name.toLowerCase() ||
-          m.name.toLowerCase() === leadName.toLowerCase()
-        ) {
-          if (!role && m.role) role = m.role;
-          if (!academicPrefix && m.title) {
-            const mMatch = m.title.match(
-              /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.)\s*/i
+    for (const m of personnelList) {
+      const mName = m.name.replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/i, "").trim();
+      if (
+        mName.toLowerCase() === parsed.name.toLowerCase() ||
+        m.name.toLowerCase() === leadName.toLowerCase()
+      ) {
+        if (!role && m.title) {
+          // title from DB is the position/role string, e.g. "Trưởng phòng"
+          role = m.title;
+        }
+        if (!academicPrefix && m.name) {
+          const mMatch = m.name.match(
+            /^(ThS\.|TS\.|PGS\.TS\.|GS\.TS\.|PGS\.|GS\.|BS\.|CN\.|KS\.|GVC\.)\s*/i
             );
             if (mMatch) academicPrefix = mMatch[1];
-          }
-          break;
         }
+        break;
       }
-      if (role) break;
     }
 
     const titleWithPrefix = academicPrefix ? `${academicPrefix} ${parsed.name}` : parsed.name;
@@ -278,17 +254,15 @@ export function LinearPropertiesSidebar({
     };
   }, [leadName, departmentName]);
 
-  // Members / Collaborators
   // Members / Collaborators: strictly read-only derived data from server truth (Rule 2)
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
-    if (Array.isArray((task as any).collaborators) && (task as any).collaborators.length > 0) {
+    if (Array.isArray((task as any).collaborators) && !isSchool) {
       return (task as any).collaborators.map((c: any) => ({
-        id: c.id || c.name,
-        name: c.name || c,
+        id: c.id || c.userId,
+        name: c.name || c.userName,
         avatarUrl: c.avatarUrl,
       }));
     }
-
     if (isSchool && schoolTask) {
       const list: Array<{ id: string; name: string; avatarUrl?: string }> = [];
       if (Array.isArray(schoolTask.coAssignees)) {
@@ -312,10 +286,10 @@ export function LinearPropertiesSidebar({
     return [];
   }, [task, isSchool, schoolTask, staffTask]);
 
-  // Dates
+  // Dates — use extractDateIso for ICT-safe date extraction (replaces inline typeof + slice)
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
-  const startDateIso = rawStartDate ? formatIsoDate(rawStartDate, "") : "";
-  const dueDateIso = task.dueDate ? formatIsoDate(task.dueDate, "") : "";
+  const startDateIso = extractDateIso(rawStartDate);
+  const dueDateIso = extractDateIso(task.dueDate);
   const dueStatus = computeDueStatus(task.dueDate);
 
   // Allowed transitions validation via domain State Machine
@@ -332,54 +306,41 @@ export function LinearPropertiesSidebar({
     return map;
   }, [allowedTransitions]);
 
+  // Build status options from FSM-allowed transitions (same pattern as task-identity-block)
+  const statusOptions = React.useMemo(() => {
+    return CORE_STATUS_OPTIONS.map((opt) => {
+      const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
+      const isCurrent = normalizedStatus === opt.value;
+      return {
+        value: opt.value,
+        label: opt.label,
+        dotClass: opt.dotClass,
+        iconClass: opt.iconClass,
+        disabled: !isCurrent && !check.allowed,
+        reason: !isCurrent && !check.allowed ? check.reason : undefined,
+      };
+    });
+  }, [allowedMap, normalizedStatus]);
+
   // Handlers
   const handleSelectStatus = async (newStatus: TaskStatus) => {
-    setIsStatusMenuOpen(false);
     if (onStatusChange && newStatus !== task.status) {
       await onStatusChange(task.id, newStatus);
     }
   };
 
   const handleSelectPriority = async (newPriority: TaskPriority) => {
-    setIsPriorityMenuOpen(false);
     if (onPriorityChange && newPriority !== currentPriority) {
       await onPriorityChange(task.id, newPriority);
     }
   };
 
   const handleSelectLead = async (personId: string, personName: string) => {
+    if (!onReassignLead) return;
     setIsReassigning(true);
     setReassignError(null);
     try {
-      if (onReassignLead) {
-        await onReassignLead(personId, personName);
-        setIsLeadMenuOpen(false);
-        return;
-      }
-
-      const res = await fetch(`/api/tasks/${task.id}/actions/reassign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          newAssigneeId: personId,
-          newAssigneeName: personName,
-        }),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        const errMsg =
-          errJson?.error?.message ||
-          errJson?.message ||
-          (res.status === 403
-            ? "Bạn không có quyền chuyển giao người phụ trách (403 Forbidden)"
-            : "Không thể chuyển giao người phụ trách. Vui lòng thử lại");
-        setReassignError(errMsg);
-        return;
-      }
-
-      setIsLeadMenuOpen(false);
-      window.location.reload();
+      await onReassignLead(personId, personName);
     } catch (e: unknown) {
       setReassignError(e instanceof Error ? e.message : "Lỗi kết nối khi chuyển giao người phụ trách");
     } finally {
@@ -419,13 +380,13 @@ export function LinearPropertiesSidebar({
 
   return (
     <div
-      data-slot="linear-properties-sidebar"
+      data-slot="task-properties-sidebar"
       className={cn(
         "w-full space-y-0 text-xs text-foreground select-none",
         className
       )}
     >
-      {/* 1. SECTION: PROPERTIES (Linear Style) */}
+      {/* 1. SECTION: PROPERTIES */}
       <div className="space-y-3 pb-5">
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
@@ -437,250 +398,42 @@ export function LinearPropertiesSidebar({
 
         {/* 2-Column Key-Value Table */}
         <div className="space-y-1 text-xs">
-          {/* Status Row */}
-          <div
-            ref={statusMenuRef}
-            onClick={() => {
-              if (canEdit) {
-                setIsPriorityMenuOpen(false);
-                setIsLeadMenuOpen(false);
-                setIsStatusMenuOpen(!isStatusMenuOpen);
-              }
-            }}
-            className={cn(
-              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
-              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
-            )}
-          >
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Trạng thái</span>
-            <div className="relative">
-              <div
-                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
-              >
-                <div className="size-4 shrink-0 flex items-center justify-center">
-                  <CircleDashed className={cn("size-3.5", activeStatusOption.value === "COMPLETED" ? "text-emerald-600" : activeStatusOption.value === "IN_PROGRESS" ? "text-amber-500" : "text-muted-foreground")} strokeWidth={1.5} />
-                </div>
-                <span>{activeStatusOption.label}</span>
-              </div>
+          {/* Status Row — @base-ui Select via TaskStatusSelect */}
+          <PropertyRow label="Trạng thái" interactive={canEdit}>
+            <TaskStatusSelect
+              value={normalizedStatus}
+              options={statusOptions}
+              disabled={!canEdit}
+              onValueChange={handleSelectStatus}
+            />
+          </PropertyRow>
 
-              {isStatusMenuOpen && canEdit && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-                >
-                  {CORE_STATUS_OPTIONS.map((opt) => {
-                    const check = allowedMap.get(opt.value === "NOT_STARTED" ? "NEW" : opt.value) || { allowed: true };
-                    const isCurrent = normalizedStatus === opt.value;
-                    const isOptionDisabled = !isCurrent && !check.allowed;
+          {/* Priority Row — @base-ui Select via TaskPrioritySelect */}
+          <PropertyRow label="Ưu tiên" interactive={canEdit}>
+            <TaskPrioritySelect
+              value={normalizedPriority}
+              options={PRIORITY_DISPLAY_CONFIG as any}
+              disabled={!canEdit}
+              onValueChange={handleSelectPriority}
+            />
+          </PropertyRow>
 
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="menuitem"
-                        disabled={isOptionDisabled}
-                        title={isOptionDisabled ? check.reason : undefined}
-                        onClick={() => {
-                          if (!isOptionDisabled) {
-                            handleSelectStatus(opt.value);
-                          }
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left",
-                          isOptionDisabled
-                            ? "opacity-40 cursor-not-allowed text-muted-foreground hover:bg-transparent"
-                            : "cursor-pointer",
-                          isCurrent
-                            ? "bg-primary/10 text-primary font-medium"
-                            : !isOptionDisabled
-                            ? "text-foreground hover:bg-muted"
-                            : ""
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn("size-2 rounded-full", opt.dotClass)} />
-                          <span>{opt.label}</span>
-                        </div>
-                        {isCurrent && (
-                          <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Priority Row */}
-          <div
-            ref={priorityMenuRef}
-            onClick={() => {
-              if (canEdit) {
-                setIsStatusMenuOpen(false);
-                setIsLeadMenuOpen(false);
-                setIsPriorityMenuOpen(!isPriorityMenuOpen);
-              }
-            }}
-            className={cn(
-              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
-              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
-            )}
-          >
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ưu tiên</span>
-            <div className="relative">
-              <div
-                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
-              >
-                <div className="size-4 shrink-0 flex items-center justify-center">
-                  <Signal className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
-                </div>
-                <span>{activePriorityOption.label}</span>
-              </div>
-
-              {isPriorityMenuOpen && canEdit && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-                >
-                  {PRIORITY_DISPLAY_CONFIG.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => handleSelectPriority(opt.value)}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                        normalizedPriority === opt.value
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Signal className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
-                        <span>{opt.label}</span>
-                      </div>
-                      {normalizedPriority === opt.value && (
-                        <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Lead Row with Reassign Popover */}
-          <div
-            ref={leadMenuRef}
-            onClick={() => {
-              if (canEdit && !isReassigning) {
-                setIsStatusMenuOpen(false);
-                setIsPriorityMenuOpen(false);
-                setReassignError(null);
-                setIsLeadMenuOpen(!isLeadMenuOpen);
-              }
-            }}
-            className={cn(
-              "group relative flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-colors select-none min-h-[28px]",
-              canEdit ? "cursor-pointer hover:bg-muted/40" : ""
-            )}
-          >
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phụ trách</span>
-            <div className="relative min-w-0">
-              <div
-                className="inline-flex items-center gap-2 px-1.5 py-0.5 rounded text-xs font-normal text-foreground"
-                style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}
-                title={leadParsed.tooltip}
-              >
-                {isReassigning ? (
-                  <div className="flex items-center gap-2 text-primary text-xs">
-                    <div className="size-4 shrink-0 flex items-center justify-center">
-                      <Loader2 className="size-3.5 animate-spin" />
-                    </div>
-                    <span>Đang cập nhật...</span>
-                  </div>
-                ) : leadParsed.displayName && leadParsed.displayName !== "Chưa phân công" ? (
-                  <>
-                    <div className="size-4 shrink-0 flex items-center justify-center">
-                      <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px]">
-                        {getInitials(leadParsed.displayName)}
-                      </div>
-                    </div>
-                    <span
-                      className="min-w-0 font-normal line-clamp-2 select-text"
-                      title={leadParsed.tooltip}
-                      style={{ minWidth: 0, whiteSpace: "normal", overflow: "visible", textOverflow: "clip", wordBreak: "break-word" }}
-                    >
-                      {leadParsed.displayName}
-                    </span>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="size-4 shrink-0 flex items-center justify-center">
-                      <UserPlus className="size-3.5" strokeWidth={1.5} />
-                    </div>
-                    <span>Thêm phụ trách</span>
-                  </div>
-                )}
-              </div>
-
-              {isLeadMenuOpen && canEdit && (
-                <div
-                  role="menu"
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-full mt-1.5 w-60 max-h-72 overflow-y-auto rounded-xl border border-border bg-white p-1 text-foreground shadow-2xl z-100 animate-in fade-in-0 zoom-in-95 duration-100"
-                >
-                  <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 select-none flex items-center justify-between">
-                    <span>Chọn người phụ trách</span>
-                    {isReassigning && <Loader2 className="size-3 animate-spin text-primary" />}
-                  </div>
-
-                  {reassignError && (
-                    <div className="mx-1 my-1 p-2 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-1.5 leading-snug">
-                      <AlertCircle className="size-3.5 text-rose-600 shrink-0 mt-0.5" />
-                      <span>{reassignError}</span>
-                    </div>
-                  )}
-
-                  {personnelList.map((p, idx) => {
-                    const isSelected = p.name === leadName || p.name === leadParsed.displayName;
-                    return (
-                      <button
-                        key={p.id || `lead-${idx}-${p.name}`}
-                        type="button"
-                        disabled={isReassigning}
-                        onClick={() => handleSelectLead(p.id, p.name)}
-                        className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer disabled:opacity-50",
-                          isSelected
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="size-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-semibold shrink-0">
-                            {getInitials(p.name)}
-                          </div>
-                          <div className="truncate">
-                            <div className="truncate text-foreground font-normal">{p.name}</div>
-                            {p.departmentName && (
-                              <div className="text-[10px] text-muted-foreground truncate">{p.departmentName}</div>
-                            )}
-                          </div>
-                        </div>
-                        {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Lead / DRI Row — @base-ui Combobox via TaskAssigneePicker */}
+          <PropertyRow label="Phụ trách" interactive={canEdit}>
+            <TaskAssigneePicker
+              items={personnelList}
+              assigneeName={leadName}
+              displayName={leadParsed.displayName}
+              disabled={!canEdit}
+              pending={isReassigning}
+              onSelect={async (person) => {
+                await handleSelectLead(person.id, person.name);
+              }}
+            />
+          </PropertyRow>
 
           {/* Members / Collaborators Row: strictly read-only derived data from active subtasks (Rule 2) */}
-          <div className="flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md min-h-[28px] select-none">
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Phối hợp</span>
+          <PropertyRow label="Phối hợp">
             <div className="relative">
               {collaborators.length > 0 ? (
                 <div
@@ -711,11 +464,10 @@ export function LinearPropertiesSidebar({
                 </div>
               )}
             </div>
-          </div>
+          </PropertyRow>
 
           {/* Row 5: Start Date */}
-          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Ngày bắt đầu</span>
+          <PropertyRow label="Ngày bắt đầu" interactive>
             <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && onStartDateChange ? (
                 <VietnameseDatePicker
@@ -746,11 +498,10 @@ export function LinearPropertiesSidebar({
                 </div>
               )}
             </div>
-          </div>
+          </PropertyRow>
 
           {/* Row 6: Due Date / Target Date */}
-          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors select-none min-h-[28px]">
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5 whitespace-nowrap">Hạn hoàn thành</span>
+          <PropertyRow label="Hạn hoàn thành" interactive>
             <div className="flex items-center text-xs shrink-0 min-w-0">
               {canEdit && onDueDateChange ? (
                 <VietnameseDatePicker
@@ -805,11 +556,10 @@ export function LinearPropertiesSidebar({
                 </div>
               )}
             </div>
-          </div>
+          </PropertyRow>
 
           {/* Row 7: Department */}
-          <div className="group flex items-start justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[28px]">
-            <span className="text-muted-foreground text-xs font-normal shrink-0 pt-0.5">Đơn vị</span>
+          <PropertyRow label="Đơn vị" interactive>
             <div
               className="inline-flex items-start gap-2 px-1.5 py-0.5 rounded min-w-0 text-foreground text-xs leading-snug"
               style={{
@@ -836,7 +586,7 @@ export function LinearPropertiesSidebar({
                 {departmentName}
               </span>
             </div>
-          </div>
+          </PropertyRow>
         </div>
       </div>
 
@@ -852,4 +602,4 @@ export function LinearPropertiesSidebar({
   );
 }
 
-// QCET linear properties inspector
+// Task properties inspector

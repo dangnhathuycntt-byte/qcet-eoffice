@@ -107,7 +107,7 @@ export function TaskProgressComposer({
     <div
       data-slot="task-progress-composer"
       className={cn(
-        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none",
+        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none cursor-default",
         className
       )}
     >

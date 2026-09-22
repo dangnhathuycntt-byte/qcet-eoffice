@@ -13,14 +13,14 @@ import { TaskIdentityBlock } from "./task-identity-block";
 import { TaskProgressComposer } from "./task-progress-composer";
 import { TaskEvidenceSection, type DeliverableItem } from "./task-evidence-section";
 import { TaskActivityTimeline, type ActivityEvent } from "./task-activity-timeline";
-import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-sidebar";
+import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
 import { TaskPropertiesDrawer } from "./task-properties-drawer";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 
-export interface LinearTaskDetailViewProps {
+export interface TaskDetailViewProps {
   task: SchoolTask | StaffTask;
   taskId: string;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
@@ -38,7 +38,9 @@ export interface LinearTaskDetailViewProps {
   className?: string;
 }
 
-export function LinearTaskDetailView({
+const EMPTY_DELIVERABLES: DeliverableItem[] = [];
+
+export function TaskDetailView({
   task: initialTask,
   taskId,
   onStatusChange,
@@ -54,7 +56,7 @@ export function LinearTaskDetailView({
   onSubmitDeliverable,
   onReview,
   className,
-}: LinearTaskDetailViewProps) {
+}: TaskDetailViewProps) {
   const { notifyError, notifySuccess } = useFeedback();
   const [task, setTask] = React.useState<SchoolTask | StaffTask>(initialTask);
   React.useEffect(() => {
@@ -63,6 +65,7 @@ export function LinearTaskDetailView({
 
   const [showInspector, setShowInspector] = React.useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = React.useState(false);
+  const mainRef = React.useRef<HTMLElement>(null);
 
   // Local audit events
   const [auditEvents, setAuditEvents] = React.useState<ActivityEvent[]>(initialAuditEvents as ActivityEvent[]);
@@ -75,6 +78,14 @@ export function LinearTaskDetailView({
     return consolidateActivityFeed(auditEvents as any[], 60000);
   }, [auditEvents]);
 
+  const handleToggleInspector = React.useCallback(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMobileDrawerOpen((prev) => !prev);
+    } else {
+      setShowInspector((prev) => !prev);
+    }
+  }, []);
+
   // Keyboard shortcut: Ctrl/Cmd + I toggles inspector
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,7 +97,7 @@ export function LinearTaskDetailView({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [handleToggleInspector]);
 
   const isSchool = isSchoolTask(task);
   const schoolTask = isSchool ? (task as SchoolTask) : null;
@@ -104,23 +115,17 @@ export function LinearTaskDetailView({
     : staffTask?.deliverableDescription || (task as any).description;
 
   // Deliverables / Resources state
-  const initialDeliverables = (task as any).deliverables || [];
-  const [deliverables, setDeliverables] = React.useState<DeliverableItem[]>(initialDeliverables);
+  const taskDeliverables = (task as any).deliverables as DeliverableItem[] | undefined;
+  const [deliverables, setDeliverables] = React.useState<DeliverableItem[]>(
+    taskDeliverables || EMPTY_DELIVERABLES,
+  );
   React.useEffect(() => {
-    if (Array.isArray((task as any).deliverables)) {
-      setDeliverables((task as any).deliverables);
+    if (Array.isArray(taskDeliverables)) {
+      setDeliverables(taskDeliverables);
     }
-  }, [task]);
+  }, [taskDeliverables]);
 
-  const handleToggleInspector = () => {
-    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-      setIsMobileDrawerOpen((prev) => !prev);
-    } else {
-      setShowInspector((prev) => !prev);
-    }
-  };
-
-  const handleStatusChangeInternal = async (taskId: string, newStatus: TaskStatus, note?: string) => {
+  const handleStatusChangeInternal = React.useCallback(async (taskId: string, newStatus: TaskStatus, note?: string) => {
     if (onStatusChange) {
       await onStatusChange(taskId, newStatus, note);
     }
@@ -139,9 +144,9 @@ export function LinearTaskDetailView({
       },
       ...prev,
     ]);
-  };
+  }, [onStatusChange, currentUser?.name]);
 
-  const handlePriorityChangeInternal = async (taskId: string, newPriority: TaskPriority) => {
+  const handlePriorityChangeInternal = React.useCallback(async (taskId: string, newPriority: TaskPriority) => {
     if (onPriorityChange) {
       await onPriorityChange(taskId, newPriority);
     }
@@ -151,9 +156,9 @@ export function LinearTaskDetailView({
       ...prev,
       priority: cleanPriority,
     }));
-  };
+  }, [onPriorityChange]);
 
-  const handleDueDateChangeInternal = async (taskId: string, newDueDate: string) => {
+  const handleDueDateChangeInternal = React.useCallback(async (taskId: string, newDueDate: string) => {
     if (onDueDateChange) {
       await onDueDateChange(taskId, newDueDate);
     }
@@ -161,9 +166,9 @@ export function LinearTaskDetailView({
       ...prev,
       dueDate: newDueDate,
     }));
-  };
+  }, [onDueDateChange]);
 
-  const handleStartDateChangeInternal = async (taskId: string, newStartDate: string) => {
+  const handleStartDateChangeInternal = React.useCallback(async (taskId: string, newStartDate: string) => {
     if (onStartDateChange) {
       await onStartDateChange(taskId, newStartDate);
     } else {
@@ -178,9 +183,9 @@ export function LinearTaskDetailView({
         version: (res.data as any)?.data?.version ?? (res.data as any)?.task?.version ?? (prev as any).version,
       } as any));
     }
-  };
+  }, [onStartDateChange, task, notifyError]);
 
-  const handleTitleChangeInternal = async (taskId: string, newTitle: string) => {
+  const handleTitleChangeInternal = React.useCallback(async (taskId: string, newTitle: string) => {
     if (onTitleChange) {
       await onTitleChange(taskId, newTitle);
     } else {
@@ -194,9 +199,9 @@ export function LinearTaskDetailView({
       ...prev,
       title: newTitle,
     }));
-  };
+  }, [onTitleChange]);
 
-  const handleSaveDescription = async (newDesc: string) => {
+  const handleSaveDescription = React.useCallback(async (newDesc: string) => {
     const trimmed = newDesc.trim();
     if (onDescriptionChange) {
       await onDescriptionChange(task.id, trimmed);
@@ -214,9 +219,9 @@ export function LinearTaskDetailView({
       ...prev,
       description: trimmed,
     }));
-  };
+  }, [onDescriptionChange, task.id]);
 
-  const handleProgressUpdated = async (newProgress: number, note?: string) => {
+  const handleProgressUpdated = React.useCallback(async (newProgress: number, note?: string) => {
     setTask((prev) => ({
       ...prev,
       progressPercent: newProgress,
@@ -232,9 +237,9 @@ export function LinearTaskDetailView({
       },
       ...prev,
     ]);
-  };
+  }, [currentUser?.name]);
 
-  const handleCreateSubtaskInline = async (
+  const handleCreateSubtaskInline = React.useCallback(async (
     title: string,
     assigneeName?: string,
     dueDate?: string,
@@ -333,9 +338,9 @@ export function LinearTaskDetailView({
       });
       notifySuccess("Tạo việc thành phần thành công", "Thành công");
     }
-  };
+  }, [task, isSchool, schoolTask, notifySuccess]);
 
-  const handleToggleSubtaskStatus = async (st: StaffTask) => {
+  const handleToggleSubtaskStatus = React.useCallback(async (st: StaffTask) => {
     const newStatus: TaskStatus = st.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
     if (onStatusChange) {
       await onStatusChange(st.id, newStatus);
@@ -350,9 +355,9 @@ export function LinearTaskDetailView({
         subTasks: updatedSubtasks,
       } as SchoolTask;
     });
-  };
+  }, [onStatusChange, isSchool, schoolTask]);
 
-  const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
+  const handleAddDeliverable = React.useCallback(async (title: string, fileUrl?: string, notes?: string) => {
     const trimmedTitle = title.trim();
     const trimmedUrl = fileUrl?.trim();
 
@@ -402,9 +407,9 @@ export function LinearTaskDetailView({
     };
 
     setDeliverables((prev) => [newDeliv, ...prev]);
-  };
+  }, [task.id, currentUser]);
 
-  const handleDeleteDeliverable = async (deliverableId: string) => {
+  const handleDeleteDeliverable = React.useCallback(async (deliverableId: string) => {
     const previousDeliverables = deliverables;
     setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
 
@@ -432,11 +437,11 @@ export function LinearTaskDetailView({
       setDeliverables(previousDeliverables);
       notifyError(error instanceof Error ? error.message : "Không thể xóa tài liệu minh chứng", "Lỗi xóa minh chứng");
     }
-  };
+  }, [task.id, deliverables, notifyError]);
 
   return (
     <div
-      data-slot="linear-task-detail-view"
+      data-slot="task-detail-view"
       className={cn(
         "w-full min-h-screen bg-background text-foreground flex flex-col antialiased",
         className
@@ -452,7 +457,24 @@ export function LinearTaskDetailView({
       {/* 2. Workspace Body: Main Content + Right Properties Inspector */}
       <div className="flex-1 w-full flex flex-col lg:flex-row min-h-0 overflow-hidden lg:gap-0">
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 space-y-7 max-w-4xl">
+        <main
+          ref={mainRef}
+          className="flex-1 min-w-0 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8 space-y-7 max-w-4xl cursor-text"
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (target !== mainRef.current) return;
+            // Click on main padding → focus description editor at end
+            const editable = mainRef.current?.querySelector<HTMLElement>(
+              "[data-slot='task-description-section'] [contenteditable], [data-slot='task-description-section'] textarea"
+            );
+            if (editable) { editable.focus(); return; }
+            // Fallback: click the description view to activate it
+            const descView = mainRef.current?.querySelector<HTMLElement>(
+              "[data-slot='task-description-section'] [class*='cursor-text']"
+            );
+            descView?.click();
+          }}
+        >
           {/* A. Task Identity Block */}
           <TaskIdentityBlock
             task={task}
@@ -479,8 +501,8 @@ export function LinearTaskDetailView({
           />
 
           {/* C. Description Section (Prose with clean readable width) */}
-          <section data-slot="task-description-section" className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
+          <section data-slot="task-description-section" className="space-y-2 cursor-text">
+            <div className="flex items-center justify-between gap-2 cursor-default">
               <div className="flex items-center gap-2">
                 <FileText className="size-4 text-primary shrink-0" strokeWidth={1.5} />
                 <h2 className="text-xs font-semibold text-foreground">
@@ -531,7 +553,7 @@ export function LinearTaskDetailView({
               className="hidden lg:block shrink-0 border-l border-border/50 bg-muted/30 overflow-y-auto overflow-x-hidden self-start sticky top-0 max-h-screen"
             >
               <div className="w-[300px] px-5 py-6">
-                <LinearPropertiesSidebar
+                <TaskPropertiesSidebar
                   task={task}
                   currentUser={currentUser}
                   onStatusChange={handleStatusChangeInternal}

@@ -1,13 +1,18 @@
-import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
-
 /**
  * Chuẩn hóa tên người phụ trách:
  * - Chỉ hiển thị học vị + họ tên (ví dụ: "ThS. Phạm Văn Tường")
  * - Bỏ chức vụ / phần trong ngoặc đơn (...), ngoặc vuông [...], hoặc sau dấu gạch ngang
  * - Hiển thị đủ tên (không bị cắt ngắn)
- * - Tra cứu dữ liệu danh bạ nhân sự QCET để lấy học vị nếu tên gốc chưa kèm học vị
+ * - Tra cứu dữ liệu danh bạ nhân sự để lấy học vị nếu tên gốc chưa kèm học vị
+ *
+ * @param rawName - Tên gốc cần chuẩn hóa
+ * @param personnelDirectory - Danh sách nhân sự (từ usePersonnelList hook) để tra cứu học vị.
+ *   Nếu không truyền, bỏ qua bước lookup — trả tên đã clean.
  */
-export function formatAssigneeNameWithTitle(rawName?: string | null): string {
+export function formatAssigneeNameWithTitle(
+  rawName?: string | null,
+  personnelDirectory?: Array<{ name: string; title?: string }>,
+): string {
   if (!rawName) return "Chưa phân công";
   const trimmed = rawName.trim();
   if (!trimmed || trimmed.toLowerCase().includes("chưa phân công")) {
@@ -49,10 +54,10 @@ export function formatAssigneeNameWithTitle(rawName?: string | null): string {
     return `${normalizedPrefix} ${nameWithoutPrefix}`;
   }
 
-  // 3. Nếu chưa có học vị: tra cứu trong danh bạ nhân sự QCET để lấy title đầy đủ
-  const lowerClean = cleanName.toLowerCase();
-  for (const group of QCET_DEPARTMENT_GROUPS) {
-    for (const member of group.members) {
+  // 3. Nếu chưa có học vị: tra cứu trong danh bạ nhân sự để lấy title đầy đủ
+  if (personnelDirectory && personnelDirectory.length > 0) {
+    const lowerClean = cleanName.toLowerCase();
+    for (const member of personnelDirectory) {
       const memberNameClean = member.name
         .replace(/^(ThS\.|TS\.|CN\.|BS\.|PGS\.|GS\.|KS\.|GVC\.)\s*/i, "")
         .trim()
@@ -62,7 +67,6 @@ export function formatAssigneeNameWithTitle(rawName?: string | null): string {
         memberNameClean === lowerClean
       ) {
         if (member.title && member.title.trim()) {
-          // member.title đã có sẵn dạng "ThS. Phạm Văn Tường"
           return member.title.trim();
         }
       }

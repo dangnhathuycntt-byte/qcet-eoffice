@@ -1,0 +1,654 @@
+<title>QCET Task Detail</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+/* ── Design Tokens (DESIGN.md) ── */
+:root {
+  --canvas: oklch(0.985 0.003 250);
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.965 0.005 250);
+  --text-primary: oklch(0.145 0.015 250);
+  --text-secondary: oklch(0.205 0.015 250);
+  --text-muted: oklch(0.38 0.015 250);
+  --text-on-accent: oklch(0.985 0 0);
+  --primary: oklch(0.42 0.18 250);
+  --border: oklch(0.915 0.006 250);
+  --border-30: oklch(0.915 0.006 250 / 0.30);
+  --ring: oklch(0.45 0.12 250);
+  --info: #2563eb;
+  --info-bg: #eff6ff;
+  --danger: oklch(0.577 0.245 27.325);
+  --danger-bg: #fef2f2;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --success: #059669;
+  --violet: #7c3aed;
+  --radius-sm: 0.51rem;
+  --radius-md: 0.68rem;
+  --radius-lg: 0.85rem;
+  --radius-xl: 1rem;
+  --shadow-subtle: 0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 3px 1px rgba(0,0,0,0.02);
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.03);
+  --font: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  font-family: var(--font);
+  background: var(--canvas);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  padding: 0 !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+::selection { background: oklch(0.42 0.18 250 / 0.12); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+.sb-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 10px;
+}
+.sb-avatar {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.sb-name {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+}
+.sb-btns { display: flex; gap: 2px; margin-left: auto; }
+.ib {
+  width: 28px; height: 28px; border: none; background: none;
+  border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: background 160ms ease, color 160ms ease;
+}
+.ib:hover { background: var(--surface-muted); color: var(--text-primary); }
+.ib:active { transform: translateY(1px); }
+.ib svg { width: 16px; height: 16px; }
+.sb-nav { padding: 4px 8px; }
+.ni {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: var(--radius-lg);
+  font-size: 13.5px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; text-decoration: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+.ni:hover { background: var(--surface-muted); color: var(--text-primary); }
+.ni.act { background: var(--surface-muted); color: var(--text-primary); font-weight: 600; }
+.ni svg { width: 18px; height: 18px; opacity: .6; flex-shrink: 0; }
+.sb-sect {
+  padding: 20px 16px 6px;
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+
+/* ── Topbar ── */
+.topbar {
+  height: 44px; min-height: 44px;
+  display: flex; align-items: center; padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px; gap: 6px;
+}
+.topbar a { color: var(--text-muted); text-decoration: none; transition: color 160ms; }
+.topbar a:hover { color: var(--text-primary); }
+.topbar .sep { color: var(--text-muted); opacity: .45; font-size: 11px; }
+.topbar .cur { color: var(--text-primary); font-weight: 600; }
+
+/* ── Split Workspace ── */
+.split {
+  flex: 1; display: grid; grid-template-columns: 1fr;
+  gap: calc(4px * 3); padding: 12px;
+  min-height: 0;
+  transition: grid-template-columns 280ms var(--ease-out);
+}
+.split.peek { grid-template-columns: 1fr min(75vw, 480px); }
+
+/* ── Workspace Card ── */
+.ws {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  container-type: inline-size;
+}
+
+/* ── Header Actions ── */
+.hdr {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 8px 18px 0; gap: 4px;
+}
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 4px; padding: 6px 24px 0; }
+.tab {
+  padding: 7px 14px; border-radius: 18px;
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; border: 1px solid transparent; background: none;
+  transition: all 160ms ease;
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font);
+}
+.tab:hover { background: var(--surface-muted); color: var(--text-primary); }
+.tab.act { background: var(--surface-muted); color: var(--text-primary); font-weight: 600; }
+.tbdg {
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  background: oklch(0.965 0.005 250); padding: 1px 6px; border-radius: 10px;
+}
+
+/* ── Canvas ── */
+.canvas {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 0 clamp(24px, 3vw, 48px) 64px;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.145 0.015 250 / 0.12) transparent;
+}
+.cnt { width: 100%; padding-top: 24px; }
+
+/* ── Content + Sidebar flex ── */
+.cl { display: flex; gap: 32px; align-items: flex-start; }
+.cm { flex: 1; min-width: 0; }
+
+/* ── Title ── */
+.ttl {
+  font-size: 24px; font-weight: 600; line-height: 1.4;
+  letter-spacing: -0.6px; color: var(--text-primary);
+  margin-bottom: 16px; text-wrap: balance;
+}
+
+/* ── Inline Props (shown when peek open) ── */
+.ip {
+  display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 20px; font-size: 13px; color: var(--text-secondary);
+}
+.split.peek .ip { display: flex; }
+.split.peek .ps { display: none; }
+.ipi { display: inline-flex; align-items: center; gap: 5px; }
+.ipi svg { width: 14px; height: 14px; opacity: .55; }
+.dot { color: var(--text-muted); opacity: .4; user-select: none; }
+.dbg {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.dbg svg { width: 13px; height: 13px; }
+.dbg-a { background: var(--warning-bg); color: var(--warning); }
+.dbg-r { background: var(--danger-bg); color: oklch(0.577 0.245 27.325); }
+.darr { color: var(--text-muted); font-size: 12px; }
+
+/* ── Block Content ── */
+.bc { font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
+
+/* ── Properties Sidebar ── */
+.ps { width: 280px; min-width: 280px; flex-shrink: 0; }
+.ps-hd {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 0 14px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+}
+.ps-hd svg { width: 14px; height: 14px; color: var(--text-muted); }
+.pg {
+  display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 0;
+}
+.pl {
+  font-size: 12.5px; color: var(--text-muted);
+  padding: 6px 0; display: flex; align-items: center; min-height: 32px;
+}
+.pv {
+  font-size: 13px; color: var(--text-primary);
+  padding: 6px 0; display: flex; align-items: center; gap: 6px; min-height: 32px;
+}
+.pv svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
+
+/* ── Status / Priority Badges ── */
+.sb {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.sb svg { width: 16px; height: 16px; }
+.chv { width: 12px !important; height: 12px !important; color: var(--text-muted) !important; opacity: .6; }
+.s-ip { color: var(--info); }
+.s-ip svg:not(.chv) { color: var(--info); }
+.s-new { color: var(--text-muted); }
+.s-new svg:not(.chv) { color: var(--text-muted); }
+.pb { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.pb svg { width: 16px; height: 16px; }
+.p-n { color: var(--violet); }
+.p-n svg:not(.chv) { color: var(--violet); }
+
+/* ── Subtask Section ── */
+.ss {
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid oklch(0.915 0.006 250 / 0.5);
+}
+.ss-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ss-t {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px;
+}
+.ss-c {
+  font-size: 11px; font-weight: 600; background: var(--surface-muted);
+  color: var(--text-muted); padding: 1px 7px; border-radius: 10px;
+}
+.ab {
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted);
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 3px;
+  padding: 3px 8px; border-radius: 6px;
+  font-family: var(--font);
+  transition: all 160ms ease;
+}
+.ab:hover { background: var(--surface-muted); color: var(--text-primary); }
+.ab svg { width: 14px; height: 14px; }
+.si {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 8px;
+  cursor: pointer; transition: background 160ms ease; font-size: 13px;
+}
+.si:hover { background: var(--surface-muted); }
+.si-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted); flex-shrink: 0; opacity: .45;
+}
+.si-t {
+  flex: 1; color: var(--text-primary); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.si-d { font-size: 12px; color: var(--text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.si-av {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--surface-muted); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.si-av svg { width: 12px; height: 12px; color: var(--text-muted); }
+
+/* ── Peek Surface ── */
+.pk {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.pk-hd {
+  display: flex; align-items: center;
+  padding: 14px 16px; border-bottom: 1px solid oklch(0.915 0.006 250 / 0.5);
+  gap: 8px;
+}
+.pk-t { font-size: 13px; font-weight: 600; color: var(--text-primary); flex: 1; }
+.pk-c { font-size: 12px; color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+.pk-x {
+  width: 28px; height: 28px; border: none; background: none;
+  border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: background 160ms ease;
+}
+.pk-x:hover { background: var(--surface-muted); }
+.pk-x svg { width: 16px; height: 16px; }
+
+/* ── Peek Tabs ── */
+.pk-tabs {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; font-size: 12.5px; color: var(--text-muted);
+  border-bottom: 1px solid oklch(0.915 0.006 250 / 0.5);
+}
+.pk-tl { flex-shrink: 0; font-weight: 500; }
+.pk-tp {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 16px;
+  background: var(--surface-muted); font-size: 12.5px; font-weight: 500;
+  color: var(--text-primary); cursor: pointer;
+  border: 1px solid var(--border);
+}
+.pk-td { width: 6px; height: 6px; border-radius: 50%; background: oklch(0.577 0.245 27.325); flex-shrink: 0; }
+.pk-tdate { color: var(--text-muted); font-weight: 400; }
+
+/* ── Peek Content ── */
+.pk-cnt { flex: 1; overflow-y: auto; padding: 20px 16px 32px; }
+.st-ttl {
+  font-size: 20px; font-weight: 600; line-height: 1.4;
+  letter-spacing: -0.4px; color: var(--text-primary); margin-bottom: 14px;
+}
+.st-p { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; }
+.st-d { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+.ev {
+  width: 100%; border-radius: 10px;
+  background: #111827; min-height: 160px;
+  overflow: hidden; position: relative; margin-top: 4px;
+}
+.ev-code {
+  font-size: 11.5px; color: rgba(255,255,255,.45);
+  font-family: var(--font-mono); padding: 18px 20px;
+  line-height: 1.6; white-space: pre; overflow-x: auto;
+}
+.ev-code .kw { color: #c084fc; }
+.ev-code .fn { color: #67e8f9; }
+.ev-code .str { color: #86efac; }
+.ev-code .cm { color: rgba(255,255,255,.22); }
+.nt-in {
+  width: 100%; border: none; background: none;
+  font-family: var(--font); font-size: 13.5px;
+  color: var(--text-muted); padding: 14px 0; outline: none;
+}
+.nt-in::placeholder { color: var(--text-muted); opacity: .45; }
+
+/* ── Toggle FAB ── */
+.fab {
+  position: fixed; bottom: 20px; right: 20px; z-index: 100;
+  padding: 10px 18px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); box-shadow: var(--shadow-card);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  color: var(--primary); cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.fab:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); transform: translateY(-1px); }
+.fab:active { transform: translateY(1px); }
+.fab svg { width: 16px; height: 16px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .ps { display: none !important; }
+  .ip { display: flex !important; }
+  .split { padding: 0; gap: 0; }
+  .split.peek { grid-template-columns: 1fr; }
+  .pk {
+    position: fixed; inset: 0; z-index: 50;
+    border-radius: 0; border: none;
+  }
+  .ws { border-radius: 0; border-left: none; border-right: none; }
+  .ttl { font-size: 21px; }
+  .canvas { padding: 0 16px 40px; }
+  .fab { bottom: 16px; right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── Scrollbar ── */
+.canvas::-webkit-scrollbar { width: 5px; }
+.canvas::-webkit-scrollbar-thumb {
+  background: oklch(0.145 0.015 250 / 0.12);
+  border-radius: 9999px;
+}
+.canvas::-webkit-scrollbar-thumb:hover { background: oklch(0.145 0.015 250 / 0.25); }
+.pk-cnt::-webkit-scrollbar { width: 5px; }
+.pk-cnt::-webkit-scrollbar-thumb { background: oklch(0.145 0.015 250 / 0.12); border-radius: 9999px; }
+
+/* ── Animation ── */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.pk { animation: panel-in 180ms ease-out; }
+</style>
+
+<!-- ═══ SVG Icon Defs ═══ -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 17 4-4 4 4 6-6"/></symbol>
+  <symbol id="i-bldg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
+
+<div style="display:flex;height:100vh;overflow:hidden;width:100%;">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar" aria-label="Thanh điều hướng chính">
+  <div class="sb-head">
+    <div class="sb-avatar">HT</div>
+    <span class="sb-name">Hiệu Trưởng ...</span>
+    <div class="sb-btns">
+      <button class="ib" title="Tìm kiếm (⌘K)" aria-label="Tìm kiếm"><svg><use href="#i-search"/></svg></button>
+      <button class="ib" title="Giao việc mới" aria-label="Giao việc mới"><svg><use href="#i-edit"/></svg></button>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <a class="ni act" href="#" aria-current="page"><svg><use href="#i-check"/></svg>Nhiệm vụ</a>
+    <a class="ni" href="#"><svg><use href="#i-cal"/></svg>Lịch công tác</a>
+    <a class="ni" href="#"><svg><use href="#i-mail"/></svg>Hộp thư</a>
+  </div>
+  <div class="sb-sect">Tổ chức</div>
+  <div class="sb-nav">
+    <a class="ni" href="#"><svg><use href="#i-users"/></svg>Cơ cấu & Danh bạ</a>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <!-- Topbar -->
+  <header class="topbar">
+    <a href="#">Nhiệm vụ</a>
+    <span class="sep">›</span>
+    <span class="cur">NV-2026-09-098</span>
+  </header>
+
+  <!-- Split Workspace -->
+  <div class="split" id="split">
+    <!-- ── Workspace Card ── -->
+    <div class="ws">
+      <div class="hdr">
+        <button class="ib" title="Sao chép liên kết" aria-label="Sao chép liên kết"><svg><use href="#i-link"/></svg></button>
+        <button class="ib" title="Ẩn/Hiện thuộc tính" aria-label="Ẩn/Hiện thuộc tính"><svg><use href="#i-panel"/></svg></button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist" aria-label="Các phân mục chi tiết nhiệm vụ">
+        <button class="tab act" role="tab" aria-selected="true">Tổng quan</button>
+        <button class="tab" role="tab" aria-selected="false">Hoạt động <span class="tbdg">1</span></button>
+      </div>
+
+      <!-- Canvas -->
+      <div class="canvas" role="tabpanel" aria-label="Tổng quan">
+        <div class="cnt">
+          <div class="cl">
+            <div class="cm">
+              <h1 class="ttl">Tổ chức gặp mặt, chào đón tân HSSV khóa 20.</h1>
+
+              <!-- Inline props (peek mode) -->
+              <div class="ip">
+                <span class="ipi sb s-ip">
+                  <svg width="16" height="16"><use href="#i-clock"/></svg>
+                  Đang thực hiện
+                  <svg class="chv"><use href="#i-chev"/></svg>
+                </span>
+                <span class="dot">·</span>
+                <span class="ipi">
+                  <svg><use href="#i-user"/></svg>
+                  ThS. Nguyễn Văn Thắng
+                </span>
+                <span class="dot">·</span>
+                <span class="dbg dbg-a">
+                  <svg><use href="#i-cal"/></svg>
+                  14/09/2026
+                </span>
+                <span class="darr">→</span>
+                <span class="dbg dbg-r">
+                  <svg><use href="#i-cal"/></svg>
+                  21/09/2026
+                </span>
+              </div>
+
+              <div class="bc">
+                <p>Tổ chức gặp mặt, chào đón tân HSSV khóa 20.</p>
+              </div>
+            </div>
+
+            <!-- ── Properties Sidebar ── -->
+            <aside class="ps" id="ps" aria-label="Thuộc tính nhiệm vụ">
+              <div class="ps-hd">
+                Thuộc tính
+                <svg><use href="#i-chev"/></svg>
+              </div>
+              <div class="pg">
+                <span class="pl">Trạng thái</span>
+                <span class="pv">
+                  <span class="sb s-ip">
+                    <svg><use href="#i-clock"/></svg>
+                    Đang thực hiện
+                    <svg class="chv"><use href="#i-chev"/></svg>
+                  </span>
+                </span>
+
+                <span class="pl">Ưu tiên</span>
+                <span class="pv">
+                  <span class="pb p-n">
+                    <svg><use href="#i-chart"/></svg>
+                    Bình thường
+                    <svg class="chv"><use href="#i-chev"/></svg>
+                  </span>
+                </span>
+
+                <span class="pl">Phụ trách</span>
+                <span class="pv"><svg><use href="#i-user"/></svg>Nguyễn Văn Thắng</span>
+
+                <span class="pl">Phối hợp</span>
+                <span class="pv" style="color:var(--text-muted)">—</span>
+
+                <span class="pl">Ngày bắt đầu</span>
+                <span class="pv" style="font-variant-numeric:tabular-nums"><svg><use href="#i-cal"/></svg>14/09/2026</span>
+
+                <span class="pl">Hạn hoàn thành</span>
+                <span class="pv" style="font-variant-numeric:tabular-nums"><svg><use href="#i-cal"/></svg>21/09/2026</span>
+
+                <span class="pl">Đơn vị</span>
+                <span class="pv"><svg><use href="#i-bldg"/></svg>Khoa Điện</span>
+              </div>
+
+              <!-- Subtask Section -->
+              <div class="ss">
+                <div class="ss-hd">
+                  <span class="ss-t">Việc con <span class="ss-c">1</span></span>
+                  <button class="ab"><svg><use href="#i-plus"/></svg>Thêm</button>
+                </div>
+                <div class="si" onclick="toggle()" tabindex="0" role="button" aria-label="Xem chi tiết Subtask kiểm thử UI">
+                  <span class="si-dot"></span>
+                  <span class="si-t">Subtask kiểm thử UI</span>
+                  <span class="si-d">20/09</span>
+                  <span class="si-av"><svg><use href="#i-user"/></svg></span>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Peek Surface (subtask drawer) ── -->
+    <div class="pk" id="pk" style="display:none" role="dialog" aria-label="Chi tiết việc con: Subtask kiểm thử UI">
+      <div class="pk-hd">
+        <span class="pk-t">Chi tiết việc con<span class="pk-c">1 / 1</span></span>
+        <button class="ab" style="font-size:13px"><svg><use href="#i-plus"/></svg>Thêm</button>
+        <button class="pk-x" onclick="toggle()" aria-label="Đóng chi tiết việc con"><svg><use href="#i-x"/></svg></button>
+      </div>
+
+      <div class="pk-tabs">
+        <span class="pk-tl">Việc con:</span>
+        <span class="pk-tp">
+          <span class="pk-td"></span>
+          Subtask kiểm thử UI
+          <span class="pk-tdate">· 20/09</span>
+        </span>
+      </div>
+
+      <div class="pk-cnt">
+        <h2 class="st-ttl">Subtask kiểm thử UI</h2>
+
+        <div class="st-p">
+          <span class="sb s-new">
+            <svg width="16" height="16"><use href="#i-circle"/></svg>
+            Mới
+            <svg class="chv"><use href="#i-chev"/></svg>
+          </span>
+          <span class="dot">·</span>
+          <span class="ipi">
+            <svg width="14" height="14"><use href="#i-user"/></svg>
+            Chưa phân công
+          </span>
+        </div>
+
+        <div class="st-d">
+          <span class="dbg dbg-a">
+            <svg><use href="#i-cal"/></svg>
+            20/09/2026
+          </span>
+          <span class="darr">→</span>
+          <span class="dbg dbg-r">
+            <svg><use href="#i-cal"/></svg>
+            20/09/2026
+          </span>
+        </div>
+
+        <div class="ev">
+          <div class="ev-code"><span class="cm">// evidence screenshot placeholder</span>
+<span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">runTests</span>({
+  suite: <span class="str">'ui-components'</span>,
+  coverage: <span class="str">true</span>,
+  verbose: <span class="str">true</span>,
+});
+
+console.<span class="fn">log</span>(<span class="str">'Tests passed:'</span>, result.passed);
+console.<span class="fn">log</span>(<span class="str">'Coverage:'</span>, result.coverage + <span class="str">'%'</span>);</div>
+        </div>
+
+        <input class="nt-in" type="text" placeholder="Thêm chú thích..." aria-label="Thêm chú thích">
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Toggle FAB -->
+<button class="fab" id="fab" onclick="toggle()" aria-label="Mở việc con">
+  <svg><use href="#i-panel"/></svg>
+  <span id="fab-label">Mở việc con</span>
+</button>
+
+<script>
+let open = false;
+function toggle() {
+  open = !open;
+  document.getElementById('split').classList.toggle('peek', open);
+  document.getElementById('pk').style.display = open ? 'flex' : 'none';
+  document.getElementById('fab-label').textContent = open ? 'Đóng việc con' : 'Mở việc con';
+}
+</script>

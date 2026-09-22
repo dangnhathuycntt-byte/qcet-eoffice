@@ -220,7 +220,7 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     const content = fs.readFileSync(identityBlockPath, "utf-8");
     const propertiesSidebarPath = path.join(
       process.cwd(),
-      "src/components/tasks/detail/linear-properties-sidebar.tsx"
+      "src/components/tasks/detail/task-properties-sidebar.tsx"
     );
     const propertiesSidebarContent = fs.readFileSync(propertiesSidebarPath, "utf-8");
 

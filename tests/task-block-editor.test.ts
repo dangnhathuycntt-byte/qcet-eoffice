@@ -5,13 +5,13 @@ import * as path from "node:path";
 import {
   parseContentToBlocks,
   serializeBlocksToContent,
-  type NotionBlockItem,
-} from "@/components/tasks/detail/task-notion-block-content";
+  type ContentBlockItem,
+} from "@/components/tasks/detail/task-block-editor";
 
 describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No Internal Scroll", () => {
   const componentPath = path.join(
     process.cwd(),
-    "src/components/tasks/detail/task-notion-block-content.tsx"
+    "src/components/tasks/detail/task-block-editor.tsx"
   );
   const detailPagePath = path.join(
     process.cwd(),
@@ -148,7 +148,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
 
     it("integrates the shared editor into the canvas without an outer card", () => {
-      const rootIndex = componentContent.indexOf('data-slot="task-notion-block-content"');
+      const rootIndex = componentContent.indexOf('data-slot="task-block-editor"');
       assert.ok(rootIndex > 0, "Editor root slot must exist");
 
       const rootBlock = componentContent.slice(rootIndex, rootIndex + 500);
@@ -190,7 +190,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
 
     it("serializes and deserializes structured blocks round-trip and strips legacy subtasks widgets", () => {
-      const initialBlocks: NotionBlockItem[] = [
+      const initialBlocks: ContentBlockItem[] = [
         { id: "b1", type: "heading", content: "Kế hoạch năm học", level: 1 },
         { id: "b2", type: "text", content: "Nội dung thực hiện chi tiết." },
         { id: "b3", type: "bulleted_list", content: "Giai đoạn 1: Chuẩn bị" },
@@ -298,7 +298,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     it("connects real persistence and protects Space key from triggering sidebar toggle", () => {
       assert.ok(
         detailPageContent.includes("onSaveContent={handleSaveDescription}"),
-        "TaskNotionBlockContent must connect to handleSaveDescription for real persistence"
+        "TaskBlockEditor must connect to handleSaveDescription for real persistence"
       );
       assert.ok(
         detailPageContent.includes("isEditable(target) || isEditable(focused)"),
@@ -602,7 +602,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
 
   describe("7. Empty Block Prevention, Auto-Sanitization & Non-Persistence", () => {
     it("identifies meaningful blocks and rejects placeholder-only empty blocks", () => {
-      const { isMeaningfulBlock } = require("@/components/tasks/detail/task-notion-block-content");
+      const { isMeaningfulBlock } = require("@/components/tasks/detail/task-block-editor");
 
       // Divider is always meaningful
       assert.equal(isMeaningfulBlock({ id: "1", type: "divider", content: "" }), true);
@@ -683,7 +683,7 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
 
     it("resolves internal QCET E-Office links for tasks, documents and meetings", () => {
-      const { resolveUrlMetadata } = require("@/components/tasks/detail/task-notion-block-content");
+      const { resolveUrlMetadata } = require("@/components/tasks/detail/task-block-editor");
 
       const taskMeta = resolveUrlMetadata("/tasks/task-123", "Soạn thảo kế hoạch");
       assert.equal(taskMeta.isInternalQcet, true);

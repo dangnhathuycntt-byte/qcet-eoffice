@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { LinearInboxView } from "@/components/inbox/linear-inbox-view";
+import { InboxView } from "@/components/inbox/inbox-view";
 
 export const metadata: Metadata = {
   title: "Hộp thư | QCET E-Office",
@@ -16,7 +16,7 @@ export default function InboxPage() {
         </div>
       }
     >
-      <LinearInboxView />
+      <InboxView />
     </Suspense>
   );
 }

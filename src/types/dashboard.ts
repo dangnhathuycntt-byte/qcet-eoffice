@@ -296,5 +296,3 @@ export interface DashboardPayload {
   syncTimestamp?: string;
 }
 
-export type { DepartmentPersonnel, DepartmentPersonnelGroup } from "@/lib/departments";
-

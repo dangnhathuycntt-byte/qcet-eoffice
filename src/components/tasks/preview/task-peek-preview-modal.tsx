@@ -15,7 +15,7 @@ import { formatDetailDate, getRelativeDueTime } from "@/lib/task-detail-helpers"
 import { shouldIgnoreShortcut } from "@/lib/shortcuts/guards";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 
-export interface LinearPeekPreviewModalProps {
+export interface TaskPeekPreviewModalProps {
   task: SchoolTask | StaffTask | null;
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +27,7 @@ export interface LinearPeekPreviewModalProps {
   hasNext?: boolean;
 }
 
-export function LinearPeekPreviewModal({
+export function TaskPeekPreviewModal({
   task,
   isOpen,
   onClose,
@@ -37,7 +37,7 @@ export function LinearPeekPreviewModal({
   onNavigatePrev,
   hasPrev = true,
   hasNext = true,
-}: LinearPeekPreviewModalProps) {
+}: TaskPeekPreviewModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
   const previousActiveElement = React.useRef<HTMLElement | null>(null);
   const openedAtRef = React.useRef<number>(0);

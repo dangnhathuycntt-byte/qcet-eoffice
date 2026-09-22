@@ -27,7 +27,7 @@ export interface PropertyRowProps
 /**
  * Consistent property row layout for sidebars and detail panels.
  *
- * Replaces 7+ copy-paste className patterns in linear-properties-sidebar.tsx
+ * Replaces 7+ copy-paste className patterns in task-properties-sidebar.tsx
  * with a single cva-driven component.
  */
 export function PropertyRow({

@@ -5,7 +5,6 @@ import {
   canRoleSelectAssignee,
   validateTaskForm,
   getInitialTaskFormData,
-  getDepartmentForMember,
 } from "../src/components/dashboard/create-task-modal";
 import type { AuthUser } from "../src/types/auth";
 import type { SchoolTask } from "../src/types/dashboard";
@@ -76,17 +75,6 @@ describe("Create Task Modal Constraints & Helpers", () => {
   test("canRoleSelectAssignee rejects staff from assigning tasks", () => {
     const staffCheck = canRoleSelectAssignee(staffUser, "DAO_TAO");
     assert.equal(staffCheck.allowed, false);
-  });
-
-  test("getDepartmentForMember resolves correct department group", () => {
-    const vinhDept = getDepartmentForMember("Nguyễn Ngọc Vinh");
-    assert.ok(vinhDept?.code === "TT_STT" || vinhDept?.code === "CNTT");
-
-    const trungDept = getDepartmentForMember("Đỗ Quang Trung");
-    assert.ok(trungDept?.code === "P_QLDT" || trungDept?.code === "DAO_TAO");
-
-    const unknown = getDepartmentForMember("Người Lạ");
-    assert.equal(unknown, undefined);
   });
 
   test("validateTaskForm enforces required fields and DACUM deliverables", () => {

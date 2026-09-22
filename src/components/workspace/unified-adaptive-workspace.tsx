@@ -42,8 +42,8 @@ const TaskKanbanBoard = dynamic(
 );
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { isSchoolTask } from "@/types/dashboard";
-const LinearTaskDetailView = dynamic(
-  () => import("@/components/tasks/detail/linear-task-detail-view").then((m) => ({ default: m.LinearTaskDetailView })),
+const TaskDetailView = dynamic(
+  () => import("@/components/tasks/detail/task-detail-view").then((m) => ({ default: m.TaskDetailView })),
   { ssr: false }
 );
 const LinearPeekPreviewModal = dynamic(
@@ -2091,7 +2091,7 @@ function UnifiedAdaptiveWorkspaceInner({
       {/* Main Canvas Surface: Linear Task Detail (when task selected) OR Workspace List/Table View */}
       {!disableInternalDetail && isDetailOpen && internalSelectedTask ? (
         <div data-slot="in-canvas-linear-detail" className="w-full">
-          <LinearTaskDetailView
+          <TaskDetailView
             task={internalSelectedTask}
             taskId={internalSelectedTask.id}
             onStatusChange={handleStatusChange}

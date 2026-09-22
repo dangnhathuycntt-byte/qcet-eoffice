@@ -23,11 +23,8 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { Popover } from "@base-ui/react/popover";
-import {
-  QCET_DEPARTMENT_GROUPS,
-  type DepartmentPersonnelGroup,
-  toCanonicalUnitCode,
-} from "@/lib/departments";
+import { useDepartmentList } from "@/hooks/use-department-list";
+import { toCanonicalUnitCode } from "@/lib/departments";
 import {
   submitCreateTask,
   type CreateTaskLevel,
@@ -39,9 +36,9 @@ import {
  */
 export const ENABLE_TASK_AGENT_ASSISTANT = false;
 
-export type LinearPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
+export type CreateTaskPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
-export interface LinearCreateTaskModalProps {
+export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: (task: unknown) => void;
@@ -63,7 +60,7 @@ interface TaskDraftStorage {
   title: string;
   summary: string;
   description: string;
-  priority: LinearPriority;
+  priority: CreateTaskPriority;
   status: "TODO" | "IN_PROGRESS";
   leadAssigneeName: string;
   coAssignees: string[];
@@ -74,7 +71,7 @@ interface TaskDraftStorage {
 }
 
 const PRIORITY_CONFIG: Record<
-  LinearPriority,
+  CreateTaskPriority,
   { label: string; color: string; bg: string; border: string; iconColor: string }
 > = {
   URGENT: {
@@ -107,7 +104,7 @@ const PRIORITY_CONFIG: Record<
   },
 };
 
-const PRIORITY_KEYS: LinearPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+const PRIORITY_KEYS: CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 
 const CATEGORY_OPTIONS = [
   { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số" },
@@ -119,7 +116,7 @@ const CATEGORY_OPTIONS = [
   { id: "KHAC", label: "Khác" },
 ];
 
-export function LinearCreateTaskModal({
+export function CreateTaskModal({
   isOpen,
   onClose,
   onSubmitSuccess,
@@ -131,8 +128,9 @@ export function LinearCreateTaskModal({
   initialParentTaskTitle,
   initialLeadAssigneeName = "",
   initialDueDate = "",
-}: LinearCreateTaskModalProps) {
+}: CreateTaskModalProps) {
   const { user } = useAuth();
+  const { departments } = useDepartmentList({ includePersonnel: true });
   const defaultDepartmentCode = initialDepartmentCode || toCanonicalUnitCode(user?.departmentCode || user?.department || "") || "P_QLDT";
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -146,7 +144,7 @@ export function LinearCreateTaskModal({
   const [title, setTitle] = React.useState(initialTitle);
   const [summary, setSummary] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [priority, setPriority] = React.useState<LinearPriority>("MEDIUM");
+  const [priority, setPriority] = React.useState<CreateTaskPriority>("MEDIUM");
   const [status, setStatus] = React.useState<"TODO" | "IN_PROGRESS">("IN_PROGRESS");
   const [leadAssigneeName, setLeadAssigneeName] = React.useState(initialLeadAssigneeName);
   const [coAssignees, setCoAssignees] = React.useState<string[]>([]);
@@ -214,10 +212,10 @@ export function LinearCreateTaskModal({
   // Department & personnel lookup
   const currentDept = React.useMemo(() => {
     return (
-      QCET_DEPARTMENT_GROUPS.find((d) => d.code === selectedDeptCode) ||
-      QCET_DEPARTMENT_GROUPS[0]
+      departments.find((d) => d.code === selectedDeptCode) ||
+      departments[0]
     );
-  }, [selectedDeptCode]);
+  }, [selectedDeptCode, departments]);
 
   const availablePersonnel = React.useMemo(() => {
     return currentDept?.personnel || [];
@@ -564,7 +562,7 @@ export function LinearCreateTaskModal({
   const modalElement = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-2 sm:p-4 md:p-6"
-      data-slot="linear-create-task-modal"
+      data-slot="create-task-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-task-modal-title"
@@ -575,7 +573,7 @@ export function LinearCreateTaskModal({
         }
       }}
     >
-      {/* Outer Card: Compact Linear-inspired Composer */}
+      {/* Outer Card: Compact task composer */}
       <div
         ref={modalRef}
         className={cn(
@@ -584,7 +582,7 @@ export function LinearCreateTaskModal({
           "animate-in fade-in zoom-in-95"
         )}
       >
-        {/* Modal Top Header - Minimal Linear Breadcrumb */}
+        {/* Modal Top Header */}
         <header className="flex items-center justify-between px-5 sm:px-6 py-2.5 border-b border-border/60 bg-card shrink-0">
           {/* Breadcrumb & Unit Selector */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -616,7 +614,7 @@ export function LinearCreateTaskModal({
               <Popover.Portal>
               <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
               <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl" aria-label="Chọn đơn vị phòng ban">
-                {QCET_DEPARTMENT_GROUPS.map((dept) => (
+                {departments.map((dept) => (
                   <button
                     key={dept.code}
                     type="button"
@@ -1034,4 +1032,4 @@ export function LinearCreateTaskModal({
   return createPortal(modalElement, document.body);
 }
 
-export default LinearCreateTaskModal;
+export default CreateTaskModal;

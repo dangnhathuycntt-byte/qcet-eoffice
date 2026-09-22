@@ -9,7 +9,7 @@
  * - Empty document serializes to "".
  */
 
-import type { NotionBlockItem, NotionBlockType } from "./task-notion-block-content";
+import type { ContentBlockItem, ContentBlockType } from "./task-block-editor";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -86,7 +86,7 @@ export type PlateValue = PlateElement[];
 // QCET → Plate
 // ---------------------------------------------------------------------------
 
-function qcetBlockToPlateElement(block: NotionBlockItem): PlateElement {
+function blockToPlateElement(block: ContentBlockItem): PlateElement {
   const children: [{ text: string }] = [{ text: block.content || "" }];
   const base: PlateElement = { id: block.id, type: PT.paragraph, children };
 
@@ -165,10 +165,10 @@ function qcetBlockToPlateElement(block: NotionBlockItem): PlateElement {
   }
 }
 
-export function qcetToPlate(blocks: NotionBlockItem[]): PlateValue {
+export function blocksToPlate(blocks: ContentBlockItem[]): PlateValue {
   return blocks
     .filter((b) => b && !LEGACY_STRIP_TYPES.has(b.type))
-    .map(qcetBlockToPlateElement);
+    .map(blockToPlateElement);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +181,7 @@ function textOf(el: PlateElement): string {
     .join("");
 }
 
-function plateElementToQcetBlock(el: PlateElement): NotionBlockItem {
+function plateElementToBlock(el: PlateElement): ContentBlockItem {
   const id = el.id || `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const content = textOf(el);
 
@@ -246,15 +246,15 @@ function plateElementToQcetBlock(el: PlateElement): NotionBlockItem {
   }
 }
 
-export function plateToQcet(value: PlateValue): NotionBlockItem[] {
-  return value.map(plateElementToQcetBlock);
+export function plateToBlocks(value: PlateValue): ContentBlockItem[] {
+  return value.map(plateElementToBlock);
 }
 
 // ---------------------------------------------------------------------------
-// Parse / Serialize (replacing the originals in task-notion-block-content.tsx)
+// Parse / Serialize (replacing the originals in task-block-editor.tsx)
 // ---------------------------------------------------------------------------
 
-export function isMeaningfulBlock(b: NotionBlockItem | null | undefined): boolean {
+export function isMeaningfulBlock(b: ContentBlockItem | null | undefined): boolean {
   if (!b) return false;
   if (b.type === "divider") return true;
   if (b.type === "image") return Boolean(b.url && b.url.trim().length > 0);
@@ -281,7 +281,7 @@ export function isMeaningfulBlock(b: NotionBlockItem | null | undefined): boolea
   return Boolean(b.content && b.content.trim().length > 0);
 }
 
-export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
+export function parseContentToBlocks(raw?: string | null): ContentBlockItem[] {
   if (!raw || !raw.trim()) {
     return [{ id: `b-${Date.now()}-1`, type: "text", content: "" }];
   }
@@ -304,7 +304,7 @@ export function parseContentToBlocks(raw?: string | null): NotionBlockItem[] {
   return [{ id: `b-${Date.now()}-legacy`, type: "text", content: raw }];
 }
 
-export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
+export function serializeBlocksToContent(blocks: ContentBlockItem[]): string {
   const cleaned = blocks.filter(
     (b) => !LEGACY_STRIP_TYPES.has(b.type) && isMeaningfulBlock(b)
   );
@@ -317,11 +317,11 @@ export function serializeBlocksToContent(blocks: NotionBlockItem[]): string {
 // ---------------------------------------------------------------------------
 
 export function parseToPlateValue(raw?: string | null): PlateValue {
-  return qcetToPlate(parseContentToBlocks(raw));
+  return blocksToPlate(parseContentToBlocks(raw));
 }
 
 export function serializePlateValue(value: PlateValue): string {
-  return serializeBlocksToContent(plateToQcet(value));
+  return serializeBlocksToContent(plateToBlocks(value));
 }
 
 // Re-export Plate node type constants for use in editor plugin config

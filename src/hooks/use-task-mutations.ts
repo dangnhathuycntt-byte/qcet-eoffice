@@ -46,24 +46,6 @@ export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
   syncTimestamp: "",
 };
 
-const INITIAL_QCET_DELEGATIONS: DelegationRule[] = [
-  {
-    id: "del-cntt-001",
-    grantorId: "staff-vinh-nn",
-    grantorName: "TS. Nguyễn Ngọc Vinh",
-    grantorRole: "MANAGER",
-    granteeId: "staff-pho-lv",
-    granteeName: "ThS. Lê Văn Phó",
-    granteeRole: "STAFF",
-    departmentCode: "K_CNTT",
-    scope: "DACUM_REVIEW_STEP1",
-    startDate: "2026-09-01",
-    endDate: "2026-09-30",
-    status: "ACTIVE",
-    reason: "Ủy quyền thẩm định và phê duyệt hồ sơ DACUM bước 1 trong thời gian Trưởng khoa công tác.",
-    createdAt: "2026-09-01T08:00:00.000Z",
-  },
-];
 
 export interface TaskMutationsReturn {
   dashboardData: DashboardPayload;
@@ -94,8 +76,8 @@ export function useTaskMutations(
   const [isLoading, setIsLoading] = React.useState<boolean>(!hasInitialData);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
-  const [delegations, setDelegations] = React.useState<DelegationRule[]>(INITIAL_QCET_DELEGATIONS);
-  const [delegationDeptCode] = React.useState("K_CNTT");
+  const [delegations, setDelegations] = React.useState<DelegationRule[]>([]);
+  const [delegationDeptCode] = React.useState(user?.departmentCode || "");
 
   // Latest-request-wins guard: a slow earlier fetch must not overwrite a newer
   // one (plan T03.6). One guard instance per hook, shared by every overview fetch.
@@ -140,6 +122,42 @@ export function useTaskMutations(
       isMounted = false;
     };
   }, [hasInitialData]);
+
+  // Fetch active delegations from API
+  React.useEffect(() => {
+    if (!user?.id) return;
+    let isMounted = true;
+    fetch("/api/delegations?status=ACTIVE")
+      .then((r) => {
+        if (!r.ok) throw new Error("delegation fetch failed");
+        return r.json();
+      })
+      .then((data: any[]) => {
+        if (!isMounted || !Array.isArray(data)) return;
+        setDelegations(
+          data.map((d) => ({
+            id: d.id,
+            grantorId: d.grantorAssignment?.userId || "",
+            grantorName: d.grantorAssignment?.user?.name || "",
+            grantorRole: (d.grantorAssignment?.user?.role === "ADMIN" ? "ADMIN" : "MANAGER") as "ADMIN" | "MANAGER",
+            granteeId: d.granteeAssignment?.userId || "",
+            granteeName: d.granteeAssignment?.user?.name || "",
+            granteeRole: (d.granteeAssignment?.user?.role === "MANAGER" ? "MANAGER" : "STAFF") as "MANAGER" | "STAFF",
+            departmentCode: d.grantorAssignment?.unit?.code || d.granteeAssignment?.unit?.code || "",
+            scope: d.action || "",
+            startDate: d.validFrom ? new Date(d.validFrom).toISOString().slice(0, 10) : "",
+            endDate: d.validUntil ? new Date(d.validUntil).toISOString().slice(0, 10) : "",
+            status: d.status || "ACTIVE",
+            reason: d.reason || "",
+            documentRef: d.sourceDocumentNumber || undefined,
+            createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : "",
+            revokedAt: d.revokedAt ? new Date(d.revokedAt).toISOString() : undefined,
+          }))
+        );
+      })
+      .catch(() => {/* silent — delegations are optional */});
+    return () => { isMounted = false; };
+  }, [user?.id]);
 
   const handleManualRefresh = React.useCallback(async () => {
     const requestToken = overviewRequestGuard.current.begin();

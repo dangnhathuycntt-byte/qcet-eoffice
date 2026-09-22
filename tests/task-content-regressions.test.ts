@@ -5,9 +5,9 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { UpdateTaskInputSchema, UpdateTaskMetadataSchema } from '@/contracts/tasks';
 import { parseAndValidateJson, MAX_JSON_BODY_SIZE } from '@/server/api/validation';
-import { moveBlock, parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-notion-block-content';
+import { moveBlock, parseContentToBlocks, serializeBlocksToContent } from '@/components/tasks/detail/task-block-editor';
 
-const editorPath = 'src/components/tasks/detail/task-notion-block-content.tsx';
+const editorPath = 'src/components/tasks/detail/task-block-editor.tsx';
 const editorSource = ts.createSourceFile(editorPath, readFileSync(editorPath, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
 test('editing blocks preserves the row component identity across editor renders', () => {

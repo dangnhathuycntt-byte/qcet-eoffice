@@ -1,12 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  QCET_DEPARTMENT_GROUPS,
   QCET_UNIT_CANONICAL_MAP,
   QCET_CANONICAL_UNITS,
   toCanonicalUnitCode,
   isCanonicalUnitCode,
-  getDepartmentByCode,
 } from '../src/lib/departments';
 import { QCET_DEPARTMENTS } from '../src/components/org/organization-tree';
 import { DEFAULT_DEMO_USERS } from '../src/lib/role-task-filter';
@@ -129,57 +127,6 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
       );
     }
     assert.strictEqual(isCanonicalUnitCode('INVALID_NON_EXISTENT_UNIT'), false);
-  });
-
-  test('2. QCET_DEPARTMENT_GROUPS contains real canonical units and leaders', () => {
-    assert.ok(Array.isArray(QCET_DEPARTMENT_GROUPS));
-    assert.ok(QCET_DEPARTMENT_GROUPS.length >= 15);
-
-    const bghGroup = QCET_DEPARTMENT_GROUPS.find(
-      (g) => g.code === 'BGH' || g.id === 'bgh'
-    );
-    assert.ok(bghGroup, 'BGH group must exist in QCET_DEPARTMENT_GROUPS');
-
-    // Real Ban Giám hiệu names
-    const bghNames = bghGroup.personnel.map((p) => p.name);
-    assert.ok(
-      bghNames.some((n) => n.includes('Đặng Nhật Huy')),
-      'BGH must contain Hiệu trưởng Đặng Nhật Huy'
-    );
-    assert.ok(
-      bghNames.some((n) => n.includes('Phạm Văn Tường')),
-      'BGH must contain Phó Hiệu trưởng Phạm Văn Tường'
-    );
-    assert.ok(
-      bghNames.some((n) => n.includes('Trần Trọng Kiệm')),
-      'BGH must contain Phó Hiệu trưởng Trần Trọng Kiệm'
-    );
-    assert.ok(
-      bghNames.some((n) => n.includes('Lê Xuân Nguyên')),
-      'BGH must contain Phó Hiệu trưởng Lê Xuân Nguyên'
-    );
-
-    // Check key functional departments exist with correct codes
-    const qldt = getDepartmentByCode('P_QLDT');
-    assert.ok(qldt, 'Phòng QLĐT must resolve by code P_QLDT');
-    assert.ok(
-      qldt.personnel.some((p) => p.name.includes('Lê Văn Thí')),
-      'Phòng QLĐT must have Trưởng phòng Lê Văn Thí'
-    );
-
-    const tc = getDepartmentByCode('P_TC');
-    assert.ok(tc, 'Phòng Tài chính must resolve by code P_TC');
-    assert.ok(
-      tc.personnel.some((p) => p.name.includes('Lê Phương Thúy Oanh')),
-      'Phòng Tài chính must have Trưởng phòng Lê Phương Thúy Oanh'
-    );
-
-    const stt = getDepartmentByCode('TT_STT');
-    assert.ok(stt, 'TT Số - Truyền thông must resolve by code TT_STT');
-    assert.ok(
-      stt.personnel.some((p) => p.name.includes('Nguyễn Ngọc Vinh')),
-      'TT Số - Truyền thông must have Nguyễn Ngọc Vinh'
-    );
   });
 
   test('3. QCET_DEPARTMENTS in organization-tree has 15+ units and 100% @cdktcnqn.edu.vn emails', () => {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { cn } from "../src/lib/utils";
-import { QCET_TOKENS, qcetTokens, twentyTokens, NAV_ITEMS } from "../src/lib/tokens";
+import { QCET_TOKENS, qcetTokens, NAV_ITEMS } from "../src/lib/tokens";
 import { buttonVariants, Button } from "../src/components/ui/button";
 import { badgeVariants, Badge } from "../src/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "../src/components/ui/card";
@@ -119,7 +119,6 @@ describe("QCET Design System Smoke Test Suite", () => {
 
     it("provides backward-compatible aliases for tokens", () => {
       assert.equal(qcetTokens, QCET_TOKENS);
-      assert.equal(twentyTokens, QCET_TOKENS);
     });
 
   });

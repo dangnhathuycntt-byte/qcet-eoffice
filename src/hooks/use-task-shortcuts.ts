@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createTaskSequenceListener } from "@/lib/shortcuts/task-shortcuts";
 
-export interface UseLinearTaskShortcutsOptions {
+export interface UseTaskShortcutsOptions {
   enabled?: boolean;
   onOpen?: () => void;
   onClose?: () => void;
@@ -15,7 +15,7 @@ export interface UseLinearTaskShortcutsOptions {
  * - Single key `c` shortcut for quick task creation
  * - Safely ignores typing in inputs, textareas, selects, and contenteditable elements via shouldIgnoreShortcut
  */
-export function useLinearTaskShortcuts(options: UseLinearTaskShortcutsOptions = {}) {
+export function useTaskShortcuts(options: UseTaskShortcutsOptions = {}) {
   const { enabled = true, onOpen, onClose } = options;
   const [isNewTaskOpen, setIsNewTaskOpen] = React.useState(false);
 

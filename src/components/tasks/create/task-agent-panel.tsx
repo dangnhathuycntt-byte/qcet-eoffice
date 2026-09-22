@@ -5,7 +5,6 @@ import {
   ChevronRight,
   X,
   Send,
-  Loader2,
   AlertCircle,
   Sparkles,
 } from "lucide-react";
@@ -31,7 +30,7 @@ export interface TaskAgentSuggestion {
   suggestedCoAssignees?: string[];
 }
 
-export interface LinearTaskAgentPanelProps {
+export interface TaskAgentPanelProps {
   isOpen: boolean;
   onClose?: () => void;
   onCollapse?: () => void;
@@ -81,219 +80,26 @@ const PROMPT_PILLS = [
   },
 ];
 
-function generateMockAgentResponse(
-  prompt: string,
-  currentTitle?: string,
-  personnelList: { name: string; role?: string }[] = []
-): TaskAgentSuggestion {
-  const normalized = prompt.toLowerCase();
-  const baseTitle =
-    currentTitle && currentTitle.trim().length > 3
-      ? currentTitle.trim()
-      : "Hoàn thiện hệ thống quản lý đào tạo và khảo thí trực tuyến QCET";
-
-  // Calculate default target dates (UTC+7 / ICT standard)
-  const now = new Date();
-  const startDate = now.toISOString().split("T")[0];
-  const targetDateObj = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const targetDate = targetDateObj.toISOString().split("T")[0];
-
-  const m1Date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-  const m2Date = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-  const m3Date = new Date(now.getTime() + 23 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-
-  // Candidates for DRI & Collaborators
-  const candidateLead =
-    personnelList.length > 0 ? personnelList[0].name : "Trưởng phòng QLĐT";
-  const candidateCo =
-    personnelList.length > 1
-      ? personnelList.slice(1, 3).map((p) => p.name)
-      : [];
-
-  if (normalized.includes("mốc") || normalized.includes("phân rã") || normalized.includes("chia")) {
-    return {
-      title: baseTitle,
-      summary:
-        "Phân rã nhiệm vụ thành 4 giai đoạn độc lập có sản phẩm nghiệm thu rõ ràng.",
-      priority: "HIGH",
-      description:
-        "Kế hoạch triển khai chia nhỏ theo các mốc công việc:\n- Giai đoạn 1: Thu thập hồ sơ, căn cứ pháp lý và yêu cầu thực tế.\n- Giai đoạn 2: Xây dựng dự thảo phương án và thẩm định kỹ thuật.\n- Giai đoạn 3: Triển khai thí điểm tại các đơn vị trực thuộc.\n- Giai đoạn 4: Hoàn thiện báo cáo tổng kết và nghiệm thu chính thức.",
-      startDate,
-      targetDate,
-      category: "CHUYEN_DOI_SO",
-      suggestedLeadName: candidateLead,
-      suggestedCoAssignees: candidateCo,
-      milestones: [
-        {
-          id: `ms-${Date.now()}-1`,
-          title: "Khảo sát hiện trạng và tổng hợp nhu cầu các đơn vị",
-          dueDate: m1Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-2`,
-          title: "Xây dựng dự thảo quy trình và thẩm định kỹ thuật",
-          dueDate: m2Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-3`,
-          title: "Triển khai thử nghiệm và tiếp nhận phản hồi hiệu chỉnh",
-          dueDate: m3Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-4`,
-          title: "Nghiệm thu chính thức và bàn giao tài liệu hướng dẫn",
-          dueDate: targetDate,
-          completed: false,
-        },
-      ],
-    };
-  }
-
-  if (normalized.includes("nhân sự") || normalized.includes("phụ trách") || normalized.includes("dri")) {
-    return {
-      title: baseTitle,
-      summary:
-        "Phân công cụ thể vai trò Người chủ trì (DRI) và đầu mối phối hợp các đơn vị.",
-      priority: "URGENT",
-      description:
-        "Yêu cầu về nhân sự thực hiện:\n- Người chủ trì chịu trách nhiệm toàn diện trước BGH về tiến độ và chất lượng.\n- Các nhân sự phối hợp chủ động thực hiện phần việc được giao theo phân công.",
-      startDate,
-      targetDate,
-      category: "CHUYEN_DOI_SO",
-      suggestedLeadName: candidateLead,
-      suggestedCoAssignees: candidateCo,
-      milestones: [
-        {
-          id: `ms-${Date.now()}-1`,
-          title: "Họp phân công nhiệm vụ chi tiết cho các thành viên",
-          dueDate: m1Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-2`,
-          title: "Kiểm tra tiến độ thực hiện định kỳ giữa kỳ",
-          dueDate: m2Date,
-          completed: false,
-        },
-        {
-          id: `ms-${Date.now()}-3`,
-          title: "Tổng hợp đánh giá năng suất và báo cáo kết quả thực hiện",
-          dueDate: targetDate,
-          completed: false,
-        },
-      ],
-    };
-  }
-
-  // Default: Scope & Objective
-  return {
-    title: baseTitle,
-    summary:
-      "Xác lập mục tiêu chỉ đạo, tiêu chí hoàn thành và phân công trách nhiệm rõ ràng.",
-    priority: "MEDIUM",
-    description:
-      "Mục tiêu & Yêu cầu trọng tâm:\n- Bảo đảm tính đồng bộ, tuân thủ quy chế chuyên môn và tiến độ nhà trường.\n- Các đơn vị liên quan chủ động phối hợp, báo cáo kịp thời khi phát sinh vướng mắc.\n- Sản phẩm bàn giao phải có hồ sơ kiểm thử và xác nhận của lãnh đạo phụ trách.",
-    startDate,
-    targetDate,
-    category: "CHUYEN_DOI_SO",
-    suggestedLeadName: candidateLead,
-    suggestedCoAssignees: candidateCo,
-    milestones: [
-      {
-        id: `ms-${Date.now()}-1`,
-        title: "Xác định danh mục chỉ tiêu và sản phẩm bàn giao cốt lõi",
-        dueDate: m1Date,
-        completed: false,
-      },
-      {
-        id: `ms-${Date.now()}-2`,
-        title: "Thẩm định đề cương công việc cùng các bên liên quan",
-        dueDate: m2Date,
-        completed: false,
-      },
-      {
-        id: `ms-${Date.now()}-3`,
-        title: "Tổ chức triển khai thí điểm tại 02 đơn vị đầu mối",
-        dueDate: m3Date,
-        completed: false,
-      },
-      {
-        id: `ms-${Date.now()}-4`,
-        title: "Nghiệm thu toàn diện và hoàn tất hồ sơ lưu trữ",
-        dueDate: targetDate,
-        completed: false,
-      },
-    ],
-  };
-}
-
-export function LinearTaskAgentPanel({
+export function TaskAgentPanel({
   isOpen,
   onClose,
   onCollapse,
   onApplySuggestion,
   currentDraft,
   availablePersonnel = [],
-}: LinearTaskAgentPanelProps) {
+}: TaskAgentPanelProps) {
   const [prompt, setPrompt] = React.useState("");
-  const [isGenerating, setIsGenerating] = React.useState(false);
   const [suggestion, setSuggestion] = React.useState<TaskAgentSuggestion | null>(null);
   const [errorNotice, setErrorNotice] = React.useState<string | null>(null);
   const [applied, setApplied] = React.useState(false);
   const [onlyEmptyFields, setOnlyEmptyFields] = React.useState(false);
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  React.useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const handleGenerate = (customPrompt?: string) => {
-    const textToRun = customPrompt ?? prompt;
-    if (!textToRun.trim() && !currentDraft?.title) {
-      setErrorNotice("Vui lòng nhập yêu cầu hoặc đặt tên nhiệm vụ trước.");
-      return;
-    }
-
-    setIsGenerating(true);
-    setErrorNotice(null);
-    setApplied(false);
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-
-    timerRef.current = setTimeout(() => {
-      try {
-        const res = generateMockAgentResponse(
-          textToRun,
-          currentDraft?.title,
-          availablePersonnel
-        );
-        if (!res || !res.title) {
-          throw new Error("Phản hồi đề xuất từ Trợ lý AI không đúng định dạng.");
-        }
-        setSuggestion(res);
-        setIsGenerating(false);
-      } catch (err: unknown) {
-        setIsGenerating(false);
-        setErrorNotice(
-          err instanceof Error
-            ? err.message
-            : "Đã xảy ra sự cố khi kết nối Trợ lý AI. Bạn vẫn có thể tiếp tục nhập biểu mẫu thủ công."
-        );
-      }
-    }, 700);
+  const handleGenerate = () => {
+    setErrorNotice(
+      "Tính năng Trợ lý AI đang trong giai đoạn phát triển. Vui lòng nhập thông tin nhiệm vụ thủ công."
+    );
   };
 
   const handleApply = () => {
@@ -324,6 +130,9 @@ export function LinearTaskAgentPanel({
         <h3 className="text-xs font-semibold text-foreground">
           Trợ lý soạn thảo
         </h3>
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700 border border-amber-200 select-none">
+          Đang phát triển
+        </span>
       </header>
 
       {/* Main Scrollable Content */}
@@ -340,10 +149,9 @@ export function LinearTaskAgentPanel({
                 type="button"
                 onClick={() => {
                   setPrompt(pill.prompt);
-                  handleGenerate(pill.prompt);
+                  handleGenerate();
                 }}
-                disabled={isGenerating}
-                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-left cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none"
+                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-left cursor-pointer select-none"
               >
                 <span>{pill.label}</span>
               </button>
@@ -375,7 +183,7 @@ export function LinearTaskAgentPanel({
             <button
               type="button"
               onClick={() => handleGenerate()}
-              disabled={isGenerating || (!prompt.trim() && !currentDraft?.title)}
+              disabled={!prompt.trim() && !currentDraft?.title}
               className={cn(
                 "inline-flex items-center justify-center size-6 rounded bg-primary text-primary-foreground transition-all shadow-2xs cursor-pointer",
                 "hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
@@ -383,11 +191,7 @@ export function LinearTaskAgentPanel({
               )}
               aria-label="Gửi yêu cầu tới AI"
             >
-              {isGenerating ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <Send className="size-3" strokeWidth={1.5} />
-              )}
+              <Send className="size-3" strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -411,18 +215,8 @@ export function LinearTaskAgentPanel({
           </div>
         )}
 
-        {/* Loading State Animation */}
-        {isGenerating && (
-          <div className="flex flex-col items-center justify-center py-8 space-y-1.5 text-center text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-xs font-medium text-foreground">
-              Trợ lý đang soạn thảo...
-            </p>
-          </div>
-        )}
-
         {/* Generated Suggestion Preview (Diff & Approval) */}
-        {!isGenerating && suggestion && (
+        {suggestion && (
           <div className="rounded-md border border-border/80 bg-background p-3 space-y-2.5 shadow-2xs">
             <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
               <span className="text-xs font-semibold text-foreground">
@@ -545,4 +339,4 @@ export function LinearTaskAgentPanel({
   );
 }
 
-export default LinearTaskAgentPanel;
+export default TaskAgentPanel;

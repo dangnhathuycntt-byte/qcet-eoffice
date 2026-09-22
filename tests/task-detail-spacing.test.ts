@@ -16,9 +16,9 @@ test('desktop task canvas uses flex layout', () => {
 });
 
 test('sidebar sections have breathing room without additional shadows', () => {
-  const sidebar = declarations(".workspace [data-slot='linear-properties-sidebar']");
+  const sidebar = declarations(".workspace [data-slot='task-properties-sidebar']");
   assert.ok(parseFloat(sidebar.gap) >= 16);
-  assert.equal(declarations(".workspace [data-slot='linear-properties-sidebar'] > div")['box-shadow'], 'none');
+  assert.equal(declarations(".workspace [data-slot='task-properties-sidebar'] > div")['box-shadow'], 'none');
 });
 
 test('narrow workspaces handled by TaskDetailSplitLayout matchMedia', () => {

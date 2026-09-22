@@ -4,7 +4,6 @@ import {
   validateTaskForm,
   getInitialTaskFormData,
   CATEGORY_OPTIONS,
-  QCET_DEPARTMENT_GROUPS,
   isFormDirty,
   takeFormSnapshot,
   resolveCreateTaskIdentity,
@@ -70,26 +69,6 @@ describe("CreateTaskModal Helpers", () => {
     assert.equal(errors.dueDate, undefined);
   });
 
-  test("Anti-slop: zero emojis in create task modal department groups and category options", () => {
-    const hasEmoji = (str: string) =>
-      /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F680}-\u{1F6C5}\u{1F6CB}-\u{1F6D0}\u{1F6E0}-\u{1F6E5}\u{1F6F0}-\u{1F6F3}]/u.test(str);
-
-    for (const group of QCET_DEPARTMENT_GROUPS) {
-      assert.equal(hasEmoji(group.department), false, `Emoji found in department: ${group.department}`);
-      if (group.icon) {
-        assert.equal(hasEmoji(group.icon), false, `Emoji found in group icon: ${group.icon}`);
-      }
-      for (const member of group.members) {
-        assert.equal(hasEmoji(member.name), false, `Emoji found in member name: ${member.name}`);
-        assert.equal(hasEmoji(member.title), false, `Emoji found in member title: ${member.title}`);
-        assert.equal(hasEmoji(member.role), false, `Emoji found in member role: ${member.role}`);
-      }
-    }
-
-    for (const cat of CATEGORY_OPTIONS) {
-      assert.equal(hasEmoji(cat.label), false, `Emoji found in category: ${cat.label}`);
-    }
-  });
 });
 
 // ──────────────────────────────────────────────────────────────────

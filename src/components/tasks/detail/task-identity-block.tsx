@@ -100,11 +100,14 @@ export function TaskIdentityBlock({
     return map;
   }, [allowedTransitions]);
 
+  // Personnel list for shared assignee picker
+  const { personnel: personnelList } = usePersonnelList();
+
   const rawLeadName = isSchool
     ? schoolTask?.leadAssigneeName || "Chưa phân công"
     : staffTask?.assigneeName || "Chưa phân công";
 
-  const leadName = formatAssigneeNameWithTitle(rawLeadName);
+  const leadName = formatAssigneeNameWithTitle(rawLeadName, personnelList);
 
   const rawStartDate = isSchool
     ? (schoolTask?.startDate || schoolTask?.assignedDate)
@@ -119,9 +122,6 @@ export function TaskIdentityBlock({
     : staffTask?.assignedToDepartmentName || staffTask?.department || "Tổ chuyên môn";
 
   const dueInfo = computeDueStatus(task.dueDate);
-
-  // Personnel list for shared assignee picker
-  const { personnel: personnelList } = usePersonnelList();
   const [isReassigning, setIsReassigning] = React.useState(false);
 
   const normalizedStatus = normalizeDisplayStatus(task.status);
@@ -170,7 +170,7 @@ export function TaskIdentityBlock({
 
       {showInlineProperties && (
       /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */
-      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-muted-foreground font-normal select-none">
+      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-muted-foreground font-normal select-none cursor-default">
         <TaskStatusSelect
           value={normalizedStatus}
           options={statusOptions}

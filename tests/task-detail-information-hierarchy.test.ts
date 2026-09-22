@@ -19,7 +19,7 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
 
   const sidebarFile = path.resolve(
     process.cwd(),
-    "src/components/tasks/detail/linear-properties-sidebar.tsx"
+    "src/components/tasks/detail/task-properties-sidebar.tsx"
   );
   const sidebarContent = fs.readFileSync(sidebarFile, "utf-8");
 

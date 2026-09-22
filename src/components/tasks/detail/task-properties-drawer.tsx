@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
-import { LinearPropertiesSidebar, type AuditLogItem } from "./linear-properties-sidebar";
+import { TaskPropertiesSidebar, type AuditLogItem } from "./task-properties-sidebar";
 
 export interface TaskPropertiesDrawerProps {
   isOpen: boolean;
@@ -105,7 +105,7 @@ export function TaskPropertiesDrawer({
 
         {/* Drawer Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          <LinearPropertiesSidebar
+          <TaskPropertiesSidebar
             task={task}
             currentUser={currentUser}
             onStatusChange={onStatusChange}

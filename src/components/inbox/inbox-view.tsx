@@ -58,7 +58,7 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
   { id: "reminders", label: "Nhắc hạn", icon: AlertTriangle },
 ];
 
-export function LinearInboxView() {
+export function InboxView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setBadgeCounts } = useSidebar();

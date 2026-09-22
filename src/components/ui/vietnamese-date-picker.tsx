@@ -57,7 +57,7 @@ export interface VietnameseDatePickerProps {
   id?: string;
 }
 
-const LINEAR_WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -467,7 +467,7 @@ export function VietnameseDatePicker({
 
             {/* Weekday Grid (Su Mo Tu We Th Fr Sa) */}
             <div className="grid grid-cols-7 text-center">
-              {LINEAR_WEEKDAYS.map((w) => (
+              {WEEKDAY_LABELS.map((w) => (
                 <div
                   key={w}
                   className="text-[11px] font-medium text-muted-foreground py-1 select-none"
