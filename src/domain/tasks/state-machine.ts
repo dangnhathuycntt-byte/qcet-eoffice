@@ -32,6 +32,18 @@ export interface TransitionResult {
   code?: string;
 }
 
+/**
+ * Pure Domain Authorization Decision interface (ADR-002)
+ * Decouples domain state machine from server capability engine and static role strings.
+ */
+export interface TaskAuthorizationDecision {
+  canApprove?: boolean;
+  canReject?: boolean;
+  canCancel?: boolean;
+  canStart?: boolean;
+  canSubmit?: boolean;
+}
+
 export interface ActorContext {
   id: string;
   role: string;
@@ -151,7 +163,8 @@ export class TaskStateMachine {
     actor: ActorContext,
     task: TaskContext,
     fromStatus: TaskStatus | string,
-    toStatus: TaskStatus | string
+    toStatus: TaskStatus | string,
+    authDecision?: TaskAuthorizationDecision
   ): TransitionResult {
     const from = normalizeTaskStatus(fromStatus);
     const to = normalizeTaskStatus(toStatus);
@@ -200,6 +213,17 @@ export class TaskStateMachine {
     // 2. Cancellation Transitions (-> CANCELLED)
     // ------------------------------------------------------------------------
     if (to === 'CANCELLED') {
+      if (authDecision?.canCancel !== undefined) {
+        if (authDecision.canCancel) {
+          return { allowed: true };
+        }
+        return {
+          allowed: false,
+          reason: 'Chỉ Ban Giám hiệu, Quản trị viên hoặc người tạo nhiệm vụ mới có quyền hủy nhiệm vụ.',
+          code: 'UNAUTHORIZED_CANCELLATION',
+        };
+      }
+
       const isCreator = task.createdById === actor.id;
       if (!isExecutive && !isCreator && !hasDelegation) {
         return {
@@ -234,6 +258,16 @@ export class TaskStateMachine {
       }
 
       if (to === 'IN_PROGRESS') {
+        if (authDecision?.canStart !== undefined) {
+          if (authDecision.canStart) {
+            return { allowed: true };
+          }
+          return {
+            allowed: false,
+            reason: 'Bạn không có quyền bắt đầu thực hiện nhiệm vụ này.',
+            code: 'UNAUTHORIZED_ACTION',
+          };
+        }
         // Anyone assigned, manager, or executive can start the task
         return { allowed: true };
       }
@@ -264,6 +298,16 @@ export class TaskStateMachine {
       }
 
       if (to === 'WAITING_APPROVAL') {
+        if (authDecision?.canSubmit !== undefined) {
+          if (authDecision.canSubmit) {
+            return { allowed: true };
+          }
+          return {
+            allowed: false,
+            reason: 'Bạn không có quyền gửi yêu cầu nghiệm thu nhiệm vụ này.',
+            code: 'UNAUTHORIZED_ACTION',
+          };
+        }
         // Staff, Manager, or Executive can submit deliverable / request review
         return { allowed: true };
       }
@@ -287,6 +331,17 @@ export class TaskStateMachine {
 
       // Rejection / Send back for rework (WAITING_APPROVAL -> IN_PROGRESS)
       if (to === 'IN_PROGRESS') {
+        if (authDecision?.canReject !== undefined) {
+          if (authDecision.canReject) {
+            return { allowed: true };
+          }
+          return {
+            allowed: false,
+            reason: 'Không đủ quyền để từ chối hoặc yêu cầu chỉnh sửa nhiệm vụ.',
+            code: 'UNAUTHORIZED_APPROVER',
+          };
+        }
+
         if (isStaff) {
           return {
             allowed: false,
@@ -335,6 +390,7 @@ export class TaskStateMachine {
         // 1. Maker-Checker / Segregation of Duties (SoD) Invariant:
         // A maker (creator, DRI, assignee, submitter, deliverable uploader) MUST NEVER approve the task.
         // Delegation MUST NEVER bypass Maker-Checker SoD.
+        // HARD INVARIANT: Maker cannot approve, even if AuthorizationDecision says canApprove: true.
         if (this.isMaker(actor, task)) {
           return {
             allowed: false,
@@ -343,7 +399,20 @@ export class TaskStateMachine {
           };
         }
 
-        // 2. Staff cannot approve unless delegated
+        // 2. Pure domain authority via TaskAuthorizationDecision interface (ADR-002)
+        if (authDecision?.canApprove !== undefined) {
+          if (authDecision.canApprove) {
+            return { allowed: true };
+          }
+          return {
+            allowed: false,
+            reason: 'Bạn không có thẩm quyền nghiệm thu nhiệm vụ này.',
+            code: 'UNAUTHORIZED_APPROVER',
+          };
+        }
+
+        // 3. Fall back to existing role category checks for backward compatibility
+        // Staff cannot approve unless delegated
         if (isStaff && !hasDelegation) {
           return {
             allowed: false,
@@ -412,7 +481,8 @@ export class TaskStateMachine {
   public getAllowedTransitions(
     actor: ActorContext,
     task: TaskContext,
-    fromStatus: TaskStatus | string
+    fromStatus: TaskStatus | string,
+    authDecision?: TaskAuthorizationDecision
   ): Array<{ status: CanonicalTaskStatus; allowed: boolean; reason?: string; code?: string }> {
     const canonicalTargets: CanonicalTaskStatus[] = [
       'NOT_STARTED',
@@ -423,7 +493,7 @@ export class TaskStateMachine {
     ];
 
     return canonicalTargets.map((to) => {
-      const result = this.canTransition(actor, task, fromStatus, to);
+      const result = this.canTransition(actor, task, fromStatus, to, authDecision);
       return {
         status: to,
         allowed: result.allowed,

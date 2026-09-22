@@ -595,3 +595,107 @@ describe('Fallback khi availableActions thiếu', () => {
     assert.equal(result.readonly, true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test: ADR-002 TaskAuthorizationDecision Integration via availableActions (WI-3.3)
+// ---------------------------------------------------------------------------
+
+describe('ADR-002 TaskAuthorizationDecision Integration via availableActions (WI-3.3)', () => {
+  const nonMakerWaitingSubtask = {
+    ...baseSubtask,
+    status: 'WAITING_APPROVAL',
+    assigneeId: 'user-other-person',
+  };
+
+  it('allows Staff to approve when availableActions includes task.approve (and non-maker)', () => {
+    const actionsWithApprove = [
+      'task.read',
+      'task.update_execution',
+      'task.approve',
+    ];
+
+    const result = canSubtaskTransition(
+      nonMakerWaitingSubtask,
+      staffActor,
+      'COMPLETED',
+      actionsWithApprove,
+    );
+
+    assert.equal(result.allowed, true);
+  });
+
+  it('HARD INVARIANT: Maker Staff CANNOT approve even if availableActions includes task.approve (SoD)', () => {
+    const makerWaitingSubtask = {
+      ...baseSubtask,
+      status: 'WAITING_APPROVAL',
+      assigneeId: staffActor.id,
+    };
+
+    const actionsWithApprove = [
+      'task.read',
+      'task.update_execution',
+      'task.approve',
+    ];
+
+    const result = canSubtaskTransition(
+      makerWaitingSubtask,
+      staffActor,
+      'COMPLETED',
+      actionsWithApprove,
+    );
+
+    assert.equal(result.allowed, false);
+    assert.equal(result.code, 'MAKER_CANNOT_BE_CHECKER');
+  });
+
+  it('allows Staff to reject when availableActions includes task.reject', () => {
+    const actionsWithReject = [
+      'task.read',
+      'task.update_execution',
+      'task.reject',
+    ];
+
+    const result = canSubtaskTransition(
+      nonMakerWaitingSubtask,
+      staffActor,
+      'IN_PROGRESS',
+      actionsWithReject,
+    );
+
+    assert.equal(result.allowed, true);
+  });
+
+  it('allows Staff to reject when availableActions includes task.review', () => {
+    const actionsWithReview = [
+      'task.read',
+      'task.update_execution',
+      'task.review',
+    ];
+
+    const result = canSubtaskTransition(
+      nonMakerWaitingSubtask,
+      staffActor,
+      'IN_PROGRESS',
+      actionsWithReview,
+    );
+
+    assert.equal(result.allowed, true);
+  });
+
+  it('allows Staff to cancel when availableActions includes task.cancel', () => {
+    const actionsWithCancel = [
+      'task.read',
+      'task.update_execution',
+      'task.cancel',
+    ];
+
+    const result = canSubtaskTransition(
+      nonMakerWaitingSubtask,
+      staffActor,
+      'CANCELLED',
+      actionsWithCancel,
+    );
+
+    assert.equal(result.allowed, true);
+  });
+});
