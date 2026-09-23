@@ -15,9 +15,18 @@ import {
   isPrivilegedUser,
   isDepartmentLeader,
 } from '../src/server/tasks';
-import { TaskScope, TaskStatus, TaskPriority, AssigneeRole, DeliverableReviewStatus } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, DeliverableReviewStatus } from '@prisma/client';
 import type { AuthenticatedUser } from '../src/server/api/request-context';
 import { getSystemReferenceDate } from '../src/lib/academic-calendar';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => {
   let adminUser: AuthenticatedUser;

@@ -9,7 +9,16 @@ import { recalculateParentTaskProgress } from "@/server/tasks/task-command-servi
 import { canUserDeleteDeliverable } from "@/server/tasks/task-policy";
 import { canDeleteDeliverable } from "@/server/policies/task-policy";
 import { getTextOffsetInContainer } from "@/components/tasks/detail/direct-inline-editor";
-import { TaskStatus, AssigneeRole } from "@prisma/client";
+import { TaskStatus} from "@prisma/client";
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () => {
   // =========================================================================

@@ -8,7 +8,16 @@ import { GET as getTask, PATCH as patchTask, DELETE as deleteTask } from '../src
 import { GET as getFile } from '../src/app/api/files/[...path]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus, AssigneeRole } from '@prisma/client';
+import { TaskScope, TaskPriority, TaskStatus} from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 const TEST_UPLOADS_DIR = path.resolve('./test_idor_sandbox');
 

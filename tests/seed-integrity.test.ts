@@ -3,7 +3,15 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '../src/lib/prisma';
-import { AssigneeRole } from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Seed Data Integrity and Verification', () => {
   test('seed script contains 11 QCET units, user accounts, and 40 realistic tasks with COLLABORATOR support', () => {

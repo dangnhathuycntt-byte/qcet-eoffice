@@ -7,7 +7,16 @@ import { prisma } from '../src/lib/prisma';
 import { taskQueryService } from '../src/server/tasks/task-query-service';
 import { GET as getTasksRoute } from '../src/app/api/tasks/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskStatus, TaskPriority, AssigneeRole, UserRole } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, UserRole } from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagination Tests', () => {
   let testDept: any;

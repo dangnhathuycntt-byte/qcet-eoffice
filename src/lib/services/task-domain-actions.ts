@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import {
   TaskStatus,
   TaskActorRole,
-  AssigneeRole,
   DeliverableReviewStatus,
   ApprovalProcessStatus,
   ApprovalStepStatus,
@@ -176,9 +175,6 @@ export async function loadTaskAndBuildResource(
       actors: {
         include: { user: true },
       },
-      assignees: {
-        include: { user: true },
-      },
       taskResults: {
         orderBy: { submittedAt: "desc" },
         take: 5,
@@ -209,19 +205,13 @@ export async function loadTaskAndBuildResource(
   const primaryOwnerActor =
     task.actors.find((a) => a.role === TaskActorRole.DRI && a.isPrimaryDRI) ||
     task.actors.find((a) => a.role === TaskActorRole.DRI);
-  const primaryOwnerAssignee =
-    task.assignees.find((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER) ||
-    task.assignees[0];
-  const primaryOwnerId = primaryOwnerActor?.userId || primaryOwnerAssignee?.userId || undefined;
+  const primaryOwnerId = primaryOwnerActor?.userId || undefined;
 
   const collaboratorIds = Array.from(
     new Set([
       ...task.actors
         .filter((a) => a.role === TaskActorRole.COLLABORATOR && a.userId)
         .map((a) => a.userId as string),
-      ...task.assignees
-        .filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR && a.userId)
-        .map((a) => a.userId),
     ])
   );
 
@@ -236,7 +226,6 @@ export async function loadTaskAndBuildResource(
   const assigneeIds = Array.from(
     new Set([
       ...task.actors.map((a) => a.userId).filter(Boolean) as string[],
-      ...task.assignees.map((a) => a.userId).filter(Boolean) as string[],
     ])
   );
 
@@ -374,7 +363,7 @@ export class TaskDomainActionService {
       createdById: task.createdById,
       departmentId: task.departmentId,
       primaryOwnerId,
-      assignees: task.assignees,
+      assignees: [],
       deliverables: task.deliverables,
     });
 

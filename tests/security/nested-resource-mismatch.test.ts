@@ -19,10 +19,19 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { UserRole, TaskScope, TaskPriority, TaskStatus, AssigneeRole, UnitType } from '@prisma/client';
+import { UserRole, TaskScope, TaskPriority, TaskStatus, UnitType } from '@prisma/client';
 import { signSessionToken } from '@/lib/jwt-session';
 import { DELETE as deleteDeliverable } from '@/app/api/tasks/[id]/deliverables/route';
 import { DELETE as deleteDossierItem } from '@/app/api/dossiers/[id]/items/route';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 /**
  * Issue #28 nested-resource invariant: authorize parent, verify the child

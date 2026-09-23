@@ -4,7 +4,6 @@ import {
   TaskScope,
   TaskStatus,
   TaskPriority,
-  AssigneeRole,
   DocumentType,
   DocumentUrgency,
   DocumentSecurityLevel,
@@ -12,6 +11,13 @@ import {
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { seedCanonicalOrg } from './seeds/canonical-org-seed';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
 
 const prisma = new PrismaClient();
 
@@ -2468,7 +2474,7 @@ async function main() {
       title: 'Sửa chữa lớn hệ thống phòng học lý thuyết và xưởng ô tô chuẩn bị năm học mới 2027-2028',
       description: 'Sơn sửa khối nhà học B, thay bóng đèn LED tiết kiệm điện và làm mới mặt sàn xưởng cơ khí động lực.',
       scope: TaskScope.SCHOOL,
-      status: TaskStatus.OVERDUE,
+      status: TaskStatus.IN_PROGRESS,
       priority: TaskPriority.URGENT,
       progressPercent: 20,
       academicMonth: 8,

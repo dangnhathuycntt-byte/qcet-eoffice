@@ -89,7 +89,6 @@ function normalizeTaskStatus(rawStatus?: string | null): TaskStatus | null {
     IN_PROGRESS: TaskStatus.IN_PROGRESS,
     WAITING_APPROVAL: TaskStatus.WAITING_APPROVAL,
     COMPLETED: TaskStatus.COMPLETED,
-    OVERDUE: TaskStatus.OVERDUE,
     CANCELLED: TaskStatus.CANCELLED,
   };
   return statusMap[upper] || null;
@@ -290,10 +289,6 @@ export async function POST(request: NextRequest) {
             task.dueDate.getTime() + days * 24 * 60 * 60 * 1000
           );
           taskUpdateData.dueDate = newDueDate;
-
-          if (task.status === TaskStatus.OVERDUE) {
-            taskUpdateData.status = TaskStatus.IN_PROGRESS;
-          }
         }
       } else if (
         mappedResolutionType === ResolutionType.REASSIGN_OWNER &&
@@ -312,9 +307,6 @@ export async function POST(request: NextRequest) {
           if (user && user.departmentId) {
             taskUpdateData.departmentId = user.departmentId;
           }
-        }
-        if (task.status === TaskStatus.OVERDUE) {
-          taskUpdateData.status = TaskStatus.IN_PROGRESS;
         }
       } else if (mappedResolutionType === ResolutionType.DIRECTIVE_NOTE) {
         taskUpdateData.priority = TaskPriority.URGENT;
