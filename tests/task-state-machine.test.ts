@@ -27,13 +27,13 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
   const managerActor: ActorContext = {
     id: 'user-mgr-01',
     role: 'TRUONG_PHONG',
-
+    departmentId: 'dept-01',
   };
 
   const otherDeptManagerActor: ActorContext = {
     id: 'user-mgr-02',
     role: 'TRUONG_PHONG',
-
+    departmentId: 'dept-02',
   };
 
   const executiveActor: ActorContext = {
@@ -51,7 +51,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
   const baseDepartmentTask: TaskContext = {
     id: 'task-dept-01',
     scope: 'DEPARTMENT',
-
+    departmentId: 'dept-01',
     createdById: 'user-creator-99',
     primaryOwnerId: 'user-staff-99',
     assigneeIds: ['user-staff-99'],
@@ -583,25 +583,25 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     const deanActor: ActorContext = {
       id: 'user-dean-01',
       role: 'TRUONG_KHOA',
-
+      departmentId: 'dept-01',
     };
 
     const viceDeanActor: ActorContext = {
       id: 'user-vice-dean-01',
       role: 'PHO_TRUONG_KHOA',
-
+      departmentId: 'dept-01',
     };
 
     const centerDirectorActor: ActorContext = {
       id: 'user-dir-01',
       role: 'GIAM_DOC_TRUNG_TAM',
-
+      departmentId: 'dept-01',
     };
 
     const viceDirectorActor: ActorContext = {
       id: 'user-vice-dir-01',
       role: 'PHO_GIAM_DOC_TRUNG_TAM',
-
+      departmentId: 'dept-01',
     };
 
     it('categorizes TRUONG_KHOA, PHO_TRUONG_KHOA, GIAM_DOC_TRUNG_TAM, PHO_GIAM_DOC_TRUNG_TAM as MANAGER', () => {
@@ -654,7 +654,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     it('prohibits TRUONG_KHOA from approving department tasks of a different department', () => {
       const otherDean: ActorContext = {
         ...deanActor,
-
+        departmentId: 'dept-02',
       };
       const res = taskStateMachine.canTransition(
         otherDean,
