@@ -100,9 +100,6 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       await prisma.taskDeliverable.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
-      await prisma.dacumDelegation.deleteMany({
-        where: { taskId: { in: createdTaskIds } },
-      });
 
       const allTasks = await prisma.task.findMany({
         where: { id: { in: createdTaskIds } },

@@ -123,7 +123,6 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
           findMany: async () => mockTasks,
         },
         user: { findMany: async () => [] },
-        dacumDelegation: { findMany: async () => [] },
         document: { findMany: async () => [] },
         documentDirective: { findMany: async () => [] },
         jobCatalogItem: { findMany: async () => [] },
@@ -167,7 +166,6 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
           findMany: async () => mockTasks,
         },
         user: { findMany: async () => [] },
-        dacumDelegation: { findMany: async () => [] },
         document: { findMany: async () => [] },
         documentDirective: { findMany: async () => [] },
         jobCatalogItem: { findMany: async () => [] },
@@ -191,7 +189,6 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
         department: { findMany: async () => [] },
         task: { findMany: async () => [] },
         user: { findMany: async () => [] },
-        dacumDelegation: { findMany: async () => [] },
         document: { findMany: async () => [] },
         documentDirective: { findMany: async () => [] },
         jobCatalogItem: { findMany: async () => [] },
@@ -217,16 +214,13 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
   });
 
   describe('4. Expanded FK Parity (expandedFkParityCheck)', () => {
-    it('returns per-model summary for all 8 department-referencing fields', async () => {
+    it('returns per-model summary for all 7 department-referencing fields', async () => {
       const mockDb: any = {
         user: {
           findMany: async () => [{ departmentId: 'P_QLDT' }, { departmentId: 'UNKNOWN_XYZ' }],
         },
         task: {
           findMany: async () => [{ departmentId: 'K_CNTT' }],
-        },
-        dacumDelegation: {
-          findMany: async () => [],
         },
         document: {
           findMany: async () => [],
@@ -251,8 +245,8 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
 
       const summary = await expandedFkParityCheck(mockDb);
       assert.ok(Array.isArray(summary));
-      // Should have 8 entries (one per model.field combination)
-      assert.strictEqual(summary.length, 8);
+      // Should have 7 entries (one per model.field combination, DacumDelegation dropped in Phase 9)
+      assert.strictEqual(summary.length, 7);
 
       const userEntry = summary.find((s) => s.model === 'user.departmentId');
       assert.ok(userEntry, 'should have user.departmentId entry');
@@ -271,7 +265,6 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
       const mockDb: any = {
         user: { findMany: async () => [] },
         task: { findMany: async () => [] },
-        dacumDelegation: { findMany: async () => [] },
         document: { findMany: async () => [] },
         documentDirective: { findMany: async () => [] },
         jobCatalogItem: { findMany: async () => [] },
@@ -289,31 +282,30 @@ describe('WI-8.2: Department to OrganizationalUnit Migration Track', () => {
       }
     });
 
-    it('counts unmapped department codes correctly', async () => {
+    it('counts unmapped department codes correctly for dacumDuty', async () => {
       const mockDb: any = {
         user: { findMany: async () => [] },
         task: { findMany: async () => [] },
-        dacumDelegation: {
+        document: { findMany: async () => [] },
+        documentDirective: { findMany: async () => [] },
+        jobCatalogItem: { findMany: async () => [] },
+        dacumDuty: {
           findMany: async () => [
             { departmentId: 'PHONG_KHONG_CO_TRONG_MAP' },
             { departmentId: 'PHONG_KHONG_CO_TRONG_MAP_2' },
           ],
         },
-        document: { findMany: async () => [] },
-        documentDirective: { findMany: async () => [] },
-        jobCatalogItem: { findMany: async () => [] },
-        dacumDuty: { findMany: async () => [] },
         organizationalUnit: {
           findFirst: async () => null,
         },
       };
 
       const summary = await expandedFkParityCheck(mockDb);
-      const delegEntry = summary.find((s) => s.model === 'dacumDelegation.departmentId');
-      assert.ok(delegEntry);
-      assert.strictEqual(delegEntry!.totalWithDeptId, 2);
-      assert.strictEqual(delegEntry!.mapped, 0);
-      assert.strictEqual(delegEntry!.unmapped, 2);
+      const dutyEntry = summary.find((s) => s.model === 'dacumDuty.departmentId');
+      assert.ok(dutyEntry);
+      assert.strictEqual(dutyEntry!.totalWithDeptId, 2);
+      assert.strictEqual(dutyEntry!.mapped, 0);
+      assert.strictEqual(dutyEntry!.unmapped, 2);
     });
   });
 });

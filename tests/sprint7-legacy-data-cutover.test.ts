@@ -12,7 +12,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     assert.strictEqual(report.overallParitySuccess, true);
     assert.strictEqual(report.departmentMigration.paritySuccess, true);
     assert.strictEqual(report.assigneeMigration.paritySuccess, true);
-    assert.strictEqual(report.dacumMigration.paritySuccess, true);
+    // Phase 9 WI-9.3: dacumMigration removed — DacumDelegation table dropped.
 
     // Verify departments vs organizational units
     const legacyDeptCount = await prisma.department.count();
@@ -105,22 +105,13 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     await prisma.task.delete({ where: { id: createdTask.id } });
   });
 
-  test("3. DacumDelegation migration preserves delegation constraints and validity", async () => {
-    const delegations = await prisma.dacumDelegation.findMany();
-    for (const del of delegations) {
-      const grant = await prisma.delegationGrant.findFirst({
-        where: {
-          grantorAssignment: {
-            userId: del.grantorId,
-          },
-          granteeAssignment: {
-            userId: del.delegateId,
-          },
-        },
-      });
-      assert.ok(grant, `DacumDelegation ${del.id} must have a corresponding DelegationGrant`);
-      const expectedStatus = del.isActive ? "ACTIVE" : "REVOKED";
-      assert.strictEqual(grant.status, expectedStatus);
+  test("3. DelegationGrant is the sole delegation authority (DacumDelegation table dropped)", async () => {
+    // Phase 9 WI-9.3: dacum_delegations table has been dropped.
+    // Verify DelegationGrant records exist and have valid status values.
+    const grants = await prisma.delegationGrant.findMany({ take: 10 });
+    for (const grant of grants) {
+      assert.ok(["ACTIVE", "REVOKED", "EXPIRED"].includes(grant.status), `DelegationGrant ${grant.id} must have a valid status`);
+      assert.ok(grant.validFrom <= grant.validUntil, `DelegationGrant ${grant.id} must have validFrom before validUntil`);
     }
   });
 });

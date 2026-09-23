@@ -1256,9 +1256,7 @@ export class TaskCommandService {
         await tx.taskActor.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.taskAssignee.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.taskDeliverable.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
-        // Stage B cutover: DelegationScopeRule is primary cleanup target; dacumDelegation kept as belt-and-suspenders during observe window.
         await tx.delegationScopeRule.deleteMany({ where: { entityType: 'TASK', entityId: { in: allSubtaskIds } } });
-        await tx.dacumDelegation.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.executiveResolution.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
 
         await tx.task.deleteMany({ where: { id: { in: allSubtaskIds } } });
@@ -1274,9 +1272,7 @@ export class TaskCommandService {
       await tx.taskActor.deleteMany({ where: { taskId } });
       await tx.taskAssignee.deleteMany({ where: { taskId } });
       await tx.taskDeliverable.deleteMany({ where: { taskId } });
-      // Stage B cutover: DelegationScopeRule is primary cleanup target; dacumDelegation kept as belt-and-suspenders during observe window.
       await tx.delegationScopeRule.deleteMany({ where: { entityType: 'TASK', entityId: taskId } });
-      await tx.dacumDelegation.deleteMany({ where: { taskId } });
       await tx.executiveResolution.deleteMany({ where: { taskId } });
 
       // 4. Xóa nhiệm vụ chính

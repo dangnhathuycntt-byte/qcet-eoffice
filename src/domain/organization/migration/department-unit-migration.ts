@@ -126,12 +126,11 @@ async function checkModelParity(
  * Fields verified:
  *  1. User.departmentId
  *  2. Task.departmentId
- *  3. DacumDelegation.departmentId
- *  4. Document.draftingDeptId
- *  5. Document.leadDepartmentId
- *  6. DocumentDirective.assignedDeptId
- *  7. JobCatalogItem.departmentId
- *  8. DacumDuty.departmentId
+ *  3. Document.draftingDeptId
+ *  4. Document.leadDepartmentId
+ *  5. DocumentDirective.assignedDeptId
+ *  6. JobCatalogItem.departmentId
+ *  7. DacumDuty.departmentId
  */
 export async function expandedFkParityCheck(
   db: DbClient
@@ -139,7 +138,6 @@ export async function expandedFkParityCheck(
   const checks: Array<{ modelName: string; deptIdField: string }> = [
     { modelName: 'user', deptIdField: 'departmentId' },
     { modelName: 'task', deptIdField: 'departmentId' },
-    { modelName: 'dacumDelegation', deptIdField: 'departmentId' },
     { modelName: 'document', deptIdField: 'draftingDeptId' },
     { modelName: 'document', deptIdField: 'leadDepartmentId' },
     { modelName: 'documentDirective', deptIdField: 'assignedDeptId' },

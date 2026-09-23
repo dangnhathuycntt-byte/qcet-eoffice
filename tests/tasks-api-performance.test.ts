@@ -92,9 +92,6 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       await prisma.taskDeliverable.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
-      await prisma.dacumDelegation.deleteMany({
-        where: { taskId: { in: createdTaskIds } },
-      });
       await prisma.executiveResolution.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
