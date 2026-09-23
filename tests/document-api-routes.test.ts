@@ -547,7 +547,9 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
 
     });
 
-    // 3. Create 100 unauthorized documents (Department B, registered by User B)
+    // 3. Create 100 unauthorized documents (Unit B, registered by User B)
+    // Phase 9: đơn vị chủ trì canonical nằm trên `DocumentIncomingWorkflow.leadUnitId`
+    // (quan hệ 1-1) nên không thể dùng `createMany` — phải tạo kèm quan hệ.
     const unauthorizedBatch = Array.from({ length: 100 }, (_, i) => ({
       type: DocumentType.VAN_BAN_DEN,
       registrationNumber: 20000 + i + 1,
@@ -559,17 +561,16 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       summary: `Văn bản phòng B không có quyền ${runId} số ${i + 1}`,
       urgency: DocumentUrgency.THUONG,
       securityLevel: DocumentSecurityLevel.THUONG,
-      leadDepartmentId: deptB.id,
-      draftingDeptId: deptB.id,
       registeredById: userB.id,
       status: DocumentStatus.CHO_PHAN_CONG,
+      incomingWorkflow: { create: { leadUnitId: deptB.id } },
     }));
 
-    await prisma.document.createMany({
-      data: unauthorizedBatch,
-    });
+    for (const data of unauthorizedBatch) {
+      await prisma.document.create({ data });
+    }
 
-    // 4. Create 5 authorized documents (Department A, registered by User A)
+    // 4. Create 5 authorized documents (Unit A, registered by User A)
     const authorizedBatch = Array.from({ length: 5 }, (_, j) => ({
       type: DocumentType.VAN_BAN_DEN,
       registrationNumber: 30000 + j + 1,
@@ -581,15 +582,14 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       summary: `Văn bản phòng A được phép xem ${runId} số ${j + 1}`,
       urgency: DocumentUrgency.THUONG,
       securityLevel: DocumentSecurityLevel.THUONG,
-      leadDepartmentId: deptA.id,
-      draftingDeptId: deptA.id,
       registeredById: userA.id,
       status: DocumentStatus.CHO_PHAN_CONG,
+      incomingWorkflow: { create: { leadUnitId: deptA.id } },
     }));
 
-    await prisma.document.createMany({
-      data: authorizedBatch,
-    });
+    for (const data of authorizedBatch) {
+      await prisma.document.create({ data });
+    }
   });
 
   after(async () => {
@@ -646,7 +646,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
 
     // All returned documents must belong to Department A / registered by User A
     for (const doc of result.documents) {
-      assert.equal(doc.leadDepartmentId, deptA.id);
+      assert.equal(doc.leadUnitId, deptA.id);
       assert.equal(doc.registeredById, userA.id);
       assert.ok(doc.originalNumber.startsWith(`AUTH_${runId}`));
     }
@@ -683,7 +683,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
     assert.equal(json.limit, 10);
 
     for (const doc of json.data) {
-      assert.equal(doc.leadDepartmentId, deptA.id);
+      assert.equal(doc.leadUnitId, deptA.id);
       assert.ok(doc.originalNumber.startsWith(`AUTH_${runId}`));
     }
   });
@@ -755,8 +755,8 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
     assert.equal(resultB.documents.length, 10);
 
     for (const doc of resultB.documents) {
-      assert.equal(doc.leadDepartmentId, deptB.id);
-      assert.notEqual(doc.leadDepartmentId, deptA.id);
+      assert.equal(doc.leadUnitId, deptB.id);
+      assert.notEqual(doc.leadUnitId, deptA.id);
     }
   });
 

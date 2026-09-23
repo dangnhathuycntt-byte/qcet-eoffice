@@ -41,9 +41,12 @@ export interface DocumentDirectiveDTO {
   leader?: UserSummaryDTO | null;
   instruction: string;
   deadline?: string | null;
-  assignedDeptId?: string | null;
-  assignedDeptName?: string | null;
-  assignedDept?: DocumentDepartmentDTO | null;
+  /** Đơn vị nhận chỉ đạo — lấy từ nhiệm vụ được sinh ra (Phase 9). */
+  leadUnitId?: string | null;
+  leadUnitName?: string | null;
+  assignedUnit?: DocumentDepartmentDTO | null;
+  linkedTaskId?: string | null;
+  linkedTaskCode?: string | null;
   collaboratorIds?: string | null;
   isTaskGenerated?: boolean;
   createdAt?: string;
@@ -82,8 +85,10 @@ export interface DocumentDetailDTO extends DocumentListDTO {
   notes?: string | null;
   registeredBy?: UserSummaryDTO | null;
   registeredById?: string | null;
-  leadDepartmentId?: string | null;
-  draftingDeptId?: string | null;
+  /** Đơn vị chủ trì — canonical `OrganizationalUnit`. */
+  leadUnitId?: string | null;
+  leadUnitName?: string | null;
+  leadUnitCode?: string | null;
   leadUserId?: string | null;
 }
 
@@ -155,62 +160,33 @@ function extractSigner(raw: Record<string, any>): DocumentSignerDTO | null {
   return null;
 }
 
+/**
+ * Đơn vị chủ trì của văn bản.
+ * Phase 9: chỉ còn một nguồn chân lý là `OrganizationalUnit` gắn qua quy trình
+ * văn bản đến — các cột `departmentId` / `leadDepartmentId` / `draftingDeptId`
+ * trên `Document` đã bị drop.
+ */
 function extractDocumentDepartment(raw: Record<string, any>): DocumentDepartmentDTO | null {
-  // Explicit department relation/object
-  if (raw.department && typeof raw.department === 'object') {
+  const unit =
+    (raw.leadUnit && typeof raw.leadUnit === 'object' ? raw.leadUnit : null) ??
+    (raw.incomingWorkflow?.leadUnit && typeof raw.incomingWorkflow.leadUnit === 'object'
+      ? raw.incomingWorkflow.leadUnit
+      : null);
+
+  if (unit) {
     return {
-      id: raw.department.id ? String(raw.department.id) : undefined,
-      code: raw.department.code ?? raw.department.shortName ?? null,
-      name: String(raw.department.name ?? ''),
-    };
-  }
-  if (typeof raw.department === 'string' && raw.department.trim()) {
-    return {
-      id: raw.departmentId ? String(raw.departmentId) : undefined,
-      code: raw.departmentCode ?? null,
-      name: raw.department.trim(),
+      id: unit.id ? String(unit.id) : undefined,
+      code: unit.code ?? unit.shortName ?? null,
+      name: String(unit.name ?? ''),
     };
   }
 
-  // Decree 30 Lead Department (Van ban den)
-  if (raw.leadDepartment && typeof raw.leadDepartment === 'object') {
+  if (typeof raw.leadUnitName === 'string' && raw.leadUnitName.trim()) {
+    const id = raw.leadUnitId ?? raw.incomingWorkflow?.leadUnitId;
     return {
-      id: raw.leadDepartment.id ? String(raw.leadDepartment.id) : undefined,
-      code: raw.leadDepartment.code ?? raw.leadDepartment.shortName ?? null,
-      name: String(raw.leadDepartment.name ?? ''),
-    };
-  }
-  if (typeof raw.leadDepartment === 'string' && raw.leadDepartment.trim()) {
-    return {
-      id: raw.leadDepartmentId ? String(raw.leadDepartmentId) : undefined,
-      name: raw.leadDepartment.trim(),
-    };
-  }
-  if (raw.leadDepartmentName && typeof raw.leadDepartmentName === 'string') {
-    return {
-      id: raw.leadDepartmentId ? String(raw.leadDepartmentId) : undefined,
-      name: raw.leadDepartmentName.trim(),
-    };
-  }
-
-  // Decree 30 Drafting Department (Van ban di)
-  if (raw.draftingDept && typeof raw.draftingDept === 'object') {
-    return {
-      id: raw.draftingDept.id ? String(raw.draftingDept.id) : undefined,
-      code: raw.draftingDept.code ?? raw.draftingDept.shortName ?? null,
-      name: String(raw.draftingDept.name ?? ''),
-    };
-  }
-  if (typeof raw.draftingDept === 'string' && raw.draftingDept.trim()) {
-    return {
-      id: raw.draftingDeptId ? String(raw.draftingDeptId) : undefined,
-      name: raw.draftingDept.trim(),
-    };
-  }
-  if (raw.draftingDeptName && typeof raw.draftingDeptName === 'string') {
-    return {
-      id: raw.draftingDeptId ? String(raw.draftingDeptId) : undefined,
-      name: raw.draftingDeptName.trim(),
+      id: id ? String(id) : undefined,
+      code: typeof raw.leadUnitCode === 'string' ? raw.leadUnitCode : null,
+      name: raw.leadUnitName.trim(),
     };
   }
 
@@ -247,19 +223,44 @@ function extractDirectives(raw: Record<string, any>): DocumentDirectiveDTO[] {
       leader: d.leader ? toUserSummaryDTO(d.leader) : null,
       instruction: String(d.instruction ?? ''),
       deadline: d.deadline ? extractDateString(d.deadline) : null,
-      assignedDeptId: d.assignedDeptId ? String(d.assignedDeptId) : null,
-      assignedDeptName: d.assignedDeptName ?? d.assignedDept?.name ?? null,
-      assignedDept: d.assignedDept && typeof d.assignedDept === 'object'
-        ? {
-            id: d.assignedDept.id ? String(d.assignedDept.id) : undefined,
-            code: d.assignedDept.code ?? d.assignedDept.shortName ?? null,
-            name: String(d.assignedDept.name ?? ''),
-          }
-        : null,
+      ...mapDirectiveUnitFields(d),
       collaboratorIds: d.collaboratorIds ?? null,
       isTaskGenerated: Boolean(d.isTaskGenerated),
       createdAt: d.createdAt ? extractDateString(d.createdAt) : undefined,
     }));
+}
+
+/**
+ * Đơn vị nhận chỉ đạo của một bút phê.
+ * Phase 9: `DocumentDirective.assignedDeptId` đã bị drop; nguồn chân lý là đơn vị
+ * chủ trì của nhiệm vụ mà bút phê sinh ra (`linkedTask.leadUnit`).
+ */
+function mapDirectiveUnitFields(d: Record<string, any>): Pick<
+  DocumentDirectiveDTO,
+  'leadUnitId' | 'leadUnitName' | 'assignedUnit' | 'linkedTaskId' | 'linkedTaskCode'
+> {
+  const task = d.linkedTask && typeof d.linkedTask === 'object' ? d.linkedTask : null;
+  const unit =
+    (task?.leadUnit && typeof task.leadUnit === 'object' ? task.leadUnit : null) ??
+    (d.leadUnit && typeof d.leadUnit === 'object' ? d.leadUnit : null);
+
+  const leadUnitId =
+    d.leadUnitId ?? unit?.id ?? task?.leadUnitId ?? null;
+  const leadUnitName = d.leadUnitName ?? unit?.name ?? null;
+
+  return {
+    leadUnitId: leadUnitId ? String(leadUnitId) : null,
+    leadUnitName: leadUnitName ?? null,
+    assignedUnit: leadUnitName
+      ? {
+          id: leadUnitId ? String(leadUnitId) : undefined,
+          code: unit?.code ?? unit?.shortName ?? d.leadUnitCode ?? null,
+          name: String(leadUnitName),
+        }
+      : null,
+    linkedTaskId: task?.id ? String(task.id) : d.linkedTaskId ? String(d.linkedTaskId) : null,
+    linkedTaskCode: task?.code ? String(task.code) : d.linkedTaskCode ? String(d.linkedTaskCode) : null,
+  };
 }
 
 /**
@@ -316,8 +317,13 @@ export function toDocumentDetailDTO(rawDoc: unknown): DocumentDetailDTO | null {
     notes: doc.notes ? String(doc.notes) : null,
     registeredBy: doc.registeredBy ? toUserSummaryDTO(doc.registeredBy) : null,
     registeredById: doc.registeredById ? String(doc.registeredById) : null,
-    leadDepartmentId: doc.leadDepartmentId ? String(doc.leadDepartmentId) : null,
-    draftingDeptId: doc.draftingDeptId ? String(doc.draftingDeptId) : null,
+    leadUnitId: doc.leadUnitId
+      ? String(doc.leadUnitId)
+      : doc.incomingWorkflow?.leadUnitId
+      ? String(doc.incomingWorkflow.leadUnitId)
+      : null,
+    leadUnitName: doc.leadUnitName ?? doc.incomingWorkflow?.leadUnit?.name ?? null,
+    leadUnitCode: doc.leadUnitCode ?? doc.incomingWorkflow?.leadUnit?.code ?? null,
     leadUserId: doc.leadUserId ? String(doc.leadUserId) : null,
   };
 }
@@ -347,16 +353,7 @@ export function toDocumentDirectiveDTO(raw: unknown): DocumentDirectiveDTO | nul
     leader: d.leader ? toUserSummaryDTO(d.leader) : null,
     instruction: String(d.instruction ?? d.content ?? ''),
     deadline: d.deadline ? extractDateString(d.deadline) : null,
-    assignedDeptId: d.assignedDeptId ? String(d.assignedDeptId) : null,
-    assignedDeptName: d.assignedDeptName ?? d.assignedDept?.name ?? null,
-    assignedDept:
-      d.assignedDept && typeof d.assignedDept === 'object'
-        ? {
-            id: d.assignedDept.id ? String(d.assignedDept.id) : undefined,
-            code: d.assignedDept.code ?? d.assignedDept.shortName ?? null,
-            name: String(d.assignedDept.name ?? ''),
-          }
-        : null,
+    ...mapDirectiveUnitFields(d),
     collaboratorIds: d.collaboratorIds ?? null,
     isTaskGenerated: Boolean(d.isTaskGenerated),
     createdAt: d.createdAt ? extractDateString(d.createdAt) : undefined,

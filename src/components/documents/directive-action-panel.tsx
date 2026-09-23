@@ -21,8 +21,12 @@ export interface QuickDirectivePreset {
   id: string;
   label: string;
   description: string;
-  defaultDeptId: string;
-  defaultDeptName: string;
+  /**
+   * Từ khóa nhận diện đơn vị chủ trì trong danh sách đơn vị đã tải.
+   * Phase 9: preset không còn giữ mã đơn vị legacy ("DT", "TCHC"...) vì các mã đó
+   * không phải `OrganizationalUnit.id`/`code` canonical.
+   */
+  unitKeywords: string[];
   template: string;
   offsetDays: number;
   priority?: "NORMAL" | "HIGH" | "URGENT";
@@ -33,8 +37,7 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
     id: "giao-dao-tao",
     label: "Giao P. Đào tạo",
     description: "Chủ trì rà soát chuyên môn, đào tạo & QLKH",
-    defaultDeptId: "DT",
-    defaultDeptName: "Phòng Đào tạo",
+    unitKeywords: ["đào tạo"],
     template: "Giao Phòng Đào tạo chủ trì, phối hợp các đơn vị liên quan nghiên cứu tham mưu triển khai trước hạn.",
     offsetDays: 5,
     priority: "HIGH",
@@ -43,8 +46,7 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
     id: "giao-tc-hc",
     label: "Giao P. TCHC",
     description: "Tổ chức hành chính, nhân sự, tổng hợp",
-    defaultDeptId: "TCHC",
-    defaultDeptName: "Phòng Tổ chức - Hành chính",
+    unitKeywords: ["tổ chức", "hành chính"],
     template: "Giao Phòng Tổ chức - Hành chính chủ trì phối hợp giải quyết theo đúng quy định.",
     offsetDays: 3,
     priority: "NORMAL",
@@ -53,8 +55,7 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
     id: "giao-kh-tc",
     label: "Giao P. KHTC",
     description: "Thẩm định dự toán tài chính, kế hoạch ngân sách",
-    defaultDeptId: "KHTC",
-    defaultDeptName: "Phòng Kế hoạch - Tài chính",
+    unitKeywords: ["kế hoạch", "tài chính"],
     template: "Giao Phòng Kế hoạch - Tài chính thẩm định dự toán và báo cáo BGH.",
     offsetDays: 3,
     priority: "NORMAL",
@@ -63,8 +64,7 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
     id: "giao-cntt",
     label: "Giao Khoa CNTT",
     description: "Hạ tầng kỹ thuật số, phần mềm e-office",
-    defaultDeptId: "CNTT",
-    defaultDeptName: "Khoa Công nghệ Thông tin",
+    unitKeywords: ["công nghệ thông tin"],
     template: "Giao Khoa Công nghệ Thông tin nghiên cứu triển khai giải pháp kỹ thuật.",
     offsetDays: 5,
     priority: "NORMAL",
@@ -73,8 +73,7 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
     id: "pho-bien-toan-truong",
     label: "Phổ biến toàn trường",
     description: "Thông báo các đơn vị triển khai đến toàn thể CB-GV",
-    defaultDeptId: "TCHC",
-    defaultDeptName: "Phòng Tổ chức - Hành chính",
+    unitKeywords: ["tổ chức", "hành chính"],
     template: "Chuyển các phòng, khoa, đơn vị trực thuộc phổ biến cán bộ, giảng viên, nhân viên thực hiện.",
     offsetDays: 7,
     priority: "NORMAL",
@@ -83,9 +82,44 @@ export const QUICK_DIRECTIVE_PRESETS: QuickDirectivePreset[] = [
 
 export interface AppliedDirectivePreset {
   instruction: string;
-  assignedDeptId: string;
+  /**
+   * Đơn vị chủ trì suy ra từ danh sách đơn vị đã tải, khớp theo `unitKeywords`
+   * của preset; rỗng nếu không đơn vị nào khớp.
+   */
+  leadUnitId: string;
   deadline?: string;
   priority?: "NORMAL" | "HIGH" | "URGENT";
+}
+
+/** Bỏ dấu tiếng Việt để so khớp từ khóa đơn vị không phân biệt dấu. */
+function normalizeUnitLabel(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Chọn `OrganizationalUnit.id` canonical cho một preset từ danh sách đơn vị đã tải.
+ * Không hardcode mã đơn vị: mã legacy ("DT", "TCHC") không phải id hợp lệ trong
+ * hệ thống canonical và sẽ bị từ chối ở tầng resolve.
+ */
+export function resolvePresetLeadUnit(
+  preset: QuickDirectivePreset,
+  departments: Array<{ id: string; name: string; shortName?: string }>
+): string {
+  if (departments.length === 0) return "";
+  for (const keyword of preset.unitKeywords) {
+    const needle = normalizeUnitLabel(keyword);
+    const match = departments.find((dept) => {
+      const haystack = normalizeUnitLabel(`${dept.name} ${dept.shortName ?? ""}`);
+      return haystack.includes(needle);
+    });
+    if (match) return match.id;
+  }
+  return departments[0].id;
 }
 
 /**
@@ -93,13 +127,14 @@ export interface AppliedDirectivePreset {
  */
 export function applyPresetToDirective(
   presetId: string,
-  baseDateStr?: string
+  baseDateStr?: string,
+  departments: Array<{ id: string; name: string; shortName?: string }> = []
 ): AppliedDirectivePreset {
   const preset = QUICK_DIRECTIVE_PRESETS.find((p) => p.id === presetId);
   if (!preset) {
     return {
       instruction: "",
-      assignedDeptId: "DT",
+      leadUnitId: "",
       deadline: undefined,
     };
   }
@@ -110,7 +145,7 @@ export function applyPresetToDirective(
 
   return {
     instruction: preset.template,
-    assignedDeptId: preset.defaultDeptId,
+    leadUnitId: resolvePresetLeadUnit(preset, departments),
     deadline: deadlineDate.toISOString(),
     priority: preset.priority,
   };
@@ -137,8 +172,8 @@ export function DirectiveActionPanel({
 }: DirectiveActionPanelProps) {
   const [selectedPresetId, setSelectedPresetId] = React.useState<string | null>(null);
   const [instruction, setInstruction] = React.useState<string>("");
-  const [assignedDeptId, setAssignedDeptId] = React.useState<string>(
-    document.leadDepartmentId || "DT"
+  const [leadUnitId, setLeadUnitId] = React.useState<string>(
+    document.leadUnitId || departments[0]?.id || ""
   );
   const [collaboratorIds, setCollaboratorIds] = React.useState<string[]>([]);
   const [deadline, setDeadline] = React.useState<string>("");
@@ -156,9 +191,9 @@ export function DirectiveActionPanel({
   // 1-touch preset handler
   const handleSelectPreset = (preset: QuickDirectivePreset) => {
     setSelectedPresetId(preset.id);
-    const applied = applyPresetToDirective(preset.id);
+    const applied = applyPresetToDirective(preset.id, undefined, departments);
     setInstruction(applied.instruction);
-    setAssignedDeptId(applied.assignedDeptId);
+    setLeadUnitId(applied.leadUnitId);
     if (applied.deadline) {
       setDeadline(formatDateForInput(applied.deadline));
     }
@@ -174,7 +209,7 @@ export function DirectiveActionPanel({
 
   // Toggle collaborator
   const handleToggleCollaborator = (deptId: string) => {
-    if (deptId === assignedDeptId) return;
+    if (deptId === leadUnitId) return;
     setCollaboratorIds((prev) =>
       prev.includes(deptId) ? prev.filter((id) => id !== deptId) : [...prev, deptId]
     );
@@ -189,7 +224,7 @@ export function DirectiveActionPanel({
       return;
     }
 
-    if (!assignedDeptId) {
+    if (!leadUnitId) {
       setErrorMessage("Vui lòng chọn đơn vị chủ trì thực hiện.");
       return;
     }
@@ -201,7 +236,7 @@ export function DirectiveActionPanel({
     try {
       const payload = {
         instruction: instruction.trim(),
-        assignedDeptId,
+        leadUnitId,
         collaboratorIds: collaboratorIds.length > 0 ? collaboratorIds : null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         leaderId: currentUser?.id,
@@ -344,10 +379,10 @@ export function DirectiveActionPanel({
               <span className="text-rose-500">*</span>
             </label>
             <select
-              value={assignedDeptId}
+              value={leadUnitId}
               onChange={(e) => {
                 const newDept = e.target.value;
-                setAssignedDeptId(newDept);
+                setLeadUnitId(newDept);
                 // Remove from collaborators if previously checked
                 setCollaboratorIds((prev) => prev.filter((id) => id !== newDept));
               }}
@@ -415,7 +450,7 @@ export function DirectiveActionPanel({
           </label>
           <div className="mt-2 flex flex-wrap gap-2">
             {departments
-              .filter((d) => d.id !== assignedDeptId)
+              .filter((d) => d.id !== leadUnitId)
               .map((dept) => {
                 const isChecked = collaboratorIds.includes(dept.id);
                 return (

@@ -571,9 +571,6 @@ export async function directDocument(
       },
     });
 
-    // Phase 9: Department model dropped — no legacy dual-write needed
-    const legacyDept = null;
-
     const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetWorkflowStatus);
 
     await tx.document.update({
@@ -584,25 +581,12 @@ export async function directDocument(
       },
     });
 
-    // 3. Create legacy DocumentDirective if legacy Department exists
-    let createdDirective: any = null;
-    if (legacyDept) {
-      const dir = await tx.documentDirective.create({
-        data: {
-          documentId: input.documentId,
-          leaderId: user.id,
-          instruction: input.leadershipInstruction,
-          deadline,
-          assignedDeptId: (legacyDept as any).id,
-          collaboratorIds: (input.coordinatingUnitIds || []).join(","),
-        },
-      });
-      createdDirective = Object.assign(dir, {
-        leadUnitId: dir.assignedDeptId,
-      });
-    }
+    // Phase 9: `Document.departmentId`/`leadDepartmentId` and
+    // `DocumentDirective.assignedDeptId` were dropped. Leadership direction now
+    // lives entirely on the incoming workflow (`leadUnitId`, `coordinatingUnitIds`),
+    // so no legacy directive/dual-write is produced here.
 
-    // 4. Audit Log
+    // 3. Audit Log
     await auditService.logEvent(tx, {
       actorId: user.id,
       action: AuditAction.DOCUMENT_DIRECTED,
@@ -638,7 +622,9 @@ export async function directDocument(
     return {
       ...updatedWorkflow,
       workflow: updatedWorkflow,
-      directive: createdDirective,
+      // Phase 9: leadership direction is stored on the workflow, not as a
+      // `DocumentDirective`, so there is no separate directive record to return.
+      directive: null,
       document: {
         id: doc.id,
         summary: doc.summary,

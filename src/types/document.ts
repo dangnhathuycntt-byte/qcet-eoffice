@@ -55,8 +55,14 @@ export interface DocumentDirectiveItem {
   leaderName?: string;
   instruction: string;
   deadline?: string | null;
-  assignedDeptId: string;
-  assignedDeptName?: string;
+  /**
+   * Phase 9: the directive no longer carries its own unit column. The receiving
+   * unit is the lead unit of the task generated from this directive.
+   */
+  leadUnitId?: string | null;
+  leadUnitName?: string | null;
+  linkedTaskId?: string | null;
+  linkedTaskCode?: string | null;
   collaboratorIds?: string | null;
   isTaskGenerated: boolean;
   createdAt?: string;
@@ -81,14 +87,13 @@ export interface DocumentItem {
   // Văn bản đi
   signerName?: string | null;
   signerTitle?: string | null;
-  draftingDeptId?: string | null;
-  draftingDeptName?: string | null;
   recipientList?: string | null;
   distributedCopies?: number | null;
 
-  // Văn bản đến
-  leadDepartmentId?: string | null;
-  leadDepartmentName?: string | null;
+  // Đơn vị chủ trì (canonical `OrganizationalUnit`, qua quy trình văn bản đến)
+  leadUnitId?: string | null;
+  leadUnitName?: string | null;
+  leadUnitCode?: string | null;
   leadUserId?: string | null;
   leadUserName?: string | null;
 

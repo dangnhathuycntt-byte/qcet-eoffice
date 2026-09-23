@@ -523,7 +523,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       const result = await createDocumentDirectiveAtomic(prisma, {
         documentId: doc.id,
         leaderId: testApproverId,
-        assignedDeptId: testDepartmentId,
+        leadUnitId: testDepartmentId,
         instruction: 'Yêu cầu phòng chuyên môn khẩn trương triển khai theo đúng thời hạn.',
         deadline: '2026-10-30',
         collaboratorIds: [testCollaboratorId],
@@ -561,7 +561,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
           await createDocumentDirectiveAtomic(prisma, {
             documentId: doc.id,
             leaderId: testApproverId,
-            assignedDeptId: testDepartmentId,
+            leadUnitId: testDepartmentId,
             instruction: 'Chỉ đạo này sẽ bị rollback.',
             failAtStep: 'afterDocumentTouch',
           });
@@ -592,7 +592,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
           await createDocumentDirectiveAtomic(prisma, {
             documentId: doc.id,
             leaderId: testApproverId,
-            assignedDeptId: testDepartmentId,
+            leadUnitId: testDepartmentId,
             instruction: 'Chỉ đạo trên văn bản với version không hợp lệ',
             expectedDocumentVersion: 888, // Stale version
           });

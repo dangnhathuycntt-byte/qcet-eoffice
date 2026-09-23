@@ -366,9 +366,7 @@ function hasValidActiveDelegation(
 
 function extractDocumentUnitIds(doc: DocumentClassificationTarget): string[] {
   const units: string[] = [];
-  if (doc.departmentId) units.push(doc.departmentId);
-  if (doc.leadDepartmentId) units.push(doc.leadDepartmentId);
-  if (doc.draftingDeptId) units.push(doc.draftingDeptId);
+  // Phase 9: chỉ còn `OrganizationalUnit` là đơn vị canonical.
   if (doc.leadUnitId) units.push(doc.leadUnitId);
   if (doc.draftingUnitId) units.push(doc.draftingUnitId);
   if (doc.owningUnitId) units.push(doc.owningUnitId);
@@ -376,7 +374,10 @@ function extractDocumentUnitIds(doc: DocumentClassificationTarget): string[] {
 
   if (Array.isArray(doc.directives)) {
     for (const d of doc.directives) {
-      if (d.assignedDeptId) units.push(d.assignedDeptId);
+      // Bút phê không còn cột đơn vị; đơn vị nhận chỉ đạo là đơn vị của nhiệm vụ
+      // được sinh ra (đọc trực tiếp trên linkedTask nếu có).
+      if (d?.leadUnitId) units.push(d.leadUnitId);
+      else if (d?.linkedTask?.leadUnitId) units.push(d.linkedTask.leadUnitId);
     }
   }
 

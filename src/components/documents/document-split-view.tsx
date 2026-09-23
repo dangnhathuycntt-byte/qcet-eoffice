@@ -425,7 +425,7 @@ export function DocumentSplitView({
                   Đơn vị chủ trì giải quyết:
                 </span>
                 <p className="font-semibold text-foreground pl-4.5">
-                  {doc.leadDepartmentName || "Chưa phân công"}
+                  {doc.leadUnitName || "Chưa phân công"}
                 </p>
               </div>
             )}
@@ -454,7 +454,7 @@ export function DocumentSplitView({
                     Đơn vị soạn thảo:
                   </span>
                   <p className="font-semibold text-foreground pl-4.5">
-                    {doc.draftingDeptName || "---"}
+                    {doc.leadUnitName || "---"}
                   </p>
                 </div>
 
@@ -528,7 +528,7 @@ export function DocumentSplitView({
                     <span className="text-muted-foreground">
                       Đơn vị xử lý:{" "}
                       <strong className="text-foreground">
-                        {dir.assignedDeptName || dir.assignedDeptId}
+                        {dir.leadUnitName || dir.leadUnitId}
                       </strong>
                     </span>
 

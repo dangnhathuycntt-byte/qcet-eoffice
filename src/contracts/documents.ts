@@ -76,20 +76,19 @@ export const DocumentQuerySchema = PaginationQuerySchema.extend({
     ])
     .optional(),
   status: DocumentStatusSchema.optional(),
+  /**
+   * Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`).
+   * `departmentId` giữ lại như alias tương thích cho client cũ.
+   */
+  leadUnitId: z
+    .string()
+    .trim()
+    .max(64, 'Lead unit ID cannot exceed 64 characters')
+    .optional(),
   departmentId: z
     .string()
     .trim()
     .max(64, 'Department ID cannot exceed 64 characters')
-    .optional(),
-  leadDepartmentId: z
-    .string()
-    .trim()
-    .max(64, 'Lead Department ID cannot exceed 64 characters')
-    .optional(),
-  draftingDeptId: z
-    .string()
-    .trim()
-    .max(64, 'Drafting Department ID cannot exceed 64 characters')
     .optional(),
   search: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
   q: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
@@ -164,22 +163,21 @@ export const CreateDocumentSchema = z
       .optional()
       .nullable(),
     type: DocumentTypeSchema,
+    /**
+     * Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`).
+     * Phase 9: `draftingDeptId` / `leadDepartmentId` đã bị drop khỏi `Document`;
+     * `departmentId` giữ lại như alias tương thích cho client cũ.
+     */
+    leadUnitId: z
+      .string()
+      .trim()
+      .max(64, 'Lead unit ID cannot exceed 64 characters')
+      .optional()
+      .nullable(),
     departmentId: z
       .string()
       .trim()
       .max(64, 'Department ID cannot exceed 64 characters')
-      .optional()
-      .nullable(),
-    draftingDeptId: z
-      .string()
-      .trim()
-      .max(64, 'Drafting department ID cannot exceed 64 characters')
-      .optional()
-      .nullable(),
-    leadDepartmentId: z
-      .string()
-      .trim()
-      .max(64, 'Lead department ID cannot exceed 64 characters')
       .optional()
       .nullable(),
     leadUserId: z
@@ -253,6 +251,8 @@ export const UpdateDocumentSchema = z
     documentNumber: z.string().trim().max(100).optional().nullable(),
     originalNumber: z.string().trim().max(100).optional().nullable(),
     type: DocumentTypeSchema.optional(),
+    /** Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`). */
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
     departmentId: z.string().trim().max(64).optional().nullable(),
     fileUrl: z.string().trim().max(1024).optional().nullable(),
     urgency: z.string().trim().max(50).optional().nullable(),
@@ -263,8 +263,6 @@ export const UpdateDocumentSchema = z
     dueDate: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
     signerName: z.string().trim().max(255).optional().nullable(),
     signerTitle: z.string().trim().max(255).optional().nullable(),
-    draftingDeptId: z.string().trim().max(64).optional().nullable(),
-    leadDepartmentId: z.string().trim().max(64).optional().nullable(),
     leadUserId: z.string().trim().max(64).optional().nullable(),
     recipientList: z.string().trim().max(1000).optional().nullable(),
     distributedCopies: z.coerce.number().int().optional().nullable(),
@@ -285,8 +283,12 @@ export const CreateDirectiveSchema = z
     content: z.string().trim().max(5000).optional().nullable(),
     instruction: z.string().trim().max(5000).optional().nullable(),
     leaderId: z.string().trim().max(64).optional().nullable(),
-    assignedToDepartmentId: z.string().trim().max(64).optional().nullable(),
-    assignedDeptId: z.string().trim().max(64).optional().nullable(),
+    /**
+     * Đơn vị chủ trì thực hiện chỉ đạo — canonical `OrganizationalUnit.id` (hoặc `code`).
+     * Phase 9: `assignedDeptId` / `assignedToDepartmentId` đã bị drop cùng model
+     * `Department`; giá trị này được resolve sang `Task.leadUnitId`.
+     */
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
     deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
     collaboratorIds: z
       .union([
@@ -308,16 +310,9 @@ export const CreateDirectiveSchema = z
       path: ['instruction'],
     }
   )
-  .refine(
-    (data) =>
-      Boolean(
-        (data.assignedDeptId && data.assignedDeptId.trim().length > 0) ||
-        (data.assignedToDepartmentId && data.assignedToDepartmentId.trim().length > 0)
-      ),
-    {
-      message: 'Đơn vị chủ trì thực hiện (assignedDeptId) là bắt buộc',
-      path: ['assignedDeptId'],
-    }
-  );
+  .refine((data) => Boolean(data.leadUnitId && data.leadUnitId.trim().length > 0), {
+    message: 'Đơn vị chủ trì thực hiện (leadUnitId) là bắt buộc',
+    path: ['leadUnitId'],
+  });
 
 export type CreateDirectiveInput = z.infer<typeof CreateDirectiveSchema>;

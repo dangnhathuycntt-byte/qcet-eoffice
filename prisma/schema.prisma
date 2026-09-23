@@ -397,7 +397,10 @@ model DocumentDirective {
   leaderId         String      @map("leader_id")
   instruction      String      @db.Text
   deadline         DateTime?
-  assignedDeptId   String      @map("assigned_dept_id") @db.VarChar(50)
+  // Phase 9: `assignedDeptId` (legacy `Department` FK) was dropped in migration
+  // 20260923000002_drop_department. The unit receiving a directive is the lead
+  // unit of the task the directive generated (`Task.leadUnitId`, reached through
+  // `Document.linkedTaskId`).
   collaboratorIds  String?     @map("collaborator_ids") @db.Text
   isTaskGenerated  Boolean     @default(false) @map("is_task_generated")
 

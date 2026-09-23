@@ -27,7 +27,8 @@ export interface GeneratedTaskPayload {
   title: string;
   description: string;
   scope: "SCHOOL";
-  departmentId: string;
+  /** Đơn vị chủ trì — canonical `OrganizationalUnit.id`. */
+  leadUnitId: string;
   collaboratorDepartmentIds?: string[];
   priority: TaskPriority;
   dueDate: string;
@@ -108,7 +109,7 @@ export function mapDirectiveToSchoolTask(
     title,
     description: descriptionLines.join("\n"),
     scope: "SCHOOL",
-    departmentId: directive.assignedDeptId,
+    leadUnitId: directive.leadUnitId || "",
     collaboratorDepartmentIds: collaboratorIds.length > 0 ? collaboratorIds : undefined,
     priority: mapUrgencyToTaskPriority(doc.urgency),
     dueDate,

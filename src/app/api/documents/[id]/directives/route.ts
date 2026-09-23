@@ -31,6 +31,7 @@ import {
   mapUrgencyToTaskPriority,
 } from "@/lib/documents/directive-pipeline";
 import { validateDirectivePayload } from "@/lib/documents/document-validator";
+import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import { getAcademicMonthInfo, getAcademicYear } from "@/lib/academic-calendar";
 import { TaskScope, TaskPriority, TaskStatus } from "@prisma/client";
 import {
@@ -68,7 +69,9 @@ export async function GET(
       );
     }
 
-    const directives = await prisma.documentDirective.findMany({
+    // Phase 9: a directive carries no unit of its own — the receiving unit is the
+    // lead unit of the task the directive generated, reached through the document.
+    const directiveRows = await prisma.documentDirective.findMany({
       where: { documentId: id },
       include: {
         leader: {
@@ -78,9 +81,25 @@ export async function GET(
             role: true,
           },
         },
+        document: {
+          select: {
+            linkedTask: {
+              select: {
+                id: true,
+                code: true,
+                leadUnit: { select: { id: true, name: true, code: true } },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
+
+    const directives = directiveRows.map(({ document: parent, ...dir }) => ({
+      ...dir,
+      linkedTask: parent?.linkedTask ?? null,
+    }));
 
     return apiSuccess(
       {
@@ -165,7 +184,18 @@ export async function POST(
     }
 
     const instruction = (validated.instruction || validated.content)!;
-    const assignedDeptId = (validated.assignedDeptId || validated.assignedToDepartmentId)!;
+    // Fail-fast: `Task.leadUnitId` is a foreign key to `OrganizationalUnit`, so the
+    // client's reference must resolve to a real unit (id or canonical code) before
+    // it is written. Writing an unresolved value would surface as an FK violation.
+    const leadUnit = await OrganizationalUnitService.resolveUnitRef(validated.leadUnitId);
+    if (!leadUnit) {
+      throw new ValidationError(
+        `Đơn vị chủ trì "${validated.leadUnitId}" không tồn tại trong hệ thống đơn vị.`,
+        { leadUnitId: [`Không tìm thấy đơn vị với id/mã "${validated.leadUnitId}"`] },
+        "ORG_UNIT_NOT_FOUND"
+      );
+    }
+    const leadUnitId = leadUnit.id;
     const deadline = validated.deadline ? new Date(validated.deadline) : null;
     const serializedCollaborators = Array.isArray(validated.collaboratorIds)
       ? JSON.stringify(validated.collaboratorIds)
@@ -181,7 +211,7 @@ export async function POST(
       leaderName: authUser.name || "Ban Giám hiệu",
       instruction,
       deadline: deadline ? deadline.toISOString() : null,
-      assignedDeptId,
+      leadUnitId,
       collaboratorIds: serializedCollaborators,
       isTaskGenerated: false,
     });
@@ -215,7 +245,8 @@ export async function POST(
           code = `NV-${curYear}-${String(monthNum).padStart(2, "0")}-${String(seq).padStart(3, "0")}`;
         }
 
-        // Phase 9: Department model dropped — use leadUnitId directly
+        // Phase 9: Department model dropped — the resolved canonical unit id is
+        // written straight into the `OrganizationalUnit` FK.
         const task = await tx.task.create({
           data: {
             code,
@@ -225,7 +256,7 @@ export async function POST(
             status: TaskStatus.NOT_STARTED,
             priority: priorityEnum,
             dueDate: dueDateObj,
-            leadUnitId: assignedDeptId || null,
+            leadUnitId,
             createdById: authUser.id,
             academicMonth: monthNum,
             academicYear: academicYearStr,
@@ -241,7 +272,6 @@ export async function POST(
             leaderId: authUser.id,
             instruction,
             deadline,
-            assignedDeptId,
             collaboratorIds: serializedCollaborators,
             isTaskGenerated: true,
           },

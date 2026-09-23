@@ -60,7 +60,7 @@ describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
       summary: "Triển khai nhiệm vụ an toàn mạng",
       urgency: "THUONG",
       securityLevel: "THUONG",
-      leadDepartmentName: "Khoa CNTT",
+      leadUnitName: "Khoa CNTT",
       status: "DANG_XU_LY",
       registeredById: "u1",
     };
@@ -93,7 +93,7 @@ describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
       securityLevel: "THUONG",
       status: "DA_HOAN_THANH",
       signerName: "TS. Nguyễn Văn A - Hiệu trưởng",
-      draftingDeptName: "Phòng Đào tạo",
+      leadUnitName: "Phòng Đào tạo",
       recipientList: "Toàn thể CB, GV, NV",
       distributedCopies: 3,
       notes: "Đã gửi qua email trường",
@@ -127,7 +127,7 @@ describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
       summary: 'Phê duyệt kế hoạch "Nâng cao chất lượng đào tạo, nghề"\nNăm học 2026', // Quotes and newline
       urgency: "THUONG",
       securityLevel: "THUONG",
-      leadDepartmentName: "Khoa Cơ khí",
+      leadUnitName: "Khoa Cơ khí",
       status: "CHO_PHAN_CONG",
       registeredById: "u1",
     };
@@ -281,15 +281,15 @@ describe("E2E Document Lifecycle: Entry -> Endorsement -> Task -> Export", () =>
       leaderName: "Phó Hiệu trưởng phụ trách Đào tạo",
       instruction: "Giao Khoa Cơ khí xây dựng kế hoạch chi tiết tham gia trước 20/09",
       deadline: "2026-09-20T17:00:00Z",
-      assignedDeptId: "CK",
-      assignedDeptName: "Khoa Cơ Khí",
+      leadUnitId: "k-ck",
+      leadUnitName: "Khoa Cơ Khí",
       collaboratorIds: "ĐT, TCKT",
       isTaskGenerated: true,
     };
 
     // 3. Đường ống sinh Task tự động (Directive Pipeline)
     const task = mapDirectiveToSchoolTask(doc, directive);
-    assert.equal(task.departmentId, "CK");
+    assert.equal(task.leadUnitId, "k-ck");
     assert.equal(task.priority, "HIGH");
     assert.equal(task.dueDate, "2026-09-20T17:00:00Z");
     assert.equal(task.sourceDocumentId, "doc-e2e-01");
@@ -300,7 +300,7 @@ describe("E2E Document Lifecycle: Entry -> Endorsement -> Task -> Export", () =>
     assert.ok(task.description.includes("Giao Khoa Cơ khí"));
 
     // 4. Kết xuất dòng Excel phục vụ đóng sổ (Nghị định 30/2020/NĐ-CP Phụ lục IV)
-    doc.leadDepartmentName = "Khoa Cơ Khí";
+    doc.leadUnitName = "Khoa Cơ Khí";
     doc.status = "DANG_XU_LY";
     const excelRow = formatDocumentRowForAppendixIV(doc);
     assert.equal(excelRow[0], "07/09/2026"); // Ngày đến
@@ -337,8 +337,8 @@ describe("E2E Document Lifecycle: Entry -> Endorsement -> Task -> Export", () =>
       leaderName: "Hiệu trưởng",
       instruction: "Khẩn trương rà soát danh mục thiết bị, báo cáo BGH trước 15/09",
       deadline: "2026-09-15T12:00:00Z",
-      assignedDeptId: "QLCSVC",
-      assignedDeptName: "Phòng Quản lý CSVC",
+      leadUnitId: "p-qlcsvc",
+      leadUnitName: "Phòng Quản lý CSVC",
       isTaskGenerated: false,
     };
 
@@ -378,7 +378,7 @@ describe("E2E Document Lifecycle: Entry -> Endorsement -> Task -> Export", () =>
       urgency: "THUONG",
       securityLevel: "THUONG",
       status: "DA_HOAN_THANH",
-      leadDepartmentName: "Phòng TC-HC",
+      leadUnitName: "Phòng TC-HC",
       registeredById: "vt-01",
     };
 

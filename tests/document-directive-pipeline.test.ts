@@ -11,11 +11,24 @@ import {
 import {
   QUICK_DIRECTIVE_PRESETS,
   applyPresetToDirective,
+  resolvePresetLeadUnit,
   DirectiveActionPanel
 } from "../src/components/documents/directive-action-panel";
 import { DocumentQuickEntryModal } from "../src/components/documents/document-quick-entry-modal";
 import { formatIsoDate } from "@/lib/format";
 import type { DocumentItem, DocumentDirectiveItem } from "../src/types/document";
+
+// Phase 9: presets no longer carry a hardcoded legacy unit code ("DT", "TCHC").
+// They describe the target unit by keyword and are resolved against the loaded
+// canonical `OrganizationalUnit` list, so the value sent to the API is always a
+// real unit id.
+const canonicalUnits = [
+  { id: "p-kt-dbcl", name: "Phòng Khảo thí và Đảm bảo chất lượng", shortName: "KT-ĐBCL" },
+  { id: "p-tchc-qt", name: "Phòng Tổ chức - Hành chính - Quản trị", shortName: "TCHC-QT" },
+  { id: "p-tckt", name: "Phòng Tài chính - Kế toán", shortName: "TC-KT" },
+  { id: "p-qldt", name: "Phòng Quản lý Đào tạo", shortName: "QLĐT" },
+  { id: "k-cntt", name: "Khoa Công nghệ Thông tin", shortName: "CNTT" },
+];
 
 describe("Document-to-Task Directive Pipeline", () => {
   const sampleDoc: DocumentItem = {
@@ -42,8 +55,8 @@ describe("Document-to-Task Directive Pipeline", () => {
     leaderName: "TS. Lê Hải Đăng (Hiệu trưởng)",
     instruction: "Giao Khoa CNTT chủ trì, phối hợp Phòng Đào tạo rà soát toàn bộ hệ thống trước ngày 15/09",
     deadline: "2026-09-15T17:00:00Z",
-    assignedDeptId: "CNTT",
-    assignedDeptName: "Khoa Công Nghệ Thông Tin",
+    leadUnitId: "k-cntt",
+    leadUnitName: "Khoa Công nghệ Thông tin",
     collaboratorIds: JSON.stringify(["DT"]),
     isTaskGenerated: false
   };
@@ -68,7 +81,7 @@ describe("Document-to-Task Directive Pipeline", () => {
       "Task title must format registrationNumber and originalNumber"
     );
     assert.equal(taskPayload.scope, "SCHOOL");
-    assert.equal(taskPayload.departmentId, "CNTT");
+    assert.equal(taskPayload.leadUnitId, "k-cntt");
     assert.deepEqual(taskPayload.collaboratorDepartmentIds, ["DT"]);
     assert.equal(taskPayload.priority, "URGENT");
     assert.equal(taskPayload.dueDate, "2026-09-15T17:00:00Z");
@@ -145,22 +158,34 @@ describe("Quick Directive Presets for Leadership", () => {
 
   test("contains standard academic and operational presets", () => {
     assert.ok(QUICK_DIRECTIVE_PRESETS.length >= 3);
+
     const trainingPreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-dao-tao");
     assert.ok(trainingPreset, "Must have preset for Training Dept");
-    assert.equal(trainingPreset?.defaultDeptId, "DT");
+    assert.deepEqual(trainingPreset?.unitKeywords, ["đào tạo"]);
+    assert.equal(resolvePresetLeadUnit(trainingPreset!, canonicalUnits), "p-qldt");
 
     const adminPreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-tc-hc");
     assert.ok(adminPreset, "Must have preset for TCHC Dept");
-    assert.equal(adminPreset?.defaultDeptId, "TCHC");
+    assert.equal(resolvePresetLeadUnit(adminPreset!, canonicalUnits), "p-tchc-qt");
 
     const financePreset = QUICK_DIRECTIVE_PRESETS.find(p => p.id === "giao-kh-tc");
     assert.ok(financePreset, "Must have preset for KHTC Dept");
-    assert.equal(financePreset?.defaultDeptId, "KHTC");
+    assert.equal(resolvePresetLeadUnit(financePreset!, canonicalUnits), "p-tckt");
+  });
+
+  test("không hardcode mã đơn vị legacy trong preset", () => {
+    for (const preset of QUICK_DIRECTIVE_PRESETS) {
+      assert.ok(preset.unitKeywords.length > 0, `${preset.id} phải có từ khóa đơn vị`);
+      assert.equal((preset as any).defaultDeptId, undefined, `${preset.id} không được giữ mã đơn vị legacy`);
+    }
+    // Danh sách rỗng -> không bịa ra id giả
+    const empty = applyPresetToDirective("giao-dao-tao", undefined, []);
+    assert.equal(empty.leadUnitId, "");
   });
 
   test("applies preset and sets deadline offset accurately", () => {
-    const result = applyPresetToDirective("giao-dao-tao", "2026-09-07T00:00:00Z");
-    assert.equal(result.assignedDeptId, "DT");
+    const result = applyPresetToDirective("giao-dao-tao", "2026-09-07T00:00:00Z", canonicalUnits);
+    assert.equal(result.leadUnitId, "p-qldt");
     assert.ok(result.instruction.includes("Phòng Đào tạo"));
     assert.ok(result.deadline);
 
@@ -171,8 +196,8 @@ describe("Quick Directive Presets for Leadership", () => {
   });
 
   test("applies default deadline offset when baseDate is omitted", () => {
-    const result = applyPresetToDirective("giao-tc-hc");
-    assert.equal(result.assignedDeptId, "TCHC");
+    const result = applyPresetToDirective("giao-tc-hc", undefined, canonicalUnits);
+    assert.equal(result.leadUnitId, "p-tchc-qt");
     assert.ok(result.instruction.includes("Phòng Tổ chức - Hành chính") || result.instruction.includes("Hành chính"));
     assert.ok(result.deadline);
   });
@@ -256,7 +281,7 @@ describe("T52 & T53: Directive-to-Task Pipeline & Statutory Presets", () => {
     leaderId: "leader-1",
     leaderName: "TS. Nguyễn Văn Hiệu",
     instruction: "Giao P. Đào tạo chủ trì",
-    assignedDeptId: "DT",
+    leadUnitId: "p-qldt",
     deadline: "2026-09-15T00:00:00.000Z",
     isTaskGenerated: false,
   };
@@ -265,7 +290,7 @@ describe("T52 & T53: Directive-to-Task Pipeline & Statutory Presets", () => {
     const payload = mapDirectiveToSchoolTask(dummyDoc, dummyDirective);
 
     assert.strictEqual(payload.scope, "SCHOOL");
-    assert.strictEqual(payload.departmentId, "DT");
+    assert.strictEqual(payload.leadUnitId, "p-qldt");
     assert.strictEqual(payload.priority, "URGENT"); // HOA_TOC -> URGENT
     assert.strictEqual(payload.sourceDocumentId, "doc-test-1");
     assert.strictEqual(payload.metadata.originalNumber, "123/UBND");
@@ -276,9 +301,9 @@ describe("T52 & T53: Directive-to-Task Pipeline & Statutory Presets", () => {
 
   test("applyPresetToDirective sets statutory deadline offset correctly", () => {
     const baseDate = "2026-09-10T00:00:00.000Z";
-    const preset = applyPresetToDirective("giao-dao-tao", baseDate);
+    const preset = applyPresetToDirective("giao-dao-tao", baseDate, canonicalUnits);
 
-    assert.strictEqual(preset.assignedDeptId, "DT");
+    assert.strictEqual(preset.leadUnitId, "p-qldt");
     assert.strictEqual(preset.priority, "HIGH");
     assert.ok(preset.instruction.includes("Phòng Đào tạo"));
     // 5 days offset from 2026-09-10 -> 2026-09-15
