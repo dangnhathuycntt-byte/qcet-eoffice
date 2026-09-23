@@ -248,6 +248,10 @@ export function isTaskMaker(task: any, userId: string): boolean {
     for (const actor of actorRows) {
       const actorUserId = actor?.userId || actor?.user?.id;
       if (typeof actorUserId !== 'string' || !actorUserId) continue;
+      // SoD: chỉ DRI và COLLABORATOR là "maker" — REVIEWER không phải người tạo/thực hiện
+      // nên không được gộp vào maker set. Gộp REVIEWER vào sẽ block họ khỏi approve
+      // task của chính mình — sai nghĩa nghiệp vụ ADR-001.
+      if (actor.role === 'REVIEWER') continue;
       actorUserIds.push(actorUserId);
       if (actorPrimaryDriId === null && (actor.isPrimaryDRI === true || actor.role === 'DRI')) {
         actorPrimaryDriId = actorUserId;
