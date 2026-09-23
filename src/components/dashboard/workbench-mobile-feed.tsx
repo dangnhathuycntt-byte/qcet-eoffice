@@ -246,7 +246,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
             ? "PENDING_EXECUTIVE_APPROVAL"
             : item.primaryReason === "BLOCKED"
               ? "BLOCKED"
-              : "OVERDUE";
+              : "IN_PROGRESS";
         return {
           id: item.taskId,
           title: item.title,

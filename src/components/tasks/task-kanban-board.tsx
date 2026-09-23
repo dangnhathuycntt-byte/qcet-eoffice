@@ -159,7 +159,6 @@ const COLUMN_ICONS: Record<
   NEEDS_REVIEW: AlertCircle,
   BLOCKED: AlertTriangle,
   COMPLETED: CheckCircle2,
-  OVERDUE: AlertCircle,
   CANCELLED: AlertTriangle,
 };
 
@@ -198,7 +197,7 @@ const STATUS_ORDER: TaskStatus[] = [
  * Canonical mapping from database/operational status to one of the 4 Kanban columns.
  * Conforms to src/contracts/workspace-semantic.ts:
  * - NOT_STARTED, NEW -> NEW
- * - IN_PROGRESS, OVERDUE, BLOCKED -> IN_PROGRESS
+ * - IN_PROGRESS, BLOCKED -> IN_PROGRESS
  * - WAITING_APPROVAL, PENDING_EXECUTIVE_APPROVAL, NEEDS_REVIEW -> NEEDS_REVIEW
  * - COMPLETED -> COMPLETED
  */
@@ -210,7 +209,6 @@ export function mapTaskStatusToKanbanColumn(status?: string): TaskStatus {
     case "NOT_STARTED":
       return "NEW";
     case "IN_PROGRESS":
-    case "OVERDUE":
     case "BLOCKED":
       return "IN_PROGRESS";
     case "NEEDS_REVIEW":
@@ -483,7 +481,6 @@ export function groupTasksByStatus(
     NEEDS_REVIEW: [],
     BLOCKED: [],
     COMPLETED: [],
-    OVERDUE: [],
     CANCELLED: [],
   };
 
@@ -570,7 +567,7 @@ function KanbanCard({
     setMounted(true);
   }, []);
 
-  const overdue = isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
+  const overdue = isOverdue(item.dueDate, item.status) || (item.rawTask as SchoolTask).isOverdue === true;
 
   const updateCoords = React.useCallback(() => {
     if (!triggerRef.current || typeof window === "undefined") return;
@@ -1249,7 +1246,6 @@ export function TaskKanbanBoard({
     NEEDS_REVIEW: 30,
     BLOCKED: 30,
     COMPLETED: 30,
-    OVERDUE: 30,
     CANCELLED: 30,
   });
 

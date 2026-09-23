@@ -1213,7 +1213,6 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       assert.equal(getStatusBadgeConfig("COMPLETED").label, "Hoàn thành");
       assert.equal(getStatusBadgeConfig("IN_PROGRESS").label, "Đang thực hiện");
       assert.equal(getStatusBadgeConfig("NEW").label, "Mới");
-      assert.equal(getStatusBadgeConfig("OVERDUE").label, "Quá hạn");
       assert.equal(getStatusBadgeConfig("CANCELLED").label, "Đã hủy");
     });
 

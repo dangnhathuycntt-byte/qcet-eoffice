@@ -12,7 +12,7 @@
  * - PENDING_EXECUTIVE_APPROVAL → "Chờ BGH duyệt"
  * - NEEDS_REVIEW → "Cần chỉnh sửa"
  * - COMPLETED → "Hoàn thành"
- * - OVERDUE → "Quá hạn"
+ * - OVERDUE → removed from enum (Phase 9 WI-9.4)
  * - CANCELLED → "Đã hủy"
  * - BLOCKED → "Tạm dừng"
  */
@@ -125,16 +125,6 @@ export const STATUS_DISPLAY_CONFIG: ReadonlyArray<StatusDisplayConfig> = [
     colorClass: 'text-emerald-700 bg-emerald-50/80 border-emerald-200/80',
     badgeVariant: 'emerald',
     icon: CheckCircle2,
-  },
-  {
-    value: 'OVERDUE',
-    label: 'Quá hạn',
-    shortLabel: 'Quá hạn',
-    dotClass: 'bg-rose-600',
-    iconClass: 'text-rose-600',
-    colorClass: 'text-rose-700 bg-rose-50/80 border-rose-200/80',
-    badgeVariant: 'rose',
-    icon: AlertTriangle,
   },
   {
     value: 'CANCELLED',

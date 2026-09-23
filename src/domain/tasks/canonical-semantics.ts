@@ -6,7 +6,7 @@
  *    to TaskLifecycleStatus.
  * 2. Complete Kanban Projection: Every valid lifecycle status maps to a recognized
  *    Kanban column ('NEW' | 'IN_PROGRESS' | 'NEEDS_REVIEW' | 'COMPLETED'), resolving
- *    the historical 85-task delta (75 NOT_STARTED + 9 WAITING_APPROVAL + 1 OVERDUE).
+ *    the historical 85-task delta (75 NOT_STARTED + 9 WAITING_APPROVAL).
  * 3. Light-only token alignment, zero emojis.
  */
 
@@ -32,7 +32,6 @@ export const KANBAN_COLUMNS = ['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED'
  * - WAITING_APPROVAL, NEEDS_REVIEW -> WAITING_APPROVAL
  * - PENDING_EXECUTIVE_APPROVAL -> PENDING_EXECUTIVE_APPROVAL
  * - COMPLETED, DONE -> COMPLETED
- * - OVERDUE -> OVERDUE
  * - CANCELLED, CANCELED, ARCHIVED -> CANCELLED
  */
 export function mapDbStatusToLifecycle(dbStatus: string): TaskLifecycleStatus {
@@ -64,9 +63,6 @@ export function mapDbStatusToLifecycle(dbStatus: string): TaskLifecycleStatus {
     case 'DONE':
       return 'COMPLETED';
 
-    case 'OVERDUE':
-      return 'OVERDUE';
-
     case 'CANCELLED':
     case 'CANCELED':
     case 'ARCHIVED':
@@ -96,7 +92,6 @@ export function normalizeDisplayStatus(
     case 'COMPLETED':
       return 'COMPLETED';
     case 'IN_PROGRESS':
-    case 'OVERDUE':
       return 'IN_PROGRESS';
     case 'WAITING_APPROVAL':
     case 'PENDING_EXECUTIVE_APPROVAL':
@@ -171,7 +166,6 @@ export function deriveTaskCompletion(
  * - IN_PROGRESS -> 'IN_PROGRESS'
  * - WAITING_APPROVAL, PENDING_EXECUTIVE_APPROVAL -> 'NEEDS_REVIEW'
  * - COMPLETED -> 'COMPLETED'
- * - OVERDUE -> 'IN_PROGRESS' (flagged as isOverdue)
  * - CANCELLED -> 'COMPLETED' (closed / terminal state)
  */
 export function mapLifecycleToKanbanColumn(status: TaskLifecycleStatus): KanbanColumnId {
@@ -180,7 +174,6 @@ export function mapLifecycleToKanbanColumn(status: TaskLifecycleStatus): KanbanC
       return 'NEW';
 
     case 'IN_PROGRESS':
-    case 'OVERDUE':
       return 'IN_PROGRESS';
 
     case 'WAITING_APPROVAL':
@@ -203,7 +196,7 @@ export function mapLifecycleToKanbanColumn(status: TaskLifecycleStatus): KanbanC
 export function mapLifecycleToKanban(status: TaskLifecycleStatus): KanbanColumnMapping {
   return {
     column: mapLifecycleToKanbanColumn(status),
-    isOverdue: status === 'OVERDUE',
+    isOverdue: false,
   };
 }
 
@@ -230,7 +223,7 @@ export function projectTaskToKanban(
 
   return {
     column: mapLifecycleToKanbanColumn(lifecycle),
-    isOverdue: lifecycle === 'OVERDUE',
+    isOverdue: false,
     isExcluded: false,
     exclusionReason: null,
   };
@@ -240,7 +233,6 @@ export function projectTaskToKanban(
  * Reconciles and validates the elimination of the 85-task delta:
  * 75 NOT_STARTED -> 'NEW'
  * 9 WAITING_APPROVAL -> 'NEEDS_REVIEW'
- * 1 OVERDUE -> 'IN_PROGRESS' (isOverdue: true)
  */
 export function verify85TaskDeltaResolution(tasks: Array<{ status: string; id?: string }>): {
   total: number;
@@ -292,7 +284,6 @@ export interface TaskCountReconciliation {
   deltaBreakdown: {
     notStartedMappedToNew: number;
     waitingApprovalMappedToReview: number;
-    overdueMappedToInProgress: number;
     total85DeltaRecovered: number;
   };
 }
@@ -302,7 +293,7 @@ export interface TaskCountReconciliation {
  * mapped_tasks + intentionally_excluded_tasks = total_tasks
  *
  * Explicitly tracks and accounts for:
- * 1. The historical 85-task delta (75 NOT_STARTED, 9 WAITING_APPROVAL, 1 OVERDUE).
+ * 1. The historical 85-task delta (75 NOT_STARTED, 9 WAITING_APPROVAL).
  * 2. Zero silent dropping of unknown statuses.
  * 3. Intentional exclusion classification for CANCELLED tasks when board filtering is active.
  */
@@ -327,7 +318,6 @@ export function reconcileTaskCounts(
 
   let notStartedMappedToNew = 0;
   let waitingApprovalMappedToReview = 0;
-  let overdueMappedToInProgress = 0;
 
   for (const task of tasks) {
     const rawStatus = (task.status || '').trim().toUpperCase();
@@ -341,8 +331,6 @@ export function reconcileTaskCounts(
       rawStatus === 'PENDING_EXECUTIVE_APPROVAL'
     ) {
       waitingApprovalMappedToReview++;
-    } else if (rawStatus === 'OVERDUE') {
-      overdueMappedToInProgress++;
     }
 
     if (excludeCancelled && lifecycle === 'CANCELLED') {
@@ -361,7 +349,7 @@ export function reconcileTaskCounts(
   }
 
   const total85DeltaRecovered =
-    notStartedMappedToNew + waitingApprovalMappedToReview + overdueMappedToInProgress;
+    notStartedMappedToNew + waitingApprovalMappedToReview;
 
   return {
     total: tasks.length,
@@ -376,7 +364,6 @@ export function reconcileTaskCounts(
     deltaBreakdown: {
       notStartedMappedToNew,
       waitingApprovalMappedToReview,
-      overdueMappedToInProgress,
       total85DeltaRecovered,
     },
   };

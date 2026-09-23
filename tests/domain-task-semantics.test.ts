@@ -4,7 +4,7 @@
  * Requirements:
  * 1. mapDbStatusToLifecycle: Complete mapping of all DB statuses to TaskLifecycleStatus.
  * 2. mapLifecycleToKanbanColumn: Projection to 4 Kanban columns (NEW, IN_PROGRESS, NEEDS_REVIEW, COMPLETED).
- * 3. 85-Task Delta Resolution: Prove 75 NOT_STARTED + 9 WAITING_APPROVAL + 1 OVERDUE all map to valid columns.
+ * 3. 85-Task Delta Resolution: Prove 75 NOT_STARTED + 9 WAITING_APPROVAL all map to valid columns.
  * 4. Segregation of Duties (SoD): Makers (creators, assignees, submitters) CANNOT have 'requires_my_approval'.
  * 5. Maker Attention: 'requires_my_action' for assignees/co-assignees on NOT_STARTED / IN_PROGRESS.
  * 6. Checker Attention: 'requires_my_approval' on WAITING_APPROVAL / PENDING_EXECUTIVE_APPROVAL for authorized checkers.
@@ -42,7 +42,6 @@ describe('1. Canonical Task Status Lifecycle Mapping', () => {
     assert.equal(mapDbStatusToLifecycle('WAITING_APPROVAL'), 'WAITING_APPROVAL');
     assert.equal(mapDbStatusToLifecycle('PENDING_EXECUTIVE_APPROVAL'), 'PENDING_EXECUTIVE_APPROVAL');
     assert.equal(mapDbStatusToLifecycle('COMPLETED'), 'COMPLETED');
-    assert.equal(mapDbStatusToLifecycle('OVERDUE'), 'OVERDUE');
     assert.equal(mapDbStatusToLifecycle('CANCELLED'), 'CANCELLED');
   });
 
@@ -52,7 +51,6 @@ describe('1. Canonical Task Status Lifecycle Mapping', () => {
     assert.equal(mapDbStatusToLifecycle('waiting_approval'), 'WAITING_APPROVAL');
     assert.equal(mapDbStatusToLifecycle('pending_executive_approval'), 'PENDING_EXECUTIVE_APPROVAL');
     assert.equal(mapDbStatusToLifecycle('completed'), 'COMPLETED');
-    assert.equal(mapDbStatusToLifecycle('overdue'), 'OVERDUE');
     assert.equal(mapDbStatusToLifecycle('cancelled'), 'CANCELLED');
   });
 
@@ -78,15 +76,10 @@ describe('2. Kanban Column Projection', () => {
     assert.equal(mapLifecycleToKanbanColumn('WAITING_APPROVAL'), 'NEEDS_REVIEW');
     assert.equal(mapLifecycleToKanbanColumn('PENDING_EXECUTIVE_APPROVAL'), 'NEEDS_REVIEW');
     assert.equal(mapLifecycleToKanbanColumn('COMPLETED'), 'COMPLETED');
-    assert.equal(mapLifecycleToKanbanColumn('OVERDUE'), 'IN_PROGRESS');
     assert.equal(mapLifecycleToKanbanColumn('CANCELLED'), 'COMPLETED');
   });
 
-  it('projects OVERDUE to IN_PROGRESS with isOverdue = true', () => {
-    const projection = mapLifecycleToKanban('OVERDUE');
-    assert.equal(projection.column, 'IN_PROGRESS');
-    assert.equal(projection.isOverdue, true);
-
+  it('projects IN_PROGRESS with isOverdue = false', () => {
     const normalInProgress = mapLifecycleToKanban('IN_PROGRESS');
     assert.equal(normalInProgress.column, 'IN_PROGRESS');
     assert.equal(normalInProgress.isOverdue, false);
@@ -94,40 +87,38 @@ describe('2. Kanban Column Projection', () => {
 });
 
 describe('3. Historical 85-Task Delta Elimination Proof', () => {
-  it('demonstrates that legacy naive status matching drops exactly 85 tasks', () => {
-    // 75 NOT_STARTED + 9 WAITING_APPROVAL + 1 OVERDUE = 85 tasks
+  it('demonstrates that legacy naive status matching drops tasks because DB status strings do not match column IDs', () => {
+    // 75 NOT_STARTED + 9 WAITING_APPROVAL = 84 tasks (OVERDUE removed from DB)
     const legacyDataset: Array<{ id: string; status: string }> = [
       ...Array.from({ length: 75 }, (_, i) => ({ id: `ns-${i}`, status: 'NOT_STARTED' })),
       ...Array.from({ length: 9 }, (_, i) => ({ id: `wa-${i}`, status: 'WAITING_APPROVAL' })),
-      { id: 'od-1', status: 'OVERDUE' },
     ];
 
-    assert.equal(legacyDataset.length, 85);
+    assert.equal(legacyDataset.length, 84);
 
     // In a naive system matching strictly against Kanban column names ['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED']
     const kanbanColumnSet = new Set<string>(['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED']);
     const droppedCount = legacyDataset.filter((t) => !kanbanColumnSet.has(t.status)).length;
-    assert.equal(droppedCount, 85, 'Naive grouping drops all 85 tasks because DB status strings do not match column IDs');
+    assert.equal(droppedCount, 84, 'Naive grouping drops all 84 tasks because DB status strings do not match column IDs');
   });
 
-  it('eliminates the 85-task delta completely via canonical mapping', () => {
+  it('eliminates the task delta completely via canonical mapping', () => {
     const legacyDataset: Array<{ id: string; status: string }> = [
       ...Array.from({ length: 75 }, (_, i) => ({ id: `ns-${i}`, status: 'NOT_STARTED' })),
       ...Array.from({ length: 9 }, (_, i) => ({ id: `wa-${i}`, status: 'WAITING_APPROVAL' })),
-      { id: 'od-1', status: 'OVERDUE' },
     ];
 
     const result = verify85TaskDeltaResolution(legacyDataset);
 
-    assert.equal(result.total, 85);
-    assert.equal(result.mappedCount, 85);
+    assert.equal(result.total, 84);
+    assert.equal(result.mappedCount, 84);
     assert.equal(result.unmappedCount, 0);
     assert.equal(result.deltaResolved, true);
 
     // Exact expected column distribution
     assert.equal(result.columnCounts.NEW, 75, '75 NOT_STARTED tasks correctly map to NEW column');
     assert.equal(result.columnCounts.NEEDS_REVIEW, 9, '9 WAITING_APPROVAL tasks correctly map to NEEDS_REVIEW column');
-    assert.equal(result.columnCounts.IN_PROGRESS, 1, '1 OVERDUE task correctly maps to IN_PROGRESS column');
+    assert.equal(result.columnCounts.IN_PROGRESS, 0);
     assert.equal(result.columnCounts.COMPLETED, 0);
   });
 });
@@ -425,10 +416,11 @@ describe('7. Temporal Attention: overdue Calculation', () => {
     assert.equal(attentions.includes('overdue'), false);
   });
 
-  it('assigns overdue when status is explicitly OVERDUE', () => {
+  it('assigns overdue when task has isOverdue flag set', () => {
     const statusOverdueTask = {
       id: 'task-status-od',
-      status: 'OVERDUE',
+      status: 'IN_PROGRESS',
+      isOverdue: true,
       dueDate: '2026-09-20',
     };
 
@@ -520,10 +512,11 @@ describe('9. Temporal Attention: due_soon Calculation & Window Consistency', () 
     assert.equal(attentions.includes('due_soon'), false, 'Overdue task must not be due_soon');
   });
 
-  it('does NOT assign due_soon when task status is explicitly OVERDUE even with future date', () => {
+  it('does NOT assign due_soon when task has isOverdue flag even with future date', () => {
     const statusOverdueTask = {
       id: 'task-status-od',
-      status: 'OVERDUE',
+      status: 'IN_PROGRESS',
+      isOverdue: true,
       dueDate: '2026-09-12', // 2 days ahead
     };
 
@@ -660,25 +653,24 @@ describe('11. Task Count Invariants, CANCELLED Accounting, and Detailed Projecti
       ...Array.from({ length: 294 }, (_, i) => ({ id: `ip-${i}`, status: 'IN_PROGRESS' })),
       ...Array.from({ length: 9 }, (_, i) => ({ id: `wa-${i}`, status: 'WAITING_APPROVAL' })),
       ...Array.from({ length: 16 }, (_, i) => ({ id: `cp-${i}`, status: 'COMPLETED' })),
-      { id: 'od-1', status: 'OVERDUE' },
       ...Array.from({ length: 10 }, (_, i) => ({ id: `can-${i}`, status: 'CANCELLED' })),
     ];
 
-    assert.equal(dataset.length, 405);
+    assert.equal(dataset.length, 404);
 
     // Scenario A: Without excluding CANCELLED
     const resultAll = reconcileTaskCounts(dataset, { excludeCancelled: false });
-    assert.equal(resultAll.total, 405);
-    assert.equal(resultAll.mappedCount, 405);
+    assert.equal(resultAll.total, 404);
+    assert.equal(resultAll.mappedCount, 404);
     assert.equal(resultAll.intentionallyExcludedCount, 0);
     assert.equal(resultAll.unmappedCount, 0);
     assert.equal(resultAll.invariantSatisfied, true);
-    assert.equal(resultAll.deltaBreakdown.total85DeltaRecovered, 85);
+    assert.equal(resultAll.deltaBreakdown.total85DeltaRecovered, 84);
 
     // Scenario B: With CANCELLED intentionally excluded
     const resultExcluded = reconcileTaskCounts(dataset, { excludeCancelled: true });
-    assert.equal(resultExcluded.total, 405);
-    assert.equal(resultExcluded.mappedCount, 395);
+    assert.equal(resultExcluded.total, 404);
+    assert.equal(resultExcluded.mappedCount, 394);
     assert.equal(resultExcluded.intentionallyExcludedCount, 10);
     assert.equal(resultExcluded.exclusionCounts.CANCELLED, 10);
     assert.equal(resultExcluded.unmappedCount, 0);
@@ -688,7 +680,7 @@ describe('11. Task Count Invariants, CANCELLED Accounting, and Detailed Projecti
       'mapped + intentionallyExcluded === total'
     );
     assert.equal(resultExcluded.invariantSatisfied, true);
-    assert.equal(resultExcluded.deltaBreakdown.total85DeltaRecovered, 85);
+    assert.equal(resultExcluded.deltaBreakdown.total85DeltaRecovered, 84);
   });
 
   it('maps BLOCKED status to IN_PROGRESS without throwing or dropping', () => {

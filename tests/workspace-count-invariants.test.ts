@@ -29,7 +29,6 @@ export function mapTaskToKanbanColumn(task: SchoolTask): KanbanTargetColumn | "E
       return "NEW";
 
     case "IN_PROGRESS":
-    case "OVERDUE":
     case "BLOCKED":
       return "IN_PROGRESS";
 
@@ -113,7 +112,7 @@ export function groupTasksIntoKanbanColumns(tasks: SchoolTask[]): KanbanMappingR
 
 describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", () => {
   describe("Invariant 1: Count Reconciliation (mapped_tasks + excluded_tasks === total_tasks)", () => {
-    test("every input task is accounted for across all 10 canonical statuses", () => {
+    test("every input task is accounted for across all 9 canonical statuses", () => {
       const allStatuses: TaskStatus[] = [
         "NEW",
         "NOT_STARTED",
@@ -123,11 +122,10 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         "NEEDS_REVIEW",
         "BLOCKED",
         "COMPLETED",
-        "OVERDUE",
         "CANCELLED",
       ];
 
-      // Generate 5 tasks per status = 50 total tasks
+      // Generate 5 tasks per status = 45 total tasks
       const tasks: SchoolTask[] = allStatuses.flatMap((st, idx) =>
         Array.from({ length: 5 }, (_, subIdx) =>
         makeSchoolTask({
@@ -143,7 +141,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       )
       );
 
-      assert.equal(tasks.length, 50, "Input dataset must have 50 tasks");
+      assert.equal(tasks.length, 45, "Input dataset must have 45 tasks");
 
       const result = groupTasksIntoKanbanColumns(tasks);
 
@@ -154,7 +152,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         "Reconciliation failed: mapped + excluded !== totalInput"
       );
 
-      assert.equal(result.stats.totalMapped, 45, "45 non-cancelled tasks must be mapped");
+      assert.equal(result.stats.totalMapped, 40, "40 non-cancelled tasks must be mapped");
       assert.equal(result.stats.totalExcluded, 5, "5 CANCELLED tasks must be excluded");
 
       // Verify no task ID duplication or omission
@@ -177,7 +175,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       const tasks: SchoolTask[] = [
         makeSchoolTask({ id: "t1", title: "T1", status: "NOT_STARTED", progressPercent: 0 }),
         makeSchoolTask({ id: "t2", title: "T2", status: "WAITING_APPROVAL", progressPercent: 50 }),
-        makeSchoolTask({ id: "t3", title: "T3", status: "OVERDUE", progressPercent: 30, dueDate: "2026-09-01" }),
+        makeSchoolTask({ id: "t3", title: "T3", status: "IN_PROGRESS", progressPercent: 30, dueDate: "2026-09-01", isOverdue: true }),
         makeSchoolTask({ id: "t4", title: "T4", status: "IN_PROGRESS", progressPercent: 40 }),
         makeSchoolTask({ id: "t5", title: "T5", status: "COMPLETED", progressPercent: 100, dueDate: "2026-09-10" }),
       ];
@@ -308,13 +306,14 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       assert.equal(result.stats.totalExcluded, 0);
     });
 
-    test("OVERDUE and BLOCKED tasks map 100% into IN_PROGRESS without silent dropping", () => {
+    test("IN_PROGRESS (past-due) and BLOCKED tasks map 100% into IN_PROGRESS without silent dropping", () => {
       const tasks: SchoolTask[] = [
         ...Array.from({ length: 4 }, (_, i) =>
           makeSchoolTask({
             id: `task-overdue-${i}`,
             title: `Nhiệm vụ quá hạn #${i + 1}`,
-            status: "OVERDUE",
+            status: "IN_PROGRESS",
+            isOverdue: true,
             progressPercent: 50,
             assignedDate: "2026-08-01",
             dueDate: "2026-08-25",
@@ -352,9 +351,9 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         ...Array.from({ length: 6 }, (_, i) =>
           makeSchoolTask({ id: `wa-${i}`, title: `WA ${i}`, status: "WAITING_APPROVAL", progressPercent: 80, dueDate: "2026-10-01" })
         ),
-        // 4 OVERDUE
+        // 4 past-due IN_PROGRESS (OVERDUE removed from enum)
         ...Array.from({ length: 4 }, (_, i) =>
-          makeSchoolTask({ id: `od-${i}`, title: `OD ${i}`, status: "OVERDUE", progressPercent: 30, assignedDate: "2026-08-01", dueDate: "2026-08-20" })
+          makeSchoolTask({ id: `od-${i}`, title: `OD ${i}`, status: "IN_PROGRESS", isOverdue: true, progressPercent: 30, assignedDate: "2026-08-01", dueDate: "2026-08-20" })
         ),
         // 8 COMPLETED
         ...Array.from({ length: 8 }, (_, i) =>
@@ -381,13 +380,13 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
     /**
      * Institutional strategic dataset definition:
      * - Total School Tasks = 130
-     * - In Progress Tasks = 85
-     * - The 85 Delta = 130 - 85 = 45 tasks
+     * - In Progress Tasks = 86 (85 + 1 past-due, now IN_PROGRESS with isOverdue flag)
+     * - The delta = 130 - 86 = 44 tasks
      * Consisting of:
      *   - 30 NOT_STARTED
      *   - 3 WAITING_APPROVAL
-     *   - 1 OVERDUE
      *   - 11 COMPLETED
+     * Note: OVERDUE removed from TaskStatus enum in Phase 9 WI-9.4
      */
     const INSTITUTIONAL_STRATEGIC_TASKS: SchoolTask[] = [
       ...Array.from({ length: 85 }, (_, i) =>
@@ -421,7 +420,8 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         makeSchoolTask({
           id: `inst-od-${i}`,
           title: `Nhiệm vụ quá hạn #${i + 1}`,
-          status: "OVERDUE",
+          status: "IN_PROGRESS",
+          isOverdue: true,
           progressPercent: 40,
           assignedDate: "2026-08-01",
           dueDate: "2026-08-31",
@@ -438,36 +438,34 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       ),
     ];
 
-    test("the 85 delta mathematically equals 45 and is 100% accounted for", () => {
+    test("the delta mathematically equals 44 and is 100% accounted for", () => {
       const totalCount = INSTITUTIONAL_STRATEGIC_TASKS.length;
       assert.equal(totalCount, 130, "Total institutional tasks must equal 130");
 
       const inProgressCount = INSTITUTIONAL_STRATEGIC_TASKS.filter((t) => t.status === "IN_PROGRESS").length;
-      assert.equal(inProgressCount, 85, "In-progress count must equal 85");
+      assert.equal(inProgressCount, 86, "In-progress count must equal 86 (85 + 1 past-due)");
 
       const delta = totalCount - inProgressCount;
-      assert.equal(delta, 45, "The 85 delta must equal 45 (130 - 85)");
+      assert.equal(delta, 44, "The delta must equal 44 (130 - 86)");
 
-      // Itemize the 45 delta
+      // Itemize the 44 delta
       const notStartedCount = INSTITUTIONAL_STRATEGIC_TASKS.filter((t) => t.status === "NOT_STARTED").length;
       const waitingApprovalCount = INSTITUTIONAL_STRATEGIC_TASKS.filter((t) => t.status === "WAITING_APPROVAL").length;
-      const overdueCount = INSTITUTIONAL_STRATEGIC_TASKS.filter((t) => t.status === "OVERDUE").length;
       const completedCount = INSTITUTIONAL_STRATEGIC_TASKS.filter((t) => t.status === "COMPLETED").length;
 
       assert.equal(notStartedCount, 30, "NOT_STARTED must be 30");
       assert.equal(waitingApprovalCount, 3, "WAITING_APPROVAL must be 3");
-      assert.equal(overdueCount, 1, "OVERDUE must be 1");
       assert.equal(completedCount, 11, "COMPLETED must be 11");
 
-      const deltaSum = notStartedCount + waitingApprovalCount + overdueCount + completedCount;
+      const deltaSum = notStartedCount + waitingApprovalCount + completedCount;
       assert.equal(
         deltaSum,
         delta,
-        "The delta items must sum up to exactly 45 with zero unaccounted variance"
+        "The delta items must sum up to exactly 44 with zero unaccounted variance"
       );
 
-      // Verify full conservation: 85 + 45 === 130
-      assert.equal(inProgressCount + deltaSum, totalCount, "Full dataset conservation must hold: 85 + 45 === 130");
+      // Verify full conservation: 86 + 44 === 130
+      assert.equal(inProgressCount + deltaSum, totalCount, "Full dataset conservation must hold: 86 + 44 === 130");
     });
 
     test("Kanban mapping of 130 institutional tasks retains 100% with zero dropped tasks", () => {
@@ -476,11 +474,11 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       // Verify Column NEW: 30 NOT_STARTED
       assert.equal(result.columns.NEW.length, 30, "Column NEW must contain 30 NOT_STARTED tasks");
 
-      // Verify Column IN_PROGRESS: 85 IN_PROGRESS + 1 OVERDUE = 86
+      // Verify Column IN_PROGRESS: 85 IN_PROGRESS + 1 past-due IN_PROGRESS = 86
       assert.equal(
         result.columns.IN_PROGRESS.length,
         86,
-        "Column IN_PROGRESS must contain 86 tasks (85 IN_PROGRESS + 1 OVERDUE)"
+        "Column IN_PROGRESS must contain 86 tasks (85 IN_PROGRESS + 1 past-due)"
       );
 
       // Verify Column NEEDS_REVIEW: 3 WAITING_APPROVAL
@@ -554,13 +552,14 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
      * - Non-cancelled: 390 tasks
      * - Cancelled (intentionally excluded): 5 tasks
      *
-     * The 85-task delta comprised:
+     * The 84-task delta comprised:
      * - 75 NOT_STARTED tasks
      * - 9 WAITING_APPROVAL tasks
-     * - 1 OVERDUE task
+     * Note: OVERDUE (previously 1) removed from enum in Phase 9 WI-9.4
+     *       — now represented as IN_PROGRESS with isOverdue flag
      *
      * Previously visible under naive matching: 310 tasks
-     * 310 + 85 = 395 total
+     * 310 + 84 = 394 active tasks + 1 past-due IN_PROGRESS = 395 total
      */
     const AUDIT_395_FIXTURE: SchoolTask[] = [
       // 200 IN_PROGRESS
@@ -604,12 +603,13 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
           dueDate: "2026-09-20",
         })
       ),
-      // 1 OVERDUE
+      // 1 past-due IN_PROGRESS (OVERDUE removed from enum in Phase 9 WI-9.4)
       ...Array.from({ length: 1 }, (_, i) =>
         makeSchoolTask({
           id: `audit-od-${i}`,
           title: `Quá hạn #${i + 1}`,
-          status: "OVERDUE",
+          status: "IN_PROGRESS",
+          isOverdue: true,
           progressPercent: 30,
           assignedDate: "2026-08-01",
           dueDate: "2026-08-25",
@@ -631,9 +631,9 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       assert.equal(AUDIT_395_FIXTURE.length, 395, "Audit fixture must contain exactly 395 tasks");
     });
 
-    test("legacy naive status-matching mapper reproduces the 85-task omission (310 visible)", () => {
+    test("legacy naive status-matching mapper reproduces the 84-task omission", () => {
       // Simulates legacy mapper that only matched exact column IDs ['NEW', 'IN_PROGRESS', 'NEEDS_REVIEW', 'COMPLETED']
-      // without folding NOT_STARTED, WAITING_APPROVAL, and OVERDUE.
+      // without folding NOT_STARTED, WAITING_APPROVAL.
       const legacyColumns = {
         NEW: AUDIT_395_FIXTURE.filter((t) => (t.status as string) === "NEW"),
         IN_PROGRESS: AUDIT_395_FIXTURE.filter((t) => (t.status as string) === "IN_PROGRESS"),
@@ -647,19 +647,17 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         legacyColumns.NEEDS_REVIEW.length +
         legacyColumns.COMPLETED.length;
 
-      // Under legacy mapping: NEW=0, IN_PROGRESS=200, NEEDS_REVIEW=0, COMPLETED=105 -> 305 visible
-      // (or 310 if NEW had 5). In our fixture: 200 + 105 = 305, plus 85 missing + 5 cancelled = 90 missing.
+      // Under legacy mapping: NEW=0, IN_PROGRESS=201, NEEDS_REVIEW=0, COMPLETED=105 -> 306 visible
       const droppedDelta = AUDIT_395_FIXTURE.filter(
         (t) =>
           t.status === "NOT_STARTED" ||
-          t.status === "WAITING_APPROVAL" ||
-          t.status === "OVERDUE"
+          t.status === "WAITING_APPROVAL"
       ).length;
 
       assert.equal(
         droppedDelta,
-        85,
-        "The legacy dropped tasks must equal exactly 85 (75 NOT_STARTED + 9 WAITING_APPROVAL + 1 OVERDUE)"
+        84,
+        "The legacy dropped tasks must equal exactly 84 (75 NOT_STARTED + 9 WAITING_APPROVAL)"
       );
 
       // Verify legacy dropped rate is substantial (> 20%)
@@ -680,11 +678,11 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         "Column NEW must receive 75 NOT_STARTED tasks"
       );
 
-      // Verify Column IN_PROGRESS received 200 IN_PROGRESS + 1 OVERDUE = 201
+      // Verify Column IN_PROGRESS received 200 IN_PROGRESS + 1 past-due IN_PROGRESS = 201
       assert.equal(
         result.columns.IN_PROGRESS.length,
         201,
-        "Column IN_PROGRESS must receive 201 tasks (200 IN_PROGRESS + 1 OVERDUE)"
+        "Column IN_PROGRESS must receive 201 tasks (200 IN_PROGRESS + 1 past-due)"
       );
 
       // Verify Column NEEDS_REVIEW received all 9 WAITING_APPROVAL tasks
@@ -760,7 +758,8 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
           makeSchoolTask({
             id: `h-od-${i}`,
             title: `Task OD #${i}`,
-            status: "OVERDUE",
+            status: "IN_PROGRESS",
+            isOverdue: true,
             progressPercent: 20,
             dueDate: "2026-08-20",
           })
@@ -832,11 +831,10 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       const notStarted = heterogeneousDataset.filter((t) => t.status === "NOT_STARTED").length;
       const inProgress = heterogeneousDataset.filter((t) => t.status === "IN_PROGRESS").length;
       const waitingApproval = heterogeneousDataset.filter((t) => t.status === "WAITING_APPROVAL").length;
-      const overdue = heterogeneousDataset.filter((t) => t.status === "OVERDUE").length;
       const completed = heterogeneousDataset.filter((t) => t.status === "COMPLETED").length;
       const cancelled = heterogeneousDataset.filter((t) => t.status === "CANCELLED").length;
 
-      const sumAllStatuses = notStarted + inProgress + waitingApproval + overdue + completed + cancelled;
+      const sumAllStatuses = notStarted + inProgress + waitingApproval + completed + cancelled;
       assert.equal(
         sumAllStatuses,
         derived.metrics.totalParentTasks,

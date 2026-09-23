@@ -44,7 +44,6 @@ export type TaskLifecycleStatus =
   | 'WAITING_APPROVAL'
   | 'PENDING_EXECUTIVE_APPROVAL'
   | 'COMPLETED'
-  | 'OVERDUE'
   | 'CANCELLED';
 
 export type KanbanColumnId = 'NEW' | 'IN_PROGRESS' | 'NEEDS_REVIEW' | 'COMPLETED';

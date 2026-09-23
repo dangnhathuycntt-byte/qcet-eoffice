@@ -89,7 +89,6 @@ const VALID_LIFECYCLE_STATUSES: Set<TaskLifecycleStatus> = new Set([
   "WAITING_APPROVAL",
   "PENDING_EXECUTIVE_APPROVAL",
   "COMPLETED",
-  "OVERDUE",
   "CANCELLED",
 ]);
 
@@ -356,8 +355,6 @@ export function parseWorkspaceQuery(
         status = "PENDING_EXECUTIVE_APPROVAL";
       } else if (lower === "completed" || lower === "done") {
         status = "COMPLETED";
-      } else if (lower === "overdue") {
-        status = "OVERDUE";
       } else if (lower === "cancelled" || lower === "canceled") {
         status = "CANCELLED";
       }

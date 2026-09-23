@@ -64,7 +64,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       title: "Báo cáo an toàn thông tin quý 3",
       category: "ATTT",
       categoryLabel: "An toàn thông tin",
-      status: "OVERDUE",
+      status: "IN_PROGRESS",
       priority: "URGENT",
       dueDate: "2026-09-01", // Past due
       progressPercent: 20,
