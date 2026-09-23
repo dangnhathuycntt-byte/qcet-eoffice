@@ -8,15 +8,14 @@ export type DbClient = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Models that support Optimistic Concurrency Control with a version token.
+ * Removed Stage B: DacumDelegation no longer needs OCC after cutover to DelegationGrant.
  */
 export type OCCSupportedModel =
   | "Task"
   | "Document"
-  | "DacumDelegation"
   | "DocumentDirective"
   | "task"
   | "document"
-  | "dacumDelegation"
   | "documentDirective";
 
 export interface ConcurrencyConflictErrorParams {
@@ -104,9 +103,6 @@ function resolveDelegate(client: DbClient, model: string): { delegate: any; enti
   }
   if (lower === "document") {
     return { delegate: (client as any).document, entityName: "Document" };
-  }
-  if (lower === "dacumdelegation") {
-    return { delegate: (client as any).dacumDelegation, entityName: "DacumDelegation" };
   }
   if (lower === "documentdirective") {
     return { delegate: (client as any).documentDirective, entityName: "DocumentDirective" };
@@ -266,16 +262,6 @@ export async function updateDocumentWithOCC<T = any>(
   options?: { select?: Prisma.DocumentSelect; include?: Prisma.DocumentInclude; returnRecord?: boolean }
 ): Promise<T> {
   return updateWithOCC(client, "Document", id, expectedVersion, data, options);
-}
-
-export async function updateDacumDelegationWithOCC<T = any>(
-  client: DbClient,
-  id: string,
-  expectedVersion: number,
-  data: Prisma.DacumDelegationUpdateInput | Record<string, any>,
-  options?: { select?: Prisma.DacumDelegationSelect; include?: Prisma.DacumDelegationInclude; returnRecord?: boolean }
-): Promise<T> {
-  return updateWithOCC(client, "DacumDelegation", id, expectedVersion, data, options);
 }
 
 export async function updateDocumentDirectiveWithOCC<T = any>(

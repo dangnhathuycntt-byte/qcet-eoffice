@@ -7,7 +7,6 @@ import {
   updateWithOCC,
   updateTaskWithOCC,
   updateDocumentWithOCC,
-  updateDacumDelegationWithOCC,
   updateDocumentDirectiveWithOCC,
 } from '../src/lib/db/occ';
 
@@ -38,7 +37,7 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
   });
 
   describe('1. Schema Verification: Version Field on Core Entities', () => {
-    const modelsToCheck = ['Task', 'Document', 'DacumDelegation', 'DocumentDirective'];
+    const modelsToCheck = ['Task', 'Document', 'DocumentDirective'];
 
     for (const modelName of modelsToCheck) {
       test(`model ${modelName} contains version Int field with default 1 and mapped to "version"`, () => {
@@ -377,11 +376,10 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
     });
   });
 
-  describe('6. Document, DacumDelegation, and DocumentDirective Typed Helpers', () => {
+  describe('6. Document and DocumentDirective Typed Helpers', () => {
     test('helpers are callable and export correct function signatures', () => {
       assert.strictEqual(typeof updateTaskWithOCC, 'function');
       assert.strictEqual(typeof updateDocumentWithOCC, 'function');
-      assert.strictEqual(typeof updateDacumDelegationWithOCC, 'function');
       assert.strictEqual(typeof updateDocumentDirectiveWithOCC, 'function');
     });
 
