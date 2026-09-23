@@ -25,13 +25,21 @@ import {
   TaskScope,
   TaskPriority,
   TaskStatus,
-  AssigneeRole,
   AssignmentType,
   AssignmentStatus,
-  TaskPriority as TaskPriorityEnum,
+  TaskPriority as TaskPriorityEnum
 } from '@prisma/client';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as getResolutions, POST as createResolution } from '@/app/api/executive/resolutions/route';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 /**
  * Issue #27 corrective review: `/api/executive/*` business authority must

@@ -5,8 +5,17 @@ import { prisma } from '../src/lib/prisma';
 import { PATCH } from '../src/app/api/tasks/[id]/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { UpdateTaskMetadataSchema } from '../src/contracts/tasks';
-import { TaskStatus, TaskPriority, TaskScope, AssigneeRole } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope} from '@prisma/client';
 import { AuditAction } from '../src/lib/db/audit';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
   let testDept: any;

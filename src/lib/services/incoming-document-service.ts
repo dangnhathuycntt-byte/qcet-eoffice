@@ -29,7 +29,6 @@ import {
   TaskStatus,
   TaskPriority,
   TaskActorRole,
-  AssigneeRole,
 } from "@prisma/client";
 import {
   assertAuthorized,
@@ -758,18 +757,6 @@ export async function assignUnitWork(
           createdById: user.id,
           departmentId: legacyDept ? legacyDept.id : undefined,
           leadUnitId,
-          assignees: {
-            create: [
-              {
-                userId: input.driUserId,
-                roleInTask: AssigneeRole.PRIMARY_OWNER,
-              },
-              ...(input.collaboratorUserIds || []).map((collabId) => ({
-                userId: collabId,
-                roleInTask: AssigneeRole.COLLABORATOR,
-              })),
-            ],
-          },
           actors: {
             create: [
               {

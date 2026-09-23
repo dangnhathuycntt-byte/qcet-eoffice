@@ -102,7 +102,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
         title: 'Nhiệm vụ kiểm tra lệnh điều hành BGH',
         description: 'Mô tả nhiệm vụ kiểm thử lệnh điều hành',
         scope: TaskScope.SCHOOL,
-        status: TaskStatus.OVERDUE,
+        status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
         progressPercent: 40,
         academicMonth: 9,

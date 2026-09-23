@@ -6,7 +6,16 @@ import { taskCommandService } from '../src/server/tasks/task-command-service';
 import { PreconditionFailedError } from '../src/server/api/errors';
 import { GET, PATCH } from '../src/app/api/tasks/[id]/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, AssigneeRole, DeliverableReviewStatus } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus } from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Version Invariant', () => {
   let testDept: any;

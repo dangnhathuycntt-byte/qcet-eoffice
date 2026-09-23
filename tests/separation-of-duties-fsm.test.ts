@@ -5,7 +5,16 @@ import { PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable, PATCH as patchDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, AssigneeRole, UserRole } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, UserRole } from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   let staffUser: any;

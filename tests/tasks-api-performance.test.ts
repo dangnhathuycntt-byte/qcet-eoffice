@@ -5,7 +5,16 @@ import { GET as getTasks } from '../src/app/api/tasks/route';
 import { DELETE as deleteTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus, AssigneeRole, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
+import { TaskScope, TaskPriority, TaskStatus, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 10)', () => {
   let testUserId: string;

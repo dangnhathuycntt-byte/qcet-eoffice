@@ -20,9 +20,8 @@ import {
   TaskStatus,
   TaskPriority,
   UserRole,
-  AssigneeRole,
   AssignmentStatus,
-  UnitType,
+  UnitType
 } from '@prisma/client';
 import {
   buildTaskReadWhere,
@@ -35,6 +34,15 @@ import {
   SystemRole,
   type ActivePositionAssignment,
 } from '@/server/authorization/authorization-context';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F02)', () => {
   const testRunId = `v2_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;

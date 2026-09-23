@@ -5,7 +5,16 @@ import { GET, POST } from '../src/app/api/tasks/route';
 import { GET as getTaskDetail, PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus, AssigneeRole } from '@prisma/client';
+import { TaskScope, TaskPriority, TaskStatus} from '@prisma/client';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Tasks API Route Handler Tests', () => {
   let testUserId: string;

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { UserRole, TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus, AssigneeRole } from '@prisma/client';
+import { UserRole, TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus} from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { taskQueryService } from '@/server/tasks/task-query-service';
 import { GET as getTaskById, PATCH as patchTaskById } from '@/app/api/tasks/[id]/route';
@@ -12,6 +12,15 @@ import { GET as getFileRoute } from '@/app/api/files/[...path]/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
 import { loadTaskAndBuildResource, taskDomainActionService } from '@/lib/services/task-domain-actions';
 import { NotFoundError } from '@/server/api/errors';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', () => {
   const testRunId = String(Date.now());

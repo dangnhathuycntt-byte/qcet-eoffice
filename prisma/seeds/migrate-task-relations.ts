@@ -1,4 +1,12 @@
-import { PrismaClient, TaskActorRole, AssigneeRole, OrganizationalUnit } from "@prisma/client";
+import { PrismaClient, TaskActorRole, OrganizationalUnit } from "@prisma/client";
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
 
 export const DEPARTMENT_TO_ORG_UNIT_MAP: Record<string, string> = {
   // Đào tạo

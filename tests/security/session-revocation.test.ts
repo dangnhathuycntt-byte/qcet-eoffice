@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { UserRole, TaskStatus, TaskPriority, TaskScope, AssigneeRole } from '@prisma/client';
+import { UserRole, TaskStatus, TaskPriority, TaskScope} from '@prisma/client';
 import { signSessionToken, getJwtSecret, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import {
   resolveCurrentSession,
@@ -40,6 +40,15 @@ import { GET as getTaskById } from '@/app/api/tasks/[id]/route';
 import { POST as createTask } from '@/app/api/tasks/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
 import { AuthenticationError } from '@/server/api/errors';
+
+// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
+const AssigneeRole = {
+  PRIMARY_OWNER: 'PRIMARY_OWNER',
+  COLLABORATOR: 'COLLABORATOR',
+  SUPERVISOR: 'SUPERVISOR',
+} as const;
+type AssigneeRole = keyof typeof AssigneeRole;
+
 
 describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () => {
   const testRunId = String(Date.now());

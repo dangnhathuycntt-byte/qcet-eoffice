@@ -816,10 +816,7 @@ export class TaskQueryService {
             },
           },
           {
-            OR: [
-              { status: TaskStatus.OVERDUE },
-              { dueDate: { lt: refDate } },
-            ],
+            dueDate: { lt: refDate },
           },
         ];
       } else {
@@ -1101,7 +1098,7 @@ export class TaskQueryService {
         where.AND = [
           ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
           { status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } },
-          { OR: [{ status: TaskStatus.OVERDUE }, { dueDate: { lt: refDate } }] },
+          { dueDate: { lt: refDate } },
         ];
       } else {
         const statusMap: Record<string, TaskStatus> = {
