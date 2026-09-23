@@ -37,50 +37,22 @@ export async function checkActiveDelegation(
 ): Promise<boolean> {
   const now = new Date();
 
-  // Canonical V2 DelegationGrant check
-  if (tx.delegationGrant) {
-    const grant = await tx.delegationGrant.findFirst({
-      where: {
-        granteeAssignment: {
-          userId,
-          status: 'ACTIVE',
-        },
+  // Stage B cutover: DacumDelegation fallback removed. Verify via verifyDelegationGrantParity before Phase 9 drop.
+  // Canonical V2 DelegationGrant is now the sole authority for delegation checks.
+  const grant = await tx.delegationGrant.findFirst({
+    where: {
+      granteeAssignment: {
+        userId,
         status: 'ACTIVE',
-        validFrom: { lte: now },
-        validUntil: { gte: now },
       },
-      select: { id: true },
-    });
-    if (grant) return true;
-  }
+      status: 'ACTIVE',
+      validFrom: { lte: now },
+      validUntil: { gte: now },
+    },
+    select: { id: true },
+  });
 
-  // Fallback to legacy DacumDelegation
-  if (tx.dacumDelegation) {
-    const delegation = await tx.dacumDelegation.findFirst({
-      where: {
-        delegateId: userId,
-        isActive: true,
-        expiresAt: { gte: now },
-        OR: [
-          { startDate: null },
-          { startDate: { lte: now } },
-        ],
-        AND: [
-          {
-            OR: [
-              ...(taskId ? [{ taskId }] : []),
-              ...(departmentId ? [{ departmentId }] : []),
-              { departmentId: null },
-            ],
-          },
-        ],
-      },
-      select: { id: true },
-    });
-    return Boolean(delegation);
-  }
-
-  return false;
+  return Boolean(grant);
 }
 
 export function canUserCreateTask(
