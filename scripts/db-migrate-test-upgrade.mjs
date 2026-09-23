@@ -61,6 +61,7 @@ async function run() {
     }
 
     // 5. Verify tables & constraints remain consistent
+    // Phase 9: task_assignees, departments, dacum_delegations dropped → 45 models + _prisma_migrations = 46 tables
     const tables = await prisma.$queryRawUnsafe(`
       SELECT count(*)::int as count
       FROM information_schema.tables
@@ -68,8 +69,8 @@ async function run() {
     `);
     const tableCount = tables[0]?.count || 0;
     console.log(`[db:migrate:test-upgrade] Verified stable table count: ${tableCount}`);
-    if (tableCount < 48) {
-      throw new Error(`Expected at least 48 tables, got ${tableCount}`);
+    if (tableCount < 46) {
+      throw new Error(`Expected at least 46 tables, got ${tableCount}`);
     }
 
     console.log(`[db:migrate:test-upgrade] SUCCESS: Migration upgrade and idempotency verified cleanly.`);

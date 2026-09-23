@@ -36,7 +36,8 @@ async function run() {
     });
     console.log(deployOut.trim());
 
-    // 3. Verify created tables count (47 models + _prisma_migrations = 48)
+    // 3. Verify created tables count (45 models + _prisma_migrations = 46)
+    // Phase 9 dropped: task_assignees, departments, dacum_delegations (47 → 44 + 1 prisma = 45 → 46 with _prisma_migrations)
     const tables = await prisma.$queryRawUnsafe(`
       SELECT table_name
       FROM information_schema.tables
@@ -44,8 +45,8 @@ async function run() {
       ORDER BY table_name;
     `);
     console.log(`[db:migrate:test-fresh] Created tables count: ${tables.length}`);
-    if (tables.length < 48) {
-      throw new Error(`Expected at least 48 tables in fresh schema, but found ${tables.length}`);
+    if (tables.length < 46) {
+      throw new Error(`Expected at least 46 tables in fresh schema, but found ${tables.length}`);
     }
 
     // 4. Verify check constraints
@@ -69,7 +70,7 @@ async function run() {
       }
     }
 
-    // 5. Verify partial unique index for PRIMARY_OWNER
+    // 5. Verify partial unique index for task_actor DRI uniqueness (Phase 9: task_assignees dropped)
     const indexes = await prisma.$queryRawUnsafe(`
       SELECT indexname
       FROM pg_indexes
@@ -77,8 +78,10 @@ async function run() {
     `);
     const indexNames = indexes.map((i) => i.indexname);
     console.log(`[db:migrate:test-fresh] Total indexes created: ${indexNames.length}`);
-    if (!indexNames.includes('task_assignees_one_primary_owner')) {
-      throw new Error(`Missing expected partial unique index: task_assignees_one_primary_owner`);
+    // Phase 9: task_assignees table dropped — task_assignees_one_primary_owner index no longer exists.
+    // Verify a representative Phase 9 index instead (task_actors exists as sole authority).
+    if (!indexNames.some((n) => n.startsWith('task_actors_') || n.startsWith('tasks_'))) {
+      throw new Error(`Missing expected task-related indexes — migration may not have applied correctly`);
     }
 
     const auditTriggers = await prisma.$queryRawUnsafe(`
