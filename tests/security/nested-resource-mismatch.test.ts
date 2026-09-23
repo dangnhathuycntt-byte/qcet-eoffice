@@ -56,12 +56,12 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
     deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, name: `Dept B ${runId}` } });
 
     alice = await prisma.user.create({
-      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: deptA.id, isActive: true },
+      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
     });
     bob = await prisma.user.create({
-      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: deptB.id, isActive: true },
+      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
     });
-    aliceToken = signSessionToken({ id: alice.id, email: alice.email, name: alice.name, role: alice.role, departmentId: alice.departmentId });
+    aliceToken = signSessionToken({ id: alice.id, email: alice.email, name: alice.name, role: alice.role});
 
     const mkTask = (owner: any, dept: any, code: string, title: string) =>
       prisma.task.create({

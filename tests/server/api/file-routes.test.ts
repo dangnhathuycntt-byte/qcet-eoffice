@@ -18,9 +18,9 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
   const testSandboxRel = "test_file_hardening_sandbox";
   const testSandboxAbs = path.join(uploadsDir, testSandboxRel);
 
-  let adminUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let deptAUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let deptBUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
+  let adminUser: { id: string; email: string; name: string; role: string;};
+  let deptAUser: { id: string; email: string; name: string; role: string;};
+  let deptBUser: { id: string; email: string; name: string; role: string;};
 
   let adminToken: string;
   let deptAToken: string;
@@ -70,7 +70,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     // 3. Identify users
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
     assert.ok(admin, "ADMIN user required");
-    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role, departmentId: admin.departmentId };
+    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role};
 
     // Create explicit test staff users in Dept A and Dept B
     const userA = await prisma.user.create({
@@ -81,7 +81,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
       },
     });
-    deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role, departmentId: deptAId };
+    deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role};
 
     const userB = await prisma.user.create({
       data: {
@@ -91,12 +91,12 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
       },
     });
-    deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role, departmentId: deptBId };
+    deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role};
 
     // 4. Generate tokens
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
-    deptAToken = signSessionToken({ id: deptAUser.id, email: deptAUser.email, name: deptAUser.name, role: deptAUser.role, departmentId: deptAId });
-    deptBToken = signSessionToken({ id: deptBUser.id, email: deptBUser.email, name: deptBUser.name, role: deptBUser.role, departmentId: deptBId });
+    deptAToken = signSessionToken({ id: deptAUser.id, email: deptAUser.email, name: deptAUser.name, role: deptAUser.role});
+    deptBToken = signSessionToken({ id: deptBUser.id, email: deptBUser.email, name: deptBUser.name, role: deptBUser.role});
 
     // 5. Create private Document & DocumentAttachment restricted to Dept B
     const docYear = new Date().getFullYear();

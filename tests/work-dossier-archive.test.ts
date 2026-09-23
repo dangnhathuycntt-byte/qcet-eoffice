@@ -112,7 +112,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Chuyên viên Quản lý Đào tạo Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: `dept-acad-${testRunId}`,
+}`,
       },
     });
 
@@ -123,7 +123,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-        departmentId: `dept-acad-${testRunId}`,
+}`,
       },
     });
 
@@ -134,7 +134,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Lưu trữ viên Cơ quan Test",
         role: UserRole.VAN_THU,
         title: "Lưu trữ viên",
-        departmentId: `dept-admin-${testRunId}`,
+}`,
       },
     });
 
@@ -145,7 +145,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Giảng viên Không thẩm quyền Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Giảng viên",
-        departmentId: `dept-unrel-${testRunId}`,
+}`,
       },
     });
 

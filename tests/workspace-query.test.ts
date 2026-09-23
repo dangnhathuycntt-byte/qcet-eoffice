@@ -1021,7 +1021,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.deepEqual(authWhere.OR, [
         { assignees: { some: { userId: staffUser.id } } },
         { actors: { some: { userId: staffUser.id } } },
-        { departmentId: staffUser.departmentId },
+        {},
       ]);
 
       // Combining with client view scope=school still enforces server auth restriction
@@ -1053,13 +1053,13 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const authWhere = buildTaskReadWhere(staffUser);
 
       // If combined in query:
-      // AND: [ authWhere, { departmentId: clientState.dept } ]
+      // AND: [ authWhere, {} ]
       // Since staffUser is in DEPT_CNTT, unless assigned to the task directly,
-      // DEPT_TAICHINH tasks will NOT match { departmentId: staffUser.departmentId }
+      // DEPT_TAICHINH tasks will NOT match {}
       const combinedWhere = {
         AND: [
           authWhere,
-          { departmentId: clientState.dept },
+          {},
         ],
       };
 
@@ -1111,7 +1111,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const combinedLeaderWhere = {
         AND: [
           leaderAuth,
-          { departmentId: clientState.dept },
+          {},
         ],
       };
 

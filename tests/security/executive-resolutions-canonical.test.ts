@@ -85,7 +85,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
       data: { email: `admin.${runId}@qnc.edu.vn`, name: `Admin ${runId}`, role: UserRole.ADMIN, isActive: true },
     });
     staffUser = await prisma.user.create({
-      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: dept.id, isActive: true },
+      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
     });
     bghNoAssignUser = await prisma.user.create({
       data: { email: `bghna.${runId}@qnc.edu.vn`, name: `BGH NoAssign ${runId}`, role: UserRole.BAN_GIAM_HIEU, isActive: true },
@@ -104,7 +104,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
 
     rectorToken = signSessionToken({ id: rectorUser.id, email: rectorUser.email, name: rectorUser.name, role: rectorUser.role });
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
-    staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role, departmentId: dept.id });
+    staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role});
     bghNoAssignToken = signSessionToken({ id: bghNoAssignUser.id, email: bghNoAssignUser.email, name: bghNoAssignUser.name, role: bghNoAssignUser.role });
 
     task = await prisma.task.create({

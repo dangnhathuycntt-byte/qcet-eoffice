@@ -16,10 +16,10 @@ import { GET as dashboardOverviewRoute } from '@/app/api/dashboard/overview/rout
 import { GET as networkInfoRoute } from '@/app/api/system/network-info/route';
 
 describe('Notifications, Executive, Search & System API Hardening (Task 12)', () => {
-  let executiveUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let staffUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let otherUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let adminUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
+  let executiveUser: { id: string; email: string; name: string; role: string;};
+  let staffUser: { id: string; email: string; name: string; role: string;};
+  let otherUser: { id: string; email: string; name: string; role: string;};
+  let adminUser: { id: string; email: string; name: string; role: string;};
 
   let executiveToken: string;
   let staffToken: string;
@@ -40,19 +40,19 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
     // 1. Fetch or identify test users
     const bgh = await prisma.user.findFirst({ where: { role: 'BAN_GIAM_HIEU' } });
     assert.ok(bgh, 'BAN_GIAM_HIEU user required');
-    executiveUser = { id: bgh.id, email: bgh.email, name: bgh.name, role: bgh.role, departmentId: bgh.departmentId };
+    executiveUser = { id: bgh.id, email: bgh.email, name: bgh.name, role: bgh.role};
 
     const chuyenvien = await prisma.user.findFirst({ where: { role: 'CHUYEN_VIEN' } });
     assert.ok(chuyenvien, 'CHUYEN_VIEN user required');
-    staffUser = { id: chuyenvien.id, email: chuyenvien.email, name: chuyenvien.name, role: chuyenvien.role, departmentId: chuyenvien.departmentId };
+    staffUser = { id: chuyenvien.id, email: chuyenvien.email, name: chuyenvien.name, role: chuyenvien.role};
 
     const truongphong = await prisma.user.findFirst({ where: { role: 'TRUONG_PHONG' } });
     assert.ok(truongphong, 'TRUONG_PHONG user required');
-    otherUser = { id: truongphong.id, email: truongphong.email, name: truongphong.name, role: truongphong.role, departmentId: truongphong.departmentId };
+    otherUser = { id: truongphong.id, email: truongphong.email, name: truongphong.name, role: truongphong.role};
 
     const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
     assert.ok(admin, 'ADMIN user required');
-    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role, departmentId: admin.departmentId };
+    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role};
 
     // 2. Generate tokens
     executiveToken = signSessionToken({ id: executiveUser.id, email: executiveUser.email, name: executiveUser.name, role: executiveUser.role });

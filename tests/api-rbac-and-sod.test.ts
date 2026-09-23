@@ -28,7 +28,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     // 1. Fetch real seeded users
     adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
     bghUser = await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } });
-    leaderUser = await prisma.user.findFirst({ where: { role: "TRUONG_PHONG", departmentId: { not: null } } });
+    leaderUser = await prisma.user.findFirst({ where: { role: "TRUONG_PHONG"} } });
     staffUser = await prisma.user.findFirst({ where: { role: "CHUYEN_VIEN" } });
 
     assert.ok(adminUser, "Must have ADMIN user in DB");

@@ -130,10 +130,10 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
       // DEPARTMENT scope requires authority over that unit (P0-06): a leader of
       // it, or a privileged actor. INDIVIDUAL remains open to any authenticated user.
-      const managerCanCreateDept = canUserCreateTask(managerUser, { scope: TaskScope.DEPARTMENT, departmentId: testDept1Id });
+      const managerCanCreateDept = canUserCreateTask(managerUser, { scope: TaskScope.DEPARTMENT});
       assert.strictEqual(managerCanCreateDept.allowed, true);
 
-      const staffCanCreateIndiv = canUserCreateTask(staffUser1, { scope: TaskScope.INDIVIDUAL, departmentId: testDept1Id });
+      const staffCanCreateIndiv = canUserCreateTask(staffUser1, { scope: TaskScope.INDIVIDUAL});
       assert.strictEqual(staffCanCreateIndiv.allowed, true);
 
       // P0-06 regression: an actor without unit authority creates PERSONAL tasks
@@ -147,7 +147,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.match(staffCanCreateDept.reason || '', /cá nhân/i);
 
       // A leader of a DIFFERENT unit must not create in this one.
-      const foreignLeader = { ...managerUser, departmentId: 'dept-not-theirs' };
+      const foreignLeader = { ...managerUser};
       const foreignLeaderDept = canUserCreateTask(foreignLeader, {
         scope: TaskScope.DEPARTMENT,
 

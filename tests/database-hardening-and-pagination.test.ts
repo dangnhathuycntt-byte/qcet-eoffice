@@ -47,7 +47,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     // 2. Setup users
     staffUser = await prisma.user.upsert({
       where: { id: 'user-harden-staff' },
-      update: { role: UserRole.CHUYEN_VIEN, departmentId: testDept.id },
+      update: { role: UserRole.CHUYEN_VIEN},
       create: {
         id: 'user-harden-staff',
         email: 'staff.harden@cdktcnqn.edu.vn',
@@ -59,7 +59,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     managerUser = await prisma.user.upsert({
       where: { id: 'user-harden-mgr' },
-      update: { role: UserRole.TRUONG_PHONG, departmentId: testDept.id },
+      update: { role: UserRole.TRUONG_PHONG},
       create: {
         id: 'user-harden-mgr',
         email: 'mgr.harden@cdktcnqn.edu.vn',
@@ -71,7 +71,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     adminUser = await prisma.user.upsert({
       where: { id: 'user-harden-admin' },
-      update: { role: UserRole.ADMIN, departmentId: testDept.id },
+      update: { role: UserRole.ADMIN},
       create: {
         id: 'user-harden-admin',
         email: 'admin.harden@cdktcnqn.edu.vn',

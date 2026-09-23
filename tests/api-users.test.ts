@@ -17,8 +17,8 @@ describe("API Route: /api/users", () => {
 
   before(async () => {
     const user = await prisma.user.findFirst({
-      where: { departmentId: { not: null } },
-      select: { id: true, name: true, email: true, role: true, departmentId: true },
+      where: {} },
+      select: { id: true, name: true, email: true, role: true},
     });
     assert.ok(user, "Expected at least one user with department in database");
     sampleUser = user;

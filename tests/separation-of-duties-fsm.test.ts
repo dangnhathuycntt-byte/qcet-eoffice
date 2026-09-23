@@ -26,7 +26,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
 
     staffUser = await prisma.user.upsert({
       where: { id: 'test-staff-sod' },
-      update: { role: UserRole.CHUYEN_VIEN, departmentId: dept.id },
+      update: { role: UserRole.CHUYEN_VIEN},
       create: {
         id: 'test-staff-sod',
         email: 'staff.sod@cdktcnqn.edu.vn',
@@ -38,7 +38,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
 
     leaderUser = await prisma.user.upsert({
       where: { id: 'test-leader-sod' },
-      update: { role: UserRole.TRUONG_PHONG, departmentId: dept.id },
+      update: { role: UserRole.TRUONG_PHONG},
       create: {
         id: 'test-leader-sod',
         email: 'leader.sod@cdktcnqn.edu.vn',
@@ -50,7 +50,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
 
     bghUser = await prisma.user.upsert({
       where: { id: 'test-bgh-sod' },
-      update: { role: UserRole.BAN_GIAM_HIEU, departmentId: dept.id },
+      update: { role: UserRole.BAN_GIAM_HIEU},
       create: {
         id: 'test-bgh-sod',
         email: 'bgh.sod@cdktcnqn.edu.vn',
