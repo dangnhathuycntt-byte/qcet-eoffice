@@ -99,7 +99,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
 
         createdById: leaderUser.id,
-        assignees: {
+        actors: {
           create: {
             userId: staffUser.id,
             role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),

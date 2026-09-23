@@ -159,7 +159,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-01'),
         createdById: userA.id,
-        departmentId: deptA.id,
+        leadUnitId: deptA.id,
         actors: {
           create: [
             {
@@ -183,7 +183,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-15'),
         createdById: userB.id,
-        departmentId: deptB.id,
+        leadUnitId: deptB.id,
         actors: {
           create: [
             {

@@ -79,7 +79,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
         createdById: adminUser.id,
-        departmentId: leaderUser.departmentId,
+        leadUnitId: undefined,  // Phase9: department dropped
         actors: {
           create: [
             { userId: leaderUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },
@@ -100,7 +100,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
         createdById: leaderUser.id,
-        departmentId: leaderUser.departmentId,
+        leadUnitId: undefined,  // Phase9: department dropped
         actors: {
           create: [
             { userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },

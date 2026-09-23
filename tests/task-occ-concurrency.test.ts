@@ -117,7 +117,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         academicYear: '2026-2027',
         status: TaskStatus.IN_PROGRESS,
         version: 1,
-        assignees: {
+        actors: {
           create: [
             {
               userId: staffUser.id,

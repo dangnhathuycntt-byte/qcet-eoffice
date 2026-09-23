@@ -118,7 +118,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-01'),
         createdById: staffUser.id,
-        departmentId: dept.id,
+        leadUnitId: dept.id,
         actors: { create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
       },
     });

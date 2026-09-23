@@ -68,7 +68,7 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
         data: {
           code, title, scope: TaskScope.DEPARTMENT, priority: TaskPriority.NORMAL,
           status: TaskStatus.IN_PROGRESS, academicMonth: 10, academicYear: '2026-2027',
-          dueDate: new Date('2026-11-01'), createdById: owner.id, departmentId: dept.id,
+          dueDate: new Date('2026-11-01'), createdById: owner.id, leadUnitId: dept.id,
           actors: { create: [{ userId: owner.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
         },
       });

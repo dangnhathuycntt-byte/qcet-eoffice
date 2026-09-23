@@ -106,7 +106,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         academicYear: '2026-2027',
         status: TaskStatus.IN_PROGRESS,
         version: 1,
-        assignees: {
+        actors: {
           create: [
             {
               userId: staffUser.id,

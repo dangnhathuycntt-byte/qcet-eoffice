@@ -824,8 +824,8 @@ export class TaskCommandService {
             scope: existing.scope,
             createdById: existing.createdById,
             departmentId: existing.leadUnitId,
-            assignees: existing.actors,
-            assigneeIds: existing.actors?.map((a) => a.userId),
+            assignees: existing.actors?.filter((a) => a.userId != null).map((a) => ({ userId: a.userId as string, roleInTask: a.role })),
+            assigneeIds: existing.actors?.map((a) => a.userId).filter((id): id is string => id != null),
           },
           existing.status,
           mappedStatus
