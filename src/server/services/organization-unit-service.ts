@@ -708,4 +708,29 @@ export class OrganizationalUnitService {
       },
     });
   }
+
+  /**
+   * 11. Resolve a caller-supplied unit reference to a canonical unit record.
+   *
+   * Unit-bound foreign keys (`Task.leadUnitId`, workflow `leadUnitId`, …) reference
+   * `OrganizationalUnit.id`, so a raw code written straight into them violates the
+   * constraint. Accept either form and normalise here instead:
+   *   - an existing unit ID is returned unchanged;
+   *   - otherwise the value is matched against `OrganizationalUnit.code`
+   *     (case-insensitive, e.g. `p_qldt` → `P_QLDT`).
+   *
+   * Returns null when nothing matches so callers can fail closed with a validation
+   * error rather than persisting a dangling reference.
+   */
+  static async resolveUnitRef(ref: string | null | undefined): Promise<OrganizationalUnit | null> {
+    const value = typeof ref === "string" ? ref.trim() : "";
+    if (!value) return null;
+
+    const byId = await prisma.organizationalUnit.findUnique({ where: { id: value } });
+    if (byId) return byId;
+
+    return await prisma.organizationalUnit.findUnique({
+      where: { code: value.toUpperCase() },
+    });
+  }
 }
