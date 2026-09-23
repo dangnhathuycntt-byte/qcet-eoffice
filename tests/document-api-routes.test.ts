@@ -90,7 +90,7 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     }
 
     if (createdTaskIds.length > 0) {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({

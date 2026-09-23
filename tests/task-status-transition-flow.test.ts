@@ -175,7 +175,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       await prisma.outboxEvent.deleteMany({
         where: { aggregateId: { in: createdTaskIds } },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskResult.deleteMany({
@@ -404,7 +404,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       });
       createdTaskIds.push(lifecycleTask.id);
 
-      await prisma.taskAssignee.create({
+      await prisma.taskActor.create({
         data: {
           taskId: lifecycleTask.id,
           userId: makerUser.id,

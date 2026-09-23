@@ -7,16 +7,7 @@ import { taskCommandService } from "../src/server/tasks";
 import { ForbiddenError } from "../src/server/api/errors";
 import prisma from "../src/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { TaskScope, TaskStatus} from "@prisma/client";
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskScope, TaskStatus, TaskActorRole } from "@prisma/client";
 
 describe("RBAC and Segregation of Duties (SoD) API Control", () => {
   let adminToken: string;
@@ -89,10 +80,10 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         dueDate: new Date("2026-09-30"),
         createdById: adminUser.id,
         departmentId: leaderUser.departmentId,
-        assignees: {
+        actors: {
           create: [
-            { userId: leaderUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER },
-            { userId: staffUser.id, roleInTask: AssigneeRole.COLLABORATOR },
+            { userId: leaderUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },
+            { userId: staffUser.id, role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false, appointedAt: new Date() },
           ],
         },
       },
@@ -110,9 +101,9 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         dueDate: new Date("2026-09-30"),
         createdById: leaderUser.id,
         departmentId: leaderUser.departmentId,
-        assignees: {
+        actors: {
           create: [
-            { userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER },
+            { userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },
           ],
         },
       },
@@ -126,11 +117,11 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       await prisma.delegationGrant.deleteMany({ where: { id: testDelegationId } });
     }
     if (schoolTaskId) {
-      await prisma.taskAssignee.deleteMany({ where: { taskId: schoolTaskId } });
+      await prisma.taskActor.deleteMany({ where: { taskId: schoolTaskId } });
       await prisma.task.deleteMany({ where: { id: schoolTaskId } });
     }
     if (deptTaskId) {
-      await prisma.taskAssignee.deleteMany({ where: { taskId: deptTaskId } });
+      await prisma.taskActor.deleteMany({ where: { taskId: deptTaskId } });
       await prisma.task.deleteMany({ where: { id: deptTaskId } });
     }
   });

@@ -326,7 +326,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       await prisma.taskResult.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.taskDeliverable.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.taskActor.deleteMany({ where: { taskId: { in: createdTaskIds } } });
-      await prisma.taskAssignee.deleteMany({ where: { taskId: { in: createdTaskIds } } });
+      // taskAssignee table dropped in Phase 9 — actors handle this now
       await prisma.taskApprovalStep.deleteMany({
         where: { process: { taskId: { in: createdTaskIds } } },
       });

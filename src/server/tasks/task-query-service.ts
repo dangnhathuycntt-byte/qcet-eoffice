@@ -114,11 +114,6 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
       user: { select: { id: true, name: true, avatarUrl: true } },
     },
   },
-  assignees: {
-    include: {
-      user: { select: { id: true, name: true, avatarUrl: true } },
-    },
-  },
   subTasks: {
     where: { archivedAt: null },
     select: {
@@ -137,14 +132,6 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
           user: { select: { id: true, name: true, avatarUrl: true } },
         },
       },
-      assignees: {
-        where: { roleInTask: 'PRIMARY_OWNER' },
-        select: {
-          userId: true,
-          roleInTask: true,
-          user: { select: { id: true, name: true, avatarUrl: true } },
-        },
-      },
     },
   },
 };
@@ -156,11 +143,6 @@ const TASK_INCLUDE = {
       userId: true,
       role: true,
       isPrimaryDRI: true,
-      user: { select: { id: true, name: true, avatarUrl: true } },
-    },
-  },
-  assignees: {
-    include: {
       user: { select: { id: true, name: true, avatarUrl: true } },
     },
   },
@@ -186,11 +168,6 @@ const TASK_INCLUDE = {
           userId: true,
           isPrimaryDRI: true,
           role: true,
-          user: { select: { id: true, name: true, avatarUrl: true } },
-        },
-      },
-      assignees: {
-        include: {
           user: { select: { id: true, name: true, avatarUrl: true } },
         },
       },
@@ -404,7 +381,7 @@ export function buildTaskViewWhere(
           // 1. Direct creator, actor, or legacy assignee on parent task
           { createdById: userFilter },
           { actors: { some: { userId: userFilter } } },
-          { assignees: { some: { userId: userFilter } } },
+          { actors: { some: { userId: userFilter } } },
 
           // 2. DRI or assignee on any active child subtask (Issue #21 parent-only match)
           {
@@ -413,7 +390,7 @@ export function buildTaskViewWhere(
                 archivedAt: null,
                 OR: [
                   { actors: { some: { userId: userFilter } } },
-                  { assignees: { some: { userId: userFilter } } },
+                  { actors: { some: { userId: userFilter } } },
                 ],
               },
             },
@@ -539,7 +516,7 @@ export function computeTaskViewerContext(
         (a.userId === userId || a.user?.id === userId) &&
         (a.role === 'DRI' || a.role === TaskActorRole.DRI || a.isPrimaryDRI)
     ) ||
-    (task.assignees || []).some(
+    (task.actors || []).some(
       (a: any) =>
         (a.userId === userId || a.user?.id === userId) &&
         (a.roleInTask === 'PRIMARY_OWNER' || a.roleInTask === 'DRI')
@@ -585,7 +562,7 @@ export function computeTaskViewerContext(
           (a.userId === userId || a.user?.id === userId) &&
           (a.role === 'DRI' || a.role === TaskActorRole.DRI || a.isPrimaryDRI)
       ) ||
-      (st.assignees || []).some(
+      (st.actors || []).some(
         (a: any) => a.userId === userId || a.user?.id === userId
       ) ||
       st.assigneeId === userId ||
@@ -721,7 +698,7 @@ export function buildTaskReadWhere(
 
   // 4. Build Filter Conditions for Manager / Staff
   const authConditions: Prisma.TaskWhereInput[] = [
-    { assignees: { some: { userId } } },
+    { actors: { some: { userId } } },
     { actors: { some: { userId } } },
   ];
 
@@ -777,17 +754,17 @@ export class TaskQueryService {
       else if (s === 'department' || s === 'unit') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual' || s === 'personal') where.scope = TaskScope.INDIVIDUAL;
       else if (s === 'my' && (userId || user)) {
-        assigneeConditions.push({ assignees: { some: { userId: userId || user!.id } } });
+        assigneeConditions.push({ actors: { some: { userId: userId || user!.id } } });
       }
     }
     if (assignedTo && assignedTo !== 'all') {
       const targetUserId = assignedTo === 'me' ? (userId || user?.id) : assignedTo;
       if (targetUserId) {
-        assigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
+        assigneeConditions.push({ actors: { some: { userId: targetUserId } } });
       }
     }
     if (assigneeConditions.length === 1) {
-      where.assignees = assigneeConditions[0].assignees;
+      where.actors = assigneeConditions[0].actors;
     } else if (assigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
@@ -1064,17 +1041,17 @@ export class TaskQueryService {
       else if (s === 'department' || s === 'unit') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual' || s === 'personal') where.scope = TaskScope.INDIVIDUAL;
       else if (s === 'my' && (userId || user)) {
-        assigneeConditions.push({ assignees: { some: { userId: userId || user!.id } } });
+        assigneeConditions.push({ actors: { some: { userId: userId || user!.id } } });
       }
     }
     if (assignedTo && assignedTo !== 'all') {
       const targetUserId = assignedTo === 'me' ? (userId || user?.id) : assignedTo;
       if (targetUserId) {
-        assigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
+        assigneeConditions.push({ actors: { some: { userId: targetUserId } } });
       }
     }
     if (assigneeConditions.length === 1) {
-      where.assignees = assigneeConditions[0].assignees;
+      where.actors = assigneeConditions[0].actors;
     } else if (assigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
@@ -1283,7 +1260,7 @@ export class TaskQueryService {
       where: { id: taskId, archivedAt: null },
       include: {
         department: true,
-        assignees: {
+        actors: {
           include: {
             user: { select: { id: true, name: true, avatarUrl: true } },
           },
@@ -1310,11 +1287,6 @@ export class TaskQueryService {
         subTasks: {
           include: {
             actors: {
-              include: {
-                user: { select: { id: true, name: true, avatarUrl: true } },
-              },
-            },
-            assignees: {
               include: {
                 user: { select: { id: true, name: true, avatarUrl: true } },
               },
@@ -1359,17 +1331,17 @@ export class TaskQueryService {
       else if (s === 'department') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual') where.scope = TaskScope.INDIVIDUAL;
       else if (s === 'my' && user) {
-        metricAssigneeConditions.push({ assignees: { some: { userId: user.id } } });
+        metricAssigneeConditions.push({ actors: { some: { userId: user.id } } });
       }
     }
     if (filters.userId) {
       const targetUserId = filters.userId === 'me' ? user?.id : filters.userId;
       if (targetUserId) {
-        metricAssigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
+        metricAssigneeConditions.push({ actors: { some: { userId: targetUserId } } });
       }
     }
     if (metricAssigneeConditions.length === 1) {
-      where.assignees = metricAssigneeConditions[0].assignees;
+      where.actors = metricAssigneeConditions[0].actors;
     } else if (metricAssigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),

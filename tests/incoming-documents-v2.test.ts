@@ -208,7 +208,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
 
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: {
           userId: { in: [specialistDri.id, specialistCollab.id] },
         },
@@ -581,11 +581,11 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       // Verify linked task was created
       const task = await prisma.task.findUnique({
         where: { id: result.assignment.createdTaskId! },
-        include: { assignees: true },
+        include: { actors: true },
       });
       assert.ok(task);
       assert.equal(task.departmentId, deptLeadId);
-      assert.ok(task.assignees.some((a) => a.userId === specialistDri.id));
+      assert.ok(task.actors.some((a) => a.userId === specialistDri.id));
 
       // Verify Audit Event
       const audit = await prisma.auditEvent.findFirst({

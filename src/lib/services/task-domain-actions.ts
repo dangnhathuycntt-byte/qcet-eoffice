@@ -208,11 +208,11 @@ export async function loadTaskAndBuildResource(
   const primaryOwnerId = primaryOwnerActor?.userId || undefined;
 
   const collaboratorIds = Array.from(
-    new Set([
-      ...task.actors
+    new Set(
+      task.actors
         .filter((a) => a.role === TaskActorRole.COLLABORATOR && a.userId)
-        .map((a) => a.userId as string),
-    ])
+        .map((a) => a.userId as string)
+    )
   );
 
   const reviewerIds = task.actors
@@ -224,9 +224,9 @@ export async function loadTaskAndBuildResource(
     .map((a) => a.userId as string);
 
   const assigneeIds = Array.from(
-    new Set([
-      ...task.actors.map((a) => a.userId).filter(Boolean) as string[],
-    ])
+    new Set(
+      task.actors.map((a) => a.userId).filter(Boolean) as string[]
+    )
   );
 
   let targetDeliverable = extra?.deliverableId
@@ -363,7 +363,7 @@ export class TaskDomainActionService {
       createdById: task.createdById,
       departmentId: task.departmentId,
       primaryOwnerId,
-      assignees: [],
+      assignees: task.actors,
       deliverables: task.deliverables,
     });
 

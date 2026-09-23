@@ -672,7 +672,7 @@ export class TaskCommandService {
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
       include: {
-        assignees: { select: { userId: true, roleInTask: true } },
+        actors: { select: { userId: true, role: true } },
       },
     });
 
@@ -822,8 +822,8 @@ export class TaskCommandService {
             scope: existing.scope,
             createdById: existing.createdById,
             departmentId: existing.leadUnitId,
-            assignees: existing.assignees,
-            assigneeIds: existing.assignees?.map((a) => a.userId),
+            assignees: existing.actors,
+            assigneeIds: existing.actors?.map((a) => a.userId),
           },
           existing.status,
           mappedStatus
@@ -1252,7 +1252,7 @@ export class TaskCommandService {
         status: true,
         createdById: true,
         leadUnitId: true,
-        assignees: { select: { userId: true } },
+        actors: { select: { userId: true } },
       },
     });
 
@@ -1397,7 +1397,7 @@ export class TaskCommandService {
       include: {
         task: {
           include: {
-            assignees: true,
+            actors: true,
           },
         },
       },
@@ -1545,7 +1545,7 @@ export class TaskCommandService {
       include: {
         task: {
           include: {
-            assignees: true,
+            actors: true,
           },
         },
       },

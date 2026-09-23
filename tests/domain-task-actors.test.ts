@@ -37,16 +37,9 @@ import {
   ApprovalProcessStatus,
   ApprovalStepStatus,
   UserRole,
-  Prisma
+  // AssigneeRole removed — Phase 9: TaskAssignee table dropped
+  Prisma,
 } from "@prisma/client";
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
@@ -217,7 +210,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         where: { taskId: { in: createdTaskIds } },
       });
 
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
 
@@ -1031,11 +1024,11 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       createdTaskIds.push(legacyTask.id);
 
       // Legacy assignee link
-      await prisma.taskAssignee.create({
+      await prisma.taskActor.create({
         data: {
           taskId: legacyTask.id,
           userId: driUser1.id,
-          roleInTask: AssigneeRole.PRIMARY_OWNER,
+          role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
         },
       });
     });
@@ -1056,24 +1049,22 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       assert.equal(task.originLevel, TaskOriginLevel.SCHOOL); // Schema default check
     });
 
-    test("4.2 Legacy queries with assignees, createdBy, and department includes succeed seamlessly", async () => {
-      const taskWithLegacyIncludes = await prisma.task.findUnique({
+    test("4.2 Task actors include succeeds (Phase 9: assignees replaced by actors)", async () => {
+      const taskWithActors = await prisma.task.findUnique({
         where: { id: legacyTask.id },
         include: {
-          assignees: {
+          actors: {
             include: { user: true },
           },
           createdBy: true,
-          department: true,
         },
       });
 
-      assert.ok(taskWithLegacyIncludes);
-      assert.equal(taskWithLegacyIncludes.createdBy.id, creatorUser.id);
-      assert.equal(taskWithLegacyIncludes.assignees.length, 1);
-      assert.equal(taskWithLegacyIncludes.assignees[0].userId, driUser1.id);
-      assert.equal(taskWithLegacyIncludes.assignees[0].roleInTask, AssigneeRole.PRIMARY_OWNER);
-      assert.equal(taskWithLegacyIncludes.department?.id, "P_QLDT");
+      assert.ok(taskWithActors);
+      assert.equal(taskWithActors.createdBy.id, creatorUser.id);
+      assert.equal(taskWithActors.actors.length, 1);
+      assert.equal(taskWithActors.actors[0].userId, driUser1.id);
+      assert.equal(taskWithActors.actors[0].role, TaskActorRole.DRI);
     });
 
     test("4.3 Standard CRUD updates on Task operate without requiring ReBAC relations", async () => {
@@ -1128,11 +1119,11 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       });
       createdTaskIds.push(taskWithAssigneeAndDept.id);
 
-      await prisma.taskAssignee.create({
+      await prisma.taskActor.create({
         data: {
           taskId: taskWithAssigneeAndDept.id,
           userId: driUser1.id,
-          roleInTask: AssigneeRole.PRIMARY_OWNER,
+          role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
         },
       });
 

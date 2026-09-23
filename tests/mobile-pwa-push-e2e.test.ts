@@ -120,7 +120,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
 
     // Clean up test tasks
     if (createdTaskIds.length > 0) {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.task.deleteMany({

@@ -169,7 +169,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
     await prisma.taskDeliverable.deleteMany({
       where: { task: { departmentId: { in: [deptAId, deptBId] } } },
     });
-    await prisma.taskAssignee.deleteMany({
+    await prisma.taskActor.deleteMany({
       where: { task: { departmentId: { in: [deptAId, deptBId] } } },
     });
     await prisma.task.deleteMany({

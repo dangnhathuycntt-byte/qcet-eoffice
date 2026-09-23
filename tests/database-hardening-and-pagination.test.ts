@@ -7,16 +7,7 @@ import { prisma } from '../src/lib/prisma';
 import { taskQueryService } from '../src/server/tasks/task-query-service';
 import { GET as getTasksRoute } from '../src/app/api/tasks/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskStatus, TaskPriority, UserRole } from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, UserRole } from '@prisma/client';
 
 describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagination Tests', () => {
   let testDept: any;
@@ -114,8 +105,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicYear: '2026-2027',
         academicMonth: 9,
         dueDate: FUTURE_DUE_DATE,
-        assignees: {
-          create: [{ userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -138,8 +129,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicMonth: 9,
         startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Overdue!
-        assignees: {
-          create: [{ userId: staffUser.id, roleInTask: AssigneeRole.COLLABORATOR }],
+        actors: {
+          create: [{ userId: staffUser.id, role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false, appointedAt: new Date() }],
         },
       },
     });
@@ -161,8 +152,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicMonth: 9,
         startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Past due date but COMPLETED
-        assignees: {
-          create: [{ userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -183,8 +174,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicYear: '2026-2027',
         academicMonth: 10,
         dueDate: FUTURE_DUE_DATE,
-        assignees: {
-          create: [{ userId: managerUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: managerUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -206,8 +197,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicMonth: 9,
         startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Overdue!
-        assignees: {
-          create: [{ userId: managerUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: managerUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -229,8 +220,8 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicMonth: 9,
         startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Past due date but CANCELLED
-        assignees: {
-          create: [{ userId: managerUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: managerUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -240,7 +231,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
   after(async () => {
     // Teardown created tasks
     if (createdTaskIds.length > 0) {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       // Delete subtasks first to satisfy foreign keys

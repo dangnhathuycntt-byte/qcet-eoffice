@@ -4,6 +4,7 @@ import {
   TaskScope,
   TaskStatus,
   TaskPriority,
+  TaskActorRole,
   DocumentType,
   DocumentUrgency,
   DocumentSecurityLevel,
@@ -11,13 +12,6 @@ import {
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { seedCanonicalOrg } from './seeds/canonical-org-seed';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
 
 const prisma = new PrismaClient();
 
@@ -2508,40 +2502,38 @@ async function main() {
     });
 
     if (assigneeId) {
-      await prisma.taskAssignee.upsert({
-        where: {
-          task_user_role_unique: {
+      const existingDRI = await prisma.taskActor.findFirst({
+        where: { taskId: task.id, userId: assigneeId, role: TaskActorRole.DRI },
+      });
+      if (!existingDRI) {
+        await prisma.taskActor.create({
+          data: {
             taskId: task.id,
             userId: assigneeId,
-            roleInTask: AssigneeRole.PRIMARY_OWNER,
+            role: TaskActorRole.DRI,
+            isPrimaryDRI: true,
+            appointedAt: new Date(),
           },
-        },
-        update: {},
-        create: {
-          taskId: task.id,
-          userId: assigneeId,
-          roleInTask: AssigneeRole.PRIMARY_OWNER,
-        },
-      });
+        });
+      }
     }
 
     if (collaboratorIds && collaboratorIds.length > 0) {
       for (const collabId of collaboratorIds) {
-        await prisma.taskAssignee.upsert({
-          where: {
-            task_user_role_unique: {
+        const existingCollab = await prisma.taskActor.findFirst({
+          where: { taskId: task.id, userId: collabId, role: TaskActorRole.COLLABORATOR },
+        });
+        if (!existingCollab) {
+          await prisma.taskActor.create({
+            data: {
               taskId: task.id,
               userId: collabId,
-              roleInTask: AssigneeRole.COLLABORATOR,
+              role: TaskActorRole.COLLABORATOR,
+              isPrimaryDRI: false,
+              appointedAt: new Date(),
             },
-          },
-          update: {},
-          create: {
-            taskId: task.id,
-            userId: collabId,
-            roleInTask: AssigneeRole.COLLABORATOR,
-          },
-        });
+          });
+        }
       }
     }
   }

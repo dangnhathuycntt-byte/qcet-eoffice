@@ -5,16 +5,7 @@ import { PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable, PATCH as patchDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, UserRole } from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole } from '@prisma/client';
 
 describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   let staffUser: any;
@@ -111,7 +102,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         assignees: {
           create: {
             userId: staffUser.id,
-            roleInTask: AssigneeRole.PRIMARY_OWNER,
+            role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
           }
         }
       },
@@ -123,7 +114,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   after(async () => {
     if (createdTaskIds.length > 0) {
       await prisma.taskDeliverable.deleteMany({ where: { taskId: { in: createdTaskIds } } });
-      await prisma.taskAssignee.deleteMany({ where: { taskId: { in: createdTaskIds } } });
+      await prisma.taskActor.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.task.deleteMany({ where: { id: { in: createdTaskIds } } });
     }
   });

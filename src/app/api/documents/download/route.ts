@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
         },
         include: {
           task: {
-            include: { assignees: true },
+            include: { actors: true },
           },
         },
       });
