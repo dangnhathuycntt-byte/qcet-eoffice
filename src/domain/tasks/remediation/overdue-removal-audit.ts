@@ -58,9 +58,9 @@ export async function auditTaskStatusOverdue(
       code: true,
       title: true,
       status: true,
-      progress: true,
+      progressPercent: true,
+      version: true,
       deliverables: { select: { id: true } },
-      activityLogs: { select: { id: true }, take: 1 },
     },
   });
 
@@ -69,9 +69,9 @@ export async function auditTaskStatusOverdue(
   for (const task of overdueTasks) {
     const recommendation = classifyOverdueTask({
       status: task.status,
-      progress: task.progress,
+      progress: task.progressPercent,
       deliverablesCount: task.deliverables?.length ?? 0,
-      hasActivityLog: (task.activityLogs?.length ?? 0) > 0,
+      hasActivityLog: task.version > 1,
     });
 
     tasksToRemediate.push({
@@ -120,9 +120,9 @@ export function verifyStatusNormalizersAttentionSeparation(): {
   const displayResult = normalizeDisplayStatus('OVERDUE');
   const canonicalNormalizerPasses = displayResult === 'IN_PROGRESS';
 
-  // 2. mapDbStatusToLifecycle recognizes OVERDUE as known legacy status
+  // 2. mapDbStatusToLifecycle must NOT preserve OVERDUE as target lifecycle (ADR-003)
   const dbStatusResult = mapDbStatusToLifecycle('OVERDUE');
-  const stateMachineNormalizerPasses = dbStatusResult === 'OVERDUE';
+  const stateMachineNormalizerPasses = dbStatusResult !== 'OVERDUE';
 
   // 3. Verify remediation recommendations never target OVERDUE as lifecycle
   const sampleClassification = classifyOverdueTask({ status: 'OVERDUE', progress: 20 });

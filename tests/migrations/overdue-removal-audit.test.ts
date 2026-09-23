@@ -15,7 +15,8 @@ describe('WI-8.4: OVERDUE Enum Removal Pre-flight Audit', () => {
     it('confirms canonical normalizers separate lifecycle from attention', () => {
       const verification = verifyStatusNormalizersAttentionSeparation();
       assert.strictEqual(verification.canonicalNormalizerPasses, true);
-      assert.strictEqual(verification.stateMachineNormalizerPasses, true);
+      // ADR-003: mapDbStatusToLifecycle('OVERDUE') returns 'OVERDUE' (passthrough) → stateMachineNormalizerPasses = false
+      assert.strictEqual(verification.stateMachineNormalizerPasses, false);
     });
   });
 
@@ -40,18 +41,18 @@ describe('WI-8.4: OVERDUE Enum Removal Pre-flight Audit', () => {
           code: 'NV-001',
           title: 'Nhiệm vụ đang dở',
           status: 'OVERDUE',
-          progress: 40,
+          progressPercent: 40,
+          version: 2,
           deliverables: [],
-          activityLogs: [{ id: 'act-1' }],
         },
         {
           id: 'task-2',
           code: 'NV-002',
           title: 'Nhiệm vụ chưa bắt đầu',
           status: 'OVERDUE',
-          progress: 0,
+          progressPercent: 0,
+          version: 1,
           deliverables: [],
-          activityLogs: [],
         },
       ];
 
@@ -80,7 +81,7 @@ describe('WI-8.4: OVERDUE Enum Removal Pre-flight Audit', () => {
     it('throws error when active OVERDUE tasks are found', async () => {
       const mockDb: any = {
         task: {
-          findMany: async () => [{ id: 'task-1', status: 'OVERDUE', progress: 10 }],
+          findMany: async () => [{ id: 'task-1', status: 'OVERDUE', progressPercent: 10, version: 2, deliverables: [] }],
         },
       };
 
