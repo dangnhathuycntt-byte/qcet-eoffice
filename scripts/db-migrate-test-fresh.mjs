@@ -70,7 +70,18 @@ async function run() {
       }
     }
 
-    // 5. Verify partial unique index for task_actor DRI uniqueness (Phase 9: task_assignees dropped)
+    // 5. Legacy tables dropped in Phase 9 must not come back.
+    const tableNames = tables.map((t) => t.table_name);
+    for (const legacyTable of ['task_assignees', 'departments', 'dacum_delegations']) {
+      if (tableNames.includes(legacyTable)) {
+        throw new Error(
+          `Legacy table "${legacyTable}" still exists after migrations — Phase 9 drop migration did not apply.`
+        );
+      }
+    }
+
+    // 6. Verify the Phase 9 single-primary-DRI invariant index and the canonical
+    // composite index that replaced tasks_department_id_status_due_date_idx.
     const indexes = await prisma.$queryRawUnsafe(`
       SELECT indexname
       FROM pg_indexes
@@ -78,10 +89,18 @@ async function run() {
     `);
     const indexNames = indexes.map((i) => i.indexname);
     console.log(`[db:migrate:test-fresh] Total indexes created: ${indexNames.length}`);
-    // Phase 9: task_assignees table dropped — task_assignees_one_primary_owner index no longer exists.
-    // Verify a representative Phase 9 index instead (task_actors exists as sole authority).
-    if (!indexNames.some((n) => n.startsWith('task_actors_') || n.startsWith('tasks_'))) {
-      throw new Error(`Missing expected task-related indexes — migration may not have applied correctly`);
+    const expectedIndexes = [
+      'task_actors_one_primary_dri_idx',
+      'tasks_lead_unit_id_status_due_date_idx',
+      'notification_unread_user_idx',
+    ];
+    for (const expectedIndex of expectedIndexes) {
+      if (!indexNames.includes(expectedIndex)) {
+        throw new Error(`Missing expected index: ${expectedIndex}`);
+      }
+    }
+    if (indexNames.includes('task_one_primary_owner_idx') || indexNames.includes('task_assignees_one_primary_owner_idx')) {
+      throw new Error('Legacy task_assignees single-primary-owner index still present after Phase 9');
     }
 
     const auditTriggers = await prisma.$queryRawUnsafe(`
@@ -94,7 +113,7 @@ async function run() {
       throw new Error('Missing append-only trigger on audit_events');
     }
 
-    // 6. Verify _prisma_migrations record
+    // 7. Verify _prisma_migrations record
     const migrations = await prisma.$queryRawUnsafe(`
       SELECT migration_name, finished_at, rolled_back_at
       FROM "${testSchema}"."_prisma_migrations";
@@ -103,6 +122,12 @@ async function run() {
     const expectedMigrations = [
       '20260910000000_baseline',
       '20260918050000_database_integrity_hardening',
+      '20260922071057_add_email_verified',
+      '20260923000001_drop_task_assignee',
+      '20260923000002_drop_department',
+      '20260923000003_drop_dacum_delegation',
+      '20260923000004_drop_overdue_enum',
+      '20260923000005_task_actor_single_primary_dri',
     ];
     for (const migrationName of expectedMigrations) {
       if (!migrations.some((m) => m.migration_name === migrationName && m.finished_at)) {
@@ -112,7 +137,7 @@ async function run() {
 
     console.log(`[db:migrate:test-fresh] SUCCESS: Fresh database deployment verified cleanly.`);
   } finally {
-    // 7. Always cleanup temporary test schema
+    // 8. Always cleanup temporary test schema
     console.log(`[db:migrate:test-fresh] Cleaning up test schema: ${testSchema}`);
     await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${testSchema}" CASCADE;`);
     await prisma.$disconnect();

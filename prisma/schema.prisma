@@ -235,6 +235,9 @@ model Task {
   @@index([updatedAt(sort: Desc)])
   @@index([scope, priority])
   @@index([leadUnitId])
+  // Phase 9: thay thế `tasks_department_id_status_due_date_idx` đã bị drop —
+  // đơn vị canonical của nhiệm vụ là `leadUnitId`.
+  @@index([leadUnitId, status, dueDate])
   @@index([primaryAssignmentId])
   @@map("tasks")
 }

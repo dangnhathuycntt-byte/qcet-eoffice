@@ -73,8 +73,22 @@ async function main() {
   const resolveLeadUnitId = createLeadUnitResolver(orgUnits);
 
     // 2. Tạo Tài khoản Người dùng với thông tin thực tế của QCET (@cdktcnqn.edu.vn)
-  const defaultPasswordHash = await bcrypt.hash("Qcet@123456", 10);
-  const qcet2026PasswordHash = await bcrypt.hash("Qcet@2026", 10);
+  // Mật khẩu seed đọc từ biến môi trường. Giá trị mặc định chỉ dành cho môi
+  // trường phát triển; ở production bắt buộc phải cấu hình, nếu không seed sẽ
+  // dừng thay vì âm thầm tạo tài khoản với mật khẩu đã biết trước.
+  const isProduction = process.env.NODE_ENV === "production";
+  const defaultSeedPassword = process.env.SEED_DEFAULT_PASSWORD;
+  const bghSeedPassword = process.env.SEED_BGH_PASSWORD;
+
+  if (isProduction && (!defaultSeedPassword || !bghSeedPassword)) {
+    throw new Error(
+      "[seed] NODE_ENV=production yêu cầu SEED_DEFAULT_PASSWORD và SEED_BGH_PASSWORD. " +
+        "Không dùng mật khẩu mặc định đã biết trước cho môi trường thật."
+    );
+  }
+
+  const defaultPasswordHash = await bcrypt.hash(defaultSeedPassword || "Qcet@123456", 10);
+  const qcet2026PasswordHash = await bcrypt.hash(bghSeedPassword || "Qcet@2026", 10);
 
   const users = [
     // Ban Giám hiệu
