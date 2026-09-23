@@ -15,8 +15,14 @@ CREATE TYPE "TaskStatus" AS ENUM (
   'CANCELLED'
 );
 
+-- Must drop column default before altering type (PostgreSQL error 42804 if omitted).
+ALTER TABLE "tasks" ALTER COLUMN "status" DROP DEFAULT;
+
 ALTER TABLE "tasks"
   ALTER COLUMN "status" TYPE "TaskStatus"
   USING "status"::text::"TaskStatus";
+
+-- Restore column default using new enum type.
+ALTER TABLE "tasks" ALTER COLUMN "status" SET DEFAULT 'NOT_STARTED'::"TaskStatus";
 
 DROP TYPE "TaskStatus_old";

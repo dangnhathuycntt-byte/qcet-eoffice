@@ -82,22 +82,13 @@ export async function dispatchTaskAssignedPush(
       }
     }
 
-    // Query assignees from TaskAssignee and canonical TaskActor models
+    // Phase 9: TaskAssignee dropped. Query only canonical TaskActor model.
     if (task.id) {
       try {
-        const [dbAssignees, dbActors] = await Promise.all([
-          prisma.taskAssignee.findMany({
-            where: { taskId: task.id },
-            select: { userId: true },
-          }),
-          prisma.taskActor.findMany({
-            where: { taskId: task.id, userId: { not: null } },
-            select: { userId: true },
-          }),
-        ]);
-        for (const a of dbAssignees) {
-          if (a.userId) targetUserIdSet.add(a.userId);
-        }
+        const dbActors = await prisma.taskActor.findMany({
+          where: { taskId: task.id, userId: { not: null } },
+          select: { userId: true },
+        });
         for (const a of dbActors) {
           if (a.userId) targetUserIdSet.add(a.userId);
         }
@@ -209,26 +200,17 @@ export async function dispatchExecutiveDirectivePush(
   try {
     const stakeholderUserIds = new Set<string>();
 
-    // 1. Task assignees and actors
+    // 1. Task actors (Phase 9: TaskAssignee dropped — sole authority is TaskActor)
     try {
-      const [assignees, actors] = await Promise.all([
-        prisma.taskAssignee.findMany({
-          where: { taskId },
-          select: { userId: true },
-        }),
-        prisma.taskActor.findMany({
-          where: { taskId, userId: { not: null } },
-          select: { userId: true },
-        }),
-      ]);
-      for (const a of assignees) {
-        if (a.userId) stakeholderUserIds.add(a.userId);
-      }
+      const actors = await prisma.taskActor.findMany({
+        where: { taskId, userId: { not: null } },
+        select: { userId: true },
+      });
       for (const a of actors) {
         if (a.userId) stakeholderUserIds.add(a.userId);
       }
     } catch (e) {
-      console.warn('[dispatchExecutiveDirectivePush] Assignee/Actor lookup error:', e);
+      console.warn('[dispatchExecutiveDirectivePush] Actor lookup error:', e);
     }
 
     // 2. Department head(s) of task
