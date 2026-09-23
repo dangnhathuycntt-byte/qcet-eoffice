@@ -11,7 +11,6 @@ describe("Issue #13 canonical Task cutover", () => {
     assert.doesNotMatch(route, /parseAndValidateJson\(req, UpdateTaskSchema\)/);
     for (const forbidden of [
       "progressPercent: validatedBody",
-      "
       "assigneeId: validatedBody",
       "collaboratorIds: validatedBody",
       "parentTaskId: validatedBody",

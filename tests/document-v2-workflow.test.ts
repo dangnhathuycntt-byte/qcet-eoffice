@@ -60,7 +60,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Đào tạo ${testRunId}`,
-        shortName: `DT_${testRunId.slice(-4)}`,
+
       },
     });
     unitAcademicId = d1.id;
@@ -77,7 +77,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       data: {
         id: `dept-adm-${testRunId}`,
         name: `Phòng Hành chính ${testRunId}`,
-        shortName: `HC_${testRunId.slice(-4)}`,
+
       },
     });
     unitAdminId = d2.id;

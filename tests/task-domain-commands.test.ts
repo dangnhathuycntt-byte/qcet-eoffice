@@ -73,7 +73,6 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         data: {
           id: `dept_${timestamp}`,
           name: "Phòng Quản lý Đào tạo",
-,
         },
       });
     }

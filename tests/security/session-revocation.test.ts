@@ -102,7 +102,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       data: {
         id: deptId,
         name: `Sprint 2 Dept ${testRunId}`,
-        shortName: `D-S2-${testRunId.slice(-6)}`,
+
       },
     });
 

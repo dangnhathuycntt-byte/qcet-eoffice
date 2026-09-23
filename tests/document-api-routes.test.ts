@@ -492,7 +492,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       data: {
         id: `DEPT_A_${runId}`,
         name: `Phòng Nghiệp vụ A ${runId}`,
-        shortName: `P.NVA_${runId}`,
+
       },
     });
 
@@ -500,7 +500,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       data: {
         id: `DEPT_B_${runId}`,
         name: `Phòng Nghiệp vụ B ${runId}`,
-        shortName: `P.NVB_${runId}`,
+
       },
     });
 

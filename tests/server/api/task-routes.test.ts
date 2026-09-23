@@ -31,8 +31,8 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng A ${testRunId}`, shortName: `PA-${testRunId}` },
-        { id: deptBId, name: `Phòng B ${testRunId}`, shortName: `PB-${testRunId}` },
+        { id: deptAId, name: `Phòng A ${testRunId}` },
+        { id: deptBId, name: `Phòng B ${testRunId}` },
       ],
     });
 

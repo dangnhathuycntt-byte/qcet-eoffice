@@ -137,7 +137,6 @@ describe('TaskDbAdapter Unit Tests', () => {
         department: {
           id: 'bgh',
           name: 'Ban Giám hiệu',
-,
         },
         parentTaskId: null,
         parentTask: null,
@@ -283,7 +282,6 @@ describe('TaskDbAdapter Unit Tests', () => {
         department: {
           id: 'p-cntt',
           name: 'Phòng Công nghệ Thông tin & Truyền thông',
-,
         },
         parentTaskId: 'parent-root-99',
         parentTask: {

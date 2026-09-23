@@ -97,7 +97,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
       data: {
         id: deptId,
         name: `Phòng Ban Thử Nghiệm ${testRunId}`,
-        shortName: `PBT-${testRunId}`,
+
       },
     });
 

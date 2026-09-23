@@ -65,7 +65,6 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         data: {
           id: `dept_st_${timestamp}`,
           name: "Phòng Hành chính - Tổng hợp",
-,
         },
       });
     }

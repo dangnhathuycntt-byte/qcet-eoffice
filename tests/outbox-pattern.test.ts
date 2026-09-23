@@ -30,7 +30,6 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
         data: {
           id: `dept-outbox-${Date.now()}`,
           name: 'Phòng Kiểm Thử Outbox',
-,
         },
       });
     }

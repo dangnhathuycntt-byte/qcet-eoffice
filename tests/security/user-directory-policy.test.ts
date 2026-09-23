@@ -17,7 +17,6 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
     department: {
       id: 'dept-cntt',
       name: 'Khoa Công nghệ Thông tin',
-,
     },
     // Tier 4 statutory HR fields in raw database entity
     citizenId: '052099001234',
@@ -37,7 +36,6 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
     department: {
       id: 'dept-daotao',
       name: 'Phòng Đào tạo',
-,
     },
     citizenId: '052099009999',
     salary: 18000000,

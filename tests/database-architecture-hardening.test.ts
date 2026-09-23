@@ -58,7 +58,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       data: {
         id: `dept-harden-${Date.now()}`,
         name: `Phòng Khảo Thí & Đảm Bảo Chất Lượng ${testRunId}`,
-        shortName: `PKT-${Date.now().toString().slice(-4)}`,
+
       },
     });
     testDepartmentId = dept.id;
@@ -1057,7 +1057,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
         data: {
           id: `dept-restrict-${Date.now()}`,
           name: `Phòng Ràng Buộc Khóa Ngoại ${testRunId}`,
-          shortName: `PRB-${Date.now().toString().slice(-4)}`,
+
         },
       });
 

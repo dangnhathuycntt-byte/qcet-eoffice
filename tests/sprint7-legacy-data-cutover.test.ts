@@ -58,6 +58,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
       },
       include: {
         actors: true,
+        actors: true,
       },
     });
 

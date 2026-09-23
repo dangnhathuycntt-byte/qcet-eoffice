@@ -22,7 +22,6 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
         data: {
           id: `dept-worker-${Date.now()}`,
           name: 'Phòng Outbox Worker Test',
-,
         },
       });
     }

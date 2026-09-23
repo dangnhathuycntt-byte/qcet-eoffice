@@ -64,7 +64,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
-        shortName: `QLDT_${testRunId.slice(-4)}`,
+
       },
     });
 
@@ -82,7 +82,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       data: {
         id: `dept-admin-${testRunId}`,
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
-        shortName: `HCTH_${testRunId.slice(-4)}`,
+
       },
     });
 
@@ -100,7 +100,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       data: {
         id: `dept-unrel-${testRunId}`,
         name: `Khoa CNTT ${testRunId}`,
-        shortName: `CNTT_${testRunId.slice(-4)}`,
+
       },
     });
 

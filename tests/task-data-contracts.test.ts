@@ -209,7 +209,6 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
       department: {
         id: 'dept_cntt',
         name: 'Khoa Công nghệ Thông tin',
-,
       },
       createdById: 'usr_admin',
       parentTaskId: null,

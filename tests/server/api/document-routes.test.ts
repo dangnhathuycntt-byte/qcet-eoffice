@@ -47,7 +47,6 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         data: {
           id: 'dept-test-doc-1',
           name: 'Phòng Thử Nghiệm 1',
-,
         },
       });
     }
@@ -60,7 +59,6 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         data: {
           id: 'dept-test-doc-2',
           name: 'Phòng Thử Nghiệm 2',
-,
         },
       });
     }

@@ -97,7 +97,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
       data: {
         id: deptId,
         name: `Phòng Ban Test Cache ${testRunId}`,
-        shortName: `PBTC-${testRunId}`,
+
       },
     });
 

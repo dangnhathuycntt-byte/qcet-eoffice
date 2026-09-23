@@ -101,7 +101,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
       data: {
         id: deptId,
         name: `MeContext Dept ${testRunId}`,
-        shortName: `D-ME-${testRunId.slice(-6)}`,
+
       },
     });
 

@@ -88,12 +88,16 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         {
           id: deptAId,
           name: `Phòng Ban Test A ${testRunId}`,
-          shortName: `DA_${testRunId}`.slice(0, 10),
+          code: deptAId,
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
         {
           id: deptBId,
           name: `Phòng Ban Test B ${testRunId}`,
-          shortName: `DB_${testRunId}`.slice(0, 10),
+          code: deptBId,
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       ],
     });

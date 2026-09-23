@@ -85,7 +85,6 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       data: {
         id: deptAId,
         name: "Khoa Công nghệ Thông tin Test",
-,
       },
     });
 
@@ -93,7 +92,6 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       data: {
         id: deptBId,
         name: "Khoa Du lịch & Dịch vụ Test",
-,
       },
     });
 

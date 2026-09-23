@@ -69,19 +69,15 @@ describe("Executive Unit Radar Dot Calculation", () => {
 
   it("getRadarDotStatus trả về đúng màu và số đếm cảnh báo", () => {
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 2, delayedTasks: 0, healthStatus: "RED" }), {
-,
       count: 2,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 1, healthStatus: "YELLOW" }), {
-,
       count: 1,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "GREEN" }), {
-,
       count: 0,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "YELLOW" }), {
-,
       count: 0,
     });
   });

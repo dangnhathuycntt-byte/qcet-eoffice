@@ -83,8 +83,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng Gate0 A ${testRunId}`, shortName: `PGA-${testRunId}` },
-        { id: deptBId, name: `Phòng Gate0 B ${testRunId}`, shortName: `PGB-${testRunId}` },
+        { id: deptAId, name: `Phòng Gate0 A ${testRunId}` },
+        { id: deptBId, name: `Phòng Gate0 B ${testRunId}` },
       ],
     });
 

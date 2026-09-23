@@ -458,7 +458,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         data: {
           id: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
-,
         },
       });
 
@@ -466,7 +465,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         data: {
           id: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
-,
         },
       });
 
