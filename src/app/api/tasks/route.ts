@@ -188,10 +188,11 @@ export async function POST(req: Request) {
 
     // Canonical object authorization: Check whether user can create a task for the specified department
     const authContext = await loadAuthorizationContext(authUser.id);
+    const effectiveUnitId = validatedBody.leadUnitId || validatedBody.departmentId;
     const authDecision = authorize(authContext, 'task.create', {
       type: 'task',
-      departmentId: validatedBody.departmentId ?? undefined,
-      leadUnitId: validatedBody.departmentId ?? undefined,
+      departmentId: effectiveUnitId ?? undefined,
+      leadUnitId: effectiveUnitId ?? undefined,
       scope: validatedBody.scope?.toLowerCase(),
     });
     if (!authDecision.allowed) {
@@ -207,7 +208,7 @@ export async function POST(req: Request) {
       const newTask = await taskCommandService.createTask(context, {
         title: validatedBody.title,
         description: validatedBody.description,
-        leadUnitId: validatedBody.departmentId,
+        leadUnitId: validatedBody.leadUnitId || validatedBody.departmentId,
         startDate: validatedBody.startDate,
         dueDate: validatedBody.dueDate ?? new Date().toISOString(),
         priority: validatedBody.priority,

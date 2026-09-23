@@ -29,6 +29,19 @@ export async function GET(req: Request) {
 
     const dbUser = await prisma.user.findUnique({
       where: { id: session.id },
+      include: {
+        // Phase 9: `User.departmentId` dropped — đơn vị canonical là phân công vị trí
+        // việc làm chính đang hiệu lực.
+        positionAssignments: {
+          where: { type: 'PRIMARY', status: 'ACTIVE' },
+          orderBy: { effectiveFrom: 'desc' },
+          take: 1,
+          include: {
+            unit: { select: { id: true, code: true, name: true } },
+            positionDefinition: { select: { code: true, title: true } },
+          },
+        },
+      },
     });
 
     if (!dbUser || !dbUser.isActive) {
@@ -41,7 +54,16 @@ export async function GET(req: Request) {
       );
     }
 
-    const publicUser = toUserPublicDTO(dbUser);
+    // Flatten primary assignment into the legacy shape client expects
+    const primaryAssignment = dbUser.positionAssignments?.[0];
+    const unitInfo = primaryAssignment?.unit;
+    const dbUserWithUnit = {
+      ...dbUser,
+      departmentId: unitInfo?.code || unitInfo?.id || null,
+      department: unitInfo ? { id: unitInfo.id, name: unitInfo.name, shortName: unitInfo.code } : null,
+    };
+
+    const publicUser = toUserPublicDTO(dbUserWithUnit);
     const userResult = {
       ...publicUser,
       title: dbUser.title,
