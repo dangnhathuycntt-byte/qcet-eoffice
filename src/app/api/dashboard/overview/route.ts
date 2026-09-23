@@ -53,6 +53,7 @@ export async function GET(request?: NextRequest): Promise<NextResponse> {
         options.departmentId = authUser.departmentId;
       } else {
         options.userId = authUser.id;
+        options.restrictSubTasksToUser = true;
       }
     }
 

@@ -186,7 +186,7 @@ export function TaskAgentPanel({
               disabled={!prompt.trim() && !currentDraft?.title}
               className={cn(
                 "inline-flex items-center justify-center size-6 rounded bg-primary text-primary-foreground transition-all shadow-2xs cursor-pointer",
-                "hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                "hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 "disabled:opacity-40 disabled:pointer-events-none"
               )}
               aria-label="Gửi yêu cầu tới AI"

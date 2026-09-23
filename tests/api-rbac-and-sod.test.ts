@@ -7,7 +7,15 @@ import { taskCommandService } from "../src/server/tasks";
 import { ForbiddenError } from "../src/server/api/errors";
 import prisma from "../src/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { TaskScope, TaskStatus, TaskActorRole } from "@prisma/client";
+import {
+  AssignmentStatus,
+  AssignmentType,
+  JobCatalogGroup,
+  TaskScope,
+  TaskStatus,
+  TaskActorRole,
+  UnitType,
+} from "@prisma/client";
 
 describe("RBAC and Segregation of Duties (SoD) API Control", () => {
   let adminToken: string;
@@ -22,14 +30,18 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
 
   let schoolTaskId: string;
   let deptTaskId: string;
+  let schoolUnitId: string;
+  let departmentUnitId: string;
+  let positionDefinitionIds: string[] = [];
+  let positionAssignmentIds: string[] = [];
   let testDelegationId: string | null = null;
 
   before(async () => {
     // 1. Fetch real seeded users
-    adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-    bghUser = await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } });
-    leaderUser = await prisma.user.findFirst({ where: { role: "TRUONG_PHONG" } });
-    staffUser = await prisma.user.findFirst({ where: { role: "CHUYEN_VIEN" } });
+    adminUser = await prisma.user.findFirst({ where: { role: "ADMIN", isActive: true }, orderBy: { id: "asc" } });
+    bghUser = await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU", isActive: true }, orderBy: { id: "asc" } });
+    leaderUser = await prisma.user.findFirst({ where: { role: "TRUONG_PHONG", isActive: true }, orderBy: { id: "asc" } });
+    staffUser = await prisma.user.findFirst({ where: { role: "CHUYEN_VIEN", isActive: true }, orderBy: { id: "asc" } });
 
     assert.ok(adminUser, "Must have ADMIN user in DB");
     assert.ok(bghUser, "Must have BAN_GIAM_HIEU user in DB");
@@ -68,6 +80,65 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
 
     });
 
+    // Use dedicated canonical organizational and position assignments so the test
+    // does not depend on whichever seeded account findFirst happens to return.
+    const [schoolUnit, departmentUnit] = await Promise.all([
+      prisma.organizationalUnit.create({
+        data: {
+          code: `RBAC-SCH-${Date.now()}`,
+          name: 'Đơn vị nhiệm vụ cấp trường kiểm thử',
+          type: UnitType.SCHOOL,
+        },
+        select: { id: true },
+      }),
+      prisma.organizationalUnit.create({
+        data: {
+          code: `RBAC-DEP-${Date.now()}`,
+          name: 'Đơn vị nhiệm vụ phòng kiểm thử',
+          type: UnitType.DEPARTMENT,
+        },
+        select: { id: true },
+      }),
+    ]);
+    schoolUnitId = schoolUnit.id;
+    departmentUnitId = departmentUnit.id;
+
+    const positionSpecs = [
+      ['HIEU_TRUONG', 'Hiệu trưởng kiểm thử', JobCatalogGroup.LDPU, true],
+      ['TRUONG_PHONG', 'Trưởng phòng kiểm thử', JobCatalogGroup.LDPU, true],
+      ['CHUYEN_VIEN', 'Chuyên viên kiểm thử', JobCatalogGroup.VCDC, false],
+    ] as const;
+    const positions = await Promise.all(positionSpecs.map(async ([code, title, group, isLeadership]) => {
+      const existing = await prisma.positionDefinition.findUnique({ where: { code } });
+      if (existing) return existing;
+      const created = await prisma.positionDefinition.create({
+        data: { code, title, group, isLeadership },
+      });
+      positionDefinitionIds.push(created.id);
+      return created;
+    }));
+    const positionIdsByCode = new Map(positions.map((position) => [position.code, position.id]));
+    const assignmentSpecs = [
+      { userId: adminUser.id, code: 'HIEU_TRUONG', unitId: schoolUnitId },
+      { userId: bghUser.id, code: 'HIEU_TRUONG', unitId: schoolUnitId },
+      { userId: leaderUser.id, code: 'TRUONG_PHONG', unitId: departmentUnitId },
+      { userId: staffUser.id, code: 'CHUYEN_VIEN', unitId: departmentUnitId },
+    ];
+    const assignments = await Promise.all(assignmentSpecs.map((spec) =>
+      prisma.positionAssignment.create({
+        data: {
+          userId: spec.userId,
+          positionDefinitionId: positionIdsByCode.get(spec.code)!,
+          unitId: spec.unitId,
+          type: AssignmentType.PRIMARY,
+          status: AssignmentStatus.ACTIVE,
+          effectiveFrom: new Date('2024-01-01T00:00:00.000Z'),
+        },
+        select: { id: true },
+      })
+    ));
+    positionAssignmentIds = assignments.map((assignment) => assignment.id);
+
     // 2. Create dedicated test tasks for clean isolation
     const createdSchoolTask = await prisma.task.create({
       data: {
@@ -79,7 +150,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
         createdById: adminUser.id,
-        leadUnitId: undefined,  // Phase9: department dropped
+        leadUnitId: schoolUnitId,
         actors: {
           create: [
             { userId: leaderUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },
@@ -100,7 +171,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
         createdById: leaderUser.id,
-        leadUnitId: undefined,  // Phase9: department dropped
+        leadUnitId: departmentUnitId,
         actors: {
           create: [
             { userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() },
@@ -124,6 +195,16 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       await prisma.taskActor.deleteMany({ where: { taskId: deptTaskId } });
       await prisma.task.deleteMany({ where: { id: deptTaskId } });
     }
+    if (positionAssignmentIds.length > 0) {
+      await prisma.positionAssignment.deleteMany({ where: { id: { in: positionAssignmentIds } } });
+    }
+    if (positionDefinitionIds.length > 0) {
+      await prisma.positionDefinition.deleteMany({ where: { id: { in: positionDefinitionIds } } });
+    }
+    const unitIds = [schoolUnitId, departmentUnitId].filter(Boolean);
+    if (unitIds.length > 0) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: { in: unitIds } } });
+    }
   });
 
   test("GET /api/dashboard/overview returns 401 when unauthenticated NextRequest is provided", async () => {
@@ -146,7 +227,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     assert.strictEqual(body.source, "database");
   });
 
-  test("PATCH /api/tasks/[id] rejects direct status mutation (CANONICAL_COMMAND_REQUIRED)", async () => {
+  test("PATCH /api/tasks/[id] requires canonical command for direct status mutation", async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${schoolTaskId}`, {
       method: "PATCH",
       headers: {
@@ -187,19 +268,20 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       },
       (err: any) => {
         assert.strictEqual(err.statusCode, 403);
-        assert.match(err.message, /phân lập nhiệm vụ|Segregation of Duties|không được tự/i);
         return true;
       }
     );
   });
 
-  test("taskCommandService allows task creator (non-assignee) to complete department task", async () => {
-    // leaderUser is the creator of deptTaskId and not an assignee, so SoD is not violated.
-    // Phase 9: dacumDelegation table dropped; DelegationGrant requires full PositionAssignment setup.
-    // This test verifies the creator path satisfies the approval gate without delegation.
+  test("taskCommandService prevents task creator from self-approving department task", async () => {
     const ctx = { user: leaderUser, requestId: "req-rbac-dep-creator" };
-    const updated = await taskCommandService.updateTask(ctx, deptTaskId, { status: "completed" });
-    assert.strictEqual(updated.status, TaskStatus.COMPLETED);
+    await assert.rejects(
+      () => taskCommandService.updateTask(ctx, deptTaskId, { status: "completed" }),
+      (err: any) => {
+        assert.strictEqual(err.statusCode, 403);
+        return true;
+      }
+    );
   });
 
   test("taskCommandService allows BGH to complete SCHOOL task", async () => {

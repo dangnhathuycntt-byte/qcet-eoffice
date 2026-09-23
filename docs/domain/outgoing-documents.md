@@ -16,10 +16,10 @@
 
 1. **Nguyên tắc Tách bạch Bốn Hành vi Pháp lý (Four Distinct Legal Acts Invariant)**:
    Hệ thống phân định rạch ròi, độc lập và tuyệt đối không gộp 04 hành vi pháp lý sau trong quy trình văn bản đi:
-   - (1) *Phê duyệt nội dung bản thảo* (`CONTENT_REVIEW`) != 
-   - (2) *Thẩm tra thể thức, kỹ thuật trình bày* (`FORMAT_RECORDS_REVIEW`) != 
-   - (3) *Ký số của người có thẩm quyền* (`AUTHORIZED_SIGN`) != 
-   - (4) *Cấp số và Đóng dấu số cơ quan* (`NUMBERED` & `ORGANIZATION_DIGITAL_SIGN`).
+   - (1) *Phê duyệt nội dung bản thảo* (`CONTENT_REVIEW`) !=
+   - (2) *Thẩm tra thể thức, kỹ thuật trình bày* (`FORMAT_CHECK`) !=
+   - (3) *Ký số của người có thẩm quyền* (`AUTHORIZED_SIGN`) !=
+   - (4) *Cấp số và Đóng dấu số cơ quan* (`NUMBERED` & `ORGANIZATION_SIGNED`).
 
 2. **Vai trò Gác cổng Thể thức của Văn thư (Clerical Functional Gatekeeper Invariant)**:
    Bộ phận Văn thư thuộc Phòng Hành chính - Quản trị là người gác cổng thể thức, kỹ thuật trình bày (Phụ lục I NĐ 30/2020/NĐ-CP), thẩm quyền ký, danh sách nơi nhận và tính đầy đủ của hồ sơ trình ký. **Văn thư KHÔNG PHẢI là người phê duyệt nội dung chuyên môn**, không được can thiệp sửa đổi các điều khoản hoặc nội dung nghiệp vụ do đơn vị soạn thảo chịu trách nhiệm.
@@ -54,7 +54,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ CỔNG 2: VĂN THƯ CƠ QUAN THẨM TRA (CLERICAL GATEKEEPER)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
-  FORMAT_RECORDS_REVIEW ────┐ (Văn thư từ chối thể thức / thiếu hồ sơ)
+  FORMAT_CHECK ────┐ (Văn thư từ chối thể thức / thiếu hồ sơ)
     │                       │
     │ ──────────────────────┴────────► [TRẢ VỀ ĐƠN VỊ SỬA THỂ THỨC / BỔ SUNG]
     │
@@ -72,7 +72,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
   NUMBERED (Cấp số đi liên tục từ DocumentNumberSequence)
     │
     ▼
-  ORGANIZATION_DIGITAL_SIGN (Áp chữ ký số cơ quan / Dấu đỏ QCET)
+  ORGANIZATION_SIGNED (Áp chữ ký số cơ quan / Dấu đỏ QCET)
     │
     ▼
   ISSUED (Chính thức có hiệu lực pháp lý)
@@ -93,10 +93,10 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
 |---|---|---|---|---|
 | `DRAFT` | Bản thảo khởi tạo | Chuyên viên đơn vị soạn thảo văn bản, đính kèm phiếu trình, dự thảo tệp PDF/Docx và các tài liệu tham chiếu. | Chuyên viên (`CHUYEN_VIEN`) | `DANG_XU_LY` |
 | `CONTENT_REVIEW` | Duyệt nội dung bản thảo | Trưởng đơn vị kiểm tra sự cần thiết, cơ sở pháp lý, tính chính xác của số liệu và nội dung chuyên môn. | Trưởng đơn vị (`TRUONG_PHONG`) | `CHO_PHE_DUYET` |
-| `FORMAT_RECORDS_REVIEW` | Thẩm tra thể thức & hồ sơ | Văn thư kiểm tra thể thức, kỹ thuật trình bày (Phụ lục I NĐ 30), thẩm quyền ký, danh sách nơi nhận. | Văn thư (`VAN_THU`) | `CHO_PHE_DUYET` |
+| `FORMAT_CHECK` | Thẩm tra thể thức & hồ sơ | Văn thư kiểm tra thể thức, kỹ thuật trình bày (Phụ lục I NĐ 30), thẩm quyền ký, danh sách nơi nhận. | Văn thư (`VAN_THU`) | `CHO_PHE_DUYET` |
 | `AUTHORIZED_SIGN` | Lãnh đạo ký số | Hiệu trưởng / Phó Hiệu trưởng sử dụng chữ ký số cá nhân chuyên dùng công vụ ký xác nhận ban hành. | Ban Giám hiệu (`BAN_GIAM_HIEU`) | `CHO_PHE_DUYET` |
 | `NUMBERED` | Đã cấp số văn bản đi | Sau khi có chữ ký lãnh đạo, Văn thư ấn định Số và ký hiệu văn bản đi chính thức vào Sổ đi của năm. | Văn thư (`VAN_THU`) | `CHO_PHE_DUYET` |
-| `ORGANIZATION_DIGITAL_SIGN` | Đóng dấu số cơ quan | Văn thư dùng chứng thư số tổ chức (Con dấu điện tử QCET) ký trùm lên 1/3 chữ ký lãnh đạo về bên trái. | Văn thư (`VAN_THU`) | `DA_HOAN_THANH` |
+| `ORGANIZATION_SIGNED` | Đóng dấu số cơ quan | Văn thư dùng chứng thư số tổ chức (Con dấu điện tử QCET) ký trùm lên 1/3 chữ ký lãnh đạo về bên trái. | Văn thư (`VAN_THU`) | `DA_HOAN_THANH` |
 | `ISSUED` | Đã ban hành chính thức | Văn bản hoàn tất thể thức pháp lý, sẵn sàng phân phối đến các đơn vị, cá nhân hoặc cơ quan ngoài trường. | Văn thư (`VAN_THU`) | `DA_HOAN_THANH` |
 | `DELIVERED` | Đã gửi / Đã chuyển phát | Văn bản được gửi thành công qua Trục VDXP, LGSP, thông báo nội bộ E-Office hoặc chuyển giao bưu tá. | Văn thư (`VAN_THU`) | `DA_HOAN_THANH` |
 | `FILED` | Đã lập hồ sơ công việc | Chuyên viên soạn thảo thu thập toàn bộ các bản thảo, phiếu trình, ý kiến thẩm định và bản lưu vào Hồ sơ. | Chuyên viên (`CHUYEN_VIEN`) | `LUU_THEO_DOI` |
@@ -114,7 +114,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
 - **Hình thức thể hiện:** Ký nháy (Ký duyệt chuyên môn - Initial Signature) tại trang cuối của phần nội dung hoặc góc phải dưới cùng của trang cuối cùng bản thảo.
 - **Ranh giới:** Phê duyệt này **chỉ có giá trị nội bộ** trong luồng chuẩn bị, không xác lập giá trị pháp lý ra bên ngoài Nhà trường.
 
-### 3.2. Thẩm tra Thể thức, Kỹ thuật Trình bày & Hồ sơ (`FORMAT_RECORDS_REVIEW`)
+### 3.2. Thẩm tra Thể thức, Kỹ thuật Trình bày & Hồ sơ (`FORMAT_CHECK`)
 - **Tác nhân:** Bộ phận Văn thư (Phòng Hành chính - Quản trị).
 - **Bản chất:** Gác cổng hành chính nhà nước theo Điều 14, 16 và Phụ lục I Nghị định số 30/2020/NĐ-CP.
 - **Nội dung kiểm tra bắt buộc:**
@@ -133,7 +133,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
   - Được bảo chứng bằng Chứng thư số cá nhân do Ban Cơ yếu Chính phủ (VGCA) cấp.
 - **Ranh giới:** Tại thời điểm Lãnh đạo ký, văn bản **chưa có Số và Ngày ban hành chính thức**, vì số và ngày chỉ được ấn định khi Văn thư vào sổ và đóng dấu cơ quan.
 
-### 3.4. Cấp số & Đóng dấu số Cơ quan (`NUMBERED` & `ORGANIZATION_DIGITAL_SIGN`)
+### 3.4. Cấp số & Đóng dấu số Cơ quan (`NUMBERED` & `ORGANIZATION_SIGNED`)
 - **Tác nhân:** Bộ phận Văn thư (được Hiệu trưởng giao quyền giữ và sử dụng con dấu điện tử).
 - **Bản chất:** Xác thực văn bản chính thức thuộc thẩm quyền ban hành của Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn , có giá trị giao dịch pháp lý công vụ (Điều 15, Điều 18 NĐ 30/2020/NĐ-CP và NĐ 68/2024/NĐ-CP).
 - **Thứ tự thực hiện bắt buộc:**
@@ -279,7 +279,7 @@ Theo Phụ lục IV ban hành kèm theo Nghị định số 30/2020/NĐ-CP, Sổ
 | **3** | Tên loại & Trích yếu nội dung | Text | Tên loại văn bản và tóm tắt nội dung chính của văn bản đi. | `Document.category` & `Document.summary` |
 | **4** | Người ký văn bản | String (150) | Chức vụ và họ tên của người có thẩm quyền ký ban hành. | `Document.signerTitle` & `Document.signerName` |
 | **5** | Nơi nhận văn bản | Text | Danh sách các cơ quan, đơn vị, cá nhân nhận văn bản. | `Document.recipientList` |
-| **6** | Đơn vị soạn thảo | String (50) | Tên Phòng, Khoa hoặc Trung tâm chủ trì dự thảo văn bản. | `Document.draftingDeptId` |
+| **6** | Đơn vị soạn thảo | String (50) | Tên đơn vị chủ trì dự thảo văn bản; tài liệu này không quyết định mô hình hoặc nguồn dữ liệu drafting unit. | Chưa có field canonical trong `DocumentOutgoingWorkflow`; không dùng `Document.draftingDeptId` |
 | **7** | Người nhận bản lưu | Text | Bộ phận Văn thư và cá nhân/đơn vị lưu bản gốc. | Lưu trong `Document.notes` |
 | **8** | Số lượng bản phát hành | Integer | Số lượng bản giấy in phát hành (nếu có phát hành văn bản giấy song song). | `Document.distributedCopies` |
 | **9** | Ngày chuyển văn bản | Date | Ngày Văn thư thực hiện gửi văn bản qua mạng hoặc chuyển bưu chính. | `Document.registeredDate` (hoặc Dispatch Time) |

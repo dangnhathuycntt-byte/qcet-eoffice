@@ -170,7 +170,8 @@ export async function resolveUserContext(
       },
     },
   });
-  const activePosition = dbUser?.positionAssignments[0]?.positionDefinition;
+  const activeAssignment = dbUser?.positionAssignments[0];
+  const activePosition = activeAssignment?.positionDefinition;
   let activePositionCode = activePosition?.code;
   if (!activePositionCode) {
     const roleUpper = (session.role || "").toUpperCase();
@@ -256,8 +257,8 @@ export async function resolveUserContext(
     role: session.role,
     systemRole: session.role === "ADMIN" ? "SYSTEM_ADMIN" : session.role,
     activePositionCode,
-    departmentId: (session as any).departmentId || undefined,
-    departmentCode: undefined,
+    departmentId: (session as any).departmentId || activeAssignment?.unitId || undefined,
+    departmentCode: activeAssignment?.unit?.code || undefined,
     portfolios,
     isActive: true,
     delegationGrants: formattedGrants,
@@ -417,7 +418,7 @@ export async function presentDocument(
     type: "document_incoming",
     scope: "SCHOOL",
     securityLevel: doc.securityLevel || "NORMAL",
-    leadDepartmentId: (doc as any).leadDepartmentId || undefined,
+    leadDepartmentId: doc.incomingWorkflow.leadUnitId || undefined,
   };
 
   await assertAuthorized(user, "document.incoming.present", resource);
@@ -655,7 +656,7 @@ export async function assignUnitWork(
     throw new NotFoundError("Không tìm thấy văn bản đến hoặc quy trình xử lý liên quan.");
   }
 
-  const leadUnitId = doc.incomingWorkflow.leadUnitId || (doc as any).leadDepartmentId;
+  const leadUnitId = doc.incomingWorkflow.leadUnitId;
   if (!leadUnitId) {
     throw new ValidationError("Văn bản chưa có đơn vị chủ trì.");
   }

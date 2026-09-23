@@ -443,7 +443,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       signerId: principalUser.id,
       signerName: principalUser.name,
       draftingUserId: staffFacultyA.id,
-      draftingDeptId: "dept_faculty_a",
+      draftingUnitId: "dept_faculty_a",
       metadata: {
         status: "SIGNED",
         isSigned: true,
@@ -697,7 +697,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       type: "document_outgoing",
       signerId: principalUser.id,
       signerName: principalUser.name,
-      draftingDeptId: "dept_faculty_a",
+      draftingUnitId: "dept_faculty_a",
     };
 
     test("DoD 9.1: Clerical officer (VAN_THU) numbering outgoing document -> ALLOWED", async () => {

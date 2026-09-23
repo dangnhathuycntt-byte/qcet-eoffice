@@ -5,7 +5,8 @@ import { PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable, PATCH as patchDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole, UnitType, JobCatalogGroup } from '@prisma/client';
+import { buildTaskContext, taskStateMachine } from '../src/domain/tasks/state-machine';
 
 describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   let staffUser: any;
@@ -16,12 +17,13 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   let bghToken: string;
   let testTaskId: string;
   let testDeliverableId: string;
+  let leaderAssignmentId: string;
   const createdTaskIds: string[] = [];
 
   before(async () => {
     // Find or create test users
     const dept = await prisma.organizationalUnit.findFirst() || await prisma.organizationalUnit.create({
-      data: { id: 'TEST_DEPT', code: 'TEST_DEPT', name: 'Phòng Thử Nghiệm', type: 'PHONG_BAN' as any, status: 'ACTIVE' as any }
+      data: { id: 'TEST_DEPT', code: 'TEST_DEPT', name: 'Phòng Thử Nghiệm', type: UnitType.DEPARTMENT, status: 'ACTIVE' }
     });
 
     staffUser = await prisma.user.upsert({
@@ -59,6 +61,38 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
 
       }
     });
+
+    const leaderPosition = await prisma.positionDefinition.upsert({
+      where: { code: 'TRUONG_PHONG' },
+      update: {},
+      create: {
+        code: 'TRUONG_PHONG',
+        title: 'Trưởng phòng',
+        group: JobCatalogGroup.LDPU,
+        isLeadership: true,
+      },
+    });
+    const existingLeaderAssignment = await prisma.positionAssignment.findFirst({
+      where: {
+        userId: leaderUser.id,
+        positionDefinitionId: leaderPosition.id,
+        unitId: dept.id,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+    if (!existingLeaderAssignment) {
+      const leaderAssignment = await prisma.positionAssignment.create({
+        data: {
+          userId: leaderUser.id,
+          positionDefinitionId: leaderPosition.id,
+          unitId: dept.id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+        },
+      });
+      leaderAssignmentId = leaderAssignment.id;
+    }
 
     staffToken = signSessionToken({
       id: staffUser.id,
@@ -98,7 +132,8 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
 
-        createdById: leaderUser.id,
+        createdById: bghUser.id,
+        leadUnitId: dept.id,
         actors: {
           create: {
             userId: staffUser.id,
@@ -112,11 +147,32 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   });
 
   after(async () => {
+    if (leaderAssignmentId) {
+      await prisma.positionAssignment.delete({ where: { id: leaderAssignmentId } });
+    }
     if (createdTaskIds.length > 0) {
       await prisma.taskDeliverable.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.taskActor.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.task.deleteMany({ where: { id: { in: createdTaskIds } } });
     }
+  });
+
+  test('buildTaskContext uses canonical TaskActor/leadUnitId and excludes reviewers from makers', () => {
+    const reviewerId = 'reviewer-sod';
+    const context = buildTaskContext({
+      id: 'task-context-sod',
+      createdById: 'creator-sod',
+      leadUnitId: 'unit-sod',
+      actors: [
+        { userId: staffUser.id, role: 'DRI', isPrimaryDRI: true },
+        { userId: reviewerId, role: 'REVIEWER', isPrimaryDRI: false },
+      ],
+    });
+
+    assert.strictEqual(context.departmentId, 'unit-sod');
+    assert.deepStrictEqual(context.assigneeIds, [staffUser.id]);
+    assert.strictEqual(taskStateMachine.isMaker({ id: reviewerId, role: 'TRUONG_PHONG' }, context), false);
+    assert.strictEqual(taskStateMachine.isMaker({ id: staffUser.id, role: 'CHUYEN_VIEN' }, context), true);
   });
 
   test('staff assignee cannot directly mark task as COMPLETED (400/403 blocked)', async () => {

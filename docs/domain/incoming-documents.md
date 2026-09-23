@@ -22,11 +22,11 @@
 
 3. **Nguyên tắc Chỉ đạo Hai cấp Chuẩn tắc (Two-Tier Directive Model)**:
    Luồng chỉ đạo văn bản đến tại QCET tuân thủ mô hình 2 cấp:
-   - Cấp 1 (Trường -> Đơn vị): Lãnh đạo có thẩm quyền (Ban Giám hiệu) ghi bút phê chỉ định Đơn vị chủ trì (`leadDepartmentId`), Đơn vị phối hợp (`collaboratorIds`), thời hạn xử lý của Trường (`dueDate`).
-   - Cấp 2 (Đơn vị -> Cá nhân): Trưởng đơn vị chủ trì (`TRUONG_PHONG`) phân công Cán bộ thụ lý chính (`leadUserId`), các thành viên phối hợp và giao hạn xử lý chi tiết của đơn vị (`subDueDate` <= `dueDate`).
+   - Cấp 1 (Trường -> Đơn vị): Lãnh đạo có thẩm quyền (Ban Giám hiệu) ghi nhận trên `DocumentIncomingWorkflow`, chỉ định đơn vị chủ trì (`leadUnitId`), các đơn vị phối hợp (`coordinatingUnitIds`) và thời hạn xử lý (`deadline`). Đơn vị được tham chiếu là `OrganizationalUnit`.
+   - Cấp 2 (Đơn vị -> Cá nhân): Trưởng đơn vị chủ trì lập `UnitWorkAssignment` với cán bộ thụ lý chính (`driUserId`), các thành viên phối hợp và hạn xử lý (`deadline`); nếu phát sinh `Task`, quan hệ người–việc được ghi bằng `TaskActor` với `role: DRI, isPrimaryDRI: true` và `role: COLLABORATOR`.
 
 4. **Nguyên tắc Tự động Hóa Văn bản - Nhiệm vụ (Document-to-Task Automation)**:
-   Ngay khi Lãnh đạo có thẩm quyền hoàn tất bút phê xác định đơn vị chủ trì, hệ thống tự động sinh một bản ghi `Task` cấp trường (`scope: SCHOOL`) liên kết 2 chiều với văn bản (`Document.linkedTaskId` <-> `Task.documentId`). Trưởng đơn vị chủ trì chịu trách nhiệm quản lý Task này.
+   Khi Lãnh đạo có thẩm quyền hoàn tất chỉ đạo, hệ thống lưu đơn vị chủ trì trên `DocumentIncomingWorkflow.leadUnitId` và thời hạn trên `DocumentIncomingWorkflow.deadline`. Việc tạo `Task` theo dõi tác nghiệp được thực hiện khi cấp đơn vị phân công; nếu tạo, `Task.leadUnitId` trỏ tới cùng `OrganizationalUnit` và các quan hệ người–việc dùng `TaskActor`. Không suy luận hay ghi nhận đơn vị qua các field `Department` cũ.
 
 5. **Nguyên tắc Toàn vẹn & An toàn Dữ liệu (Integrity & Security Invariant)**:
    Tệp đính kèm số hóa từ văn bản giấy bắt buộc scan màu định dạng PDF/A, độ phân giải tối thiểu 200 dpi, rõ con dấu đỏ và chữ ký. Mỗi tệp được hệ thống gắn mã băm SHA-256 chống chối bỏ. Tuyệt đối cấm số hóa và đăng tải văn bản thuộc danh mục bí mật nhà nước (Mật, Tối mật, Tuyệt mật) lên hệ thống Internet thông thường.
@@ -35,7 +35,7 @@
 
 ## 2. VÒNG ĐỜI VĂN BẢN ĐẾN (CANONICAL LIFECYCLE STATE MACHINE)
 
-Vòng đời chuẩn tắc của văn bản đến gồm 11 trạng thái tuần tự và các nhánh rẽ nghiệp vụ:
+`IncomingDocumentStatus` trong schema có 10 trạng thái; các nhánh xử lý khác không được biểu diễn bằng enum này:
 
 ```
 [TIẾP NHẬN]
@@ -52,18 +52,16 @@ Vòng đời chuẩn tắc của văn bản đến gồm 11 trạng thái tuần
      ▼ (Bút phê BGH cấp 1)          │
   DIRECTED                          │
      │                              │
-     ▼ (Tự động kích hoạt Task)     │
-LEAD_UNIT_ASSIGNED                  │
+     ▼ (Chỉ định đơn vị chủ trì)     │
+ASSIGNED_TO_LEAD_UNIT               │
      │                              │
      ▼ (Trưởng đơn vị phân công)    │
-PERSON_ASSIGNED                     │
+UNIT_ASSIGNED_PERSON                │
      │                              │
      ▼ (Chuyên viên bắt đầu xử lý)  │
 IN_PROGRESS                         │
      │                              │
-     ▼ (Nộp báo cáo/dự thảo)        │
-RESULT_SUBMITTED                    │
-     │                              │
+     │ (Nộp báo cáo/dự thảo)        │
      ▼ (Lãnh đạo đơn vị & BGH duyệt)│
   RESOLVED                          │
      │                              │
@@ -71,11 +69,12 @@ RESULT_SUBMITTED                    │
    FILED                            │
      │                              │
      ▼ (Nộp lưu trữ cơ quan)        │
-  ARCHIVED                          ▼
-                               [REJECTED / RETURNED]
+  ARCHIVED
+
+Nhánh chuyển trả chưa có mã tương ứng trong `IncomingDocumentStatus`.
 ```
 
-### Chi tiết 11 Trạng thái Vòng đời
+### Chi tiết 10 trạng thái `IncomingDocumentStatus`
 
 | Mã trạng thái | Tên trạng thái | Diễn giải nghiệp vụ | Tác nhân chính | Trạng thái Prisma DocumentStatus |
 |---|---|---|---|---|
@@ -83,10 +82,9 @@ RESULT_SUBMITTED                    │
 | `REGISTERED` | Đã vào sổ | Đã trích xuất thông tin, scan tệp PDF/A, cấp Số đến chính thức trong Sổ văn bản đến của năm. | Văn thư (`VAN_THU`) | `CHO_PHAN_CONG` |
 | `PRESENTED` | Đã trình lãnh đạo | Đã lập phiếu trình điện tử gửi tới Hiệu trưởng hoặc Phó Hiệu trưởng phụ trách lĩnh vực. | Văn thư (`VAN_THU`) | `CHO_PHAN_CONG` |
 | `DIRECTED` | Đã có bút phê chỉ đạo | Lãnh đạo Nhà trường đã ghi ý kiến chỉ đạo, chọn đơn vị chủ trì, đơn vị phối hợp và hạn xử lý. | Ban Giám hiệu (`BAN_GIAM_HIEU`) | `CHO_PHAN_CONG` |
-| `LEAD_UNIT_ASSIGNED` | Đã giao đơn vị chủ trì | Hệ thống kích hoạt tạo Task liên kết; văn bản xuất hiện trong hộp thư đến xử lý của Trưởng đơn vị. | Hệ thống / Trưởng đơn vị | `DANG_XU_LY` |
-| `PERSON_ASSIGNED` | Đã phân công cán bộ | Trưởng đơn vị đã giao đích danh chuyên viên/giảng viên thụ lý chính và người phối hợp trong đơn vị. | Trưởng đơn vị (`TRUONG_PHONG`) | `DANG_XU_LY` |
+| `ASSIGNED_TO_LEAD_UNIT` | Đã xác định đơn vị chủ trì | `DocumentIncomingWorkflow.leadUnitId` tham chiếu một `OrganizationalUnit`; workflow sẵn sàng cho phân công cấp đơn vị. | Ban Giám hiệu (`BAN_GIAM_HIEU`) | `CHO_PHAN_CONG` |
+| `UNIT_ASSIGNED_PERSON` | Đã phân công cán bộ | `UnitWorkAssignment` ghi `driUserId`, cộng tác viên và hạn xử lý; Task (nếu tạo) dùng `TaskActor`. | Trưởng đơn vị (`TRUONG_PHONG`) | `CHO_PHAN_CONG` |
 | `IN_PROGRESS` | Đang giải quyết | Chuyên viên thụ lý đang thực hiện các bước nghiệp vụ, thu thập tài liệu, lấy ý kiến chuyên môn. | Chuyên viên (`CHUYEN_VIEN`) | `DANG_XU_LY` |
-| `RESULT_SUBMITTED` | Đã nộp kết quả xử lý | Chuyên viên hoàn thành dự thảo văn bản trả lời, báo cáo kết quả hoặc đề xuất, nộp lên Trưởng phòng duyệt. | Chuyên viên (`CHUYEN_VIEN`) | `CHO_PHE_DUYET` |
 | `RESOLVED` | Đã giải quyết xong | Kết quả xử lý được Lãnh đạo đơn vị và Ban Giám hiệu nghiệm thu (hoặc ban hành văn bản đi trả lời). | Lãnh đạo đơn vị / BGH | `DA_HOAN_THANH` |
 | `FILED` | Đã lập hồ sơ công việc | Chuyên viên thu thập đầy đủ văn bản đến, chỉ đạo, dự thảo, sản phẩm đầu ra vào Mã hồ sơ công việc điện tử. | Chuyên viên (`CHUYEN_VIEN`) | `LUU_THEO_DOI` |
 | `ARCHIVED` | Đã nộp lưu trữ cơ quan | Đơn vị bàn giao hồ sơ điện tử đóng gói cho Lưu trữ lịch sử Nhà trường (Phòng HC-QT) kèm biên bản nộp lưu. | Lưu trữ viên (`VAN_THU`) | `LUU_THEO_DOI` |
@@ -107,18 +105,18 @@ RESULT_SUBMITTED                    │
 
 #### B. Lãnh đạo có thẩm quyền / Ban Giám hiệu (`BAN_GIAM_HIEU`)
 - **Xem xét & Định hướng**: Căn cứ Quyết định 420/QĐ-CĐKTCNQN về phân công lĩnh vực công tác, Hiệu trưởng hoặc Phó Hiệu trưởng phụ trách trực tiếp xem xét văn bản đến.
-- **Ghi Bút phê điện tử (`DocumentDirective`)**:
-  - Xác định đơn vị chủ trì (`assignedDeptId`): Duy nhất 01 đơn vị chịu trách nhiệm chính (Phòng, Khoa, hoặc Trung tâm).
-  - Xác định đơn vị phối hợp (`collaboratorIds`): Danh sách các phòng/khoa có trách nhiệm cung cấp thông tin, tham gia thẩm định.
-  - Xác định hạn xử lý (`deadline`): Căn cứ vào tính chất công việc hoặc thời hạn cơ quan cấp trên yêu cầu.
+- **Ghi chỉ đạo điện tử trên `DocumentIncomingWorkflow`**:
+  - Xác định đơn vị chủ trì (`DocumentIncomingWorkflow.leadUnitId`): Duy nhất 01 `OrganizationalUnit` chịu trách nhiệm chính (Phòng, Khoa hoặc Trung tâm).
+  - Xác định đơn vị phối hợp (`DocumentIncomingWorkflow.coordinatingUnitIds`): Danh sách định danh `OrganizationalUnit` có trách nhiệm cung cấp thông tin, tham gia thẩm định.
+  - Xác định hạn xử lý (`DocumentIncomingWorkflow.deadline`): Căn cứ vào tính chất công việc hoặc thời hạn cơ quan cấp trên yêu cầu.
   - Nội dung chỉ đạo cụ thể (`instruction`): Nêu rõ mục tiêu, yêu cầu chuyên môn, cách thức giải quyết.
 
 #### C. Trưởng đơn vị chủ trì (`TRUONG_PHONG` - Trưởng phòng/Trưởng khoa/Giám đốc trung tâm)
 - **Tiếp nhận chỉ đạo cấp 1**: Nhận thông báo văn bản chuyển về đơn vị kèm Task tự động phát sinh.
 - **Phân công cấp 2 trong đơn vị**:
-  - Chọn Cán bộ thụ lý chính (`leadUserId`): Một chuyên viên hoặc giảng viên thuộc đơn vị.
-  - Chọn cán bộ phối hợp nội bộ: Phân bổ nếu nhiệm vụ phức tạp cần nhiều người.
-  - Thiết lập hạn xử lý nội bộ (`subDueDate`): Bắt buộc thời hạn này phải trước hoặc bằng thời hạn Ban Giám hiệu giao cho đơn vị ít nhất 01 ngày làm việc để Trưởng đơn vị có thời gian thẩm định kết quả.
+  - Chọn Cán bộ thụ lý chính (`UnitWorkAssignment.driUserId`): Một chuyên viên hoặc giảng viên thuộc `OrganizationalUnit` chủ trì.
+  - Chọn cán bộ phối hợp nội bộ (`UnitWorkAssignment.collaboratorUserIds`): Phân bổ nếu nhiệm vụ phức tạp cần nhiều người.
+  - Thiết lập hạn xử lý (`UnitWorkAssignment.deadline`): Không vượt quá `DocumentIncomingWorkflow.deadline` khi workflow có hạn cấp trường.
   - Ghi chỉ đạo nội bộ: Hướng dẫn nghiệp vụ chi tiết cho cán bộ thụ lý.
 - **Kiểm tra, đôn đốc & Thẩm tra kết quả**: Đánh giá sản phẩm dự thảo, báo cáo do chuyên viên nộp trước khi trình Ban Giám hiệu phê duyệt.
 
@@ -159,15 +157,16 @@ Hệ thống QCET E-Office thiết kế luồng chỉ đạo phân tầng bảo 
 ┌─────────────────────────────────────────────────────────────┐
 │ TIER 1: CHỈ ĐẠO CẤP TRƯỜNG (School Leader -> Unit)          │
 │ Tác nhân: Hiệu trưởng / Phó Hiệu trưởng theo QĐ 420         │
-│ Hành động: Ghi nhận Bút phê điện tử (DocumentDirective)     │
-│  - Đơn vị chủ trì: Department ID (Khoa/Phòng/Trung tâm)    │
-│  - Đơn vị phối hợp: Array of Department IDs                 │
-│  - Hạn xử lý của trường: Deadline (ICT Date)                │
+│ Hành động: Ghi chỉ đạo trên DocumentIncomingWorkflow      │
+│  - Đơn vị chủ trì: DocumentIncomingWorkflow.leadUnitId     │
+│    (OrganizationalUnit: Khoa/Phòng/Trung tâm)               │
+│  - Đơn vị phối hợp: coordinatingUnitIds (unit IDs)         │
+│  - Hạn xử lý của trường: DocumentIncomingWorkflow.deadline │
 │  - Nội dung chỉ đạo: Directive text                         │
 │                                                             │
 │ HỆ QUẢ HỆ THỐNG:                                            │
-│  - Tự động sinh Task: scope=SCHOOL, linkedTaskId            │
-│  - Document.status -> DANG_XU_LY                            │
+│  - Workflow.status -> ASSIGNED_TO_LEAD_UNIT                 │
+│  - Document.status -> CHO_PHAN_CONG                          │
 │  - Notification gửi tới Trưởng đơn vị chủ trì               │
 └─────────────────────────────────────────────────────────────┘
              │
@@ -176,13 +175,14 @@ Hệ thống QCET E-Office thiết kế luồng chỉ đạo phân tầng bảo 
 │ TIER 2: CHỈ ĐẠO CẤP ĐƠN VỊ (Unit Head -> Specialist)        │
 │ Tác nhân: Trưởng phòng / Trưởng khoa chủ trì                │
 │ Hành động: Cập nhật điều phối trên Task Hub & Document      │
-│  - Cán bộ thụ lý chính: User ID (Document.leadUserId)       │
-│  - Cán bộ phối hợp nội bộ: Collaborator User IDs            │
-│  - Hạn xử lý nội bộ: subDueDate <= School Deadline          │
+│  - Cán bộ thụ lý chính: UnitWorkAssignment.driUserId        │
+│  - Cán bộ phối hợp nội bộ: collaboratorUserIds              │
+│  - Hạn xử lý nội bộ: UnitWorkAssignment.deadline             │
 │  - Hướng dẫn chuyên môn: Internal instructions              │
 │                                                             │
 │ HỆ QU�� HỆ THỐNG:                                            │
-│  - Task.primaryOwnerId = leadUserId                         │
+│  - Task.leadUnitId = leadUnitId                             │
+│  - TaskActor(role=DRI, isPrimaryDRI=true)                   │
 │  - Task.status = IN_PROGRESS                                │
 │  - Notification gửi tới Cán bộ thụ lý qua Web App & Telegram│
 └─────────────────────────────────────────────────────────────┘
@@ -192,7 +192,7 @@ Hệ thống QCET E-Office thiết kế luồng chỉ đạo phân tầng bảo 
 ```
 
 ### Các ràng buộc nghiệp vụ của mô hình 2 cấp:
-1. **Ràng buộc thời hạn (Deadline Monotonicity)**: `subDueDate` (Hạn giao chuyên viên) không bao giờ được phép lớn hơn `dueDate` (Hạn Lãnh đạo trường giao). Hệ thống tự động từ chối nếu Trưởng đơn vị đặt hạn vượt quá hạn cấp Trường.
+1. **Ràng buộc thời hạn (Deadline Monotonicity)**: `UnitWorkAssignment.deadline` (hạn giao chuyên viên) không bao giờ được phép lớn hơn `DocumentIncomingWorkflow.deadline` (hạn Lãnh đạo trường giao), khi hạn cấp trường được thiết lập.
 2. **Ràng buộc thẩm quyền giao việc**: Chỉ Lãnh đạo trường mới có quyền đổi Đơn vị chủ trì. Nếu đơn vị nhận thấy văn bản không thuộc chức năng nhiệm vụ, Trưởng đơn vị phải làm Phiếu chuyển trả hoặc báo cáo Ban Giám hiệu điều chỉnh bút phê, không được tự ý chuyển sang đơn vị khác.
 3. **Ràng buộc ủy quyền (Delegation Safety)**: Trong trường hợp Trưởng phòng ủy quyền cho Phó Trưởng phòng điều phối theo module `DelegationGrant` (hoặc `DacumDelegation`), người được ủy quyền có toàn quyền thực hiện Tier 2 nhưng không được tự phân công chính mình thành cán bộ thụ lý chính nhằm né tránh kiểm soát (Self-Assignment Prevention).
 4. **Cơ chế Xin gia hạn thời hạn giải quyết văn bản đến (`RequestExtension`)**:
@@ -205,74 +205,44 @@ Hệ thống QCET E-Office thiết kế luồng chỉ đạo phân tầng bảo 
 
 ## 5. CƠ CHẾ LIÊN THÔNG VĂN BẢN VỚI TÁC NGHIỆP (DOCUMENT-TO-TASK PIPELINE)
 
-Khi Lãnh đạo Ban Giám hiệu lưu bút phê cấp 1, hệ thống thực thi giao dịch nguyên khối (Prisma Transaction) để chuyển hóa văn bản hành chính thành thực thể tác nghiệp có thể theo dõi tiến độ:
+Khi Lãnh đạo Ban Giám hiệu lưu chỉ đạo cấp 1, hệ thống ghi nhận `DocumentIncomingWorkflow.leadUnitId`; ở cấp đơn vị, khi tạo Task để theo dõi tác nghiệp, dùng `Task.leadUnitId` cùng `OrganizationalUnit` và quan hệ người–việc `TaskActor`. Ví dụ rút gọn dưới đây minh họa ánh xạ field, không phải hàm có thể chạy độc lập:
 
 ```typescript
-// Đặc tả logic chuyển hóa Văn bản đến thành Nhiệm vụ (Document-to-Task)
-async function executeDocumentDirectivePipeline(
-  directive: DocumentDirectiveInput,
-  actor: UserSession
-) {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Lưu bản ghi Bút phê điện tử
-    const createdDirective = await tx.documentDirective.create({
-      data: {
-        documentId: directive.documentId,
-        leaderId: actor.userId,
-        instruction: directive.instruction,
-        deadline: directive.deadline ? new Date(directive.deadline) : null,
-        assignedDeptId: directive.assignedDeptId,
-        collaboratorIds: directive.collaboratorIds?.join(","),
-        isTaskGenerated: true,
-      },
-    });
+// Mô hình canonical Phase 9: chỉ đạo cấp trường lưu trên workflow.
+await tx.documentIncomingWorkflow.update({
+  where: { documentId: input.documentId },
+  data: {
+    status: "ASSIGNED_TO_LEAD_UNIT",
+    directedAt: new Date(),
+    leaderId: actor.userId,
+    leadUnitId: input.leadUnitId, // OrganizationalUnit.id
+    coordinatingUnitIds: input.coordinatingUnitIds ?? [],
+    leadershipInstruction: input.leadershipInstruction,
+    deadline: input.deadline ? new Date(input.deadline) : null,
+  },
+});
 
-    // 2. Tự động sinh Nhiệm vụ cấp trường (Task) trong Task Hub
-    const document = await tx.document.findUniqueOrThrow({
-      where: { id: directive.documentId },
-    });
-
-    const generatedTask = await tx.task.create({
-      data: {
-        title: `[VB Đến ${document.registrationNumber}/${document.documentYear}] ${document.summary}`,
-        description: `Ý KIẾN CHỈ ĐẠO CỦA LÃNH ĐẠO TRƯỜNG:\n${directive.instruction}\n\nTrích yếu văn bản: ${document.summary}\nCơ quan ban hành: ${document.issuingAuthority}\nSố ký hiệu gốc: ${document.originalNumber}`,
-        scope: "SCHOOL",
-        departmentId: directive.assignedDeptId,
-        dueDate: directive.deadline ? new Date(directive.deadline) : document.dueDate,
-        priority: mapUrgencyToPriority(document.urgency),
-        status: "NOT_STARTED",
-        documentId: document.id, // Liên kết Task -> Document
-        createdById: actor.userId,
-      },
-    });
-
-    // 3. Cập nhật liên kết ngược trên Document và chuyển trạng thái
-    await tx.document.update({
-      where: { id: document.id },
-      data: {
-        status: "DANG_XU_LY",
-        leadDepartmentId: directive.assignedDeptId,
-        dueDate: directive.deadline ? new Date(directive.deadline) : document.dueDate,
-        linkedTaskId: generatedTask.id,
-      },
-    });
-
-    // 4. Khởi tạo Thông báo đẩy (In-app Notification Queue) tới Trưởng đơn vị
-    await tx.notification.create({
-      data: {
-        userId: await getDepartmentHeadUserId(tx, directive.assignedDeptId),
-        title: `Văn bản đến cần chỉ đạo: Số ${document.registrationNumber}/${document.documentYear}`,
-        body: `Lãnh đạo trường đã giao đơn vị chủ trì xử lý: "${document.summary}"`,
-        category: "document",
-        type: "DIRECTIVE_RECEIVED",
-        linkHref: `/tasks?selectedTaskId=${generatedTask.id}`,
-      },
-    });
-
-    return { createdDirective, generatedTask };
-  });
-}
+// Ở Tier 2, UnitWorkAssignment ghi DRI và cộng tác viên. Khi cần theo dõi
+// tác nghiệp, Task dùng cùng leadUnitId và quan hệ TaskActor canonical.
+const task = await tx.task.create({
+  data: {
+    scope: "DEPARTMENT",
+    status: "IN_PROGRESS",
+    leadUnitId: input.leadUnitId,
+    actors: {
+      create: [
+        { userId: actor.userId, role: "ASSIGNER" },
+        { userId: input.driUserId, role: "DRI", isPrimaryDRI: true },
+        ...(input.collaboratorUserIds ?? []).map((userId) => ({
+          userId, role: "COLLABORATOR",
+        })),
+      ],
+    },
+  },
+});
 ```
+
+`DocumentIncomingWorkflow.leadUnitId` là nguồn đơn vị chủ trì; không dùng các field đơn vị cũ (`DocumentDirective.assignedDeptId`, `Document.leadDepartmentId`, `Task.departmentId`) hoặc suy ra đơn vị từ `Document.leadUserId`.
 
 ---
 
@@ -288,7 +258,7 @@ Sổ đăng ký văn bản đến trên QCET E-Office tuân thủ đầy đủ 0
 | **4** | Số ký hiệu gốc | String (100) | Số và ký hiệu văn bản ghi trên văn bản đến gốc (vd: 125/TCGDNN-VP). | `Document.originalNumber` |
 | **5** | Ngày ban hành gốc | Date | Ngày ghi trên văn bản gốc của cơ quan ban hành. | `Document.issuedDate` |
 | **6** | Tên loại & Trích yếu | Text | Tên loại văn bản (Công văn, Quyết định, Tờ trình...) và trích yếu nội dung. | `Document.category` & `Document.summary` |
-| **7** | Đơn vị / Người nhận | String | Đơn vị chủ trì tiếp nhận hoặc Lãnh đạo Nhà trường được chuyển giao. | `Document.leadDepartmentId` & `Document.leadUserId` |
+| **7** | Đơn vị / Người nhận | String | Đơn vị chủ trì tiếp nhận hoặc Lãnh đạo Nhà trường được chuyển giao. | `DocumentIncomingWorkflow.leadUnitId` (`OrganizationalUnit`) & `Document.leadUserId` (nếu có người nhận) |
 | **8** | Hạn giải quyết | Date | Thời hạn cuối cùng để xử lý văn bản theo chỉ đạo hoặc theo văn bản gốc. | `Document.dueDate` |
 | **9** | Ghi chú | Text | Ký hiệu lưu hồ sơ, mức độ khẩn, tình trạng xử lý hoặc văn bản trả lời liên quan. | `Document.notes` & `Document.urgency` |
 

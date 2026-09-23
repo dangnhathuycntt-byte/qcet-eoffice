@@ -397,7 +397,7 @@ export function TaskPeekPreviewModal({
                       "size-3 shrink-0",
                       st.status === "COMPLETED" ? "text-emerald-600" : "text-muted-foreground/30"
                     )}
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                   />
                   <span className={cn("truncate", st.status === "COMPLETED" && "line-through text-muted-foreground/50")}>
                     {st.title}

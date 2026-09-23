@@ -18,6 +18,11 @@ import {
   toNotificationDTOArray,
   toNotificationListResponseDTO,
 } from '@/server/dto';
+import {
+  toExecutiveResolutionDTO,
+  toExecutiveResolutionDTOArray,
+  type ExecutiveResolutionDTO,
+} from '@/server/dto/executive-dto';
 
 describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
   // ==========================================================================
@@ -444,11 +449,14 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       type: 'VAN_BAN_DEN',
       issuedDate: new Date('2026-08-20T00:00:00.000Z'),
       status: 'DANG_XU_LY',
-      leadDepartmentId: 'dept-01',
-      leadDepartment: {
-        id: 'dept-01',
-        name: 'Phòng Đào tạo',
-        shortName: 'PDT',
+      leadUnitId: 'unit-01',
+      incomingWorkflow: {
+        leadUnitId: 'unit-01',
+        leadUnit: {
+          id: 'unit-01',
+          name: 'Phòng Đào tạo',
+          code: 'PDT',
+        },
       },
       signerName: 'Vũ Thị Hạnh',
       signerTitle: 'Phó Giám đốc Sở',
@@ -499,8 +507,9 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       type: 'VAN_BAN_DI',
       releaseDate: '2026-09-01T08:00:00.000Z',
       status: 'CHO_PHE_DUYET',
-      draftingDept: {
-        id: 'dept-dt',
+      leadUnitId: 'unit-dt',
+      leadUnit: {
+        id: 'unit-dt',
         name: 'Phòng Đào tạo',
         code: 'DT',
       },
@@ -525,7 +534,7 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
 
       // Department extracted from leadDepartment
       assert.deepStrictEqual(dto.department, {
-        id: 'dept-01',
+        id: 'unit-01',
         code: 'PDT',
         name: 'Phòng Đào tạo',
       });
@@ -541,7 +550,7 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       assert.strictEqual((dto as any).internalSignerCertHash, undefined);
     });
 
-    it('toDocumentListDTO maps outgoing documents with draftingDept and structured signer', () => {
+    it('toDocumentListDTO maps outgoing documents with canonical leadUnit and structured signer', () => {
       const dto = toDocumentListDTO(rawOutgoingDoc);
 
       assert.ok(dto);
@@ -549,7 +558,7 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       assert.strictEqual(dto.documentCode, '56/CĐKTCN-ĐT');
       assert.strictEqual(dto.type, 'VAN_BAN_DI');
       assert.deepStrictEqual(dto.department, {
-        id: 'dept-dt',
+        id: 'unit-dt',
         code: 'DT',
         name: 'Phòng Đào tạo',
       });
@@ -619,6 +628,88 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
   // ==========================================================================
   // 4. NOTIFICATION DTO SUITE
   // ==========================================================================
+  describe('Executive Resolution DTO Mappings', () => {
+    const baseResolution = {
+      id: 'resolution-001',
+      taskId: 'task-001',
+      actorId: 'actor-001',
+      resolutionType: 'EXTEND_DEADLINE',
+      directiveNote: null,
+      grantedDays: 5,
+      previousDueDate: null,
+      newDueDate: new Date('2026-10-10T00:00:00.000Z'),
+      previousOwnerId: null,
+      newOwnerId: null,
+      createdAt: new Date('2026-09-20T08:00:00.000Z'),
+      actor: null,
+    };
+
+    it('maps canonical leadUnitId to nullable departmentId', () => {
+      const dto = toExecutiveResolutionDTO({
+        ...baseResolution,
+        task: {
+          id: 'task-001',
+          code: 'NV-001',
+          title: 'Nhiệm vụ có đơn vị chủ trì',
+          status: 'IN_PROGRESS',
+          priority: 'HIGH',
+          dueDate: new Date('2026-10-15T00:00:00.000Z'),
+          leadUnitId: 'unit-001',
+        },
+      });
+
+      assert.strictEqual(dto.task?.departmentId, 'unit-001');
+
+      const withoutUnit = toExecutiveResolutionDTO({
+        ...baseResolution,
+        task: {
+          id: 'task-002',
+          code: 'NV-002',
+          title: 'Nhiệm vụ chưa gán đơn vị',
+          status: 'IN_PROGRESS',
+          priority: 'NORMAL',
+          dueDate: new Date('2026-10-15T00:00:00.000Z'),
+          leadUnitId: null,
+        },
+      });
+      assert.strictEqual(withoutUnit.task?.departmentId, null);
+    });
+
+    it('maps missing task as null and maps arrays', () => {
+      assert.strictEqual(toExecutiveResolutionDTO({ ...baseResolution, task: null }).task, null);
+
+      const dtos = toExecutiveResolutionDTOArray([
+        {
+          ...baseResolution,
+          task: {
+            id: 'task-001',
+            code: 'NV-001',
+            title: 'Nhiệm vụ',
+            status: 'IN_PROGRESS',
+            priority: 'NORMAL',
+            dueDate: new Date('2026-10-15T00:00:00.000Z'),
+            leadUnitId: null,
+          },
+        },
+      ]);
+      assert.strictEqual(dtos.length, 1);
+      assert.strictEqual(dtos[0].task?.departmentId, null);
+    });
+
+    it('allows a null departmentId in the DTO type', () => {
+      const task: ExecutiveResolutionDTO['task'] = {
+        id: 'task-001',
+        code: 'NV-001',
+        title: 'Nhiệm vụ',
+        status: 'IN_PROGRESS',
+        priority: 'NORMAL',
+        dueDate: '2026-10-15T00:00:00.000Z',
+        departmentId: null,
+      };
+      assert.strictEqual(task?.departmentId, null);
+    });
+  });
+
   describe('Notification DTO Mappings', () => {
     const rawNotification = {
       id: 'notif-001',

@@ -33,7 +33,7 @@ import {
   ReviewDeliverableInputSchema,
   ApproveTaskInputSchema,
 } from '@/contracts/tasks';
-import { taskStateMachine } from '@/domain/tasks/state-machine';
+import { buildTaskContext, taskStateMachine } from '@/domain/tasks/state-machine';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
@@ -672,7 +672,9 @@ export class TaskCommandService {
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
       include: {
-        actors: { select: { userId: true, role: true } },
+        actors: { select: { userId: true, role: true, isPrimaryDRI: true } },
+        deliverables: { select: { uploadedById: true } },
+        taskResults: { select: { submittedByUserId: true, submittedAt: true }, orderBy: { submittedAt: 'desc' } },
       },
     });
 
@@ -809,24 +811,20 @@ export class TaskCommandService {
 
       const mappedStatus = statusMap[status];
       if (mappedStatus) {
-        await requireTaskAuthorization(user.id, 'task.update_execution', existing);
+        const authorizationAction = mappedStatus === TaskStatus.COMPLETED
+          ? 'task.approve'
+          : 'task.update_execution';
+        await requireTaskAuthorization(user.id, authorizationAction, existing);
 
         // Canonical State Machine Validation
         const fsmResult = taskStateMachine.canTransition(
           {
             id: user.id,
             role: user.role,
-            departmentId: null,
+            departmentId: user.departmentId ?? null,
             isDelegated: false,
           },
-          {
-            id: existing.id,
-            scope: existing.scope,
-            createdById: existing.createdById,
-            departmentId: existing.leadUnitId,
-            assignees: existing.actors?.filter((a) => a.userId != null).map((a) => ({ userId: a.userId as string, roleInTask: a.role })),
-            assigneeIds: existing.actors?.map((a) => a.userId).filter((id): id is string => id != null),
-          },
+          buildTaskContext(existing),
           existing.status,
           mappedStatus
         );
@@ -1400,6 +1398,8 @@ export class TaskCommandService {
         task: {
           include: {
             actors: true,
+            deliverables: true,
+            taskResults: { orderBy: { submittedAt: 'desc' } },
           },
         },
       },
@@ -1409,7 +1409,16 @@ export class TaskCommandService {
       throw new NotFoundError('Không tìm thấy minh chứng cho nhiệm vụ này');
     }
 
-    await requireTaskAuthorization(user.id, 'task.review', deliverable.task);
+    const reviewResource = {
+      ...deliverable.task,
+      createdById: deliverable.task.createdById,
+      leadUnitId: deliverable.task.leadUnitId,
+    };
+    await requireTaskAuthorization(
+      user.id,
+      reviewStatus === 'APPROVED' ? 'task.approve' : 'task.review',
+      reviewResource
+    );
 
     const validStatus =
       reviewStatus === 'APPROVED'
@@ -1548,6 +1557,8 @@ export class TaskCommandService {
         task: {
           include: {
             actors: true,
+            deliverables: true,
+            taskResults: { orderBy: { submittedAt: 'desc' } },
           },
         },
       },

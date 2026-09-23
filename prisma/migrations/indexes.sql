@@ -13,9 +13,9 @@
 CREATE INDEX IF NOT EXISTS idx_tasks_scope_status_due_date
 ON "tasks" ("scope", "status", "due_date");
 
--- Accelerates department task views filtered by status and due date
-CREATE INDEX IF NOT EXISTS idx_tasks_dept_status_due_date
-ON "tasks" ("department_id", "status", "due_date");
+-- Accelerates unit task views filtered by status and due date
+CREATE INDEX IF NOT EXISTS "tasks_lead_unit_id_status_due_date_idx"
+ON "tasks" ("lead_unit_id", "status", "due_date");
 
 -- Accelerates subtask hierarchy traversals and tree decompositions
 CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id
@@ -33,9 +33,9 @@ ON "tasks" ("updated_at" DESC);
 CREATE INDEX IF NOT EXISTS idx_tasks_academic_year
 ON "tasks" ("academic_year");
 
--- Compound index for department and academic period navigation
-CREATE INDEX IF NOT EXISTS idx_tasks_dept_academic_period
-ON "tasks" ("department_id", "academic_year", "academic_month");
+-- Compound index for unit and academic period navigation
+CREATE INDEX IF NOT EXISTS idx_tasks_lead_unit_academic_period
+ON "tasks" ("lead_unit_id", "academic_year", "academic_month");
 
 -- --------------------------------------------------------------------
 -- 2. NOTIFICATION COMPOSITE INDEXES
@@ -62,14 +62,6 @@ ON "documents" ("type", "status", "due_date");
 -- Accelerates original number lookup for incoming/outgoing documents
 CREATE INDEX IF NOT EXISTS idx_documents_original_number
 ON "documents" ("original_number");
-
--- Accelerates lead department document aggregations
-CREATE INDEX IF NOT EXISTS idx_documents_lead_dept_id
-ON "documents" ("lead_department_id");
-
--- Accelerates drafting department document filtering
-CREATE INDEX IF NOT EXISTS idx_documents_drafting_dept_id
-ON "documents" ("drafting_dept_id");
 
 -- --------------------------------------------------------------------
 -- 4. PARTIAL INDEXES (High-Efficiency Filtered Indexes)

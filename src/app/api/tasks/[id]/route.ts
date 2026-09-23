@@ -80,6 +80,35 @@ export async function GET(req: Request, routeContext: RouteContext) {
   }
 }
 
+async function assertNoDirectWorkflowMutation(
+  request: Request,
+  maxBytes: number
+): Promise<void> {
+  const rawBody = await request.clone().text();
+  if (Buffer.byteLength(rawBody, 'utf8') > maxBytes) {
+    throw new ValidationError('Payload vượt quá giới hạn cho phép');
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    // Leave malformed JSON handling to parseAndValidateJson for the canonical response.
+    return;
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return;
+
+  const forbiddenFields = ['status', 'approved', 'resolution'];
+  if (forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(body, field))) {
+    throw new ValidationError(
+      'Cấm cập nhật trực tiếp trạng thái hoặc quyết định phê duyệt qua PATCH; hãy dùng canonical domain action.',
+      undefined,
+      'CANONICAL_COMMAND_REQUIRED'
+    );
+  }
+}
+
 export async function PATCH(req: Request, routeContext: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
@@ -97,6 +126,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const { id } = await Promise.resolve(routeContext.params);
 
+    await assertNoDirectWorkflowMutation(req, MAX_TASK_CONTENT_BYTES);
     const validatedBody = await parseAndValidateJson(req, UpdateTaskMetadataSchema, { maxBytes: MAX_TASK_CONTENT_BYTES });
 
     // Fetch existing task to check existence, OCC, and authorization

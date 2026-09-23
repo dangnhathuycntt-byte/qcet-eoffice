@@ -414,7 +414,7 @@ export function InboxView() {
                               <Icon size={14} strokeWidth={1.5} className="shrink-0" />
                               <span>{opt.label}</span>
                             </div>
-                            {isSelected && <Check size={12} strokeWidth={2} />}
+                            {isSelected && <Check size={12} strokeWidth={1.5} />}
                           </button>
                         );
                       })}
@@ -600,7 +600,7 @@ export function InboxView() {
             /* Empty Selection State */
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
               <div className="size-16 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-center text-muted-foreground/50 mb-3 shadow-2xs">
-                <InboxIcon size={32} strokeWidth={1.2} />
+                <InboxIcon size={32} strokeWidth={1.5} />
               </div>
               <h3 className="text-sm font-semibold text-foreground">Chưa chọn thông báo nào</h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1">
@@ -721,7 +721,7 @@ export function InboxView() {
 
                 {formatNotificationContent(selectedNotification).directiveNote && (
                   <div className="p-3.5 rounded-lg bg-amber-50/80 border border-amber-300 text-amber-950 space-y-1">
-                    <div className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                    <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
                       <ShieldCheck size={14} />
                       <span>Ý kiến chỉ đạo / Ghi chú điều hành:</span>
                     </div>
@@ -738,7 +738,7 @@ export function InboxView() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Layers size={15} className="text-primary" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <span className="text-xs font-bold text-muted-foreground">
                         Nhiệm vụ liên quan
                       </span>
                     </div>

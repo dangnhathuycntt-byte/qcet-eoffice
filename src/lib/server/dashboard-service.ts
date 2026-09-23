@@ -26,6 +26,7 @@ export const VALID_TASK_CATEGORIES = new Set<string>([
 export interface LiveDashboardOptions {
   userId?: string;
   departmentId?: string;
+  restrictSubTasksToUser?: boolean;
   academicMonth?: number;
   academicYear?: string;
 }
@@ -85,6 +86,11 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
             // evidence links. `leadUnitId` is the canonical Task-level ownership field (mapPrismaTaskToStaffTask
             // never populates `assignedToDepartmentId`, which the route-level prune relied on).
             ...(scopedDepartmentId ? { leadUnitId: scopedDepartmentId } : {}),
+            // A user without a unit is scoped to task participation above; apply the same
+            // boundary to nested tasks so a visible parent cannot expose unrelated subtasks.
+            ...(options?.restrictSubTasksToUser && options.userId
+              ? { actors: { some: { userId: options.userId } } }
+              : {}),
           },
           include: {
             leadUnit: true,

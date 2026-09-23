@@ -566,30 +566,34 @@ export function buildTaskContext(task: any): TaskContext {
   const assigneeIds: string[] = [];
   const assignees: TaskAssigneeInfo[] = [];
 
+  const addAssignee = (userId: unknown, roleInTask?: unknown) => {
+    if (typeof userId !== 'string' || !userId || roleInTask === 'REVIEWER') return;
+    if (!assigneeIds.includes(userId)) assigneeIds.push(userId);
+    if (!assignees.some((a) => a.userId === userId)) {
+      assignees.push({ userId, roleInTask: typeof roleInTask === 'string' ? roleInTask : undefined });
+    }
+  };
+
+  if (Array.isArray(task.actors)) {
+    for (const actor of task.actors) {
+      addAssignee(actor.userId || actor.user?.id, actor.role);
+    }
+  }
+
   if (Array.isArray(task.assignees)) {
     for (const a of task.assignees) {
-      const uId = typeof a === 'string' ? a : (a.userId || a.id || a.user?.id);
-      if (uId) {
-        if (!assigneeIds.includes(uId)) {
-          assigneeIds.push(uId);
-        }
-        assignees.push({
-          userId: uId,
-          roleInTask: typeof a === 'object' ? (a.roleInTask || a.role) : undefined,
-        });
-      }
+      addAssignee(
+        typeof a === 'string' ? a : (a.userId || a.id || a.user?.id),
+        typeof a === 'object' ? (a.roleInTask || a.role) : undefined,
+      );
     }
   }
 
   if (Array.isArray(task.assigneeIds)) {
-    for (const id of task.assigneeIds) {
-      if (typeof id === 'string' && !assigneeIds.includes(id)) {
-        assigneeIds.push(id);
-        assignees.push({ userId: id });
-      }
-    }
+    for (const id of task.assigneeIds) addAssignee(id);
   }
 
+  const taskResults = Array.isArray(task.taskResults) ? task.taskResults : [];
   const deliverableUploadedByIds: string[] = [];
   if (Array.isArray(task.deliverables)) {
     for (const d of task.deliverables) {
@@ -613,17 +617,23 @@ export function buildTaskContext(task: any): TaskContext {
     scope: task.scope,
     creatorId: task.creatorId || task.createdById || null,
     createdById: task.createdById || task.creatorId || null,
-    departmentId: task.departmentId || task.department?.id || null,
+    departmentId: task.leadUnitId || task.departmentId || task.department?.id || null,
     primaryOwnerId:
       task.primaryOwnerId ||
       task.driId ||
+      task.leadUserId ||
+      task.actors?.find((a: any) => a.role === 'DRI' && a.isPrimaryDRI)?.userId ||
       task.leadAssignee?.id ||
       task.leadAssignee?.userId ||
       null,
-    driId: task.driId || null,
+    driId:
+      task.driId ||
+      task.leadUserId ||
+      task.actors?.find((a: any) => a.role === 'DRI' && a.isPrimaryDRI)?.userId ||
+      null,
     assigneeIds,
     assignees,
-    submittedByUserId: task.submittedByUserId || null,
+    submittedByUserId: task.submittedByUserId || taskResults[0]?.submittedByUserId || null,
     deliverableUploadedByIds,
     deliverables: task.deliverables,
   };

@@ -256,6 +256,7 @@ export async function POST(
             status: TaskStatus.NOT_STARTED,
             priority: priorityEnum,
             dueDate: dueDateObj,
+            startDate: dueDateObj,
             leadUnitId,
             createdById: authUser.id,
             academicMonth: monthNum,

@@ -161,6 +161,7 @@ export interface BaseAuthorizationResource {
   targetUserId?: string;
   submittedByUserId?: string;
   uploadedById?: string;
+  deliverableUploadedByIds?: string[];
   dossierOwnerId?: string;
   archivistId?: string;
   metadata?: Record<string, unknown>;

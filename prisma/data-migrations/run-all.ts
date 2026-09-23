@@ -37,9 +37,9 @@ export async function runAllDataMigrations(
   };
 
   console.log("================================================================================");
-  console.log("[SPRINT 7 DATA CUTOVER] BÁO CÁO TỔNG KẾT DATA PARITY:");
-  console.log(`- Tổng số bản ghi legacy đã rà soát: ${totalLegacyRecordsAudited}`);
-  console.log(`- Quan hệ ReBAC canonical đã rà soát: ${assigneeReport.totalLegacyAssignees}, Vi phạm: ${assigneeReport.mismatchedAssignees}, Parity: ${assigneeReport.paritySuccess ? "PASS" : "FAIL"}`);
+  console.log("[SPRINT 7 DATA CUTOVER] BÁO CÁO KIỂM TRA BẤT BIẾN CANONICAL:");
+  console.log(`- Tổng số nhiệm vụ canonical đã rà soát: ${assigneeReport.integrity.totalTasks}`);
+  console.log(`- Quan hệ TaskActor canonical đã rà soát: ${assigneeReport.integrity.totalActors}, Vi phạm: ${assigneeReport.mismatchedAssignees}, Kết quả: ${assigneeReport.paritySuccess ? "PASS" : "FAIL"}`);
   if (assigneeReport.integrity.violations.length > 0) {
     for (const violation of assigneeReport.integrity.violations) {
       console.log(
@@ -47,7 +47,7 @@ export async function runAllDataMigrations(
       );
     }
   }
-  console.log(`- TOÀN BỘ BẤT BIẾN CANONICAL: ${overallParitySuccess ? "PASS" : "FAILED"}`);
+  console.log(`- Bất biến TaskActor/đơn vị canonical: ${overallParitySuccess ? "PASS" : "FAILED"}`);
   console.log("================================================================================");
 
   return masterReport;

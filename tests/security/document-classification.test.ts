@@ -172,7 +172,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       const doc: DocumentClassificationTarget = {
         id: 'doc_internal_unit1',
         securityLevel: DocumentSecurityLevel.THUONG,
-        leadDepartmentId: 'unit_1',
+        leadUnitId: 'unit_1',
       };
 
       const result = canAccessClassification(ctx, doc);
@@ -189,7 +189,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       const doc: DocumentClassificationTarget = {
         id: 'doc_internal_unit1',
         securityLevel: DocumentSecurityLevel.THUONG,
-        leadDepartmentId: 'unit_1',
+        leadUnitId: 'unit_1',
       };
 
       const result = canAccessClassification(ctx, doc);
@@ -206,7 +206,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       const doc: DocumentClassificationTarget = {
         id: 'doc_restricted_unit1',
         classification: 'RESTRICTED',
-        leadDepartmentId: 'unit_1',
+        leadUnitId: 'unit_1',
         creatorId: 'usr_other',
       };
 
@@ -459,7 +459,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           id: `dept_a_${runId}`,
           code: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
-          type: "PHONG_BAN" as any,
+          type: "DEPARTMENT",
           status: "ACTIVE" as any,
         },
       });
@@ -469,7 +469,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           id: `dept_b_${runId}`,
           code: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
-          type: "PHONG_BAN" as any,
+          type: "DEPARTMENT",
           status: "ACTIVE" as any,
         },
       });

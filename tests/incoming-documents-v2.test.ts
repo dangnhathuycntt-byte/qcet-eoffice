@@ -8,6 +8,7 @@ import {
   DocumentSecurityLevel,
   IncomingDocumentStatus,
   UnitType,
+  JobCatalogGroup,
 } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import {
@@ -43,10 +44,12 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
   let specialistDri: any;
   let specialistCollab: any;
   let unprivilegedStaff: any;
+  const positionAssignmentIds: string[] = [];
+  const createdPositionDefinitionIds: string[] = [];
 
   before(async () => {
     // 1. Create or retrieve test organizational units & departments
-    await prisma.organizationalUnit.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-lead-${testRunId}`,
         code: `QLDT_${testRunId.slice(-4)}`,
@@ -54,16 +57,9 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.organizationalUnit.create({
-      data: {
-        id: `dept-lead-${testRunId}`,
-        name: `Phòng Quản lý Đào tạo ${testRunId}`,
-        shortName: `QLDT_${testRunId.slice(-4)}`,
-      },
-    });
     deptLeadId = d1.id;
 
-    await prisma.organizationalUnit.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-coord-${testRunId}`,
         code: `KHTC_${testRunId.slice(-4)}`,
@@ -71,16 +67,9 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.organizationalUnit.create({
-      data: {
-        id: `dept-coord-${testRunId}`,
-        name: `Phòng Kế hoạch Tài chính ${testRunId}`,
-        shortName: `KHTC_${testRunId.slice(-4)}`,
-      },
-    });
     deptCoordId = d2.id;
 
-    await prisma.organizationalUnit.create({
+    const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrelated-${testRunId}`,
         code: `CNTT_${testRunId.slice(-4)}`,
@@ -88,16 +77,38 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.FACULTY,
       },
     });
-    const d3 = await prisma.organizationalUnit.create({
-      data: {
-        id: `dept-unrelated-${testRunId}`,
-        name: `Khoa Công nghệ Thông tin ${testRunId}`,
-        shortName: `CNTT_${testRunId.slice(-4)}`,
-      },
-    });
     deptUnrelatedId = d3.id;
 
-    // 2. Create test users with authentic roles & titles
+    // 2. Create canonical position definitions and position assignments for authorization
+    const positionResults = await Promise.all([
+      ['HIEU_TRUONG', 'Hiệu trưởng', true],
+      ['TRUONG_PHONG', 'Trưởng phòng', true],
+      ['GIANG_VIEN', 'Giảng viên', false],
+      ['VAN_THU', 'Văn thư', false],
+    ].map(async ([code, title, isLeadership]) => {
+      const existing = await prisma.positionDefinition.findUnique({
+        where: { code: code as string },
+      });
+      if (existing) return { position: existing, created: false };
+
+      const position = await prisma.positionDefinition.create({
+        data: {
+          code: code as string,
+          title: title as string,
+          group: isLeadership ? JobCatalogGroup.LDPU : JobCatalogGroup.VCMN,
+          isLeadership: isLeadership as boolean,
+        },
+      });
+      return { position, created: true };
+    }));
+    createdPositionDefinitionIds.push(
+      ...positionResults.filter((result) => result.created).map((result) => result.position.id)
+    );
+    const positionByCode = new Map(
+      positionResults.map(({ position }) => [position.code, position])
+    );
+
+    // 3. Create test users with authentic roles & titles
     clerkUser = await prisma.user.create({
       data: {
         id: `user-clerk-${testRunId}`,
@@ -174,6 +185,28 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
 
       },
     });
+
+    const assignmentInputs = [
+      [clerkUser.id, 'VAN_THU', `dept-lead-${testRunId}`],
+      [rectorUser.id, 'HIEU_TRUONG', deptLeadId],
+      [unitHeadLead.id, 'TRUONG_PHONG', deptLeadId],
+      [unitHeadUnrelated.id, 'TRUONG_PHONG', deptUnrelatedId],
+      [specialistDri.id, 'GIANG_VIEN', deptLeadId],
+      [specialistCollab.id, 'GIANG_VIEN', deptLeadId],
+      [unprivilegedStaff.id, 'GIANG_VIEN', deptUnrelatedId],
+    ] as const;
+    for (const [userId, positionCode, unitId] of assignmentInputs) {
+      const assignment = await prisma.positionAssignment.create({
+        data: {
+          userId,
+          positionDefinitionId: positionByCode.get(positionCode)!.id,
+          unitId,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+        },
+      });
+      positionAssignmentIds.push(assignment.id);
+    }
   });
 
   after(async () => {
@@ -190,12 +223,15 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
 
       await prisma.documentDirective.deleteMany({
         where: {
-          OR: [
-            { leaderId: rectorUser.id },
-            { assignedDeptId: deptLeadId },
-          ],
+          document: { summary: { contains: testRunId } },
         },
       });
+
+      if (positionAssignmentIds.length > 0) {
+        await prisma.positionAssignment.deleteMany({
+          where: { id: { in: positionAssignmentIds } },
+        });
+      }
 
       await prisma.documentIncomingWorkflow.deleteMany({
         where: {
@@ -229,6 +265,12 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
 
+      if (createdPositionDefinitionIds.length > 0) {
+        await prisma.positionDefinition.deleteMany({
+          where: { id: { in: createdPositionDefinitionIds } },
+        });
+      }
+
       await prisma.user.deleteMany({
         where: {
           id: {
@@ -251,11 +293,6 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
 
-      await prisma.organizationalUnit.deleteMany({
-        where: {
-          id: { in: [deptLeadId, deptCoordId, deptUnrelatedId] },
-        },
-      });
     } catch (err) {
       console.error("Cleanup error:", err);
     }
@@ -456,9 +493,13 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       assert.equal(result.workflow.status, IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT);
       assert.equal(result.workflow.leadUnitId, deptLeadId);
       assert.deepEqual(result.workflow.coordinatingUnitIds, [deptCoordId]);
-      assert.ok(result.directive);
-      assert.equal(result.directive.leadUnitId, deptLeadId);
-      assert.equal(result.directive.leaderId, rectorUser.id);
+      assert.equal(result.directive, null);
+
+      const workflowRecord = await prisma.documentIncomingWorkflow.findUnique({
+        where: { documentId: docId },
+      });
+      assert.equal(workflowRecord?.leadUnitId, deptLeadId);
+      assert.equal(workflowRecord?.leaderId, rectorUser.id);
 
       // Verify Audit Event
       const audit = await prisma.auditEvent.findFirst({
@@ -584,7 +625,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         include: { actors: true },
       });
       assert.ok(task);
-      assert.equal(task.departmentId, deptLeadId);
+      assert.equal(task.leadUnitId, deptLeadId);
       assert.ok(task.actors.some((a) => a.userId === specialistDri.id));
 
       // Verify Audit Event

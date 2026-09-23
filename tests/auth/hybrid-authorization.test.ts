@@ -328,7 +328,7 @@ describe("Hybrid Authorization Engine (QCET E-Office)", () => {
     const docResource: AuthorizationResource = {
       id: "doc_business_001",
       type: "document_outgoing",
-      draftingDeptId: "dept_qldt",
+      draftingUnitId: "dept_qldt",
     };
 
     test("denies System Admin from creating business tasks", async () => {
@@ -606,7 +606,7 @@ describe("Hybrid Authorization Engine (QCET E-Office)", () => {
         id: "doc_dorm_repair",
         type: "document_outgoing",
         portfolio: "ADMINISTRATION_LOGISTICS",
-        draftingDeptId: "dept_hcqt",
+        draftingUnitId: "dept_hcqt",
       };
 
       const res = await authorize(viceRectorAcademic, "document.outgoing.sign_kt", logisticsDoc);
@@ -636,7 +636,7 @@ describe("Hybrid Authorization Engine (QCET E-Office)", () => {
         id: "doc_dorm_repair_with_del",
         type: "document_outgoing",
         portfolio: "ADMINISTRATION_LOGISTICS",
-        draftingDeptId: "dept_hcqt",
+        draftingUnitId: "dept_hcqt",
       };
 
       const now = new Date("2026-09-10");

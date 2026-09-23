@@ -57,7 +57,7 @@ Quy chế làm việc ban hành kèm theo Quyết định số 283/QĐ-CĐKTCNQN
 
 #### 1.3. Hệ quả vận hành phần mềm (Software Domain Implications)
 - **Role Decoupling Invariant (Role Is Not Scope)**: Người dùng có vai trò lãnh đạo (`BAN_GIAM_HIEU`) có thẩm quyền chỉ đạo, phê duyệt trên toàn trường nhưng khi làm việc cá nhân có thể chuyển Scope sang `my` (Cá nhân) mà không làm suy giảm quyền lực xử lý.
-- **Single DRI Invariant (Directly Responsible Individual)**: Mỗi nhiệm vụ (`Task`) trong hệ thống chỉ có duy nhất một `PRIMARY_OWNER` chịu trách nhiệm cao nhất, các thành viên khác giữ vai trò `COLLABORATOR` (phối hợp) hoặc `SUPERVISOR` (giám sát), phản ánh đúng quy định "một việc chỉ giao một người chủ trì".
+- **Single DRI Invariant (Directly Responsible Individual)**: Mỗi nhiệm vụ (`Task`) trong hệ thống chỉ có duy nhất một `TaskActor` với `role: DRI` và `isPrimaryDRI: true`; các thành viên khác dùng vai trò `COLLABORATOR`, `REVIEWER`, `APPROVER` hoặc `OBSERVER` theo quan hệ thực tế. Đơn vị chuẩn tắc của Task là `Task.leadUnitId` trỏ tới `OrganizationalUnit`.
 - **Maker-Checker Separation**: Cán bộ tạo nhiệm vụ hoặc chuyên viên nộp sản phẩm minh chứng (`TaskDeliverable`) không được phép tự phê duyệt sản phẩm của chính mình. Phê duyệt bắt buộc phải do Trưởng đơn vị (`TRUONG_PHONG`) hoặc Ban Giám hiệu (`BAN_GIAM_HIEU`) thực hiện.
 
 ---
@@ -74,7 +74,7 @@ Ban hành ngày 19/08/2026 nhằm cập nhật cơ cấu tổ chức theo mô h�
 4. **Khối Khoa chuyên môn**: Thực hiện chức năng đào tạo, nghiên cứu ứng dụng, chuyển giao công nghệ và quản lý người học trực thuộc ngành (Khoa Công nghệ thông tin, Khoa Cơ khí, Khoa Công nghệ Ô tô, Khoa Điện, Khoa Du lịch - Dịch vụ, Khoa Kinh tế - Quản trị, Khoa Văn hóa Nghệ thuật, Khoa Văn hóa THPT / Đại cương, Khoa Kỹ thuật Nông nghiệp).
 
 #### 2.3. Hệ quả vận hành phần mềm (Software Domain Implications)
-- Mô hình thực thể `Department` trong Prisma Schema định danh cố định danh sách đơn vị bằng mã viết hoa chuẩn mực (`P_QLDT`, `P_HCQT`, `K_CNTT`, `TT_STT`,...).
+- Mô hình thực thể `OrganizationalUnit` trong Prisma Schema là nguồn chuẩn tắc cho đơn vị, với `id`, `code`, `name`, `type`, quan hệ cây `parentId` và trạng thái hiệu lực. Các quan hệ Task/văn bản Phase 9 dùng định danh unit, không dùng `Department` làm foreign key.
 - Tích hợp từ điển ánh xạ tương thích ngược (`QCET_UNIT_CANONICAL_MAP`) giúp hệ thống tự động chuẩn hóa các mã phòng ban cũ trong tài liệu lịch sử hoặc dữ liệu di trú sang mã chuẩn tắc của QĐ 282.
 
 ---
@@ -91,8 +91,8 @@ Ban hành ngày 19/08/2026 nhằm cập nhật cơ cấu tổ chức theo mô h�
 2. **Giai đoạn 2 (2028 - 2030)**: Tự động hóa 80% thủ tục hành chính nội bộ, triển khai đánh giá hiệu suất công việc (KPI/DACUM) theo thời gian thực dựa trên sản phẩm đầu ra đã được kiểm định.
 
 #### 3.3. Hệ quả vận hành phần mềm (Software Domain Implications)
-- **Lifecycle & Archival Fields**: Để đáp ứng việc giải thể, sáp nhập đơn vị hoặc thuyên chuyển nhân sự mà không làm mất liên kết dữ liệu lịch sử, các bảng `User`, `Department`, `Task`, `Document` bắt buộc phải có các trường xóa mềm/lưu trữ: `archivedAt`, `archivedById`, `archiveReason`, `deactivatedAt`.
-- **Handling of Unassigned Staff**: Khi đơn vị bị sáp nhập, các tài khoản người dùng rơi vào trạng thái chưa phân bổ phòng ban (`departmentId: null`) vẫn có thể đăng nhập bằng Google Workspace nhưng giao diện tự động chuyển hướng vào quy trình Onboarding / Cập nhật vị trí công tác mới.
+- **Lifecycle & Archival Fields**: Để đáp ứng việc giải thể, sáp nhập đơn vị hoặc thuyên chuyển nhân sự mà không làm mất liên kết dữ liệu lịch sử, các thực thể `User`, `OrganizationalUnit`, `Task`, `Document` dùng các trường trạng thái/lưu trữ tương ứng trong schema; không còn giả định bảng `Department` là nguồn đơn vị của Task hoặc văn bản.
+- **Handling of Unassigned Staff**: Khi đơn vị bị sáp nhập, các tài khoản người dùng rơi vào trạng thái chưa có `PositionAssignment`/`OrganizationalUnit` hiệu lực vẫn có thể đăng nhập bằng Google Workspace nhưng giao diện tự động chuyển hướng vào quy trình Onboarding / cập nhật vị trí công tác mới.
 
 ---
 
@@ -166,7 +166,7 @@ Ban hành ngày 03/12/2025 xác định chi tiết ranh giới quản lý, trác
 ### Điều 6. Quyết định số 203/QĐ-CĐKTCNQN: Quy chế làm việc cụ thể của Khoa, Phòng, Trung tâm
 
 #### 6.1. Quy trình giao việc và phân rã nhiệm vụ nội bộ (Work Decomposition)
-1. Khi tiếp nhận văn bản chỉ đạo hoặc nhiệm vụ cấp trường giao cho đơn vị (`scope: DEPARTMENT`), Trưởng đơn vị có trách nhiệm trong vòng 24 giờ phải phân công một viên chức chủ trì (`PRIMARY_OWNER`) và các viên chức phối hợp (`COLLABORATOR`).
+1. Khi tiếp nhận văn bản chỉ đạo hoặc nhiệm vụ cấp trường giao cho đơn vị (`scope: DEPARTMENT`), Trưởng đơn vị có trách nhiệm trong vòng 24 giờ phải tạo `UnitWorkAssignment` cho một viên chức chủ trì (`driUserId`) và các viên chức phối hợp (`collaboratorUserIds`); nếu có Task, quan hệ được ghi bằng `TaskActor` với một DRI duy nhất (`role: DRI`, `isPrimaryDRI: true`).
 2. Nhiệm vụ phức tạp phải được phân rã thành các nhiệm vụ con (`parentTaskId` -> `subTasks`), xác định rõ thời hạn bắt đầu (`startDate`) và thời hạn kết thúc (`dueDate`).
 3. Sản phẩm của nhiệm vụ phải được số hóa thành tệp minh chứng (`TaskDeliverable`) kèm theo mô tả tiêu chuẩn chất lượng.
 
@@ -202,7 +202,7 @@ Tuân thủ chuẩn mực quản trị đại học tiên tiến (Stanford Autho
 - **Ràng buộc kiểm soát (Delegation Invariants)**:
   - Bắt buộc phải có ngày bắt đầu (`startDate`) và ngày hết hạn (`expiresAt`).
   - Phải ghi nhận căn cứ văn bản giao quyền (`documentRef`).
-  - **Chống tự phê duyệt (Self-Approval Prevention)**: Người được ủy quyền tuyệt đối không được phê duyệt sản phẩm minh chứng do chính mình tải lên hoặc nhiệm vụ do chính mình làm `PRIMARY_OWNER`. Hệ thống tự động từ chối giao dịch và báo lỗi `403 Forbidden`.
+  - **Chống tự phê duyệt (Self-Approval Prevention)**: Người được ủy quyền tuyệt đối không được phê duyệt sản phẩm minh chứng do chính mình tải lên hoặc nhiệm vụ mà mình là `TaskActor` DRI (`role: DRI`, `isPrimaryDRI: true`). Hệ thống tự động từ chối giao dịch và báo lỗi `403 Forbidden`.
   - Mọi giao dịch duyệt qua ủy quyền phải ghi nhận vết kiểm toán rõ ràng: `grantorId`, `delegateId`, `timestamp`.
 
 ---
@@ -221,13 +221,13 @@ Hệ thống quản trị văn bản của QCET E-Office tuân thủ 100% các �
    - Sổ đăng ký văn bản đến trên hệ thống gồm 09 trường thông tin bắt buộc theo Phụ lục IV: Ngày đến, Số đến, Tác giả (Nơi gửi), Số ký hiệu gốc, Ngày ban hành gốc, Tên loại và trích yếu, Đơn vị/Người nhận, Hạn giải quyết, Ghi chú.
 3. **Trình và Chuyển giao văn bản đến (Điều 23 & Điều 24)**:
    - Văn bản đến phải được Văn thư trình Ban Giám hiệu trong ngày làm việc (văn bản khẩn phải trình ngay).
-   - Ban Giám hiệu xem xét, ghi ý kiến chỉ đạo (Bút phê điện tử - `DocumentDirective`) xác định: Đơn vị chủ trì (`assignedDeptId`), đơn vị phối hợp (`collaboratorIds`), thời hạn xử lý (`deadline`) và nội dung chỉ đạo cụ thể.
+   - Ban Giám hiệu xem xét, ghi ý kiến chỉ đạo trên `DocumentIncomingWorkflow`, xác định đơn vị chủ trì (`leadUnitId`), đơn vị phối hợp (`coordinatingUnitIds`), thời hạn xử lý (`deadline`) và nội dung chỉ đạo cụ thể.
 4. **Tự động hóa Văn bản thành Nhiệm vụ (Document-to-Task Pipeline)**:
    - Khi Ban Giám hiệu hoàn tất bút phê có chỉ định đơn vị chủ trì, hệ thống tự động sinh ra một `Task` cấp trường (`scope: SCHOOL`) liên kết với văn bản (`linkedTaskId`), tự động chuyển trạng thái văn bản sang `DANG_XU_LY`.
 
 #### 8.2. Quy trình quản lý Văn bản Đi (Điều 14 - Điều 19)
 1. **Soạn thảo và Thẩm tra (Điều 14 & Điều 16)**:
-   - Đơn vị được giao soạn thảo văn bản (`draftingDeptId`) khởi tạo hồ sơ văn bản đi trên hệ thống.
+   - Đơn vị được giao soạn thảo khởi tạo hồ sơ văn bản đi trên hệ thống; tài liệu này không quyết định mô hình hay nguồn dữ liệu của drafting unit.
    - Lãnh đạo đơn vị duyệt bản thảo, gửi Phòng Hành chính - Quản trị và Văn thư kiểm tra thể thức, kỹ thuật trình bày theo quy định tại Phụ lục I NĐ 30/2020/NĐ-CP.
 2. **Trình ký văn bản (Điều 17)**:
    - Chuyển văn bản điện tử lên Hiệu trưởng hoặc Phó Hiệu trưởng được ủy quyền để ký số chuyên dùng công vụ.
@@ -363,17 +363,17 @@ Bảng đối chiếu tổng hợp giữa quy định thể chế và các thàn
 
 | Căn cứ Pháp lý / Quy chế | Điều khoản / Nội dung thể chế | Thực thể / Module mã nguồn E-Office | Cơ chế thực thi kỹ thuật (Enforcement Mechanism) |
 |---|---|---|---|
-| **QĐ 283/QĐ-CĐKTCNQN** | Chế độ trách nhiệm người đứng đầu, một việc một người chủ trì | `TaskAssignee`, `AssigneeRole` (`PRIMARY_OWNER`) | Ràng buộc Unique `[taskId, roleInTask]` b���o đảm mỗi nhiệm vụ chỉ có đúng 1 chủ trì duy nhất. |
+| **QĐ 283/QĐ-CĐKTCNQN** | Chế độ trách nhiệm người đứng đầu, một việc một người chủ trì | `TaskActor` (`role: DRI`, `isPrimaryDRI`) | Ràng buộc canonical `task_actors_one_primary_dri_idx` bảo đảm mỗi nhiệm vụ chỉ có đúng 1 DRI chính. |
 | **QĐ 283/QĐ-CĐKTCNQN** | Nguyên tắc Maker-Checker: Người tạo không tự duyệt | `src/app/api/tasks/[id]/deliverables` | Kiểm tra server-side: `if (deliverable.uploadedById === session.user.id) throw 403 Forbidden`. |
-| **QĐ 282/QĐ-CĐKTCNQN** | Cơ cấu chuẩn 06 Phòng/Trung tâm và 09 Khoa đào tạo | `Department`, `QCET_UNIT_CANONICAL_MAP` | Chuẩn hóa Unit Code viết hoa, ánh xạ tương thích ngược các bí danh lịch sử trong bảng tra cứu. |
+| **QĐ 282/QĐ-CĐKTCNQN** | Cơ cấu chuẩn các đơn vị | `OrganizationalUnit` | Chuẩn hóa định danh, mã, loại và quan hệ cây đơn vị; không dùng `Department` làm foreign key canonical. |
 | **PA 690/ĐA-CĐKTCNQN** | Tinh gọn bộ máy, sáp nhập đơn vị, giải quyết dôi dư nhân sự | `archivedAt`, `archiveReason`, `deactivatedAt` | Xóa mềm thực thể, giữ trọn vẹn vết liên kết khóa ngoại lịch sử và hỗ trợ điều hướng luồng Onboarding. |
-| **QĐ 420/QĐ-CĐKTCNQN** | Phân công lĩnh vực lãnh đạo BGH (Hiệu trưởng & 2 Phó Hiệu trưởng) | `ExecutiveResolution`, `DocumentDirective` | Khoang chỉ huy BGH (`ExecutiveCockpit`) lọc theo lĩnh vực; hỗ trợ 4 nghị quyết can thiệp gỡ nghẽn. |
+| **QĐ 420/QĐ-CĐKTCNQN** | Phân công lĩnh vực lãnh đạo BGH (Hiệu trưởng & 2 Phó Hiệu trưởng) | `ExecutiveResolution`, `DocumentIncomingWorkflow` | Khoang chỉ huy BGH (`ExecutiveCockpit`) lọc theo lĩnh vực; workflow văn bản đến lưu `leadUnitId` và `responsibilityAreaId`. |
 | **QĐ 203/QĐ-CĐKTCNQN** | Phân rã nhiệm vụ đơn vị, ủy quyền duyệt việc DACUM | `DacumDelegation`, `parentTaskId`, `subTasks` | Phân cấp Accordion theo đơn vị giám sát (`SupervisoryOrg`); ủy quyền có thời hạn, phạm vi và chống tự duyệt. |
 | **QĐ 93 & KH 227** | Lập hồ sơ công việc điện tử, quy chế lưu trữ và tiêu hủy | `TaskDeliverable`, `DocumentAttachment`, `archivedBy` | Toàn bộ sản phẩm được gắn định danh minh chứng; lưu vết kiểm toán nộp lưu hồ sơ cuối năm. |
-| **NĐ 232/2026/NĐ-CP** | Vị trí việc làm không đổi khi phân công công việc kiêm nhiệm | `JobCatalogItem`, `JobCatalogGroup`, `DacumDuty` | Tách biệt hoàn toàn Danh mục Vị trí việc làm chuẩn hóa (`JobCatalog`) với việc giao tác vụ động (`TaskAssignee`). |
+| **NĐ 232/2026/NĐ-CP** | Vị trí việc làm không đổi khi phân công công việc kiêm nhiệm | `JobCatalogItem`, `JobCatalogGroup`, `DacumDuty`, `TaskActor` | Tách biệt hoàn toàn Danh mục Vị trí việc làm chuẩn hóa (`JobCatalog`) với việc giao tác vụ động qua `TaskActor`. |
 | **NĐ 30/2020/NĐ-CP** | Đăng ký văn bản đến/đi, số liên tục 01/01 - 31/12 | `DocumentNumberSequence`, `registrationNumber` | Prisma Transaction Atomic: Tăng số tuần tự chống race-condition, tách biệt bộ đếm theo từng năm `documentYear`. |
 | **NĐ 30/2020/NĐ-CP** | Mẫu sổ chuẩn Phụ lục IV (9 cột văn bản đến, 10 cột văn bản đi) | `src/app/api/documents/export-excel` | Xuất file Excel chuẩn cấu trúc cột quy định tại Phụ lục IV phục vụ thanh tra lưu trữ. |
-| **NĐ 30/2020/NĐ-CP** | Bút phê BGH có đơn vị chủ trì tự động tạo nhiệm vụ | Event Pipeline: `createDocumentDirective` -> `createTask` | Tự động tạo Task cấp trường (`scope: SCHOOL`) liên kết khóa ngoại `linkedTaskId` với văn bản đến. |
+| **NĐ 30/2020/NĐ-CP** | Chỉ đạo BGH có đơn vị chủ trì và theo dõi tác nghiệp | `DocumentIncomingWorkflow.leadUnitId`, `Task.leadUnitId`, `TaskActor` | Workflow lưu đơn vị/chỉ đạo; khi tạo Task theo dõi, Task trỏ tới cùng `OrganizationalUnit`, liên kết văn bản qua `Document.linkedTaskId` và DRI qua `TaskActor`. |
 | **Luật 20/2023 & NĐ 68/2024** | Tính toàn vẹn và chống chối bỏ của văn bản điện tử | `sha256Hash`, `DocumentAttachment` | Băm dữ liệu SHA-256 tệp PDF scan màu; lưu vết người tải lên, thời gian và chứng thư số. |
 | **Luật 91/2025 & NĐ 356/2025** | Bảo vệ dữ liệu cá nhân, hạn chế lộ lọt thông tin nhạy cảm | `src/lib/auth-session.ts`, Zero-Mockup Standard | Đăng nhập Google OAuth qua domain `@cdktcnqn.edu.vn`, loại bỏ 100% tài khoản demo và dữ liệu giả lập. |
 | **Luật 117/2025 & Luật Dữ liệu** | Nghiêm cấm xử lý bí mật nhà nước trên mạng công cộng | `DocumentSecurityLevel` (`MAT`, `TOI_MAT`, `TUYET_MAT`) | Cơ chế Validation chặn tải tệp mật lên hệ thống; cô lập tài liệu khi phát hiện dấu hiệu vi phạm. |
@@ -387,7 +387,7 @@ Trước khi gửi bất kỳ Pull Request hoặc triển khai bản cập nhậ
 
 - [ ] **1. Tuân thủ nguyên tắc Role Is Not Scope**: Không bao giờ suy luận vai trò người dùng từ phạm vi hiển thị (Không dùng `if (scope === "school")` để cấp quyền admin).
 - [ ] **2. Tuân thủ chuẩn Light-Only**: Giao diện hành chính chuẩn mực, không chứa lớp CSS `dark:`, không có ThemeProvider, tôn trọng trải nghiệm công sở ban ngày.
-- [ ] **3. Nguyên tắc Người chịu trách nhiệm chính duy nhất (Single DRI)**: Mọi nhiệm vụ bắt buộc có đúng một `PRIMARY_OWNER` với `roleInTask = PRIMARY_OWNER`.
+- [ ] **3. Nguyên tắc Người chịu trách nhiệm chính duy nhất (Single DRI)**: Mọi nhiệm vụ có DRI phải có đúng một `TaskActor` với `role = DRI` và `isPrimaryDRI = true`; đơn vị chuẩn tắc của nhiệm vụ là `Task.leadUnitId`.
 - [ ] **4. Ngăn chặn tự phê duyệt (Maker-Checker Invariant)**: Cấm chuyên viên tự duyệt minh chứng của mình; cấm người được ủy quyền tự duyệt task mình làm chủ trì.
 - [ ] **5. Chuẩn mực cấp số văn bản NĐ 30**: Cấp số văn bản đến/đi tự động qua giao dịch nguyên tử (`DocumentNumberSequence`), reset về số 01 vào ngày 01/01 hàng năm.
 - [ ] **6. Không tạo dữ liệu giả mạo (Zero Synthetic Data)**: Nếu không có bản ghi, hiển thị Empty State chân thực; cấm bịa số liệu KPI hoặc danh sách nhân sự ảo.

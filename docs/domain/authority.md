@@ -86,15 +86,15 @@ Hệ thống hợp nhất ba trường phái kiểm soát truy cập thành mộ
 Quyền hạn trên một bản ghi thực thể cụ thể (Task, Document, Dossier, Deliverable) phụ thuộc vào đồ thị quan hệ trực tiếp:
 - **Task Relations**:
   - `isCreator(user, task)`: `task.createdById === user.id`
-  - `isPrimaryOwner(user, task)`: Tồn tại `TaskAssignee` với `roleInTask === 'PRIMARY_OWNER'` và `userId === user.id`.
-  - `isCollaborator(user, task)`: Tồn tại `TaskAssignee` với `roleInTask === 'COLLABORATOR'` và `userId === user.id`.
-  - `isSupervisor(user, task)`: Tồn tại `TaskAssignee` với `roleInTask === 'SUPERVISOR'` và `userId === user.id`.
-  - `isDepartmentHeadOfTask(user, task)`: Người dùng là Trưởng đơn vị của `task.departmentId`.
+  - `isPrimaryDRI(user, task)`: Tồn tại `TaskActor` với `role === 'DRI'`, `isPrimaryDRI === true` và `userId === user.id`.
+  - `isCollaborator(user, task)`: Tồn tại `TaskActor` với `role === 'COLLABORATOR'` và `userId === user.id`.
+  - Quan hệ thẩm tra/phê duyệt: Tồn tại `TaskActor` với `role === 'REVIEWER'` hoặc `role === 'APPROVER'`, tùy bước workflow.
+  - `isLeadUnitHeadOfTask(user, task)`: Người dùng là Trưởng `OrganizationalUnit` được tham chiếu bởi `task.leadUnitId`.
 - **Document Relations**:
-  - `isDraftingUser(user, doc)`: Người trực tiếp tạo dự thảo văn bản đi.
-  - `isDraftingDepartmentHead(user, doc)`: Trưởng phòng/khoa của `doc.draftingDeptId`.
-  - `isLeadDepartmentHead(user, doc)`: Trưởng phòng/khoa được chỉ đạo chủ trì giải quyết văn bản đến (`doc.leadDepartmentId`).
-  - `isDesignatedSigner(user, doc)`: Lãnh đạo BGH được chỉ định ký số văn bản đi (`doc.signerName / signerTitle`).
+  - `isDraftingUser(user, doc)`: Người trực tiếp tạo dự thảo văn bản đi. Nguồn dữ liệu/quan hệ của drafting unit không được suy diễn trong đặc tả này.
+  - `isLeadUnitHead(user, doc)`: Trưởng `OrganizationalUnit` được chỉ định trong `doc.incomingWorkflow.leadUnitId` (văn bản đến).
+  - `isDesignatedSigner(user, doc)`: Người được chỉ định ký số văn bản đi qua `doc.outgoingWorkflow.authorizedSignerId`.
+  - Việc liên kết văn bản đến với Task đi qua `doc.linkedTaskId`; đơn vị của Task là `Task.leadUnitId`.
 - **Dossier Relations**:
   - `isDossierOwner(user, dossier)`: Người mở hồ sơ công việc điện tử.
   - `isArchivist(user)`: Cán bộ lưu trữ được giao tiếp nhận hồ sơ vào kho lưu trữ số cơ quan.
@@ -105,7 +105,7 @@ Quyền hạn trên một bản ghi thực thể cụ thể (Task, Document, Dos
   - `ACADEMIC`: Công tác đào tạo, khảo thí, nghiên cứu khoa học, CNTT, chuyển đổi số (Phó Hiệu trưởng Đào tạo).
   - `ADMINISTRATION_LOGISTICS`: Hành chính, tổng hợp, cơ sở vật chất, tài sản, tuyển sinh, đối ngoại (Phó Hiệu trưởng HC-CSVC).
   - `INSTITUTIONAL_STRATEGY`: Tổ chức cán bộ, tài chính, thanh tra, chiến lược tổng thể (Hiệu trưởng).
-- `resource.departmentId`: Mã định danh đơn vị chuẩn tắc (`P_QLDT`, `P_HCQT`, `K_CNTT`,...).
+- `resource.unitId` / `resource.leadUnitId`: Định danh `OrganizationalUnit` chuẩn tắc; `Task.leadUnitId` và `DocumentIncomingWorkflow.leadUnitId` là nguồn liên kết đơn vị trong Phase 9.
 - `resource.classification`: Cấp độ bảo mật dữ liệu (`PUBLIC`, `INTERNAL`, `RESTRICTED`, `PERSONAL`, `STATE_SECRET`).
 - `context.validity`: Khoảng thời gian ủy quyền có hiệu lực (`startDate <= now && now <= expiresAt`) trích xuất từ `DacumDelegation`.
 - `context.securityContext`: Địa chỉ IP nội bộ, giao thức xác thực hai lớp (2FA/MFA), tính toàn vẹn chứng thư số.
@@ -192,7 +192,7 @@ function authorize(
     ┌────────────────────────────────────▼────────────────────────────────────┐
     │ BƯỚC 5: ĐÁNH GIÁ MỐI QUAN HỆ THỰC THỂ (ReBAC EVALUATION)                │
     │ - Kiểm tra quan hệ trực tiếp: creator, primary_owner, collaborator,     │
-    │   lead_department_head, drafting_user, assignee                         │
+    │   lead_unit_head, drafting_user, TaskActor relationship                 │
     └────────────────────────────────────┬────────────────────────────────────┘
                                          │ [Hợp lệ]
     ┌────────────────────────────────────▼────────────────────────────────────┐
@@ -222,7 +222,7 @@ Mọi quyền hạn trong hệ thống được chuẩn hóa theo cú pháp danh
 |---|---|---|
 | `task.view` | Xem thông tin nhiệm vụ | Xem chi tiết nhiệm vụ, tiến độ, hạn nộp. Cho phép đối với người tạo, người thực hiện, phối hợp, lãnh đạo đơn vị trực thuộc, hoặc BGH khi tra cứu toàn trường. |
 | `task.create` | Tạo mới nhiệm vụ | Tạo nhiệm vụ cấp trường (`SCHOOL`), cấp đơn vị (`DEPARTMENT`) hoặc cá nhân (`INDIVIDUAL`). Cán bộ chỉ được tạo nhiệm vụ trong phạm vi thẩm quyền. |
-| `task.assign` | Phân công giao việc | Chỉ định người chịu trách nhiệm chính (`PRIMARY_OWNER`) và các thành viên phối hợp (`COLLABORATOR`). |
+| `task.assign` | Phân công giao việc | Chỉ định `TaskActor` chịu trách nhiệm chính (`role: DRI`, `isPrimaryDRI: true`) và các thành viên phối hợp (`role: COLLABORATOR`); đơn vị của Task là `Task.leadUnitId`. |
 | `task.reassign` | Điều chuyển giao việc | Thay đổi người chủ trì khi có biến động nhân sự, tắc nghẽn tiến độ hoặc theo quyết định của Ban Giám hiệu (`ExecutiveResolution`). |
 | `task.update_execution` | Cập nhật thực hiện | Báo cáo tỷ lệ hoàn thành (%), cập nhật nhật ký tiến độ, ghi chú tác nghiệp. Dành riêng cho người chủ trì và người phối hợp. |
 | `task.submit_result` | Nộp sản phẩm minh chứng | Tải lên tệp đính kèm (`TaskDeliverable`), tài liệu hoàn thành, báo cáo nghiệm thu để gửi cấp quản lý phê duyệt. |
@@ -239,9 +239,9 @@ Mọi quyền hạn trong hệ thống được chuẩn hóa theo cú pháp danh
 |---|---|---|
 | `document.incoming.register` | Tiếp nhận và Vào sổ văn bản đến | Kiểm tra tính toàn vẹn, định dạng PDF/A quét màu, lấy số đ��n tự động liên tục theo năm, cập nhật Sổ đăng ký văn bản đến. Dành riêng cho `VAN_THU`. |
 | `document.incoming.present` | Trình văn bản đến | Chuyển văn bản điện tử lên Ban Giám hiệu xem xét, định tuyến tự động hoặc thủ công theo phân công lĩnh vực QĐ 420. Dành cho `VAN_THU`. |
-| `document.incoming.direct` | Bút phê chỉ đạo điều hành | Ban hành ý kiến chỉ đạo điện tử (`DocumentDirective`), xác định phòng ban chủ trì, phòng ban phối hợp, thời hạn hoàn thành. Dành riêng cho `BAN_GIAM_HIEU`. |
-| `document.incoming.assign_unit` | Phân giao đơn vị chủ trì | Xác định đơn vị chuyên môn chịu trách nhiệm chính xử lý văn bản. Tự động kích hoạt cơ chế tạo `Task` liên kết (`linkedTaskId`). |
-| `document.incoming.assign_person` | Phân công cán bộ xử lý | Trưởng đơn vị sau khi nhận văn bản phân công cụ thể chuyên viên/giảng viên trong khoa/phòng thụ lý giải quyết trong 24 giờ. |
+| `document.incoming.direct` | Bút phê chỉ đạo điều hành | Ghi nhận chỉ đạo trên `DocumentIncomingWorkflow`, xác định `leadUnitId` (một `OrganizationalUnit`), `coordinatingUnitIds` và `deadline`. Dành riêng cho `BAN_GIAM_HIEU`. |
+| `document.incoming.assign_unit` | Phân giao đơn vị chủ trì | Cập nhật `DocumentIncomingWorkflow.leadUnitId` tới một `OrganizationalUnit`; Task (nếu được tạo ở Tier 2) dùng cùng `Task.leadUnitId` và liên kết văn bản qua `Document.linkedTaskId`. |
+| `document.incoming.assign_person` | Phân công cán bộ xử lý | Trưởng đơn vị sau khi nhận văn bản tạo `UnitWorkAssignment` với `driUserId`, `collaboratorUserIds` và `deadline`; nếu tạo Task thì ghi quan hệ qua `TaskActor`. |
 | `document.incoming.execute` | Thụ lý thực hiện văn bản | Cán bộ được phân công nghiên cứu văn bản, lập hồ sơ công việc, soạn dự thảo văn bản trả lời hoặc thực hiện nội dung chỉ đạo. |
 
 ### 5.3. Phân hệ Văn bản Đi (Outgoing Document Capabilities - NĐ 30/2020)
@@ -413,7 +413,7 @@ Nhằm đảm bảo sự minh bạch, liêm chính công vụ và ngăn chặn g
 ### Quy tắc SoD 4: Cán bộ nhận ủy quyền không được tự phê duyệt cho mình (`Delegate != PrimaryOwner`)
 - Khi Trưởng đơn vị ủy quyền quyền phê duyệt công việc cho Phó Trưởng đơn vị qua cơ chế `DacumDelegation`:
   - Phó Trưởng đơn vị được thay mặt Trưởng đơn vị duyệt sản phẩm của các chuyên viên, giảng viên khác trong khoa/phòng.
-  - Nhưng đối với các nhiệm vụ mà chính Phó Trưởng đơn vị đó là người chịu trách nhiệm chính (`PRIMARY_OWNER`), quyền ủy quyền tự động mất hiệu lực đối với nhiệm vụ đó. Nhiệm vụ đó bắt buộc phải do chính Trưởng đơn vị phê duyệt hoặc trình thẳng lên Phó Hiệu trưởng phụ trách.
+  - Nhưng đối với các nhiệm vụ mà chính Phó Trưởng đơn vị đó là `TaskActor` DRI (`role: DRI`, `isPrimaryDRI: true`), quyền ủy quyền tự động mất hiệu lực đối với nhiệm vụ đó. Nhiệm vụ đó bắt buộc phải do chính Trưởng đơn vị phê duyệt hoặc trình thẳng lên Phó Hiệu trưởng phụ trách.
 
 ---
 

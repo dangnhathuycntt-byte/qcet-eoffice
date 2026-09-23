@@ -164,6 +164,16 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
       );
     });
 
+    test('does not define indexes on dropped legacy columns', () => {
+      const executableSql = sqlContent
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n');
+      assert.doesNotMatch(executableSql, /"department_id"/);
+      assert.doesNotMatch(executableSql, /"lead_department_id"/);
+      assert.doesNotMatch(executableSql, /"drafting_dept_id"/);
+    });
+
     test('defines active tasks and active documents partial indexes', () => {
       assert.ok(
         sqlContent.includes('idx_tasks_active_scope_status_due_date'),
@@ -193,8 +203,8 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
         'tasks must have index on (scope, status, due_date)'
       );
       assert.ok(
-        indexNames.some((n) => n.includes('department_id_status_due_date')),
-        'tasks must have index on (department_id, status, due_date)'
+        indexNames.some((n) => n.includes('lead_unit_id_status_due_date')),
+        'tasks must have the canonical lead_unit_id/status/due_date index'
       );
       assert.ok(
         indexNames.some((n) => n.includes('parent_task_id')),

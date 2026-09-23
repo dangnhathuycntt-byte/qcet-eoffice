@@ -170,11 +170,14 @@ export function buildTaskResource(task: any): AuthorizationResource {
 
   const creatorId = task.creatorId || task.createdById || undefined;
   const leadUnitId = task.leadUnitId || task.departmentId || undefined;
-  const departmentId = task.departmentId || leadUnitId || undefined;
+  const departmentId = leadUnitId;
 
   // Phase 9: TaskAssignee table dropped — sole authority is TaskActor.
   const primaryDRI = Array.isArray(task.actors)
-    ? task.actors.find((a: any) => a.isPrimaryDRI)
+    ? task.actors.find(
+        (a: any) =>
+          a.role === 'DRI' && a.isPrimaryDRI === true,
+      )
     : undefined;
   const primaryOwnerId =
     primaryDRI?.userId ||
@@ -186,11 +189,16 @@ export function buildTaskResource(task: any): AuthorizationResource {
 
   const collaboratorIds: string[] = [];
   const assigneeIds: string[] = [];
+  const reviewerIds: string[] = [];
 
   if (Array.isArray(task.actors)) {
     for (const a of task.actors) {
       const uid = a.userId;
       if (!uid) continue;
+      if (a.role === 'REVIEWER') {
+        reviewerIds.push(uid);
+        continue;
+      }
       assigneeIds.push(uid);
       if (a.role === 'COLLABORATOR') collaboratorIds.push(uid);
     }
@@ -202,6 +210,14 @@ export function buildTaskResource(task: any): AuthorizationResource {
 
   if (primaryOwnerId) assigneeIds.push(primaryOwnerId);
   assigneeIds.push(...collaboratorIds);
+
+  const taskResults = Array.isArray(task.taskResults) ? task.taskResults : [];
+  const deliverables = Array.isArray(task.deliverables) ? task.deliverables : [];
+  const submittedByUserId =
+    task.submittedByUserId || taskResults.at(-1)?.submittedByUserId || undefined;
+  const deliverableUploadedByIds = deliverables
+    .map((deliverable: any) => deliverable.uploadedById || deliverable.uploadedBy?.id)
+    .filter((id: unknown): id is string => typeof id === 'string');
 
   return {
     ...task,
@@ -215,7 +231,11 @@ export function buildTaskResource(task: any): AuthorizationResource {
     assignerId: creatorId,
     primaryOwnerId,
     collaboratorIds: Array.from(new Set(collaboratorIds)),
+    reviewerIds: Array.from(new Set(reviewerIds)),
     assigneeIds: Array.from(new Set(assigneeIds)),
+    submittedByUserId,
+    uploadedById: deliverableUploadedByIds.at(-1),
+    deliverableUploadedByIds: Array.from(new Set(deliverableUploadedByIds)),
     status: task.status ? task.status.toString().toUpperCase() : undefined,
   };
 }

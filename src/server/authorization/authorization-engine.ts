@@ -186,6 +186,7 @@ export function authorize(
 
   // Canonical document classification evaluation (F15)
   const hasClassification = Boolean(resource?.classification || resource?.securityLevel);
+  let documentReadAuthorized = false;
   const isDocumentTarget =
     resource &&
     hasClassification &&
@@ -196,6 +197,9 @@ export function authorize(
 
   if (isDocumentTarget && resource) {
     const docCheck = canAccessClassification(context, resource as any, now);
+    if (docCheck.allowed && action === 'document.read') {
+      documentReadAuthorized = true;
+    }
     if (!docCheck.allowed) {
       const isStateSecret =
         classification === 'STATE_SECRET' ||
@@ -504,6 +508,13 @@ export function authorize(
         policyMatched: 'STEP_4_OBSERVER_READ_ONLY_GUARD',
       },
     };
+  }
+
+  // Document classification is the canonical read policy. Preserve its allow
+  // result rather than requiring a second role/capability grant below.
+  if (action === 'document.read' && documentReadAuthorized) {
+    candidateAllowed = true;
+    candidatePolicy = 'STEP_2_CANONICAL_DOCUMENT_READ';
   }
 
   // Direct relationship permissions

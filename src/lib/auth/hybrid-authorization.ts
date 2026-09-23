@@ -242,7 +242,7 @@ export interface AuthorizationResource {
   uploadedById?: string;
   draftingUserId?: string;
   drafterId?: string;
-  draftingDeptId?: string;
+  draftingUnitId?: string;
   formatReviewerId?: string;
   signerId?: string;
   authorizedSignerId?: string;
@@ -494,7 +494,7 @@ export function getResourceRelationships(
     user.departmentId &&
     (resource.departmentId === user.departmentId ||
       resource.leadDepartmentId === user.departmentId ||
-      resource.draftingDeptId === user.departmentId ||
+      resource.draftingUnitId === user.departmentId ||
       resource.owningUnitId === user.departmentId)
   ) {
     rels.add("LEAD_UNIT");

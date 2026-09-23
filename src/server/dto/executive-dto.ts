@@ -23,7 +23,7 @@ export interface ExecutiveResolutionDTO {
     status: string;
     priority: string;
     dueDate: string;
-    departmentId: string;
+    departmentId: string | null;
   } | null;
 }
 

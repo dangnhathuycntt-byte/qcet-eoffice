@@ -295,14 +295,6 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         schemaContent.includes('@@index([originalNumber])'),
         'Document model must declare @@index([originalNumber])'
       );
-      assert.ok(
-        schemaContent.includes('@@index([leadDepartmentId])'),
-        'Document model must declare @@index([leadDepartmentId])'
-      );
-      assert.ok(
-        schemaContent.includes('@@index([draftingDeptId])'),
-        'Document model must declare @@index([draftingDeptId])'
-      );
     });
 
   });
