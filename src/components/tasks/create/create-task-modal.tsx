@@ -164,7 +164,7 @@ export function CreateTaskModal({
 
   // Database users for foreign key safety
   const [dbUsers, setDbUsers] = React.useState<
-    Array<{ id: string; name: string; departmentId?: string | null; role?: string }>
+    Array<{ id: string; name: string; departmentId?: string | null; role?: string; email?: string; title?: string | null }>
   >([]);
 
   // Validation field errors for P0 fields
@@ -218,8 +218,18 @@ export function CreateTaskModal({
   }, [selectedDeptCode, departments]);
 
   const availablePersonnel = React.useMemo(() => {
-    return currentDept?.personnel || [];
-  }, [currentDept]);
+    const deptPersonnel = currentDept?.personnel || [];
+    if (deptPersonnel.length > 0) return deptPersonnel;
+    // Fallback: khi đơn vị chưa có PositionAssignment (user mới đăng nhập qua
+    // OAuth chưa được phân công vị trí), dùng danh sách tất cả user active.
+    return dbUsers.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      title: u.title,
+    }));
+  }, [currentDept, dbUsers]);
 
   // Try restoring draft from sessionStorage on open
   React.useEffect(() => {
