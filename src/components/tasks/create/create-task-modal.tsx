@@ -461,7 +461,7 @@ export function CreateTaskModal({
         },
         {
           personnel: personnelRefs,
-          departmentId: currentDept.code || currentDept.id,
+          departmentId: currentDept?.code || currentDept?.id,
           assigneeId: matchedDri?.id,
           collaboratorIds: matchedCoIds.length > 0 ? matchedCoIds : undefined,
         }
@@ -610,7 +610,7 @@ export function CreateTaskModal({
                     : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
                 )}
               >
-                <span>{currentDept.name}</span>
+                <span>{currentDept?.name ?? "Đang tải..."}</span>
                 <ChevronDown
                   className={cn(
                     "size-3 text-muted-foreground transition-transform duration-200 ease-out",
