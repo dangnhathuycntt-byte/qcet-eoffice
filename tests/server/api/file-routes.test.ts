@@ -18,9 +18,9 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
   const testSandboxRel = "test_file_hardening_sandbox";
   const testSandboxAbs = path.join(uploadsDir, testSandboxRel);
 
-  let adminUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let deptAUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
-  let deptBUser: { id: string; email: string; name: string; role: string; departmentId: string | null };
+  let adminUser: { id: string; email: string; name: string; role: string;};
+  let deptAUser: { id: string; email: string; name: string; role: string;};
+  let deptBUser: { id: string; email: string; name: string; role: string;};
 
   let adminToken: string;
   let deptAToken: string;
@@ -61,8 +61,8 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     fs.writeFileSync(path.join(testSandboxAbs, "secret_doc.pdf"), samplePdfContent);
 
     // 2. Identify departments (non-BGH)
-    const deptA = await prisma.department.findUnique({ where: { id: "P_TC" } }) || await prisma.department.findFirst({ where: { id: { not: "BGH" } } });
-    const deptB = await prisma.department.findUnique({ where: { id: "K_CNTT" } }) || await prisma.department.findFirst({ where: { id: { notIn: ["BGH", deptA!.id] } } });
+    const deptA = await prisma.organizationalUnit.findUnique({ where: { id: "P_TC" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { not: "BGH" } } });
+    const deptB = await prisma.organizationalUnit.findUnique({ where: { id: "K_CNTT" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { notIn: ["BGH", deptA!.id] } } });
     assert.ok(deptA && deptB, "At least 2 non-BGH departments required for BOLA tests");
     deptAId = deptA.id;
     deptBId = deptB.id;
@@ -70,7 +70,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     // 3. Identify users
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
     assert.ok(admin, "ADMIN user required");
-    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role, departmentId: admin.departmentId };
+    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role};
 
     // Create explicit test staff users in Dept A and Dept B
     const userA = await prisma.user.create({
@@ -78,25 +78,25 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         email: `test-staff-a-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept A",
         role: "CHUYEN_VIEN",
-        departmentId: deptAId,
+
       },
     });
-    deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role, departmentId: deptAId };
+    deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role};
 
     const userB = await prisma.user.create({
       data: {
         email: `test-staff-b-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept B",
         role: "CHUYEN_VIEN",
-        departmentId: deptBId,
+
       },
     });
-    deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role, departmentId: deptBId };
+    deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role};
 
     // 4. Generate tokens
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
-    deptAToken = signSessionToken({ id: deptAUser.id, email: deptAUser.email, name: deptAUser.name, role: deptAUser.role, departmentId: deptAId });
-    deptBToken = signSessionToken({ id: deptBUser.id, email: deptBUser.email, name: deptBUser.name, role: deptBUser.role, departmentId: deptBId });
+    deptAToken = signSessionToken({ id: deptAUser.id, email: deptAUser.email, name: deptAUser.name, role: deptAUser.role});
+    deptBToken = signSessionToken({ id: deptBUser.id, email: deptBUser.email, name: deptBUser.name, role: deptBUser.role});
 
     // 5. Create private Document & DocumentAttachment restricted to Dept B
     const docYear = new Date().getFullYear();
@@ -111,7 +111,6 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         category: "Kế hoạch",
         issuingAuthority: "Dept B Authority",
         issuedDate: new Date(),
-        leadDepartmentId: deptBId,
         registeredById: deptBUser.id,
       },
     });
@@ -154,7 +153,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       data: {
         title: "BOLA Protected Task Dept B",
         code: `TASK-${Date.now()}`,
-        departmentId: deptBId,
+
         createdById: deptBUser.id,
         scope: "DEPARTMENT",
         status: "IN_PROGRESS",

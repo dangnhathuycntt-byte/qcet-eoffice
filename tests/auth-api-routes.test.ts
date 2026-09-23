@@ -195,7 +195,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
         name: "Kiểm Thử E2E",
         email: testEmail,
         password: testPassword,
-        departmentId: "CNTT",
+
       }),
     });
 
@@ -235,7 +235,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
           email: roleEscalateEmail,
           password: "SecurePassword123",
           role: "ADMIN",
-          departmentId: "CNTT",
+
         }),
       });
 

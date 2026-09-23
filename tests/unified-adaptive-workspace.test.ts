@@ -369,7 +369,7 @@ const sampleTasks: SchoolTask[] = [
     status: "IN_PROGRESS",
     priority: "HIGH",
     category: "CNTT",
-    departmentId: "dt-01",
+
     department: "Phòng Đào tạo & ĐBCL",
     leadAssigneeName: "ThS. Trần Thị B",
     leadAssigneeId: "user-staff-01",
@@ -404,7 +404,7 @@ const sampleTasks: SchoolTask[] = [
     status: "NEW",
     priority: "NORMAL",
     category: "KHAC",
-    departmentId: "khcn-01",
+
     department: "Phòng KHCN & HTQT",
     leadAssigneeName: "TS. Lê Văn C",
     leadAssigneeId: "user-staff-02",

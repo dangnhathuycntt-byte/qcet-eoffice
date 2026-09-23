@@ -41,17 +41,23 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
     const rand = crypto.randomBytes(4).toString('hex');
 
     // Tạo hai phòng ban độc lập
-    deptA = await prisma.department.create({
+    deptA = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_A_${rand}`,
+        code: `DEPT_A_${rand}`,
         name: 'Phòng Tổ chức Cán bộ A',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
-    deptB = await prisma.department.create({
+    deptB = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_B_${rand}`,
+        code: `DEPT_B_${rand}`,
         name: 'Phòng Kế hoạch Tài chính B',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -61,7 +67,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         email: `user_a_${rand}@qcet.edu.vn`,
         name: 'Chuyên viên User A',
         role: 'CHUYEN_VIEN',
-        departmentId: deptA.id,
+
         isActive: true,
       },
     });
@@ -72,7 +78,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         email: `user_b_${rand}@qcet.edu.vn`,
         name: 'Chuyên viên User B',
         role: 'CHUYEN_VIEN',
-        departmentId: deptB.id,
+
         isActive: true,
       },
     });
@@ -123,7 +129,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
       email: userA.email,
       name: userA.name,
       role: userA.role,
-      departmentId: userA.departmentId,
+
     });
 
     tokenB = signSessionToken({
@@ -131,7 +137,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
       email: userB.email,
       name: userB.name,
       role: userB.role,
-      departmentId: userB.departmentId,
+
     });
 
     tokenRector = signSessionToken({
@@ -153,7 +159,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-01'),
         createdById: userA.id,
-        departmentId: deptA.id,
+        leadUnitId: deptA.id,
         actors: {
           create: [
             {
@@ -177,7 +183,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-15'),
         createdById: userB.id,
-        departmentId: deptB.id,
+        leadUnitId: deptB.id,
         actors: {
           create: [
             {
@@ -241,7 +247,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
 
     const deptIds = [deptA?.id, deptB?.id].filter(Boolean);
     if (deptIds.length > 0) {
-      await prisma.department.deleteMany({ where: { id: { in: deptIds } } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: { in: deptIds } } });
     }
   });
 

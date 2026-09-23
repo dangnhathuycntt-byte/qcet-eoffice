@@ -46,7 +46,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       coAssignees: [],
       assignedDate: "2026-09-01",
       department: "Khoa CNTT",
-      departmentId: "CNTT",
+
       subTasks: [
         {
           id: "sub-01",
@@ -75,7 +75,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       coAssignees: [],
       assignedDate: "2026-08-15",
       department: "TT An toàn thông tin",
-      departmentId: "ATTT",
+
       subTasks: [],
     },
     {
@@ -95,7 +95,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       coAssignees: [],
       assignedDate: "2026-09-02",
       department: "Phòng Đào tạo",
-      departmentId: "DAO_TAO",
+
       subTasks: [],
     },
     {
@@ -115,7 +115,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       coAssignees: [],
       assignedDate: "2026-08-01",
       department: "Thư viện",
-      departmentId: "THU_VIEN",
+
       subTasks: [],
     },
   ];

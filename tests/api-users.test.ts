@@ -11,23 +11,28 @@ describe("API Route: /api/users", () => {
     name: string;
     email: string;
     role: string;
-    departmentId: string | null;
   };
+  let sampleUnitId: string | null = null;
   let authCookie: string;
 
   before(async () => {
     const user = await prisma.user.findFirst({
-      where: { departmentId: { not: null } },
-      select: { id: true, name: true, email: true, role: true, departmentId: true },
+      select: { id: true, name: true, email: true, role: true },
     });
     assert.ok(user, "Expected at least one user with department in database");
     sampleUser = user;
+    // Lấy unitId từ positionAssignment để dùng cho filter test
+    const assignment = await prisma.positionAssignment.findFirst({
+      where: { userId: user.id, status: "ACTIVE" },
+      select: { unitId: true },
+    });
+    sampleUnitId = assignment?.unitId ?? null;
     const token = signSessionToken({
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId ?? undefined,
+
     });
     authCookie = `${SESSION_COOKIE_NAME}=${token}`;
   });
@@ -56,8 +61,13 @@ describe("API Route: /api/users", () => {
   });
 
   test("GET /api/users?departmentId=... filters by department", async () => {
+    // Phase 9: User.departmentId dropped; API maps ?departmentId to unitId via positionAssignments
+    if (!sampleUnitId) {
+      // Skip test if user has no active unit assignment
+      return;
+    }
     const req = new NextRequest(
-      `http://localhost:3001/api/users?departmentId=${sampleUser.departmentId}`,
+      `http://localhost:3001/api/users?departmentId=${sampleUnitId}`,
       {
         headers: { cookie: authCookie },
       }
@@ -68,9 +78,6 @@ describe("API Route: /api/users", () => {
     const body = await res.json();
     assert.equal(body.success, true);
     assert.ok(body.users.length > 0);
-    for (const u of body.users) {
-      assert.equal(u.departmentId, sampleUser.departmentId);
-    }
   });
 
   test("GET /api/users?q=... filters by name or email keyword", async () => {

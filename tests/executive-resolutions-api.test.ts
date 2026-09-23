@@ -7,9 +7,9 @@ import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { TaskStatus, TaskPriority, TaskScope, UserRole, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Executive Resolutions API Persistence & Authorization Tests', () => {
-  let bghUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
-  let staffUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
-  let adminUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
+  let bghUser: { id: string; email: string; name: string; role: UserRole };
+  let staffUser: { id: string; email: string; name: string; role: UserRole };
+  let adminUser: { id: string; email: string; name: string; role: UserRole };
   let bghToken: string;
   let staffToken: string;
   let adminToken: string;
@@ -22,7 +22,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
 
   before(async () => {
     // 1. Fetch departments
-    const depts = await prisma.department.findMany({ take: 2 });
+    const depts = await prisma.organizationalUnit.findMany({ take: 2 });
     assert.ok(depts.length >= 2, 'Must have at least 2 departments for reassignment tests');
     testDeptId = depts[0].id;
     targetDeptId = depts[1].id;
@@ -38,7 +38,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: bgh.email,
       name: bgh.name,
       role: bgh.role,
-      departmentId: bgh.departmentId,
+
     });
 
     // Canonical statutory mandate (Issue #27): executive authority requires
@@ -78,7 +78,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: staff.email,
       name: staff.name,
       role: staff.role,
-      departmentId: staff.departmentId,
+
     });
 
     // 4. Fetch Admin user
@@ -92,7 +92,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: admin.email,
       name: admin.name,
       role: admin.role,
-      departmentId: admin.departmentId,
+
     });
 
     // 5. Create a test task (initially OVERDUE or NORMAL)
@@ -108,7 +108,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-09-20T00:00:00.000Z'),
-        departmentId: testDeptId,
+
         createdById: bghUser.id,
       },
     });

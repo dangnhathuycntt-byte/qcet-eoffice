@@ -68,10 +68,13 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
   });
 
   before(async () => {
-    testDept = await prisma.department.create({
+    testDept = await prisma.organizationalUnit.create({
       data: {
         id: `dept_m21_${runId}`,
+        code: `dept_m21_${runId}`,
         name: `Phòng Ban Thử Nghiệm M21 ${runId}`,
+        type: "PHONG_BAN" as any,
+        status: "ACTIVE" as any,
       },
     });
 
@@ -161,7 +164,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         email: `delegator_m21_${runId}@qcet.edu.vn`,
         name: 'Trưởng phòng Khảo thí',
         role: UserRole.TRUONG_PHONG,
-        departmentId: testDept.id,
+
         isActive: true,
       },
     });
@@ -171,7 +174,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         email: `delegatee_m21_${runId}@qcet.edu.vn`,
         name: 'Phó Trưởng phòng Khảo thí',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: testDept.id,
+
         isActive: true,
       },
     });
@@ -242,7 +245,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
       email: delegatorUser.email,
       name: delegatorUser.name,
       role: delegatorUser.role,
-      departmentId: testDept.id,
+
     });
   });
 
@@ -292,7 +295,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
       await prisma.organizationalUnit.delete({ where: { id: testUnit.id } });
     }
     if (testDept) {
-      await prisma.department.delete({ where: { id: testDept.id } });
+      await prisma.organizationalUnit.delete({ where: { id: testDept.id } });
     }
   });
 
@@ -460,7 +463,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
           description: 'Kiểm tra xung đột đồng thời với expectedVersion',
           priority: TaskPriority.NORMAL,
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDept.id,
+
           createdById: delegatorUser.id,
           dueDate,
           academicMonth: 9,

@@ -56,11 +56,12 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
+        code: `ACAD_${testRunId.slice(-4)}`,
         name: `Phòng Đào tạo ${testRunId}`,
-        shortName: `DT_${testRunId.slice(-4)}`,
+        type: 'DEPARTMENT' as any,
       },
     });
     unitAcademicId = d1.id;
@@ -73,11 +74,12 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-adm-${testRunId}`,
+        code: `ADM_${testRunId.slice(-4)}`,
         name: `Phòng Hành chính ${testRunId}`,
-        shortName: `HC_${testRunId.slice(-4)}`,
+        type: 'DEPARTMENT' as any,
       },
     });
     unitAdminId = d2.id;
@@ -90,7 +92,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Chuyên viên Soạn thảo",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: unitAcademicId,
+
       },
     });
 
@@ -101,7 +103,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Văn thư Cơ quan",
         role: UserRole.VAN_THU,
         title: "Văn thư",
-        departmentId: unitAdminId,
+
       },
     });
 
@@ -112,7 +114,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Hiệu trưởng QCET",
         role: UserRole.BAN_GIAM_HIEU,
         title: "Hiệu trưởng",
-        departmentId: null,
+
       },
     });
 
@@ -123,7 +125,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Người dùng không quyền",
         role: UserRole.CHUYEN_VIEN,
         title: "Giảng viên",
-        departmentId: null,
+
       },
     });
 
@@ -132,7 +134,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       email: drafterUser.email,
       role: drafterUser.role,
       name: drafterUser.name,
-      departmentId: drafterUser.departmentId,
+
     });
 
     clerkToken = await signSessionToken({
@@ -140,7 +142,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       email: clerkUser.email,
       role: clerkUser.role,
       name: clerkUser.name,
-      departmentId: clerkUser.departmentId,
+
     });
   });
 
@@ -179,7 +181,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
           },
         },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [unitAcademicId, unitAdminId] } },
       });
       await prisma.organizationalUnit.deleteMany({
@@ -214,7 +216,6 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
           securityLevel: DocumentSecurityLevel.THUONG,
           urgency: DocumentUrgency.THUONG,
           registeredById: drafterUser.id,
-          draftingDeptId: unitAcademicId,
         },
       });
       testDocId = doc.id;
@@ -600,7 +601,6 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
           securityLevel: DocumentSecurityLevel.TUYET_MAT, // Confidential / Tuyệt mật
           urgency: DocumentUrgency.THUONG,
           registeredById: drafterUser.id,
-          draftingDeptId: unitAcademicId,
           signerName: "Hiệu trưởng",
           outgoingWorkflow: {
             create: {
@@ -689,7 +689,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       const secretDoc = {
         id: signedDocId,
         securityLevel: DocumentSecurityLevel.TUYET_MAT,
-        departmentId: unitAcademicId,
+
         creatorId: drafterUser.id,
       };
 

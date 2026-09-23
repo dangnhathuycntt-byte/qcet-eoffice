@@ -21,11 +21,10 @@ describe('TaskDbAdapter Unit Tests', () => {
       academicYear: '2026-2027',
       startDate: new Date('2026-09-01T00:00:00+07:00'),
       dueDate: new Date('2026-09-24T17:00:00+07:00'),
-      departmentId: 'khoa-dien',
+
       department: {
         id: 'khoa-dien',
         name: 'Khoa Điện - Điện tử',
-        shortName: 'K.Điện'
       },
       assignees: [
         {
@@ -78,7 +77,7 @@ describe('TaskDbAdapter Unit Tests', () => {
       academicYear: '2026-2027',
       startDate: new Date('2026-09-10T00:00:00Z'),
       dueDate: new Date('2026-09-20T00:00:00Z'),
-      departmentId: null,
+
       department: null,
       assignees: [],
       deliverables: []
@@ -134,11 +133,10 @@ describe('TaskDbAdapter Unit Tests', () => {
         academicYear: '2026-2027',
         startDate: new Date('2026-09-01T08:00:00+07:00'),
         dueDate: new Date('2026-09-30T17:00:00+07:00'),
-        departmentId: 'bgh',
+
         department: {
           id: 'bgh',
           name: 'Ban Giám hiệu',
-          shortName: 'BGH',
         },
         parentTaskId: null,
         parentTask: null,
@@ -173,7 +171,7 @@ describe('TaskDbAdapter Unit Tests', () => {
             academicYear: '2026-2027',
             startDate: new Date('2026-09-02T08:00:00+07:00'),
             dueDate: new Date('2026-09-15T17:00:00+07:00'),
-            departmentId: 'khoa-cntt',
+
             department: { id: 'khoa-cntt', name: 'Khoa CNTT' },
             assignees: [
               {
@@ -196,7 +194,7 @@ describe('TaskDbAdapter Unit Tests', () => {
             academicYear: '2026-2027',
             startDate: new Date('2026-09-10T08:00:00+07:00'),
             dueDate: new Date('2026-09-25T17:00:00+07:00'),
-            departmentId: 'phong-daotao',
+
             department: { id: 'phong-daotao', name: 'Phòng Đào tạo' },
             assignees: [
               {
@@ -224,7 +222,7 @@ describe('TaskDbAdapter Unit Tests', () => {
             academicYear: '2026-2027',
             startDate: new Date('2026-09-15T08:00:00+07:00'),
             dueDate: new Date('2026-09-30T17:00:00+07:00'),
-            departmentId: 'phong-qlcl',
+
             department: { id: 'phong-qlcl', name: 'Phòng QLCL' },
             assignees: [
               {
@@ -280,11 +278,10 @@ describe('TaskDbAdapter Unit Tests', () => {
         startDate: new Date('2026-09-15T08:00:00+07:00'),
         dueDate: new Date('2026-09-25T17:00:00+07:00'),
         updatedAt: new Date('2026-09-24T10:00:00+07:00'),
-        departmentId: 'p-cntt',
+
         department: {
           id: 'p-cntt',
           name: 'Phòng Công nghệ Thông tin & Truyền thông',
-          shortName: 'P.CNTT',
         },
         parentTaskId: 'parent-root-99',
         parentTask: {

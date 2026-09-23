@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         andConditions.push({
           OR: [
             { scope: TaskScope.INDIVIDUAL },
-            { assignees: { some: { userId: authUser.id } } },
+            { actors: { some: { userId: authUser.id } } },
           ],
         });
       }
@@ -153,8 +153,8 @@ export async function GET(request: NextRequest) {
         { title: { contains: q, mode: 'insensitive' } },
         { code: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
-        { department: { name: { contains: q, mode: 'insensitive' } } },
-        { department: { shortName: { contains: q, mode: 'insensitive' } } },
+        { leadUnit: { name: { contains: q, mode: 'insensitive' } } },
+        { leadUnit: { code: { contains: q, mode: 'insensitive' } } },
       ];
 
       // Add folded and telex forms
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       // Add acronym expansions (e.g. "cntt" -> "Khoa Công nghệ thông tin")
       for (const term of acronymTerms) {
         taskOrConditions.push(
-          { department: { name: { contains: term, mode: 'insensitive' } } },
+          { leadUnit: { name: { contains: term, mode: 'insensitive' } } },
           { title: { contains: term, mode: 'insensitive' } }
         );
       }
@@ -200,8 +200,8 @@ export async function GET(request: NextRequest) {
         { email: { contains: q, mode: 'insensitive' } },
         { title: { contains: q, mode: 'insensitive' } },
         { phone: { contains: q, mode: 'insensitive' } },
-        { department: { name: { contains: q, mode: 'insensitive' } } },
-        { department: { shortName: { contains: q, mode: 'insensitive' } } },
+        // Phase 9: User.department dropped — search via positionAssignments unit name
+        { positionAssignments: { some: { unit: { name: { contains: q, mode: 'insensitive' } } } } },
       ];
 
       if (foldedQ && foldedQ !== q.toLowerCase()) {
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
 
       for (const term of acronymTerms) {
         userOrConditions.push({
-          department: { name: { contains: term, mode: 'insensitive' } },
+          positionAssignments: { some: { unit: { name: { contains: term, mode: 'insensitive' } } } },
         });
       }
 
@@ -278,17 +278,17 @@ export async function GET(request: NextRequest) {
           dueDate: true,
           academicMonth: true,
           academicYear: true,
-          department: {
+          leadUnit: {
             select: {
               id: true,
               name: true,
-              shortName: true,
-              color: true,
+              code: true,
             },
           },
-          assignees: {
+          actors: {
             select: {
-              roleInTask: true,
+              role: true,
+              isPrimaryDRI: true,
               user: {
                 select: {
                   id: true,
@@ -312,14 +312,6 @@ export async function GET(request: NextRequest) {
           title: true,
           phone: true,
           avatarUrl: true,
-          department: {
-            select: {
-              id: true,
-              name: true,
-              shortName: true,
-              color: true,
-            },
-          },
         },
         orderBy: { name: 'asc' },
         take: Math.min(limit, 20),
@@ -337,13 +329,6 @@ export async function GET(request: NextRequest) {
           issuedDate: true,
           status: true,
           urgency: true,
-          leadDepartment: {
-            select: {
-              id: true,
-              name: true,
-              shortName: true,
-            },
-          },
         },
         orderBy: [{ issuedDate: "desc" }],
         take: q ? 20 : 5,
@@ -360,13 +345,13 @@ export async function GET(request: NextRequest) {
         .map((task) => {
           const keywords = [
             task.code,
-            task.department?.name || '',
-            task.department?.shortName || '',
+            task.leadUnit?.name || '',
+            task.leadUnit?.code || '',
           ].filter(Boolean);
           const score = Math.max(
             scoreVietnameseSearch(task.title, q, keywords),
             scoreVietnameseSearch(task.code, q),
-            task.department?.name ? scoreVietnameseSearch(task.department.name, q) : 0
+            task.leadUnit?.name ? scoreVietnameseSearch(task.leadUnit.name, q) : 0
           );
           return { task, score };
         })
@@ -380,13 +365,10 @@ export async function GET(request: NextRequest) {
             user.email,
             user.phone || '',
             user.title || '',
-            user.department?.name || '',
-            user.department?.shortName || '',
           ].filter(Boolean);
           const score = Math.max(
             scoreVietnameseSearch(user.name, q, keywords),
-            user.title ? scoreVietnameseSearch(user.title, q) : 0,
-            user.department?.name ? scoreVietnameseSearch(user.department.name, q) : 0
+            user.title ? scoreVietnameseSearch(user.title, q) : 0
           );
           return { user, score };
         })
@@ -401,8 +383,6 @@ export async function GET(request: NextRequest) {
               doc.originalNumber,
               doc.issuingAuthority,
               doc.category,
-              doc.leadDepartment?.name || "",
-              doc.leadDepartment?.shortName || "",
             ].filter(Boolean);
             const score = Math.max(
               scoreVietnameseSearch(doc.summary, q, keywords),

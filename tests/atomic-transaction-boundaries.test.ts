@@ -30,14 +30,17 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
   let testDepartmentId: string;
 
   before(async () => {
-    // 1. Ensure test department exists
-    let dept = await prisma.department.findFirst();
+    // 1. Ensure test org unit exists
+    let dept = await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } });
     if (!dept) {
-      dept = await prisma.department.create({
+      const uid = `dept-test-${Date.now()}`;
+      dept = await prisma.organizationalUnit.create({
         data: {
-          id: `dept-test-${Date.now()}`,
+          id: uid,
+          code: uid,
           name: 'Phòng Thử Nghiệm Giao Dịch',
-          shortName: 'PTNGD',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -52,7 +55,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             email,
             name,
             role,
-            departmentId: testDepartmentId,
           },
         });
       }
@@ -103,7 +105,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
         description: 'Testing atomic task creation happy path',
         dueDate: '2026-10-15',
         createdById: testCreatorId,
-        departmentId: testDepartmentId,
+
         scope: TaskScope.SCHOOL,
         priority: TaskPriority.HIGH,
         primaryOwnerId: testCreatorId,
@@ -153,7 +155,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             title: taskTitle,
             dueDate: '2026-10-20',
             createdById: testCreatorId,
-            departmentId: testDepartmentId,
+
             failAtStep: 'afterTaskCreate',
           });
         },
@@ -178,7 +180,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             title: taskTitle,
             dueDate: '2026-10-20',
             createdById: testCreatorId,
-            departmentId: testDepartmentId,
+
             primaryOwnerId: testCreatorId,
             collaboratorIds: [testCollaboratorId],
             audit: {
@@ -536,7 +538,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       assert.ok(result.directive.id);
       assert.strictEqual(result.directive.leaderId, testApproverId);
       assert.strictEqual(result.document.status, DocumentStatus.DANG_XU_LY);
-      assert.strictEqual(result.document.leadDepartmentId, testDepartmentId);
       assert.strictEqual(auditRan, true);
 
       // Verify in DB
@@ -544,7 +545,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
         where: { id: doc.id },
       });
       assert.strictEqual(dbDoc?.status, DocumentStatus.DANG_XU_LY);
-      assert.strictEqual(dbDoc?.leadDepartmentId, testDepartmentId);
 
       const dbDirective = await prisma.documentDirective.findUnique({
         where: { id: result.directive.id },

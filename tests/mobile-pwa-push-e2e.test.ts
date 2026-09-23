@@ -26,8 +26,8 @@ import { checkIsIOS } from '../src/hooks/use-pwa-install';
 import { UserRole } from '@prisma/client';
 
 describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
-  let testUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
-  let adminUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
+  let testUser: { id: string; name: string; email: string; role: string };
+  let adminUser: { id: string; name: string; email: string; role: string };
   let userToken: string;
   let adminToken: string;
 
@@ -63,7 +63,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       name: user.name,
       email: user.email,
       role: user.role,
-      departmentId: user.departmentId,
+
     };
 
     let admin = await prisma.user.findFirst({
@@ -77,7 +77,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       name: admin.name,
       email: admin.email,
       role: admin.role,
-      departmentId: admin.departmentId,
+
     };
 
     userToken = signSessionToken({
@@ -85,7 +85,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       name: testUser.name,
       email: testUser.email,
       role: testUser.role,
-      departmentId: testUser.departmentId || undefined,
+
     });
 
     adminToken = signSessionToken({
@@ -93,7 +93,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       name: adminUser.name,
       email: adminUser.email,
       role: adminUser.role,
-      departmentId: adminUser.departmentId || undefined,
+
     });
 
     // Clean up existing test subscriptions if any
@@ -263,13 +263,8 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 86400000 * 2),
-        departmentId: testUser.departmentId,
-        createdById: adminUser.id,
-        assignees: {
-          create: {
-            userId: testUser.id,
-          },
-        },
+
+        createdById: adminUser.id
       },
     });
     createdTaskIds.push(testTask.id);

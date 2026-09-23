@@ -190,7 +190,7 @@ describe("DepartmentProgressMatrix", () => {
   test("getDepartmentCardData boundary: exactly 50% gets amber", () => {
     const boundary: DepartmentHealthSummary[] = [
       {
-        departmentId: "TEST",
+        departmentId: "TEST_50",
         departmentName: "Test Dept",
         leadName: "Test Lead",
         totalTasksCount: 4,
@@ -208,7 +208,7 @@ describe("DepartmentProgressMatrix", () => {
   test("getDepartmentCardData boundary: exactly 80% gets emerald", () => {
     const boundary: DepartmentHealthSummary[] = [
       {
-        departmentId: "TEST",
+        departmentId: "TEST_80",
         departmentName: "Test Dept",
         leadName: "Test Lead",
         totalTasksCount: 5,
@@ -244,7 +244,7 @@ describe("DepartmentProgressMatrix", () => {
 describe("DepartmentProgressMatrix Navigation & Sorting", () => {
   const mockDepts: DepartmentHealthSummary[] = [
     {
-      departmentId: "K-CNTT",
+      departmentId: "CNTT",
       departmentName: "Khoa CNTT",
       leadName: "Trưởng khoa CNTT",
       totalTasksCount: 20,
@@ -255,7 +255,7 @@ describe("DepartmentProgressMatrix Navigation & Sorting", () => {
       averageProgressPercent: 90,
     },
     {
-      departmentId: "QTCSVC",
+      departmentId: "QT_CSVC",
       departmentName: "Phòng QT-CSVC",
       leadName: "Trưởng phòng QTCSVC",
       totalTasksCount: 15,
@@ -266,7 +266,7 @@ describe("DepartmentProgressMatrix Navigation & Sorting", () => {
       averageProgressPercent: 45,
     },
     {
-      departmentId: "P-DT",
+      departmentId: "DAO_TAO",
       departmentName: "Phòng Đào tạo",
       leadName: "Trưởng phòng ĐT",
       totalTasksCount: 25,

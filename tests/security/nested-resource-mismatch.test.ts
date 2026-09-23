@@ -52,23 +52,23 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
   const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
   before(async () => {
-    deptA = await prisma.department.create({ data: { id: `DEPT_NA_${runId}`, name: `Dept A ${runId}` } });
-    deptB = await prisma.department.create({ data: { id: `DEPT_NB_${runId}`, name: `Dept B ${runId}` } });
+    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, code: `DEPT_NA_${runId}`, name: `Dept A ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
+    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, code: `DEPT_NB_${runId}`, name: `Dept B ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
 
     alice = await prisma.user.create({
-      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: deptA.id, isActive: true },
+      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
     bob = await prisma.user.create({
-      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: deptB.id, isActive: true },
+      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
-    aliceToken = signSessionToken({ id: alice.id, email: alice.email, name: alice.name, role: alice.role, departmentId: alice.departmentId });
+    aliceToken = signSessionToken({ id: alice.id, email: alice.email, name: alice.name, role: alice.role});
 
     const mkTask = (owner: any, dept: any, code: string, title: string) =>
       prisma.task.create({
         data: {
           code, title, scope: TaskScope.DEPARTMENT, priority: TaskPriority.NORMAL,
           status: TaskStatus.IN_PROGRESS, academicMonth: 10, academicYear: '2026-2027',
-          dueDate: new Date('2026-11-01'), createdById: owner.id, departmentId: dept.id,
+          dueDate: new Date('2026-11-01'), createdById: owner.id, leadUnitId: dept.id,
           actors: { create: [{ userId: owner.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
         },
       });
@@ -109,7 +109,7 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
     await prisma.workDossier.deleteMany({ where: { id: { in: [dossierA?.id, dossierB?.id].filter(Boolean) } } }).catch(() => undefined);
     if (unit) await prisma.organizationalUnit.delete({ where: { id: unit.id } }).catch(() => undefined);
     await prisma.user.deleteMany({ where: { id: { in: [alice?.id, bob?.id].filter(Boolean) } } }).catch(() => undefined);
-    await prisma.department.deleteMany({ where: { id: { in: [deptA?.id, deptB?.id].filter(Boolean) } } }).catch(() => undefined);
+    await prisma.organizationalUnit.deleteMany({ where: { id: { in: [deptA?.id, deptB?.id].filter(Boolean) } } }).catch(() => undefined);
   });
 
   test('DELETE deliverable with mismatched parent task fails closed and preserves the foreign child', async () => {

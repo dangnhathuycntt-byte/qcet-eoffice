@@ -15,43 +15,43 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
   const staffActor: ActorContext = {
     id: 'user-staff-01',
     role: 'CHUYEN_VIEN',
-    departmentId: 'dept-cntt',
+
   };
 
   const giangVienActor: ActorContext = {
     id: 'user-gv-01',
     role: 'GIANG_VIEN',
-    departmentId: 'dept-cntt',
+
   };
 
   const managerActor: ActorContext = {
     id: 'user-mgr-01',
     role: 'TRUONG_PHONG',
-    departmentId: 'dept-cntt',
+
   };
 
   const otherDeptManagerActor: ActorContext = {
     id: 'user-mgr-02',
     role: 'TRUONG_PHONG',
-    departmentId: 'dept-kinhte',
+
   };
 
   const executiveActor: ActorContext = {
     id: 'user-bgh-01',
     role: 'BAN_GIAM_HIEU',
-    departmentId: null,
+
   };
 
   const adminActor: ActorContext = {
     id: 'user-admin-01',
     role: 'ADMIN',
-    departmentId: null,
+
   };
 
   const baseDepartmentTask: TaskContext = {
     id: 'task-dept-01',
     scope: 'DEPARTMENT',
-    departmentId: 'dept-cntt',
+
     createdById: 'user-creator-99',
     primaryOwnerId: 'user-staff-99',
     assigneeIds: ['user-staff-99'],
@@ -60,7 +60,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
   const baseSchoolTask: TaskContext = {
     id: 'task-school-01',
     scope: 'SCHOOL',
-    departmentId: 'dept-cntt',
+
     createdById: 'user-creator-99',
     primaryOwnerId: 'user-staff-99',
     assigneeIds: ['user-staff-99'],
@@ -249,7 +249,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskWhereManagerIsDri: TaskContext = {
         id: 'task-mgr-sole-dri',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: 'user-admin-01',
         primaryOwnerId: managerActor.id,
         assigneeIds: [managerActor.id],
@@ -269,7 +269,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskWhereExecutiveIsDri: TaskContext = {
         id: 'task-exec-dri',
         scope: 'SCHOOL',
-        departmentId: null,
+
         createdById: executiveActor.id,
         driId: executiveActor.id,
         assigneeIds: [executiveActor.id],
@@ -289,7 +289,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskWithUploadedDeliverable: TaskContext = {
         id: 'task-with-deliverable',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: 'user-admin-01',
         primaryOwnerId: 'other-user',
         assigneeIds: ['other-user'],
@@ -310,7 +310,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskWithAssigneeObj: TaskContext = {
         id: 'task-obj',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: 'user-admin-01',
         assignees: [
           { userId: managerActor.id, roleInTask: 'PRIMARY_OWNER' },
@@ -332,7 +332,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskCreatedByManager: TaskContext = {
         id: 'task-created-by-mgr',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: managerActor.id,
         primaryOwnerId: 'user-staff-99',
         assigneeIds: ['user-staff-99'],
@@ -352,7 +352,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskSubmittedByManager: TaskContext = {
         id: 'task-submitted-by-mgr',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: 'user-admin-01',
         primaryOwnerId: 'user-staff-99',
         assigneeIds: ['user-staff-99'],
@@ -379,7 +379,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       const taskWhereActorIsDri: TaskContext = {
         id: 'task-delegated-maker',
         scope: 'DEPARTMENT',
-        departmentId: 'dept-cntt',
+
         createdById: 'user-admin-01',
         primaryOwnerId: managerActor.id,
         assigneeIds: [managerActor.id],
@@ -583,25 +583,25 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     const deanActor: ActorContext = {
       id: 'user-dean-01',
       role: 'TRUONG_KHOA',
-      departmentId: 'dept-cntt',
+
     };
 
     const viceDeanActor: ActorContext = {
       id: 'user-vice-dean-01',
       role: 'PHO_TRUONG_KHOA',
-      departmentId: 'dept-cntt',
+
     };
 
     const centerDirectorActor: ActorContext = {
       id: 'user-dir-01',
       role: 'GIAM_DOC_TRUNG_TAM',
-      departmentId: 'dept-cntt',
+
     };
 
     const viceDirectorActor: ActorContext = {
       id: 'user-vice-dir-01',
       role: 'PHO_GIAM_DOC_TRUNG_TAM',
-      departmentId: 'dept-cntt',
+
     };
 
     it('categorizes TRUONG_KHOA, PHO_TRUONG_KHOA, GIAM_DOC_TRUNG_TAM, PHO_GIAM_DOC_TRUNG_TAM as MANAGER', () => {
@@ -654,7 +654,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     it('prohibits TRUONG_KHOA from approving department tasks of a different department', () => {
       const otherDean: ActorContext = {
         ...deanActor,
-        departmentId: 'dept-dien-tu',
+
       };
       const res = taskStateMachine.canTransition(
         otherDean,
@@ -687,7 +687,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     const nonMakerDeptTask: TaskContext = {
       id: 'task-auth-dec-01',
       scope: 'DEPARTMENT',
-      departmentId: 'dept-cntt',
+
       createdById: 'user-creator-99',
       primaryOwnerId: 'user-staff-99',
       assigneeIds: ['user-staff-99'],
@@ -696,7 +696,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     const nonMakerSchoolTask: TaskContext = {
       id: 'task-auth-dec-02',
       scope: 'SCHOOL',
-      departmentId: 'dept-cntt',
+
       createdById: 'user-creator-99',
       primaryOwnerId: 'user-staff-99',
       assigneeIds: ['user-staff-99'],

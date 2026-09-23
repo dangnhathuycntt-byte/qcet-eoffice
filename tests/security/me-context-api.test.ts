@@ -97,11 +97,13 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
     }
 
     // 1. Department & Unit
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `MeContext Dept ${testRunId}`,
-        shortName: `D-ME-${testRunId.slice(-6)}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -156,7 +158,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         role: UserRole.CHUYEN_VIEN,
         title: 'Chuyên viên QLĐT',
         phone: '0901234567',
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -167,7 +169,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         name: 'Nguyễn Trưởng Khoa Grantor',
         role: UserRole.CHUYEN_VIEN,
         title: 'Trưởng Khoa',
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -177,7 +179,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         email: `disabled.${testRunId}@qncet.edu.vn`,
         name: 'Lê Vô Hiệu Hóa',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: false,
       },
     });
@@ -266,7 +268,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
       await prisma.user.deleteMany({
         where: { id: { in: [institutionalUser?.id, granterUser?.id, disabledUser?.id, adminUser?.id].filter(Boolean) } },
       });
-      await prisma.department.deleteMany({ where: { id: deptId } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: deptId } });
     } catch (e) {
       console.error('Cleanup error:', e);
     }

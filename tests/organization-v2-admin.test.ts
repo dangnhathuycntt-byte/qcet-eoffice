@@ -33,7 +33,7 @@ describe("Sprint 6: Organization Administration & Effective-Dated Authority (Cơ
     userRole: UserRole.ADMIN,
     systemRole: "SYSTEM_ADMIN",
     activePositionCode: "QUAN_TRI_HE_THONG",
-    departmentId: "",
+
   };
 
   // Test target staff 1

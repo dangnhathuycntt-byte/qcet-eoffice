@@ -357,7 +357,7 @@ describe("Calendar Month View Component & Precision Specs", () => {
           progressPercent: 60,
           dueDate: "2026-09-10T00:00:00.000Z",
           startDate: "2026-08-28T00:00:00.000Z",
-          departmentId: "P_DTQLKH",
+
           departmentName: "Phòng Đào tạo",
           subTasks: [],
           deliverables: [],
@@ -376,7 +376,7 @@ describe("Calendar Month View Component & Precision Specs", () => {
           progressPercent: 0,
           dueDate: "2026-10-02T00:00:00.000Z",
           startDate: "2026-09-26T00:00:00.000Z",
-          departmentId: "P_VP",
+
           departmentName: "Văn phòng",
           subTasks: [],
           deliverables: [],

@@ -24,7 +24,7 @@ const activeUser = {
   email: "auth-hardening@cdktcnqn.edu.vn",
   name: "Auth Hardening",
   role: "CHUYEN_VIEN",
-  departmentId: "CNTT",
+
   title: "Chuyên viên",
   isActive: true,
 };

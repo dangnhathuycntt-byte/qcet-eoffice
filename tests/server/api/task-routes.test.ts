@@ -29,10 +29,10 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
 
   before(async () => {
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng A ${testRunId}`, shortName: `PA-${testRunId}` },
-        { id: deptBId, name: `Phòng B ${testRunId}`, shortName: `PB-${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -43,7 +43,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         email: `staff.a.${testRunId}@qcet.edu.vn`,
         name: 'Nhân viên Phòng A',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -54,7 +54,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         email: `leader.a.${testRunId}@qcet.edu.vn`,
         name: 'Trưởng phòng A',
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -65,7 +65,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         email: `staff.b.${testRunId}@qcet.edu.vn`,
         name: 'Nhân viên Phòng B',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptBId,
+
         isActive: true,
       },
     });
@@ -76,7 +76,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         email: `bgh.${testRunId}@qcet.edu.vn`,
         name: 'Hiệu trưởng',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -87,7 +87,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       email: staffAUser.email,
       name: staffAUser.name,
       role: staffAUser.role,
-      departmentId: staffAUser.departmentId,
+
     });
 
     leaderAToken = signSessionToken({
@@ -95,7 +95,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       email: leaderAUser.email,
       name: leaderAUser.name,
       role: leaderAUser.role,
-      departmentId: leaderAUser.departmentId,
+
     });
 
     staffBToken = signSessionToken({
@@ -103,7 +103,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       email: staffBUser.email,
       name: staffBUser.name,
       role: staffBUser.role,
-      departmentId: staffBUser.departmentId,
+
     });
 
     bghToken = signSessionToken({
@@ -111,7 +111,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
 
     // 4. Create sample tasks
@@ -124,17 +124,11 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
         progressPercent: 30,
-        departmentId: deptAId,
+
         createdById: leaderAUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-15T17:00:00.000Z'),
-        assignees: {
-          create: {
-            userId: staffAUser.id,
-            roleInTask: 'PRIMARY_OWNER',
-          },
-        },
+        dueDate: new Date('2026-10-15T17:00:00.000Z')
       },
     });
     taskAId = taskA.id;
@@ -148,17 +142,11 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         status: TaskStatus.NOT_STARTED,
         priority: TaskPriority.LOW,
         progressPercent: 0,
-        departmentId: deptBId,
+
         createdById: staffBUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-20T17:00:00.000Z'),
-        assignees: {
-          create: {
-            userId: staffBUser.id,
-            roleInTask: 'PRIMARY_OWNER',
-          },
-        },
+        dueDate: new Date('2026-10-20T17:00:00.000Z')
       },
     });
     personalTaskBId = personalTaskB.id;
@@ -167,18 +155,18 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
   after(async () => {
     // Cleanup
     await prisma.taskDeliverable.deleteMany({
-      where: { task: { departmentId: { in: [deptAId, deptBId] } } },
+      where: { task: { leadUnitId: { in: [deptAId, deptBId] } } },
     });
     await prisma.taskActor.deleteMany({
-      where: { task: { departmentId: { in: [deptAId, deptBId] } } },
+      where: { task: { leadUnitId: { in: [deptAId, deptBId] } } },
     });
     await prisma.task.deleteMany({
-      where: { departmentId: { in: [deptAId, deptBId] } },
+      where: { leadUnitId: { in: [deptAId, deptBId] } },
     });
     await prisma.user.deleteMany({
       where: { id: { in: [staffAUser.id, leaderAUser.id, staffBUser.id, bghUser.id] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [deptAId, deptBId] } },
     });
   });
@@ -298,7 +286,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
           title: `Nhiệm vụ tạo tự động ${testRunId}`,
           description: 'Mô tả chi tiết',
           scope: 'department',
-          departmentId: deptAId,
+
           assigneeId: staffAUser.id,
           priority: 'high',
           dueDate: '2026-11-01T17:00:00.000Z',

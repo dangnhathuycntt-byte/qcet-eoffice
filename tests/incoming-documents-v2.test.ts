@@ -54,7 +54,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-lead-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
@@ -71,7 +71,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-coord-${testRunId}`,
         name: `Phòng Kế hoạch Tài chính ${testRunId}`,
@@ -88,7 +88,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.FACULTY,
       },
     });
-    const d3 = await prisma.department.create({
+    const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrelated-${testRunId}`,
         name: `Khoa Công nghệ Thông tin ${testRunId}`,
@@ -105,7 +105,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Văn thư Test",
         role: UserRole.VAN_THU,
         title: "Văn thư viên",
-        departmentId: deptLeadId,
+
       },
     });
 
@@ -116,7 +116,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Hiệu trưởng Test",
         role: UserRole.BAN_GIAM_HIEU,
         title: "Hiệu trưởng",
-        departmentId: null,
+
       },
     });
 
@@ -127,7 +127,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-        departmentId: deptLeadId,
+
       },
     });
 
@@ -138,7 +138,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Trưởng khoa CNTT Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng khoa",
-        departmentId: deptUnrelatedId,
+
       },
     });
 
@@ -149,7 +149,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Chuyên viên Phụ trách Chính",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: deptLeadId,
+
       },
     });
 
@@ -160,7 +160,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Chuyên viên Phối hợp",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: deptCoordId,
+
       },
     });
 
@@ -171,7 +171,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         name: "Nhân viên Không thẩm quyền",
         role: UserRole.CHUYEN_VIEN,
         title: "Nhân viên",
-        departmentId: deptUnrelatedId,
+
       },
     });
   });
@@ -245,7 +245,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
 
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: { in: [deptLeadId, deptCoordId, deptUnrelatedId] },
         },
@@ -771,7 +771,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         email: clerkUser.email,
         name: clerkUser.name,
         role: clerkUser.role,
-        departmentId: clerkUser.departmentId,
+
       });
 
       rectorToken = signSessionToken({
@@ -779,7 +779,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         email: rectorUser.email,
         name: rectorUser.name,
         role: rectorUser.role,
-        departmentId: rectorUser.departmentId,
+
       });
 
       unitHeadToken = signSessionToken({
@@ -787,7 +787,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         email: unitHeadLead.email,
         name: unitHeadLead.name,
         role: unitHeadLead.role,
-        departmentId: unitHeadLead.departmentId,
+
       });
 
       driToken = signSessionToken({
@@ -795,7 +795,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         email: specialistDri.email,
         name: specialistDri.name,
         role: specialistDri.role,
-        departmentId: specialistDri.departmentId,
+
       });
     });
 

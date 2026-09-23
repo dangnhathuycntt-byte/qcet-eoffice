@@ -127,8 +127,7 @@ async function verifyDRIReassignmentAuthority(
 
   const isLeadUnitLeaderByDept =
     requestingUser.role === UserRole.TRUONG_PHONG &&
-    ((task.leadUnit && requestingUser.departmentId === task.leadUnit.code) ||
-      (task.departmentId && requestingUser.departmentId === task.departmentId));
+    (task.leadUnit && (requestingUser as any).departmentId === task.leadUnit.code);
 
   if (isLeadUnitLeaderByAssignment || isLeadUnitLeaderByDept) {
     return;
@@ -352,7 +351,6 @@ export async function getTaskActors(taskId: string): Promise<TaskActorsGroup> {
           name: true,
           email: true,
           role: true,
-          departmentId: true,
         },
       },
       unit: true,

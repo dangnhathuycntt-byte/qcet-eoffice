@@ -72,13 +72,15 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
   before(async () => {
     const timestamp = Date.now();
 
-    dept = await prisma.department.findFirst();
+    dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_p1p2_${timestamp}`,
+          code: `dept_p1p2_${timestamp}`,
           name: 'Phòng Tổ chức Cán bộ P1P2',
-          shortName: 'TCCB',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -101,7 +103,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
         name: 'Quản trị viên Hệ thống',
         email: `admin_${timestamp}@qcet.edu.vn`,
         role: UserRole.ADMIN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(adminUser.id);
@@ -126,7 +128,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
         name: 'Hiệu Trưởng Test',
         email: `rector_${timestamp}@qcet.edu.vn`,
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(rectorUser.id);
@@ -161,7 +163,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
         name: 'Chuyên viên A',
         email: `staff_a_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(staffUser.id);
@@ -182,7 +184,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
         name: 'Chuyên viên B',
         email: `staff_b_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(secondStaffUser.id);
@@ -202,7 +204,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       email: adminUser.email,
       name: adminUser.name,
       role: adminUser.role,
-      departmentId: adminUser.departmentId,
+
     });
 
     rectorToken = signSessionToken({
@@ -210,7 +212,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       email: rectorUser.email,
       name: rectorUser.name,
       role: rectorUser.role,
-      departmentId: rectorUser.departmentId,
+
     });
 
     staffToken = signSessionToken({
@@ -218,7 +220,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
 
     secondStaffToken = signSessionToken({
@@ -226,7 +228,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       email: secondStaffUser.email,
       name: secondStaffUser.name,
       role: secondStaffUser.role,
-      departmentId: secondStaffUser.departmentId,
+
     });
   });
 
@@ -665,7 +667,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       const actor = {
         id: 'dri_user',
         role: 'CHUYEN_VIEN',
-        departmentId: 'dept_1',
+
       };
 
       const task = {
@@ -673,7 +675,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
         status: 'WAITING_APPROVAL',
         creatorId: 'manager_user',
         primaryOwnerId: 'dri_user',
-        departmentId: 'dept_1',
+
         deliverables: [{ id: 'del_1', uploadedById: 'dri_user' }],
       };
 

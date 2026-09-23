@@ -797,11 +797,13 @@ export class TaskCommandService {
         in_progress: TaskStatus.IN_PROGRESS,
         waiting_approval: TaskStatus.WAITING_APPROVAL,
         completed: TaskStatus.COMPLETED,
+        overdue: TaskStatus.IN_PROGRESS,
         cancelled: TaskStatus.CANCELLED,
         NOT_STARTED: TaskStatus.NOT_STARTED,
         IN_PROGRESS: TaskStatus.IN_PROGRESS,
         WAITING_APPROVAL: TaskStatus.WAITING_APPROVAL,
         COMPLETED: TaskStatus.COMPLETED,
+        OVERDUE: TaskStatus.IN_PROGRESS,
         CANCELLED: TaskStatus.CANCELLED,
       };
 
@@ -822,8 +824,8 @@ export class TaskCommandService {
             scope: existing.scope,
             createdById: existing.createdById,
             departmentId: existing.leadUnitId,
-            assignees: existing.actors,
-            assigneeIds: existing.actors?.map((a) => a.userId),
+            assignees: existing.actors?.filter((a) => a.userId != null).map((a) => ({ userId: a.userId as string, roleInTask: a.role })),
+            assigneeIds: existing.actors?.map((a) => a.userId).filter((id): id is string => id != null),
           },
           existing.status,
           mappedStatus

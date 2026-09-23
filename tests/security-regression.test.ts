@@ -15,7 +15,7 @@ function createTestToken(payload: { id: string; role: string; departmentId?: str
   return signSessionToken({
     id: payload.id,
     role: payload.role,
-    departmentId: payload.departmentId,
+
     name: payload.name || "Test User",
     email: payload.email || `${payload.id}@qcet.edu.vn`,
   });
@@ -158,15 +158,15 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
 describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
   before(async () => {
     // Setup test departments
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: "dept-daotao" },
       update: {},
-      create: { id: "dept-daotao", name: "Phòng Đào tạo (Test)" },
+      create: { id: "dept-daotao", code: "dept-daotao", name: "Phòng Đào tạo (Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: "dept-cntt" },
       update: {},
-      create: { id: "dept-cntt", name: "Khoa CNTT (Test)" },
+      create: { id: "dept-cntt", code: "dept-cntt", name: "Khoa CNTT (Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
 
     // Setup test users
@@ -178,7 +178,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         email: "creator1@test.com",
         name: "Creator User",
         role: "TRUONG_PHONG",
-        departmentId: "dept-daotao",
+
       },
     });
     await prisma.user.upsert({
@@ -189,7 +189,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         email: "assignee@test.com",
         name: "Assignee User",
         role: "CHUYEN_VIEN",
-        departmentId: "dept-cntt",
+
       },
     });
     await prisma.user.upsert({
@@ -200,7 +200,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         email: "user-cntt@test.com",
         name: "CNTT User",
         role: "CHUYEN_VIEN",
-        departmentId: "dept-cntt",
+
       },
     });
     await prisma.user.upsert({
@@ -211,7 +211,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         email: "lead-cntt@test.com",
         name: "CNTT Lead",
         role: "TRUONG_PHONG",
-        departmentId: "dept-cntt",
+
       },
     });
     await prisma.user.upsert({
@@ -313,7 +313,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         title: "Nhiệm vụ đào tạo",
         status: "IN_PROGRESS",
         priority: "NORMAL",
-        departmentId: "dept-daotao",
+
         createdById: "user-creator-1",
         dueDate: new Date("2026-10-01"),
         academicMonth: 9,
@@ -330,17 +330,12 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         title: "Nhiệm vụ CNTT",
         status: "IN_PROGRESS",
         priority: "NORMAL",
-        departmentId: "dept-cntt",
+
         createdById: "user-creator-1",
         dueDate: new Date("2026-10-01"),
         academicMonth: 9,
         academicYear: "2026-2027",
-        assignees: {
-          create: {
-            userId: "user-assignee",
-            roleInTask: "PRIMARY_OWNER",
-          },
-        },
+        // Phase 9: TaskAssignee dropped — assignees removed
       },
     });
   });
@@ -373,7 +368,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     await prisma.organizationalUnit.deleteMany({
       where: { id: "unit-bgh-sec-test" },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: ["dept-daotao", "dept-cntt"] } },
     });
   });
@@ -488,7 +483,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         code: "TASK-TEMP-DEL-1",
         title: "Nhiệm vụ lưu trữ bởi creator",
         status: "NOT_STARTED",
-        departmentId: "dept-daotao",
+
         createdById: "user-creator-1",
         dueDate: new Date("2026-10-01"),
         academicMonth: 9,
@@ -520,7 +515,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         code: "TASK-TEMP-DEL-2",
         title: "Nhiệm vụ lưu trữ bởi BGH",
         status: "NOT_STARTED",
-        departmentId: "dept-daotao",
+
         createdById: "user-creator-1",
         dueDate: new Date("2026-10-01"),
         academicMonth: 9,

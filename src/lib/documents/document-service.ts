@@ -341,11 +341,12 @@ export async function listDocuments(
   if (filter.securityLevel) {
     queryConditions.push({ securityLevel: filter.securityLevel as any });
   }
+  // Phase 9: leadDepartmentId and draftingDeptId dropped from Document
   if (filter.leadDepartmentId) {
-    queryConditions.push({ leadDepartmentId: filter.leadDepartmentId });
+    // field removed — skip filter
   }
   if (filter.draftingDeptId) {
-    queryConditions.push({ draftingDeptId: filter.draftingDeptId });
+    // field removed — skip filter
   }
   if (filter.search && filter.search.trim()) {
     const q = filter.search.trim();

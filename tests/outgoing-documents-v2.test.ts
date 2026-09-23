@@ -47,7 +47,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
@@ -64,7 +64,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
@@ -81,7 +81,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.FACULTY,
       },
     });
-    const d3 = await prisma.department.create({
+    const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
         name: `Khoa CNTT ${testRunId}`,
@@ -98,7 +98,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Chuyên viên Soạn thảo Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: deptAcademicId,
+
       },
     });
 
@@ -109,7 +109,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-        departmentId: deptAcademicId,
+
       },
     });
 
@@ -120,7 +120,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Văn thư Test",
         role: UserRole.VAN_THU,
         title: "Văn thư",
-        departmentId: deptAdminId,
+
       },
     });
 
@@ -131,7 +131,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Hiệu trưởng Test",
         role: UserRole.BAN_GIAM_HIEU,
         title: "Hiệu trưởng",
-        departmentId: null,
+
       },
     });
 
@@ -142,7 +142,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Nhân viên Không Thẩm Quyền Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Nhân viên",
-        departmentId: deptUnrelatedId,
+
       },
     });
   });
@@ -180,7 +180,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
           },
         },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [deptAcademicId, deptAdminId, deptUnrelatedId] } },
       });
       await prisma.organizationalUnit.deleteMany({
@@ -710,7 +710,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: drafterSpecialist.email,
         name: drafterSpecialist.name,
         role: drafterSpecialist.role,
-        departmentId: drafterSpecialist.departmentId,
+
       });
 
       unitHeadToken = signSessionToken({
@@ -718,7 +718,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: unitHeadAcademic.email,
         name: unitHeadAcademic.name,
         role: unitHeadAcademic.role,
-        departmentId: unitHeadAcademic.departmentId,
+
       });
 
       clerkToken = signSessionToken({
@@ -726,7 +726,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: clerkUser.email,
         name: clerkUser.name,
         role: clerkUser.role,
-        departmentId: clerkUser.departmentId,
+
       });
 
       rectorToken = signSessionToken({
@@ -734,7 +734,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: rectorUser.email,
         name: rectorUser.name,
         role: rectorUser.role,
-        departmentId: rectorUser.departmentId,
+
       });
     });
 

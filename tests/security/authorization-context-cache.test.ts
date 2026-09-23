@@ -93,11 +93,13 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     }
 
     // 1. Create Department and Unit
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `Phòng Ban Test Cache ${testRunId}`,
-        shortName: `PBTC-${testRunId}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -152,7 +154,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
         name: 'Người dùng Thử nghiệm Cache',
         role: UserRole.TRUONG_PHONG,
         title: 'Trưởng phòng ban đầu',
-        departmentId: deptId,
+
         isActive: true,
       },
       select: { id: true, email: true },
@@ -165,7 +167,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
         name: 'Người ủy quyền Thử nghiệm Cache',
         role: UserRole.ADMIN,
         title: 'Hiệu trưởng',
-        departmentId: deptId,
+
         isActive: true,
       },
       select: { id: true, email: true },
@@ -264,7 +266,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
       await prisma.organizationalUnit.deleteMany({
         where: { id: unitId },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: deptId },
       });
     } catch (e) {

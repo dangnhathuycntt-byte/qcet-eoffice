@@ -105,7 +105,7 @@ export interface TaskMetricsResult {
 
 /** Lightweight projection for list views — includes summary subtasks for rollup and collaborators, omits deliverables, dacumTaskDef, description */
 const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
-  department: { select: { id: true, name: true, shortName: true, color: true } },
+  leadUnit: { select: { id: true, name: true, code: true } },
   actors: {
     select: {
       userId: true,
@@ -137,7 +137,7 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
 };
 
 const TASK_INCLUDE = {
-  department: true,
+  leadUnit: true,
   actors: {
     select: {
       userId: true,
@@ -264,9 +264,7 @@ export function extractUserContextDetails(
         }
       }
     }
-    if (context.user?.departmentId) {
-      myUnitIdsSet.add(context.user.departmentId);
-    }
+    // Phase 9: User.departmentId dropped — unit IDs come from positionAssignments above
     // Active delegations
     if (Array.isArray(context.delegations)) {
       for (const del of context.delegations) {
@@ -353,7 +351,6 @@ export function buildTaskViewWhere(
       return {
         OR: [
           { leadUnitId: unitFilter },
-          { departmentId: unitFilter },
           { actors: { some: { unitId: unitFilter } } },
           {
             subTasks: {
@@ -361,7 +358,6 @@ export function buildTaskViewWhere(
                 archivedAt: null,
                 OR: [
                   { leadUnitId: unitFilter },
-                  { departmentId: unitFilter },
                   { actors: { some: { unitId: unitFilter } } },
                 ],
               },
@@ -378,18 +374,16 @@ export function buildTaskViewWhere(
 
       return {
         OR: [
-          // 1. Direct creator, actor, or legacy assignee on parent task
+          // 1. Direct creator or actor on parent task
           { createdById: userFilter },
           { actors: { some: { userId: userFilter } } },
-          { actors: { some: { userId: userFilter } } },
 
-          // 2. DRI or assignee on any active child subtask (Issue #21 parent-only match)
+          // 2. DRI or actor on any active child subtask (Issue #21 parent-only match)
           {
             subTasks: {
               some: {
                 archivedAt: null,
                 OR: [
-                  { actors: { some: { userId: userFilter } } },
                   { actors: { some: { userId: userFilter } } },
                 ],
               },
@@ -699,13 +693,12 @@ export function buildTaskReadWhere(
   // 4. Build Filter Conditions for Manager / Staff
   const authConditions: Prisma.TaskWhereInput[] = [
     { actors: { some: { userId } } },
-    { actors: { some: { userId } } },
   ];
 
   if (unitIds.length === 1) {
-    authConditions.push({ departmentId: unitIds[0] });
+    authConditions.push({ leadUnitId: unitIds[0] });
   } else if (unitIds.length > 1) {
-    authConditions.push({ departmentId: { in: unitIds } });
+    authConditions.push({ leadUnitId: { in: unitIds } });
   }
 
   return {
@@ -741,7 +734,7 @@ export class TaskQueryService {
       where.academicMonth = parseInt(String(month), 10);
     }
     if (dept && dept !== 'all') {
-      where.departmentId = dept;
+      where.leadUnitId = dept;
     }
     if (year && year !== 'all') {
       where.academicYear = String(year);
@@ -764,7 +757,8 @@ export class TaskQueryService {
       }
     }
     if (assigneeConditions.length === 1) {
-      where.actors = assigneeConditions[0].actors;
+      if (!where.AND) where.AND = [];
+      (where.AND as Prisma.TaskWhereInput[]).push(assigneeConditions[0]);
     } else if (assigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
@@ -793,7 +787,9 @@ export class TaskQueryService {
             },
           },
           {
-            dueDate: { lt: refDate },
+            OR: [
+              { dueDate: { lt: refDate } },
+            ],
           },
         ];
       } else {
@@ -1028,7 +1024,7 @@ export class TaskQueryService {
       where.academicMonth = parseInt(String(month), 10);
     }
     if (dept && dept !== 'all') {
-      where.departmentId = dept;
+      where.leadUnitId = dept;
     }
     if (year && year !== 'all') {
       where.academicYear = String(year);
@@ -1051,7 +1047,8 @@ export class TaskQueryService {
       }
     }
     if (assigneeConditions.length === 1) {
-      where.actors = assigneeConditions[0].actors;
+      if (!where.AND) where.AND = [];
+      (where.AND as Prisma.TaskWhereInput[]).push(assigneeConditions[0]);
     } else if (assigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
@@ -1075,7 +1072,7 @@ export class TaskQueryService {
         where.AND = [
           ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
           { status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } },
-          { dueDate: { lt: refDate } },
+          { OR: [{ dueDate: { lt: refDate } }] },
         ];
       } else {
         const statusMap: Record<string, TaskStatus> = {
@@ -1259,7 +1256,7 @@ export class TaskQueryService {
     return prisma.task.findUnique({
       where: { id: taskId, archivedAt: null },
       include: {
-        department: true,
+        leadUnit: true,
         actors: {
           include: {
             user: { select: { id: true, name: true, avatarUrl: true } },
@@ -1322,7 +1319,7 @@ export class TaskQueryService {
       where.academicYear = filters.academicYear;
     }
     if (filters.departmentId && filters.departmentId !== 'all') {
-      where.departmentId = filters.departmentId;
+      where.leadUnitId = filters.departmentId;
     }
     const metricAssigneeConditions: Prisma.TaskWhereInput[] = [];
     if (filters.scope && filters.scope !== 'all') {
@@ -1341,7 +1338,8 @@ export class TaskQueryService {
       }
     }
     if (metricAssigneeConditions.length === 1) {
-      where.actors = metricAssigneeConditions[0].actors;
+      if (!where.AND) where.AND = [];
+      (where.AND as Prisma.TaskWhereInput[]).push(metricAssigneeConditions[0]);
     } else if (metricAssigneeConditions.length > 1) {
       where.AND = [
         ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),

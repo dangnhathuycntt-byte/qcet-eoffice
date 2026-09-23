@@ -111,14 +111,14 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
     });
     let createdTestTask = false;
     if (!existingTask) {
-      const dept = await prisma.department.findFirst();
+      const dept = await prisma.organizationalUnit.findFirst();
       const user = await prisma.user.findFirst();
       if (dept && user) {
         await prisma.task.create({
           data: {
             code: 'NV-2026-10-008',
             title: 'Test Seed Task for Code Sync',
-            departmentId: dept.id,
+            leadUnitId: dept.id,
             createdById: user.id,
             academicMonth: 10,
             academicYear: '2026-2027',

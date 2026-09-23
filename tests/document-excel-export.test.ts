@@ -163,7 +163,7 @@ describe("GET /api/documents/export-excel Route Integration", () => {
       name: user.name,
       role: user.role,
     });
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.organizationalUnit.findFirst();
 
     // Create a sample incoming document for 2026 export test
     const created = await prisma.document.create({
@@ -179,7 +179,6 @@ describe("GET /api/documents/export-excel Route Integration", () => {
         summary: "Văn bản thử nghiệm xuất sổ Excel Phụ lục IV",
         urgency: "THUONG",
         securityLevel: "THUONG",
-        leadDepartmentId: dept?.id || null,
         status: "CHO_PHAN_CONG",
         registeredById: user.id,
       },

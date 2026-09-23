@@ -81,10 +81,10 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     }
 
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng Gate0 A ${testRunId}`, shortName: `PGA-${testRunId}` },
-        { id: deptBId, name: `Phòng Gate0 B ${testRunId}`, shortName: `PGB-${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng Gate0 A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng Gate0 B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -95,7 +95,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         email: `admin.gate0.${testRunId}@qcet.edu.vn`,
         name: 'Admin Gate0',
         role: UserRole.ADMIN,
-        departmentId: deptAId,
+
         passwordHash: '$2a$10$FakePasswordHashForSecurityVerification1234567890',
         isActive: true,
       },
@@ -107,7 +107,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         email: `staff.gate0.a.${testRunId}@qcet.edu.vn`,
         name: 'Staff Gate0 A',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptAId,
+
         passwordHash: '$2a$10$FakePasswordHashForStaffA1234567890abcdef',
         isActive: true,
       },
@@ -119,7 +119,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         email: `staff.gate0.b.${testRunId}@qcet.edu.vn`,
         name: 'Staff Gate0 B',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptBId,
+
         passwordHash: '$2a$10$FakePasswordHashForStaffB1234567890abcdef',
         isActive: true,
       },
@@ -132,7 +132,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         name: 'Hiệu trưởng Gate0',
         role: UserRole.BAN_GIAM_HIEU,
         title: 'Hiệu trưởng',
-        departmentId: deptAId,
+
         passwordHash: '$2a$10$FakePasswordHashForLeadership1234567890abcdef',
         isActive: true,
       },
@@ -143,7 +143,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       email: adminUser.email,
       name: adminUser.name,
       role: adminUser.role,
-      departmentId: adminUser.departmentId,
+
     });
 
     leadershipToken = signSessionToken({
@@ -151,7 +151,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       email: leadershipUser.email,
       name: leadershipUser.name,
       role: leadershipUser.role,
-      departmentId: leadershipUser.departmentId,
+
     });
 
     staffAToken = signSessionToken({
@@ -159,7 +159,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       email: staffA.email,
       name: staffA.name,
       role: staffA.role,
-      departmentId: staffA.departmentId,
+
     });
 
     staffBToken = signSessionToken({
@@ -167,7 +167,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       email: staffB.email,
       name: staffB.name,
       role: staffB.role,
-      departmentId: staffB.departmentId,
+
     });
 
     // 3. Create Tasks
@@ -178,7 +178,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
-        departmentId: deptAId,
+
         createdById: staffA.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -196,7 +196,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.HIGH,
-        departmentId: deptBId,
+
         createdById: staffB.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -229,7 +229,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         scope: TaskScope.INDIVIDUAL,
         status: TaskStatus.IN_PROGRESS,
         parentTaskId: taskA.id,
-        departmentId: deptAId,
+
         createdById: staffA.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -283,7 +283,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       await prisma.task.deleteMany({ where: { parentTaskId: taskA?.id } });
       await prisma.task.deleteMany({ where: { id: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
       await prisma.user.deleteMany({ where: { id: { in: [adminUser?.id, staffA?.id, staffB?.id, leadershipUser?.id] } } });
-      await prisma.department.deleteMany({ where: { id: { in: [deptAId, deptBId] } } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: { in: [deptAId, deptBId] } } });
     } catch {}
   });
 
@@ -432,7 +432,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         email: staffA.email,
         name: staffA.name,
         role: staffA.role,
-        departmentId: staffA.departmentId,
+
       };
 
       await assert.rejects(
@@ -479,7 +479,6 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
           category: 'Kế hoạch',
           issuingAuthority: 'Dept A Authority',
           issuedDate: new Date(),
-          leadDepartmentId: deptAId,
           registeredById: staffA.id,
         },
       });

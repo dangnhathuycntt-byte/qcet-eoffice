@@ -38,7 +38,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       progressPercent: 40,
       dueDate: "2026-08-20T00:00:00.000Z",
       startDate: "2026-08-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       leadAssigneeName: "ThS. Đỗ Quang Trung",
       subTasks: [],
@@ -58,7 +58,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       progressPercent: 100,
       dueDate: "2026-08-15T00:00:00.000Z",
       startDate: "2026-08-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       leadAssigneeName: "ThS. Đỗ Quang Trung",
       subTasks: [],
@@ -78,7 +78,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       progressPercent: 65,
       dueDate: "2026-09-18T00:00:00.000Z",
       startDate: "2026-08-26T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       leadAssigneeName: "ThS. Đỗ Quang Trung",
       subTasks: [
@@ -132,7 +132,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       progressPercent: 100,
       dueDate: "2026-09-10T00:00:00.000Z",
       startDate: "2026-08-27T00:00:00.000Z",
-      departmentId: "K_CNTT",
+
       departmentName: "Khoa CNTT",
       leadAssigneeName: "TS. Nguyễn Ngọc Vinh",
       subTasks: [],
@@ -152,7 +152,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       progressPercent: 20,
       dueDate: "2026-10-16T00:00:00.000Z",
       startDate: "2026-09-28T00:00:00.000Z",
-      departmentId: "K_CNTT",
+
       departmentName: "Khoa CNTT",
       leadAssigneeName: "TS. Nguyễn Ngọc Vinh",
       subTasks: [],

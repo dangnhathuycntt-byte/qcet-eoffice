@@ -19,10 +19,14 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
   const createdUserIds: string[] = [];
 
   before(async () => {
-    testDept = await prisma.department.create({
+    const deptId = `dept_reg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    testDept = await prisma.organizationalUnit.create({
       data: {
-        id: `dept_reg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: deptId,
+        code: deptId,
         name: 'Phòng Khảo thí & ĐBCL Regression Test',
+        type: "PHONG_BAN" as any,
+        status: "ACTIVE" as any,
       },
     });
 
@@ -31,7 +35,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         email: `reg_leader_${Date.now()}@qncet.edu.vn`,
         name: 'Trưởng đơn vị Regression',
         role: 'TRUONG_PHONG',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(leaderUser.id);
@@ -41,7 +45,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     staffUser = await prisma.user.create({
@@ -49,7 +53,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         email: `reg_staff_${Date.now()}@qncet.edu.vn`,
         name: 'Chuyên viên Regression',
         role: 'CHUYEN_VIEN',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(staffUser.id);
@@ -81,7 +85,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
     }
 
     if (testDept?.id) {
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });
     }
@@ -94,7 +98,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         title: 'Nhiệm vụ kiểm thử Regression Schedule',
         priority: TaskPriority.HIGH,
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept.id,
+
         createdById: leaderUser.id,
         startDate,
         dueDate,
@@ -102,7 +106,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         academicYear: '2026-2027',
         status: TaskStatus.IN_PROGRESS,
         version: 1,
-        assignees: {
+        actors: {
           create: [
             {
               userId: staffUser.id,

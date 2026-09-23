@@ -64,8 +64,8 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
   });
 
   before(async () => {
-    dept = await prisma.department.create({
-      data: { id: `DEPT_EXEC_${runId}`, name: `Dept Exec ${runId}` },
+    dept = await prisma.organizationalUnit.create({
+      data: { id: `DEPT_EXEC_${runId}`, code: `DEPT_EXEC_${runId}`, name: `Dept Exec ${runId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
     unit = await prisma.organizationalUnit.create({
       data: { code: `U-EXEC-${runId}`, name: `Unit Exec ${runId}`, type: UnitType.DEPARTMENT },
@@ -85,7 +85,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
       data: { email: `admin.${runId}@qnc.edu.vn`, name: `Admin ${runId}`, role: UserRole.ADMIN, isActive: true },
     });
     staffUser = await prisma.user.create({
-      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: dept.id, isActive: true },
+      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
     bghNoAssignUser = await prisma.user.create({
       data: { email: `bghna.${runId}@qnc.edu.vn`, name: `BGH NoAssign ${runId}`, role: UserRole.BAN_GIAM_HIEU, isActive: true },
@@ -104,7 +104,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
 
     rectorToken = signSessionToken({ id: rectorUser.id, email: rectorUser.email, name: rectorUser.name, role: rectorUser.role });
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
-    staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role, departmentId: dept.id });
+    staffToken = signSessionToken({ id: staffUser.id, email: staffUser.email, name: staffUser.name, role: staffUser.role});
     bghNoAssignToken = signSessionToken({ id: bghNoAssignUser.id, email: bghNoAssignUser.email, name: bghNoAssignUser.name, role: bghNoAssignUser.role });
 
     task = await prisma.task.create({
@@ -118,7 +118,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
         academicYear: '2026-2027',
         dueDate: new Date('2026-11-01'),
         createdById: staffUser.id,
-        departmentId: dept.id,
+        leadUnitId: dept.id,
         actors: { create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
       },
     });
@@ -139,7 +139,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
       where: { id: { in: [rectorUser?.id, adminUser?.id, staffUser?.id, bghNoAssignUser?.id].filter(Boolean) } },
     }).catch(() => undefined);
     if (unit) await prisma.organizationalUnit.delete({ where: { id: unit.id } }).catch(() => undefined);
-    if (dept) await prisma.department.deleteMany({ where: { id: dept.id } }).catch(() => undefined);
+    if (dept) await prisma.organizationalUnit.deleteMany({ where: { id: dept.id } }).catch(() => undefined);
   });
 
   const getReq = (token?: string, query = '') =>

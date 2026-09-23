@@ -28,8 +28,11 @@ export async function GET(req: Request) {
     }
 
     const where: any = {};
+    // Phase 9: User.departmentId dropped — filter by unit membership instead if provided
     if (validatedQuery.departmentId) {
-      where.departmentId = validatedQuery.departmentId;
+      where.positionAssignments = {
+        some: { unitId: validatedQuery.departmentId, status: "ACTIVE" },
+      };
     }
     if (validatedQuery.role) {
       where.role = validatedQuery.role;
@@ -44,11 +47,6 @@ export async function GET(req: Request) {
     const take = validatedQuery.limit ?? validatedQuery.pageSize;
     const users = await prisma.user.findMany({
       where,
-      include: {
-        department: {
-          select: { id: true, name: true, shortName: true },
-        },
-      },
       orderBy: { name: "asc" },
       take,
       skip: (validatedQuery.page - 1) * take,

@@ -168,10 +168,8 @@ export async function resolveUserContext(
           },
         },
       },
-      department: true,
     },
   });
-
   const activePosition = dbUser?.positionAssignments[0]?.positionDefinition;
   let activePositionCode = activePosition?.code;
   if (!activePositionCode) {
@@ -258,8 +256,8 @@ export async function resolveUserContext(
     role: session.role,
     systemRole: session.role === "ADMIN" ? "SYSTEM_ADMIN" : session.role,
     activePositionCode,
-    departmentId: dbUser?.departmentId || session.departmentId || undefined,
-    departmentCode: dbUser?.department?.shortName || undefined,
+    departmentId: (session as any).departmentId || undefined,
+    departmentCode: undefined,
     portfolios,
     isActive: true,
     delegationGrants: formattedGrants,
@@ -419,7 +417,7 @@ export async function presentDocument(
     type: "document_incoming",
     scope: "SCHOOL",
     securityLevel: doc.securityLevel || "NORMAL",
-    leadDepartmentId: doc.leadDepartmentId || undefined,
+    leadDepartmentId: (doc as any).leadDepartmentId || undefined,
   };
 
   await assertAuthorized(user, "document.incoming.present", resource);
@@ -573,10 +571,8 @@ export async function directDocument(
       },
     });
 
-    // 2. Check if a legacy Department exists with id leadUnitId, if so update Document
-    const legacyDept = await tx.department.findUnique({
-      where: { id: input.leadUnitId },
-    });
+    // Phase 9: Department model dropped — no legacy dual-write needed
+    const legacyDept = null;
 
     const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetWorkflowStatus);
 
@@ -585,7 +581,6 @@ export async function directDocument(
       data: {
         status: targetDocStatus,
         dueDate: deadline,
-        ...(legacyDept ? { leadDepartmentId: input.leadUnitId } : {}),
       },
     });
 
@@ -598,7 +593,7 @@ export async function directDocument(
           leaderId: user.id,
           instruction: input.leadershipInstruction,
           deadline,
-          assignedDeptId: legacyDept.id,
+          assignedDeptId: (legacyDept as any).id,
           collaboratorIds: (input.coordinatingUnitIds || []).join(","),
         },
       });
@@ -674,7 +669,7 @@ export async function assignUnitWork(
     throw new NotFoundError("Không tìm thấy văn bản đến hoặc quy trình xử lý liên quan.");
   }
 
-  const leadUnitId = doc.incomingWorkflow.leadUnitId || doc.leadDepartmentId;
+  const leadUnitId = doc.incomingWorkflow.leadUnitId || (doc as any).leadDepartmentId;
   if (!leadUnitId) {
     throw new ValidationError("Văn bản chưa có đơn vị chủ trì.");
   }
@@ -733,10 +728,7 @@ export async function assignUnitWork(
       const code = `VB-${doc.registrationNumber}-${Math.floor(1000 + Math.random() * 9000)}`;
       const taskTitle = input.taskTitle || `Xử lý văn bản số ${doc.registrationNumber}: ${doc.summary}`;
 
-      const legacyDept = await tx.department.findUnique({
-        where: { id: leadUnitId },
-      });
-
+      // Phase 9: Department model dropped — use leadUnitId directly
       const task = await tx.task.create({
         data: {
           code,
@@ -755,7 +747,6 @@ export async function assignUnitWork(
           startDate: now,
           dueDate: deadline || new Date(now.getTime() + 7 * 86400000),
           createdById: user.id,
-          departmentId: legacyDept ? legacyDept.id : undefined,
           leadUnitId,
           actors: {
             create: [
@@ -1163,7 +1154,6 @@ export async function getIncomingDocument(
     where: { documentId },
     include: {
       leader: { select: { id: true, name: true, email: true } },
-      assignedDept: { select: { id: true, name: true } },
     },
   });
 

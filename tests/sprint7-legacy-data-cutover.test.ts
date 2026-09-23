@@ -64,8 +64,10 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     assert.ok(createdTask.id);
     assert.strictEqual(createdTask.actors.length, 1);
     assert.strictEqual(createdTask.actors[0].userId, user.id);
+    assert.strictEqual(createdTask.actors[0].userId, user.id);
 
     // Clean up test task
+    await prisma.taskActor.deleteMany({ where: { taskId: createdTask.id } });
     await prisma.taskActor.deleteMany({ where: { taskId: createdTask.id } });
     await prisma.task.delete({ where: { id: createdTask.id } });
   });

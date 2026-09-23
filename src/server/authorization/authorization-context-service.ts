@@ -55,7 +55,6 @@ export async function loadFreshAuthorizationContext(
       phone: true,
       avatarUrl: true,
       provider: true,
-      departmentId: true,
       isActive: true,
     },
   });
@@ -333,7 +332,7 @@ export async function loadFreshAuthorizationContext(
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       provider: user.provider,
-      departmentId: user.departmentId,
+      departmentId: undefined,
       isActive: user.isActive,
     },
     systemRoles,

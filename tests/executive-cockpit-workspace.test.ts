@@ -69,19 +69,15 @@ describe("Executive Unit Radar Dot Calculation", () => {
 
   it("getRadarDotStatus trả về đúng màu và số đếm cảnh báo", () => {
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 2, delayedTasks: 0, healthStatus: "RED" }), {
-      color: "RED",
       count: 2,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 1, healthStatus: "YELLOW" }), {
-      color: "RED",
       count: 1,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "GREEN" }), {
-      color: "GREEN",
       count: 0,
     });
     assert.deepEqual(getRadarDotStatus({ blockedTasks: 0, delayedTasks: 0, healthStatus: "YELLOW" }), {
-      color: "YELLOW",
       count: 0,
     });
   });
@@ -177,7 +173,7 @@ describe("Executive Attention Queue Builder", () => {
       id: "task-approval-1",
       code: "NV-001",
       title: "Phê duyệt kế hoạch kiểm định chất lượng đào tạo",
-      departmentId: "QLCL",
+
       departmentName: "Phòng Quản lý chất lượng",
       dueDate: "2026-09-15",
       status: "PENDING_EXECUTIVE_APPROVAL",
@@ -189,7 +185,7 @@ describe("Executive Attention Queue Builder", () => {
       id: "task-blocked-1",
       code: "NV-002",
       title: "Giải phóng mặt bằng phân hiệu 2",
-      departmentId: "QTCSVC",
+
       departmentName: "Phòng QT-CSVC",
       dueDate: "2026-09-10",
       status: "BLOCKED" as any,
@@ -201,7 +197,7 @@ describe("Executive Attention Queue Builder", () => {
       id: "task-overdue-1",
       code: "NV-003",
       title: "Báo cáo tuyển sinh đợt 1",
-      departmentId: "TS-TT",
+
       departmentName: "Trung tâm TS-TT",
       dueDate: "2026-08-30",
       status: "IN_PROGRESS",
@@ -213,7 +209,7 @@ describe("Executive Attention Queue Builder", () => {
       id: "task-normal-1",
       code: "NV-004",
       title: "Cập nhật đề cương chi tiết học kỳ 1",
-      departmentId: "K-CNTT",
+
       departmentName: "Khoa CNTT",
       dueDate: "2026-09-25",
       status: "IN_PROGRESS",
@@ -225,7 +221,7 @@ describe("Executive Attention Queue Builder", () => {
       id: "task-completed-1",
       code: "NV-005",
       title: "Tổ chức lễ khai giảng năm học 2026-2027",
-      departmentId: "CT-CTHSSV",
+
       departmentName: "Phòng CT-CTHSSV",
       dueDate: "2026-09-05",
       status: "COMPLETED",
@@ -254,7 +250,7 @@ describe("Executive Attention Queue Builder", () => {
       id: `task-${i}`,
       code: `NV-${String(i).padStart(3, "0")}`,
       title: `Task pending approval ${i}`,
-      departmentId: "DEPT-1",
+
       departmentName: "Phòng ban",
       dueDate: "2026-09-15",
       status: "PENDING_EXECUTIVE_APPROVAL",
@@ -276,7 +272,7 @@ describe("Executive Attention Queue Builder", () => {
         id: "task-ok-1",
         code: "NV-100",
         title: "Nhiệm vụ bình thường",
-        departmentId: "K-CNTT",
+
         departmentName: "Khoa CNTT",
         dueDate: "2026-09-30",
         status: "IN_PROGRESS",

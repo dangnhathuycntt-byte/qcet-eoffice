@@ -36,18 +36,18 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
 
-    const dept = await prisma.department.findFirst({
+    const dept = await prisma.organizationalUnit.findFirst({
       where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
     });
     assert.ok(dept, 'Must have at least one department in database');
-    testDeptId = user.departmentId || dept.id;
+    testDeptId = dept.id;
 
     validToken = signSessionToken({
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId,
+
     });
 
     // Seed 12 distinct tasks for pagination tests
@@ -64,7 +64,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
           academicMonth: 9,
           academicYear: '2026-2027',
           dueDate: new Date(Date.now() + i * 86400000),
-          departmentId: testDeptId,
+
           createdById: testUserId,
         },
       });
@@ -225,7 +225,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
           academicMonth: 9,
           academicYear: '2026-2027',
           dueDate: new Date('2026-12-31'),
-          departmentId: testDeptId,
+
           createdById: testUserId,
         },
       });
@@ -242,7 +242,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
           academicMonth: 9,
           academicYear: '2026-2027',
           dueDate: new Date('2026-11-30'),
-          departmentId: testDeptId,
+
           createdById: testUserId,
         },
       });
@@ -259,7 +259,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
           academicMonth: 9,
           academicYear: '2026-2027',
           dueDate: new Date('2026-10-31'),
-          departmentId: testDeptId,
+
           createdById: testUserId,
         },
       });

@@ -45,7 +45,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   if (options?.academicMonth) whereTask.academicMonth = options.academicMonth;
   if (options?.academicYear) whereTask.academicYear = options.academicYear;
   if (scopedDepartmentId) {
-    whereTask.departmentId = scopedDepartmentId;
+    whereTask.leadUnitId = scopedDepartmentId;
   }
   if (options?.userId) {
     whereTask.assignees = {
@@ -65,8 +65,8 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     prisma.task.findMany({
       where: whereTask,
       include: {
-        department: true,
-        assignees: {
+        leadUnit: true,
+        actors: {
           include: {
             user: {
               select: { id: true, name: true, avatarUrl: true },
@@ -79,16 +79,16 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
         subTasks: {
           where: {
             status: { not: TaskStatus.CANCELLED },
-            // Confine child tasks to the same department scope as their parent query. A parent task
-            // anchored to the caller's department (e.g. a SCHOOL directive) would otherwise serialize
-            // every cross-department subtask, leaking titles, assignee names and deliverable `fileUrl`
-            // evidence links. `departmentId` is the canonical Task-level ownership field (mapPrismaTaskToStaffTask
+            // Confine child tasks to the same unit scope as their parent query. A parent task
+            // anchored to the caller's unit (e.g. a SCHOOL directive) would otherwise serialize
+            // every cross-unit subtask, leaking titles, assignee names and deliverable `fileUrl`
+            // evidence links. `leadUnitId` is the canonical Task-level ownership field (mapPrismaTaskToStaffTask
             // never populates `assignedToDepartmentId`, which the route-level prune relied on).
-            ...(scopedDepartmentId ? { departmentId: scopedDepartmentId } : {}),
+            ...(scopedDepartmentId ? { leadUnitId: scopedDepartmentId } : {}),
           },
           include: {
-            department: true,
-            assignees: {
+            leadUnit: true,
+            actors: {
               include: {
                 user: {
                   select: { id: true, name: true, avatarUrl: true },
@@ -103,16 +103,22 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       },
       orderBy: { dueDate: "asc" },
     }),
-    prisma.department.findMany({
+    prisma.organizationalUnit.findMany({
+      where: { status: "ACTIVE" },
       include: {
-        users: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
+        positionAssignments: {
+          where: { status: "ACTIVE" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true,
+              },
+            },
           },
         },
-        tasks: {
+        leadTasks: {
           where: deptTaskWhere,
           select: {
             id: true,
@@ -146,10 +152,11 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
 
   // Chuyển đổi Prisma Tasks sang định dạng SchoolTask[]
   const mappedTasks: SchoolTask[] = dbTasks.map((t) => {
-    const leadAssignee = t.assignees.find((a) => a.roleInTask === "PRIMARY_OWNER");
-    const coAssignees = t.assignees
-      .filter((a) => a.roleInTask !== "PRIMARY_OWNER")
-      .map((a) => a.user?.name || "")
+    const actors = (t as any).actors || [];
+    const leadAssignee = actors.find((a: any) => a.role === "DRI" && a.isPrimaryDRI) || actors.find((a: any) => a.role === "DRI");
+    const coAssignees = actors
+      .filter((a: any) => a.role !== "DRI" && a.role !== "ASSIGNER")
+      .map((a: any) => a.user?.name || "")
       .filter(Boolean);
 
     const subTasks: StaffTask[] = (t.subTasks || []).map((sub) => {
@@ -197,13 +204,13 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       leadAssigneeId: leadAssignee?.user?.id || leadAssignee?.userId,
       leadAssigneeAvatar: leadAssignee?.user?.avatarUrl || undefined,
       assignedTo: leadAssignee?.user?.name || "Chưa phân công",
-      leadDepartment: t.department?.name,
-      leadDepartmentCode: t.department?.id,
-      leadDepartmentId: t.department?.id,
-      department: t.department?.name,
-      departmentCode: t.department?.id,
-      departmentId: t.department?.id,
-      departmentName: t.department?.name,
+      leadDepartment: t.leadUnit?.name,
+      leadDepartmentCode: t.leadUnit?.id,
+      leadDepartmentId: t.leadUnit?.id,
+      department: t.leadUnit?.name,
+      departmentCode: t.leadUnit?.id,
+      departmentId: t.leadUnit?.id,
+      departmentName: t.leadUnit?.name,
       coAssignees,
       assignedDate: formatLocalDate(t.startDate),
       dueDate: formatLocalDate(t.dueDate),
@@ -278,7 +285,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
 // departments đã được tải song song ở Promise.all phía trên
 
   const departmentHealth: DepartmentHealthSummary[] = departments.map((d) => {
-    const dTasks = d.tasks || [];
+    const dTasks = d.leadTasks || [];
     const dTotal = dTasks.length;
     const dCompleted = dTasks.filter((t) => t.status === "COMPLETED").length;
     const dInProgress = dTasks.filter((t) => t.status === "IN_PROGRESS").length;
@@ -295,8 +302,9 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const averageProgressPercent = dTotal > 0 ? Math.round(totalProgress / dTotal) : 0;
     const completionRate = dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0;
 
-    const leader = d.users?.find(
-      (u) =>
+    const memberUsers = (d.positionAssignments || []).map((m: any) => m.user);
+    const leader = memberUsers.find(
+      (u: any) =>
         (u.role === "TRUONG_PHONG" || u.role === "BAN_GIAM_HIEU") &&
         u.name.trim().toLowerCase() !== d.name.trim().toLowerCase()
     );
@@ -304,9 +312,9 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
 
     return {
       departmentId: d.id,
-      departmentCode: d.id,
+      departmentCode: d.code || d.id,
       departmentName: d.name,
-      shortName: d.shortName || d.id,
+      shortName: d.code || d.id,
       leadName,
       totalTasks: dTotal,
       totalTasksCount: dTotal,

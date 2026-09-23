@@ -154,8 +154,8 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
   const isSchoolScope = rawTask.scope === "SCHOOL";
   const mappedTask = (
     isSchoolScope
-      ? mapPrismaTaskToSchoolTask(rawTask)
-      : mapPrismaTaskToStaffTask(rawTask)
+      ? mapPrismaTaskToSchoolTask(rawTask as any)
+      : mapPrismaTaskToStaffTask(rawTask as any)
   ) as unknown as SchoolTask | StaffTask;
   (mappedTask as any).availableActions = availableActions;
 
@@ -209,7 +209,7 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
   }));
 
   // 3. Extract audit events from resolutions if present
-  const resolutionEvents = (rawTask.resolutions || []).map((res: any) => ({
+  const resolutionEvents = ((rawTask as any).executiveResolutions || rawTask.resolutions || []).map((res: any) => ({
     id: `res-${res.id}`,
     action: res.resolutionType || "DIRECTIVE",
     timestamp: res.createdAt ? res.createdAt.toISOString() : new Date().toISOString(),

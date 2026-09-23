@@ -23,10 +23,10 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
 
   before(async () => {
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng Ban A WF ${testRunId}`, shortName: `PA-WF-${testRunId}` },
-        { id: deptBId, name: `Phòng Ban B WF ${testRunId}`, shortName: `PB-WF-${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng Ban A WF ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng Ban B WF ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -37,7 +37,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
         email: `staff.wf.a.${testRunId}@qcet.edu.vn`,
         name: 'Staff Dept A',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -48,7 +48,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
         email: `leader.wf.a.${testRunId}@qcet.edu.vn`,
         name: 'Leader Dept A',
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -58,7 +58,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       email: leaderA.email,
       name: leaderA.name,
       role: leaderA.role,
-      departmentId: leaderA.departmentId,
+
     });
 
     staffB = await prisma.user.create({
@@ -67,7 +67,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
         email: `staff.wf.b.${testRunId}@qcet.edu.vn`,
         name: 'Staff Dept B',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptBId,
+
         isActive: true,
       },
     });
@@ -78,7 +78,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
         email: `leader.wf.b.${testRunId}@qcet.edu.vn`,
         name: 'Leader Dept B',
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptBId,
+
         isActive: true,
       },
     });
@@ -89,7 +89,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
         email: `bgh.wf.${testRunId}@qcet.edu.vn`,
         name: 'Ban Giam Hieu WF',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: null,
+
         isActive: true,
       },
     });
@@ -100,13 +100,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: staffA.id,
         role: staffA.role,
-        departmentId: staffA.departmentId,
+
       };
 
       const task: TaskContext = {
         id: `task-wf-1-${testRunId}`,
         scope: 'DON_VI',
-        departmentId: deptAId,
+
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -124,13 +124,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: staffA.id,
         role: staffA.role,
-        departmentId: staffA.departmentId,
+
       };
 
       const task: TaskContext = {
         id: `task-wf-2-${testRunId}`,
         scope: 'DON_VI',
-        departmentId: deptAId,
+
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -145,13 +145,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: leaderA.id,
         role: leaderA.role,
-        departmentId: leaderA.departmentId,
+
       };
 
       const task: TaskContext = {
         id: `task-wf-3-${testRunId}`,
         scope: 'DON_VI',
-        departmentId: deptAId,
+
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -164,13 +164,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: leaderB.id,
         role: leaderB.role,
-        departmentId: leaderB.departmentId,
+
       };
 
       const task: TaskContext = {
         id: `task-wf-4-${testRunId}`,
         scope: 'DON_VI',
-        departmentId: deptAId,
+
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -184,19 +184,19 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const managerActor: ActorContext = {
         id: leaderA.id,
         role: leaderA.role,
-        departmentId: leaderA.departmentId,
+
       };
 
       const bghActor: ActorContext = {
         id: bghUser.id,
         role: bghUser.role,
-        departmentId: null,
+
       };
 
       const schoolTask: TaskContext = {
         id: `task-wf-5-${testRunId}`,
         scope: 'TRUONG',
-        departmentId: deptAId,
+
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -218,7 +218,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const task: TaskContext = {
         id: `task-wf-6-${testRunId}`,
         scope: 'DON_VI',
-        departmentId: deptAId,
+
       };
 
       // Staff trying to reopen to IN_PROGRESS -> rejected
@@ -246,7 +246,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
           status: TaskStatus.IN_PROGRESS,
           priority: TaskPriority.NORMAL,
           scope: TaskScope.DEPARTMENT,
-          departmentId: deptAId,
+
           createdById: leaderA.id,
           academicMonth: 9,
           academicYear: '2026-2027',
@@ -295,7 +295,7 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
           status: TaskStatus.IN_PROGRESS,
           priority: TaskPriority.NORMAL,
           scope: TaskScope.DEPARTMENT,
-          departmentId: deptAId,
+
           createdById: leaderA.id,
           academicMonth: 9,
           academicYear: '2026-2027',

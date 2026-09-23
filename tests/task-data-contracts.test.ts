@@ -32,7 +32,7 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
         title: 'Triển khai chuẩn kiểm định chất lượng GDNN 2026',
         description: 'Tổ chức rà soát tiêu chí kiểm định theo kế hoạch nhà trường',
         dueDate: '2026-10-15T17:00:00.000Z',
-        departmentId: 'dept_qldt',
+
         scope: 'SCHOOL',
         academicMonth: 10,
         academicYear: '2026-2027',
@@ -53,7 +53,7 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
         () => {
           CreateTaskInputSchema.parse({
             title: 'No',
-            departmentId: 'dept_01',
+
             dueDate: '2026-10-15',
           });
         },
@@ -68,7 +68,7 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
         () => {
           CreateTaskInputSchema.parse({
             title: 'Valid Title Here',
-            departmentId: 'dept_01',
+
             dueDate: '2026-10-15',
             academicMonth: 13,
           });
@@ -86,7 +86,7 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
           CreateTaskInputSchema.parse({
             title: 'Nhiệm vụ hợp lệ',
             dueDate: '2026-10-15',
-            departmentId: 'dept_01',
+
             id: 'injected_custom_id',
             status: 'COMPLETED',
             isApproved: true,
@@ -205,11 +205,10 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
       startDate: new Date('2026-10-01T08:00:00Z'),
       academicMonth: 10,
       academicYear: '2026-2027',
-      departmentId: 'dept_cntt',
+
       department: {
         id: 'dept_cntt',
         name: 'Khoa Công nghệ Thông tin',
-        shortName: 'CNTT',
       },
       createdById: 'usr_admin',
       parentTaskId: null,

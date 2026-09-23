@@ -26,58 +26,64 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
   before(async () => {
     // 1. Setup departments
-    testDept = await prisma.department.upsert({
+    testDept = await prisma.organizationalUnit.upsert({
       where: { id: 'DEPT-HARDEN-01' },
       update: { name: 'Phòng Đào tạo Thử nghiệm' },
       create: {
         id: 'DEPT-HARDEN-01',
+        code: 'DEPT-HARDEN-01',
         name: 'Phòng Đào tạo Thử nghiệm',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
-    otherDept = await prisma.department.upsert({
+    otherDept = await prisma.organizationalUnit.upsert({
       where: { id: 'DEPT-HARDEN-02' },
       update: { name: 'Phòng Nghiên cứu Thử nghiệm' },
       create: {
         id: 'DEPT-HARDEN-02',
+        code: 'DEPT-HARDEN-02',
         name: 'Phòng Nghiên cứu Thử nghiệm',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
     // 2. Setup users
     staffUser = await prisma.user.upsert({
       where: { id: 'user-harden-staff' },
-      update: { role: UserRole.CHUYEN_VIEN, departmentId: testDept.id },
+      update: { role: UserRole.CHUYEN_VIEN},
       create: {
         id: 'user-harden-staff',
         email: 'staff.harden@cdktcnqn.edu.vn',
         name: 'Chuyên Viên Hardening',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: testDept.id,
+
       },
     });
 
     managerUser = await prisma.user.upsert({
       where: { id: 'user-harden-mgr' },
-      update: { role: UserRole.TRUONG_PHONG, departmentId: testDept.id },
+      update: { role: UserRole.TRUONG_PHONG},
       create: {
         id: 'user-harden-mgr',
         email: 'mgr.harden@cdktcnqn.edu.vn',
         name: 'Trưởng Phòng Hardening',
         role: UserRole.TRUONG_PHONG,
-        departmentId: testDept.id,
+
       },
     });
 
     adminUser = await prisma.user.upsert({
       where: { id: 'user-harden-admin' },
-      update: { role: UserRole.ADMIN, departmentId: testDept.id },
+      update: { role: UserRole.ADMIN},
       create: {
         id: 'user-harden-admin',
         email: 'admin.harden@cdktcnqn.edu.vn',
         name: 'Admin Hardening',
         role: UserRole.ADMIN,
-        departmentId: testDept.id,
+
       },
     });
 
@@ -86,7 +92,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
 
     // 3. Create test tasks representing diverse scopes, statuses, and overdue states
@@ -100,7 +106,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.HIGH,
         progressPercent: 30,
-        departmentId: testDept.id,
+
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
@@ -122,7 +128,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
         progressPercent: 50,
-        departmentId: testDept.id,
+
         createdById: managerUser.id,
         parentTaskId: task1.id,
         academicYear: '2026-2027',
@@ -146,7 +152,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.COMPLETED,
         priority: TaskPriority.LOW,
         progressPercent: 100,
-        departmentId: testDept.id,
+
         createdById: staffUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
@@ -169,7 +175,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.NOT_STARTED,
         priority: TaskPriority.URGENT,
         progressPercent: 0,
-        departmentId: otherDept.id,
+
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 10,
@@ -191,7 +197,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.WAITING_APPROVAL,
         priority: TaskPriority.HIGH,
         progressPercent: 90,
-        departmentId: testDept.id,
+
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
@@ -214,7 +220,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         status: TaskStatus.CANCELLED,
         priority: TaskPriority.LOW,
         progressPercent: 10,
-        departmentId: testDept.id,
+
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
@@ -250,7 +256,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     await prisma.user.deleteMany({
       where: { id: { in: ['user-harden-staff', 'user-harden-mgr', 'user-harden-admin'] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } },
     });
   });
@@ -306,7 +312,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const result = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           page: 1,
           limit: 2,
         }
@@ -327,7 +333,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const page1 = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           page: 1,
           limit: 2,
         }
@@ -336,7 +342,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const page2 = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           page: 2,
           limit: 2,
         }
@@ -356,7 +362,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const result = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           all: true,
         }
       );
@@ -374,7 +380,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const firstPage = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           take: 2,
         }
       );
@@ -389,7 +395,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const secondPage = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           cursor: firstCursor!,
           take: 2,
         }
@@ -410,7 +416,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         const thirdPage = await taskQueryService.queryTasks(
           { user: staffUser },
           {
-            departmentId: testDept.id,
+
             cursor: secondPage.nextCursor,
             take: 2,
           }
@@ -426,7 +432,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const schoolTasks = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           scope: 'school',
           all: true,
         }
@@ -439,7 +445,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const deptTasks = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           scope: 'unit',
           all: true,
         }
@@ -452,7 +458,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const personalTasks = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           scope: 'personal',
           all: true,
         }
@@ -479,7 +485,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const overdueResult = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           status: 'overdue',
           referenceDate: REFERENCE_DATE_STR,
           all: true,
@@ -523,7 +529,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const res1 = await taskQueryService.queryTasks(
         { user: adminUser },
         {
-          departmentId: otherDept.id,
+
           all: true,
         }
       );
@@ -546,7 +552,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const month10 = await taskQueryService.queryTasks(
         { user: adminUser },
         {
-          departmentId: otherDept.id,
+
           month: 10,
           year: '2026-2027',
           all: true,
@@ -578,7 +584,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       const rootResult = await taskQueryService.queryTasks(
         { user: staffUser },
         {
-          departmentId: testDept.id,
+
           parentTaskId: 'root',
           all: true,
         }

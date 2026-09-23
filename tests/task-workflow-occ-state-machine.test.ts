@@ -38,7 +38,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     staffUser = await prisma.user.findFirst({
       where: { role: UserRole.CHUYEN_VIEN },
     });
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.organizationalUnit.findFirst();
     testDepartmentId = dept ? dept.id : 'dept-test-1';
 
     assert.ok(adminUser, 'Admin user must exist');
@@ -50,7 +50,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
   });
 

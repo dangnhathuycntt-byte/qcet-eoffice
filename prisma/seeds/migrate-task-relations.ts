@@ -142,11 +142,11 @@ export async function migrateTaskRelations(
       const assigneeId = (task as any).assigneeId ?? primaryActor?.userId;
 
       if (assigneeId) {
-        const existingDRI = task.actors.find(
+        const existingDRIActor = task.actors.find(
           (a) => a.role === TaskActorRole.DRI && a.userId === assigneeId
         );
 
-        if (!existingDRI) {
+        if (!existingDRIActor) {
           // Demote any existing non-matching primary DRI if present
           const otherExistingDRIs = task.actors.filter(
             (a) => a.role === TaskActorRole.DRI && a.userId !== assigneeId
@@ -188,9 +188,9 @@ export async function migrateTaskRelations(
             });
           }
           driCount++;
-        } else if (!existingDRI.isPrimaryDRI) {
+        } else if (!existingDRIActor.isPrimaryDRI) {
           await prisma.taskActor.update({
-            where: { id: existingDRI.id },
+            where: { id: existingDRIActor.id },
             data: { isPrimaryDRI: true },
           });
           driCount++;
@@ -244,10 +244,10 @@ export async function migrateTaskRelations(
 
       if (task.leadUnitId) {
         targetOrgUnit = orgUnits.find((u) => u.id === task.leadUnitId);
-      } else if (task.departmentId) {
+      } else if ((task as any).departmentId) {
         const canonicalCode =
-          DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId] ??
-          DEPARTMENT_TO_ORG_UNIT_MAP[task.departmentId.toUpperCase()];
+          DEPARTMENT_TO_ORG_UNIT_MAP[(task as any).departmentId] ??
+          DEPARTMENT_TO_ORG_UNIT_MAP[(task as any).departmentId.toUpperCase()];
 
         if (canonicalCode && orgUnitByCode.has(canonicalCode)) {
           targetOrgUnit = orgUnitByCode.get(canonicalCode);
@@ -255,8 +255,8 @@ export async function migrateTaskRelations(
           // Direct code or ID fallback match
           targetOrgUnit = orgUnits.find(
             (u) =>
-              u.code.toLowerCase() === task.departmentId?.toLowerCase() ||
-              u.id === task.departmentId
+              u.code.toLowerCase() === (task as any).departmentId?.toLowerCase() ||
+              u.id === (task as any).departmentId
           );
         }
 

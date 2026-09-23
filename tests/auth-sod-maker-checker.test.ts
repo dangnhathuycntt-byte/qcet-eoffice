@@ -129,12 +129,12 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const actor = {
         id: 'creator_mgr',
         role: 'TRUONG_PHONG',
-        departmentId: 'dept_cntt',
+
       };
       const task = {
         id: 'task_created_by_actor',
         scope: 'DEPARTMENT',
-        departmentId: 'dept_cntt',
+
         createdById: 'creator_mgr',
         primaryOwnerId: 'staff_1',
         assigneeIds: ['staff_1'],
@@ -154,7 +154,7 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const actor = {
         id: 'rector_creator',
         role: 'HIEU_TRUONG',
-        departmentId: null,
+
       };
       const task = {
         id: 'task_school_1',
@@ -231,12 +231,12 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const actor = {
         id: 'mgr_submitter',
         role: 'TRUONG_PHONG',
-        departmentId: 'dept_cntt',
+
       };
       const task = {
         id: 'task_submitted_by_mgr',
         scope: 'DEPARTMENT',
-        departmentId: 'dept_cntt',
+
         createdById: 'admin_1',
         primaryOwnerId: 'staff_1',
         assigneeIds: ['staff_1'],
@@ -285,14 +285,14 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const delegatedDri = {
         id: 'dri_actor',
         role: 'TRUONG_PHONG',
-        departmentId: 'dept_cntt',
+
         isDelegated: true,
         delegatedTaskIds: ['task_dri_1'],
       };
       const task = {
         id: 'task_dri_1',
         scope: 'DEPARTMENT',
-        departmentId: 'dept_cntt',
+
         createdById: 'admin_1',
         primaryOwnerId: 'dri_actor',
         assigneeIds: ['dri_actor'],
@@ -312,14 +312,14 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const delegatedCreator = {
         id: 'creator_actor',
         role: 'TRUONG_PHONG',
-        departmentId: 'dept_cntt',
+
         isDelegated: true,
         delegatedTaskIds: ['task_creator_1'],
       };
       const task = {
         id: 'task_creator_1',
         scope: 'DEPARTMENT',
-        departmentId: 'dept_cntt',
+
         createdById: 'creator_actor',
         primaryOwnerId: 'staff_2',
         assigneeIds: ['staff_2'],
@@ -339,7 +339,7 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const actor = {
         id: 'delegated_assignee',
         role: 'CHUYEN_VIEN',
-        departmentId: 'dept_1',
+
       };
       const task = {
         id: 'task_assigned_1',
@@ -631,13 +631,13 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
         const fsmActor = {
           id: actorId,
           role: 'TRUONG_PHONG',
-          departmentId: deptId,
+
           isDelegated: false,
         };
         const fsmTaskContext = {
           id: 'task_eq_1',
           scope: 'DEPARTMENT',
-          departmentId: deptId,
+
           ...fsmTask,
         };
         const fsmResult = taskStateMachine.canTransition(
@@ -702,14 +702,14 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
         const fsmActor = {
           id: actorId,
           role: 'STAFF',
-          departmentId: deptId,
+
           isDelegated: true,
           delegatedTaskIds: ['task_eq_del_1'],
         };
         const fsmTaskContext = {
           id: 'task_eq_del_1',
           scope: 'DEPARTMENT',
-          departmentId: deptId,
+
           ...fsmTask,
         };
         const fsmResult = taskStateMachine.canTransition(
@@ -776,14 +776,14 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       const fsmActor = {
         id: actorId,
         role: 'STAFF',
-        departmentId: deptId,
+
         isDelegated: true,
         delegatedTaskIds: ['task_eq_ctrl'],
       };
       const fsmTaskContext = {
         id: 'task_eq_ctrl',
         scope: 'DEPARTMENT',
-        departmentId: deptId,
+
         creatorId: 'other_creator',
         createdById: 'other_creator',
         primaryOwnerId: 'other_dri',

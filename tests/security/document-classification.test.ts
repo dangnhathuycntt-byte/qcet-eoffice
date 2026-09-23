@@ -388,20 +388,20 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: 'clerk@qnc.edu.vn',
         name: 'Văn thư',
         role: 'VAN_THU',
-        departmentId: 'dept_vt',
+
       };
 
       const restrictedDoc = {
         id: 'doc_res',
         classification: 'RESTRICTED',
-        departmentId: 'dept_vt',
+
         creatorId: 'usr_other',
       };
 
       const secretDoc = {
         id: 'doc_sec',
         securityLevel: DocumentSecurityLevel.MAT,
-        departmentId: 'dept_vt',
+
       };
 
       // Admin cannot bypass
@@ -454,19 +454,23 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
     });
 
     before(async () => {
-      unitA = await prisma.department.create({
+      unitA = await prisma.organizationalUnit.create({
         data: {
           id: `dept_a_${runId}`,
+          code: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
-          shortName: 'P.ĐT-A',
+          type: "PHONG_BAN" as any,
+          status: "ACTIVE" as any,
         },
       });
 
-      unitB = await prisma.department.create({
+      unitB = await prisma.organizationalUnit.create({
         data: {
           id: `dept_b_${runId}`,
+          code: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
-          shortName: 'P.KH-B',
+          type: "PHONG_BAN" as any,
+          status: "ACTIVE" as any,
         },
       });
 
@@ -475,7 +479,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           email: `usera_${runId}@qnc.edu.vn`,
           name: 'Chuyên viên Đào tạo A',
           role: UserRole.CHUYEN_VIEN,
-          departmentId: unitA.id,
+
           isActive: true,
         },
       });
@@ -485,7 +489,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           email: `userb_${runId}@qnc.edu.vn`,
           name: 'Chuyên viên Kế hoạch B',
           role: UserRole.CHUYEN_VIEN,
-          departmentId: unitB.id,
+
           isActive: true,
         },
       });
@@ -504,7 +508,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: userA.email,
         name: userA.name,
         role: userA.role,
-        departmentId: unitA.id,
+
       });
 
       tokenUserB = signSessionToken({
@@ -512,7 +516,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: userB.email,
         name: userB.name,
         role: userB.role,
-        departmentId: unitB.id,
+
       });
 
       tokenAdmin = signSessionToken({
@@ -542,7 +546,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           category: 'Công văn',
           summary: `Văn bản nội bộ phòng A ${runId}`,
           securityLevel: DocumentSecurityLevel.THUONG,
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           status: DocumentStatus.CHO_PHAN_CONG,
         },
@@ -560,7 +563,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           summary: `Văn bản giới hạn đặc thù ${runId}`,
           securityLevel: DocumentSecurityLevel.THUONG,
           notes: 'RESTRICTED',
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           leadUserId: userA.id, // userA is leadUser!
           status: DocumentStatus.CHO_PHAN_CONG,
@@ -578,7 +580,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           category: 'Công văn',
           summary: `Văn bản tài liệu mật tuyệt đối không rò rỉ ${runId}`,
           securityLevel: DocumentSecurityLevel.MAT,
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           status: DocumentStatus.CHO_PHAN_CONG,
         },
@@ -628,7 +629,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       });
 
       // Clean up units
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: { in: [unitA?.id, unitB?.id].filter(Boolean) },
         },

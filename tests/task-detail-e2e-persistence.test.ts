@@ -135,7 +135,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
         name: "Attacker User",
         email: "attacker@qcet.edu.vn",
         role: "STAFF" as any,
-        departmentId: "dept-cntt",
+
       };
 
       const deliverable = {
@@ -147,7 +147,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
       const targetTask = {
         id: "task-different-2", // Nhưng yêu cầu xóa qua task 2
         createdById: "user-attacker",
-        departmentId: "dept-cntt",
+
         status: TaskStatus.IN_PROGRESS,
       };
 
@@ -164,7 +164,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
         name: "Author User",
         email: "author@qcet.edu.vn",
         role: "STAFF" as any,
-        departmentId: "dept-cntt",
+
       };
 
       const deliverable = {
@@ -176,7 +176,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
       const task = {
         id: "task-100",
         createdById: "user-boss",
-        departmentId: "dept-cntt",
+
         status: TaskStatus.IN_PROGRESS,
         assignees: [{ userId: "user-dri" }],
       };
@@ -191,7 +191,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
         name: "Stranger User",
         email: "stranger@qcet.edu.vn",
         role: "STAFF" as any,
-        departmentId: "dept-other",
+
       };
       const checkStranger = canUserDeleteDeliverable(stranger, deliverable, task);
       assert.equal(checkStranger.allowed, false);

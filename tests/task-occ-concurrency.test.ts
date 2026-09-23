@@ -20,10 +20,14 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
 
   before(async () => {
     // 1. Create dedicated isolated Department
-    testDept = await prisma.department.create({
+    const deptId = `dept_occ_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    testDept = await prisma.organizationalUnit.create({
       data: {
-        id: `dept_occ_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: deptId,
+        code: deptId,
         name: 'Phòng Đào tạo - Quản lý Khoa học OCC',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -33,7 +37,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         email: `occ_leader_${Date.now()}@qncet.edu.vn`,
         name: 'Trưởng đơn vị OCC',
         role: 'TRUONG_PHONG',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(leaderUser.id);
@@ -43,7 +47,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     // 3. Create staff user (CHUYEN_VIEN)
@@ -52,7 +56,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         email: `occ_staff_${Date.now()}@qncet.edu.vn`,
         name: 'Chuyên viên OCC',
         role: 'CHUYEN_VIEN',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(staffUser.id);
@@ -62,7 +66,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
   });
 
@@ -92,7 +96,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
     }
 
     if (testDept?.id) {
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });
     }
@@ -106,14 +110,14 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         title: initialTitle,
         priority: TaskPriority.HIGH,
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept.id,
+
         createdById: leaderUser.id,
         dueDate,
         academicMonth: 9,
         academicYear: '2026-2027',
         status: TaskStatus.IN_PROGRESS,
         version: 1,
-        assignees: {
+        actors: {
           create: [
             {
               userId: staffUser.id,

@@ -15,7 +15,7 @@ const mockTasks: SchoolTask[] = [
   {
     id: "task-1",
     title: "Nhiệm vụ CNTT Đang Làm",
-    departmentId: "CNTT",
+
     leadDepartmentId: "CNTT",
     departmentCode: "CNTT",
     status: "IN_PROGRESS",
@@ -34,7 +34,7 @@ const mockTasks: SchoolTask[] = [
   {
     id: "task-2",
     title: "Nhiệm vụ Quá Hạn",
-    departmentId: "DIEN",
+
     leadDepartmentId: "DIEN",
     departmentCode: "DIEN",
     status: "IN_PROGRESS",

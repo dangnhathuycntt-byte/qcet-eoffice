@@ -162,7 +162,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
       progressPercent: 75,
       dueDate: "2026-09-16T00:00:00.000Z",
       startDate: "2026-09-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo & QLKH",
       leadAssigneeName: "Thầy Nam",
       totalSubTasks: 1,
@@ -209,7 +209,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
       progressPercent: 30,
       dueDate: "2026-09-02T00:00:00.000Z",
       startDate: "2026-08-20T00:00:00.000Z",
-      departmentId: "P_QTTB",
+
       departmentName: "Phòng Quản trị - Thiết bị",
       leadAssigneeName: "Thầy Dũng",
       totalSubTasks: 0,
@@ -309,7 +309,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
       priority: "HIGH",
       status: "IN_PROGRESS",
       progressPercent: 75,
-      departmentId: "K_CNTT",
+
       departmentName: "Khoa CNTT",
       assigneeName: "Cô Lan",
       isOverdue: false,
@@ -339,7 +339,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
       priority: "URGENT",
       status: "OVERDUE",
       progressPercent: 30,
-      departmentId: "P_QTTB",
+
       departmentName: "Phòng Quản trị - Thiết bị",
       assigneeName: "Thầy Dũng",
       isOverdue: true,
@@ -369,7 +369,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
       priority: "HIGH",
       status: "IN_PROGRESS",
       progressPercent: 50,
-      departmentId: "BGH",
+
       departmentName: "Ban Giám hiệu",
       assigneeName: "Hiệu trưởng",
       isOverdue: false,

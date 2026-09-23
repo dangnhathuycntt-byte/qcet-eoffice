@@ -39,28 +39,32 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
 
   before(async () => {
     // 1. Ensure departments
-    testDept1 = await prisma.department.findFirst({
-      where: { shortName: 'PTN1' },
+    testDept1 = await prisma.organizationalUnit.findFirst({
+      where: {},
     });
     if (!testDept1) {
-      testDept1 = await prisma.department.create({
+      testDept1 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-1',
+          code: 'dept-test-doc-1',
           name: 'Phòng Thử Nghiệm 1',
-          shortName: 'PTN1',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
 
-    testDept2 = await prisma.department.findFirst({
-      where: { shortName: 'PTN2' },
+    testDept2 = await prisma.organizationalUnit.findFirst({
+      where: {},
     });
     if (!testDept2) {
-      testDept2 = await prisma.department.create({
+      testDept2 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-2',
+          code: 'dept-test-doc-2',
           name: 'Phòng Thử Nghiệm 2',
-          shortName: 'PTN2',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -75,7 +79,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           email: 'admin-doc-test@qncet.edu.vn',
           name: 'Admin Document Tester',
           role: 'ADMIN',
-          departmentId: testDept1.id,
+
         },
       });
     }
@@ -89,7 +93,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           email: 'manager-doc-test@qncet.edu.vn',
           name: 'Manager Document Tester',
           role: 'TRUONG_PHONG',
-          departmentId: testDept1.id,
+
         },
       });
     }
@@ -103,7 +107,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           email: 'staff-doc-test@qncet.edu.vn',
           name: 'Staff Document Tester',
           role: 'CHUYEN_VIEN',
-          departmentId: testDept1.id,
+
         },
       });
     }
@@ -117,7 +121,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           email: 'foreign-staff-doc-test@qncet.edu.vn',
           name: 'Foreign Staff Document Tester',
           role: 'CHUYEN_VIEN',
-          departmentId: testDept2.id,
+
         },
       });
     }
@@ -365,8 +369,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           status: 'CHO_PHAN_CONG',
           urgency: 'THUONG',
           securityLevel: 'THUONG',
-          draftingDeptId: testDept1.id,
-          leadDepartmentId: testDept1.id,
+          // Phase 9: leadDepartmentId dropped from Document
           registeredById: managerUser.id,
         },
       });

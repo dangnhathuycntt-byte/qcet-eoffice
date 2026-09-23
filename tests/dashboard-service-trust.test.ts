@@ -71,13 +71,18 @@ test("DepartmentHealth does not use department name as leadName when users exist
   const deptHealthList = data.departmentHealth;
 
   // Fetch departments directly to verify against ground truth in DB
-  const dbDepts = await prisma.department.findMany({
+  const dbDepts = await prisma.organizationalUnit.findMany({
     include: {
-      users: {
-        select: {
-          id: true,
-          name: true,
-          role: true,
+      positionAssignments: {
+        where: { status: 'ACTIVE' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+            },
+          },
         },
       },
     },
@@ -98,15 +103,16 @@ test("DepartmentHealth does not use department name as leadName when users exist
     );
 
     const dbDept = dbDeptMap.get(dept.departmentId);
-    if (!dbDept || !dbDept.users || dbDept.users.length === 0) {
+    const dbUsers = dbDept?.positionAssignments?.map((pa: any) => pa.user) ?? [];
+    if (!dbDept || dbUsers.length === 0) {
       assert.equal(
         dept.leadName,
         "Chưa phân công",
         `Empty department ${dept.departmentId} must return 'Chưa phân công'`
       );
     } else {
-      const realLeader = dbDept.users.find(
-        (u) =>
+      const realLeader = dbUsers.find(
+        (u: any) =>
           (u.role === "TRUONG_PHONG" || u.role === "BAN_GIAM_HIEU") &&
           u.name.trim().toLowerCase() !== dbDept.name.trim().toLowerCase()
       );

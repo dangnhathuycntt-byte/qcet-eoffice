@@ -93,11 +93,13 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
     }
 
     // 1. Department & Units
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `Phòng Ban Thử Nghiệm ${testRunId}`,
-        shortName: `PBT-${testRunId}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -207,7 +209,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         email: `admin.${testRunId}@qcet.edu.vn`,
         name: 'Quản trị viên hệ thống',
         role: UserRole.ADMIN,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -218,7 +220,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         email: `rector.${testRunId}@qcet.edu.vn`,
         name: 'Hiệu trưởng Nhà trường',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -229,7 +231,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         email: `vrector.${testRunId}@qcet.edu.vn`,
         name: 'Phó Hiệu trưởng Đào tạo',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -240,7 +242,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         email: `staff.${testRunId}@qcet.edu.vn`,
         name: 'Chuyên viên Phòng Đào tạo',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -251,7 +253,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         email: `disabled.${testRunId}@qcet.edu.vn`,
         name: 'Người dùng bị vô hiệu hóa',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: false,
       },
     });
@@ -524,7 +526,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
       await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [unitId, unitSecondaryId] } },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: deptId },
       });
     } catch (e) {

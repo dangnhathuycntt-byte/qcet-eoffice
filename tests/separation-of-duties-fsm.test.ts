@@ -20,43 +20,43 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
 
   before(async () => {
     // Find or create test users
-    const dept = await prisma.department.findFirst() || await prisma.department.create({
-      data: { id: 'TEST_DEPT', name: 'Phòng Thử Nghiệm' }
+    const dept = await prisma.organizationalUnit.findFirst() || await prisma.organizationalUnit.create({
+      data: { id: 'TEST_DEPT', code: 'TEST_DEPT', name: 'Phòng Thử Nghiệm', type: 'PHONG_BAN' as any, status: 'ACTIVE' as any }
     });
 
     staffUser = await prisma.user.upsert({
       where: { id: 'test-staff-sod' },
-      update: { role: UserRole.CHUYEN_VIEN, departmentId: dept.id },
+      update: { role: UserRole.CHUYEN_VIEN},
       create: {
         id: 'test-staff-sod',
         email: 'staff.sod@cdktcnqn.edu.vn',
         name: 'Giảng viên SoD',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       }
     });
 
     leaderUser = await prisma.user.upsert({
       where: { id: 'test-leader-sod' },
-      update: { role: UserRole.TRUONG_PHONG, departmentId: dept.id },
+      update: { role: UserRole.TRUONG_PHONG},
       create: {
         id: 'test-leader-sod',
         email: 'leader.sod@cdktcnqn.edu.vn',
         name: 'Trưởng phòng SoD',
         role: UserRole.TRUONG_PHONG,
-        departmentId: dept.id,
+
       }
     });
 
     bghUser = await prisma.user.upsert({
       where: { id: 'test-bgh-sod' },
-      update: { role: UserRole.BAN_GIAM_HIEU, departmentId: dept.id },
+      update: { role: UserRole.BAN_GIAM_HIEU},
       create: {
         id: 'test-bgh-sod',
         email: 'bgh.sod@cdktcnqn.edu.vn',
         name: 'Hiệu trưởng SoD',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: dept.id,
+
       }
     });
 
@@ -65,7 +65,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
 
     leaderToken = signSessionToken({
@@ -73,7 +73,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     bghToken = signSessionToken({
@@ -81,7 +81,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
 
     // Create task assigned to staffUser
@@ -97,9 +97,9 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
-        departmentId: dept.id,
+
         createdById: leaderUser.id,
-        assignees: {
+        actors: {
           create: {
             userId: staffUser.id,
             role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),

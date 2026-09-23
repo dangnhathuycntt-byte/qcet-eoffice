@@ -60,11 +60,13 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouAcadId = ouAcad.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
+        code: `dept-acad-${testRunId}`.slice(0, 50),
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
-        shortName: `QLDT_${testRunId.slice(-4)}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -78,11 +80,13 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouAdminId = ouAdmin.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
+        code: `dept-admin-${testRunId}`.slice(0, 50),
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
-        shortName: `HCTH_${testRunId.slice(-4)}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -96,11 +100,13 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouUnrelatedId = ouUnrel.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
+        code: `dept-unrel-${testRunId}`.slice(0, 50),
         name: `Khoa CNTT ${testRunId}`,
-        shortName: `CNTT_${testRunId.slice(-4)}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -112,7 +118,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Chuyên viên Quản lý Đào tạo Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: `dept-acad-${testRunId}`,
       },
     });
 
@@ -123,7 +128,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-        departmentId: `dept-acad-${testRunId}`,
       },
     });
 
@@ -134,7 +138,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Lưu trữ viên Cơ quan Test",
         role: UserRole.VAN_THU,
         title: "Lưu trữ viên",
-        departmentId: `dept-admin-${testRunId}`,
       },
     });
 
@@ -145,7 +148,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Giảng viên Không thẩm quyền Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Giảng viên",
-        departmentId: `dept-unrel-${testRunId}`,
       },
     });
 
@@ -155,7 +157,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: specialistUser.email,
       name: specialistUser.name,
       role: specialistUser.role,
-      departmentId: specialistUser.departmentId,
+
     });
 
     unitHeadToken = signSessionToken({
@@ -163,7 +165,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: unitHeadUser.email,
       name: unitHeadUser.name,
       role: unitHeadUser.role,
-      departmentId: unitHeadUser.departmentId,
+
     });
 
     archivistToken = signSessionToken({
@@ -171,7 +173,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: archivistUser.email,
       name: archivistUser.name,
       role: archivistUser.role,
-      departmentId: archivistUser.departmentId,
+
     });
 
     unprivilegedToken = signSessionToken({
@@ -179,7 +181,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: unprivilegedUser.email,
       name: unprivilegedUser.name,
       role: unprivilegedUser.role,
-      departmentId: unprivilegedUser.departmentId,
+
     });
 
     // 4. Create Retention Rule
@@ -217,8 +219,9 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       data: {
         code: `TASK_DT_${testRunId.slice(-4)}`,
         title: `Nhiệm vụ rà soát chương trình đào tạo - ${testRunId}`,
-        createdBy: { connect: { id: unitHeadUser.id } },
-        department: { connect: { id: `dept-acad-${testRunId}` } },
+        scope: 'DEPARTMENT' as any,
+        createdById: unitHeadUser.id,
+        leadUnitId: ouAcadId,
         academicMonth: 3,
         academicYear: "2025-2026",
         dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),
@@ -286,7 +289,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         },
       });
 
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: {
             in: [`dept-acad-${testRunId}`, `dept-admin-${testRunId}`, `dept-unrel-${testRunId}`],

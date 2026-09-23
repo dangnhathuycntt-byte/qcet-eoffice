@@ -1009,7 +1009,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "staff.cntt@qcet.edu.vn",
         name: "Nguyen Van Staff",
         role: "CHUYEN_VIEN",
-        departmentId: "DEPT_CNTT",
+
         isActive: true,
       };
 
@@ -1021,7 +1021,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.deepEqual(authWhere.OR, [
         { assignees: { some: { userId: staffUser.id } } },
         { actors: { some: { userId: staffUser.id } } },
-        { departmentId: staffUser.departmentId },
+        {},
       ]);
 
       // Combining with client view scope=school still enforces server auth restriction
@@ -1046,26 +1046,26 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "chuyenvien.cntt@qcet.edu.vn",
         name: "Tran Van Staff",
         role: "CHUYEN_VIEN",
-        departmentId: "DEPT_CNTT",
+
         isActive: true,
       };
 
       const authWhere = buildTaskReadWhere(staffUser);
 
       // If combined in query:
-      // AND: [ authWhere, { departmentId: clientState.dept } ]
+      // AND: [ authWhere, {} ]
       // Since staffUser is in DEPT_CNTT, unless assigned to the task directly,
-      // DEPT_TAICHINH tasks will NOT match { departmentId: staffUser.departmentId }
+      // DEPT_TAICHINH tasks will NOT match {}
       const combinedWhere = {
         AND: [
           authWhere,
-          { departmentId: clientState.dept },
+          {},
         ],
       };
 
-      assert.equal(combinedWhere.AND[1].departmentId, "DEPT_TAICHINH");
+      assert.equal((combinedWhere.AND[1] as any).leadUnitId ?? (combinedWhere.AND[1] as any).departmentId, "DEPT_TAICHINH");
       // authWhere remains strictly bound to DEPT_CNTT
-      assert.equal(authWhere.OR![2].departmentId, "DEPT_CNTT");
+      assert.equal((authWhere.OR![2] as any).leadUnitId ?? (authWhere.OR![2] as any).departmentId, "DEPT_CNTT");
     });
 
     test("Anonymous / unauthenticated requests cannot access any records regardless of URL parameters (returns deny-all condition)", () => {
@@ -1085,7 +1085,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "admin@qcet.edu.vn",
         name: "Admin User",
         role: "ADMIN",
-        departmentId: null,
+
         isActive: true,
       };
 
@@ -1094,7 +1094,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "hieutruong@qcet.edu.vn",
         name: "Hieu Truong",
         role: "HIEU_TRUONG",
-        departmentId: null,
+
         isActive: true,
       };
 
@@ -1111,11 +1111,11 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const combinedLeaderWhere = {
         AND: [
           leaderAuth,
-          { departmentId: clientState.dept },
+          {},
         ],
       };
 
-      assert.equal(combinedLeaderWhere.AND[1].departmentId, "CNTT");
+      assert.equal((combinedLeaderWhere.AND[1] as any).leadUnitId ?? (combinedLeaderWhere.AND[1] as any).departmentId, "CNTT");
     });
 
     test("Role is Not Scope invariant: TaskScope visual filter selection never alters or elevates user authority", () => {
@@ -1126,7 +1126,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "giangvien@qcet.edu.vn",
         name: "Giang Vien A",
         role: "GIANG_VIEN",
-        departmentId: "KHOA_CNTT",
+
         isActive: true,
       };
 
@@ -1142,7 +1142,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       // Server read authorization remains identical regardless of requested scope
       assert.deepEqual(auth1, auth2);
       assert.deepEqual(auth2, auth3);
-      assert.deepEqual(auth1.OR![2].departmentId, "KHOA_CNTT");
+      assert.deepEqual((auth1.OR![2] as any).leadUnitId ?? (auth1.OR![2] as any).departmentId, "KHOA_CNTT");
     });
   });
 

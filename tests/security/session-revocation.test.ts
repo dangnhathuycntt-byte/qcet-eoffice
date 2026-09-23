@@ -98,11 +98,13 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
     }
 
     // 1. Create test department
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `Sprint 2 Dept ${testRunId}`,
-        shortName: `D-S2-${testRunId.slice(-6)}`,
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -112,7 +114,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
         email: `active.${testRunId}@qncet.edu.vn`,
         name: 'Active Staff User',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -122,7 +124,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
         email: `dynamic.${testRunId}@qncet.edu.vn`,
         name: 'Dynamic Lifecycle User',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -136,7 +138,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
         scope: TaskScope.DEPARTMENT,
-        departmentId: deptId,
+
         createdById: activeUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -162,7 +164,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       email: activeUser.email,
       name: activeUser.name,
       role: activeUser.role,
-      departmentId: activeUser.departmentId,
+
     });
 
     dynamicToken = signSessionToken({
@@ -170,7 +172,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       email: dynamicUser.email,
       name: dynamicUser.name,
       role: dynamicUser.role,
-      departmentId: dynamicUser.departmentId,
+
     });
   });
 
@@ -184,7 +186,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       await prisma.user.deleteMany({
         where: { id: { in: [activeUser?.id, dynamicUser?.id].filter(Boolean) } },
       });
-      await prisma.department.deleteMany({ where: { id: deptId } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: deptId } });
     } catch (err) {
       console.error('Cleanup error in session-revocation.test.ts:', err);
     }

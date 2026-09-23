@@ -59,13 +59,15 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     const timestamp = Date.now();
 
     // 1. Get or create department
-    dept = await prisma.department.findFirst();
+    dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_st_${timestamp}`,
+          code: `dept_st_${timestamp}`,
           name: "Phòng Hành chính - Tổng hợp",
-          shortName: "HCTH",
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -78,7 +80,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         name: "Quản trị viên Hệ thống",
         role: UserRole.ADMIN,
         passwordHash: "hashed_password",
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(adminUser.id);
@@ -87,7 +89,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       email: adminUser.email,
       name: adminUser.name,
       role: adminUser.role,
-      departmentId: dept.id,
+
     });
 
     bghUser = await prisma.user.create({
@@ -105,7 +107,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: null,
+
     });
 
     managerUser = await prisma.user.create({
@@ -115,7 +117,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         name: "Trưởng phòng HCTH",
         role: UserRole.TRUONG_PHONG,
         passwordHash: "hashed_password",
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(managerUser.id);
@@ -124,7 +126,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       email: managerUser.email,
       name: managerUser.name,
       role: managerUser.role,
-      departmentId: dept.id,
+
     });
 
     staffUser = await prisma.user.create({
@@ -134,7 +136,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         name: "Chuyên viên Nghiệp vụ",
         role: UserRole.CHUYEN_VIEN,
         passwordHash: "hashed_password",
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(staffUser.id);
@@ -143,7 +145,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: dept.id,
+
     });
 
     makerUser = await prisma.user.create({
@@ -153,7 +155,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         name: "Chuyên viên Thực hiện Chính (DRI)",
         role: UserRole.CHUYEN_VIEN,
         passwordHash: "hashed_password",
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(makerUser.id);
@@ -162,7 +164,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       email: makerUser.email,
       name: makerUser.name,
       role: makerUser.role,
-      departmentId: dept.id,
+
     });
   });
 
@@ -204,7 +206,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       id: "task_domain_test",
       scope: "DEPARTMENT",
       createdById: "u_mgr_1",
-      departmentId: "dept_1",
+
       primaryOwnerId: "u_maker_1",
       assigneeIds: ["u_maker_1"],
     };
@@ -316,7 +318,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
           scope: TaskScope.DEPARTMENT,
           progressPercent: 100,
           createdById: managerUser.id,
-          departmentId: dept.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -395,7 +397,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
           scope: TaskScope.DEPARTMENT,
           progressPercent: 0,
           createdById: managerUser.id,
-          departmentId: dept.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -408,7 +410,8 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         data: {
           taskId: lifecycleTask.id,
           userId: makerUser.id,
-          roleInTask: "PRIMARY_OWNER",
+          role: "DRI" as any,
+          isPrimaryDRI: true,
         },
       });
     });

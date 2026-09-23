@@ -269,7 +269,7 @@ export async function createTaskAtomic(
           academicYear,
           startDate: payload.startDate ? new Date(payload.startDate) : new Date(),
           dueDate: due,
-          departmentId: payload.departmentId ?? null,
+          leadUnitId: (payload as any).leadUnitId ?? (payload as any).departmentId ?? null,
           createdById: payload.createdById,
           parentTaskId: payload.parentTaskId ?? null,
           dacumTaskDefId: payload.dacumTaskDefId ?? null,

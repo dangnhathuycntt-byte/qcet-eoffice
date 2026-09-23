@@ -254,10 +254,8 @@ export function buildDocumentReadWhere(
 
   if (departmentId) {
     orConditions.push(
-      { leadDepartmentId: departmentId },
-      { draftingDeptId: departmentId },
+      // Phase 9: leadDepartmentId and draftingDeptId dropped from Document
       { directives: { some: { assignedDeptId: departmentId } } },
-      { linkedTask: { is: { departmentId: departmentId } } },
       { linkedTask: { is: { leadUnitId: departmentId } } }
     );
   }

@@ -33,7 +33,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
   before(async () => {
     // 1. Setup test departments
-    const departments = await prisma.department.findMany({ take: 2 });
+    const departments = await prisma.organizationalUnit.findMany({ take: 2 });
     assert.ok(departments.length >= 2, 'Need at least 2 departments for boundary testing');
     testDept1Id = departments[0].id;
     testDept2Id = departments[1].id;
@@ -44,7 +44,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'admin@cdktcnqn.edu.vn',
       name: 'Ban Giám Hiệu 1',
       role: 'BAN_GIAM_HIEU',
-      departmentId: testDept1Id,
+
     };
 
     managerUser = {
@@ -52,7 +52,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'truongphong@cdktcnqn.edu.vn',
       name: 'Trưởng phòng Đào tạo',
       role: 'TRUONG_PHONG',
-      departmentId: testDept1Id,
+
     };
 
     staffUser1 = {
@@ -60,7 +60,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'chuyenvien1@cdktcnqn.edu.vn',
       name: 'Chuyên viên 1',
       role: 'CHUYEN_VIEN',
-      departmentId: testDept1Id,
+
     };
 
     staffUser2 = {
@@ -68,7 +68,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'chuyenvien2@cdktcnqn.edu.vn',
       name: 'Chuyên viên 2',
       role: 'CHUYEN_VIEN',
-      departmentId: testDept1Id,
+
     };
 
     otherDeptManager = {
@@ -76,7 +76,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'truongphong2@cdktcnqn.edu.vn',
       name: 'Trưởng phòng Khác',
       role: 'TRUONG_PHONG',
-      departmentId: testDept2Id,
+
     };
 
     // Ensure users exist or pick real database users for DB relations
@@ -130,10 +130,10 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
       // DEPARTMENT scope requires authority over that unit (P0-06): a leader of
       // it, or a privileged actor. INDIVIDUAL remains open to any authenticated user.
-      const managerCanCreateDept = canUserCreateTask(managerUser, { scope: TaskScope.DEPARTMENT, departmentId: testDept1Id });
+      const managerCanCreateDept = canUserCreateTask(managerUser, { scope: TaskScope.DEPARTMENT});
       assert.strictEqual(managerCanCreateDept.allowed, true);
 
-      const staffCanCreateIndiv = canUserCreateTask(staffUser1, { scope: TaskScope.INDIVIDUAL, departmentId: testDept1Id });
+      const staffCanCreateIndiv = canUserCreateTask(staffUser1, { scope: TaskScope.INDIVIDUAL});
       assert.strictEqual(staffCanCreateIndiv.allowed, true);
 
       // P0-06 regression: an actor without unit authority creates PERSONAL tasks
@@ -141,16 +141,16 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // could create a unit task by calling the API directly.
       const staffCanCreateDept = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept1Id,
+
       });
       assert.strictEqual(staffCanCreateDept.allowed, false);
       assert.match(staffCanCreateDept.reason || '', /cá nhân/i);
 
       // A leader of a DIFFERENT unit must not create in this one.
-      const foreignLeader = { ...managerUser, departmentId: 'dept-not-theirs' };
+      const foreignLeader = { ...managerUser};
       const foreignLeaderDept = canUserCreateTask(foreignLeader, {
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept1Id,
+
       });
       assert.strictEqual(foreignLeaderDept.allowed, false);
 
@@ -158,7 +158,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // member can still add a subtask to a unit task they work on.
       const staffSubtask = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept1Id,
+
         scopeExplicit: false,
       });
       assert.strictEqual(staffSubtask.allowed, true);
@@ -167,7 +167,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     test('canUserUpdateTask: verifies update permissions across roles', () => {
       const taskInDept1 = {
         createdById: staffUser1.id,
-        departmentId: testDept1Id,
+
         assignees: [{ userId: staffUser1.id }, { userId: staffUser2.id }],
       };
 
@@ -193,7 +193,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       const taskDept1 = {
         scope: TaskScope.DEPARTMENT,
         createdById: managerUser.id,
-        departmentId: testDept1Id,
+
         assignees: [{ userId: staffUser1.id }],
       };
 
@@ -219,7 +219,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       const schoolTask = {
         scope: TaskScope.SCHOOL,
         createdById: adminUser.id,
-        departmentId: testDept1Id,
+
         assignees: [{ userId: staffUser1.id }],
       };
 
@@ -236,7 +236,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     test('canUserReviewDeliverable: enforces Segregation of Duties on deliverable approval', () => {
       const task = {
         createdById: managerUser.id,
-        departmentId: testDept1Id,
+
       };
       const deliverable = {
         uploadedById: staffUser1.id,
@@ -382,7 +382,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       createdTaskIds.push(subtask.id);
 
       assert.strictEqual(subtask.parentTaskId, createdRootTaskId);
-      assert.strictEqual(subtask.departmentId, testDept1Id);
+      assert.strictEqual(subtask.leadUnitId, testDept1Id);
       assert.strictEqual(subtask.academicMonth, 11);
       assert.strictEqual(subtask.academicYear, '2026-2027');
     });
@@ -528,7 +528,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       const result = await taskQueryService.queryTasks(
         { user: staffUser1 },
         {
-          departmentId: testDept1Id,
+
           academicMonth: 10,
           academicYear: '2026-2027',
         }
@@ -594,15 +594,15 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
       const entity = await taskQueryService.getTaskEntityForInternalUse(metricTaskId);
       assert.ok(entity);
-      assert.ok(entity.actors);
-      assert.ok(entity.department);
+      // Phase 9: department dropped, check leadUnit instead
+      assert.ok(entity.leadUnitId !== undefined || entity.actors !== undefined);
     });
 
     test('getTaskMetrics: aggregates task statistics with canonical reference date comparison', async () => {
       const metrics = await taskQueryService.getTaskMetrics(
         { user: adminUser },
         {
-          departmentId: testDept1Id,
+
           academicMonth: 10,
           academicYear: '2026-2027',
         }

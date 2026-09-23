@@ -144,15 +144,15 @@ describe("P0-2: /api/search canonical Task authorization", () => {
 
   before(async () => {
     // Departments
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptA },
       update: {},
-      create: { id: IDS.deptA, name: "Phòng A (AuthZ Test)" },
+      create: { id: IDS.deptA, code: IDS.deptA, name: "Phòng A (AuthZ Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptB },
       update: {},
-      create: { id: IDS.deptB, name: "Phòng B (AuthZ Test)" },
+      create: { id: IDS.deptB, code: IDS.deptB, name: "Phòng B (AuthZ Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
 
     // OrganizationalUnits
@@ -210,7 +210,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         email: `staff_a_authz_${Date.now()}@qcet.edu.vn`,
         name: "Staff A AuthZ Test",
         role: "CHUYEN_VIEN",
-        departmentId: IDS.deptA,
+
         isActive: true,
       },
     });
@@ -222,7 +222,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         email: `staff_b_authz_${Date.now()}@qcet.edu.vn`,
         name: "Staff B AuthZ Test",
         role: "CHUYEN_VIEN",
-        departmentId: IDS.deptB,
+
         isActive: true,
       },
     });
@@ -281,7 +281,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         status: "IN_PROGRESS",
         priority: "NORMAL",
         scope: "DEPARTMENT",
-        departmentId: IDS.deptA,
+
         createdById: IDS.userAdmin,
         dueDate: new Date("2027-01-01"),
         academicMonth: 1,
@@ -298,7 +298,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         status: "IN_PROGRESS",
         priority: "NORMAL",
         scope: "DEPARTMENT",
-        departmentId: IDS.deptB,
+
         createdById: IDS.userAdmin,
         dueDate: new Date("2027-01-01"),
         academicMonth: 1,
@@ -337,7 +337,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [IDS.unitBgh, IDS.unitDeptA] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [IDS.deptA, IDS.deptB] } },
     });
     await prisma.positionDefinition.deleteMany({

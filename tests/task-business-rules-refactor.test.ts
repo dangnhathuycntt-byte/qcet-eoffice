@@ -39,7 +39,7 @@ describe('Task Business Rules Refactor — Targeted Verification', () => {
       const payloadWithStatus = {
         title: 'Nhiệm vụ kiểm tra trạng thái',
         dueDate: '2026-10-15',
-        departmentId: 'dept_cntt',
+
         status: 'IN_PROGRESS',
       };
 

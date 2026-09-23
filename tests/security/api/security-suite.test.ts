@@ -33,10 +33,10 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
 
   before(async () => {
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng An Ninh A ${testRunId}`, shortName: `PA-SEC-${testRunId}` },
-        { id: deptBId, name: `Phòng An Ninh B ${testRunId}`, shortName: `PB-SEC-${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng An Ninh A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng An Ninh B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -47,7 +47,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
         email: `staff.sec.a.${testRunId}@qcet.edu.vn`,
         name: 'Staff Sec A',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -58,7 +58,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
         email: `staff.sec.b.${testRunId}@qcet.edu.vn`,
         name: 'Staff Sec B',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptBId,
+
         isActive: true,
       },
     });
@@ -69,7 +69,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
         email: `manager.sec.a.${testRunId}@qcet.edu.vn`,
         name: 'Manager Sec A',
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptAId,
+
         isActive: true,
       },
     });
@@ -80,7 +80,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
         email: `manager.sec.b.${testRunId}@qcet.edu.vn`,
         name: 'Manager Sec B',
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptBId,
+
         isActive: true,
       },
     });
@@ -90,7 +90,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
       email: staffA.email,
       name: staffA.name,
       role: staffA.role,
-      departmentId: staffA.departmentId,
+
     });
 
     staffBToken = signSessionToken({
@@ -98,7 +98,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
       email: staffB.email,
       name: staffB.name,
       role: staffB.role,
-      departmentId: staffB.departmentId,
+
     });
 
     managerAToken = signSessionToken({
@@ -106,7 +106,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
       email: managerA.email,
       name: managerA.name,
       role: managerA.role,
-      departmentId: managerA.departmentId,
+
     });
 
     managerBToken = signSessionToken({
@@ -114,7 +114,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
       email: managerB.email,
       name: managerB.name,
       role: managerB.role,
-      departmentId: managerB.departmentId,
+
     });
 
     // 3. Create Task owned by Dept B
@@ -125,7 +125,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.HIGH,
         scope: TaskScope.DEPARTMENT,
-        departmentId: deptBId,
+
         createdById: managerB.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -252,16 +252,11 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
           status: TaskStatus.IN_PROGRESS,
           priority: TaskPriority.NORMAL,
           scope: TaskScope.DEPARTMENT,
-          departmentId: deptAId,
+
           createdById: managerA.id,
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(Date.now() + 86400000),
-          assignees: {
-            create: {
-              userId: staffA.id,
-            },
-          },
+          dueDate: new Date(Date.now() + 86400000)
         },
       });
 
