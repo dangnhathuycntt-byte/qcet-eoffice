@@ -119,7 +119,8 @@ export interface PrismaTaskCreateInput {
   academicYear: string;
   dueDate: Date;
   createdById: string;
-  departmentId?: string | null;
+  /** Canonical unit ownership — `Task.departmentId` was dropped in Phase 9. */
+  leadUnitId?: string | null;
   [key: string]: any;
 }
 
@@ -393,7 +394,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
 export function mapSchoolTaskToPrismaCreateInput(
   task: Partial<SchoolTask>,
   creatorId: string,
-  departmentId?: string
+  leadUnitId?: string
 ): PrismaTaskCreateInput {
   const reverseStatusMap: Record<string, PrismaTaskCreateInput['status']> = {
     not_started: 'NOT_STARTED',
@@ -427,6 +428,6 @@ export function mapSchoolTaskToPrismaCreateInput(
     academicYear: task.academicYear || '2026-2027',
     dueDate,
     createdById: creatorId,
-    departmentId: departmentId || (task as any).departmentId || null,
+    leadUnitId: leadUnitId || (task as any).leadUnitId || null,
   };
 }
