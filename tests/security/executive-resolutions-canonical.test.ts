@@ -85,7 +85,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
       data: { email: `admin.${runId}@qnc.edu.vn`, name: `Admin ${runId}`, role: UserRole.ADMIN, isActive: true },
     });
     staffUser = await prisma.user.create({
-      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
+      data: { email: `staff.${runId}@qnc.edu.vn`, name: `Staff ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
     bghNoAssignUser = await prisma.user.create({
       data: { email: `bghna.${runId}@qnc.edu.vn`, name: `BGH NoAssign ${runId}`, role: UserRole.BAN_GIAM_HIEU, isActive: true },

@@ -63,8 +63,10 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
+        code: `dept-acad-${testRunId}`.slice(0, 50),
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -81,8 +83,10 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
+        code: `dept-admin-${testRunId}`.slice(0, 50),
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -99,8 +103,10 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
+        code: `dept-unrel-${testRunId}`.slice(0, 50),
         name: `Khoa CNTT ${testRunId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -112,7 +118,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Chuyên viên Quản lý Đào tạo Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-}`,
       },
     });
 
@@ -123,7 +128,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-}`,
       },
     });
 
@@ -134,7 +138,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Lưu trữ viên Cơ quan Test",
         role: UserRole.VAN_THU,
         title: "Lưu trữ viên",
-}`,
       },
     });
 
@@ -145,7 +148,6 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         name: "Giảng viên Không thẩm quyền Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Giảng viên",
-}`,
       },
     });
 
@@ -217,6 +219,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       data: {
         code: `TASK_DT_${testRunId.slice(-4)}`,
         title: `Nhiệm vụ rà soát chương trình đào tạo - ${testRunId}`,
+        scope: 'DEPARTMENT' as any,
         createdBy: { connect: { id: unitHeadUser.id } },
         leadUnitId: ouAcadId,
         academicMonth: 3,

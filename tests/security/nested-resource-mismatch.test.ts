@@ -52,14 +52,14 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
   const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
   before(async () => {
-    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, name: `Dept A ${runId}` } });
-    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, name: `Dept B ${runId}` } });
+    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, code: `DEPT_NA_${runId}`, name: `Dept A ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
+    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, code: `DEPT_NB_${runId}`, name: `Dept B ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
 
     alice = await prisma.user.create({
-      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
+      data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
     bob = await prisma.user.create({
-      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN isActive: true },
+      data: { email: `bob.${runId}@qcet.edu.vn`, name: `Bob ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },
     });
     aliceToken = signSessionToken({ id: alice.id, email: alice.email, name: alice.name, role: alice.role});
 
