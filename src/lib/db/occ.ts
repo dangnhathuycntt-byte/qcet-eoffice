@@ -8,7 +8,7 @@ export type DbClient = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Models that support Optimistic Concurrency Control with a version token.
- * Removed Stage B: DacumDelegation no longer needs OCC after cutover to DelegationGrant.
+ * Phase 9: DacumDelegation table dropped; DelegationGrant handles delegation OCC.
  */
 export type OCCSupportedModel =
   | "Task"

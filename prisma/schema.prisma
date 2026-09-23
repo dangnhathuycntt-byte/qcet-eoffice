@@ -90,7 +90,6 @@ model Department {
   directives   DocumentDirective[] @relation("DirectiveDepartments")
   jobCatalogItems JobCatalogItem[]
   dacumDuties     DacumDuty[]
-  delegations     DacumDelegation[]
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -123,8 +122,6 @@ model User {
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
-  delegationsGranted    DacumDelegation[]     @relation("DelegationGrantor")
-  delegationsReceived   DacumDelegation[]     @relation("DelegationDelegate")
   resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
   leadDocs              Document[]            @relation("LeadUserDocs")
   docsRegistered        Document[]            @relation("DocRegisteredBy")
@@ -228,7 +225,6 @@ model Task {
   parentTask      Task?                 @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subTasks        Task[]                @relation("SubTasks")
   deliverables    TaskDeliverable[]
-  delegations     DacumDelegation[]
   resolutions     ExecutiveResolution[]
   linkedDocument  Document?
   dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
@@ -287,32 +283,6 @@ model TaskDeliverable {
 
   @@index([taskId, reviewStatus])
   @@map("task_deliverables")
-}
-
-model DacumDelegation {
-  id             String      @id @default(cuid())
-  taskId         String?     @map("task_id")
-  grantorId      String      @map("grantor_id")
-  delegateId     String      @map("delegate_id")
-  committeeRole  String      @map("committee_role") @db.VarChar(100)
-  authorityScope String      @map("authority_scope") @db.VarChar(255)
-  departmentId   String?     @map("department_id") @db.VarChar(50)
-  startDate      DateTime?   @default(now()) @map("start_date")
-  expiresAt      DateTime    @map("expires_at")
-  isActive       Boolean     @default(true) @map("is_active")
-  reason         String?     @db.Text
-  documentRef    String?     @map("document_ref") @db.VarChar(100)
-  task           Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id], onDelete: Restrict)
-  delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id], onDelete: Restrict)
-  version        Int         @default(1) @map("version")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-
-  @@index([delegateId, isActive, expiresAt])
-  @@index([departmentId, isActive])
-  @@map("dacum_delegations")
 }
 
 model ExecutiveResolution {

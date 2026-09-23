@@ -1,14 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { backfillDepartmentToUnits, DepartmentBackfillReport } from "./backfill-department-to-units";
 import { backfillAssigneesToActors, AssigneesBackfillReport } from "./backfill-assignees-to-actors";
-import { backfillDacumToDelegationGrants, DacumBackfillReport } from "./backfill-dacum-to-delegation-grants";
 
 export interface MasterCutoverParityReport {
   timestamp: string;
   isDryRun: boolean;
   departmentMigration: DepartmentBackfillReport;
   assigneeMigration: AssigneesBackfillReport;
-  dacumMigration: DacumBackfillReport;
   overallParitySuccess: boolean;
   totalLegacyRecordsAudited: number;
 }
@@ -30,25 +28,21 @@ export async function runAllDataMigrations(
   // 2. TaskAssignee -> TaskActor
   const assigneeReport = await backfillAssigneesToActors(prisma, { dryRun });
 
-  // 3. DacumDelegation -> DelegationGrant
-  const dacumReport = await backfillDacumToDelegationGrants(prisma, { dryRun });
+  // Phase 9 WI-9.3: DacumDelegation table dropped; dacum backfill removed.
 
   const overallParitySuccess =
     deptReport.paritySuccess &&
-    assigneeReport.paritySuccess &&
-    dacumReport.paritySuccess;
+    assigneeReport.paritySuccess;
 
   const totalLegacyRecordsAudited =
     deptReport.totalLegacyDepartments +
-    assigneeReport.totalLegacyAssignees +
-    dacumReport.totalLegacyDacumDelegations;
+    assigneeReport.totalLegacyAssignees;
 
   const masterReport: MasterCutoverParityReport = {
     timestamp: new Date().toISOString(),
     isDryRun: dryRun,
     departmentMigration: deptReport,
     assigneeMigration: assigneeReport,
-    dacumMigration: dacumReport,
     overallParitySuccess,
     totalLegacyRecordsAudited,
   };
@@ -58,7 +52,6 @@ export async function runAllDataMigrations(
   console.log(`- Tổng số bản ghi legacy đã rà soát: ${totalLegacyRecordsAudited}`);
   console.log(`- Department -> Unit: ${deptReport.mappedToCanonicalUnits} mapped, ${deptReport.newUnitsCreated} created, Parity: ${deptReport.paritySuccess ? "PASS (100%)" : "FAIL"}`);
   console.log(`- TaskAssignee -> TaskActor: ${assigneeReport.totalLegacyAssignees} legacy rows, Mismatch: ${assigneeReport.mismatchedAssignees}, Parity: ${assigneeReport.paritySuccess ? "PASS (100%)" : "FAIL"}`);
-  console.log(`- DacumDelegation -> DelegationGrant: ${dacumReport.totalLegacyDacumDelegations} legacy rows, Mismatch: ${dacumReport.mismatchCount}, Parity: ${dacumReport.paritySuccess ? "PASS (100%)" : "FAIL"}`);
   console.log(`- TOÀN BỘ DATA CUTOVER PARITY: ${overallParitySuccess ? "SUCCESS (100% ZERO DATA LOSS)" : "FAILED"}`);
   console.log("================================================================================");
 

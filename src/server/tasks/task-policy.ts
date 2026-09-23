@@ -37,8 +37,7 @@ export async function checkActiveDelegation(
 ): Promise<boolean> {
   const now = new Date();
 
-  // Stage B cutover: DacumDelegation fallback removed. Verify via verifyDelegationGrantParity before Phase 9 drop.
-  // Canonical V2 DelegationGrant is now the sole authority for delegation checks.
+  // Phase 9: DacumDelegation table dropped. DelegationGrant is the sole authority.
   const grant = await tx.delegationGrant.findFirst({
     where: {
       granteeAssignment: {
