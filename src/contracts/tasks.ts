@@ -181,6 +181,8 @@ export const CreateTaskInputSchema = z
       .max(64, 'Department ID cannot exceed 64 characters')
       .optional()
       .nullable(),
+    /** Phase 9: canonical — client mới gửi `leadUnitId`, client cũ gửi `departmentId` */
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
     startDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
     assigneeId: z

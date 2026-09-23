@@ -87,20 +87,12 @@ export function mapDbUserToAuthUser(dbUser: {
     email: dbUser.email,
     role,
     roleLabel,
+    // Phase 9: `User.departmentId` đã drop; `/api/auth/me` flatten đơn vị canonical
+    // từ `positionAssignments` vào `department` object. Fallback slug cũ không còn cần.
     department:
       dbUser.department?.name ||
-      (dbUser.departmentId === "BGH"
-        ? "Ban Giám hiệu Nhà trường"
-        : dbUser.departmentId === "CNTT"
-        ? "Phòng Quản trị Mạng và CNTT"
-        : dbUser.departmentId === "TCHC"
-        ? "Phòng Tổ chức Hành chính"
-        : dbUser.departmentId === "KHTC"
-        ? "Phòng Kế hoạch Tài chính"
-        : dbUser.departmentId === "DT_QLKH"
-        ? "Phòng Đào tạo & Quản lý Khoa học"
-        : "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"),
-    departmentCode: dbUser.departmentId || "QCET",
+      "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
+    departmentCode: dbUser.department?.shortName || dbUser.departmentId || "QCET",
     title: dbUser.title || roleLabel,
     avatar: dbUser.avatarUrl || dbUser.avatar || undefined,
     phone: dbUser.phone || undefined,
