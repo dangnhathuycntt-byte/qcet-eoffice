@@ -175,7 +175,9 @@ export function DocumentQuickEntryModal({
         summary: summary.trim(),
         urgency,
         securityLevel,
-        leadUnitId: leadUnitId || undefined,
+        // Đơn vị chủ trì canonical chỉ tồn tại cho văn bản đến (quy trình văn bản
+        // đến). Văn bản đi không có trường đơn vị — không gửi để tránh bị từ chối.
+        leadUnitId: docType === "VAN_BAN_DEN" ? leadUnitId || undefined : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         registeredById: user?.id || "system",
       };

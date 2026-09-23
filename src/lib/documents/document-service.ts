@@ -290,10 +290,18 @@ export async function createDocument(
     registeredById: payload.registeredById,
   };
 
-  // Phase 9: `Document.draftingDeptId` / `leadDepartmentId` were dropped. The
-  // canonical unit is the incoming workflow's `leadUnit`, so a unit supplied at
-  // registration seeds the workflow instead of a document column.
+  // Phase 9: `Document.draftingDeptId` / `leadDepartmentId` were dropped. The only
+  // canonical unit home left is the incoming workflow's `leadUnit`, which drives
+  // the incoming lifecycle — so it may only be created for `VAN_BAN_DEN`.
+  // A unit supplied for any other type would be silently lost, so it is rejected.
   if (payload.leadUnitId) {
+    if (payload.type !== "VAN_BAN_DEN") {
+      throw new ValidationError(
+        `Đơn vị chủ trì chỉ áp dụng cho văn bản đến; loại "${payload.type}" không có trường đơn vị canonical nào để lưu.`,
+        { leadUnitId: [`Không thể gán đơn vị chủ trì cho văn bản loại "${payload.type}"`] },
+        "LEAD_UNIT_NOT_APPLICABLE"
+      );
+    }
     const unit = await OrganizationalUnitService.resolveUnitRef(payload.leadUnitId);
     if (!unit) {
       throw new ValidationError(

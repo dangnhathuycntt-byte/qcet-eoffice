@@ -2607,6 +2607,12 @@ async function main() {
     status: DocumentStatus;
     signerName?: string;
     signerTitle?: string;
+    /**
+     * Phase 9: `Document.draftingDeptId` / `leadDepartmentId` đã bị drop. Đây là
+     * dữ liệu đầu vào legacy: `leadDepartmentId` được resolve sang
+     * `OrganizationalUnit.id` và ghi vào `incomingWorkflow.leadUnitId` cho văn bản
+     * đến; `draftingDeptId` của văn bản đi không còn chỗ lưu canonical nên bị bỏ qua.
+     */
     draftingDeptId?: string;
     recipientList?: string;
     distributedCopies?: number;
@@ -2619,6 +2625,7 @@ async function main() {
       leaderId: string;
       instruction: string;
       deadline?: Date;
+      /** Alias đơn vị legacy; đơn vị canonical được ghi trên nhiệm vụ sinh ra. */
       assignedDeptId: string;
       collaboratorIds?: string;
       isTaskGenerated?: boolean;
@@ -3232,8 +3239,12 @@ async function main() {
       create: documentData,
     });
 
-    // Đơn vị chủ trì canonical của văn bản đến (Phase 9)
-    if (leadUnitId) {
+    // Đơn vị chủ trì canonical của văn bản đến (Phase 9).
+    // Chỉ ghi cho văn bản ĐẾN: `DocumentIncomingWorkflow` điều khiển vòng đời văn
+    // bản đến, nên tạo nó cho văn bản đi sẽ bịa ra một vòng đời không tồn tại.
+    // Văn bản đi hiện không có trường đơn vị canonical nào (Phase 9 đã drop
+    // `draftingDeptId`/`leadDepartmentId`), nên đơn vị bị bỏ qua thay vì ghi sai.
+    if (leadUnitId && docItem.type === DocumentType.VAN_BAN_DEN) {
       await prisma.documentIncomingWorkflow.upsert({
         where: { documentId: doc.id },
         update: { leadUnitId },

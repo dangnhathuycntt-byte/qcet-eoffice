@@ -14,14 +14,37 @@ test('Kế hoạch công tác tháng 9/2026 - Data Integrity & Architecture Inva
       include: {
         attachments: true,
         directives: true,
+        incomingWorkflow: { include: { leadUnit: true } },
       },
     });
 
     assert.ok(doc, 'Văn bản đi 09/KH-CĐKTCNQN phải tồn tại trong cơ sở dữ liệu');
     assert.equal(doc.type, DocumentType.VAN_BAN_DI, 'Phải thuộc loại Sổ Văn bản đi');
     assert.equal(doc.signerName, 'ThS. Phạm Văn Tường', 'Người ký phải là Hiệu trưởng ThS. Phạm Văn Tường');
-    assert.equal((doc as any).draftingDeptId, 'P_TCDBCL', 'Đơn vị soạn thảo là Phòng TC-ĐBCL');
+    // Phase 9: `Document.draftingDeptId` / `leadDepartmentId` đã bị drop. Văn bản
+    // ĐI hiện không có trường đơn vị canonical nào (`DocumentIncomingWorkflow`
+    // điều khiển vòng đời văn bản ĐẾN nên không được tạo cho văn bản đi).
+    assert.equal(
+      doc.incomingWorkflow,
+      null,
+      'Không được tạo quy trình văn bản đến cho văn bản đi'
+    );
     assert.equal(doc.documentYear, 2026, 'Năm văn bản là 2026');
+
+    // Văn bản ĐẾN thì ngược lại: đơn vị chủ trì phải nằm trên quy trình canonical.
+    const incomingDoc = await prisma.document.findFirst({
+      where: { type: DocumentType.VAN_BAN_DEN },
+      include: { incomingWorkflow: { include: { leadUnit: true } } },
+    });
+    assert.ok(incomingDoc, 'Phải có văn bản đến trong dữ liệu seed');
+    assert.ok(
+      incomingDoc.incomingWorkflow?.leadUnitId,
+      'Văn bản đến phải có đơn vị chủ trì canonical trên quy trình'
+    );
+    assert.ok(
+      incomingDoc.incomingWorkflow?.leadUnit,
+      'Đơn vị chủ trì phải resolve được sang OrganizationalUnit'
+    );
 
     // Kiểm tra file đính kèm
     assert.ok(doc.attachments.length >= 1, 'Phải có ít nhất 1 file đính kèm');
