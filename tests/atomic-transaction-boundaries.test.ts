@@ -30,14 +30,17 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
   let testDepartmentId: string;
 
   before(async () => {
-    // 1. Ensure test department exists
-    let dept = await prisma.department.findFirst();
+    // 1. Ensure test org unit exists
+    let dept = await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } });
     if (!dept) {
-      dept = await prisma.department.create({
+      const uid = `dept-test-${Date.now()}`;
+      dept = await prisma.organizationalUnit.create({
         data: {
-          id: `dept-test-${Date.now()}`,
+          id: uid,
+          code: uid,
           name: 'Phòng Thử Nghiệm Giao Dịch',
-          shortName: 'PTNGD',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -52,7 +55,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             email,
             name,
             role,
-            departmentId: testDepartmentId,
           },
         });
       }

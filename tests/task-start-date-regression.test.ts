@@ -19,7 +19,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
   const createdUserIds: string[] = [];
 
   before(async () => {
-    testDept = await prisma.department.create({
+    testDept = await prisma.organizationalUnit.create({
       data: {
         id: `dept_reg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: 'Phòng Khảo thí & ĐBCL Regression Test',
@@ -81,7 +81,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
     }
 
     if (testDept?.id) {
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });
     }

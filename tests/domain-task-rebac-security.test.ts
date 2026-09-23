@@ -81,7 +81,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
     const deptAId = `DEPT_CNTT_${timestamp}`;
     const deptBId = `DEPT_DLDV_${timestamp}`;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptAId,
         name: "Khoa Công nghệ Thông tin Test",
@@ -89,7 +89,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       },
     });
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptBId,
         name: "Khoa Du lịch & Dịch vụ Test",
@@ -342,11 +342,11 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
 
       if (deptA) {
         await prisma.organizationalUnit.delete({ where: { id: deptA.id } });
-        await prisma.department.delete({ where: { id: deptA.id } });
+        await prisma.organizationalUnit.delete({ where: { id: deptA.id } });
       }
       if (deptB) {
         await prisma.organizationalUnit.delete({ where: { id: deptB.id } });
-        await prisma.department.delete({ where: { id: deptB.id } });
+        await prisma.organizationalUnit.delete({ where: { id: deptB.id } });
       }
     } catch (cleanupError) {
       console.error("Cleanup error:", cleanupError);

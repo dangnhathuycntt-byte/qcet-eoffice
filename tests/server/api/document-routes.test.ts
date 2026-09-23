@@ -39,11 +39,11 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
 
   before(async () => {
     // 1. Ensure departments
-    testDept1 = await prisma.department.findFirst({
+    testDept1 = await prisma.organizationalUnit.findFirst({
       where: { shortName: 'PTN1' },
     });
     if (!testDept1) {
-      testDept1 = await prisma.department.create({
+      testDept1 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-1',
           name: 'Phòng Thử Nghiệm 1',
@@ -52,11 +52,11 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       });
     }
 
-    testDept2 = await prisma.department.findFirst({
+    testDept2 = await prisma.organizationalUnit.findFirst({
       where: { shortName: 'PTN2' },
     });
     if (!testDept2) {
-      testDept2 = await prisma.department.create({
+      testDept2 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-2',
           name: 'Phòng Thử Nghiệm 2',

@@ -68,7 +68,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
   });
 
   before(async () => {
-    testDept = await prisma.department.create({
+    testDept = await prisma.organizationalUnit.create({
       data: {
         id: `dept_m21_${runId}`,
         name: `Phòng Ban Thử Nghiệm M21 ${runId}`,
@@ -292,7 +292,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
       await prisma.organizationalUnit.delete({ where: { id: testUnit.id } });
     }
     if (testDept) {
-      await prisma.department.delete({ where: { id: testDept.id } });
+      await prisma.organizationalUnit.delete({ where: { id: testDept.id } });
     }
   });
 

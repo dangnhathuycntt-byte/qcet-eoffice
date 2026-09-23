@@ -21,9 +21,9 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
 
-    const dept = await prisma.department.findFirst({
+    const dept = await prisma.organizationalUnit.findFirst({
       where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
-    }) || await prisma.department.findFirst();
+    }) || await prisma.organizationalUnit.findFirst();
     assert.ok(dept, 'Must have at least one department in database');
     testDeptId = dept.id;
 
@@ -259,9 +259,9 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
   });
 
   test('DELETE /api/tasks/[id] deletes the task when authenticated', async () => {
-    const targetDept = await prisma.department.findFirst({
+    const targetDept = await prisma.organizationalUnit.findFirst({
       where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
-    }) || await prisma.department.findFirst();
+    }) || await prisma.organizationalUnit.findFirst();
     const deptId = targetDept ? targetDept.id : testDeptId;
 
     const targetUser = await prisma.user.findFirst({

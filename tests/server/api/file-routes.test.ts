@@ -61,8 +61,8 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     fs.writeFileSync(path.join(testSandboxAbs, "secret_doc.pdf"), samplePdfContent);
 
     // 2. Identify departments (non-BGH)
-    const deptA = await prisma.department.findUnique({ where: { id: "P_TC" } }) || await prisma.department.findFirst({ where: { id: { not: "BGH" } } });
-    const deptB = await prisma.department.findUnique({ where: { id: "K_CNTT" } }) || await prisma.department.findFirst({ where: { id: { notIn: ["BGH", deptA!.id] } } });
+    const deptA = await prisma.organizationalUnit.findUnique({ where: { id: "P_TC" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { not: "BGH" } } });
+    const deptB = await prisma.organizationalUnit.findUnique({ where: { id: "K_CNTT" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { notIn: ["BGH", deptA!.id] } } });
     assert.ok(deptA && deptB, "At least 2 non-BGH departments required for BOLA tests");
     deptAId = deptA.id;
     deptBId = deptB.id;

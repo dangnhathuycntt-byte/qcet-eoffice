@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
       }
     }
     if (departmentId) {
-      where.task = { ...(where.task || {}), departmentId };
+      where.task = { ...(where.task || {}), leadUnitId: departmentId };
     }
 
     const resolutions = await prisma.executiveResolution.findMany({
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
             status: true,
             priority: true,
             dueDate: true,
-            departmentId: true,
+            leadUnitId: true,
           },
         },
       },
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     const task = await prisma.task.findUnique({
       where: { id: validated.taskId },
-      include: { department: true },
+      include: { leadUnit: true },
     });
 
     if (!task) {
@@ -289,24 +289,20 @@ export async function POST(request: NextRequest) {
             task.dueDate.getTime() + days * 24 * 60 * 60 * 1000
           );
           taskUpdateData.dueDate = newDueDate;
+
+          if ((task.status as string) === 'OVERDUE') {
+            taskUpdateData.status = TaskStatus.IN_PROGRESS;
+          }
         }
       } else if (
         mappedResolutionType === ResolutionType.REASSIGN_OWNER &&
         validated.newOwnerId
       ) {
-        previousOwnerId = task.departmentId;
-        const dept = await tx.department.findUnique({
-          where: { id: validated.newOwnerId },
-        });
-        if (dept) {
-          taskUpdateData.departmentId = validated.newOwnerId;
-        } else {
-          const user = await tx.user.findUnique({
-            where: { id: validated.newOwnerId },
-          });
-          if (user && user.departmentId) {
-            taskUpdateData.departmentId = user.departmentId;
-          }
+        previousOwnerId = task.leadUnitId;
+        // Phase 9: Department model dropped — update leadUnitId directly
+        taskUpdateData.leadUnitId = validated.newOwnerId;
+        if ((task.status as string) === 'OVERDUE') {
+          taskUpdateData.status = TaskStatus.IN_PROGRESS;
         }
       } else if (mappedResolutionType === ResolutionType.DIRECTIVE_NOTE) {
         taskUpdateData.priority = TaskPriority.URGENT;
@@ -354,7 +350,7 @@ export async function POST(request: NextRequest) {
 
       const updatedTask = await tx.task.findUniqueOrThrow({
         where: { id: validated.taskId },
-        include: { department: true },
+        include: { leadUnit: true },
       });
 
       const resolution = await tx.executiveResolution.create({
@@ -386,7 +382,7 @@ export async function POST(request: NextRequest) {
               status: true,
               priority: true,
               dueDate: true,
-              departmentId: true,
+              leadUnitId: true,
             },
           },
         },
@@ -423,7 +419,7 @@ export async function POST(request: NextRequest) {
           directiveNote: validated.directiveNote || null,
           actorName: authUser.name || 'Ban Giám Hiệu',
           actorId: authUser.id,
-          departmentId: result.updatedTask.departmentId || task.departmentId,
+          departmentId: result.updatedTask.leadUnitId || task.leadUnitId,
           newOwnerId: validated.newOwnerId || null,
         });
       } catch (pushError) {

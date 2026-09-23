@@ -158,12 +158,12 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
 describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
   before(async () => {
     // Setup test departments
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: "dept-daotao" },
       update: {},
       create: { id: "dept-daotao", name: "Phòng Đào tạo (Test)" },
     });
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: "dept-cntt" },
       update: {},
       create: { id: "dept-cntt", name: "Khoa CNTT (Test)" },
@@ -373,7 +373,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     await prisma.organizationalUnit.deleteMany({
       where: { id: "unit-bgh-sec-test" },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: ["dept-daotao", "dept-cntt"] } },
     });
   });

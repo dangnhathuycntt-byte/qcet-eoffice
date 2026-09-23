@@ -29,7 +29,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
 
   before(async () => {
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
         { id: deptAId, name: `Phòng A ${testRunId}`, shortName: `PA-${testRunId}` },
         { id: deptBId, name: `Phòng B ${testRunId}`, shortName: `PB-${testRunId}` },
@@ -178,7 +178,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
     await prisma.user.deleteMany({
       where: { id: { in: [staffAUser.id, leaderAUser.id, staffBUser.id, bghUser.id] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [deptAId, deptBId] } },
     });
   });

@@ -71,7 +71,7 @@ test("DepartmentHealth does not use department name as leadName when users exist
   const deptHealthList = data.departmentHealth;
 
   // Fetch departments directly to verify against ground truth in DB
-  const dbDepts = await prisma.department.findMany({
+  const dbDepts = await prisma.organizationalUnit.findMany({
     include: {
       users: {
         select: {

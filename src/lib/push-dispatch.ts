@@ -213,18 +213,22 @@ export async function dispatchExecutiveDirectivePush(
       console.warn('[dispatchExecutiveDirectivePush] Actor lookup error:', e);
     }
 
-    // 2. Department head(s) of task
+    // 2. Department head(s) of task (Phase 9: User.departmentId dropped — look up via OrganizationalUnit members)
     if (departmentId) {
       try {
-        const deptHeads = await prisma.user.findMany({
-          where: {
-            departmentId,
-            role: UserRole.TRUONG_PHONG,
+        const unit = await prisma.organizationalUnit.findUnique({
+          where: { id: departmentId },
+          include: {
+            positionAssignments: {
+              where: { status: 'ACTIVE' },
+              include: { user: { select: { id: true, role: true } } },
+            },
           },
-          select: { id: true },
         });
-        for (const h of deptHeads) {
-          stakeholderUserIds.add(h.id);
+        for (const m of unit?.positionAssignments ?? []) {
+          if (m.user.role === UserRole.TRUONG_PHONG) {
+            stakeholderUserIds.add(m.user.id);
+          }
         }
       } catch (e) {
         console.warn('[dispatchExecutiveDirectivePush] Dept head lookup error:', e);
@@ -241,16 +245,20 @@ export async function dispatchExecutiveDirectivePush(
         if (user) {
           stakeholderUserIds.add(user.id);
         } else {
-          // Check if newOwnerId is a Department ID
-          const deptHeads = await prisma.user.findMany({
-            where: {
-              departmentId: newOwnerId,
-              role: UserRole.TRUONG_PHONG,
+          // Check if newOwnerId is an OrganizationalUnit ID
+          const unit = await prisma.organizationalUnit.findUnique({
+            where: { id: newOwnerId },
+            include: {
+              positionAssignments: {
+                where: { status: 'ACTIVE' },
+                include: { user: { select: { id: true, role: true } } },
+              },
             },
-            select: { id: true },
           });
-          for (const h of deptHeads) {
-            stakeholderUserIds.add(h.id);
+          for (const m of unit?.positionAssignments ?? []) {
+            if (m.user.role === UserRole.TRUONG_PHONG) {
+              stakeholderUserIds.add(m.user.id);
+            }
           }
         }
       } catch (e) {

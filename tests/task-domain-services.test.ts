@@ -33,7 +33,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
   before(async () => {
     // 1. Setup test departments
-    const departments = await prisma.department.findMany({ take: 2 });
+    const departments = await prisma.organizationalUnit.findMany({ take: 2 });
     assert.ok(departments.length >= 2, 'Need at least 2 departments for boundary testing');
     testDept1Id = departments[0].id;
     testDept2Id = departments[1].id;

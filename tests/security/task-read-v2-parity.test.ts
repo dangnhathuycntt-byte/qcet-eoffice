@@ -83,7 +83,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
     }
 
     // 1. Create test departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
         {
           id: deptAId,
@@ -254,7 +254,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
           },
         },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [deptAId, deptBId] } },
       });
     } catch {}

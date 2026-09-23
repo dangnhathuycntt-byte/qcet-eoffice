@@ -60,7 +60,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouAcadId = ouAcad.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
@@ -78,7 +78,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouAdminId = ouAdmin.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
@@ -96,7 +96,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
     });
     ouUnrelatedId = ouUnrel.id;
 
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
         name: `Khoa CNTT ${testRunId}`,
@@ -286,7 +286,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         },
       });
 
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: {
             in: [`dept-acad-${testRunId}`, `dept-admin-${testRunId}`, `dept-unrel-${testRunId}`],

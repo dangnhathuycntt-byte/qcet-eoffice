@@ -81,7 +81,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     }
 
     // 1. Setup departments
-    await prisma.department.createMany({
+    await prisma.organizationalUnit.createMany({
       data: [
         { id: deptAId, name: `Phòng Gate0 A ${testRunId}`, shortName: `PGA-${testRunId}` },
         { id: deptBId, name: `Phòng Gate0 B ${testRunId}`, shortName: `PGB-${testRunId}` },
@@ -283,7 +283,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       await prisma.task.deleteMany({ where: { parentTaskId: taskA?.id } });
       await prisma.task.deleteMany({ where: { id: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
       await prisma.user.deleteMany({ where: { id: { in: [adminUser?.id, staffA?.id, staffB?.id, leadershipUser?.id] } } });
-      await prisma.department.deleteMany({ where: { id: { in: [deptAId, deptBId] } } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: { in: [deptAId, deptBId] } } });
     } catch {}
   });
 

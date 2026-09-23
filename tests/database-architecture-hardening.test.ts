@@ -54,7 +54,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
 
   before(async () => {
     // 1. Ensure test department exists
-    const dept = await prisma.department.create({
+    const dept = await prisma.organizationalUnit.create({
       data: {
         id: `dept-harden-${Date.now()}`,
         name: `Phòng Khảo Thí & Đảm Bảo Chất Lượng ${testRunId}`,
@@ -136,7 +136,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
     await prisma.user.deleteMany({
       where: { id: { in: [testUserId1, testUserId2] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: testDepartmentId },
     });
   });
@@ -1053,7 +1053,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       assert.strictEqual(deletedUser.id, restrictedUser.id);
 
       // 2. Prevent Department deletion when referenced in DocumentDirective.assignedDept (onDelete: Restrict)
-      const restrictedDept = await prisma.department.create({
+      const restrictedDept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-restrict-${Date.now()}`,
           name: `Phòng Ràng Buộc Khóa Ngoại ${testRunId}`,
@@ -1087,7 +1087,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       // Attempting to delete restrictedDept must fail with foreign key constraint violation
       await assert.rejects(
         async () => {
-          await prisma.department.delete({
+          await prisma.organizationalUnit.delete({
             where: { id: restrictedDept.id },
           });
         },
@@ -1105,7 +1105,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       // Clean up directive, then department deletion succeeds
       await prisma.documentDirective.delete({ where: { id: directive.id } });
       await prisma.document.delete({ where: { id: directiveDoc.id } });
-      const deletedDept = await prisma.department.delete({
+      const deletedDept = await prisma.organizationalUnit.delete({
         where: { id: restrictedDept.id },
       });
       assert.strictEqual(deletedDept.id, restrictedDept.id);

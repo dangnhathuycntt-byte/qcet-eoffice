@@ -98,7 +98,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
     }
 
     // 1. Create test department
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
         name: `Sprint 2 Dept ${testRunId}`,
@@ -184,7 +184,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
       await prisma.user.deleteMany({
         where: { id: { in: [activeUser?.id, dynamicUser?.id].filter(Boolean) } },
       });
-      await prisma.department.deleteMany({ where: { id: deptId } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: deptId } });
     } catch (err) {
       console.error('Cleanup error in session-revocation.test.ts:', err);
     }

@@ -20,7 +20,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
 
   before(async () => {
     // 1. Create dedicated isolated Department
-    testDept = await prisma.department.create({
+    testDept = await prisma.organizationalUnit.create({
       data: {
         id: `dept_occ_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: 'Phòng Đào tạo - Quản lý Khoa học OCC',
@@ -92,7 +92,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
     }
 
     if (testDept?.id) {
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });
     }

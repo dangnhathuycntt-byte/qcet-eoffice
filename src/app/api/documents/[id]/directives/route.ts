@@ -78,13 +78,6 @@ export async function GET(
             role: true,
           },
         },
-        assignedDept: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -222,10 +215,7 @@ export async function POST(
           code = `NV-${curYear}-${String(monthNum).padStart(2, "0")}-${String(seq).padStart(3, "0")}`;
         }
 
-        const validDept = await tx.department.findUnique({
-          where: { id: assignedDeptId },
-        });
-
+        // Phase 9: Department model dropped — use leadUnitId directly
         const task = await tx.task.create({
           data: {
             code,
@@ -235,13 +225,13 @@ export async function POST(
             status: TaskStatus.NOT_STARTED,
             priority: priorityEnum,
             dueDate: dueDateObj,
-            departmentId: validDept ? validDept.id : null,
+            leadUnitId: assignedDeptId || null,
             createdById: authUser.id,
             academicMonth: monthNum,
             academicYear: academicYearStr,
           },
           include: {
-            department: true,
+            leadUnit: true,
           },
         });
 
@@ -257,7 +247,6 @@ export async function POST(
           },
           include: {
             leader: true,
-            assignedDept: true,
           },
         });
 
@@ -266,18 +255,14 @@ export async function POST(
           data: {
             status: "DANG_XU_LY",
             linkedTaskId: task.id,
-            leadDepartmentId: assignedDeptId,
           },
           include: {
-            draftingDept: true,
-            leadDepartment: true,
             leadUser: true,
             registeredBy: true,
             attachments: true,
             directives: {
               include: {
                 leader: true,
-                assignedDept: true,
               },
             },
             linkedTask: true,

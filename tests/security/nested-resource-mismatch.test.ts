@@ -52,8 +52,8 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
   const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
   before(async () => {
-    deptA = await prisma.department.create({ data: { id: `DEPT_NA_${runId}`, name: `Dept A ${runId}` } });
-    deptB = await prisma.department.create({ data: { id: `DEPT_NB_${runId}`, name: `Dept B ${runId}` } });
+    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, name: `Dept A ${runId}` } });
+    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, name: `Dept B ${runId}` } });
 
     alice = await prisma.user.create({
       data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, departmentId: deptA.id, isActive: true },
@@ -109,7 +109,7 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
     await prisma.workDossier.deleteMany({ where: { id: { in: [dossierA?.id, dossierB?.id].filter(Boolean) } } }).catch(() => undefined);
     if (unit) await prisma.organizationalUnit.delete({ where: { id: unit.id } }).catch(() => undefined);
     await prisma.user.deleteMany({ where: { id: { in: [alice?.id, bob?.id].filter(Boolean) } } }).catch(() => undefined);
-    await prisma.department.deleteMany({ where: { id: { in: [deptA?.id, deptB?.id].filter(Boolean) } } }).catch(() => undefined);
+    await prisma.organizationalUnit.deleteMany({ where: { id: { in: [deptA?.id, deptB?.id].filter(Boolean) } } }).catch(() => undefined);
   });
 
   test('DELETE deliverable with mismatched parent task fails closed and preserves the foreign child', async () => {

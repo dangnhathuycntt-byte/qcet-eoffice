@@ -56,7 +56,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Đào tạo ${testRunId}`,
@@ -73,7 +73,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-adm-${testRunId}`,
         name: `Phòng Hành chính ${testRunId}`,
@@ -179,7 +179,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
           },
         },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [unitAcademicId, unitAdminId] } },
       });
       await prisma.organizationalUnit.deleteMany({

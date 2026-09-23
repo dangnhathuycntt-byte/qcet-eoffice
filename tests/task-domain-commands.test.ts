@@ -67,9 +67,9 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
     const timestamp = Date.now();
 
     // 1. Get or create department and organizational unit
-    dept = await prisma.department.findFirst();
+    dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_${timestamp}`,
           name: "Phòng Quản lý Đào tạo",

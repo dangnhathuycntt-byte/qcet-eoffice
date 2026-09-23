@@ -72,9 +72,9 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
   before(async () => {
     const timestamp = Date.now();
 
-    dept = await prisma.department.findFirst();
+    dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_p1p2_${timestamp}`,
           name: 'Phòng Tổ chức Cán bộ P1P2',

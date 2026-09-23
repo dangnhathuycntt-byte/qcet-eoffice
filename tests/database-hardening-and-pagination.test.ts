@@ -26,7 +26,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
   before(async () => {
     // 1. Setup departments
-    testDept = await prisma.department.upsert({
+    testDept = await prisma.organizationalUnit.upsert({
       where: { id: 'DEPT-HARDEN-01' },
       update: { name: 'Phòng Đào tạo Thử nghiệm' },
       create: {
@@ -35,7 +35,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       },
     });
 
-    otherDept = await prisma.department.upsert({
+    otherDept = await prisma.organizationalUnit.upsert({
       where: { id: 'DEPT-HARDEN-02' },
       update: { name: 'Phòng Nghiên cứu Thử nghiệm' },
       create: {
@@ -250,7 +250,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     await prisma.user.deleteMany({
       where: { id: { in: ['user-harden-staff', 'user-harden-mgr', 'user-harden-admin'] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } },
     });
   });

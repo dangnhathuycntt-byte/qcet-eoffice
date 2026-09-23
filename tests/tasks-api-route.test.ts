@@ -15,8 +15,8 @@ describe('Tasks API Route Handler Tests', () => {
 
   before(async () => {
     // Retrieve or seed a user and department for testing
-    const dept = await prisma.department.findFirst();
-    assert.ok(dept, 'Must have at least one department in database');
+    const dept = await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } });
+    assert.ok(dept, 'Must have at least one organizational unit in database');
 
     // In QCET Canonical Authorization, technical SYSTEM_ADMIN cannot perform non-technical task mutations
     // due to Separation of Powers. Use an institutional leader with an active PositionAssignment for task lifecycle tests.
@@ -40,14 +40,13 @@ describe('Tasks API Route Handler Tests', () => {
       (await prisma.user.findFirst());
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
-    testDeptId = user.departmentId || dept.id;
+    testDeptId = dept.id;
 
     validToken = signSessionToken({
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId,
     });
   });
 

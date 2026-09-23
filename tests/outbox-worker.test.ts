@@ -16,9 +16,9 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
   let testUserId: string;
 
   before(async () => {
-    let dept = await prisma.department.findFirst();
+    let dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-worker-${Date.now()}`,
           name: 'Phòng Outbox Worker Test',

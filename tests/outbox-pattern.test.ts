@@ -24,9 +24,9 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
 
   before(async () => {
     // 1. Ensure test department exists
-    let dept = await prisma.department.findFirst();
+    let dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-outbox-${Date.now()}`,
           name: 'Phòng Kiểm Thử Outbox',

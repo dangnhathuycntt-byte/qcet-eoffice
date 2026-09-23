@@ -93,7 +93,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
     }
 
     // 1. Department & Units
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
         name: `Phòng Ban Thử Nghiệm ${testRunId}`,
@@ -524,7 +524,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
       await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [unitId, unitSecondaryId] } },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: deptId },
       });
     } catch (e) {

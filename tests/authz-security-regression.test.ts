@@ -144,12 +144,12 @@ describe("P0-2: /api/search canonical Task authorization", () => {
 
   before(async () => {
     // Departments
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptA },
       update: {},
       create: { id: IDS.deptA, name: "Phòng A (AuthZ Test)" },
     });
-    await prisma.department.upsert({
+    await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptB },
       update: {},
       create: { id: IDS.deptB, name: "Phòng B (AuthZ Test)" },
@@ -337,7 +337,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [IDS.unitBgh, IDS.unitDeptA] } },
     });
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: { id: { in: [IDS.deptA, IDS.deptB] } },
     });
     await prisma.positionDefinition.deleteMany({

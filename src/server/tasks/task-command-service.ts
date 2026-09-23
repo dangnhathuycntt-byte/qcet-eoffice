@@ -797,11 +797,13 @@ export class TaskCommandService {
         in_progress: TaskStatus.IN_PROGRESS,
         waiting_approval: TaskStatus.WAITING_APPROVAL,
         completed: TaskStatus.COMPLETED,
+        overdue: TaskStatus.IN_PROGRESS,
         cancelled: TaskStatus.CANCELLED,
         NOT_STARTED: TaskStatus.NOT_STARTED,
         IN_PROGRESS: TaskStatus.IN_PROGRESS,
         WAITING_APPROVAL: TaskStatus.WAITING_APPROVAL,
         COMPLETED: TaskStatus.COMPLETED,
+        OVERDUE: TaskStatus.IN_PROGRESS,
         CANCELLED: TaskStatus.CANCELLED,
       };
 

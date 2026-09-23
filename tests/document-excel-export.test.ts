@@ -163,7 +163,7 @@ describe("GET /api/documents/export-excel Route Integration", () => {
       name: user.name,
       role: user.role,
     });
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.organizationalUnit.findFirst();
 
     // Create a sample incoming document for 2026 export test
     const created = await prisma.document.create({

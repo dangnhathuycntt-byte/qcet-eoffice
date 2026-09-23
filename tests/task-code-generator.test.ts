@@ -111,7 +111,7 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
     });
     let createdTestTask = false;
     if (!existingTask) {
-      const dept = await prisma.department.findFirst();
+      const dept = await prisma.organizationalUnit.findFirst();
       const user = await prisma.user.findFirst();
       if (dept && user) {
         await prisma.task.create({

@@ -29,11 +29,6 @@ export async function GET(req: Request) {
 
     const dbUser = await prisma.user.findUnique({
       where: { id: session.id },
-      include: {
-        department: {
-          select: { id: true, name: true, shortName: true },
-        },
-      },
     });
 
     if (!dbUser || !dbUser.isActive) {
@@ -123,11 +118,6 @@ export async function PATCH(req: Request) {
         ...(name !== undefined ? { name } : {}),
         ...(phone !== undefined ? { phone } : {}),
         ...(title !== undefined ? { title } : {}),
-      },
-      include: {
-        department: {
-          select: { id: true, name: true, shortName: true },
-        },
       },
     });
 

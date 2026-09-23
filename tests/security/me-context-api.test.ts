@@ -97,7 +97,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
     }
 
     // 1. Department & Unit
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
         name: `MeContext Dept ${testRunId}`,
@@ -266,7 +266,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
       await prisma.user.deleteMany({
         where: { id: { in: [institutionalUser?.id, granterUser?.id, disabledUser?.id, adminUser?.id].filter(Boolean) } },
       });
-      await prisma.department.deleteMany({ where: { id: deptId } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: deptId } });
     } catch (e) {
       console.error('Cleanup error:', e);
     }

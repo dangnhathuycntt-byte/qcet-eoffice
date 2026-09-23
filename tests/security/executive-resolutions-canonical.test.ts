@@ -64,7 +64,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
   });
 
   before(async () => {
-    dept = await prisma.department.create({
+    dept = await prisma.organizationalUnit.create({
       data: { id: `DEPT_EXEC_${runId}`, name: `Dept Exec ${runId}` },
     });
     unit = await prisma.organizationalUnit.create({
@@ -139,7 +139,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
       where: { id: { in: [rectorUser?.id, adminUser?.id, staffUser?.id, bghNoAssignUser?.id].filter(Boolean) } },
     }).catch(() => undefined);
     if (unit) await prisma.organizationalUnit.delete({ where: { id: unit.id } }).catch(() => undefined);
-    if (dept) await prisma.department.deleteMany({ where: { id: dept.id } }).catch(() => undefined);
+    if (dept) await prisma.organizationalUnit.deleteMany({ where: { id: dept.id } }).catch(() => undefined);
   });
 
   const getReq = (token?: string, query = '') =>

@@ -93,7 +93,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
     }
 
     // 1. Create Department and Unit
-    await prisma.department.create({
+    await prisma.organizationalUnit.create({
       data: {
         id: deptId,
         name: `Phòng Ban Test Cache ${testRunId}`,
@@ -264,7 +264,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
       await prisma.organizationalUnit.deleteMany({
         where: { id: unitId },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: deptId },
       });
     } catch (e) {

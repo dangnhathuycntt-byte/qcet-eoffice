@@ -41,14 +41,14 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
     const rand = crypto.randomBytes(4).toString('hex');
 
     // Tạo hai phòng ban độc lập
-    deptA = await prisma.department.create({
+    deptA = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_A_${rand}`,
         name: 'Phòng Tổ chức Cán bộ A',
       },
     });
 
-    deptB = await prisma.department.create({
+    deptB = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_B_${rand}`,
         name: 'Phòng Kế hoạch Tài chính B',
@@ -241,7 +241,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
 
     const deptIds = [deptA?.id, deptB?.id].filter(Boolean);
     if (deptIds.length > 0) {
-      await prisma.department.deleteMany({ where: { id: { in: deptIds } } });
+      await prisma.organizationalUnit.deleteMany({ where: { id: { in: deptIds } } });
     }
   });
 

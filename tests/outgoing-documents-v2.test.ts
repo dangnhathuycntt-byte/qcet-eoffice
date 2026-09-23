@@ -47,7 +47,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
@@ -64,7 +64,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
@@ -81,7 +81,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         type: UnitType.FACULTY,
       },
     });
-    const d3 = await prisma.department.create({
+    const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
         name: `Khoa CNTT ${testRunId}`,
@@ -180,7 +180,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
           },
         },
       });
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: { id: { in: [deptAcademicId, deptAdminId, deptUnrelatedId] } },
       });
       await prisma.organizationalUnit.deleteMany({

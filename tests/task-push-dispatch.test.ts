@@ -38,7 +38,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     });
 
     // 1. Get or create test department
-    const dept = await prisma.department.findFirst({
+    const dept = await prisma.organizationalUnit.findFirst({
       where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
     });
     assert.ok(dept, 'Database must contain at least one department');

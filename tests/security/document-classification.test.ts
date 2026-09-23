@@ -454,7 +454,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
     });
 
     before(async () => {
-      unitA = await prisma.department.create({
+      unitA = await prisma.organizationalUnit.create({
         data: {
           id: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
@@ -462,7 +462,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         },
       });
 
-      unitB = await prisma.department.create({
+      unitB = await prisma.organizationalUnit.create({
         data: {
           id: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
@@ -628,7 +628,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       });
 
       // Clean up units
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: { in: [unitA?.id, unitB?.id].filter(Boolean) },
         },

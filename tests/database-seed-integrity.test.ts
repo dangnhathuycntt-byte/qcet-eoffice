@@ -5,7 +5,7 @@ import { prisma } from '../src/lib/prisma';
 describe('Database Seed Integrity Contract', () => {
   test('cơ sở dữ liệu phải có đầy đủ người dùng, phòng ban, nhiệm vụ và sổ văn bản sau khi seed', async () => {
     const userCount = await prisma.user.count();
-    const deptCount = await prisma.department.count();
+    const deptCount = await prisma.organizationalUnit.count();
     const taskCount = await prisma.task.count();
     const docCount = await prisma.document.count();
     const seqCount = await prisma.documentNumberSequence.count();

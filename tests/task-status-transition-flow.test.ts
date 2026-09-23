@@ -59,9 +59,9 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     const timestamp = Date.now();
 
     // 1. Get or create department
-    dept = await prisma.department.findFirst();
+    dept = await prisma.organizationalUnit.findFirst();
     if (!dept) {
-      dept = await prisma.department.create({
+      dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_st_${timestamp}`,
           name: "Phòng Hành chính - Tổng hợp",

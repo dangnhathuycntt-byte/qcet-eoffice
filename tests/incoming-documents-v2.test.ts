@@ -54,7 +54,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d1 = await prisma.department.create({
+    const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-lead-${testRunId}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
@@ -71,7 +71,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.DEPARTMENT,
       },
     });
-    const d2 = await prisma.department.create({
+    const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-coord-${testRunId}`,
         name: `Phòng Kế hoạch Tài chính ${testRunId}`,
@@ -88,7 +88,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         type: UnitType.FACULTY,
       },
     });
-    const d3 = await prisma.department.create({
+    const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrelated-${testRunId}`,
         name: `Khoa Công nghệ Thông tin ${testRunId}`,
@@ -245,7 +245,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
 
-      await prisma.department.deleteMany({
+      await prisma.organizationalUnit.deleteMany({
         where: {
           id: { in: [deptLeadId, deptCoordId, deptUnrelatedId] },
         },

@@ -52,7 +52,7 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       role: "BAN_GIAM_HIEU",
     });
 
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.organizationalUnit.findFirst();
     assert.ok(dept, "At least one department must exist in database");
     seededDeptId = dept.id;
 
@@ -488,7 +488,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
 
   before(async () => {
     // 1. Create departments
-    deptA = await prisma.department.create({
+    deptA = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_A_${runId}`,
         name: `Phòng Nghiệp vụ A ${runId}`,
@@ -496,7 +496,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       },
     });
 
-    deptB = await prisma.department.create({
+    deptB = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_B_${runId}`,
         name: `Phòng Nghiệp vụ B ${runId}`,
@@ -606,7 +606,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
     });
 
     // Cleanup departments
-    await prisma.department.deleteMany({
+    await prisma.organizationalUnit.deleteMany({
       where: {
         id: { in: [deptA.id, deptB.id] },
       },

@@ -30,14 +30,17 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
   let testUserId: string;
 
   before(async () => {
-    // 1. Ensure test department exists
-    let dept = await prisma.department.findFirst();
+    // 1. Ensure test org unit exists
+    let dept = await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } });
     if (!dept) {
-      dept = await prisma.department.create({
+      const uid = `dept-audit-${Date.now()}`;
+      dept = await prisma.organizationalUnit.create({
         data: {
-          id: `dept-audit-${Date.now()}`,
+          id: uid,
+          code: uid,
           name: 'Phòng Kiểm Thử Kiểm Toán',
-          shortName: 'PKTKT',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -51,7 +54,6 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
           email: `audit_user_${testRunId}@qncet.edu.vn`,
           name: 'Audit Test User',
           role: 'CHUYEN_VIEN',
-          departmentId: testDepartmentId,
         },
       });
     }

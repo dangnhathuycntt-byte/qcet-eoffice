@@ -22,7 +22,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
 
   before(async () => {
     // 1. Fetch departments
-    const depts = await prisma.department.findMany({ take: 2 });
+    const depts = await prisma.organizationalUnit.findMany({ take: 2 });
     assert.ok(depts.length >= 2, 'Must have at least 2 departments for reassignment tests');
     testDeptId = depts[0].id;
     targetDeptId = depts[1].id;
