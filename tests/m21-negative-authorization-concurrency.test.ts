@@ -71,7 +71,10 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
     testDept = await prisma.organizationalUnit.create({
       data: {
         id: `dept_m21_${runId}`,
+        code: `dept_m21_${runId}`,
         name: `Phòng Ban Thử Nghiệm M21 ${runId}`,
+        type: "PHONG_BAN" as any,
+        status: "ACTIVE" as any,
       },
     });
 

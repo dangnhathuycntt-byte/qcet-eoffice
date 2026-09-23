@@ -81,37 +81,33 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
     const deptAId = `DEPT_CNTT_${timestamp}`;
     const deptBId = `DEPT_DLDV_${timestamp}`;
 
-    await prisma.organizationalUnit.create({
-      data: {
-        id: deptAId,
-        name: "Khoa Công nghệ Thông tin Test",
-      },
-    });
-
-    await prisma.organizationalUnit.create({
-      data: {
-        id: deptBId,
-        name: "Khoa Du lịch & Dịch vụ Test",
-      },
-    });
-
-    deptA = await prisma.organizationalUnit.create({
-      data: {
+    await prisma.organizationalUnit.upsert({
+      where: { id: deptAId },
+      update: {},
+      create: {
         id: deptAId,
         code: `K_CNTT_${timestamp}`,
         name: "Khoa Công nghệ Thông tin Test",
-        type: "FACULTY",
+        type: "FACULTY" as any,
+        status: "ACTIVE" as any,
       },
     });
 
-    deptB = await prisma.organizationalUnit.create({
-      data: {
+    await prisma.organizationalUnit.upsert({
+      where: { id: deptBId },
+      update: {},
+      create: {
         id: deptBId,
         code: `K_DLDV_${timestamp}`,
         name: "Khoa Du lịch & Dịch vụ Test",
-        type: "FACULTY",
+        type: "FACULTY" as any,
+        status: "ACTIVE" as any,
       },
     });
+
+    deptA = await prisma.organizationalUnit.findUniqueOrThrow({ where: { id: deptAId } });
+
+    deptB = await prisma.organizationalUnit.findUniqueOrThrow({ where: { id: deptBId } });
 
     // 2. Create Users
     executiveUser = await prisma.user.create({

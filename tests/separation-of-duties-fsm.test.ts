@@ -21,7 +21,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   before(async () => {
     // Find or create test users
     const dept = await prisma.organizationalUnit.findFirst() || await prisma.organizationalUnit.create({
-      data: { id: 'TEST_DEPT', name: 'Phòng Thử Nghiệm' }
+      data: { id: 'TEST_DEPT', code: 'TEST_DEPT', name: 'Phòng Thử Nghiệm', type: 'PHONG_BAN' as any, status: 'ACTIVE' as any }
     });
 
     staffUser = await prisma.user.upsert({

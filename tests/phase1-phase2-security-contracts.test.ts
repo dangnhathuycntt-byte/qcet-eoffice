@@ -77,7 +77,10 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
       dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_p1p2_${timestamp}`,
+          code: `dept_p1p2_${timestamp}`,
           name: 'Phòng Tổ chức Cán bộ P1P2',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }

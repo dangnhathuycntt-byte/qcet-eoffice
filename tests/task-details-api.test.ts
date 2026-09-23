@@ -49,13 +49,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
 
-        createdById: testUserId,
-        assignees: {
-          create: {
-            userId: testUserId,
-            roleInTask: 'PRIMARY_OWNER',
-          },
-        },
+        createdById: testUserId
       },
     });
     testTaskId = task.id;

@@ -491,16 +491,20 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
     deptA = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_A_${runId}`,
+        code: `DEPT_A_${runId}`,
         name: `Phòng Nghiệp vụ A ${runId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
     deptB = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_B_${runId}`,
+        code: `DEPT_B_${runId}`,
         name: `Phòng Nghiệp vụ B ${runId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

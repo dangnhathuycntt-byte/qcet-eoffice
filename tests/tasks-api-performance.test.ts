@@ -40,7 +40,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
     });
     assert.ok(dept, 'Must have at least one department in database');
-    testDeptId = user.departmentId || dept.id;
+    testDeptId = dept.id;
 
     validToken = signSessionToken({
       id: user.id,

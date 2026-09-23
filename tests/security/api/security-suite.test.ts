@@ -35,8 +35,8 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng An Ninh A ${testRunId}` },
-        { id: deptBId, name: `Phòng An Ninh B ${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng An Ninh A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng An Ninh B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -256,12 +256,7 @@ describe('API Security Test Suite (Phase 29, OWASP API Top 10)', () => {
           createdById: managerA.id,
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(Date.now() + 86400000),
-          assignees: {
-            create: {
-              userId: staffA.id,
-            },
-          },
+          dueDate: new Date(Date.now() + 86400000)
         },
       });
 

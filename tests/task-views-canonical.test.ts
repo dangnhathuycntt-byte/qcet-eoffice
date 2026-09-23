@@ -499,7 +499,6 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       const matchesStaffAuth =
         (unrelated.assignees || []).some((a: any) => a.userId === staffContext.userId) ||
         (unrelated.actors || []).some((a: any) => a.userId === staffContext.userId) ||
-        unrelated.departmentId === 'unit_cntt' ||
         unrelated.leadUnitId === 'unit_cntt';
 
       assert.equal(matchesStaffAuth, false, `Staff must not have read access to unrelated task in view ${v}`);

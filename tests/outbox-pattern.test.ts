@@ -29,7 +29,10 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
       dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-outbox-${Date.now()}`,
+          code: `dept-outbox-${Date.now()}`,
           name: 'Phòng Kiểm Thử Outbox',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }

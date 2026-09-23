@@ -72,7 +72,10 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_${timestamp}`,
+          code: `dept_${timestamp}`,
           name: "Phòng Quản lý Đào tạo",
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }

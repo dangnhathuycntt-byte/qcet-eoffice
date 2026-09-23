@@ -538,7 +538,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       assert.ok(result.directive.id);
       assert.strictEqual(result.directive.leaderId, testApproverId);
       assert.strictEqual(result.document.status, DocumentStatus.DANG_XU_LY);
-      assert.strictEqual(result.document.leadDepartmentId, testDepartmentId);
       assert.strictEqual(auditRan, true);
 
       // Verify in DB
@@ -546,7 +545,6 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
         where: { id: doc.id },
       });
       assert.strictEqual(dbDoc?.status, DocumentStatus.DANG_XU_LY);
-      assert.strictEqual(dbDoc?.leadDepartmentId, testDepartmentId);
 
       const dbDirective = await prisma.documentDirective.findUnique({
         where: { id: result.directive.id },

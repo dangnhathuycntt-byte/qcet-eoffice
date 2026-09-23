@@ -64,7 +64,10 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept_st_${timestamp}`,
+          code: `dept_st_${timestamp}`,
           name: "Phòng Hành chính - Tổng hợp",
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -407,7 +410,8 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         data: {
           taskId: lifecycleTask.id,
           userId: makerUser.id,
-          roleInTask: "PRIMARY_OWNER",
+          role: "DRI" as any,
+          isPrimaryDRI: true,
         },
       });
     });

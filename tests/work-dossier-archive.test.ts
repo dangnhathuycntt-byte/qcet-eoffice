@@ -220,7 +220,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         code: `TASK_DT_${testRunId.slice(-4)}`,
         title: `Nhiệm vụ rà soát chương trình đào tạo - ${testRunId}`,
         scope: 'DEPARTMENT' as any,
-        createdBy: { connect: { id: unitHeadUser.id } },
+        createdById: unitHeadUser.id,
         leadUnitId: ouAcadId,
         academicMonth: 3,
         academicYear: "2025-2026",

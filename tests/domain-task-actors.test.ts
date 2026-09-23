@@ -1049,23 +1049,23 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       assert.equal(task.originLevel, TaskOriginLevel.SCHOOL); // Schema default check
     });
 
-    test("4.2 Task actors include succeeds (Phase 9: assignees replaced by actors)", async () => {
-      const taskWithActors = await prisma.task.findUnique({
+    test("4.2 Legacy queries with createdBy and leadUnit includes succeed seamlessly", async () => {
+      const taskWithIncludes = await prisma.task.findUnique({
         where: { id: legacyTask.id },
         include: {
-          actors: {
-            include: { user: true },
-          },
           createdBy: true,
+          leadUnit: true,
+          actors: true,
         },
       });
 
-      assert.ok(taskWithLegacyIncludes);
-      assert.equal(taskWithLegacyIncludes.createdBy.id, creatorUser.id);
-      assert.equal(taskWithLegacyIncludes.assignees.length, 1);
-      assert.equal(taskWithLegacyIncludes.assignees[0].userId, driUser1.id);
-      assert.equal(taskWithLegacyIncludes.assignees[0].roleInTask.PRIMARY_OWNER);
-      assert.equal((taskWithLegacyIncludes as any).leadUnit?.id ?? taskWithLegacyIncludes.leadUnitId, "P_QLDT");
+      assert.ok(taskWithIncludes);
+      assert.equal(taskWithIncludes.createdBy.id, creatorUser.id);
+      assert.ok(taskWithIncludes.actors.length >= 1);
+      const dri = taskWithIncludes.actors.find((a: any) => a.role === 'DRI');
+      assert.ok(dri);
+      assert.equal(dri?.userId, driUser1.id);
+      assert.equal((taskWithIncludes as any).leadUnit?.id ?? taskWithIncludes.leadUnitId, "P_QLDT");
     });
 
     test("4.3 Standard CRUD updates on Task operate without requiring ReBAC relations", async () => {

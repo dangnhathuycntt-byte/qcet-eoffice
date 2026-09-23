@@ -382,7 +382,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       createdTaskIds.push(subtask.id);
 
       assert.strictEqual(subtask.parentTaskId, createdRootTaskId);
-      assert.strictEqual(subtask.departmentId, testDept1Id);
+      assert.strictEqual(subtask.leadUnitId, testDept1Id);
       assert.strictEqual(subtask.academicMonth, 11);
       assert.strictEqual(subtask.academicYear, '2026-2027');
     });

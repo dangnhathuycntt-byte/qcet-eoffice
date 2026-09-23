@@ -147,12 +147,12 @@ describe("P0-2: /api/search canonical Task authorization", () => {
     await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptA },
       update: {},
-      create: { id: IDS.deptA, name: "Phòng A (AuthZ Test)" },
+      create: { id: IDS.deptA, code: IDS.deptA, name: "Phòng A (AuthZ Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
     await prisma.organizationalUnit.upsert({
       where: { id: IDS.deptB },
       update: {},
-      create: { id: IDS.deptB, name: "Phòng B (AuthZ Test)" },
+      create: { id: IDS.deptB, code: IDS.deptB, name: "Phòng B (AuthZ Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
 
     // OrganizationalUnits

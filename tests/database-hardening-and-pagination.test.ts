@@ -31,7 +31,10 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       update: { name: 'Phòng Đào tạo Thử nghiệm' },
       create: {
         id: 'DEPT-HARDEN-01',
+        code: 'DEPT-HARDEN-01',
         name: 'Phòng Đào tạo Thử nghiệm',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
@@ -40,7 +43,10 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       update: { name: 'Phòng Nghiên cứu Thử nghiệm' },
       create: {
         id: 'DEPT-HARDEN-02',
+        code: 'DEPT-HARDEN-02',
         name: 'Phòng Nghiên cứu Thử nghiệm',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

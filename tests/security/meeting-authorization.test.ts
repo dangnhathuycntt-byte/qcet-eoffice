@@ -407,7 +407,6 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
       where: { id: body.resultingTaskId },
       include: {
         actors: true,
-        actors: true,
       },
     });
 

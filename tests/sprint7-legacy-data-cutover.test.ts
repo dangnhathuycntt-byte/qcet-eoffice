@@ -58,12 +58,12 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
       },
       include: {
         actors: true,
-        actors: true,
       },
     });
 
     assert.ok(createdTask.id);
     assert.strictEqual(createdTask.actors.length, 1);
+    assert.strictEqual(createdTask.actors[0].userId, user.id);
     assert.strictEqual(createdTask.actors[0].userId, user.id);
 
     // Clean up test task

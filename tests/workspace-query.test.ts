@@ -1063,9 +1063,9 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         ],
       };
 
-      assert.equal(combinedWhere.AND[1].departmentId, "DEPT_TAICHINH");
+      assert.equal((combinedWhere.AND[1] as any).leadUnitId ?? (combinedWhere.AND[1] as any).departmentId, "DEPT_TAICHINH");
       // authWhere remains strictly bound to DEPT_CNTT
-      assert.equal(authWhere.OR![2].departmentId, "DEPT_CNTT");
+      assert.equal((authWhere.OR![2] as any).leadUnitId ?? (authWhere.OR![2] as any).departmentId, "DEPT_CNTT");
     });
 
     test("Anonymous / unauthenticated requests cannot access any records regardless of URL parameters (returns deny-all condition)", () => {
@@ -1115,7 +1115,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         ],
       };
 
-      assert.equal(combinedLeaderWhere.AND[1].departmentId, "CNTT");
+      assert.equal((combinedLeaderWhere.AND[1] as any).leadUnitId ?? (combinedLeaderWhere.AND[1] as any).departmentId, "CNTT");
     });
 
     test("Role is Not Scope invariant: TaskScope visual filter selection never alters or elevates user authority", () => {
@@ -1142,7 +1142,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       // Server read authorization remains identical regardless of requested scope
       assert.deepEqual(auth1, auth2);
       assert.deepEqual(auth2, auth3);
-      assert.deepEqual(auth1.OR![2].departmentId, "KHOA_CNTT");
+      assert.deepEqual((auth1.OR![2] as any).leadUnitId ?? (auth1.OR![2] as any).departmentId, "KHOA_CNTT");
     });
   });
 

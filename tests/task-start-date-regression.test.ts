@@ -19,10 +19,14 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
   const createdUserIds: string[] = [];
 
   before(async () => {
+    const deptId = `dept_reg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     testDept = await prisma.organizationalUnit.create({
       data: {
-        id: `dept_reg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: deptId,
+        code: deptId,
         name: 'Phòng Khảo thí & ĐBCL Regression Test',
+        type: "PHONG_BAN" as any,
+        status: "ACTIVE" as any,
       },
     });
 

@@ -457,14 +457,20 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
       unitA = await prisma.organizationalUnit.create({
         data: {
           id: `dept_a_${runId}`,
+          code: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
+          type: "PHONG_BAN" as any,
+          status: "ACTIVE" as any,
         },
       });
 
       unitB = await prisma.organizationalUnit.create({
         data: {
           id: `dept_b_${runId}`,
+          code: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
+          type: "PHONG_BAN" as any,
+          status: "ACTIVE" as any,
         },
       });
 
@@ -540,7 +546,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           category: 'Công văn',
           summary: `Văn bản nội bộ phòng A ${runId}`,
           securityLevel: DocumentSecurityLevel.THUONG,
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           status: DocumentStatus.CHO_PHAN_CONG,
         },
@@ -558,7 +563,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           summary: `Văn bản giới hạn đặc thù ${runId}`,
           securityLevel: DocumentSecurityLevel.THUONG,
           notes: 'RESTRICTED',
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           leadUserId: userA.id, // userA is leadUser!
           status: DocumentStatus.CHO_PHAN_CONG,
@@ -576,7 +580,6 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           category: 'Công văn',
           summary: `Văn bản tài liệu mật tuyệt đối không rò rỉ ${runId}`,
           securityLevel: DocumentSecurityLevel.MAT,
-          leadDepartmentId: unitA.id,
           registeredById: userA.id,
           status: DocumentStatus.CHO_PHAN_CONG,
         },

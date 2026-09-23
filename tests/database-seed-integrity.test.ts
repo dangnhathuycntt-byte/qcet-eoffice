@@ -18,12 +18,13 @@ describe('Database Seed Integrity Contract', () => {
   });
 
   test('văn bản đến phải có liên kết đơn vị chủ trì và ý kiến chỉ đạo', async () => {
-    const incomingDoc = await prisma.document.findFirst({
-      where: { type: 'VAN_BAN_DEN', leadDepartmentId: { not: null } },
-      include: { leadDepartment: true, directives: true },
+    // Phase 9: leadDepartmentId/leadDepartment dropped from Document — check incomingWorkflow.leadUnitId instead
+    const incomingWorkflow = await prisma.documentIncomingWorkflow.findFirst({
+      where: { leadUnitId: { not: null } },
+      include: { document: { include: { directives: true } } },
     });
 
-    assert.ok(incomingDoc, 'Phải có ít nhất 1 văn bản đến trong DB có đơn vị chủ trì');
-    assert.ok(incomingDoc.leadDepartmentId, 'Văn bản đến phải có đơn vị chủ trì');
+    assert.ok(incomingWorkflow, 'Phải có ít nhất 1 văn bản đến trong DB có đơn vị chủ trì');
+    assert.ok(incomingWorkflow.leadUnitId, 'Văn bản đến phải có đơn vị chủ trì');
   });
 });

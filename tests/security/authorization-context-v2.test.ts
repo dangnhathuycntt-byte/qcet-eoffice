@@ -96,8 +96,10 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
     await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `Phòng Ban Thử Nghiệm ${testRunId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

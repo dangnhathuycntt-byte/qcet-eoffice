@@ -101,8 +101,10 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
     await prisma.organizationalUnit.create({
       data: {
         id: deptId,
+        code: deptId,
         name: `Sprint 2 Dept ${testRunId}`,
-
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

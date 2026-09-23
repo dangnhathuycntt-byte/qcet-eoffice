@@ -20,10 +20,14 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
 
   before(async () => {
     // 1. Create dedicated isolated Department
+    const deptId = `dept_occ_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     testDept = await prisma.organizationalUnit.create({
       data: {
-        id: `dept_occ_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: deptId,
+        code: deptId,
         name: 'Phòng Đào tạo - Quản lý Khoa học OCC',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

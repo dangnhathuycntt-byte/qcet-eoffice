@@ -280,13 +280,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           dueDate: new Date('2026-10-15T17:00:00Z'),
           academicMonth: 10,
           academicYear: '2026-2027',
-          createdById: adminUser.id,
-          assignees: {
-            create: {
-              userId: staffUser.id,
-              roleInTask: 'PRIMARY_OWNER',
-            },
-          },
+          createdById: adminUser.id
         },
       });
       createdTaskIds.push(task.id);
@@ -298,7 +292,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         directiveNote: 'Yêu cầu hoàn thành trước ngày 20 để kịp nghiệm thu',
         actorName: adminUser.name,
         actorId: adminUser.id,
-        leadUnitId: testDepartmentId,
+        departmentId: testDepartmentId,
       });
 
       // Should notify staffUser and deptHead (if different from admin)
@@ -338,7 +332,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         body: JSON.stringify({
           title: 'Nhiệm vụ tự động bắn push ngầm qua after()',
           description: 'Kiểm thử tích hợp after() Next.js 15',
-          leadUnitId: testDepartmentId,
+          departmentId: testDepartmentId,
           dueDate: '2026-12-01T17:00:00.000Z',
           priority: 'urgent',
           scope: 'department',
@@ -385,13 +379,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           dueDate: new Date('2026-10-10T17:00:00Z'),
           academicMonth: 10,
           academicYear: '2026-2027',
-          createdById: adminUser.id,
-          assignees: {
-            create: {
-              userId: staffUser.id,
-              roleInTask: 'PRIMARY_OWNER',
-            },
-          },
+          createdById: adminUser.id
         },
       });
       createdTaskIds.push(task.id);

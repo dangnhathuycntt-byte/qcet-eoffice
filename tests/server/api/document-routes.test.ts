@@ -46,7 +46,10 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       testDept1 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-1',
+          code: 'dept-test-doc-1',
           name: 'Phòng Thử Nghiệm 1',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -58,7 +61,10 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       testDept2 = await prisma.organizationalUnit.create({
         data: {
           id: 'dept-test-doc-2',
+          code: 'dept-test-doc-2',
           name: 'Phòng Thử Nghiệm 2',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }
@@ -363,8 +369,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           status: 'CHO_PHAN_CONG',
           urgency: 'THUONG',
           securityLevel: 'THUONG',
-          draftingDeptId: testDept1.id,
-          leadDepartmentId: testDept1.id,
+          // Phase 9: leadDepartmentId dropped from Document
           registeredById: managerUser.id,
         },
       });

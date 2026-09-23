@@ -377,7 +377,7 @@ describe('Tasks API Route Handler Tests', () => {
 
       assert.ok(subtaskInDb);
       assert.strictEqual(subtaskInDb.parentTaskId, parentCreatedTaskId);
-      assert.strictEqual(subtaskInDb.departmentId, testDeptId);
+      assert.strictEqual(subtaskInDb.leadUnitId, testDeptId);
       assert.strictEqual(subtaskInDb.scope, TaskScope.DEPARTMENT);
     });
 

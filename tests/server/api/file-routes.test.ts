@@ -111,7 +111,6 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         category: "Kế hoạch",
         issuingAuthority: "Dept B Authority",
         issuedDate: new Date(),
-        leadDepartmentId: deptBId,
         registeredById: deptBUser.id,
       },
     });

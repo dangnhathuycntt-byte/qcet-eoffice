@@ -36,7 +36,7 @@ const mockStats: ExecutiveActionStats = {
 
 const mockDepartments: DepartmentHealthSummary[] = [
   {
-
+    departmentId: "CNTT",
     departmentName: "Khoa Cong nghe thong tin",
     leadName: "TS. Nguyen Ngoc Vinh",
     totalTasksCount: 10,
@@ -47,7 +47,7 @@ const mockDepartments: DepartmentHealthSummary[] = [
     averageProgressPercent: 72,
   },
   {
-
+    departmentId: "DAO_TAO",
     departmentName: "Phong Dao tao & QLKH",
     leadName: "ThS. Do Quang Trung",
     totalTasksCount: 8,
@@ -58,7 +58,7 @@ const mockDepartments: DepartmentHealthSummary[] = [
     averageProgressPercent: 92,
   },
   {
-
+    departmentId: "HANH_CHINH",
     departmentName: "Phong Hanh chinh - Quan tri",
     leadName: "ThS. Phan Van Thanh",
     totalTasksCount: 5,
@@ -190,7 +190,7 @@ describe("DepartmentProgressMatrix", () => {
   test("getDepartmentCardData boundary: exactly 50% gets amber", () => {
     const boundary: DepartmentHealthSummary[] = [
       {
-
+        departmentId: "TEST_50",
         departmentName: "Test Dept",
         leadName: "Test Lead",
         totalTasksCount: 4,
@@ -208,7 +208,7 @@ describe("DepartmentProgressMatrix", () => {
   test("getDepartmentCardData boundary: exactly 80% gets emerald", () => {
     const boundary: DepartmentHealthSummary[] = [
       {
-
+        departmentId: "TEST_80",
         departmentName: "Test Dept",
         leadName: "Test Lead",
         totalTasksCount: 5,
@@ -244,7 +244,7 @@ describe("DepartmentProgressMatrix", () => {
 describe("DepartmentProgressMatrix Navigation & Sorting", () => {
   const mockDepts: DepartmentHealthSummary[] = [
     {
-
+      departmentId: "CNTT",
       departmentName: "Khoa CNTT",
       leadName: "Trưởng khoa CNTT",
       totalTasksCount: 20,
@@ -255,7 +255,7 @@ describe("DepartmentProgressMatrix Navigation & Sorting", () => {
       averageProgressPercent: 90,
     },
     {
-
+      departmentId: "QT_CSVC",
       departmentName: "Phòng QT-CSVC",
       leadName: "Trưởng phòng QTCSVC",
       totalTasksCount: 15,
@@ -266,7 +266,7 @@ describe("DepartmentProgressMatrix Navigation & Sorting", () => {
       averageProgressPercent: 45,
     },
     {
-
+      departmentId: "DAO_TAO",
       departmentName: "Phòng Đào tạo",
       leadName: "Trưởng phòng ĐT",
       totalTasksCount: 25,

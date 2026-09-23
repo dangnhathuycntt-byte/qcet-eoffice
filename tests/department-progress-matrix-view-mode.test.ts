@@ -13,7 +13,7 @@ import type { DepartmentHealthSummary } from "../src/lib/executive-matrix-aggreg
 
 const mockDepartments: DepartmentHealthSummary[] = [
   {
-
+    departmentId: "CNTT",
     departmentName: "Khoa Công nghệ thông tin",
     leadName: "TS. Nguyễn Ngọc Vịnh",
     totalTasksCount: 10,
@@ -24,7 +24,7 @@ const mockDepartments: DepartmentHealthSummary[] = [
     averageProgressPercent: 78,
   },
   {
-
+    departmentId: "DIEN",
     departmentName: "Khoa Điện - Điện tử",
     leadName: "ThS. Trần Văn Ba",
     totalTasksCount: 12,
@@ -35,7 +35,7 @@ const mockDepartments: DepartmentHealthSummary[] = [
     averageProgressPercent: 45,
   },
   {
-
+    departmentId: "CO_KHI",
     departmentName: "Khoa Cơ khí động lực",
     leadName: "TS. Lê Hoàng",
     totalTasksCount: 8,
@@ -64,7 +64,7 @@ describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
   test("sortDepartmentsByOverdue handles legacy field names (overdueTasks)", () => {
     const legacyDepts: DepartmentHealthSummary[] = [
       {
-
+        departmentId: "DEPT_A",
         departmentName: "Phòng A",
         leadName: "Lãnh đạo A",
         totalTasksCount: 5,
@@ -76,7 +76,7 @@ describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
         overdueTasks: 0,
       },
       {
-
+        departmentId: "DEPT_B",
         departmentName: "Phòng B",
         leadName: "Lãnh đạo B",
         totalTasksCount: 5,

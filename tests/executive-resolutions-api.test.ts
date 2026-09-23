@@ -7,9 +7,9 @@ import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
 import { TaskStatus, TaskPriority, TaskScope, UserRole, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Executive Resolutions API Persistence & Authorization Tests', () => {
-  let bghUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
-  let staffUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
-  let adminUser: { id: string; email: string; name: string; role: UserRole; departmentId: string | null };
+  let bghUser: { id: string; email: string; name: string; role: UserRole };
+  let staffUser: { id: string; email: string; name: string; role: UserRole };
+  let adminUser: { id: string; email: string; name: string; role: UserRole };
   let bghToken: string;
   let staffToken: string;
   let adminToken: string;

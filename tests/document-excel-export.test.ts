@@ -179,7 +179,6 @@ describe("GET /api/documents/export-excel Route Integration", () => {
         summary: "Văn bản thử nghiệm xuất sổ Excel Phụ lục IV",
         urgency: "THUONG",
         securityLevel: "THUONG",
-        leadDepartmentId: dept?.id || null,
         status: "CHO_PHAN_CONG",
         registeredById: user.id,
       },

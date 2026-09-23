@@ -44,14 +44,20 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
     deptA = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_A_${rand}`,
+        code: `DEPT_A_${rand}`,
         name: 'Phòng Tổ chức Cán bộ A',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 
     deptB = await prisma.organizationalUnit.create({
       data: {
         id: `DEPT_B_${rand}`,
+        code: `DEPT_B_${rand}`,
         name: 'Phòng Kế hoạch Tài chính B',
+        type: 'PHONG_BAN' as any,
+        status: 'ACTIVE' as any,
       },
     });
 

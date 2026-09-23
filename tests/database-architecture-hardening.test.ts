@@ -57,8 +57,10 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
     const dept = await prisma.organizationalUnit.create({
       data: {
         id: `dept-harden-${Date.now()}`,
+        code: `dept-harden-${Date.now()}`,
         name: `Phòng Khảo Thí & Đảm Bảo Chất Lượng ${testRunId}`,
-
+        type: "PHONG_BAN" as any,
+        status: "ACTIVE" as any,
       },
     });
     testDepartmentId = dept.id;
@@ -1056,8 +1058,10 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       const restrictedDept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-restrict-${Date.now()}`,
+          code: `dept-restrict-${Date.now()}`,
           name: `Phòng Ràng Buộc Khóa Ngoại ${testRunId}`,
-
+          type: "PHONG_BAN" as any,
+          status: "ACTIVE" as any,
         },
       });
 

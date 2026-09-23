@@ -21,7 +21,10 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
       dept = await prisma.organizationalUnit.create({
         data: {
           id: `dept-worker-${Date.now()}`,
+          code: `dept-worker-${Date.now()}`,
           name: 'Phòng Outbox Worker Test',
+          type: 'PHONG_BAN' as any,
+          status: 'ACTIVE' as any,
         },
       });
     }

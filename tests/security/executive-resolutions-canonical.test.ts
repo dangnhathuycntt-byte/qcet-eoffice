@@ -65,7 +65,7 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
 
   before(async () => {
     dept = await prisma.organizationalUnit.create({
-      data: { id: `DEPT_EXEC_${runId}`, name: `Dept Exec ${runId}` },
+      data: { id: `DEPT_EXEC_${runId}`, code: `DEPT_EXEC_${runId}`, name: `Dept Exec ${runId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
     });
     unit = await prisma.organizationalUnit.create({
       data: { code: `U-EXEC-${runId}`, name: `Unit Exec ${runId}`, type: UnitType.DEPARTMENT },

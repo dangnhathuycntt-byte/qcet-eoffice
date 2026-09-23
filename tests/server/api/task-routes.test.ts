@@ -31,8 +31,8 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, name: `Phòng A ${testRunId}` },
-        { id: deptBId, name: `Phòng B ${testRunId}` },
+        { id: deptAId, code: deptAId, name: `Phòng A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
       ],
     });
 
@@ -128,13 +128,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         createdById: leaderAUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-15T17:00:00.000Z'),
-        assignees: {
-          create: {
-            userId: staffAUser.id,
-            roleInTask: 'PRIMARY_OWNER',
-          },
-        },
+        dueDate: new Date('2026-10-15T17:00:00.000Z')
       },
     });
     taskAId = taskA.id;
@@ -152,13 +146,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         createdById: staffBUser.id,
         academicMonth: 9,
         academicYear: '2026-2027',
-        dueDate: new Date('2026-10-20T17:00:00.000Z'),
-        assignees: {
-          create: {
-            userId: staffBUser.id,
-            roleInTask: 'PRIMARY_OWNER',
-          },
-        },
+        dueDate: new Date('2026-10-20T17:00:00.000Z')
       },
     });
     personalTaskBId = personalTaskB.id;

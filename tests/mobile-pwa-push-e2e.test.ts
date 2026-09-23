@@ -26,8 +26,8 @@ import { checkIsIOS } from '../src/hooks/use-pwa-install';
 import { UserRole } from '@prisma/client';
 
 describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
-  let testUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
-  let adminUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
+  let testUser: { id: string; name: string; email: string; role: string };
+  let adminUser: { id: string; name: string; email: string; role: string };
   let userToken: string;
   let adminToken: string;
 
@@ -264,12 +264,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 86400000 * 2),
 
-        createdById: adminUser.id,
-        assignees: {
-          create: {
-            userId: testUser.id,
-          },
-        },
+        createdById: adminUser.id
       },
     });
     createdTaskIds.push(testTask.id);
