@@ -21,7 +21,8 @@ import {
   Prisma,
   PrismaClient,
   Task,
-  TaskAssignee,
+  TaskActor,
+  TaskActorRole,
   TaskDeliverable,
   ExecutiveResolution,
   Document,
@@ -29,7 +30,6 @@ import {
   TaskScope,
   TaskStatus,
   TaskPriority,
-  AssigneeRole,
   DeliverableReviewStatus,
   ResolutionType,
   DocumentStatus,
@@ -39,7 +39,6 @@ import { generateTaskCodeAtomic, type TaskCodeOptions } from "../task-code-gener
 import { getAcademicYear, getAcademicMonthInfo } from "../academic-calendar";
 import { updateTaskWithOCC, updateDocumentWithOCC, type DbClient } from "./occ";
 import { logAuditEvent } from "./audit";
-import { syncAssigneeToActor } from "@/domain/tasks/migration/task-actor-migration";
 
 /**
  * Options for configuring interactive transactions.
@@ -137,7 +136,8 @@ async function recordTransactionAudit(
 
 export interface TaskAssigneeInput {
   userId: string;
-  roleInTask?: AssigneeRole;
+  /** 'PRIMARY_OWNER' | 'COLLABORATOR' — mapped to TaskActor.role after Phase 9 */
+  roleInTask?: 'PRIMARY_OWNER' | 'COLLABORATOR';
 }
 
 export interface CreateTaskAtomicPayload {
@@ -167,18 +167,18 @@ export interface CreateTaskAtomicPayload {
 }
 
 export interface CreateTaskAtomicResult {
-  task: Task & { assignees: TaskAssignee[] };
-  assignees: TaskAssignee[];
+  task: Task & { actors: TaskActor[] };
+  actors: TaskActor[];
   code: string;
 }
 
 /**
- * Creates a task atomically with unique sequential code, assignees, and audit entry.
+ * Creates a task atomically with unique sequential code, actors, and audit entry.
  *
  * Sequence of operations in tx:
  * 1. Atomic sequence number allocation (generateTaskCodeAtomic).
  * 2. Academic month & year derivation if omitted.
- * 3. Task record creation with nested TaskAssignee records.
+ * 3. Task record creation + TaskActor records (Phase 9: TaskAssignee table dropped).
  * 4. Audit trail persistence within the same transaction.
  */
 export async function createTaskAtomic(
@@ -212,18 +212,22 @@ export async function createTaskAtomic(
           ...payload.codeOptions,
         }));
 
-      // 2. Normalize and deduplicate assignees
-      const assigneesToCreate: { userId: string; roleInTask: AssigneeRole }[] = [];
+      // 2. Normalize and deduplicate actors
+      const actorsToCreate: { userId: string; role: TaskActorRole; isPrimaryDRI: boolean }[] = [];
       const seen = new Set<string>();
 
       if (Array.isArray(payload.assignees)) {
         for (const a of payload.assignees) {
           if (a?.userId && a.userId.trim()) {
-            const role = a.roleInTask ?? AssigneeRole.PRIMARY_OWNER;
+            const role = a.roleInTask ?? 'PRIMARY_OWNER';
             const key = `${a.userId.trim()}_${role}`;
             if (!seen.has(key)) {
               seen.add(key);
-              assigneesToCreate.push({ userId: a.userId.trim(), roleInTask: role });
+              actorsToCreate.push({
+                userId: a.userId.trim(),
+                role: role === 'PRIMARY_OWNER' ? TaskActorRole.DRI : TaskActorRole.COLLABORATOR,
+                isPrimaryDRI: role === 'PRIMARY_OWNER',
+              });
             }
           }
         }
@@ -231,10 +235,10 @@ export async function createTaskAtomic(
 
       if (payload.primaryOwnerId && payload.primaryOwnerId.trim()) {
         const uId = payload.primaryOwnerId.trim();
-        const key = `${uId}_${AssigneeRole.PRIMARY_OWNER}`;
+        const key = `${uId}_PRIMARY_OWNER`;
         if (!seen.has(key)) {
           seen.add(key);
-          assigneesToCreate.push({ userId: uId, roleInTask: AssigneeRole.PRIMARY_OWNER });
+          actorsToCreate.push({ userId: uId, role: TaskActorRole.DRI, isPrimaryDRI: true });
         }
       }
 
@@ -242,16 +246,16 @@ export async function createTaskAtomic(
         for (const cId of payload.collaboratorIds) {
           if (cId && cId.trim()) {
             const trimmed = cId.trim();
-            const key = `${trimmed}_${AssigneeRole.COLLABORATOR}`;
+            const key = `${trimmed}_COLLABORATOR`;
             if (!seen.has(key)) {
               seen.add(key);
-              assigneesToCreate.push({ userId: trimmed, roleInTask: AssigneeRole.COLLABORATOR });
+              actorsToCreate.push({ userId: trimmed, role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false });
             }
           }
         }
       }
 
-      // 3. Create task and assignees atomically
+      // 3. Create task atomically
       const task = await tx.task.create({
         data: {
           code: taskCode,
@@ -269,39 +273,21 @@ export async function createTaskAtomic(
           createdById: payload.createdById,
           parentTaskId: payload.parentTaskId ?? null,
           dacumTaskDefId: payload.dacumTaskDefId ?? null,
-          ...(assigneesToCreate.length > 0
+          ...(actorsToCreate.length > 0
             ? {
-                assignees: {
-                  create: assigneesToCreate,
+                actors: {
+                  create: actorsToCreate,
                 },
               }
             : {}),
         },
         include: {
-          assignees: true,
+          actors: true,
         },
       });
 
       if (payload.failAtStep === "afterTaskCreate") {
         throw new Error("[createTaskAtomic] Simulated failure after task creation");
-      }
-
-      // 3b. Dual-write: sync each TaskAssignee to TaskActor (Stage B — degrade gracefully)
-      for (const a of task.assignees) {
-        try {
-          await syncAssigneeToActor(tx, {
-            id: a.id,
-            taskId: a.taskId,
-            userId: a.userId,
-            roleInTask: a.roleInTask,
-            assignedAt: a.assignedAt ?? undefined,
-          });
-        } catch (err) {
-          console.error(
-            `[createTaskAtomic] TaskActor dual-write failed for assignee ${a.id} — continuing:`,
-            err
-          );
-        }
       }
 
       // 4. Record audit entry
@@ -316,7 +302,7 @@ export async function createTaskAtomic(
             code: task.code,
             title: task.title,
             scope: task.scope,
-            assigneeCount: task.assignees.length,
+            actorCount: task.actors.length,
             ...(payload.audit?.metadata ?? {}),
           },
           requestId: payload.audit?.requestId,
@@ -331,7 +317,7 @@ export async function createTaskAtomic(
 
       return {
         task,
-        assignees: task.assignees,
+        actors: task.actors,
         code: task.code,
       };
     },

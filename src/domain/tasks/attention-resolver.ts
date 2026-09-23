@@ -24,7 +24,6 @@ import {
   parseDateParts,
 } from '../../lib/academic-calendar';
 import { checkAntiSelfApproval } from './contract';
-import { TASK_ACTOR_READ_ENABLED } from '../../lib/feature-flags';
 
 export type { UserAttentionType, UserAttentionContext, AttentionResolverFn };
 export type UserContext = UserAttentionContext;
@@ -278,8 +277,8 @@ export function isTaskMaker(task: any, userId: string): boolean {
 export function isTaskAssignee(task: any, userId: string): boolean {
   if (!userId || !task) return false;
 
-  // Stage B cutover: when flag enabled and actors array present, use canonical TaskActor.
-  if (TASK_ACTOR_READ_ENABLED && Array.isArray(task.actors) && task.actors.length > 0) {
+  // Phase 9: TaskAssignee table dropped — sole authority is TaskActor.
+  if (Array.isArray(task.actors) && task.actors.length > 0) {
     return task.actors.some(
       (a: any) =>
         a.userId === userId &&
@@ -287,7 +286,7 @@ export function isTaskAssignee(task: any, userId: string): boolean {
     );
   }
 
-  // Legacy path: read from task.assignees (TaskAssignee)
+  // Fallback for DTOs that carry flattened fields (no actors relation loaded)
   if (
     task.assigneeId === userId ||
     task.leadAssigneeId === userId ||

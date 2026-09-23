@@ -4,7 +4,7 @@ import {
   TaskStatus,
   TaskScope,
   TaskPriority,
-  AssigneeRole,
+  TaskActorRole,
   DeliverableReviewStatus,
   ResolutionType,
   DocumentStatus,
@@ -127,19 +127,19 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       assert.ok(result.task.id, 'Task ID must be returned');
       assert.ok(result.code, 'Task code must be generated');
       assert.strictEqual(result.task.title, `Task Happy Path ${testRunId}`);
-      assert.strictEqual(result.assignees.length, 2, 'Should create 2 assignees');
+      assert.strictEqual(result.actors.length, 2, 'Should create 2 actors');
       assert.strictEqual(auditRecorded, true, 'Audit recorder must have been invoked');
       assert.strictEqual(postCommitRan, true, 'afterCommit hook must have been executed');
 
       // Verify server truth in PostgreSQL
       const persisted = await prisma.task.findUnique({
         where: { id: result.task.id },
-        include: { assignees: true },
+        include: { actors: true },
       });
       assert.ok(persisted, 'Task must exist in database');
-      assert.strictEqual(persisted?.assignees.length, 2);
-      const owner = persisted?.assignees.find((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collaborator = persisted?.assignees.find((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
+      assert.strictEqual(persisted?.actors.length, 2);
+      const owner = persisted?.actors.find((a) => a.role === TaskActorRole.DRI && a.isPrimaryDRI);
+      const collaborator = persisted?.actors.find((a) => a.role === TaskActorRole.COLLABORATOR);
       assert.strictEqual(owner?.userId, testCreatorId);
       assert.strictEqual(collaborator?.userId, testCollaboratorId);
     });
@@ -209,7 +209,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
           assignees: [
             {
               userId: 'non-existent-user-uuid-12345',
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
+              roleInTask: 'PRIMARY_OWNER',
             },
           ],
         });
