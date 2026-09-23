@@ -192,7 +192,7 @@ export function isTaskOrSubtaskOverdue(
 
   // 1. Kiểm tra chính nhiệm vụ cha
   if (
-    task.status === "OVERDUE" ||
+    task.isOverdue ||
     isTaskPastDue(task.dueDate, referenceDate)
   ) {
     return true;
@@ -205,7 +205,6 @@ export function isTaskOrSubtaskOverdue(
         return false;
       }
       return (
-        sub.status === "OVERDUE" ||
         isTaskPastDue(sub.dueDate, referenceDate)
       );
     });

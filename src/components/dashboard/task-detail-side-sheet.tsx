@@ -222,12 +222,6 @@ export const TASK_STATUS_CONFIG: Record<
       "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
     variant: "success",
   },
-  OVERDUE: {
-    label: "Quá hạn",
-    className:
-      "border-red-500/20 bg-red-500/10 text-red-700",
-    variant: "destructive",
-  },
   CANCELLED: {
     label: "Đã hủy",
     className:
@@ -363,8 +357,7 @@ export interface TaskDetailCapabilities {
 
 /**
  * Normalizes a canonical lifecycle status into the exact token the capability
- * engine understands. OVERDUE is an in-progress task past its deadline, so it
- * must not silently lose submit/edit capability.
+ * engine understands.
  */
 function toEngineStatus(lifecycle: TaskLifecycleStatus): string {
   switch (lifecycle) {
@@ -379,7 +372,6 @@ function toEngineStatus(lifecycle: TaskLifecycleStatus): string {
     case "CANCELLED":
       return "CANCELLED";
     case "IN_PROGRESS":
-    case "OVERDUE":
     default:
       return "IN_PROGRESS";
   }

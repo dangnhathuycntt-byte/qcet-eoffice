@@ -163,7 +163,6 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     assert.equal(mapTaskStatusToKanbanColumn("NOT_STARTED"), "NEW");
     assert.equal(mapTaskStatusToKanbanColumn("NEW"), "NEW");
     assert.equal(mapTaskStatusToKanbanColumn("IN_PROGRESS"), "IN_PROGRESS");
-    assert.equal(mapTaskStatusToKanbanColumn("OVERDUE"), "IN_PROGRESS");
     assert.equal(mapTaskStatusToKanbanColumn("BLOCKED"), "IN_PROGRESS");
     assert.equal(mapTaskStatusToKanbanColumn("WAITING_APPROVAL"), "NEEDS_REVIEW");
     assert.equal(mapTaskStatusToKanbanColumn("PENDING_EXECUTIVE_APPROVAL"), "NEEDS_REVIEW");
@@ -171,8 +170,8 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     assert.equal(mapTaskStatusToKanbanColumn("COMPLETED"), "COMPLETED");
   });
 
-  test("Kanban board accounts for all 395 tasks across 4 columns with zero silent loss", () => {
-    // Generate 395 mock tasks covering NOT_STARTED (75), WAITING_APPROVAL (9), OVERDUE (1), etc.
+  test("Kanban board accounts for all 394 tasks across 4 columns with zero silent loss", () => {
+    // Generate 394 mock tasks covering NOT_STARTED (75), WAITING_APPROVAL (9), IN_PROGRESS (100), etc.
     const mock395Tasks: SchoolTask[] = [];
 
     // 75 NOT_STARTED
@@ -251,7 +250,8 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       });
     }
 
-    // 1 OVERDUE
+    // 100 IN_PROGRESS (replacing 1 OVERDUE task with IN_PROGRESS to maintain dataset structure)
+    // OVERDUE has been removed from TaskStatus enum — past-due tasks remain IN_PROGRESS with isOverdue flag
     mock395Tasks.push({
       id: "task-overdue-1",
       title: "Nhiệm vụ quá hạn 1",
@@ -261,7 +261,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       coAssignees: [],
       assignedDate: "2026-08-01",
       dueDate: "2026-08-15",
-      status: "OVERDUE" as unknown as SchoolTask["status"],
+      status: "IN_PROGRESS" as unknown as SchoolTask["status"],
       subTasks: [],
       totalSubTasks: 0,
       completedSubTasks: 0,
@@ -306,13 +306,13 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       });
     }
 
-    assert.equal(mock395Tasks.length, 395, "Total mock tasks must equal 395");
+    assert.equal(mock395Tasks.length, 394, "Total mock tasks must equal 394");
 
     const grouped = groupTasksByStatus(mock395Tasks);
 
     // Assert partition across the 4 Kanban columns
     assert.equal(grouped.NEW.length, 175, "NEW column must have 100 NEW + 75 NOT_STARTED = 175");
-    assert.equal(grouped.IN_PROGRESS.length, 101, "IN_PROGRESS column must have 100 IN_PROGRESS + 1 OVERDUE = 101");
+    assert.equal(grouped.IN_PROGRESS.length, 101, "IN_PROGRESS column must have 100 IN_PROGRESS + 1 extra IN_PROGRESS = 101");
     assert.equal(grouped.NEEDS_REVIEW.length, 19, "NEEDS_REVIEW column must have 10 NEEDS_REVIEW + 9 WAITING_APPROVAL = 19");
     assert.equal(grouped.COMPLETED.length, 100, "COMPLETED column must have 100 COMPLETED = 100");
 
@@ -322,7 +322,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       grouped.NEEDS_REVIEW.length +
       grouped.COMPLETED.length;
 
-    assert.equal(sumVisible, 395, "All 395 tasks must be visible on the Kanban board with zero silent loss");
+    assert.equal(sumVisible, 394, "All 394 tasks must be visible on the Kanban board with zero silent loss");
 
     // Render component and verify count notice header
     const html = renderToStaticMarkup(
@@ -507,7 +507,8 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
       }),
       makeSchoolTask("flagged", {
         title: "Nhiệm vụ bị gắn cờ quá hạn",
-        status: "OVERDUE",
+        status: "IN_PROGRESS",
+        isOverdue: true,
         dueDate: "2026-08-01",
         progressPercent: 30,
       }),
@@ -531,7 +532,6 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
       "NOT_STARTED",
       "NEW",
       "IN_PROGRESS",
-      "OVERDUE",
       "BLOCKED",
       "WAITING_APPROVAL",
       "PENDING_EXECUTIVE_APPROVAL",

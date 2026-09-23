@@ -385,10 +385,10 @@ describe("Task Detail decision capability & truthful history", () => {
       assert.equal(caps.canSubmit, true);
     });
 
-    test("OVERDUE keeps its overdue lifecycle token", () => {
-      const task = staffTask({ status: "OVERDUE", assigneeId: "staff-1" });
+    test("IN_PROGRESS task with isOverdue flag keeps IN_PROGRESS lifecycle token", () => {
+      const task = staffTask({ status: "IN_PROGRESS", assigneeId: "staff-1" });
       const caps = deriveTaskDetailCapabilities(task, staffUser);
-      assert.equal(caps.lifecycle, "OVERDUE");
+      assert.equal(caps.lifecycle, "IN_PROGRESS");
     });
 
     test("no actor yields an all-false capability matrix (fail closed)", () => {

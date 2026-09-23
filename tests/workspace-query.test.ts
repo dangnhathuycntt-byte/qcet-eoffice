@@ -263,8 +263,11 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.equal(parseWorkspaceQuery(new URLSearchParams("tab=done")).status, "COMPLETED");
     });
 
-    test("migrates legacy 'tab=overdue' -> 'OVERDUE'", () => {
-      assert.equal(parseWorkspaceQuery(new URLSearchParams("tab=overdue")).status, "OVERDUE");
+    test("legacy 'tab=overdue' falls through to default status (OVERDUE removed from enum)", () => {
+      // OVERDUE removed from TaskStatus in Phase 9 WI-9.4; legacy tab=overdue no longer maps to a status
+      const result = parseWorkspaceQuery(new URLSearchParams("tab=overdue")).status;
+      // Status should be 'ALL' (default) since 'OVERDUE' is not a valid TaskLifecycleStatus
+      assert.equal(result, "ALL", "OVERDUE is no longer a valid status filter — falls back to ALL");
     });
 
     test("migrates legacy 'tab=executive' -> 'PENDING_EXECUTIVE_APPROVAL'", () => {

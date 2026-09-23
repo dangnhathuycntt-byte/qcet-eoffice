@@ -422,7 +422,6 @@ export function resolveUserAttention(
   const isAssignee = isTaskAssignee(task, userId);
 
   const isOverdue =
-    status === 'OVERDUE' ||
     task.isOverdue === true ||
     isDatePast(task.dueDate, userContext.now);
 
@@ -443,9 +442,9 @@ export function resolveUserAttention(
   }
 
   // 3. Maker Attention: 'requires_my_action'
-  // When user is assignee/co-assignee and task is NOT_STARTED or IN_PROGRESS (or OVERDUE)
+  // When user is assignee/co-assignee and task is NOT_STARTED or IN_PROGRESS
   if (isAssignee) {
-    if (status === 'NOT_STARTED' || status === 'IN_PROGRESS' || status === 'OVERDUE') {
+    if (status === 'NOT_STARTED' || status === 'IN_PROGRESS') {
       attentions.push('requires_my_action');
     }
   }

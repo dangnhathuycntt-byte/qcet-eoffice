@@ -110,7 +110,7 @@ export interface PrismaTaskCreateInput {
   title: string;
   description: string | null;
   scope: 'SCHOOL' | 'DEPARTMENT' | 'INDIVIDUAL';
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING_APPROVAL' | 'COMPLETED' | 'OVERDUE' | 'CANCELLED';
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING_APPROVAL' | 'COMPLETED' | 'CANCELLED';
   priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
   progressPercent: number;
   academicMonth: number;
@@ -150,7 +150,6 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     WAITING_APPROVAL: 'NEEDS_REVIEW',
     NEEDS_REVIEW: 'NEEDS_REVIEW',
     COMPLETED: 'COMPLETED',
-    OVERDUE: 'BLOCKED',
     BLOCKED: 'BLOCKED',
     CANCELLED: 'BLOCKED'
   };
@@ -272,13 +271,11 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     IN_PROGRESS: 'IN_PROGRESS',
     WAITING_APPROVAL: 'WAITING_APPROVAL',
     COMPLETED: 'COMPLETED',
-    OVERDUE: 'OVERDUE',
     CANCELLED: 'CANCELLED',
     not_started: 'NOT_STARTED',
     in_progress: 'IN_PROGRESS',
     waiting_approval: 'WAITING_APPROVAL',
     completed: 'COMPLETED',
-    overdue: 'OVERDUE',
     cancelled: 'CANCELLED',
     NEW: 'NOT_STARTED',
     NEEDS_REVIEW: 'WAITING_APPROVAL',
@@ -401,7 +398,6 @@ export function mapSchoolTaskToPrismaCreateInput(
     in_progress: 'IN_PROGRESS',
     waiting_approval: 'WAITING_APPROVAL',
     completed: 'COMPLETED',
-    overdue: 'OVERDUE',
     cancelled: 'CANCELLED'
   };
 

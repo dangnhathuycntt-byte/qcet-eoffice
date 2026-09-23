@@ -34,7 +34,6 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
     "NEEDS_REVIEW",
     "BLOCKED",
     "COMPLETED",
-    "OVERDUE",
     "CANCELLED",
   ] as const;
 

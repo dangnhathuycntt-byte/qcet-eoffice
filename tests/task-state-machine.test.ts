@@ -71,7 +71,6 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       assert.strictEqual(normalizeTaskStatus('NEW'), 'NOT_STARTED');
       assert.strictEqual(normalizeTaskStatus('TODO'), 'NOT_STARTED');
       assert.strictEqual(normalizeTaskStatus('NOT_STARTED'), 'NOT_STARTED');
-      assert.strictEqual(normalizeTaskStatus('OVERDUE'), 'IN_PROGRESS');
       assert.strictEqual(normalizeTaskStatus('IN_PROGRESS'), 'IN_PROGRESS');
       assert.strictEqual(normalizeTaskStatus('WAITING_APPROVAL'), 'WAITING_APPROVAL');
       assert.strictEqual(normalizeTaskStatus('NEEDS_REVIEW'), 'WAITING_APPROVAL');

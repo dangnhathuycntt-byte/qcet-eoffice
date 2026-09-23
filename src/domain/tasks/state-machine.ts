@@ -23,8 +23,7 @@ export type TaskStatus =
   | 'TODO'
   | 'NEEDS_REVIEW'
   | 'DONE'
-  | 'CANCELED'
-  | 'OVERDUE';
+  | 'CANCELED';
 
 export interface TransitionResult {
   allowed: boolean;
@@ -109,7 +108,7 @@ const STAFF_ROLES = new Set([
 export function normalizeTaskStatus(status: TaskStatus | string): CanonicalTaskStatus {
   const s = (status || '').toString().trim().toUpperCase();
   if (s === 'NOT_STARTED' || s === 'TODO' || s === 'NEW') return 'NOT_STARTED';
-  if (s === 'IN_PROGRESS' || s === 'DOING' || s === 'BLOCKED' || s === 'OVERDUE') return 'IN_PROGRESS';
+  if (s === 'IN_PROGRESS' || s === 'DOING' || s === 'BLOCKED') return 'IN_PROGRESS';
   if (s === 'WAITING_APPROVAL' || s === 'NEEDS_REVIEW' || s === 'PENDING_EXECUTIVE_APPROVAL') return 'WAITING_APPROVAL';
   if (s === 'COMPLETED' || s === 'DONE') return 'COMPLETED';
   if (s === 'CANCELLED' || s === 'CANCELED' || s === 'ARCHIVED') return 'CANCELLED';
@@ -166,22 +165,6 @@ export class TaskStateMachine {
     toStatus: TaskStatus | string,
     authDecision?: TaskAuthorizationDecision
   ): TransitionResult {
-    // ------------------------------------------------------------------------
-    // ADR-003 Guard: OVERDUE is a derived attention signal, not a lifecycle state.
-    // It is computed from dueDate + isOverdue flag and MUST NEVER be set directly.
-    // Block any mutation that attempts to write status='OVERDUE' to the database.
-    // ------------------------------------------------------------------------
-    const rawTo = (toStatus || '').toString().trim().toUpperCase();
-    if (rawTo === 'OVERDUE') {
-      return {
-        allowed: false,
-        reason:
-          'OVERDUE là trạng thái chú ý phái sinh (derived attention state), không thể gán trực tiếp. ' +
-          'Sử dụng IN_PROGRESS với isOverdue flag. (ADR-003)',
-        code: 'OVERDUE_IS_DERIVED_ATTENTION',
-      };
-    }
-
     const from = normalizeTaskStatus(fromStatus);
     const to = normalizeTaskStatus(toStatus);
 

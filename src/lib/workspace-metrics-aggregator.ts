@@ -188,7 +188,7 @@ export function isTaskOverdueOrHasOverdueSubtask(
   if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") {
     return false;
   }
-  if (t.status === "OVERDUE") return true;
+  if (t.isOverdue) return true;
 
   const parentOverdue = Boolean(t.dueDate && isTaskPastDue(t.dueDate, refDate));
   const subtaskOverdue = Boolean(
@@ -196,8 +196,7 @@ export function isTaskOverdueOrHasOverdueSubtask(
       (st) =>
         st.status !== "COMPLETED" &&
         (st.status as string) !== "CANCELLED" &&
-        (st.status === "OVERDUE" ||
-          Boolean(st.dueDate && isTaskPastDue(st.dueDate, refDate)))
+        Boolean(st.dueDate && isTaskPastDue(st.dueDate, refDate))
     )
   );
 

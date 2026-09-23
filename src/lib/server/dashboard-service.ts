@@ -224,7 +224,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   const inProgress = mappedTasks.filter((t) => t.status === "IN_PROGRESS").length;
   const completed = mappedTasks.filter((t) => t.status === "COMPLETED").length;
   const overdue = mappedTasks.filter(
-    (t) => t.status === "OVERDUE" || (isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED")
+    (t) => isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED"
   ).length;
   const pendingApprovals = mappedTasks.filter(
     (t) => t.status === "WAITING_APPROVAL" || t.status === "PENDING_EXECUTIVE_APPROVAL"
@@ -283,7 +283,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const dCompleted = dTasks.filter((t) => t.status === "COMPLETED").length;
     const dInProgress = dTasks.filter((t) => t.status === "IN_PROGRESS").length;
     const dOverdue = dTasks.filter(
-      (t) => t.status === "OVERDUE" || (isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED")
+      (t) => isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED"
     ).length;
 
     const totalProgress = dTasks.reduce((acc, t) => {

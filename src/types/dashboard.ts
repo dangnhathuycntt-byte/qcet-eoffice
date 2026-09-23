@@ -6,7 +6,6 @@ export type TaskStatus =
   | 'NEEDS_REVIEW'
   | 'BLOCKED'
   | 'COMPLETED'
-  | 'OVERDUE'
   | 'CANCELLED'
   | 'NEW';
 
