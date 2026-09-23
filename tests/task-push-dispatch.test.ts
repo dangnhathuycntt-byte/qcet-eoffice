@@ -15,9 +15,9 @@ import { POST as createResolutionRoute } from '../src/app/api/executive/resoluti
 import { UserRole, TaskPriority, TaskScope, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
 
 describe('Task Push Dispatch & Background after() Integration', () => {
-  let adminUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
-  let deptHeadUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
-  let staffUser: { id: string; name: string; email: string; role: string; departmentId: string | null };
+  let adminUser: { id: string; name: string; email: string; role: string };
+  let deptHeadUser: { id: string; name: string; email: string; role: string };
+  let staffUser: { id: string; name: string; email: string; role: string };
   let testDepartmentId: string;
 
   let adminToken: string;
@@ -86,30 +86,28 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       });
     }
     assert.ok(admin, 'Admin/BGH user must exist');
-    if (admin.departmentId) {
-      testDepartmentId = admin.departmentId;
+    if (false) {
+      
     }
     adminUser = {
       id: admin.id,
       name: admin.name,
       email: admin.email,
       role: admin.role,
-      departmentId: admin.departmentId,
+      
     };
 
     // Department Head
     let deptHead = await prisma.user.findFirst({
       where: {
-        departmentId: testDepartmentId,
         role: UserRole.TRUONG_PHONG,
         id: { notIn: ephemeralTestUserIds },
       },
     });
     if (!deptHead) {
-      // Find any user in department or fallback
+      // Fallback to any user
       deptHead = await prisma.user.findFirst({
         where: {
-          departmentId: testDepartmentId,
           id: { notIn: ephemeralTestUserIds },
         },
       });
@@ -122,7 +120,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       name: deptHead.name,
       email: deptHead.email,
       role: deptHead.role,
-      departmentId: deptHead.departmentId,
+      
     };
 
     // Staff member
@@ -139,7 +137,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       name: staff.name,
       email: staff.email,
       role: staff.role,
-      departmentId: staff.departmentId,
+      
     };
 
     adminToken = signSessionToken({
@@ -147,7 +145,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       email: adminUser.email,
       name: adminUser.name,
       role: adminUser.role,
-      departmentId: adminUser.departmentId,
+      
     });
 
     // Canonical statutory mandate (Issue #27): the executive-resolution
@@ -218,7 +216,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         data: {
           code: `NV-TEST-${Date.now()}`,
           title: 'Soạn thảo đề án mở ngành đào tạo mới Công Nghệ Bán Dẫn',
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-11-20T17:00:00Z'),
           academicMonth: 11,
           academicYear: '2026-2027',
@@ -278,7 +276,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         data: {
           code: `NV-DIR-${Date.now()}`,
           title: 'Khảo sát cơ sở vật chất phòng thí nghiệm AI',
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-10-15T17:00:00Z'),
           academicMonth: 10,
           academicYear: '2026-2027',
@@ -300,7 +298,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         directiveNote: 'Yêu cầu hoàn thành trước ngày 20 để kịp nghiệm thu',
         actorName: adminUser.name,
         actorId: adminUser.id,
-        departmentId: testDepartmentId,
+        leadUnitId: testDepartmentId,
       });
 
       // Should notify staffUser and deptHead (if different from admin)
@@ -340,7 +338,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         body: JSON.stringify({
           title: 'Nhiệm vụ tự động bắn push ngầm qua after()',
           description: 'Kiểm thử tích hợp after() Next.js 15',
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: '2026-12-01T17:00:00.000Z',
           priority: 'urgent',
           scope: 'department',
@@ -383,7 +381,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         data: {
           code: `NV-RES-${Date.now()}`,
           title: 'Chuẩn bị hồ sơ đánh giá chất lượng AUN-QA',
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-10-10T17:00:00Z'),
           academicMonth: 10,
           academicYear: '2026-2027',
