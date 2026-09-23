@@ -12,7 +12,7 @@ import {
   ApprovalStepStatus,
   TaskStatus,
   UserRole,
-  AssigneeRole,
+  // Phase 9: AssigneeRole removed — TaskAssignee table dropped.
   AssignmentStatus,
 } from "@prisma/client";
 
@@ -236,29 +236,7 @@ export async function setTaskDRI(
       },
     });
 
-    // 4. Keep legacy TaskAssignee synchronized for backward compatibility
-    await tx.taskAssignee.deleteMany({
-      where: {
-        taskId,
-        roleInTask: AssigneeRole.PRIMARY_OWNER,
-      },
-    });
-
-    await tx.taskAssignee.upsert({
-      where: {
-        task_user_role_unique: {
-          taskId,
-          userId,
-          roleInTask: AssigneeRole.PRIMARY_OWNER,
-        },
-      },
-      update: {},
-      create: {
-        taskId,
-        userId,
-        roleInTask: AssigneeRole.PRIMARY_OWNER,
-      },
-    });
+    // Phase 9: TaskAssignee table dropped — no legacy sync needed.
 
     return primaryDRI;
   };
@@ -317,22 +295,7 @@ export async function addTaskCollaborator(
       });
     }
 
-    // Synchronize legacy TaskAssignee
-    await tx.taskAssignee.upsert({
-      where: {
-        task_user_role_unique: {
-          taskId,
-          userId,
-          roleInTask: AssigneeRole.COLLABORATOR,
-        },
-      },
-      update: {},
-      create: {
-        taskId,
-        userId,
-        roleInTask: AssigneeRole.COLLABORATOR,
-      },
-    });
+    // Phase 9: TaskAssignee table dropped — no legacy sync needed.
 
     return collaborator;
   });

@@ -5,10 +5,10 @@ import {
   TaskPriority,
   TaskOriginLevel,
   TaskActorRole,
-  AssigneeRole,
   DeliverableReviewStatus,
   Prisma,
 } from '@prisma/client';
+// Phase 9: AssigneeRole removed — TaskAssignee table dropped. TaskActor is sole authority.
 import type { ApiRequestContext, AuthenticatedUser } from '@/server/api/request-context';
 import {
   AuthenticationError,
@@ -295,18 +295,7 @@ export class TaskCommandService {
         academicYear,
         createdById: input.actorId,
         leadUnitId: effectiveUnitId,
-        ...(input.leadUserId
-          ? {
-              assignees: {
-                create: [
-                  {
-                    userId: input.leadUserId,
-                    roleInTask: AssigneeRole.PRIMARY_OWNER,
-                  },
-                ],
-              },
-            }
-          : {}),
+        // Phase 9: assignees relation removed — DRI set via TaskActor below.
       },
     });
 
@@ -472,13 +461,7 @@ export class TaskCommandService {
       typeof assigneeId === 'string' && assigneeId.trim() ? assigneeId.trim() : null;
 
     // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), không gán thủ công khi tạo
-    const assigneesToCreate: { userId: string; roleInTask: AssigneeRole }[] = [];
-    if (validAssigneeId) {
-      assigneesToCreate.push({
-        userId: validAssigneeId,
-        roleInTask: AssigneeRole.PRIMARY_OWNER,
-      });
-    }
+    // Phase 9: TaskAssignee table dropped — only TaskActor is created below.
 
     // Thực hiện trong transaction
     const newTask = await prisma.$transaction(async (tx) => {
@@ -517,9 +500,7 @@ export class TaskCommandService {
         throw new NotFoundError('Một hoặc nhiều người được phân công không tồn tại');
       }
 
-      const safeAssigneesToCreate = assigneesToCreate.filter((a) =>
-        existingUserIdSet.has(a.userId)
-      );
+      // Phase 9: TaskAssignee dropped — validate assignee existence; DRI set via TaskActor below.
 
       // Sinh mã tự động atomic O(1)
       const code =
@@ -559,21 +540,11 @@ export class TaskCommandService {
           priority: taskPriority,
           createdById: effectiveCreatorId,
           parentTaskId: parentTaskId || null,
-          ...(safeAssigneesToCreate.length > 0
-            ? {
-                assignees: {
-                  create: safeAssigneesToCreate,
-                },
-              }
-            : {}),
+          // Phase 9: assignees relation removed — TaskActor written below.
         },
         include: {
           leadUnit: true,
-          assignees: {
-            include: {
-              user: { select: { id: true, name: true, avatarUrl: true } },
-            },
-          },
+          // Phase 9: assignees relation removed.
           deliverables: true,
           parentTask: {
             select: { id: true, code: true, title: true, scope: true },
@@ -585,11 +556,6 @@ export class TaskCommandService {
               title: true,
               status: true,
               progressPercent: true,
-              assignees: {
-                include: {
-                  user: { select: { id: true, name: true, avatarUrl: true } },
-                },
-              },
             },
           },
         },
@@ -643,7 +609,7 @@ export class TaskCommandService {
           beforeData: null,
           afterData: {
             assigneeId: validAssigneeId,
-            roleInTask: AssigneeRole.PRIMARY_OWNER,
+            role: 'DRI', // Phase 9: TaskActorRole.DRI replaces AssigneeRole.PRIMARY_OWNER
             collaboratorIds: [],
           },
         });
@@ -933,8 +899,9 @@ export class TaskCommandService {
       let assigneeChanged = false;
 
       if (assigneeId !== undefined) {
-        const existingOwner = await tx.taskAssignee.findFirst({
-          where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
+        // Phase 9: TaskAssignee dropped. Read previous DRI from TaskActor.
+        const existingOwner = await tx.taskActor.findFirst({
+          where: { taskId, isPrimaryDRI: true },
           select: { userId: true },
         });
         previousAssigneeId = existingOwner?.userId || null;
@@ -964,34 +931,16 @@ export class TaskCommandService {
             },
           });
 
-          // Legacy TaskAssignee compatibility
-          await tx.taskAssignee.deleteMany({
-            where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
-          });
-          await tx.taskAssignee.deleteMany({
-            where: { taskId, userId: validAssigneeId },
-          });
-          await tx.taskAssignee.create({
-            data: {
-              taskId,
-              userId: validAssigneeId,
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
-            },
-          });
+          // Phase 9: TaskAssignee table dropped — no legacy sync needed.
         } else if (assigneeId === null) {
           await tx.taskActor.deleteMany({
             where: { taskId, role: TaskActorRole.DRI },
           });
-          await tx.taskAssignee.deleteMany({
-            where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
-          });
+          // Phase 9: TaskAssignee table dropped — no legacy sync needed.
         }
       } else {
         const existingOwner = await tx.taskActor.findFirst({
           where: { taskId, isPrimaryDRI: true },
-          select: { userId: true },
-        }) || await tx.taskAssignee.findFirst({
-          where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
           select: { userId: true },
         });
         effectivePrimaryOwnerId = existingOwner?.userId || null;
@@ -1008,11 +957,7 @@ export class TaskCommandService {
         where: { id: taskId },
         include: {
           leadUnit: true,
-          assignees: {
-            include: {
-              user: { select: { id: true, name: true, avatarUrl: true } },
-            },
-          },
+          // Phase 9: assignees relation removed.
           deliverables: {
             include: {
               uploadedBy: { select: { id: true, name: true, avatarUrl: true } },
@@ -1024,9 +969,6 @@ export class TaskCommandService {
           },
           subTasks: {
             include: {
-              assignees: {
-                include: { user: true },
-              },
               deliverables: true,
             },
           },
@@ -1195,7 +1137,7 @@ export class TaskCommandService {
         });
 
         await tx.taskActor.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
-        await tx.taskAssignee.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
+        // Phase 9: TaskAssignee table dropped — no longer deleted here.
         await tx.taskDeliverable.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.delegationScopeRule.deleteMany({ where: { entityType: 'TASK', entityId: { in: allSubtaskIds } } });
         await tx.executiveResolution.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
@@ -1211,7 +1153,7 @@ export class TaskCommandService {
 
       // 3. Dọn dẹp quan hệ
       await tx.taskActor.deleteMany({ where: { taskId } });
-      await tx.taskAssignee.deleteMany({ where: { taskId } });
+      // Phase 9: TaskAssignee table dropped — no longer deleted here.
       await tx.taskDeliverable.deleteMany({ where: { taskId } });
       await tx.delegationScopeRule.deleteMany({ where: { entityType: 'TASK', entityId: taskId } });
       await tx.executiveResolution.deleteMany({ where: { taskId } });
