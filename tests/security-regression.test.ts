@@ -350,7 +350,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     await prisma.positionAssignment.deleteMany({
       where: { id: { in: ["pos-assign-lead-cntt-sec", "pos-assign-bgh-sec"] } },
     });
-    await prisma.taskAssignee.deleteMany({
+    await prisma.taskActor.deleteMany({
       where: {
         OR: [
           { taskId: { in: ["task-daotao-1", "task-cntt-1", "task-temp-delete-creator", "task-temp-delete-bgh"] } },

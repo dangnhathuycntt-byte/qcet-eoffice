@@ -6,16 +6,7 @@ import { taskCommandService } from '../src/server/tasks/task-command-service';
 import { PreconditionFailedError } from '../src/server/api/errors';
 import { GET, PATCH } from '../src/app/api/tasks/[id]/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus } from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, DeliverableReviewStatus } from '@prisma/client';
 
 describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Version Invariant', () => {
   let testDept: any;
@@ -83,7 +74,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       await prisma.taskDeliverable.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskActor.deleteMany({
@@ -126,7 +117,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
           create: [
             {
               userId: staffUser.id,
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
+              role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
             },
           ],
         },

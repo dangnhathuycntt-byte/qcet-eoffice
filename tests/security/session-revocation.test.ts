@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { UserRole, TaskStatus, TaskPriority, TaskScope} from '@prisma/client';
+import { UserRole, TaskStatus, TaskPriority, TaskScope, TaskActorRole } from '@prisma/client';
 import { signSessionToken, getJwtSecret, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import {
   resolveCurrentSession,
@@ -40,14 +40,6 @@ import { GET as getTaskById } from '@/app/api/tasks/[id]/route';
 import { POST as createTask } from '@/app/api/tasks/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
 import { AuthenticationError } from '@/server/api/errors';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () => {
@@ -149,15 +141,15 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 7 * 86400000),
-        assignees: {
+        actors: {
           create: [
             {
               userId: activeUser.id,
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
+              role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
             },
             {
               userId: dynamicUser.id,
-              roleInTask: AssigneeRole.COLLABORATOR,
+              role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false, appointedAt: new Date(),
             },
           ],
         },
@@ -184,7 +176,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
 
   after(async () => {
     try {
-      await prisma.taskAssignee.deleteMany({ where: { taskId: testTask?.id } });
+      await prisma.taskActor.deleteMany({ where: { taskId: testTask?.id } });
       await prisma.task.deleteMany({ where: { id: testTask?.id } });
       await prisma.session.deleteMany({
         where: { userId: { in: [activeUser?.id, dynamicUser?.id].filter(Boolean) } },

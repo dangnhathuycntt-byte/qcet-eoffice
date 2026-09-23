@@ -53,7 +53,7 @@ test('Kế hoạch công tác tháng 9/2026 - Data Integrity & Architecture Inva
       },
       orderBy: { code: 'asc' },
       include: {
-        assignees: true,
+        actors: true,
         department: true,
       },
     });
@@ -74,7 +74,7 @@ test('Kế hoạch công tác tháng 9/2026 - Data Integrity & Architecture Inva
       assert.ok(task.description && task.description.length > 10, `Nhiệm vụ ${task.code} phải có mô tả chi tiết`);
       assert.equal(task.scope, TaskScope.SCHOOL, `Nhiệm vụ ${task.code} phải thuộc phạm vi TaskScope.SCHOOL`);
       assert.ok(task.departmentId, `Nhiệm vụ ${task.code} phải có đơn vị phụ trách`);
-      assert.ok(task.assignees.length >= 1, `Nhiệm vụ ${task.code} phải có ít nhất 1 người được phân công (PRIMARY_OWNER)`);
+      assert.ok(task.actors.length >= 1, `Nhiệm vụ ${task.code} phải có ít nhất 1 người được phân công (PRIMARY_OWNER)`);
       assert.ok(task.dueDate, `Nhiệm vụ ${task.code} phải có hạn hoàn thành (dueDate)`);
 
       const dueMonth = new Date(task.dueDate).getUTCMonth() + 1;

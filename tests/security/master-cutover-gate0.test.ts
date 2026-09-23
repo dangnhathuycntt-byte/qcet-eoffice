@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { UserRole, TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus} from '@prisma/client';
+import { UserRole, TaskStatus, TaskPriority, TaskScope, DeliverableReviewStatus, TaskActorRole } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { taskQueryService } from '@/server/tasks/task-query-service';
 import { GET as getTaskById, PATCH as patchTaskById } from '@/app/api/tasks/[id]/route';
@@ -12,14 +12,6 @@ import { GET as getFileRoute } from '@/app/api/files/[...path]/route';
 import { POST as logoutRoute } from '@/app/api/auth/logout/route';
 import { loadTaskAndBuildResource, taskDomainActionService } from '@/lib/services/task-domain-actions';
 import { NotFoundError } from '@/server/api/errors';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', () => {
@@ -191,8 +183,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 7 * 86400000),
-        assignees: {
-          create: [{ userId: staffA.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: staffA.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -209,8 +201,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 7 * 86400000),
-        assignees: {
-          create: [{ userId: staffB.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: staffB.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -242,8 +234,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 3 * 86400000),
-        assignees: {
-          create: [{ userId: staffA.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        actors: {
+          create: [{ userId: staffA.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
       },
     });
@@ -287,7 +279,7 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     try {
       await prisma.taskDeliverable.deleteMany({ where: { taskId: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
       await prisma.taskResult.deleteMany({ where: { taskId: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
-      await prisma.taskAssignee.deleteMany({ where: { taskId: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
+      await prisma.taskActor.deleteMany({ where: { taskId: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
       await prisma.task.deleteMany({ where: { parentTaskId: taskA?.id } });
       await prisma.task.deleteMany({ where: { id: { in: [taskA?.id, taskB?.id, schoolTask?.id] } } });
       await prisma.user.deleteMany({ where: { id: { in: [adminUser?.id, staffA?.id, staffB?.id, leadershipUser?.id] } } });

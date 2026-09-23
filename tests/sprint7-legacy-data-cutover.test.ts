@@ -13,7 +13,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     // Phase 9 WI-9.3: dacumMigration removed — DacumDelegation table dropped.
 
     // Verify each legacy task assignee has a corresponding V2 task actor
-    const sampleAssignees = await prisma.taskAssignee.findMany({ take: 10 });
+    const sampleAssignees = await prisma.taskActor.findMany({ take: 10 });
     for (const assignee of sampleAssignees) {
       const actor = await prisma.taskActor.findFirst({
         where: {
@@ -29,7 +29,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     }
   });
 
-  test("2. Task creation maintains both TaskActor and TaskAssignee for backward compatibility", async () => {
+  test("2. Task creation maintains TaskActor records correctly (Phase 9: TaskAssignee dropped)", async () => {
     // Find or create test task
     const testCode = `TEST_S7_${Date.now()}`;
     const user = await prisma.user.findFirst();
@@ -39,7 +39,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
       data: {
         code: testCode,
         title: "Sprint 7 Cutover Task",
-        description: "Testing V2 TaskActor and legacy TaskAssignee parity",
+        description: "Testing V2 TaskActor parity (Phase 9: TaskAssignee dropped)",
         scope: "DEPARTMENT",
         priority: "NORMAL",
         status: "IN_PROGRESS",
@@ -52,30 +52,21 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
             userId: user.id,
             role: "DRI",
             isPrimaryDRI: true,
-          },
-        },
-        assignees: {
-          create: {
-            userId: user.id,
-            roleInTask: "PRIMARY_OWNER",
+            appointedAt: new Date(),
           },
         },
       },
       include: {
         actors: true,
-        assignees: true,
       },
     });
 
     assert.ok(createdTask.id);
     assert.strictEqual(createdTask.actors.length, 1);
-    assert.strictEqual(createdTask.assignees.length, 1);
     assert.strictEqual(createdTask.actors[0].userId, user.id);
-    assert.strictEqual(createdTask.assignees[0].userId, user.id);
 
     // Clean up test task
     await prisma.taskActor.deleteMany({ where: { taskId: createdTask.id } });
-    await prisma.taskAssignee.deleteMany({ where: { taskId: createdTask.id } });
     await prisma.task.delete({ where: { id: createdTask.id } });
   });
 

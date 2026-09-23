@@ -8,16 +8,7 @@ import { GET as getTask, PATCH as patchTask, DELETE as deleteTask } from '../src
 import { GET as getFile } from '../src/app/api/files/[...path]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus} from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskScope, TaskPriority, TaskStatus, TaskActorRole } from '@prisma/client';
 
 const TEST_UPLOADS_DIR = path.resolve('./test_idor_sandbox');
 
@@ -163,11 +154,11 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         dueDate: new Date('2026-11-01'),
         createdById: userA.id,
         departmentId: deptA.id,
-        assignees: {
+        actors: {
           create: [
             {
               userId: userA.id,
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
+              role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
             },
           ],
         },
@@ -187,11 +178,11 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         dueDate: new Date('2026-11-15'),
         createdById: userB.id,
         departmentId: deptB.id,
-        assignees: {
+        actors: {
           create: [
             {
               userId: userB.id,
-              roleInTask: AssigneeRole.PRIMARY_OWNER,
+              role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
             },
           ],
         },
@@ -231,7 +222,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
     if (taskA?.id || taskB?.id) {
       const taskIds = [taskA?.id, taskB?.id].filter(Boolean);
       await prisma.taskDeliverable.deleteMany({ where: { taskId: { in: taskIds } } });
-      await prisma.taskAssignee.deleteMany({ where: { taskId: { in: taskIds } } });
+      await prisma.taskActor.deleteMany({ where: { taskId: { in: taskIds } } });
       await prisma.taskActor.deleteMany({ where: { taskId: { in: taskIds } } });
       await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
     }

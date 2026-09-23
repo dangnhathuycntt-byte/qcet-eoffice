@@ -182,7 +182,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
 
     // Cleanup tasks
     if (createdTaskIds.length > 0) {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       }).catch(() => {});
       await prisma.executiveResolution.deleteMany({

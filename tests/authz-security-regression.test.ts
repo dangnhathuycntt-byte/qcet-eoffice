@@ -322,7 +322,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
 
   after(async () => {
     // Cleanup theo thứ tự dependency
-    await prisma.taskAssignee.deleteMany({
+    await prisma.taskActor.deleteMany({
       where: { taskId: { in: [IDS.taskSchool, IDS.taskDeptA, IDS.taskDeptB] } },
     });
     await prisma.task.deleteMany({

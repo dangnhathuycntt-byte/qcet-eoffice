@@ -3,15 +3,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '../src/lib/prisma';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskActorRole } from '@prisma/client';
 
 describe('Seed Data Integrity and Verification', () => {
   test('seed script contains 11 QCET units, user accounts, and 40 realistic tasks with COLLABORATOR support', () => {
@@ -55,9 +47,9 @@ describe('Seed Data Integrity and Verification', () => {
     assert.ok(content.includes('NV-2026-09-001'), 'Should contain initial seed task');
     assert.ok(content.includes('NV-2027-08-040'), 'Should contain final seed task (at least 40 tasks)');
 
-    // 4. Verify multi-role assignee support in seed code
-    assert.ok(content.includes('collaboratorIds?: string[]'), 'Should support optional collaboratorIds array');
-    assert.ok(content.includes('AssigneeRole.COLLABORATOR'), 'Should insert AssigneeRole.COLLABORATOR records');
+    // 4. Verify multi-role actor support in seed code (Phase 9: TaskAssignee replaced by TaskActor)
+    assert.ok(content.includes('collaboratorIds'), 'Should support optional collaboratorIds');
+    assert.ok(content.includes('TaskActorRole.COLLABORATOR'), 'Should insert TaskActorRole.COLLABORATOR records');
   });
 
   test('database contains persisted tasks with PRIMARY_OWNER and COLLABORATOR assignees', async () => {
@@ -66,8 +58,8 @@ describe('Seed Data Integrity and Verification', () => {
     assert.ok(taskCount >= 40, `Expected at least 40 tasks, got ${taskCount}`);
 
     // Verify database has COLLABORATOR assignees
-    const collaboratorCount = await prisma.taskAssignee.count({
-      where: { roleInTask: AssigneeRole.COLLABORATOR }
+    const collaboratorCount = await prisma.taskActor.count({
+      where: { role: TaskActorRole.COLLABORATOR }
     });
     assert.ok(collaboratorCount >= 10, `Expected at least 10 collaborator assignees, got ${collaboratorCount}`);
 
@@ -87,12 +79,12 @@ describe('Seed Data Integrity and Verification', () => {
     for (const code of collaborativeCodes) {
       const task = await prisma.task.findUnique({
         where: { code },
-        include: { assignees: true }
+        include: { actors: true }
       });
       assert.ok(task, `Task with code ${code} must exist in database`);
 
-      const hasPrimary = task.assignees.some(a => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const hasCollab = task.assignees.some(a => a.roleInTask === AssigneeRole.COLLABORATOR);
+      const hasPrimary = task.actors.some(a => a.role === TaskActorRole.DRI && a.isPrimaryDRI);
+      const hasCollab = task.actors.some(a => a.role === TaskActorRole.COLLABORATOR);
 
       assert.strictEqual(hasPrimary, true, `Task ${code} must have a PRIMARY_OWNER`);
       assert.strictEqual(hasCollab, true, `Task ${code} must have at least one COLLABORATOR`);

@@ -5,16 +5,7 @@ import { GET as getTasks } from '../src/app/api/tasks/route';
 import { DELETE as deleteTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskScope, TaskPriority, TaskStatus, TaskActorRole, DeliverableReviewStatus, ResolutionType } from '@prisma/client';
 
 describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 10)', () => {
   let testUserId: string;
@@ -95,7 +86,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
         where: { linkedTaskId: { in: createdTaskIds } },
         data: { linkedTaskId: null },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({
@@ -275,18 +266,18 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       createdTaskIds.push(subSubTask.id);
 
       // 4. Attach assignees to parent and subtasks
-      await prisma.taskAssignee.create({
+      await prisma.taskActor.create({
         data: {
           taskId: parentTask.id,
           userId: testUserId,
-          roleInTask: AssigneeRole.PRIMARY_OWNER,
+          role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date(),
         },
       });
-      await prisma.taskAssignee.create({
+      await prisma.taskActor.create({
         data: {
           taskId: subTask.id,
           userId: testUserId,
-          roleInTask: AssigneeRole.COLLABORATOR,
+          role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false, appointedAt: new Date(),
         },
       });
 
@@ -381,7 +372,7 @@ describe('Tasks API Performance & Cascade Delete Tests (QCET-PERF-2025-01 Task 1
       assert.ok(checkSubSub, 'Nested subtask must still exist after archive');
 
       // Assignees and deliverables are preserved (archive ≠ hard delete)
-      const checkAssignees = await prisma.taskAssignee.findMany({
+      const checkAssignees = await prisma.taskActor.findMany({
         where: { taskId: { in: [parentTask.id, subTask.id, subSubTask.id] } },
       });
       assert.ok(checkAssignees.length > 0, 'Task assignees must be preserved after archive');

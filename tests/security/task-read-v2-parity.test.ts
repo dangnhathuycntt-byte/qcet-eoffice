@@ -20,6 +20,7 @@ import {
   TaskStatus,
   TaskPriority,
   UserRole,
+  TaskActorRole,
   AssignmentStatus,
   UnitType
 } from '@prisma/client';
@@ -34,14 +35,6 @@ import {
   SystemRole,
   type ActivePositionAssignment,
 } from '@/server/authorization/authorization-context';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F02)', () => {
@@ -236,9 +229,9 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date(Date.now() + 7 * 86400000),
-        assignees: {
+        actors: {
           create: [
-            { userId: dbStaffA.id, roleInTask: AssigneeRole.COLLABORATOR },
+            { userId: dbStaffA.id, role: TaskActorRole.COLLABORATOR, isPrimaryDRI: false, appointedAt: new Date() },
           ],
         },
       },
@@ -248,7 +241,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
 
   after(async () => {
     try {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: [taskAId, taskBId, schoolTaskId, assignedTaskId] } },
       });
       await prisma.task.deleteMany({

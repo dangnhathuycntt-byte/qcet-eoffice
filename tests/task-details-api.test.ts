@@ -64,7 +64,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
 
   after(async () => {
     if (createdTaskIds.length > 0) {
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({

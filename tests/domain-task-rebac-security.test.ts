@@ -307,7 +307,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       await prisma.taskActor.deleteMany({
         where: { task: { code: { contains: String(timestamp) } } },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { task: { code: { contains: String(timestamp) } } },
       });
       await prisma.task.deleteMany({
@@ -388,7 +388,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
     after(async () => {
       if (taskForTest1) {
         await prisma.taskActor.deleteMany({ where: { taskId: taskForTest1.id } });
-        await prisma.taskAssignee.deleteMany({ where: { taskId: taskForTest1.id } });
+        await prisma.taskActor.deleteMany({ where: { taskId: taskForTest1.id } });
         await prisma.task.delete({ where: { id: taskForTest1.id } });
       }
     });
@@ -546,7 +546,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           where: { taskId: taskForTest2.id },
         });
         await prisma.taskActor.deleteMany({ where: { taskId: taskForTest2.id } });
-        await prisma.taskAssignee.deleteMany({ where: { taskId: taskForTest2.id } });
+        await prisma.taskActor.deleteMany({ where: { taskId: taskForTest2.id } });
         await prisma.task.delete({ where: { id: taskForTest2.id } });
       }
     });
@@ -683,7 +683,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
     after(async () => {
       if (observedTask) {
         await prisma.taskActor.deleteMany({ where: { taskId: observedTask.id } });
-        await prisma.taskAssignee.deleteMany({ where: { taskId: observedTask.id } });
+        await prisma.taskActor.deleteMany({ where: { taskId: observedTask.id } });
         await prisma.task.delete({ where: { id: observedTask.id } });
       }
     });
@@ -784,7 +784,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
     after(async () => {
       if (taskFacultyB) {
         await prisma.taskActor.deleteMany({ where: { taskId: taskFacultyB.id } });
-        await prisma.taskAssignee.deleteMany({ where: { taskId: taskFacultyB.id } });
+        await prisma.taskActor.deleteMany({ where: { taskId: taskFacultyB.id } });
         await prisma.task.delete({ where: { id: taskFacultyB.id } });
       }
     });
@@ -953,7 +953,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           where: { taskId: stagedTask.id },
         });
         await prisma.taskActor.deleteMany({ where: { taskId: stagedTask.id } });
-        await prisma.taskAssignee.deleteMany({ where: { taskId: stagedTask.id } });
+        await prisma.taskActor.deleteMany({ where: { taskId: stagedTask.id } });
         await prisma.task.delete({ where: { id: stagedTask.id } });
       }
     });
@@ -1134,7 +1134,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       await prisma.taskApprovalStep.deleteMany({ where: { processId: proc.id } });
       await prisma.taskApprovalProcess.deleteMany({ where: { taskId: emergencyTask.id } });
       await prisma.taskActor.deleteMany({ where: { taskId: emergencyTask.id } });
-      await prisma.taskAssignee.deleteMany({ where: { taskId: emergencyTask.id } });
+      await prisma.taskActor.deleteMany({ where: { taskId: emergencyTask.id } });
       await prisma.task.delete({ where: { id: emergencyTask.id } });
     });
   });

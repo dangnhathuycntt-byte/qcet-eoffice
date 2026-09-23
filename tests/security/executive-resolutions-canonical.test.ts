@@ -25,20 +25,13 @@ import {
   TaskScope,
   TaskPriority,
   TaskStatus,
+  TaskActorRole,
   AssignmentType,
   AssignmentStatus,
   TaskPriority as TaskPriorityEnum
 } from '@prisma/client';
 import { signSessionToken } from '@/lib/jwt-session';
 import { GET as getResolutions, POST as createResolution } from '@/app/api/executive/resolutions/route';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 /**
@@ -126,14 +119,14 @@ describe('Issue #27: executive resolutions canonical statutory authority', () =>
         dueDate: new Date('2026-11-01'),
         createdById: staffUser.id,
         departmentId: dept.id,
-        assignees: { create: [{ userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }] },
+        actors: { create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }] },
       },
     });
   });
 
   after(async () => {
     await prisma.executiveResolution.deleteMany({ where: { taskId: task?.id } }).catch(() => undefined);
-    await prisma.taskAssignee.deleteMany({ where: { taskId: task?.id } }).catch(() => undefined);
+    await prisma.taskActor.deleteMany({ where: { taskId: task?.id } }).catch(() => undefined);
     await prisma.taskActor.deleteMany({ where: { taskId: task?.id } }).catch(() => undefined);
     if (task) await prisma.task.deleteMany({ where: { id: task.id } }).catch(() => undefined);
     await prisma.auditEvent.deleteMany({

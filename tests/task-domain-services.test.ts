@@ -15,17 +15,9 @@ import {
   isPrivilegedUser,
   isDepartmentLeader,
 } from '../src/server/tasks';
-import { TaskScope, TaskStatus, TaskPriority, DeliverableReviewStatus } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus } from '@prisma/client';
 import type { AuthenticatedUser } from '../src/server/api/request-context';
 import { getSystemReferenceDate } from '../src/lib/academic-calendar';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
 
 
 describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => {
@@ -103,7 +95,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         where: { linkedTaskId: { in: createdTaskIds } },
         data: { linkedTaskId: null },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({
@@ -303,10 +295,10 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(task.scope, TaskScope.DEPARTMENT);
       assert.strictEqual(task.priority, TaskPriority.HIGH);
 
-      // Verify single DRI and collaborator in DB
-      const assignees = await prisma.taskAssignee.findMany({ where: { taskId: task.id } });
-      const owners = assignees.filter(a => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collabs = assignees.filter(a => a.roleInTask === AssigneeRole.COLLABORATOR);
+      // Verify single DRI and collaborator in DB (Phase 9: TaskAssignee → TaskActor)
+      const actors = await prisma.taskActor.findMany({ where: { taskId: task.id } });
+      const owners = actors.filter(a => a.role === TaskActorRole.DRI && a.isPrimaryDRI);
+      const collabs = actors.filter(a => a.role === TaskActorRole.COLLABORATOR);
 
       assert.strictEqual(owners.length, 1);
       assert.strictEqual(owners[0].userId, staffUser1.id);
@@ -410,9 +402,9 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(updated.progressPercent, 50);
       assert.strictEqual(updated.priority, TaskPriority.URGENT);
 
-      const assignees = await prisma.taskAssignee.findMany({ where: { taskId: createdRootTaskId } });
-      const owner = assignees.find(a => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collab = assignees.find(a => a.roleInTask === AssigneeRole.COLLABORATOR);
+      const actors2 = await prisma.taskActor.findMany({ where: { taskId: createdRootTaskId } });
+      const owner = actors2.find(a => a.role === TaskActorRole.DRI && a.isPrimaryDRI);
+      const collab = actors2.find(a => a.role === TaskActorRole.COLLABORATOR);
 
       assert.strictEqual(owner?.userId, staffUser2.id);
       assert.strictEqual(collab?.userId, staffUser1.id);
@@ -602,7 +594,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
 
       const entity = await taskQueryService.getTaskEntityForInternalUse(metricTaskId);
       assert.ok(entity);
-      assert.ok(entity.assignees);
+      assert.ok(entity.actors);
       assert.ok(entity.department);
     });
 

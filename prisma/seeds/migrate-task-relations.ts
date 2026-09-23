@@ -1,13 +1,5 @@
 import { PrismaClient, TaskActorRole, OrganizationalUnit } from "@prisma/client";
 
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
 export const DEPARTMENT_TO_ORG_UNIT_MAP: Record<string, string> = {
   // Đào tạo
   P_QLDT: "P_QLDT",
@@ -127,7 +119,6 @@ export async function migrateTaskRelations(
   const tasks = await prisma.task.findMany({
     where: options?.taskIds ? { id: { in: options.taskIds } } : undefined,
     include: {
-      assignees: true,
       actors: true,
     },
   });
@@ -142,15 +133,13 @@ export async function migrateTaskRelations(
   for (const task of tasks) {
     try {
       // ----------------------------------------------------
-      // 1. DRI Actor: Identify assigneeId
+      // 1. DRI Actor: Identify assigneeId from existing actors or task field
       // ----------------------------------------------------
-      const primaryAssignee =
-        task.assignees
-          .filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER)
-          .sort((a, b) => b.assignedAt.getTime() - a.assignedAt.getTime())[0] ??
-        task.assignees[0];
+      const primaryActor = task.actors.find(
+        (a) => a.role === TaskActorRole.DRI && a.isPrimaryDRI
+      ) ?? task.actors.find((a) => a.role === TaskActorRole.DRI);
 
-      const assigneeId = (task as any).assigneeId ?? primaryAssignee?.userId;
+      const assigneeId = (task as any).assigneeId ?? primaryActor?.userId;
 
       if (assigneeId) {
         const existingDRI = task.actors.find(

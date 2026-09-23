@@ -9,16 +9,7 @@ import { recalculateParentTaskProgress } from "@/server/tasks/task-command-servi
 import { canUserDeleteDeliverable } from "@/server/tasks/task-policy";
 import { canDeleteDeliverable } from "@/server/policies/task-policy";
 import { getTextOffsetInContainer } from "@/components/tasks/detail/direct-inline-editor";
-import { TaskStatus} from "@prisma/client";
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskStatus } from "@prisma/client";
 
 describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () => {
   // =========================================================================
@@ -187,7 +178,7 @@ describe("Task Detail E2E Persistence, Rollup, Security & Real Data Suite", () =
         createdById: "user-boss",
         departmentId: "dept-cntt",
         status: TaskStatus.IN_PROGRESS,
-        assignees: [{ userId: "user-dri", roleInTask: AssigneeRole.PRIMARY_OWNER }],
+        assignees: [{ userId: "user-dri" }],
       };
 
       // 1. Người nộp xóa chính tài liệu của mình -> ALLOWED

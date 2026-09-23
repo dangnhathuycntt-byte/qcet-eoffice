@@ -5,16 +5,7 @@ import { GET, POST } from '../src/app/api/tasks/route';
 import { GET as getTaskDetail, PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus} from '@prisma/client';
-
-// Local fallback: AssigneeRole was removed from @prisma/client in Phase 9
-const AssigneeRole = {
-  PRIMARY_OWNER: 'PRIMARY_OWNER',
-  COLLABORATOR: 'COLLABORATOR',
-  SUPERVISOR: 'SUPERVISOR',
-} as const;
-type AssigneeRole = keyof typeof AssigneeRole;
-
+import { TaskScope, TaskPriority, TaskStatus,TaskActorRole } from '@prisma/client';
 
 describe('Tasks API Route Handler Tests', () => {
   let testUserId: string;
@@ -67,7 +58,7 @@ describe('Tasks API Route Handler Tests', () => {
         where: { linkedTaskId: { in: createdTaskIds } },
         data: { linkedTaskId: null },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({
@@ -343,12 +334,12 @@ describe('Tasks API Route Handler Tests', () => {
       parentCreatedTaskId = json.task.id;
       createdTaskIds.push(parentCreatedTaskId);
 
-      const assignees = await prisma.taskAssignee.findMany({
+      const assignees = await prisma.taskActor.findMany({
         where: { taskId: parentCreatedTaskId },
       });
 
-      const owners = assignees.filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
-      const collabs = assignees.filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
+      const owners = assignees.filter((a) => a.role === 'DRI' && a.isPrimaryDRI);
+      const collabs = assignees.filter((a) => a.role === 'COLLABORATOR');
 
       assert.strictEqual(owners.length, 1, 'Must have exactly 1 PRIMARY_OWNER');
       assert.strictEqual(owners[0].userId, staffUser1.id);
@@ -382,7 +373,7 @@ describe('Tasks API Route Handler Tests', () => {
 
       const subtaskInDb = await prisma.task.findUnique({
         where: { id: subtaskId },
-        include: { assignees: true, parentTask: true },
+        include: { actors: true, parentTask: true },
       });
 
       assert.ok(subtaskInDb);

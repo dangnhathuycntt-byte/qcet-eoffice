@@ -121,7 +121,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       await prisma.executiveResolution.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
-      await prisma.taskAssignee.deleteMany({
+      await prisma.taskActor.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({
