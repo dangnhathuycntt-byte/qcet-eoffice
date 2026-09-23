@@ -17,6 +17,13 @@ export type DbClient = PrismaClient | Prisma.TransactionClient;
 
 export { DEPARTMENT_TO_ORG_UNIT_CODE_MAP };
 
+export interface ModelParitySummary {
+  model: string;
+  totalWithDeptId: number;
+  mapped: number;
+  unmapped: number;
+}
+
 export interface DepartmentUnitParityReport {
   isParityMatched: boolean;
   totalDepartments: number;
@@ -27,6 +34,7 @@ export interface DepartmentUnitParityReport {
   tasksMissingLeadUnit: number;
   mismatchedTaskIds: string[];
   invalidLeadUnitIds: string[];
+  perModelSummary: ModelParitySummary[];
 }
 
 /**
@@ -75,11 +83,98 @@ export async function resolveUnitIdForDepartmentId(
 }
 
 /**
+ * Checks parity for a single model: counts records with a non-null departmentId field,
+ * resolves each via resolveUnitIdForDepartmentId, and returns a per-model summary.
+ */
+async function checkModelParity(
+  db: DbClient,
+  modelName: string,
+  deptIdField: string
+): Promise<ModelParitySummary> {
+  const records: Array<Record<string, string | null>> = await (db as any)[modelName].findMany({
+    where: { [deptIdField]: { not: null } },
+    select: { [deptIdField]: true },
+  });
+
+  let mapped = 0;
+  let unmapped = 0;
+
+  for (const record of records) {
+    const deptId = record[deptIdField];
+    if (!deptId) continue;
+    const unitId = await resolveUnitIdForDepartmentId(db, deptId);
+    if (unitId) {
+      mapped++;
+    } else {
+      unmapped++;
+    }
+  }
+
+  return {
+    model: modelName,
+    totalWithDeptId: records.length,
+    mapped,
+    unmapped,
+  };
+}
+
+/**
+ * Expanded FK parity check covering all 8 models that reference Department.
+ * For each model, queries records with a non-null dept FK, resolves each via
+ * DEPARTMENT_TO_ORG_UNIT_CODE_MAP, and returns per-model mapped/unmapped counts.
+ *
+ * Fields verified:
+ *  1. User.departmentId
+ *  2. Task.departmentId
+ *  3. DacumDelegation.departmentId
+ *  4. Document.draftingDeptId
+ *  5. Document.leadDepartmentId
+ *  6. DocumentDirective.assignedDeptId
+ *  7. JobCatalogItem.departmentId
+ *  8. DacumDuty.departmentId
+ */
+export async function expandedFkParityCheck(
+  db: DbClient
+): Promise<ModelParitySummary[]> {
+  const checks: Array<{ modelName: string; deptIdField: string }> = [
+    { modelName: 'user', deptIdField: 'departmentId' },
+    { modelName: 'task', deptIdField: 'departmentId' },
+    { modelName: 'dacumDelegation', deptIdField: 'departmentId' },
+    { modelName: 'document', deptIdField: 'draftingDeptId' },
+    { modelName: 'document', deptIdField: 'leadDepartmentId' },
+    { modelName: 'documentDirective', deptIdField: 'assignedDeptId' },
+    { modelName: 'jobCatalogItem', deptIdField: 'departmentId' },
+    { modelName: 'dacumDuty', deptIdField: 'departmentId' },
+  ];
+
+  const results: ModelParitySummary[] = [];
+
+  for (const { modelName, deptIdField } of checks) {
+    // Gracefully skip if the model accessor doesn't exist on the client
+    if (typeof (db as any)[modelName]?.findMany !== 'function') {
+      results.push({
+        model: `${modelName}.${deptIdField}`,
+        totalWithDeptId: 0,
+        mapped: 0,
+        unmapped: 0,
+      });
+      continue;
+    }
+
+    const summary = await checkModelParity(db, modelName, deptIdField);
+    results.push({ ...summary, model: `${modelName}.${deptIdField}` });
+  }
+
+  return results;
+}
+
+/**
  * Verifies parity between Department and OrganizationalUnit data:
  * 1. 100% of departments have an active mapped OrganizationalUnit.
  * 2. 100% of tasks with departmentId have a valid leadUnitId.
  * 3. leadUnitId correctly corresponds to the expected unit of departmentId (zero divergence).
  * 4. leadUnitId references a real, existing OrganizationalUnit (FK integrity).
+ * 5. All 8 models referencing Department have per-model mapping summary.
  */
 export async function verifyDepartmentUnitParity(
   db: DbClient
@@ -138,6 +233,9 @@ export async function verifyDepartmentUnitParity(
     }
   }
 
+  // Run expanded FK parity across all 8 department-referencing models
+  const perModelSummary = await expandedFkParityCheck(db);
+
   const isParityMatched =
     unmappedDepartmentIds.length === 0 &&
     tasksMissingLeadUnit === 0 &&
@@ -154,5 +252,6 @@ export async function verifyDepartmentUnitParity(
     tasksMissingLeadUnit,
     mismatchedTaskIds,
     invalidLeadUnitIds,
+    perModelSummary,
   };
 }
