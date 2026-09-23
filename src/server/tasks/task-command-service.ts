@@ -38,8 +38,6 @@ import { loadAuthorizationContext } from '@/server/authorization/authorization-c
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import type { CapabilityAction } from '@/server/authorization/capability';
-import { ORG_UNIT_WRITE_CUTOVER } from '@/lib/feature-flags';
-import { resolveUnitIdForDepartmentId } from '@/domain/organization/migration/department-unit-migration';
 
 export interface CreateFromMeetingResolutionInput {
   meetingId: string;
@@ -60,7 +58,7 @@ export interface CreateFromMeetingResolutionInput {
 export interface CreateTaskInput {
   title: string;
   description?: string | null;
-  departmentId?: string | null;
+  leadUnitId?: string | null;
   startDate?: string | Date | null;
   dueDate: string | Date;
   priority?: string | TaskPriority;
@@ -83,7 +81,7 @@ export interface UpdateTaskInput {
   priority?: string | TaskPriority;
   startDate?: string | Date | null;
   dueDate?: string | Date | null;
-  departmentId?: string | null;
+  leadUnitId?: string | null;
   assigneeId?: string | null;
   parentTaskId?: string | null;
   collaboratorIds?: string[];
@@ -283,17 +281,6 @@ export class TaskCommandService {
       code = `RES-TASK-${Date.now()}`;
     }
 
-    let validDepartmentId: string | null = null;
-    if (effectiveUnitId) {
-      const dept = await tx.department.findUnique({
-        where: { id: effectiveUnitId },
-        select: { id: true },
-      });
-      if (dept) {
-        validDepartmentId = dept.id;
-      }
-    }
-
     const task = await tx.task.create({
       data: {
         code,
@@ -308,7 +295,6 @@ export class TaskCommandService {
         academicYear,
         createdById: input.actorId,
         leadUnitId: effectiveUnitId,
-        departmentId: validDepartmentId,
         ...(input.leadUserId
           ? {
               assignees: {
@@ -395,7 +381,7 @@ export class TaskCommandService {
         if (!fieldErrors[key]) fieldErrors[key] = [];
         fieldErrors[key].push(issue.message);
       }
-      if (!input?.title || !input?.dueDate || (!input?.departmentId && !input?.parentTaskId)) {
+      if (!input?.title || !input?.dueDate || (!input?.leadUnitId && !input?.parentTaskId)) {
         throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)', fieldErrors);
       }
       throw new ValidationError('Dữ liệu tạo nhiệm vụ không hợp lệ', fieldErrors);
@@ -404,7 +390,7 @@ export class TaskCommandService {
     const {
       title,
       description,
-      departmentId,
+      leadUnitId: inputLeadUnitId,
       startDate,
       dueDate,
       priority,
@@ -420,7 +406,7 @@ export class TaskCommandService {
 
     let parentTask: {
       id: string;
-      departmentId: string | null;
+      leadUnitId: string | null;
       academicMonth: number;
       academicYear: string;
       scope: TaskScope;
@@ -430,14 +416,14 @@ export class TaskCommandService {
     if (parentTaskId) {
       parentTask = await prisma.task.findUnique({
         where: { id: parentTaskId },
-        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true, dueDate: true },
+        select: { id: true, leadUnitId: true, academicMonth: true, academicYear: true, scope: true, dueDate: true },
       });
       if (!parentTask) {
         throw new NotFoundError('Không tìm thấy nhiệm vụ cha');
       }
     }
 
-    const effectiveDepartmentId = departmentId || parentTask?.departmentId || null;
+    const effectiveLeadUnitId = inputLeadUnitId || parentTask?.leadUnitId || null;
     const monthNum = academicMonth
       ? Number(academicMonth)
       : (parentTask?.academicMonth ?? (new Date(dueDate).getMonth() + 1 || 9));
@@ -446,7 +432,7 @@ export class TaskCommandService {
       parentTask?.academicYear ||
       getAcademicYear(dueDate || getSystemReferenceDate());
 
-    if (!title || !dueDate || !effectiveDepartmentId) {
+    if (!title || !dueDate || !effectiveLeadUnitId) {
       throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)');
     }
 
@@ -458,7 +444,7 @@ export class TaskCommandService {
 
     const curYear = new Date().getFullYear();
 
-    let taskScope: TaskScope = parentTask?.scope || (effectiveDepartmentId ? TaskScope.DEPARTMENT : TaskScope.SCHOOL);
+    let taskScope: TaskScope = parentTask?.scope || (effectiveLeadUnitId ? TaskScope.DEPARTMENT : TaskScope.SCHOOL);
     if (scope) {
       const s = String(scope).toLowerCase();
       if (s === 'department') taskScope = TaskScope.DEPARTMENT;
@@ -468,7 +454,7 @@ export class TaskCommandService {
 
     await requireTaskAuthorization(user.id, 'task.create', {
       scope: taskScope,
-      departmentId: effectiveDepartmentId,
+      leadUnitId: effectiveLeadUnitId,
       // A subtask inherits its parent's scope; only an explicitly chosen scope
       // is subject to the scope-authority gate (P0-06).
       scopeExplicit: Boolean(scope) || !parentTaskId,
@@ -501,25 +487,20 @@ export class TaskCommandService {
       }
       const effectiveCreatorId = user.id;
 
-      // Resolve valid department ID against database to guarantee foreign key integrity
-      let validDepartmentId: string | null = null;
-      const dept = await tx.department.findFirst({
+      // Resolve valid OrganizationalUnit ID to guarantee foreign key integrity
+      const orgUnit = await tx.organizationalUnit.findFirst({
         where: {
           OR: [
-            { id: effectiveDepartmentId },
-            { id: effectiveDepartmentId.toUpperCase() },
-            { id: effectiveDepartmentId.toLowerCase() },
-            { shortName: effectiveDepartmentId },
-            { name: effectiveDepartmentId },
+            { id: effectiveLeadUnitId },
+            { code: effectiveLeadUnitId },
           ],
         },
         select: { id: true },
       });
-      if (dept) {
-        validDepartmentId = dept.id;
-      } else {
+      if (!orgUnit) {
         throw new NotFoundError('Đơn vị được chọn không tồn tại');
       }
+      const validLeadUnitId = orgUnit.id;
 
       // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
       const candidateUserIds = validAssigneeId ? [validAssigneeId] : [];
@@ -547,7 +528,7 @@ export class TaskCommandService {
           year: curYear,
           month: monthNum,
           scope: taskScope,
-          departmentCode: validDepartmentId || undefined,
+          departmentCode: validLeadUnitId || undefined,
         }));
 
       const parsedDueDate = new Date(dueDate);
@@ -569,7 +550,7 @@ export class TaskCommandService {
           code,
           title,
           description: description || null,
-          departmentId: validDepartmentId,
+          leadUnitId: validLeadUnitId,
           startDate: validStartDate,
           dueDate: parsedDueDate,
           academicMonth: monthNum,
@@ -587,7 +568,7 @@ export class TaskCommandService {
             : {}),
         },
         include: {
-          department: true,
+          leadUnit: true,
           assignees: {
             include: {
               user: { select: { id: true, name: true, avatarUrl: true } },
@@ -614,40 +595,12 @@ export class TaskCommandService {
         },
       });
 
-      // Synchronize TaskActors enforcing Single Primary DRI invariant
-      const matchedOrgUnit = await tx.organizationalUnit.findFirst({
-        where: {
-          OR: [
-            { id: effectiveDepartmentId },
-            { code: effectiveDepartmentId },
-          ],
-        },
-        select: { id: true },
-      });
-      const resolvedUnitId = matchedOrgUnit?.id || null;
-
-      // Stage B dual-write: khi ORG_UNIT_WRITE_CUTOVER bật, ghi leadUnitId từ OrganizationalUnit
-      if (ORG_UNIT_WRITE_CUTOVER && validDepartmentId && !resolvedUnitId) {
-        const fallbackUnitId = await resolveUnitIdForDepartmentId(tx, validDepartmentId);
-        if (fallbackUnitId) {
-          await tx.task.update({
-            where: { id: task.id },
-            data: { leadUnitId: fallbackUnitId },
-          });
-        }
-      } else if (ORG_UNIT_WRITE_CUTOVER && resolvedUnitId) {
-        await tx.task.update({
-          where: { id: task.id },
-          data: { leadUnitId: resolvedUnitId },
-        });
-      }
-
       if (validAssigneeId && existingUserIdSet.has(validAssigneeId)) {
         await tx.taskActor.create({
           data: {
             taskId: task.id,
             userId: validAssigneeId,
-            unitId: resolvedUnitId,
+            unitId: validLeadUnitId,
             role: TaskActorRole.DRI,
             isPrimaryDRI: true,
             assignedById: effectiveCreatorId,
@@ -671,7 +624,7 @@ export class TaskCommandService {
         afterData: {
           code: task.code,
           title: task.title,
-          departmentId: task.departmentId,
+          leadUnitId: task.leadUnitId,
           scope: task.scope,
           priority: task.priority,
           dueDate: task.dueDate.toISOString(),
@@ -772,7 +725,6 @@ export class TaskCommandService {
       priority,
       startDate,
       dueDate,
-      departmentId,
       assigneeId,
       parentTaskId,
       collaboratorIds,
@@ -817,17 +769,6 @@ export class TaskCommandService {
 
     if (resolvedParentTaskId !== undefined) {
       scalarUpdateData.parentTaskId = resolvedParentTaskId;
-    }
-    if (departmentId !== undefined) {
-      const newDeptId = typeof departmentId === 'string' && departmentId.trim() ? departmentId.trim() : null;
-      scalarUpdateData.departmentId = newDeptId;
-      // Stage B dual-write: khi ORG_UNIT_WRITE_CUTOVER bật, resolve và ghi leadUnitId
-      if (ORG_UNIT_WRITE_CUTOVER && newDeptId) {
-        const resolvedWriteUnitId = await resolveUnitIdForDepartmentId(prisma, newDeptId);
-        if (resolvedWriteUnitId) {
-          scalarUpdateData.leadUnitId = resolvedWriteUnitId;
-        }
-      }
     }
     if (typeof title === 'string' && title.trim()) {
       scalarUpdateData.title = title.trim();
@@ -909,14 +850,14 @@ export class TaskCommandService {
           {
             id: user.id,
             role: user.role,
-            departmentId: user.departmentId,
+            departmentId: null,
             isDelegated: false,
           },
           {
             id: existing.id,
             scope: existing.scope,
             createdById: existing.createdById,
-            departmentId: existing.departmentId,
+            departmentId: existing.leadUnitId,
             assignees: existing.assignees,
             assigneeIds: existing.assignees?.map((a) => a.userId),
           },
@@ -1066,7 +1007,7 @@ export class TaskCommandService {
       const updatedTask = await tx.task.findUniqueOrThrow({
         where: { id: taskId },
         include: {
-          department: true,
+          leadUnit: true,
           assignees: {
             include: {
               user: { select: { id: true, name: true, avatarUrl: true } },
@@ -1370,7 +1311,7 @@ export class TaskCommandService {
         id: true,
         status: true,
         createdById: true,
-        departmentId: true,
+        leadUnitId: true,
         assignees: { select: { userId: true } },
       },
     });

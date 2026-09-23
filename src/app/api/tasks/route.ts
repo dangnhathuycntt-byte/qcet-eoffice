@@ -207,7 +207,7 @@ export async function POST(req: Request) {
       const newTask = await taskCommandService.createTask(context, {
         title: validatedBody.title,
         description: validatedBody.description,
-        departmentId: validatedBody.departmentId,
+        leadUnitId: validatedBody.departmentId,
         startDate: validatedBody.startDate,
         dueDate: validatedBody.dueDate ?? new Date().toISOString(),
         priority: validatedBody.priority,

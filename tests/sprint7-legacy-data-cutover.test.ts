@@ -2,7 +2,6 @@ import { test, describe } from "node:test";
 import assert from "node:assert";
 import { prisma } from "@/lib/prisma";
 import { runAllDataMigrations } from "../prisma/data-migrations/run-all";
-import { DEPARTMENT_TO_ORG_UNIT_CODE_MAP } from "../prisma/data-migrations/backfill-department-to-units";
 
 describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
   test("1. Backfill runner is fully idempotent and achieves 100% data parity", async () => {
@@ -10,33 +9,8 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
 
     assert.ok(report);
     assert.strictEqual(report.overallParitySuccess, true);
-    assert.strictEqual(report.departmentMigration.paritySuccess, true);
     assert.strictEqual(report.assigneeMigration.paritySuccess, true);
     // Phase 9 WI-9.3: dacumMigration removed — DacumDelegation table dropped.
-
-    // Verify departments vs organizational units
-    const legacyDeptCount = await prisma.department.count();
-    const v2UnitCount = await prisma.organizationalUnit.count();
-    assert.ok(v2UnitCount >= legacyDeptCount, "V2 unit count must cover all legacy departments");
-
-    // Verify each legacy department has an active V2 unit mapping
-    const sampleDepts = await prisma.department.findMany({ take: 10 });
-    for (const dept of sampleDepts) {
-      const canonicalCode = (DEPARTMENT_TO_ORG_UNIT_CODE_MAP as Record<string, string>)[dept.id] || dept.id;
-      const match = await prisma.organizationalUnit.findFirst({
-        where: {
-          OR: [
-            { id: dept.id },
-            { code: canonicalCode.toUpperCase() },
-            { code: dept.id.toUpperCase() },
-            { name: dept.name },
-            { code: `K_${dept.id}`.toUpperCase() },
-            { code: `P_${dept.id}`.toUpperCase() },
-          ],
-        },
-      });
-      assert.ok(match, `Legacy department ${dept.id} must have a V2 OrganizationalUnit representation`);
-    }
 
     // Verify each legacy task assignee has a corresponding V2 task actor
     const sampleAssignees = await prisma.taskAssignee.findMany({ take: 10 });
