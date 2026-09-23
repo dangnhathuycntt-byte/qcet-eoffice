@@ -97,8 +97,8 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
           onScopeChange: () => {},
           selectedUnitId: "cntt",
           units: [
-            { id: "cntt", name: "Khoa CNTT", shortName: "CNTT" },
-            { id: "kt", name: "Khoa Kinh tế", shortName: "KT" },
+            { id: "cntt", name: "Khoa CNTT"},
+            { id: "kt", name: "Khoa Kinh tế"},
           ],
         })
       );

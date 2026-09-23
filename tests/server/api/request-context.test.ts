@@ -155,7 +155,7 @@ describe('Central API Request Context & Auth Extraction', () => {
         email: 'gv01@qncet.edu.vn',
         name: 'Nguyen Van A',
         role: 'CHUYEN_VIEN',
-        departmentId: 'CNTT',
+
         title: 'Giang vien CNTT',
       });
 
@@ -181,7 +181,7 @@ describe('Central API Request Context & Auth Extraction', () => {
         email: 'hieutruong@qncet.edu.vn',
         name: 'Tran Thi B',
         role: 'BAN_GIAM_HIEU',
-        departmentId: 'BGH',
+
       });
 
       const req = new Request('http://localhost:3000/api/tasks', {
@@ -230,7 +230,7 @@ describe('Central API Request Context & Auth Extraction', () => {
         email: 'test@qncet.edu.vn',
         name: 'User 1',
         role: 'STAFF',
-        departmentId: 'CNTT',
+
       };
       const ctx: ApiRequestContext = {
         requestId: 'req-1',
@@ -267,7 +267,7 @@ describe('Central API Request Context & Auth Extraction', () => {
       email: 'admin@qncet.edu.vn',
       name: 'Admin User',
       role: 'ADMIN',
-      departmentId: 'BGH',
+
     };
 
     const bghUser: AuthenticatedUser = {
@@ -275,7 +275,7 @@ describe('Central API Request Context & Auth Extraction', () => {
       email: 'bgh@qncet.edu.vn',
       name: 'BGH User',
       role: 'BAN_GIAM_HIEU',
-      departmentId: 'BGH',
+
     };
 
     const managerUser: AuthenticatedUser = {
@@ -283,7 +283,7 @@ describe('Central API Request Context & Auth Extraction', () => {
       email: 'mgr@qncet.edu.vn',
       name: 'Manager User',
       role: 'TRUONG_PHONG',
-      departmentId: 'TCHC',
+
     };
 
     const staffUser: AuthenticatedUser = {
@@ -291,7 +291,7 @@ describe('Central API Request Context & Auth Extraction', () => {
       email: 'staff@qncet.edu.vn',
       name: 'Staff User',
       role: 'CHUYEN_VIEN',
-      departmentId: 'CNTT',
+
     };
 
     it('throws AuthenticationError when context has no authenticated user', () => {

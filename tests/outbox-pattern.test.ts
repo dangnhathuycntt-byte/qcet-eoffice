@@ -30,7 +30,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
         data: {
           id: `dept-outbox-${Date.now()}`,
           name: 'Phòng Kiểm Thử Outbox',
-          shortName: 'PKTO',
+,
         },
       });
     }
@@ -44,7 +44,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
           email: `outbox_user_${testRunId}@qncet.edu.vn`,
           name: 'Outbox Test User',
           role: 'CHUYEN_VIEN',
-          departmentId: testDepartmentId,
+
         },
       });
     }
@@ -210,7 +210,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
             code: `OUTBOX-${Date.now()}`,
             title: `Task Commit ${testRunId}`,
             createdById: testUserId,
-            departmentId: testDepartmentId,
+
             academicMonth: 9,
             academicYear: '2026-2027',
             dueDate: new Date('2026-09-30T17:00:00Z'),
@@ -262,7 +262,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
               code: `OUTBOX-ABORT-${Date.now()}`,
               title: `Task Abort ${testRunId}`,
               createdById: testUserId,
-              departmentId: testDepartmentId,
+
               academicMonth: 9,
               academicYear: '2026-2027',
               dueDate: new Date('2026-09-30T17:00:00Z'),

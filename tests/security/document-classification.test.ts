@@ -388,20 +388,20 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: 'clerk@qnc.edu.vn',
         name: 'Văn thư',
         role: 'VAN_THU',
-        departmentId: 'dept_vt',
+
       };
 
       const restrictedDoc = {
         id: 'doc_res',
         classification: 'RESTRICTED',
-        departmentId: 'dept_vt',
+
         creatorId: 'usr_other',
       };
 
       const secretDoc = {
         id: 'doc_sec',
         securityLevel: DocumentSecurityLevel.MAT,
-        departmentId: 'dept_vt',
+
       };
 
       // Admin cannot bypass
@@ -458,7 +458,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         data: {
           id: `dept_a_${runId}`,
           name: 'Phòng Đào tạo A',
-          shortName: 'P.ĐT-A',
+,
         },
       });
 
@@ -466,7 +466,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         data: {
           id: `dept_b_${runId}`,
           name: 'Phòng Kế hoạch B',
-          shortName: 'P.KH-B',
+,
         },
       });
 
@@ -475,7 +475,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           email: `usera_${runId}@qnc.edu.vn`,
           name: 'Chuyên viên Đào tạo A',
           role: UserRole.CHUYEN_VIEN,
-          departmentId: unitA.id,
+
           isActive: true,
         },
       });
@@ -485,7 +485,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
           email: `userb_${runId}@qnc.edu.vn`,
           name: 'Chuyên viên Kế hoạch B',
           role: UserRole.CHUYEN_VIEN,
-          departmentId: unitB.id,
+
           isActive: true,
         },
       });
@@ -504,7 +504,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: userA.email,
         name: userA.name,
         role: userA.role,
-        departmentId: unitA.id,
+
       });
 
       tokenUserB = signSessionToken({
@@ -512,7 +512,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         email: userB.email,
         name: userB.name,
         role: userB.role,
-        departmentId: unitB.id,
+
       });
 
       tokenAdmin = signSessionToken({

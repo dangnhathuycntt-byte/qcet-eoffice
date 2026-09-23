@@ -33,7 +33,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'contributor@cdktcnqn.edu.vn',
     name: 'Nguyễn Văn Đóng Góp',
     role: 'CHUYEN_VIEN',
-    departmentId: 'unit_training',
+
   };
 
   const otherOfficerUser: AuthenticatedUser = {
@@ -41,7 +41,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'officer2@cdktcnqn.edu.vn',
     name: 'Trần Thị Chuyên Viên',
     role: 'CHUYEN_VIEN',
-    departmentId: 'unit_admin',
+
   };
 
   const sameUnitMember: AuthenticatedUser = {
@@ -49,7 +49,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'sameunit@cdktcnqn.edu.vn',
     name: 'Lê Văn Cùng Khoa',
     role: 'GIANG_VIEN',
-    departmentId: 'unit_it',
+
   };
 
   const responsibleUser: AuthenticatedUser = {
@@ -57,7 +57,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'responsible@cdktcnqn.edu.vn',
     name: 'Phạm Văn Chủ Trì',
     role: 'CHUYEN_VIEN',
-    departmentId: 'unit_it',
+
   };
 
   const submitterUser: AuthenticatedUser = {
@@ -65,7 +65,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'submitter@cdktcnqn.edu.vn',
     name: 'Hoàng Văn Nộp Lưu',
     role: 'CHUYEN_VIEN',
-    departmentId: 'unit_it',
+
   };
 
   const archiverUser: AuthenticatedUser = {
@@ -74,7 +74,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     name: 'Đỗ Thị Tiếp Nhận',
     role: 'VAN_THU',
     positionCode: 'LUU_TRU',
-    departmentId: 'unit_archives',
+
   };
 
   const rectorUser: AuthenticatedUser = {
@@ -83,7 +83,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     name: 'Hiệu Trưởng Nhà Trường',
     role: 'BAN_GIAM_HIEU',
     positionCode: 'HIEU_TRUONG',
-    departmentId: 'unit_board',
+
   };
 
   // Test Items

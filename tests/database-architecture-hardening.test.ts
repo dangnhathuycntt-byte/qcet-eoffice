@@ -69,7 +69,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
         email: `harden_user1_${testRunId}@qncet.edu.vn`,
         name: "Database Hardening Officer 1",
         role: "CHUYEN_VIEN",
-        departmentId: testDepartmentId,
+
       },
     });
     testUserId1 = user1.id;
@@ -79,7 +79,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
         email: `harden_user2_${testRunId}@qncet.edu.vn`,
         name: "Database Hardening Officer 2",
         role: "CHUYEN_VIEN",
-        departmentId: testDepartmentId,
+
       },
     });
     testUserId2 = user2.id;
@@ -1012,7 +1012,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           email: `restricted_creator_${testRunId}@qncet.edu.vn`,
           name: "Restricted Creator User",
           role: "CHUYEN_VIEN",
-          departmentId: testDepartmentId,
+
         },
       });
 

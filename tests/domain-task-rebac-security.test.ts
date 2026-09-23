@@ -85,7 +85,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       data: {
         id: deptAId,
         name: "Khoa Công nghệ Thông tin Test",
-        shortName: "CNTT",
+,
       },
     });
 
@@ -93,7 +93,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       data: {
         id: deptBId,
         name: "Khoa Du lịch & Dịch vụ Test",
-        shortName: "DLDV",
+,
       },
     });
 
@@ -129,7 +129,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         name: "TS. Vũ Văn Trực (Trưởng Khoa CNTT)",
         email: `truc.vv_${timestamp}@qcet.edu.vn`,
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptA.id,
+
       },
     });
 
@@ -138,7 +138,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         name: "Trưởng Khoa Du lịch Test",
         email: `dean.b_${timestamp}@qcet.edu.vn`,
         role: UserRole.TRUONG_PHONG,
-        departmentId: deptB.id,
+
       },
     });
 
@@ -147,7 +147,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         name: "Nguyễn Văn A (Giảng viên CNTT)",
         email: `staff.a_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptA.id,
+
       },
     });
 
@@ -156,7 +156,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         name: "Trần Thị B (Giảng viên Dịch vụ)",
         email: `staff.b_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptB.id,
+
       },
     });
 
@@ -221,7 +221,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: deanFacultyA.name,
       email: deanFacultyA.email,
       activePositionCode: "TRUONG_DON_VI",
-      departmentId: deptA.id,
+
       departmentCode: deptA.code,
       isActive: true,
     };
@@ -231,7 +231,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: deanFacultyB.name,
       email: deanFacultyB.email,
       activePositionCode: "TRUONG_DON_VI",
-      departmentId: deptB.id,
+
       departmentCode: deptB.code,
       isActive: true,
     };
@@ -241,7 +241,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: staffFacultyA.name,
       email: staffFacultyA.email,
       activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-      departmentId: deptA.id,
+
       departmentCode: deptA.code,
       isActive: true,
     };
@@ -251,7 +251,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: staffFacultyB.name,
       email: staffFacultyB.email,
       activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-      departmentId: deptB.id,
+
       departmentCode: deptB.code,
       isActive: true,
     };
@@ -271,7 +271,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         title: "Nhiệm vụ Hiện đại hóa Phòng máy CNTT",
         createdById: executiveUser.id,
         leadUnitId: deptA.id,
-        departmentId: deptA.id,
+
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date(Date.now() + 86400000),
@@ -284,7 +284,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         title: "Nhiệm vụ Thẩm định Giáo trình Du lịch",
         createdById: executiveUser.id,
         leadUnitId: deptB.id,
-        departmentId: deptB.id,
+
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date(Date.now() + 86400000),
@@ -367,7 +367,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Xây dựng Chuẩn đầu ra ngành CNTT",
           createdById: deanFacultyA.id,
           leadUnitId: deptA.id,
-          departmentId: deptA.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -397,7 +397,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: taskForTest1.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         collaboratorIds: [staffFacultyC.id],
@@ -431,7 +431,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: taskForTest1.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         collaboratorIds: [staffFacultyC.id],
@@ -467,7 +467,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: taskForTest1.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         collaboratorIds: [staffFacultyC.id],
@@ -496,7 +496,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Biên soạn Giáo trình Mạng Máy tính Nâng cao",
           createdById: deanFacultyA.id,
           leadUnitId: deptA.id,
-          departmentId: deptA.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -558,7 +558,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         createdById: deanFacultyA.id,
         primaryOwnerId: staffFacultyA.id, // Staff A is DRI
         submittedByUserId: staffFacultyA.id, // Staff A is Submitter
-        departmentId: deptA.id,
+
       };
 
       const res = await authorize(authContextStaffA, "task.approve", deliverableResource);
@@ -579,7 +579,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
         createdById: deanFacultyA.id,
         primaryOwnerId: staffFacultyA.id,
         submittedByUserId: staffFacultyA.id,
-        departmentId: deptA.id,
+
       };
 
       const res = await authorize(authContextStaffA, "task.review", deliverableResource);
@@ -662,7 +662,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Quan sát Đánh giá Chất lượng Đào tạo",
           createdById: executiveUser.id,
           leadUnitId: deptA.id,
-          departmentId: deptA.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -692,7 +692,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: observedTask.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         observerIds: [staffFacultyC.id],
@@ -708,7 +708,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: observedTask.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         observerIds: [staffFacultyC.id],
@@ -725,7 +725,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: observedTask.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         observerIds: [staffFacultyC.id],
@@ -740,7 +740,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resource: AuthorizationResource = {
         id: observedTask.id,
         type: "task",
-        departmentId: deptA.id,
+
         leadDepartmentId: deptA.id,
         primaryOwnerId: staffFacultyA.id,
         observerIds: [staffFacultyC.id],
@@ -768,7 +768,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Xây dựng Chuỗi Phòng thực hành Nhà hàng - Khách sạn",
           createdById: executiveUser.id,
           leadUnitId: deptB.id,
-          departmentId: deptB.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -793,7 +793,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resourceB: AuthorizationResource = {
         id: taskFacultyB.id,
         type: "task",
-        departmentId: deptB.id,
+
         leadDepartmentId: deptB.id,
         primaryOwnerId: staffFacultyB.id,
         scope: "DEPARTMENT",
@@ -866,7 +866,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       const resourceB: AuthorizationResource = {
         id: taskFacultyB.id,
         type: "task",
-        departmentId: deptB.id,
+
         leadDepartmentId: deptB.id,
         primaryOwnerId: staffFacultyB.id,
       };
@@ -894,7 +894,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Đề án Mở ngành Logistics & Quản lý Chuỗi Cung ứng",
           createdById: staffFacultyB.id,
           leadUnitId: deptA.id,
-          departmentId: deptA.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),
@@ -1072,7 +1072,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
           title: "Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp",
           createdById: staffFacultyA.id,
           leadUnitId: deptA.id,
-          departmentId: deptA.id,
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),

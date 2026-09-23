@@ -6,7 +6,7 @@ import { sortDepartmentsByOverdue } from "../src/components/dashboard/department
 test("sorts departments by overdue count descending", () => {
   const depts: DepartmentHealthSummary[] = [
     {
-      departmentId: "CNTT",
+
       code: "CNTT",
       departmentName: "Khoa CNTT",
       leadName: "Nguyễn A",
@@ -24,7 +24,7 @@ test("sorts departments by overdue count descending", () => {
       status: "good",
     },
     {
-      departmentId: "DIEN",
+
       code: "DIEN",
       departmentName: "Khoa Điện",
       leadName: "Trần B",

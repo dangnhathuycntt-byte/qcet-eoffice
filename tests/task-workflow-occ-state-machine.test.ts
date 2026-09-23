@@ -50,7 +50,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
   });
 

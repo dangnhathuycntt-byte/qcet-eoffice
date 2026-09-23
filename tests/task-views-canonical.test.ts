@@ -39,7 +39,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       email: 'staff.cntt@qcet.edu.vn',
       name: 'Chuyên viên Nguyễn Văn A',
       role: 'CHUYEN_VIEN',
-      departmentId: 'unit_cntt',
+
       isActive: true,
     },
     systemRoles: [],
@@ -81,7 +81,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       email: 'truongkhoa.cntt@qcet.edu.vn',
       name: 'Trưởng khoa Trần Văn B',
       role: 'TRUONG_PHONG',
-      departmentId: 'unit_cntt',
+
       isActive: true,
     },
     systemRoles: [],
@@ -123,7 +123,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       email: 'hieutruong@qcet.edu.vn',
       name: 'Hiệu trưởng Lê Văn C',
       role: 'BAN_GIAM_HIEU',
-      departmentId: 'unit_bgh',
+
       isActive: true,
     },
     systemRoles: [],
@@ -165,7 +165,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       email: 'delegate.approver@qcet.edu.vn',
       name: 'Người được ủy quyền duyệt Đỗ Văn D',
       role: 'CHUYEN_VIEN',
-      departmentId: 'unit_daotao',
+
       isActive: true,
     },
     systemRoles: [],
@@ -229,7 +229,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       id: 'task_parent_01',
       code: 'CV-2026-01',
       title: 'Tổ chức lễ khai giảng năm học mới',
-      departmentId: 'unit_daotao',
+
       leadUnitId: 'unit_daotao',
       createdById: 'user_leader_daotao',
       parentTaskId: null,
@@ -249,7 +249,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       id: 'task_unit_cntt_02',
       code: 'CV-2026-02',
       title: 'Xây dựng chương trình đào tạo trí tuệ nhân tạo',
-      departmentId: 'unit_cntt',
+
       leadUnitId: 'unit_cntt',
       createdById: 'user_leader_cntt',
       parentTaskId: null,
@@ -263,7 +263,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       id: 'task_approval_03',
       code: 'CV-2026-03',
       title: 'Duyệt đề cương học phần lập trình mạng',
-      departmentId: 'unit_daotao',
+
       leadUnitId: 'unit_daotao',
       createdById: 'user_creator_daotao',
       status: 'WAITING_APPROVAL',
@@ -295,7 +295,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
       id: 'task_unrelated_04',
       code: 'CV-2026-04',
       title: 'Quyết toán kinh phí hội nghị khoa học',
-      departmentId: 'unit_taichinh',
+
       leadUnitId: 'unit_taichinh',
       createdById: 'user_taichinh_01',
       parentTaskId: null,
@@ -430,7 +430,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
         email: 'expired.delegate@qcet.edu.vn',
         name: 'Người hết hạn ủy quyền',
         role: 'CHUYEN_VIEN',
-        departmentId: 'unit_daotao',
+
         isActive: true,
       },
       systemRoles: [],

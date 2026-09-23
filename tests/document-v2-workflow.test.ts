@@ -90,7 +90,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Chuyên viên Soạn thảo",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: unitAcademicId,
+
       },
     });
 
@@ -101,7 +101,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Văn thư Cơ quan",
         role: UserRole.VAN_THU,
         title: "Văn thư",
-        departmentId: unitAdminId,
+
       },
     });
 
@@ -112,7 +112,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Hiệu trưởng QCET",
         role: UserRole.BAN_GIAM_HIEU,
         title: "Hiệu trưởng",
-        departmentId: null,
+
       },
     });
 
@@ -123,7 +123,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
         name: "Người dùng không quyền",
         role: UserRole.CHUYEN_VIEN,
         title: "Giảng viên",
-        departmentId: null,
+
       },
     });
 
@@ -132,7 +132,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       email: drafterUser.email,
       role: drafterUser.role,
       name: drafterUser.name,
-      departmentId: drafterUser.departmentId,
+
     });
 
     clerkToken = await signSessionToken({
@@ -140,7 +140,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       email: clerkUser.email,
       role: clerkUser.role,
       name: clerkUser.name,
-      departmentId: clerkUser.departmentId,
+
     });
   });
 
@@ -689,7 +689,7 @@ describe("Sprint 5: Document V2 Full Cutover", () => {
       const secretDoc = {
         id: signedDocId,
         securityLevel: DocumentSecurityLevel.TUYET_MAT,
-        departmentId: unitAcademicId,
+
         creatorId: drafterUser.id,
       };
 

@@ -27,7 +27,7 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
     email: "test@cdktcnqn.edu.vn",
     name: "Nguyễn Văn Test",
     role: "ADMIN",
-    departmentId: "BGH",
+
   });
 
   const createRequest = (url: string, cookieToken?: string) => {

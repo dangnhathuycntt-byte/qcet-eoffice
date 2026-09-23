@@ -58,7 +58,7 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
         email: `${TEST_PREFIX.toLowerCase()}leader@qcet.edu.vn`,
         name: 'TS. Nguyễn Văn QA - Cán bộ Kiểm thử',
         role: UserRole.TRUONG_PHONG,
-        departmentId: 'K_CNTT',
+
       },
     });
     testUserId = testUser.id;

@@ -78,7 +78,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         email: `test-staff-a-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept A",
         role: "CHUYEN_VIEN",
-        departmentId: deptAId,
+
       },
     });
     deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role, departmentId: deptAId };
@@ -88,7 +88,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         email: `test-staff-b-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept B",
         role: "CHUYEN_VIEN",
-        departmentId: deptBId,
+
       },
     });
     deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role, departmentId: deptBId };
@@ -154,7 +154,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       data: {
         title: "BOLA Protected Task Dept B",
         code: `TASK-${Date.now()}`,
-        departmentId: deptBId,
+
         createdById: deptBUser.id,
         scope: "DEPARTMENT",
         status: "IN_PROGRESS",

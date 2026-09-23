@@ -104,7 +104,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         email: `staff.a.${testRunId}@qcet.edu.vn`,
         name: `Chuyên viên A ${testRunId}`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptAId,
+
         passwordHash: 'FakePasswordHash123',
       },
     });
@@ -114,7 +114,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         email: `staff.b.${testRunId}@qcet.edu.vn`,
         name: `Chuyên viên B ${testRunId}`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptBId,
+
         passwordHash: 'FakePasswordHash123',
       },
     });
@@ -124,7 +124,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         email: `admin.${testRunId}@qcet.edu.vn`,
         name: `Quản trị hệ thống ${testRunId}`,
         role: UserRole.ADMIN,
-        departmentId: deptAId,
+
         passwordHash: 'FakePasswordHash123',
       },
     });
@@ -135,7 +135,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         name: `Hiệu trưởng ${testRunId}`,
         role: UserRole.BAN_GIAM_HIEU,
         title: 'Hiệu trưởng',
-        departmentId: deptAId,
+
         passwordHash: 'FakePasswordHash123',
       },
     });
@@ -145,7 +145,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       email: dbStaffA.email,
       name: dbStaffA.name,
       role: dbStaffA.role,
-      departmentId: dbStaffA.departmentId,
+
     };
 
     adminUser = {
@@ -153,7 +153,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       email: dbAdmin.email,
       name: dbAdmin.name,
       role: dbAdmin.role,
-      departmentId: dbAdmin.departmentId,
+
     };
 
     leadershipUser = {
@@ -161,7 +161,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       email: dbLeadership.email,
       name: dbLeadership.name,
       role: dbLeadership.role,
-      departmentId: dbLeadership.departmentId,
+
       title: dbLeadership.title,
     };
 
@@ -174,7 +174,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
-        departmentId: deptAId,
+
         createdById: dbStaffA.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -191,7 +191,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
-        departmentId: deptBId,
+
         createdById: dbStaffB.id,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -224,7 +224,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         scope: TaskScope.DEPARTMENT,
         status: TaskStatus.IN_PROGRESS,
         priority: TaskPriority.NORMAL,
-        departmentId: deptBId,
+
         createdById: dbStaffB.id,
         academicMonth: 9,
         academicYear: '2026-2027',

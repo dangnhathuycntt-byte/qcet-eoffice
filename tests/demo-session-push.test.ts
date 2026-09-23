@@ -47,7 +47,7 @@ describe('Push Notification Authentication & Session Integration', () => {
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId || 'ban-giam-hieu',
+
       title: user.title || 'Hiệu trưởng',
     });
     assert.ok(sessionCookie, 'Session cookie must exist');

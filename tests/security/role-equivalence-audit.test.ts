@@ -95,7 +95,7 @@ describe('Security Audit: Role Equivalence Elimination from Business Authority (
       email: 'admin@qncet.edu.vn',
       name: 'System Admin',
       role: 'ADMIN',
-      departmentId: 'CNTT',
+
     };
 
     const ctx: ApiRequestContext = {

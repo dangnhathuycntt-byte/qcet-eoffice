@@ -21,7 +21,7 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
       progressPercent: 70,
       dueDate: "2026-09-05T00:00:00.000Z",
       startDate: "2026-08-26T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       subTasks: [
         {
@@ -63,7 +63,7 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
       progressPercent: 40,
       dueDate: "2026-08-20T00:00:00.000Z",
       startDate: "2026-08-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       subTasks: [],
       deliverables: [],
@@ -82,7 +82,7 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
       progressPercent: 100,
       dueDate: "2026-08-15T00:00:00.000Z",
       startDate: "2026-08-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo",
       subTasks: [],
       deliverables: [],
@@ -101,7 +101,7 @@ describe("Academic Calendar Monthly Partitioning & Backlog Engine", () => {
       progressPercent: 0,
       dueDate: "2026-10-15T00:00:00.000Z",
       startDate: "2026-09-28T00:00:00.000Z",
-      departmentId: "K_CNTT",
+
       departmentName: "Khoa CNTT",
       subTasks: [],
       deliverables: [],

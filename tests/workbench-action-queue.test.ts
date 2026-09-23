@@ -167,7 +167,7 @@ describe("W2 — department resolution never falls back to BGH", () => {
       leadDepartmentCode: "KHONG_TON_TAI",
       leadDepartmentId: undefined,
       departmentCode: undefined,
-      departmentId: undefined,
+
       leadDepartment: undefined,
       department: undefined,
       departmentName: undefined,

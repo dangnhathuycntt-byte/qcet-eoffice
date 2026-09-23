@@ -12,7 +12,7 @@ describe("Complete Authentication Lifecycle & Regression Suite (Login -> Logout 
     email: "dangnhathuy@cdktcnqn.edu.vn",
     name: "ThS. Đặng Nhật Huy (Hiệu trưởng)",
     role: "BAN_GIAM_HIEU",
-    departmentId: "BGH",
+
     title: "Hiệu trưởng",
   };
 

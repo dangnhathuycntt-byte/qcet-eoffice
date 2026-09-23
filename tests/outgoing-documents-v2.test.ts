@@ -98,7 +98,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Chuyên viên Soạn thảo Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: deptAcademicId,
+
       },
     });
 
@@ -109,7 +109,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Trưởng phòng Đào tạo Test",
         role: UserRole.TRUONG_PHONG,
         title: "Trưởng phòng",
-        departmentId: deptAcademicId,
+
       },
     });
 
@@ -120,7 +120,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Văn thư Test",
         role: UserRole.VAN_THU,
         title: "Văn thư",
-        departmentId: deptAdminId,
+
       },
     });
 
@@ -131,7 +131,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Hiệu trưởng Test",
         role: UserRole.BAN_GIAM_HIEU,
         title: "Hiệu trưởng",
-        departmentId: null,
+
       },
     });
 
@@ -142,7 +142,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         name: "Nhân viên Không Thẩm Quyền Test",
         role: UserRole.CHUYEN_VIEN,
         title: "Nhân viên",
-        departmentId: deptUnrelatedId,
+
       },
     });
   });
@@ -710,7 +710,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: drafterSpecialist.email,
         name: drafterSpecialist.name,
         role: drafterSpecialist.role,
-        departmentId: drafterSpecialist.departmentId,
+
       });
 
       unitHeadToken = signSessionToken({
@@ -718,7 +718,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: unitHeadAcademic.email,
         name: unitHeadAcademic.name,
         role: unitHeadAcademic.role,
-        departmentId: unitHeadAcademic.departmentId,
+
       });
 
       clerkToken = signSessionToken({
@@ -726,7 +726,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: clerkUser.email,
         name: clerkUser.name,
         role: clerkUser.role,
-        departmentId: clerkUser.departmentId,
+
       });
 
       rectorToken = signSessionToken({
@@ -734,7 +734,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
         email: rectorUser.email,
         name: rectorUser.name,
         role: rectorUser.role,
-        departmentId: rectorUser.departmentId,
+
       });
     });
 

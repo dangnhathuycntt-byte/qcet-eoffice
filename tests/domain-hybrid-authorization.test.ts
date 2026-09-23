@@ -78,7 +78,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     email: "truc.vv@cdktcnqn.edu.vn",
     name: "TS. Vũ Văn Trực",
     activePositionCode: "TRUONG_DON_VI",
-    departmentId: "dept_faculty_a",
+
     departmentCode: "K_CNTT",
     isActive: true,
   };
@@ -88,7 +88,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     email: "dean.b@cdktcnqn.edu.vn",
     name: "Trưởng khoa B",
     activePositionCode: "TRUONG_DON_VI",
-    departmentId: "dept_faculty_b",
+
     departmentCode: "K_DLDV",
     isActive: true,
   };
@@ -98,7 +98,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     email: "staff.a@cdktcnqn.edu.vn",
     name: "Nguyễn Văn A",
     activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-    departmentId: "dept_faculty_a",
+
     departmentCode: "K_CNTT",
     isActive: true,
   };
@@ -108,7 +108,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     email: "staff.b@cdktcnqn.edu.vn",
     name: "Trần Thị B",
     activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-    departmentId: "dept_faculty_b",
+
     departmentCode: "K_DLDV",
     isActive: true,
   };
@@ -118,7 +118,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     email: "vanthu@cdktcnqn.edu.vn",
     name: "Cán bộ Văn thư",
     activePositionCode: "VAN_THU",
-    departmentId: "dept_hcqt",
+
     departmentCode: "P_HCQT",
     isActive: true,
   };
@@ -140,7 +140,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       id: "task_finance_annual_audit_001",
       type: "task",
       portfolio: "ADMINISTRATION_LOGISTICS", // Finance & Asset under VP Logistics / Principal
-      departmentId: "dept_khtc",
+
       createdById: "usr_fin_creator_010",
       primaryOwnerId: "usr_fin_lead_011",
       scope: "SCHOOL",
@@ -175,7 +175,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
         id: "task_academic_curriculum_001",
         type: "task",
         portfolio: "ACADEMIC",
-        departmentId: "dept_faculty_a",
+
         createdById: "usr_dept_head_004",
         primaryOwnerId: "usr_staff_a_006",
         scope: "SCHOOL",
@@ -190,7 +190,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       const untaggedFinanceTask: AuthorizationResource = {
         id: "task_finance_untagged_002",
         type: "task",
-        departmentId: "dept_khtc",
+
         createdById: "usr_fin_creator_010",
         primaryOwnerId: "usr_fin_lead_011",
         scope: "SCHOOL",
@@ -217,7 +217,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       id: "task_strategic_expansion_001",
       type: "task",
       portfolio: "INSTITUTIONAL_STRATEGY",
-      departmentId: "dept_bgh",
+
       createdById: "usr_dept_head_004",
       primaryOwnerId: "usr_staff_a_006",
     };
@@ -496,7 +496,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     const internalTaskFacultyB: AuthorizationResource = {
       id: "task_faculty_b_internal_curriculum_001",
       type: "task",
-      departmentId: "dept_faculty_b",
+
       leadDepartmentId: "dept_faculty_b",
       scope: "DEPARTMENT", // Internal unit scope
       createdById: deanFacultyB.id,
@@ -519,7 +519,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       const taskFacultyA: AuthorizationResource = {
         id: "task_faculty_a_internal_001",
         type: "task",
-        departmentId: "dept_faculty_a",
+
         leadDepartmentId: "dept_faculty_a",
         scope: "DEPARTMENT",
         createdById: deanFacultyA.id,
@@ -535,7 +535,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       const schoolTask: AuthorizationResource = {
         id: "task_school_wide_announcement_001",
         type: "task",
-        departmentId: "dept_faculty_b",
+
         scope: "SCHOOL", // Institutional scope
         createdById: principalUser.id,
         primaryOwnerId: staffFacultyB.id,
@@ -553,7 +553,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     const taskWithCollab: AuthorizationResource = {
       id: "task_lab_modernization_001",
       type: "task",
-      departmentId: "dept_faculty_a",
+
       createdById: deanFacultyA.id,
       primaryOwnerId: "usr_lead_dri_012",
       collaboratorIds: [staffFacultyA.id], // staffFacultyA is ONLY a collaborator
@@ -601,7 +601,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
     const observedTask: AuthorizationResource = {
       id: "task_observed_project_001",
       type: "task",
-      departmentId: "dept_faculty_a",
+
       primaryOwnerId: "usr_lead_dri_012",
       observerIds: [staffFacultyA.id], // staffFacultyA is ONLY an observer
       collaboratorIds: [],
@@ -755,7 +755,7 @@ describe("Adversarial Authorization Engine Penetration Test (10 DoD Scenarios)",
       type: "dossier",
       primaryOwnerId: staffFacultyA.id, // Task executor / DRI
       dossierOwnerId: staffFacultyA.id,
-      departmentId: "dept_faculty_a",
+
     };
 
     test("DoD 10.1: Task executor / DRI has duty and permission to open dossier (dossier.open) -> ALLOWED", async () => {

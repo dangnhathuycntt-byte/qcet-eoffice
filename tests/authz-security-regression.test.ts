@@ -210,7 +210,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         email: `staff_a_authz_${Date.now()}@qcet.edu.vn`,
         name: "Staff A AuthZ Test",
         role: "CHUYEN_VIEN",
-        departmentId: IDS.deptA,
+
         isActive: true,
       },
     });
@@ -222,7 +222,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         email: `staff_b_authz_${Date.now()}@qcet.edu.vn`,
         name: "Staff B AuthZ Test",
         role: "CHUYEN_VIEN",
-        departmentId: IDS.deptB,
+
         isActive: true,
       },
     });
@@ -281,7 +281,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         status: "IN_PROGRESS",
         priority: "NORMAL",
         scope: "DEPARTMENT",
-        departmentId: IDS.deptA,
+
         createdById: IDS.userAdmin,
         dueDate: new Date("2027-01-01"),
         academicMonth: 1,
@@ -298,7 +298,7 @@ describe("P0-2: /api/search canonical Task authorization", () => {
         status: "IN_PROGRESS",
         priority: "NORMAL",
         scope: "DEPARTMENT",
-        departmentId: IDS.deptB,
+
         createdById: IDS.userAdmin,
         dueDate: new Date("2027-01-01"),
         academicMonth: 1,

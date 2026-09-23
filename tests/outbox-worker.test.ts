@@ -22,7 +22,7 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
         data: {
           id: `dept-worker-${Date.now()}`,
           name: 'Phòng Outbox Worker Test',
-          shortName: 'POWT',
+,
         },
       });
     }
@@ -35,7 +35,7 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
           email: `worker_${testRunId}@qncet.edu.vn`,
           name: 'Outbox Worker User',
           role: 'CHUYEN_VIEN',
-          departmentId: testDepartmentId,
+
         },
       });
     }
@@ -67,7 +67,7 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
             title: 'Nhiệm vụ kiểm thử outbox atomicity',
             priority: 'NORMAL',
             scope: 'DEPARTMENT',
-            departmentId: testDepartmentId,
+
             createdById: testUserId,
             academicMonth: 9,
             academicYear: '2025-2026',

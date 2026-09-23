@@ -73,7 +73,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         data: {
           id: `dept_${timestamp}`,
           name: "Phòng Quản lý Đào tạo",
-          shortName: "QLDT",
+,
         },
       });
     }
@@ -140,7 +140,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         name: "Người Giao Việc (Trưởng phòng) Test",
         email: `creator_${timestamp}@qcet.edu.vn`,
         role: UserRole.TRUONG_PHONG,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(creatorUser.id);
@@ -160,7 +160,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         name: "Cán Bộ Chủ Trì (DRI) Test",
         email: `dri_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(driUser.id);
@@ -170,7 +170,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         name: "Cán Bộ Chủ Trì Mới Test",
         email: `newdri_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(newDriUser.id);
@@ -180,7 +180,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         name: "Cán Bộ Phối Hợp Test",
         email: `collab_${timestamp}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(collaboratorUser.id);
@@ -190,7 +190,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         name: "Trưởng Đơn Vị Test",
         email: `unithead_${timestamp}@qcet.edu.vn`,
         role: UserRole.TRUONG_PHONG,
-        departmentId: dept.id,
+
       },
     });
     createdUserIds.push(unitHeadUser.id);
@@ -230,7 +230,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       email: creatorUser.email,
       name: creatorUser.name,
       role: creatorUser.role,
-      departmentId: creatorUser.departmentId,
+
       title: "TRUONG_PHONG",
     });
 
@@ -239,7 +239,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       email: driUser.email,
       name: driUser.name,
       role: driUser.role,
-      departmentId: driUser.departmentId,
+
     });
 
     newDriToken = signSessionToken({
@@ -247,7 +247,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       email: newDriUser.email,
       name: newDriUser.name,
       role: newDriUser.role,
-      departmentId: newDriUser.departmentId,
+
     });
 
     collaboratorToken = signSessionToken({
@@ -255,7 +255,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       email: collaboratorUser.email,
       name: collaboratorUser.name,
       role: collaboratorUser.role,
-      departmentId: collaboratorUser.departmentId,
+
     });
 
     unitHeadToken = signSessionToken({
@@ -263,7 +263,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       email: unitHeadUser.email,
       name: unitHeadUser.name,
       role: unitHeadUser.role,
-      departmentId: unitHeadUser.departmentId,
+
       title: "TRUONG_DON_VI",
     });
 
@@ -282,7 +282,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         title: "Nhiệm vụ kiểm thử Task Domain Commands",
         createdById: creatorUser.id,
         leadUnitId: orgUnit.id,
-        departmentId: dept.id,
+
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date(Date.now() + 86400000),
@@ -803,7 +803,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000 * 5),
-          departmentId: dept.id,
+
           createdById: creatorUser.id,
           actors: {
             create: {
@@ -843,7 +843,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000 * 5),
-          departmentId: dept.id,
+
           createdById: creatorUser.id,
           actors: {
             create: {
@@ -885,7 +885,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000 * 5),
-          departmentId: dept.id,
+
           createdById: creatorUser.id,
           actors: {
             create: {

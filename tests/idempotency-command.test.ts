@@ -69,7 +69,7 @@ describe('Tasks 3.12-3.14: Idempotency Payload Verification & Command Flow', () 
       const key = `key_same_${Date.now()}`;
       const payload = {
         title: 'Nhiệm vụ định kỳ quý 3',
-        departmentId: 'dept-cntt',
+
         priority: 'NORMAL',
         dueDate: '2026-09-30T17:00:00Z',
       };
@@ -117,7 +117,7 @@ describe('Tasks 3.12-3.14: Idempotency Payload Verification & Command Flow', () 
       const permutedPayload = {
         dueDate: '2026-09-30T17:00:00Z',
         priority: 'NORMAL',
-        departmentId: 'dept-cntt',
+
         title: 'Nhiệm vụ định kỳ quý 3',
       };
 

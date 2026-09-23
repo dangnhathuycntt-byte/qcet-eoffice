@@ -438,7 +438,7 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
       const title = `Task Audit Integration ${testRunId}`;
       const result = await createTaskAtomic(prisma, {
         createdById: testUserId,
-        departmentId: testDepartmentId,
+
         title,
         dueDate: '2026-10-15',
         scope: TaskScope.DEPARTMENT,
@@ -461,7 +461,7 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
     test('submitDeliverableAtomic automatically records TASK_DELIVERABLE_SUBMITTED in audit_events', async () => {
       const created = await createTaskAtomic(prisma, {
         createdById: testUserId,
-        departmentId: testDepartmentId,
+
         title: `Task for Deliverable ${testRunId}`,
         dueDate: '2026-10-15',
         scope: TaskScope.DEPARTMENT,
@@ -493,7 +493,7 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
     test('approveTaskAtomic automatically records TASK_APPROVED in audit_events', async () => {
       const created = await createTaskAtomic(prisma, {
         createdById: testUserId,
-        departmentId: testDepartmentId,
+
         title: `Task for Approval ${testRunId}`,
         dueDate: '2026-10-15',
         scope: TaskScope.DEPARTMENT,

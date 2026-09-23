@@ -77,7 +77,7 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
           email: user.email,
           name: user.name,
           role: user.role,
-          departmentId: user.departmentId ?? undefined,
+
         });
       }
       const req = new NextRequest("http://localhost:3000/api/dashboard/overview?source=mock", {

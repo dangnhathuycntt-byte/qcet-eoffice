@@ -155,7 +155,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: specialistUser.email,
       name: specialistUser.name,
       role: specialistUser.role,
-      departmentId: specialistUser.departmentId,
+
     });
 
     unitHeadToken = signSessionToken({
@@ -163,7 +163,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: unitHeadUser.email,
       name: unitHeadUser.name,
       role: unitHeadUser.role,
-      departmentId: unitHeadUser.departmentId,
+
     });
 
     archivistToken = signSessionToken({
@@ -171,7 +171,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: archivistUser.email,
       name: archivistUser.name,
       role: archivistUser.role,
-      departmentId: archivistUser.departmentId,
+
     });
 
     unprivilegedToken = signSessionToken({
@@ -179,7 +179,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       email: unprivilegedUser.email,
       name: unprivilegedUser.name,
       role: unprivilegedUser.role,
-      departmentId: unprivilegedUser.departmentId,
+
     });
 
     // 4. Create Retention Rule
@@ -218,7 +218,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         code: `TASK_DT_${testRunId.slice(-4)}`,
         title: `Nhiệm vụ rà soát chương trình đào tạo - ${testRunId}`,
         createdBy: { connect: { id: unitHeadUser.id } },
-        department: { connect: { id: `dept-acad-${testRunId}` } },
+        leadUnitId: ouAcadId,
         academicMonth: 3,
         academicYear: "2025-2026",
         dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),

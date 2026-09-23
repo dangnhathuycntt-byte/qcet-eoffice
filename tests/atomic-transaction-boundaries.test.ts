@@ -105,7 +105,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
         description: 'Testing atomic task creation happy path',
         dueDate: '2026-10-15',
         createdById: testCreatorId,
-        departmentId: testDepartmentId,
+
         scope: TaskScope.SCHOOL,
         priority: TaskPriority.HIGH,
         primaryOwnerId: testCreatorId,
@@ -155,7 +155,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             title: taskTitle,
             dueDate: '2026-10-20',
             createdById: testCreatorId,
-            departmentId: testDepartmentId,
+
             failAtStep: 'afterTaskCreate',
           });
         },
@@ -180,7 +180,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
             title: taskTitle,
             dueDate: '2026-10-20',
             createdById: testCreatorId,
-            departmentId: testDepartmentId,
+
             primaryOwnerId: testCreatorId,
             collaboratorIds: [testCollaboratorId],
             audit: {

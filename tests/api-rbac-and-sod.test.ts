@@ -41,7 +41,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       email: adminUser.email,
       name: adminUser.name,
       role: adminUser.role,
-      departmentId: adminUser.departmentId,
+
     });
 
     bghToken = signSessionToken({
@@ -49,7 +49,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
 
     leaderDeptToken = signSessionToken({
@@ -57,7 +57,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     staffToken = signSessionToken({
@@ -65,7 +65,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
 
     // 2. Create dedicated test tasks for clean isolation

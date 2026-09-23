@@ -285,7 +285,7 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
         email: "chuyenvien.vanphong@cdktcnqn.edu.vn",
         name: "Chuyên viên Văn phòng",
         role: UserRole.CHUYEN_VIEN,
-        departmentId: "DEPT_VP",
+
         avatarUrl: null,
         isActive: true,
         accounts: [],
@@ -350,7 +350,7 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
         name: "Trợ lý Văn phòng",
         role: UserRole.CHUYEN_VIEN,
         title: "Chuyên viên",
-        departmentId: "DEPT_VP",
+
         isActive: true,
       };
 
@@ -562,7 +562,7 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
         phone: null,
         avatarUrl: null,
         provider: "google",
-        departmentId: "TT_STT",
+
         isActive: true,
       };
 
@@ -660,7 +660,7 @@ describe("Issue #5: Auth.js V5 + Google Workspace Consolidation & Security Test 
         phone: null,
         avatarUrl: null,
         provider: "google",
-        departmentId: "KHOA_CNTT",
+
         isActive: true,
       };
 

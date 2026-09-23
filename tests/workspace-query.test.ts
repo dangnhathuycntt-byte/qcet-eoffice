@@ -1009,7 +1009,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "staff.cntt@qcet.edu.vn",
         name: "Nguyen Van Staff",
         role: "CHUYEN_VIEN",
-        departmentId: "DEPT_CNTT",
+
         isActive: true,
       };
 
@@ -1046,7 +1046,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "chuyenvien.cntt@qcet.edu.vn",
         name: "Tran Van Staff",
         role: "CHUYEN_VIEN",
-        departmentId: "DEPT_CNTT",
+
         isActive: true,
       };
 
@@ -1085,7 +1085,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "admin@qcet.edu.vn",
         name: "Admin User",
         role: "ADMIN",
-        departmentId: null,
+
         isActive: true,
       };
 
@@ -1094,7 +1094,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "hieutruong@qcet.edu.vn",
         name: "Hieu Truong",
         role: "HIEU_TRUONG",
-        departmentId: null,
+
         isActive: true,
       };
 
@@ -1126,7 +1126,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "giangvien@qcet.edu.vn",
         name: "Giang Vien A",
         role: "GIANG_VIEN",
-        departmentId: "KHOA_CNTT",
+
         isActive: true,
       };
 

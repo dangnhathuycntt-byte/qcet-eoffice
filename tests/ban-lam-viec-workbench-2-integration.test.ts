@@ -294,7 +294,7 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
   describe("5. Compact Table View in DepartmentProgressMatrix", () => {
     const mockDepts: DepartmentHealthSummary[] = [
       {
-        departmentId: "CNTT",
+
         code: "CNTT",
         departmentName: "Khoa Công Nghệ Thông Tin",
         leadName: "Nguyễn Văn A",
@@ -312,7 +312,7 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
         status: "good",
       },
       {
-        departmentId: "DIEN",
+
         code: "DIEN",
         departmentName: "Khoa Điện - Điện Tử",
         leadName: "Trần Văn B",

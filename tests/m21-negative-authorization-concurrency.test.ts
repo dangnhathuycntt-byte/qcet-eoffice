@@ -161,7 +161,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         email: `delegator_m21_${runId}@qcet.edu.vn`,
         name: 'Trưởng phòng Khảo thí',
         role: UserRole.TRUONG_PHONG,
-        departmentId: testDept.id,
+
         isActive: true,
       },
     });
@@ -171,7 +171,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         email: `delegatee_m21_${runId}@qcet.edu.vn`,
         name: 'Phó Trưởng phòng Khảo thí',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: testDept.id,
+
         isActive: true,
       },
     });
@@ -242,7 +242,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
       email: delegatorUser.email,
       name: delegatorUser.name,
       role: delegatorUser.role,
-      departmentId: testDept.id,
+
     });
   });
 
@@ -460,7 +460,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
           description: 'Kiểm tra xung đột đồng thời với expectedVersion',
           priority: TaskPriority.NORMAL,
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDept.id,
+
           createdById: delegatorUser.id,
           dueDate,
           academicMonth: 9,

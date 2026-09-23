@@ -128,7 +128,7 @@ describe('4. Segregation of Duties (SoD) Enforcement', () => {
     userId: 'user-leader-1',
     role: 'TRUONG_PHONG',
     positionCode: 'TRUONG_PHONG',
-    departmentId: 'dept-cntt',
+
   };
 
   const executiveUser = {
@@ -143,7 +143,7 @@ describe('4. Segregation of Duties (SoD) Enforcement', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'user-leader-1', // Creator is leaderUser
       leadAssigneeId: 'user-staff-1',
-      departmentId: 'dept-cntt',
+
     };
 
     assert.equal(isTaskMaker(taskCreatedByLeader, leaderUser.userId), true);
@@ -180,7 +180,7 @@ describe('4. Segregation of Duties (SoD) Enforcement', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'user-bgh-1',
       leadAssigneeId: 'user-leader-1', // Leader is lead assignee
-      departmentId: 'dept-cntt',
+
     };
 
     assert.equal(isTaskMaker(taskLeadByLeader, leaderUser.userId), true);
@@ -199,7 +199,7 @@ describe('4. Segregation of Duties (SoD) Enforcement', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'user-bgh-1',
       leadAssigneeId: 'user-staff-1',
-      departmentId: 'dept-cntt',
+
       deliverables: [{ id: 'deliv-1', uploadedById: 'user-leader-1' }],
     };
 
@@ -219,7 +219,7 @@ describe('4. Segregation of Duties (SoD) Enforcement', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'user-staff-1',
       leadAssigneeId: 'user-staff-2',
-      departmentId: 'dept-cntt',
+
     };
 
     assert.equal(isTaskMaker(taskForReview, leaderUser.userId), false);
@@ -309,21 +309,21 @@ describe('6. Checker Attention: requires_my_approval Authority Tiers', () => {
     userId: 'head-cntt',
     role: 'TRUONG_PHONG',
     positionCode: 'TRUONG_PHONG',
-    departmentId: 'dept-cntt',
+
   };
 
   const unitHeadKinhTe = {
     userId: 'head-kt',
     role: 'TRUONG_PHONG',
     positionCode: 'TRUONG_PHONG',
-    departmentId: 'dept-kinhte',
+
   };
 
   const staff = {
     userId: 'staff-1',
     role: 'STAFF',
     positionCode: 'CHUYEN_VIEN',
-    departmentId: 'dept-cntt',
+
   };
 
   it('handles WAITING_APPROVAL: Executive and matching Unit Head have approval; other Unit Head and Staff do not', () => {
@@ -332,7 +332,7 @@ describe('6. Checker Attention: requires_my_approval Authority Tiers', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'creator-99',
       leadAssigneeId: 'assignee-99',
-      departmentId: 'dept-cntt',
+
     };
 
     // Executive can approve
@@ -358,7 +358,7 @@ describe('6. Checker Attention: requires_my_approval Authority Tiers', () => {
       status: 'PENDING_EXECUTIVE_APPROVAL',
       createdById: 'creator-99',
       leadAssigneeId: 'assignee-99',
-      departmentId: 'dept-cntt',
+
     };
 
     // Executive CAN approve
@@ -598,7 +598,7 @@ describe('10. Compound Attentions with due_soon & Orthogonality from Lifecycle S
       status: 'WAITING_APPROVAL',
       createdById: 'user-other',
       assigneeId: 'user-other-2',
-      departmentId: 'dept-cntt',
+
       dueDate: '2026-09-11',
     };
 
@@ -606,7 +606,7 @@ describe('10. Compound Attentions with due_soon & Orthogonality from Lifecycle S
       userId: 'user-head-1',
       role: 'TRUONG_PHONG',
       positionCode: 'TRUONG_PHONG',
-      departmentId: 'dept-cntt',
+
       now: fixedNow,
     });
 

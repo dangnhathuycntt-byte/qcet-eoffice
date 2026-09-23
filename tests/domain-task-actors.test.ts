@@ -97,7 +97,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         name: `QA Dept Head ${testRunId}`,
         email: `qa_head_${testRunId}@qcet.edu.vn`,
         role: UserRole.TRUONG_PHONG,
-        departmentId: "P_QLDT",
+
       },
     });
     createdUserIds.push(deptHeadUser.id);
@@ -107,7 +107,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         name: `QA Task Creator ${testRunId}`,
         email: `qa_creator_${testRunId}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: "P_QLDT",
+
       },
     });
     createdUserIds.push(creatorUser.id);
@@ -117,7 +117,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         name: `QA Primary DRI 1 ${testRunId}`,
         email: `qa_dri1_${testRunId}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: "P_QLDT",
+
       },
     });
     createdUserIds.push(driUser1.id);
@@ -127,7 +127,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         name: `QA Primary DRI 2 ${testRunId}`,
         email: `qa_dri2_${testRunId}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: "P_QLDT",
+
       },
     });
     createdUserIds.push(driUser2.id);
@@ -137,7 +137,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         name: `QA Collaborator ${testRunId}`,
         email: `qa_collab_${testRunId}@qcet.edu.vn`,
         role: UserRole.CHUYEN_VIEN,
-        departmentId: "P_QLDT",
+
       },
     });
     createdUserIds.push(collaboratorUser.id);
@@ -1012,7 +1012,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
           title: "Nhiệm vụ kiểm tra tương thích ngược",
           description: "Mô tả nhiệm vụ kiểm thử hồi quy",
           createdById: creatorUser.id,
-          departmentId: "P_QLDT",
+
           academicMonth: 9,
           academicYear: "2026-2027",
           status: TaskStatus.IN_PROGRESS,
@@ -1060,11 +1060,12 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         },
       });
 
-      assert.ok(taskWithActors);
-      assert.equal(taskWithActors.createdBy.id, creatorUser.id);
-      assert.equal(taskWithActors.actors.length, 1);
-      assert.equal(taskWithActors.actors[0].userId, driUser1.id);
-      assert.equal(taskWithActors.actors[0].role, TaskActorRole.DRI);
+      assert.ok(taskWithLegacyIncludes);
+      assert.equal(taskWithLegacyIncludes.createdBy.id, creatorUser.id);
+      assert.equal(taskWithLegacyIncludes.assignees.length, 1);
+      assert.equal(taskWithLegacyIncludes.assignees[0].userId, driUser1.id);
+      assert.equal(taskWithLegacyIncludes.assignees[0].roleInTask.PRIMARY_OWNER);
+      assert.equal((taskWithLegacyIncludes as any).leadUnit?.id ?? taskWithLegacyIncludes.leadUnitId, "P_QLDT");
     });
 
     test("4.3 Standard CRUD updates on Task operate without requiring ReBAC relations", async () => {
@@ -1086,7 +1087,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         where: {
           academicMonth: 9,
           academicYear: "2026-2027",
-          departmentId: "P_QLDT",
+
           code: legacyTask.code,
         },
       });
@@ -1111,7 +1112,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
           code: `QA-MIG-1-${testRunId}`,
           title: "Nhiệm vụ di chuyển 1: Có assignee và phòng ban",
           createdById: creatorUser.id,
-          departmentId: "P_QLDT",
+
           academicMonth: 9,
           academicYear: "2026-2027",
           dueDate: new Date(Date.now() + 86400000),

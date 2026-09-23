@@ -32,7 +32,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         email: 'staff.sod@cdktcnqn.edu.vn',
         name: 'Giảng viên SoD',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: dept.id,
+
       }
     });
 
@@ -44,7 +44,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         email: 'leader.sod@cdktcnqn.edu.vn',
         name: 'Trưởng phòng SoD',
         role: UserRole.TRUONG_PHONG,
-        departmentId: dept.id,
+
       }
     });
 
@@ -56,7 +56,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         email: 'bgh.sod@cdktcnqn.edu.vn',
         name: 'Hiệu trưởng SoD',
         role: UserRole.BAN_GIAM_HIEU,
-        departmentId: dept.id,
+
       }
     });
 
@@ -65,7 +65,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
 
     leaderToken = signSessionToken({
@@ -73,7 +73,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     bghToken = signSessionToken({
@@ -81,7 +81,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       email: bghUser.email,
       name: bghUser.name,
       role: bghUser.role,
-      departmentId: bghUser.departmentId,
+
     });
 
     // Create task assigned to staffUser
@@ -97,7 +97,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
-        departmentId: dept.id,
+
         createdById: leaderUser.id,
         assignees: {
           create: {

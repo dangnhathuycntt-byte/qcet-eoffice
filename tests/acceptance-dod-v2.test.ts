@@ -148,7 +148,7 @@ test('QCET E-Office — Comprehensive DoD & Institutional Acceptance Verificatio
       isActive: true,
       activePositionCode: 'TRUONG_PHONG',
       activeUnitId: 'unit-a',
-      departmentId: 'unit-a',
+
     };
 
     const taskUnitB: AuthorizationResource = {

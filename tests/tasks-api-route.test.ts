@@ -111,7 +111,7 @@ describe('Tasks API Route Handler Tests', () => {
       body: JSON.stringify({
         title: 'Test Task Unauthenticated',
         dueDate: '2026-10-15',
-        departmentId: testDeptId,
+
       }),
     });
     const res = await POST(req);
@@ -151,7 +151,7 @@ describe('Tasks API Route Handler Tests', () => {
       body: JSON.stringify({
         title: 'Triển khai kiểm định chất lượng cấp cơ sở 2026',
         description: 'Mô tả chi tiết nhiệm vụ thử nghiệm',
-        departmentId: testDeptId,
+
         dueDate: '2026-10-30T17:00:00.000Z',
         priority: 'high',
         scope: 'department',
@@ -254,7 +254,7 @@ describe('Tasks API Route Handler Tests', () => {
           email: `tar_s1_${stamp}@unit.local`,
           name: 'TAR Staff 1',
           role: 'CHUYEN_VIEN',
-          departmentId: testDeptId,
+
         },
       });
       staffUser2 = await prisma.user.create({
@@ -263,7 +263,7 @@ describe('Tasks API Route Handler Tests', () => {
           email: `tar_s2_${stamp}@unit.local`,
           name: 'TAR Staff 2',
           role: 'CHUYEN_VIEN',
-          departmentId: testDeptId,
+
         },
       });
 
@@ -272,7 +272,7 @@ describe('Tasks API Route Handler Tests', () => {
         email: staffUser1.email,
         name: staffUser1.name,
         role: staffUser1.role,
-        departmentId: staffUser1.departmentId,
+
       });
     });
 
@@ -295,7 +295,7 @@ describe('Tasks API Route Handler Tests', () => {
         body: JSON.stringify({
           title: 'Subtask with non-existent parent',
           dueDate: '2026-10-30',
-          departmentId: testDeptId,
+
           parentTaskId: 'non-existent-task-id-12345',
         }),
       });
@@ -318,7 +318,7 @@ describe('Tasks API Route Handler Tests', () => {
         body: JSON.stringify({
           title: 'Root Task Single DRI Route Test',
           dueDate: '2026-10-25',
-          departmentId: testDeptId,
+
           academicMonth: 10,
           academicYear: '2026-2027',
           assigneeId: staffUser1.id,

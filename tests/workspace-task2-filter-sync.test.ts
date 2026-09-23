@@ -23,7 +23,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       taskCode: "NV-001",
       status: "IN_PROGRESS",
       priority: "HIGH",
-      departmentId: "CNTT",
+
       departmentName: "Khoa Công nghệ thông tin",
       leadDepartmentId: "CNTT",
       leadDepartment: "Khoa Công nghệ thông tin",
@@ -40,7 +40,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       taskCode: "NV-002",
       status: "WAITING_APPROVAL",
       priority: "NORMAL",
-      departmentId: "DAO_TAO",
+
       departmentName: "Phòng Đào tạo",
       leadDepartmentId: "DAO_TAO",
       leadDepartment: "Phòng Đào tạo",
@@ -57,7 +57,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       taskCode: "NV-003",
       status: "COMPLETED",
       priority: "URGENT",
-      departmentId: "KHAO_THI",
+
       departmentName: "Phòng Khảo thí & ĐBCL",
       leadDepartmentId: "KHAO_THI",
       leadDepartment: "Phòng Khảo thí & ĐBCL",

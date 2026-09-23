@@ -21,7 +21,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
       progressPercent: 75,
       dueDate: "2026-09-16T00:00:00.000Z",
       startDate: "2026-09-01T00:00:00.000Z",
-      departmentId: "P_DTQLKH",
+
       departmentName: "Phòng Đào tạo & QLKH",
       leadAssigneeName: "Thầy Nam",
       totalSubTasks: 1,
@@ -68,7 +68,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
       progressPercent: 30,
       dueDate: "2026-09-02T00:00:00.000Z",
       startDate: "2026-08-20T00:00:00.000Z",
-      departmentId: "P_QTTB",
+
       departmentName: "Phòng Quản trị - Thiết bị",
       leadAssigneeName: "Thầy Dũng",
       totalSubTasks: 0,

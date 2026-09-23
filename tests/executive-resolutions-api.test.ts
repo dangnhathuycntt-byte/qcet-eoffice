@@ -38,7 +38,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: bgh.email,
       name: bgh.name,
       role: bgh.role,
-      departmentId: bgh.departmentId,
+
     });
 
     // Canonical statutory mandate (Issue #27): executive authority requires
@@ -78,7 +78,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: staff.email,
       name: staff.name,
       role: staff.role,
-      departmentId: staff.departmentId,
+
     });
 
     // 4. Fetch Admin user
@@ -92,7 +92,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       email: admin.email,
       name: admin.name,
       role: admin.role,
-      departmentId: admin.departmentId,
+
     });
 
     // 5. Create a test task (initially OVERDUE or NORMAL)
@@ -108,7 +108,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-09-20T00:00:00.000Z'),
-        departmentId: testDeptId,
+
         createdById: bghUser.id,
       },
     });

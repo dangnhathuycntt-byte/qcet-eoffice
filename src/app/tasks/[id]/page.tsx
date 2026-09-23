@@ -154,8 +154,8 @@ export default async function Page({ params, searchParams }: TaskDetailPageParam
   const isSchoolScope = rawTask.scope === "SCHOOL";
   const mappedTask = (
     isSchoolScope
-      ? mapPrismaTaskToSchoolTask(rawTask)
-      : mapPrismaTaskToStaffTask(rawTask)
+      ? mapPrismaTaskToSchoolTask(rawTask as any)
+      : mapPrismaTaskToStaffTask(rawTask as any)
   ) as unknown as SchoolTask | StaffTask;
   (mappedTask as any).availableActions = availableActions;
 

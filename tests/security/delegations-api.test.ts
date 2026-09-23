@@ -178,7 +178,7 @@ describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
       email: regularUser.email,
       name: regularUser.name,
       role: regularUser.role,
-      departmentId: regularUser.departmentId,
+
     });
 
     delegatorToken = await signSessionToken({
@@ -186,7 +186,7 @@ describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
       email: delegatorUser.email,
       name: delegatorUser.name,
       role: delegatorUser.role,
-      departmentId: delegatorUser.departmentId,
+
     });
 
     delegateeToken = await signSessionToken({
@@ -194,7 +194,7 @@ describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
       email: delegateeUser.email,
       name: delegateeUser.name,
       role: delegateeUser.role,
-      departmentId: delegateeUser.departmentId,
+
     });
 
     rectorToken = await signSessionToken({
@@ -202,7 +202,7 @@ describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
       email: rectorUser.email,
       name: rectorUser.name,
       role: rectorUser.role,
-      departmentId: rectorUser.departmentId,
+
     });
   });
 

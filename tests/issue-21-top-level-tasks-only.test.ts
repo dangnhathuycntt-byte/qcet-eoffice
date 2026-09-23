@@ -39,7 +39,7 @@ function makeParentTask(id: string, overrides: Partial<SchoolTask> = {}): School
     title: `Nhiệm vụ cha ${id}`,
     department: "Phòng CNTT",
     departmentCode: "CNTT",
-    departmentId: "CNTT",
+
     leadDepartment: "Phòng CNTT",
     leadDepartmentCode: "CNTT",
     leadDepartmentId: "CNTT",
@@ -89,7 +89,7 @@ function makeChildTask(id: string, parentId: string, overrides: Partial<SchoolTa
     title: `Nhiệm vụ con ${id} (cha: ${parentId})`,
     department: "Phòng CNTT",
     departmentCode: "CNTT",
-    departmentId: "CNTT",
+
     leadDepartment: "Phòng CNTT",
     leadDepartmentCode: "CNTT",
     leadDepartmentId: "CNTT",

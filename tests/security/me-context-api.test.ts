@@ -156,7 +156,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         role: UserRole.CHUYEN_VIEN,
         title: 'Chuyên viên QLĐT',
         phone: '0901234567',
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -167,7 +167,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         name: 'Nguyễn Trưởng Khoa Grantor',
         role: UserRole.CHUYEN_VIEN,
         title: 'Trưởng Khoa',
-        departmentId: deptId,
+
         isActive: true,
       },
     });
@@ -177,7 +177,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         email: `disabled.${testRunId}@qncet.edu.vn`,
         name: 'Lê Vô Hiệu Hóa',
         role: UserRole.CHUYEN_VIEN,
-        departmentId: deptId,
+
         isActive: false,
       },
     });

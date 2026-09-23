@@ -168,7 +168,7 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
         category: "CNTT",
         categoryLabel: "CNTT",
         leadAssigneeName: "Nguyễn Văn A",
-        departmentId: "CNTT",
+
         coAssignees: [],
         assignedDate: "2026-09-01",
         dueDate: "2026-09-20",
@@ -178,7 +178,7 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
             id: "sub-rel-1",
             title: "Cấu hình Switch L3",
             assigneeName: "Kỹ thuật viên 1",
-            departmentId: "CNTT",
+
             status: "IN_PROGRESS",
             dueDate: "2026-09-15",
             parentSchoolTaskId: "task-rel-1",
@@ -195,7 +195,7 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
         category: "BAO_CAO",
         categoryLabel: "Báo cáo",
         leadAssigneeName: "Trần Thị B",
-        departmentId: "DAO_TAO",
+
         coAssignees: [],
         assignedDate: "2026-09-01",
         dueDate: "2026-09-10",
@@ -247,7 +247,7 @@ describe("Personal Scope Subtask First-Class UX Suite (MY_TASKS)", () => {
             status: "IN_PROGRESS",
             dueDate: "2026-09-15",
             department: "Khoa CNTT",
-            departmentId: "CNTT",
+
             updatedAt: "2026-09-01T00:00:00.000Z",
           },
           {

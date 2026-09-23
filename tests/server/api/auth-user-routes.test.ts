@@ -34,7 +34,7 @@ describe('Authentication and User API Routes Hardening', () => {
         passwordHash,
         role: 'CHUYEN_VIEN',
         isActive: true,
-        departmentId: 'CNTT',
+
       },
     });
     testUserId = user.id;
@@ -184,7 +184,7 @@ describe('Authentication and User API Routes Hardening', () => {
           email: `reg.${testRunId}@qcet.edu.vn`,
           password: 'SecurePassword123!',
           name: 'Cán Bộ Mới',
-          departmentId: 'CNTT',
+
         }),
       });
 
@@ -219,7 +219,7 @@ describe('Authentication and User API Routes Hardening', () => {
         email: testUserEmail,
         name: 'Nguyễn Văn Kiểm Thử',
         role: 'CHUYEN_VIEN',
-        departmentId: 'CNTT',
+
       });
 
       const req = new Request('http://localhost:3000/api/auth/me', {
@@ -262,7 +262,7 @@ describe('Authentication and User API Routes Hardening', () => {
         email: testUserEmail,
         name: 'Nguyễn Văn Kiểm Thử',
         role: 'CHUYEN_VIEN',
-        departmentId: 'CNTT',
+
       });
 
       const req = new Request('http://localhost:3000/api/users?limit=10', {
@@ -296,7 +296,7 @@ describe('Authentication and User API Routes Hardening', () => {
         email: testUserEmail,
         name: 'Nguyễn Văn Kiểm Thử',
         role: 'CHUYEN_VIEN',
-        departmentId: 'CNTT',
+
       });
 
       const req = new Request(`http://localhost:3000/api/users?q=Kiểm+Thử`, {

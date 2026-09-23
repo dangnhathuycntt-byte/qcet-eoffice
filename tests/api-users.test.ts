@@ -11,7 +11,7 @@ describe("API Route: /api/users", () => {
     name: string;
     email: string;
     role: string;
-    departmentId: string | null;
+
   };
   let authCookie: string;
 
@@ -27,7 +27,7 @@ describe("API Route: /api/users", () => {
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId ?? undefined,
+
     });
     authCookie = `${SESSION_COOKIE_NAME}=${token}`;
   });

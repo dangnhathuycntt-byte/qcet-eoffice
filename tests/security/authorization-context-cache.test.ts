@@ -152,7 +152,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
         name: 'Người dùng Thử nghiệm Cache',
         role: UserRole.TRUONG_PHONG,
         title: 'Trưởng phòng ban đầu',
-        departmentId: deptId,
+
         isActive: true,
       },
       select: { id: true, email: true },
@@ -165,7 +165,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
         name: 'Người ủy quyền Thử nghiệm Cache',
         role: UserRole.ADMIN,
         title: 'Hiệu trưởng',
-        departmentId: deptId,
+
         isActive: true,
       },
       select: { id: true, email: true },

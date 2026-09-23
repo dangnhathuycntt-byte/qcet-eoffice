@@ -25,7 +25,7 @@ const baseSubtask = {
   id: 'subtask-01',
   status: 'IN_PROGRESS',
   assigneeId: 'user-staff-01',
-  departmentId: 'dept-cntt',
+
   scope: 'DEPARTMENT',
 };
 
@@ -34,7 +34,7 @@ const staffActor = {
   id: 'user-staff-01',
   role: 'STAFF',          // client simplified
   dbRole: 'CHUYEN_VIEN',  // raw DB role
-  departmentId: 'dept-cntt',
+
 };
 
 /** Actor: Trưởng phòng */
@@ -42,7 +42,7 @@ const managerActor = {
   id: 'user-mgr-01',
   role: 'MANAGER',
   dbRole: 'TRUONG_PHONG',
-  departmentId: 'dept-cntt',
+
 };
 
 /** Actor: Ban giám hiệu */
@@ -50,7 +50,7 @@ const executiveActor = {
   id: 'user-bgh-01',
   role: 'ADMIN',
   dbRole: 'BAN_GIAM_HIEU',
-  departmentId: null,
+
 };
 
 /** Quyền đầy đủ bao gồm update_execution */
@@ -73,7 +73,7 @@ describe('buildSubtaskActorContext', () => {
       id: 'user-01',
       role: 'ADMIN',           // client simplified
       dbRole: 'BAN_GIAM_HIEU', // raw DB
-      departmentId: 'dept-01',
+
     });
 
     assert.equal(ctx.role, 'BAN_GIAM_HIEU', 'Phải dùng dbRole');
@@ -117,7 +117,7 @@ describe('buildSubtaskContext', () => {
     const ctx = buildSubtaskContext({
       id: 'st-01',
       assigneeId: 'user-01',
-      departmentId: 'dept-01',
+
       scope: 'DEPARTMENT',
     });
 
@@ -547,14 +547,14 @@ describe('Role/scope guard trong subtask context', () => {
     const subtask = {
       ...baseSubtask,
       status: 'WAITING_APPROVAL',
-      departmentId: 'dept-cntt',
+
       assigneeId: 'user-other',
     };
 
     const otherManager = {
       ...managerActor,
       id: 'user-mgr-02',
-      departmentId: 'dept-kinhte',
+
     };
 
     const result = canSubtaskTransition(

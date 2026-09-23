@@ -32,7 +32,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
       email: user.email,
       name: user.name,
       role: user.role,
-      departmentId: user.departmentId,
+
     });
 
     // Create a task for testing detail routes
@@ -48,7 +48,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
-        departmentId: testDeptId,
+
         createdById: testUserId,
         assignees: {
           create: {
@@ -279,7 +279,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
-        departmentId: deptId,
+
         createdById: userId,
       },
     });

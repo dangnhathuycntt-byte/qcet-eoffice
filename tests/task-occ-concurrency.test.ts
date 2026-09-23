@@ -33,7 +33,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         email: `occ_leader_${Date.now()}@qncet.edu.vn`,
         name: 'Trưởng đơn vị OCC',
         role: 'TRUONG_PHONG',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(leaderUser.id);
@@ -43,7 +43,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       email: leaderUser.email,
       name: leaderUser.name,
       role: leaderUser.role,
-      departmentId: leaderUser.departmentId,
+
     });
 
     // 3. Create staff user (CHUYEN_VIEN)
@@ -52,7 +52,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         email: `occ_staff_${Date.now()}@qncet.edu.vn`,
         name: 'Chuyên viên OCC',
         role: 'CHUYEN_VIEN',
-        departmentId: testDept.id,
+
       },
     });
     createdUserIds.push(staffUser.id);
@@ -62,7 +62,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       email: staffUser.email,
       name: staffUser.name,
       role: staffUser.role,
-      departmentId: staffUser.departmentId,
+
     });
   });
 
@@ -106,7 +106,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         title: initialTitle,
         priority: TaskPriority.HIGH,
         scope: TaskScope.DEPARTMENT,
-        departmentId: testDept.id,
+
         createdById: leaderUser.id,
         dueDate,
         academicMonth: 9,

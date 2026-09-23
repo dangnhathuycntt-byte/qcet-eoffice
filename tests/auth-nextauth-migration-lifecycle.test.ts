@@ -48,7 +48,7 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       email: dbUser.email,
       name: dbUser.name,
       role: dbUser.role,
-      departmentId: dbUser.departmentId,
+
       title: dbUser.title,
     });
 
@@ -78,7 +78,7 @@ describe("Auth.js NextAuth Migration & Full Lifecycle Regression Suite", () => {
       email: dbDisabledUser.email,
       name: dbDisabledUser.name,
       role: dbDisabledUser.role,
-      departmentId: dbDisabledUser.departmentId,
+
       title: dbDisabledUser.title,
     });
   });

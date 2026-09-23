@@ -13,11 +13,11 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
     email: 'nva@qcet.edu.vn',
     role: 'STAFF',
     phone: '0912345678',
-    departmentId: 'dept-cntt',
+
     department: {
       id: 'dept-cntt',
       name: 'Khoa Công nghệ Thông tin',
-      shortName: 'CNTT',
+,
     },
     // Tier 4 statutory HR fields in raw database entity
     citizenId: '052099001234',
@@ -33,11 +33,11 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
     email: 'ttb@qcet.edu.vn',
     role: 'STAFF',
     phone: '0987654321',
-    departmentId: 'dept-daotao',
+
     department: {
       id: 'dept-daotao',
       name: 'Phòng Đào tạo',
-      shortName: 'P.ĐT',
+,
     },
     citizenId: '052099009999',
     salary: 18000000,
@@ -52,7 +52,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const viewer = {
         id: 'user-001',
         role: 'STAFF',
-        departmentId: 'dept-cntt',
+
       };
 
       const canRead = canReadSensitivePersonalData(viewer, targetUserInDept1);
@@ -67,7 +67,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const viewer = {
         userId: 'user-001',
         role: 'STAFF',
-        departmentId: 'dept-cntt',
+
       };
 
       const canRead = canReadSensitivePersonalData(viewer, targetUserInDept1);
@@ -87,7 +87,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const colleagueSameUnit = {
         id: 'user-003',
         role: 'STAFF',
-        departmentId: 'dept-cntt',
+
       };
 
       const canRead = canReadSensitivePersonalData(colleagueSameUnit, targetUserInDept1);
@@ -102,7 +102,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const colleagueCrossUnit = {
         id: 'user-002',
         role: 'STAFF',
-        departmentId: 'dept-daotao',
+
       };
 
       const canRead = canReadSensitivePersonalData(colleagueCrossUnit, targetUserInDept1);
@@ -132,7 +132,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         const unitLeader = {
           id: 'leader-dept1',
           role,
-          departmentId: 'dept-cntt',
+
         };
 
         const canRead = canReadSensitivePersonalData(unitLeader, targetUserInDept1);
@@ -147,7 +147,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         const unitLeader = {
           id: 'leader-dept1',
           role,
-          departmentId: 'dept-cntt',
+
         };
 
         const canRead = canReadSensitivePersonalData(unitLeader, targetUserInDept2);
@@ -200,7 +200,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         const execLeader = {
           id: 'exec-leader-01',
           role,
-          departmentId: 'dept-bgh',
+
         };
 
         // Dept 1
@@ -241,7 +241,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const sysAdmin = {
         id: 'admin-001',
         role: 'SYSTEM_ADMIN',
-        departmentId: 'dept-cntt', // Even if assigned to same department!
+
         isSystemAdmin: true,
       };
 
@@ -267,7 +267,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         email: 'sysadmin@qcet.edu.vn',
         role: 'SYSTEM_ADMIN',
         phone: '0900000000',
-        departmentId: 'dept-cntt',
+
         isSystemAdmin: true,
       };
 
@@ -321,7 +321,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const viewer = {
         id: 'leader-dept1',
         role: 'TRUONG_KHOA',
-        departmentId: 'dept-cntt',
+
       };
 
       const users = [targetUserInDept1, targetUserInDept2];

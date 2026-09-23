@@ -35,7 +35,7 @@ function makeRawTask(overrides: Record<string, any> = {}): RawTaskEntity {
     academicYear: overrides.academicYear ?? '2026-2027',
     startDate: overrides.startDate ?? new Date('2026-01-01'),
     dueDate: overrides.dueDate ?? new Date('2026-12-31'),
-    departmentId: overrides.departmentId ?? 'dept-1',
+
     parentTaskId: overrides.parentTaskId ?? null,
     parentTask: overrides.parentTask ?? null,
     createdById: overrides.createdById ?? 'user-1',
@@ -65,7 +65,7 @@ function makeSubTask(id: string, extra: Record<string, any> = {}): any {
     status: extra.status ?? 'IN_PROGRESS',
     progressPercent: extra.progressPercent ?? 25,
     scope: extra.scope ?? 'DEPARTMENT',
-    departmentId: extra.departmentId ?? 'dept-1',
+
     createdById: extra.createdById ?? 'user-1',
     parentTaskId: extra.parentTaskId ?? 'task-root',
     startDate: new Date('2026-02-01'),
@@ -166,7 +166,7 @@ describe('authorizeSubTasks', () => {
     const subB = makeSubTask('sub-b', {
       assigneeId: 'user-3',
       assigneeName: 'Lê C',
-      departmentId: 'dept-other',
+
     });
 
     const authCtx = makeAuthCtx({ userId: 'user-1' });

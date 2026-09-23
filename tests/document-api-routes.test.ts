@@ -511,7 +511,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
         name: `Chuyên viên A ${runId}`,
         passwordHash: 'dummy-password-hash',
         role: 'CHUYEN_VIEN',
-        departmentId: deptA.id,
+
         isActive: true,
       },
     });
@@ -522,7 +522,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
         name: `Chuyên viên B ${runId}`,
         passwordHash: 'dummy-password-hash',
         role: 'CHUYEN_VIEN',
-        departmentId: deptB.id,
+
         isActive: true,
       },
     });
@@ -532,7 +532,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       email: userA.email,
       name: userA.name,
       role: userA.role,
-      departmentId: userA.departmentId,
+
     });
 
     tokenB = signSessionToken({
@@ -540,7 +540,7 @@ describe("Task 3.17: Document ACL-Before-Pagination (F13)", () => {
       email: userB.email,
       name: userB.name,
       role: userB.role,
-      departmentId: userB.departmentId,
+
     });
 
     // 3. Create 100 unauthorized documents (Department B, registered by User B)

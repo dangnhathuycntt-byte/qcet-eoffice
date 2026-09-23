@@ -24,7 +24,7 @@ const sampleEntries: CalendarEntry[] = [
     title: "Báo cáo tổng kết năm học toàn trường",
     level: "Trường",
     status: "IN_PROGRESS",
-    departmentId: undefined,
+
     assigneeId: "user-principal",
     assigneeName: "Hiệu trưởng Nguyễn Văn A",
   },
@@ -38,7 +38,7 @@ const sampleEntries: CalendarEntry[] = [
     title: "Triển khai hạ tầng phòng thực hành CNTT",
     level: "Đơn vị",
     status: "IN_PROGRESS",
-    departmentId: "K_CNTT",
+
     departmentName: "Khoa CNTT",
     assigneeId: "user-cntt-lead",
     assigneeName: "Trần Trọng B",
@@ -53,7 +53,7 @@ const sampleEntries: CalendarEntry[] = [
     title: "Tổng hợp danh sách nhân sự",
     level: "Đơn vị",
     status: "WAITING_APPROVAL",
-    departmentId: "P_TCHC",
+
     departmentName: "Phòng TCHC",
     assigneeId: "user-tchc-staff",
     assigneeName: "Lê Thị C",
@@ -115,7 +115,7 @@ describe("Calendar presentation discriminated union & scope semantics", () => {
     const cnttUser: CalendarUserContext = {
       id: "user-cntt-staff-x",
       name: "Phạm Văn D",
-      departmentId: "K_CNTT",
+
       departmentName: "Khoa CNTT",
     };
 
@@ -145,7 +145,7 @@ describe("Calendar presentation discriminated union & scope semantics", () => {
     const userLeadB: CalendarUserContext = {
       id: "user-cntt-lead",
       name: "Trần Trọng B",
-      departmentId: "K_CNTT",
+
     };
 
     const myItems = filterPresentationEntriesByScope(sampleEntries, "personal", userLeadB);
@@ -178,7 +178,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     originType: "school_milestone",
     priority: "HIGH",
     status: "IN_PROGRESS",
-    departmentId: "K_CNTT",
+
     departmentName: "Khoa CNTT",
     assigneeId: "user-cntt-lead",
     assigneeName: "Trần Trọng B",
@@ -195,7 +195,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     originType: "subtask",
     priority: "MEDIUM",
     status: "IN_PROGRESS",
-    departmentId: "P_TCHC",
+
     departmentName: "Phòng TCHC",
     assigneeId: "user-tchc-staff",
     assigneeName: "Lê Thị C",
@@ -203,7 +203,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     daysOverdue: 0,
   };
   const meetingAsEntry = {
-    departmentId: "K_CNTT",
+
     unitId: "K_CNTT",
     organizerId: "user-cntt-lead",
   };
@@ -237,7 +237,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     const idLess: WorkCalendarItem = {
       ...tchcSubtask,
       id: "subtask-id-less",
-      departmentId: undefined,
+
       departmentName: undefined,
     };
     assert.strictEqual(
@@ -257,7 +257,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     const sameNameOtherId: WorkCalendarItem = {
       ...cnttMilestone,
       id: "milestone-same-name",
-      departmentId: "P_TCHC",
+
       departmentName: "Khoa CNTT",
     };
     assert.strictEqual(
@@ -302,7 +302,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     const items = [cnttMilestone, tchcSubtask];
     const unitItems = filterWorkCalendarEntriesByScope(items, "unit", {
       id: "u",
-      departmentId: "K_CNTT",
+
     });
     assert.deepEqual(
       unitItems.map((i) => i.id),
@@ -324,7 +324,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
           title: "Việc trường",
           status: "IN_PROGRESS",
           dueDate: "2026-09-20",
-          departmentId: "K_CNTT",
+
           leadAssigneeId: "user-cntt-lead",
           subTasks: [
             {
@@ -342,7 +342,7 @@ describe("work-calendar-adapter scope semantics (ID-first)", () => {
     );
     const unitItems = filterWorkCalendarEntriesByScope(transformed, "unit", {
       id: "u",
-      departmentId: "K_CNTT",
+
     });
     assert.ok(unitItems.some((i) => i.id === "milestone-school-1"));
     assert.ok(!unitItems.some((i) => i.id === "subtask-sub-1"));

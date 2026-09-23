@@ -61,7 +61,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         email: `user_a_${rand}@qcet.edu.vn`,
         name: 'Chuyên viên User A',
         role: 'CHUYEN_VIEN',
-        departmentId: deptA.id,
+
         isActive: true,
       },
     });
@@ -72,7 +72,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
         email: `user_b_${rand}@qcet.edu.vn`,
         name: 'Chuyên viên User B',
         role: 'CHUYEN_VIEN',
-        departmentId: deptB.id,
+
         isActive: true,
       },
     });
@@ -123,7 +123,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
       email: userA.email,
       name: userA.name,
       role: userA.role,
-      departmentId: userA.departmentId,
+
     });
 
     tokenB = signSessionToken({
@@ -131,7 +131,7 @@ describe('IDOR & Resource-Level Authorization Security Tests (Issue #28)', () =>
       email: userB.email,
       name: userB.name,
       role: userB.role,
-      departmentId: userB.departmentId,
+
     });
 
     tokenRector = signSessionToken({
