@@ -274,7 +274,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         {
           title: 'Nhiệm vụ kiểm thử dịch vụ miền Canonical',
           description: 'Mô tả nhiệm vụ kiểm thử toàn diện',
-          departmentId: testDept1Id,
+          leadUnitId: testDept1Id,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           priority: 'high',
           scope: 'department',
@@ -312,7 +312,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             { user: staffUser1 },
             {
               title: 'Nhiệm vụ cấp trường trái quyền',
-              departmentId: testDept1Id,
+              leadUnitId: testDept1Id,
               dueDate: new Date('2026-11-20T17:00:00.000Z'),
               scope: 'school',
             }
@@ -331,7 +331,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         { user: managerUser },
         {
           title: 'Nhiệm vụ kiểm thử chống mạo danh creatorId',
-          departmentId: testDept1Id,
+          leadUnitId: testDept1Id,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           scope: 'department',
           creatorId: adminUser.id, // Attempt to spoof admin
@@ -350,7 +350,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         { user: adminUser },
         {
           title: 'Nhiệm vụ do BGH tạo hộ cấp dưới',
-          departmentId: testDept1Id,
+          leadUnitId: testDept1Id,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           scope: 'department',
           creatorId: staffUser1.id,
@@ -510,7 +510,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         { user: adminUser },
         {
           title: 'Nhiệm vụ kiểm thử TaskQueryService',
-          departmentId: testDept1Id,
+          leadUnitId: testDept1Id,
           dueDate: new Date('2026-10-15T17:00:00.000Z'),
           priority: 'normal',
           scope: 'department',

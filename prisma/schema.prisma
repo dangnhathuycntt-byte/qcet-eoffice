@@ -77,23 +77,6 @@ enum ResolutionType {
   DISMISS_BOTTLENECK
 }
 
-model Department {
-  id          String   @id @db.VarChar(50)
-  name        String   @db.VarChar(255)
-  shortName   String?  @map("short_name") @db.VarChar(50)
-  color       String?  @db.VarChar(20)
-  users       User[]
-  tasks       Task[]
-  draftingDocs Document[]          @relation("DraftingDeptDocs")
-  leadDocs     Document[]          @relation("LeadDepartmentDocs")
-  directives   DocumentDirective[] @relation("DirectiveDepartments")
-  jobCatalogItems JobCatalogItem[]
-  dacumDuties     DacumDuty[]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("departments")
-}
 
 model User {
   id                    String                @id @default(cuid())
@@ -101,8 +84,6 @@ model User {
   name                  String                @db.VarChar(255)
   passwordHash          String?               @map("password_hash")
   role                  UserRole              @default(CHUYEN_VIEN)
-  departmentId          String?               @map("department_id") @db.VarChar(50)
-  department            Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   title                 String?               @db.VarChar(150)
   phone                 String?               @db.VarChar(20)
   avatarUrl             String?               @map("avatar_url")
@@ -216,8 +197,6 @@ model Task {
   startDate       DateTime              @default(now()) @map("start_date")
   dueDate         DateTime              @map("due_date")
   completedAt     DateTime?             @map("completed_at")
-  departmentId    String?               @map("department_id") @db.VarChar(50)
-  department      Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   createdById     String                @map("created_by_id")
   createdBy       User                  @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   parentTaskId    String?               @map("parent_task_id")
@@ -248,11 +227,9 @@ model Task {
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
 
-  @@index([departmentId, academicYear, academicMonth])
   @@index([academicYear])
   @@index([status, dueDate])
   @@index([scope, status, dueDate])
-  @@index([departmentId, status, dueDate])
   @@index([parentTaskId])
   @@index([createdById])
   @@index([updatedAt(sort: Desc)])
@@ -330,15 +307,11 @@ model Document {
   // Các trường đặc thù Văn bản Đi (Phụ lục IV Mẫu Sổ Văn bản Đi)
   signerName         String?               @map("signer_name") @db.VarChar(150)
   signerTitle        String?               @map("signer_title") @db.VarChar(100)
-  draftingDeptId     String?               @map("drafting_dept_id") @db.VarChar(50)
-  draftingDept       Department?           @relation("DraftingDeptDocs", fields: [draftingDeptId], references: [id], onDelete: SetNull)
   recipientList      String?               @map("recipient_list") @db.Text
   distributedCopies  Int?                  @default(1) @map("distributed_copies")
 
   // Các trường đặc thù Văn bản Đến (Phụ lục IV Mẫu Sổ Văn bản Đến)
   dueDate            DateTime?             @map("due_date")
-  leadDepartmentId   String?               @map("lead_department_id") @db.VarChar(50)
-  leadDepartment     Department?           @relation("LeadDepartmentDocs", fields: [leadDepartmentId], references: [id], onDelete: SetNull)
   leadUserId         String?               @map("lead_user_id")
   leadUser           User?                 @relation("LeadUserDocs", fields: [leadUserId], references: [id], onDelete: SetNull)
 
@@ -375,8 +348,6 @@ model Document {
   @@index([type, status, dueDate])
   @@index([status, urgency, dueDate])
   @@index([originalNumber])
-  @@index([leadDepartmentId])
-  @@index([draftingDeptId])
   @@map("documents")
 }
 
@@ -432,7 +403,6 @@ model DocumentDirective {
 
   document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
   leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id], onDelete: Restrict)
-  assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id], onDelete: Restrict)
   version          Int         @default(1) @map("version")
   createdAt        DateTime    @default(now()) @map("created_at")
 
@@ -742,8 +712,6 @@ model JobCatalogItem {
   code          String          @unique @db.VarChar(50)
   title         String          @db.VarChar(255)
   group         JobCatalogGroup
-  departmentId  String?         @map("department_id") @db.VarChar(50)
-  department    Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   description   String?         @db.Text
   competencyReq String?         @map("competency_req") @db.Text
   duties        DacumDuty[]
@@ -751,7 +719,6 @@ model JobCatalogItem {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
-  @@index([group, departmentId])
   @@map("job_catalog_items")
 }
 
@@ -759,15 +726,12 @@ model DacumDuty {
   id               String          @id @db.VarChar(50)
   code             String          @db.VarChar(20)
   title            String          @db.VarChar(255)
-  departmentId     String          @map("department_id") @db.VarChar(50)
-  department       Department      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   jobCatalogItemId String?         @map("job_catalog_item_id") @db.VarChar(50)
   jobCatalogItem   JobCatalogItem? @relation(fields: [jobCatalogItemId], references: [id], onDelete: SetNull)
   taskDefs         DacumTaskDef[]
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
 
-  @@unique([departmentId, code])
   @@map("dacum_duties")
 }
 

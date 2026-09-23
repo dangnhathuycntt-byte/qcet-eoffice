@@ -165,20 +165,18 @@ export async function getApiContext(
     try {
       currentSession = await resolveCurrentSession(request);
       if (currentSession) {
-        // Single DB query for role/departmentId/title — resolveCurrentSession already
+        // Single DB query for role/title — resolveCurrentSession already
         // verified the session and user.isActive; this adds the profile fields only.
         let dbRole = 'CHUYEN_VIEN';
-        let dbDept: string | null = null;
         let dbTitle: string | null = null;
 
         try {
           const fullDbUser = await prisma.user.findUnique({
             where: { id: currentSession.userId },
-            select: { role: true, departmentId: true, title: true },
+            select: { role: true, title: true },
           });
           if (fullDbUser) {
             dbRole = fullDbUser.role || dbRole;
-            dbDept = fullDbUser.departmentId ?? dbDept;
             dbTitle = fullDbUser.title ?? dbTitle;
           }
         } catch {
@@ -190,7 +188,7 @@ export async function getApiContext(
           email: currentSession.user.email,
           name: currentSession.user.name,
           role: dbRole,
-          departmentId: dbDept,
+          departmentId: null,
           title: dbTitle,
         };
       }

@@ -86,7 +86,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task FSM Illegal Transition Test',
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           priority: 'medium',
           academicMonth: 11,
@@ -120,7 +120,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task FSM Cancelled Transition Test',
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           priority: 'medium',
           academicMonth: 11,
@@ -162,7 +162,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task FSM Legal Transition Test',
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           priority: 'medium',
           academicMonth: 11,
@@ -197,7 +197,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task OCC Executive Resolution Test',
           scope: TaskScope.SCHOOL,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -242,7 +242,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task OCC Mismatch Test',
           scope: TaskScope.SCHOOL,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -281,7 +281,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task OCC If-Match Mismatch Test',
           scope: TaskScope.SCHOOL,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -344,7 +344,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         {
           title: 'Task Overdue Query Reconciliation Test',
           scope: TaskScope.DEPARTMENT,
-          departmentId: testDepartmentId,
+          leadUnitId: testDepartmentId,
           dueDate: new Date('2026-11-20T17:00:00.000Z'),
           priority: 'medium',
           academicMonth: 11,
