@@ -48,7 +48,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     whereTask.leadUnitId = scopedDepartmentId;
   }
   if (options?.userId) {
-    whereTask.assignees = {
+    whereTask.actors = {
       some: { userId: options.userId },
     };
   }

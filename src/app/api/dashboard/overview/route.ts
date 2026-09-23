@@ -90,9 +90,7 @@ export async function GET(request?: NextRequest): Promise<NextResponse> {
             task.departmentId === userDeptId ||
             task.leadDepartmentId === userDeptId ||
             task.subTasks?.some(
-              (sub) =>
-                sub.assignedToDepartmentId === userDeptId ||
-                sub.assigneeId === authUser.id
+              (sub) => sub.departmentId === userDeptId || sub.assigneeId === authUser.id
             )
         );
       }

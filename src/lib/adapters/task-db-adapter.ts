@@ -58,7 +58,6 @@ export interface PrismaTaskWithRelations {
   dueDate: Date;
   updatedAt?: Date | string | null;
   completedAt?: Date | null;
-  departmentId: string | null;
   parentTaskId?: string | null;
   parentTask?: {
     id: string;
@@ -67,20 +66,23 @@ export interface PrismaTaskWithRelations {
     scope?: string;
   } | null;
   subTasks?: any[];
-  department?: {
-    id: string;
-    name: string;
-    shortName?: string | null;
-  } | null;
-  assignees?: {
-    userId: string;
-    roleInTask: string;
+  /** Canonical ReBAC actors (Phase 9: replaces the dropped `assignees` relation). */
+  actors?: {
+    userId?: string | null;
+    role: string;
+    isPrimaryDRI: boolean;
     user?: {
       id?: string;
       name: string;
       avatarUrl?: string | null;
     } | null;
   }[];
+  /** Canonical unit ownership (Phase 9: replaces the dropped `department` relation). */
+  leadUnit?: {
+    id: string;
+    name: string;
+    code?: string | null;
+  } | null;
   deliverables?: {
     id: string;
     title: string;
@@ -133,11 +135,23 @@ export function formatLocalDate(d: Date | string | null | undefined): string {
   }).format(dateObj);
 }
 
+/**
+ * Resolve the task's primary DRI from canonical ReBAC actors.
+ * Prefers the row flagged `isPrimaryDRI`, falling back to any `DRI` row for
+ * records written before the single-primary-DRI invariant was enforced.
+ */
+export function findPrimaryActor(
+  actors: PrismaTaskWithRelations['actors']
+): NonNullable<PrismaTaskWithRelations['actors']>[number] | undefined {
+  if (!Array.isArray(actors)) return undefined;
+  return actors.find((a) => a.isPrimaryDRI) || actors.find((a) => a.role === 'DRI');
+}
+
 export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTask {
-  const primaryOwner = raw.assignees?.find(a => a.roleInTask === 'PRIMARY_OWNER');
+  const primaryOwner = findPrimaryActor(raw.actors);
 
   const assigneeName = primaryOwner?.user?.name || 'Chưa phân công';
-  const assigneeId = (primaryOwner?.user as any)?.id || primaryOwner?.userId || undefined;
+  const assigneeId = primaryOwner?.user?.id || primaryOwner?.userId || undefined;
   const assigneeAvatar = primaryOwner?.user?.avatarUrl || undefined;
 
   // Subtasks/leaf tasks have no manual collaborators; collaborators are derived only on parent tasks
@@ -180,9 +194,9 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     parentSchoolTaskCode,
     parentTaskScope,
     updatedAt,
-    department: raw.department?.name || undefined,
-    departmentCode: (raw.department as any)?.shortName || raw.department?.id || raw.departmentId || undefined,
-    departmentId: raw.departmentId || raw.department?.id || undefined,
+    department: raw.leadUnit?.name || undefined,
+    departmentCode: raw.leadUnit?.code || raw.leadUnit?.id || undefined,
+    departmentId: raw.leadUnit?.id || undefined,
     deliverableDescription: raw.description || '',
     deliverables: (raw.deliverables || []).map((d: any) => ({
       id: d.id,
@@ -199,8 +213,8 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
 }
 
 export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenceDate?: string): SchoolTask {
-  // Tìm người chủ trì chính (Single DRI)
-  const primaryOwner = raw.assignees?.find(a => a.roleInTask === 'PRIMARY_OWNER');
+  // Tìm người chủ trì chính (Single DRI) từ canonical ReBAC actors
+  const primaryOwner = findPrimaryActor(raw.actors);
   // Canonical derived collaborators:
   // "Phối hợp của task cha = tập unique Primary DRI/Chủ trì của các nhiệm vụ con active."
   // - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
@@ -229,18 +243,6 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
         if (dri) {
           subLeadId = dri.userId || dri.user?.id;
           subLeadName = dri.user?.name || dri.userName;
-        }
-      }
-
-      // Check assignees
-      if (!subLeadName && Array.isArray(st.assignees)) {
-        const lead = st.assignees.find((a: any) => {
-          const role = a?.roleInTask ?? a?.role;
-          return role === 'PRIMARY_OWNER' || role === 'primary_owner' || role === 'LEAD';
-        }) || st.assignees[0];
-        if (lead) {
-          subLeadId = lead.userId || lead.user?.id;
-          subLeadName = lead.user?.name || lead.name;
         }
       }
 
@@ -341,16 +343,16 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     taskCode: raw.code,
     title: raw.title,
     description: raw.description || '',
-    department: raw.department?.name || 'Chưa phân bổ',
+    department: raw.leadUnit?.name || 'Chưa phân bổ',
     assignedTo: primaryOwner?.user?.name || 'Chưa phân công',
     leadAssigneeName: primaryOwner?.user?.name || 'Chưa phân công',
-    leadAssigneeId: (primaryOwner?.user as any)?.id || primaryOwner?.userId || undefined,
+    leadAssigneeId: primaryOwner?.user?.id || primaryOwner?.userId || undefined,
     leadAssigneeAvatar: primaryOwner?.user?.avatarUrl || undefined,
-    leadDepartment: raw.department?.name,
-    leadDepartmentCode: raw.department?.id,
-    leadDepartmentId: raw.department?.id,
-    departmentId: raw.departmentId || raw.department?.id || undefined,
-    departmentCode: (raw.department as any)?.shortName || raw.department?.id || undefined,
+    leadDepartment: raw.leadUnit?.name,
+    leadDepartmentCode: raw.leadUnit?.code || raw.leadUnit?.id,
+    leadDepartmentId: raw.leadUnit?.id,
+    departmentId: raw.leadUnit?.id || undefined,
+    departmentCode: raw.leadUnit?.code || raw.leadUnit?.id || undefined,
     // Đồng bộ chính xác ngày bắt đầu và hạn chót cho chi tiết nhiệm vụ
     startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,

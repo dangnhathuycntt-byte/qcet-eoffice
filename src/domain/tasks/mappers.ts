@@ -53,6 +53,25 @@ export function toTaskAssigneeDomain(raw: any): TaskAssigneeDomain {
   };
 }
 
+/**
+ * Map a canonical ReBAC `TaskActor` row onto the legacy assignee domain shape.
+ *
+ * Phase 9 dropped `TaskAssignee`; the domain model keeps the `PRIMARY_OWNER` /
+ * `COLLABORATOR` vocabulary so downstream FSM, SoD and attention logic stay
+ * unchanged, but the data now comes from `TaskActor`.
+ */
+export function toTaskAssigneeDomainFromActor(actor: any): TaskAssigneeDomain {
+  return {
+    userId: actor?.userId || actor?.user?.id || '',
+    roleInTask:
+      actor?.isPrimaryDRI === true || actor?.role === 'DRI' || actor?.role === 'PRIMARY_OWNER'
+        ? 'PRIMARY_OWNER'
+        : 'COLLABORATOR',
+    userName: actor?.user?.name || actor?.userName || 'Chưa phân công',
+    userAvatar: actor?.user?.avatarUrl ?? actor?.userAvatar ?? null,
+  };
+}
+
 export function toTaskDeliverableDomain(raw: any, taskIdFallback?: string): TaskDeliverableDomain {
   const reviewStatus: DomainDeliverableStatus =
     raw.reviewStatus === 'APPROVED'
@@ -85,9 +104,11 @@ export function toTaskDomainModel(raw: any, referenceDate?: string): TaskDomainM
     throw new Error('Cannot map null or undefined raw task to domain model');
   }
 
-  // Map Assignees
-  const rawAssignees = Array.isArray(raw.assignees) ? raw.assignees : [];
-  const assignees: TaskAssigneeDomain[] = rawAssignees.map(toTaskAssigneeDomain);
+  // Map Assignees — canonical ReBAC `actors` are authoritative; the dropped
+  // `assignees` relation is only kept as a shape fallback for legacy callers.
+  const assignees: TaskAssigneeDomain[] = Array.isArray(raw.actors) && raw.actors.length > 0
+    ? raw.actors.map(toTaskAssigneeDomainFromActor)
+    : (Array.isArray(raw.assignees) ? raw.assignees : []).map(toTaskAssigneeDomain);
 
   const primaryOwner =
     assignees.find((a) => a.roleInTask === 'PRIMARY_OWNER') ||
@@ -183,9 +204,10 @@ export function toTaskDomainModel(raw: any, referenceDate?: string): TaskDomainM
     completedAt: raw.completedAt ? formatLocalDate(raw.completedAt) : null,
     academicMonth: typeof raw.academicMonth === 'number' ? raw.academicMonth : 9,
     academicYear: raw.academicYear || getAcademicYear(dueDateStr || getSystemReferenceDate()),
-    departmentId: raw.departmentId ?? raw.department?.id ?? null,
-    departmentName: raw.department?.name ?? null,
-    departmentCode: raw.department?.shortName ?? raw.department?.code ?? null,
+    // Phase 9: unit ownership is canonical `leadUnit` (the `department` relation was dropped).
+    departmentId: raw.leadUnitId ?? raw.leadUnit?.id ?? raw.departmentId ?? null,
+    departmentName: raw.leadUnit?.name ?? raw.department?.name ?? null,
+    departmentCode: raw.leadUnit?.code ?? raw.leadUnit?.shortName ?? raw.department?.shortName ?? null,
     createdById: raw.createdById ?? '',
     parentTaskId: raw.parentTaskId ?? raw.parentTask?.id ?? null,
     parentTask,

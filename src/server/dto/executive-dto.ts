@@ -60,7 +60,7 @@ export function toExecutiveResolutionDTO(entity: any): ExecutiveResolutionDTO {
           status: entity.task.status,
           priority: entity.task.priority,
           dueDate: new Date(entity.task.dueDate).toISOString(),
-          departmentId: entity.task.departmentId,
+          departmentId: entity.task.leadUnitId ?? null,
         }
       : null,
   };
