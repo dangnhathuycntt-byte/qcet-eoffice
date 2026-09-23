@@ -39,6 +39,7 @@ import { generateTaskCodeAtomic, type TaskCodeOptions } from "../task-code-gener
 import { getAcademicYear, getAcademicMonthInfo } from "../academic-calendar";
 import { updateTaskWithOCC, updateDocumentWithOCC, type DbClient } from "./occ";
 import { logAuditEvent } from "./audit";
+import { syncAssigneeToActor } from "@/domain/tasks/migration/task-actor-migration";
 
 /**
  * Options for configuring interactive transactions.
@@ -283,6 +284,24 @@ export async function createTaskAtomic(
 
       if (payload.failAtStep === "afterTaskCreate") {
         throw new Error("[createTaskAtomic] Simulated failure after task creation");
+      }
+
+      // 3b. Dual-write: sync each TaskAssignee to TaskActor (Stage B — degrade gracefully)
+      for (const a of task.assignees) {
+        try {
+          await syncAssigneeToActor(tx, {
+            id: a.id,
+            taskId: a.taskId,
+            userId: a.userId,
+            roleInTask: a.roleInTask,
+            assignedAt: a.assignedAt ?? undefined,
+          });
+        } catch (err) {
+          console.error(
+            `[createTaskAtomic] TaskActor dual-write failed for assignee ${a.id} — continuing:`,
+            err
+          );
+        }
       }
 
       // 4. Record audit entry

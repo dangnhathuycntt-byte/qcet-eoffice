@@ -13,6 +13,7 @@ import type { AuthorizationContext } from './authorization-context';
 import type { CapabilityAction } from './capability';
 import type { AuthorizationResource } from './resource';
 import { authorize } from './authorization-engine';
+import { TASK_ACTOR_READ_ENABLED } from '@/lib/feature-flags';
 
 // ============================================================================
 // CANONICAL CANDIDATE ACTION LISTS
@@ -172,6 +173,41 @@ export function buildTaskResource(task: any): AuthorizationResource {
   const leadUnitId = task.leadUnitId || task.departmentId || undefined;
   const departmentId = task.departmentId || leadUnitId || undefined;
 
+  // Stage B cutover: when flag enabled, derive IDs from canonical TaskActor records.
+  if (TASK_ACTOR_READ_ENABLED && Array.isArray(task.actors) && task.actors.length > 0) {
+    const primaryDRI = task.actors.find((a: any) => a.isPrimaryDRI);
+    const primaryOwnerId = primaryDRI?.userId || undefined;
+
+    const collaboratorIds: string[] = [];
+    const assigneeIds: string[] = [];
+
+    for (const a of task.actors) {
+      const uid = a.userId;
+      if (!uid) continue;
+      assigneeIds.push(uid);
+      if (a.role === 'COLLABORATOR') collaboratorIds.push(uid);
+    }
+    if (primaryOwnerId) assigneeIds.push(primaryOwnerId);
+
+    return {
+      ...task,
+      type: 'task',
+      id: task.id,
+      scope: (task.scope || 'school').toString().toLowerCase(),
+      departmentId,
+      leadDepartmentId: leadUnitId,
+      leadUnitId,
+      creatorId,
+      createdById: creatorId,
+      assignerId: creatorId,
+      primaryOwnerId,
+      collaboratorIds: Array.from(new Set(collaboratorIds)),
+      assigneeIds: Array.from(new Set(assigneeIds)),
+      status: task.status ? task.status.toString().toUpperCase() : undefined,
+    };
+  }
+
+  // Legacy path: read from task.assignees (TaskAssignee)
   // Extract primary DRI
   let primaryOwnerId =
     task.primaryOwnerId ||
