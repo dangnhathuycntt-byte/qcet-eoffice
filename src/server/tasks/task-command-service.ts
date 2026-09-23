@@ -38,6 +38,8 @@ import { loadAuthorizationContext } from '@/server/authorization/authorization-c
 import { authorize } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import type { CapabilityAction } from '@/server/authorization/capability';
+import { ORG_UNIT_WRITE_CUTOVER } from '@/lib/feature-flags';
+import { resolveUnitIdForDepartmentId } from '@/domain/organization/migration/department-unit-migration';
 
 export interface CreateFromMeetingResolutionInput {
   meetingId: string;
@@ -624,6 +626,22 @@ export class TaskCommandService {
       });
       const resolvedUnitId = matchedOrgUnit?.id || null;
 
+      // Stage B dual-write: khi ORG_UNIT_WRITE_CUTOVER bật, ghi leadUnitId từ OrganizationalUnit
+      if (ORG_UNIT_WRITE_CUTOVER && validDepartmentId && !resolvedUnitId) {
+        const fallbackUnitId = await resolveUnitIdForDepartmentId(tx, validDepartmentId);
+        if (fallbackUnitId) {
+          await tx.task.update({
+            where: { id: task.id },
+            data: { leadUnitId: fallbackUnitId },
+          });
+        }
+      } else if (ORG_UNIT_WRITE_CUTOVER && resolvedUnitId) {
+        await tx.task.update({
+          where: { id: task.id },
+          data: { leadUnitId: resolvedUnitId },
+        });
+      }
+
       if (validAssigneeId && existingUserIdSet.has(validAssigneeId)) {
         await tx.taskActor.create({
           data: {
@@ -801,8 +819,15 @@ export class TaskCommandService {
       scalarUpdateData.parentTaskId = resolvedParentTaskId;
     }
     if (departmentId !== undefined) {
-      scalarUpdateData.departmentId =
-        typeof departmentId === 'string' && departmentId.trim() ? departmentId.trim() : null;
+      const newDeptId = typeof departmentId === 'string' && departmentId.trim() ? departmentId.trim() : null;
+      scalarUpdateData.departmentId = newDeptId;
+      // Stage B dual-write: khi ORG_UNIT_WRITE_CUTOVER bật, resolve và ghi leadUnitId
+      if (ORG_UNIT_WRITE_CUTOVER && newDeptId) {
+        const resolvedWriteUnitId = await resolveUnitIdForDepartmentId(prisma, newDeptId);
+        if (resolvedWriteUnitId) {
+          scalarUpdateData.leadUnitId = resolvedWriteUnitId;
+        }
+      }
     }
     if (typeof title === 'string' && title.trim()) {
       scalarUpdateData.title = title.trim();

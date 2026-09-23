@@ -12,6 +12,7 @@
  */
 
 import type { CapabilityAction } from '@/server/authorization/capability';
+import { ORG_UNIT_READ_CUTOVER } from '@/lib/feature-flags';
 import {
   type ActorContext,
   type TaskContext,
@@ -75,6 +76,8 @@ export function buildSubtaskActorContext(user?: {
   departmentId?: string | null;
   departmentCode?: string | null;
   department?: string | null;
+  /** leadUnitId: OrganizationalUnit ID dùng khi ORG_UNIT_READ_CUTOVER bật */
+  leadUnitId?: string | null;
   isDelegated?: boolean;
   delegatedTaskIds?: string[];
 } | null): ActorContext {
@@ -84,8 +87,9 @@ export function buildSubtaskActorContext(user?: {
 
   // Ưu tiên dbRole (raw DB role) để FSM categorizeRole hoạt động chính xác
   const canonicalRole = user.dbRole || user.role || 'STAFF';
-  const departmentId =
-    user.departmentId || user.departmentCode || user.department || null;
+  const departmentId = ORG_UNIT_READ_CUTOVER
+    ? (user.leadUnitId || user.departmentId || user.departmentCode || user.department || null)
+    : (user.departmentId || user.departmentCode || user.department || null);
 
   return buildActorContext({
     id: user.id,
@@ -108,6 +112,8 @@ export function buildSubtaskContext(subtask: {
   assigneeId?: string;
   assigneeName?: string;
   departmentId?: string | null;
+  /** leadUnitId: OrganizationalUnit ID dùng khi ORG_UNIT_READ_CUTOVER bật */
+  leadUnitId?: string | null;
   scope?: string;
   createdById?: string;
   collaborators?: Array<{ id: string; role?: string }>;
@@ -125,11 +131,15 @@ export function buildSubtaskContext(subtask: {
     assigneeIds.push(subtask.assigneeId);
   }
 
+  const effectiveDepartmentId = ORG_UNIT_READ_CUTOVER
+    ? (subtask.leadUnitId || subtask.departmentId || null)
+    : (subtask.departmentId || null);
+
   return {
     id: subtask.id,
     scope: subtask.scope,
     createdById: subtask.createdById,
-    departmentId: subtask.departmentId || null,
+    departmentId: effectiveDepartmentId,
     primaryOwnerId: subtask.assigneeId || null,
     driId: subtask.assigneeId || null,
     assigneeIds,
