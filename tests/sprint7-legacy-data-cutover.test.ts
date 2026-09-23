@@ -68,6 +68,7 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
 
     // Clean up test task
     await prisma.taskActor.deleteMany({ where: { taskId: createdTask.id } });
+    await prisma.taskActor.deleteMany({ where: { taskId: createdTask.id } });
     await prisma.task.delete({ where: { id: createdTask.id } });
   });
 
