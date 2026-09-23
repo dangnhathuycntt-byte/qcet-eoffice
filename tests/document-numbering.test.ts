@@ -109,8 +109,9 @@ describe("Document Registration Service", () => {
             updatedAt: new Date(),
             attachments: data.attachments?.create || [],
             directives: [],
-            draftingDept: data.draftingDeptId ? { id: data.draftingDeptId, name: "Phòng Đào tạo" } : null,
-            leadDepartment: data.leadDepartmentId ? { id: data.leadDepartmentId, name: "Phòng Đào tạo" } : null,
+            // Phase 9: đơn vị canonical nằm trên quy trình văn bản đến, không phải
+            // cột trên `Document`; payload tạo mới không còn ghi đơn vị tại đây.
+            incomingWorkflow: null,
             leadUser: null,
             registeredBy: { id: data.registeredById, name: "Văn thư" }
           };
@@ -148,14 +149,15 @@ describe("Document Registration Service", () => {
       securityLevel: "THUONG" as const,
       status: "CHO_PHAN_CONG" as const,
       registeredById: "user-vt-1",
-      leadDepartmentId: "PHONG_DAO_TAO"
     };
 
     const created = await createDocument(payload, mockPrismaClient as any);
     assert.equal(created.type, "VAN_BAN_DEN");
     assert.equal(created.originalNumber, "125/TCGDNN-VP");
     assert.equal(created.registrationNumber, 1);
-    assert.equal(created.leadDepartmentId, "PHONG_DAO_TAO");
+    // Chưa có đơn vị nào được gán ở bước ghi sổ: đơn vị chủ trì được thiết lập sau,
+    // qua quy trình văn bản đến (`incomingWorkflow.leadUnitId`).
+    assert.equal(created.leadUnitId, null);
 
     const retrieved = await getDocumentById(created.id, mockPrismaClient as any);
     assert.ok(retrieved);

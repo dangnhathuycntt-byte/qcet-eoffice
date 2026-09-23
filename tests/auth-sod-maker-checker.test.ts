@@ -564,6 +564,53 @@ describe('WI-1.1: Unified Maker-Checker SoD Guard & Delegation Invariant (#35)',
       assert.equal(isTaskMaker({}, ''), false);
       assert.equal(isTaskMaker({}, TARGET), false);
     });
+
+    // -----------------------------------------------------------------------
+    // Phase 9 regression: TaskAssignee dropped — actors[] là nguồn duy nhất.
+    // -----------------------------------------------------------------------
+    it('Phase 9: actors-only DRI được nhận diện là maker (SoD block)', () => {
+      // DRI chính → maker
+      assert.equal(
+        isTaskMaker({ actors: [{ userId: TARGET, role: 'DRI', isPrimaryDRI: true }] }, TARGET),
+        true,
+        'DRI chính phải là maker'
+      );
+      // DRI không phải primary vẫn là maker
+      assert.equal(
+        isTaskMaker({ actors: [{ userId: TARGET, role: 'DRI', isPrimaryDRI: false }] }, TARGET),
+        true,
+        'DRI (isPrimaryDRI=false) vẫn là maker'
+      );
+      // COLLABORATOR → maker
+      assert.equal(
+        isTaskMaker({ actors: [{ userId: TARGET, role: 'COLLABORATOR' }] }, TARGET),
+        true,
+        'COLLABORATOR là maker'
+      );
+    });
+
+    it('Phase 9: REVIEWER actor KHÔNG phải maker — không bị block SoD khi approve', () => {
+      // ADR-001 SoD: REVIEWER được chỉ định xem xét chứ không phải tạo/thực hiện.
+      // Gộp REVIEWER vào maker set sẽ block họ tự approve — sai nghĩa nghiệp vụ.
+      assert.equal(
+        isTaskMaker({ actors: [{ userId: TARGET, role: 'REVIEWER' }] }, TARGET),
+        false,
+        'REVIEWER không phải maker — không được block SoD'
+      );
+    });
+
+    it('Phase 9: actors mix — chỉ DRI/COLLABORATOR bị block, REVIEWER được thông qua', () => {
+      const DRI_ID = 'user_dri';
+      const REVIEWER_ID = 'user_reviewer';
+      const task = {
+        actors: [
+          { userId: DRI_ID, role: 'DRI', isPrimaryDRI: true },
+          { userId: REVIEWER_ID, role: 'REVIEWER' },
+        ],
+      };
+      assert.equal(isTaskMaker(task, DRI_ID), true, 'DRI bị block');
+      assert.equal(isTaskMaker(task, REVIEWER_ID), false, 'REVIEWER không bị block');
+    });
   });
 
   // ==========================================================================

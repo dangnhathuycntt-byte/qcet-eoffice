@@ -137,7 +137,9 @@ export function isUserAuthorizedApprover(task: any, userContext: UserContext): b
   if (isUserExecutive(userContext)) return true;
 
   // Department-level / Waiting approval
-  const taskDeptId = task.departmentId || task.leadDepartmentId || null;
+  // `task.departmentId` trên domain model đã là `Task.leadUnitId` canonical
+  // (xem `src/domain/tasks/mappers.ts`), nên không còn fallback legacy.
+  const taskDeptId = task.departmentId ?? null;
   if (isUserUnitHead(userContext, taskDeptId)) {
     return true;
   }
@@ -236,6 +238,27 @@ export function isTaskMaker(task: any, userId: string): boolean {
   if (task.primaryOwner?.id) assigneeIds.push(task.primaryOwner.id);
   if (typeof task.primaryOwner === 'string') assigneeIds.push(task.primaryOwner);
 
+  // 3b. Canonical ReBAC actors (Phase 9: the `assignees` relation was dropped).
+  // Without this branch a raw Prisma task — which only carries `actors` — would
+  // yield an empty maker set, letting the real DRI pass the SoD guard.
+  const actorRows = Array.isArray(task.actors) ? task.actors : undefined;
+  const actorUserIds: string[] = [];
+  let actorPrimaryDriId: string | null = null;
+  if (actorRows) {
+    for (const actor of actorRows) {
+      const actorUserId = actor?.userId || actor?.user?.id;
+      if (typeof actorUserId !== 'string' || !actorUserId) continue;
+      // SoD: chỉ DRI và COLLABORATOR là "maker" — REVIEWER không phải người tạo/thực hiện
+      // nên không được gộp vào maker set. Gộp REVIEWER vào sẽ block họ khỏi approve
+      // task của chính mình — sai nghĩa nghiệp vụ ADR-001.
+      if (actor.role === 'REVIEWER') continue;
+      actorUserIds.push(actorUserId);
+      if (actorPrimaryDriId === null && (actor.isPrimaryDRI === true || actor.role === 'DRI')) {
+        actorPrimaryDriId = actorUserId;
+      }
+    }
+  }
+
   const assignees = Array.isArray(task.assignees) ? task.assignees : undefined;
   const collaborators = Array.isArray(task.collaborators) ? task.collaborators : undefined;
   const coAssigneeIds = Array.isArray(task.coAssigneeIds) ? task.coAssigneeIds : undefined;
@@ -255,9 +278,9 @@ export function isTaskMaker(task: any, userId: string): boolean {
     userId,
     creatorId,
     createdById,
-    primaryOwnerId,
-    driId,
-    assigneeIds,
+    primaryOwnerId: primaryOwnerId || actorPrimaryDriId,
+    driId: driId || actorPrimaryDriId,
+    assigneeIds: actorUserIds.length > 0 ? [...assigneeIds, ...actorUserIds] : assigneeIds,
     assignees,
     collaborators,
     coAssigneeIds,

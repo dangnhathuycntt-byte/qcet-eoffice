@@ -87,16 +87,15 @@ CREATE INDEX IF NOT EXISTS notification_unread_user_flag_idx
 ON "notifications" ("user_id", "created_at" DESC)
 WHERE "is_read" = false;
 
--- Single primary owner partial unique index on TaskAssignee (task specification)
--- Guarantees that at most one PRIMARY_OWNER exists per task at the database engine level
-CREATE UNIQUE INDEX IF NOT EXISTS task_one_primary_owner_idx
-ON "task_assignees" ("task_id")
-WHERE "role" = 'PRIMARY_OWNER';
-
--- Single primary owner partial unique index on physical PostgreSQL column (role_in_task)
-CREATE UNIQUE INDEX IF NOT EXISTS task_assignees_one_primary_owner_idx
-ON "task_assignees" ("task_id")
-WHERE "role_in_task" = 'PRIMARY_OWNER';
+-- Single primary DRI partial unique index.
+-- Phase 9: bảng `task_assignees` (và index `task_one_primary_owner_idx` /
+-- `task_assignees_one_primary_owner_idx`) đã bị drop ở migration
+-- 20260923000001. Quan hệ canonical là `task_actors`, và index thực thi bất biến
+-- "tối đa một DRI chính mỗi nhiệm vụ" nằm trong migration
+-- 20260923000005_task_actor_single_primary_dri.
+CREATE UNIQUE INDEX IF NOT EXISTS task_actors_one_primary_dri_idx
+ON "task_actors" ("task_id")
+WHERE "role" = 'DRI' AND "is_primary_dri" = TRUE;
 
 -- Active (non-archived) tasks partial index for production dashboard queries
 CREATE INDEX IF NOT EXISTS idx_tasks_active_scope_status_due_date

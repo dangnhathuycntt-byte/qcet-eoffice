@@ -22,20 +22,23 @@ describe('TaskDbAdapter Unit Tests', () => {
       startDate: new Date('2026-09-01T00:00:00+07:00'),
       dueDate: new Date('2026-09-24T17:00:00+07:00'),
 
-      department: {
+      leadUnit: {
         id: 'khoa-dien',
         name: 'Khoa Điện - Điện tử',
+        code: 'K_DIEN_DTV',
       },
-      assignees: [
+      actors: [
         {
           userId: 'user-01',
-          roleInTask: 'PRIMARY_OWNER',
-          user: { name: 'ThS. Nguyễn Văn A', avatarUrl: '/avatars/01.jpg' }
+          role: 'DRI',
+          isPrimaryDRI: true,
+          user: { id: 'user-01', name: 'ThS. Nguyễn Văn A', avatarUrl: '/avatars/01.jpg' }
         },
         {
           userId: 'user-02',
-          roleInTask: 'COLLABORATOR',
-          user: { name: 'KS. Trần B', avatarUrl: null }
+          role: 'COLLABORATOR',
+          isPrimaryDRI: false,
+          user: { id: 'user-02', name: 'KS. Trần B', avatarUrl: null }
         }
       ],
       deliverables: [
@@ -53,17 +56,22 @@ describe('TaskDbAdapter Unit Tests', () => {
     assert.strictEqual(schoolTask.id, 'task-001');
     assert.strictEqual(schoolTask.title, 'Soạn thảo Đề cương Chương trình đào tạo Nghề Kỹ thuật Máy lạnh');
     assert.strictEqual(schoolTask.department, 'Khoa Điện - Điện tử');
+    assert.strictEqual(schoolTask.departmentId, 'khoa-dien');
+    assert.strictEqual(schoolTask.departmentCode, 'K_DIEN_DTV');
     assert.strictEqual(schoolTask.assignedTo, 'ThS. Nguyễn Văn A');
+    assert.strictEqual(schoolTask.leadAssigneeId, 'user-01');
     assert.strictEqual(schoolTask.dueDate, '2026-09-24');
     assert.strictEqual(schoolTask.status, 'IN_PROGRESS');
     assert.strictEqual(schoolTask.priority, 'HIGH');
     assert.strictEqual(schoolTask.academicMonth, 9);
     assert.strictEqual(schoolTask.progress, 65);
-    assert.strictEqual(schoolTask.collaborators?.length, 1);
-    assert.strictEqual(schoolTask.collaborators?.[0], 'KS. Trần B');
+    // Collaborators ('Phối hợp') are derived from active subtasks' Primary DRIs only,
+    // so a task without subtasks exposes none (commit 8290ff24).
+    assert.strictEqual(schoolTask.collaborators, undefined);
+    assert.deepEqual(schoolTask.coAssignees, []);
   });
 
-  test('falls back gracefully when department or assignees are missing', () => {
+  test('falls back gracefully when lead unit or actors are missing', () => {
     const rawMinimal: any = {
       id: 'task-002',
       code: 'NV-2026-09-002',
@@ -78,8 +86,8 @@ describe('TaskDbAdapter Unit Tests', () => {
       startDate: new Date('2026-09-10T00:00:00Z'),
       dueDate: new Date('2026-09-20T00:00:00Z'),
 
-      department: null,
-      assignees: [],
+      leadUnit: null,
+      actors: [],
       deliverables: []
     };
 
@@ -110,7 +118,7 @@ describe('TaskDbAdapter Unit Tests', () => {
     assert.strictEqual(prismaInput.title, 'Xây dựng kế hoạch tuyển sinh 2026');
     assert.strictEqual(prismaInput.description, 'Chi tiết kế hoạch tuyển sinh');
     assert.strictEqual(prismaInput.createdById, 'user-creator-123');
-    assert.strictEqual(prismaInput.departmentId, 'dept-01');
+    assert.strictEqual(prismaInput.leadUnitId, 'dept-01');
     assert.strictEqual(prismaInput.status, 'IN_PROGRESS');
     assert.strictEqual(prismaInput.priority, 'HIGH');
     assert.strictEqual(prismaInput.scope, 'SCHOOL');
@@ -134,26 +142,30 @@ describe('TaskDbAdapter Unit Tests', () => {
         startDate: new Date('2026-09-01T08:00:00+07:00'),
         dueDate: new Date('2026-09-30T17:00:00+07:00'),
 
-        department: {
+        leadUnit: {
           id: 'bgh',
           name: 'Ban Giám hiệu',
+          code: 'QCET',
         },
         parentTaskId: null,
         parentTask: null,
-        assignees: [
+        actors: [
           {
             userId: 'user-dri-01',
-            roleInTask: 'PRIMARY_OWNER',
+            role: 'DRI',
+            isPrimaryDRI: true,
             user: { id: 'user-dri-01', name: 'TS. Lê Hoàng B', avatarUrl: '/avatars/dri.jpg' },
           },
           {
             userId: 'user-collab-01',
-            roleInTask: 'COLLABORATOR',
+            role: 'COLLABORATOR',
+            isPrimaryDRI: false,
             user: { id: 'user-collab-01', name: 'ThS. Đỗ C', avatarUrl: null },
           },
           {
             userId: 'user-collab-02',
-            roleInTask: 'COLLABORATOR',
+            role: 'COLLABORATOR',
+            isPrimaryDRI: false,
             user: { id: 'user-collab-02', name: 'KS. Phạm D', avatarUrl: null },
           },
         ],
@@ -172,11 +184,12 @@ describe('TaskDbAdapter Unit Tests', () => {
             startDate: new Date('2026-09-02T08:00:00+07:00'),
             dueDate: new Date('2026-09-15T17:00:00+07:00'),
 
-            department: { id: 'khoa-cntt', name: 'Khoa CNTT' },
-            assignees: [
+            leadUnit: { id: 'khoa-cntt', name: 'Khoa CNTT', code: 'K_CNTT' },
+            actors: [
               {
                 userId: 'user-sub-01',
-                roleInTask: 'PRIMARY_OWNER',
+                role: 'DRI',
+                isPrimaryDRI: true,
                 user: { id: 'user-sub-01', name: 'ThS. Nguyễn Văn A', avatarUrl: '/avatars/a.jpg' },
               },
             ],
@@ -195,16 +208,18 @@ describe('TaskDbAdapter Unit Tests', () => {
             startDate: new Date('2026-09-10T08:00:00+07:00'),
             dueDate: new Date('2026-09-25T17:00:00+07:00'),
 
-            department: { id: 'phong-daotao', name: 'Phòng Đào tạo' },
-            assignees: [
+            leadUnit: { id: 'phong-daotao', name: 'Phòng Đào tạo', code: 'P_QLDT' },
+            actors: [
               {
                 userId: 'user-sub-02',
-                roleInTask: 'PRIMARY_OWNER',
+                role: 'DRI',
+                isPrimaryDRI: true,
                 user: { id: 'user-sub-02', name: 'TS. Trần Thị E', avatarUrl: null },
               },
               {
                 userId: 'user-sub-03',
-                roleInTask: 'COLLABORATOR',
+                role: 'COLLABORATOR',
+                isPrimaryDRI: false,
                 user: { id: 'user-sub-03', name: 'KS. Vũ F', avatarUrl: null },
               },
             ],
@@ -223,11 +238,12 @@ describe('TaskDbAdapter Unit Tests', () => {
             startDate: new Date('2026-09-15T08:00:00+07:00'),
             dueDate: new Date('2026-09-30T17:00:00+07:00'),
 
-            department: { id: 'phong-qlcl', name: 'Phòng QLCL' },
-            assignees: [
+            leadUnit: { id: 'phong-qlcl', name: 'Phòng QLCL', code: 'P_KT_DBCL' },
+            actors: [
               {
                 userId: 'user-sub-04',
-                roleInTask: 'PRIMARY_OWNER',
+                role: 'DRI',
+                isPrimaryDRI: true,
                 user: { id: 'user-sub-04', name: 'CN. Hoàng G', avatarUrl: null },
               },
             ],
@@ -244,8 +260,17 @@ describe('TaskDbAdapter Unit Tests', () => {
       assert.equal(mapped.leadAssigneeName, 'TS. Lê Hoàng B');
       assert.equal(mapped.leadAssigneeId, 'user-dri-01');
       assert.equal(mapped.leadAssigneeAvatar, '/avatars/dri.jpg');
-      assert.deepEqual(mapped.coAssignees, ['ThS. Đỗ C', 'KS. Phạm D']);
-      assert.deepEqual(mapped.collaborators, ['ThS. Đỗ C', 'KS. Phạm D']);
+      // 'Phối hợp' = unique Primary DRIs of active subtasks, excluding the parent's own DRI
+      assert.deepEqual(mapped.collaborators, [
+        'ThS. Nguyễn Văn A',
+        'TS. Trần Thị E',
+        'CN. Hoàng G',
+      ]);
+      assert.deepEqual(mapped.coAssignees, [
+        'ThS. Nguyễn Văn A',
+        'TS. Trần Thị E',
+        'CN. Hoàng G',
+      ]);
 
       // Subtask metrics
       assert.equal(mapped.totalSubTasks, 3);
@@ -279,9 +304,10 @@ describe('TaskDbAdapter Unit Tests', () => {
         dueDate: new Date('2026-09-25T17:00:00+07:00'),
         updatedAt: new Date('2026-09-24T10:00:00+07:00'),
 
-        department: {
+        leadUnit: {
           id: 'p-cntt',
           name: 'Phòng Công nghệ Thông tin & Truyền thông',
+          code: 'TT_NN_TH',
         },
         parentTaskId: 'parent-root-99',
         parentTask: {
@@ -290,15 +316,17 @@ describe('TaskDbAdapter Unit Tests', () => {
           title: 'Hiện đại hóa hạ tầng điều hành điện tử',
           scope: 'SCHOOL',
         },
-        assignees: [
+        actors: [
           {
             userId: 'dri-uid-1',
-            roleInTask: 'PRIMARY_OWNER',
+            role: 'DRI',
+            isPrimaryDRI: true,
             user: { id: 'dri-uid-1', name: 'KS. Đặng Minh V', avatarUrl: '/avatars/v.png' },
           },
           {
             userId: 'collab-uid-2',
-            roleInTask: 'COLLABORATOR',
+            role: 'COLLABORATOR',
+            isPrimaryDRI: false,
             user: { id: 'collab-uid-2', name: 'CN. Ngô Q', avatarUrl: null },
           },
         ],
@@ -325,14 +353,10 @@ describe('TaskDbAdapter Unit Tests', () => {
       assert.equal(staffTask.assigneeAvatar, '/avatars/v.png');
       assert.equal(staffTask.assignedTo, 'KS. Đặng Minh V');
 
-      // Collaborators / Co-assignees assertions
-      assert.ok(staffTask.collaborators);
-      assert.equal(staffTask.collaborators!.length, 1);
-      assert.equal(staffTask.collaborators![0].id, 'collab-uid-2');
-      assert.equal(staffTask.collaborators![0].name, 'CN. Ngô Q');
-      assert.ok(staffTask.coAssignees);
-      assert.equal(staffTask.coAssignees!.length, 1);
-      assert.equal(staffTask.coAssignees![0].id, 'collab-uid-2');
+      // Leaf tasks carry no 'Phối hợp' entries: collaborators are derived on parent
+      // tasks from their subtasks' Primary DRIs (commit 8290ff24), not from actors.
+      assert.deepEqual(staffTask.collaborators, []);
+      assert.deepEqual(staffTask.coAssignees, []);
 
       // Parent Task Breadcrumbs
       assert.equal(staffTask.parentSchoolTaskId, 'parent-root-99');
@@ -368,7 +392,7 @@ describe('TaskDbAdapter Unit Tests', () => {
         academicYear: '2026-2027',
         startDate: new Date('2026-09-01T00:00:00Z'),
         dueDate: new Date('2026-09-10T00:00:00Z'),
-        assignees: [],
+        actors: [],
         deliverables: [],
       };
 

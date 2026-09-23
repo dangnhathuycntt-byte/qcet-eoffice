@@ -67,7 +67,7 @@ export function formatDocumentRowForAppendixIV(doc: DocumentItem): (string | num
       doc.originalNumber || "",
       formatDate(doc.issuedDate),
       doc.category ? `${doc.category}: ${doc.summary}` : doc.summary,
-      doc.leadDepartmentName || "",
+      doc.leadUnitName || "",
       "", // Ký nhận
       doc.notes || (doc.dueDate ? `Hạn: ${formatDate(doc.dueDate)}` : ""),
     ];
@@ -78,7 +78,7 @@ export function formatDocumentRowForAppendixIV(doc: DocumentItem): (string | num
     formatDate(doc.issuedDate),
     doc.category ? `${doc.category}: ${doc.summary}` : doc.summary,
     doc.signerName || "",
-    doc.draftingDeptName || "",
+    doc.leadUnitName || "",
     doc.recipientList || "",
     doc.distributedCopies ?? 1,
     "Văn thư trường",

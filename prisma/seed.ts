@@ -11,20 +11,91 @@ import {
   DocumentStatus,
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { seedCanonicalOrg } from './seeds/canonical-org-seed';
+import {
+  seedCanonicalOrg,
+  seedCanonicalPositions,
+  seedCanonicalAssignments,
+} from './seeds/canonical-org-seed';
+import { DEPARTMENT_TO_ORG_UNIT_MAP } from './seeds/migrate-task-relations';
 
 const prisma = new PrismaClient();
+
+/**
+ * Bảng tra slug/code legacy -> mã đơn vị canonical, dùng chung với script backfill
+ * `migrate-task-relations.ts` (nguồn chân lý duy nhất, không nhân bản mapping).
+ */
+const UNIT_CODE_ALIASES = new Map<string, string>(
+  Object.entries(DEPARTMENT_TO_ORG_UNIT_MAP).map(([alias, code]) => [alias.toUpperCase(), code.toUpperCase()])
+);
+
+/**
+ * Resolve một tham chiếu đơn vị (id canonical | code canonical | alias legacy)
+ * sang `OrganizationalUnit.id` thật trong DB.
+ *
+ * Fail-fast: seed tuyệt đối không được ghi một giá trị không resolve được vào FK
+ * `Task.leadUnitId` / `DocumentIncomingWorkflow.leadUnitId` (đây chính là lỗi làm
+ * seed không chạy được trên DB sạch).
+ */
+function createLeadUnitResolver(units: Array<{ id: string; code: string }>) {
+  const byCode = new Map<string, string>();
+  const byId = new Set<string>();
+  for (const unit of units) {
+    byCode.set(unit.code.toUpperCase(), unit.id);
+    byId.add(unit.id);
+  }
+
+  return function resolveLeadUnitId(ref: string | null | undefined, context: string): string | null {
+    const raw = typeof ref === 'string' ? ref.trim() : '';
+    if (!raw) return null;
+    if (byId.has(raw)) return raw;
+
+    const upper = raw.toUpperCase();
+    const canonicalCode = UNIT_CODE_ALIASES.get(upper) ?? upper;
+    const unitId = byCode.get(canonicalCode);
+    if (!unitId) {
+      throw new Error(
+        `[seed] Không resolve được đơn vị "${raw}" (${context}). ` +
+          `Bổ sung alias vào DEPARTMENT_TO_ORG_UNIT_MAP hoặc kiểm tra seeds/canonical-org-seed.ts.`
+      );
+    }
+    return unitId;
+  };
+}
 
 async function main() {
   console.log('Seeding QCET E-Office Database...');
 
-    // 1. Tạo và đồng bộ 15 đơn vị chuẩn của QCET cùng các mã tương thích
-  // Phase 9: Department model dropped — departments are now OrganizationalUnits (seeded via canonical-org-seed)
-  // The legacy prisma.department.upsert block is removed; units are managed in seeds/canonical-org-seed.ts
+  // 1. Cơ cấu tổ chức chuẩn tắc QCET (QĐ 282 & QĐ 420).
+  // Phase 9: `Department` đã bị drop — đơn vị canonical là `OrganizationalUnit`.
+  // Phải chạy TRƯỚC users/tasks/documents vì mọi tham chiếu đơn vị dưới đây là FK
+  // tới `organizational_units.id`.
+  await seedCanonicalOrg(prisma);
+
+  // Danh mục vị trí việc làm (NĐ 106/2020 & TT 12/2022) — cần trước khi gán vị trí.
+  await seedCanonicalPositions(prisma);
+
+  const orgUnits = await prisma.organizationalUnit.findMany({
+    select: { id: true, code: true },
+  });
+  const resolveLeadUnitId = createLeadUnitResolver(orgUnits);
 
     // 2. Tạo Tài khoản Người dùng với thông tin thực tế của QCET (@cdktcnqn.edu.vn)
-  const defaultPasswordHash = await bcrypt.hash("Qcet@123456", 10);
-  const qcet2026PasswordHash = await bcrypt.hash("Qcet@2026", 10);
+  // Mật khẩu seed đọc từ biến môi trường. Giá trị mặc định chỉ dành cho môi
+  // trường phát triển; ở production bắt buộc phải cấu hình, nếu không seed sẽ
+  // dừng thay vì âm thầm tạo tài khoản với mật khẩu đã biết trước.
+  const isProduction = process.env.NODE_ENV === "production";
+  const defaultSeedPassword = process.env.SEED_DEFAULT_PASSWORD;
+  const bghSeedPassword = process.env.SEED_BGH_PASSWORD;
+
+  if (isProduction && (!defaultSeedPassword || !bghSeedPassword)) {
+    throw new Error(
+      "[seed] NODE_ENV=production yêu cầu SEED_DEFAULT_PASSWORD và SEED_BGH_PASSWORD. " +
+        "Không dùng mật khẩu mặc định đã biết trước cho môi trường thật."
+    );
+  }
+
+  const defaultPasswordHash = await bcrypt.hash(defaultSeedPassword || "Qcet@123456", 10);
+  const qcet2026PasswordHash = await bcrypt.hash(bghSeedPassword || "Qcet@2026", 10);
 
   const users = [
     // Ban Giám hiệu
@@ -81,6 +152,19 @@ async function main() {
     });
     userMap[u.email] = created.id;
   }
+
+  // Phân công vị trí việc làm (PositionAssignment) cho người dùng mẫu theo RFC-02 Bước 5.
+  // Người dùng có chức danh không khớp đơn vị canonical nào sẽ được báo cáo tường
+  // minh và bỏ qua thay vì gán bừa.
+  await seedCanonicalAssignments(
+    prisma,
+    users.map((u) => ({
+      id: userMap[u.email],
+      name: u.name,
+      role: u.role,
+      title: u.title ?? null,
+    }))
+  );
 
   // 3. Tạo 40 Nhiệm vụ mẫu trải đều qua 12 tháng học vụ và 11 đơn vị
     const adminId = userMap["admin@cdktcnqn.edu.vn"];
@@ -2443,6 +2527,9 @@ async function main() {
       : new Date('2026-08-01T00:00:00Z');
     const finalTaskData = {
       ...taskData,
+      // Phase 9: `Task.leadUnitId` là FK tới `OrganizationalUnit.id`; dữ liệu mẫu
+      // ghi bằng slug/code nên phải resolve trước khi ghi.
+      leadUnitId: resolveLeadUnitId((t as any).leadUnitId, `task ${t.code}`),
       startDate: computedStartDate,
       // Constraint chk_tasks_completion_lifecycle: COMPLETED → completedAt NOT NULL
       ...(taskData.status === TaskStatus.COMPLETED && {
@@ -2540,6 +2627,12 @@ async function main() {
     status: DocumentStatus;
     signerName?: string;
     signerTitle?: string;
+    /**
+     * Phase 9: `Document.draftingDeptId` / `leadDepartmentId` đã bị drop. Đây là
+     * dữ liệu đầu vào legacy: `leadDepartmentId` được resolve sang
+     * `OrganizationalUnit.id` và ghi vào `incomingWorkflow.leadUnitId` cho văn bản
+     * đến; `draftingDeptId` của văn bản đi không còn chỗ lưu canonical nên bị bỏ qua.
+     */
     draftingDeptId?: string;
     recipientList?: string;
     distributedCopies?: number;
@@ -2552,6 +2645,7 @@ async function main() {
       leaderId: string;
       instruction: string;
       deadline?: Date;
+      /** Alias đơn vị legacy; đơn vị canonical được ghi trên nhiệm vụ sinh ra. */
       assignedDeptId: string;
       collaboratorIds?: string;
       isTaskGenerated?: boolean;
@@ -3133,8 +3227,19 @@ async function main() {
   ];
 
   for (const docItem of sampleDocuments) {
-    const { directives, attachments, linkedTaskCode, ...baseData } = docItem;
+    const {
+      directives,
+      attachments,
+      linkedTaskCode,
+      leadDepartmentId,
+      draftingDeptId: _draftingDeptId,
+      ...baseData
+    } = docItem as typeof docItem & { leadDepartmentId?: string; draftingDeptId?: string };
     const linkedTaskId = linkedTaskCode ? taskCodeMap[linkedTaskCode] || null : null;
+
+    // Phase 9: `Document.leadDepartmentId` / `draftingDeptId` đã bị drop; đơn vị
+    // chủ trì canonical nằm trên quy trình văn bản đến (`incomingWorkflow.leadUnitId`).
+    const leadUnitId = resolveLeadUnitId(leadDepartmentId, `document #${docItem.registrationNumber}`);
 
     const documentData = {
       ...baseData,
@@ -3153,6 +3258,19 @@ async function main() {
       update: documentData,
       create: documentData,
     });
+
+    // Đơn vị chủ trì canonical của văn bản đến (Phase 9).
+    // Chỉ ghi cho văn bản ĐẾN: `DocumentIncomingWorkflow` điều khiển vòng đời văn
+    // bản đến, nên tạo nó cho văn bản đi sẽ bịa ra một vòng đời không tồn tại.
+    // Văn bản đi hiện không có trường đơn vị canonical nào (Phase 9 đã drop
+    // `draftingDeptId`/`leadDepartmentId`), nên đơn vị bị bỏ qua thay vì ghi sai.
+    if (leadUnitId && docItem.type === DocumentType.VAN_BAN_DEN) {
+      await prisma.documentIncomingWorkflow.upsert({
+        where: { documentId: doc.id },
+        update: { leadUnitId },
+        create: { documentId: doc.id, leadUnitId },
+      });
+    }
 
     // Đồng bộ tệp đính kèm chuẩn số hóa NĐ 30/2020
     if (attachments && attachments.length > 0) {
@@ -3180,13 +3298,15 @@ async function main() {
         where: { documentId: doc.id },
       });
       for (const dir of directives) {
+        // Phase 9: `DocumentDirective.assignedDeptId` đã bị drop. Đơn vị nhận chỉ
+        // đạo là `Task.leadUnitId` của nhiệm vụ mà bút phê sinh ra, không phải
+        // thuộc tính của bút phê.
         await prisma.documentDirective.create({
           data: {
             documentId: doc.id,
             leaderId: dir.leaderId,
             instruction: dir.instruction,
             deadline: dir.deadline || null,
-            assignedDeptId: dir.assignedDeptId,
             collaboratorIds: dir.collaboratorIds || null,
             isTaskGenerated: dir.isTaskGenerated ?? false,
           },
@@ -3259,9 +3379,6 @@ async function main() {
       create: notif,
     });
   }
-
-  // Khởi tạo cơ cấu tổ chức chuẩn tắc QCET (QĐ 282 & QĐ 420)
-  await seedCanonicalOrg(prisma);
 
   console.log(`Seeding completed successfully with ${users.length} users, ${sampleTasks.length} tasks, and ${sampleDocuments.length} documents.`);
 }

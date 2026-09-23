@@ -28,7 +28,7 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
       assert.ok(taskFieldNames.includes('scope'), 'Task must include scope');
       assert.ok(taskFieldNames.includes('status'), 'Task must include status');
       assert.ok(taskFieldNames.includes('dueDate'), 'Task must include dueDate');
-      assert.ok(taskFieldNames.includes('departmentId'), 'Task must include departmentId');
+      assert.ok(taskFieldNames.includes('leadUnitId'), 'Task must include leadUnitId');
       assert.ok(taskFieldNames.includes('parentTaskId'), 'Task must include parentTaskId');
       assert.ok(taskFieldNames.includes('updatedAt'), 'Task must include updatedAt');
       assert.ok(taskFieldNames.includes('academicYear'), 'Task must include academicYear');
@@ -56,10 +56,10 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
       );
     });
 
-    test('Task model defines composite index @@index([departmentId, status, dueDate])', () => {
+    test('Task model defines composite index @@index([leadUnitId, status, dueDate])', () => {
       assert.ok(
-        /@@index\(\[departmentId,\s*status,\s*dueDate\]\)/.test(schemaContent),
-        'Task model must contain @@index([departmentId, status, dueDate])'
+        /@@index\(\[leadUnitId,\s*status,\s*dueDate\]\)/.test(schemaContent),
+        'Task model must contain @@index([leadUnitId, status, dueDate])'
       );
     });
 
@@ -118,29 +118,49 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
       );
     });
 
-    test('defines single primary owner partial unique index on TaskAssignee', () => {
+    // Phase 9: `task_assignees` bị drop (migration 20260923000001). Bất biến
+    // "một DRI chính mỗi nhiệm vụ" nay nằm trên `task_actors`.
+    test('defines single primary DRI partial unique index on TaskActor', () => {
       assert.ok(
-        sqlContent.includes('task_one_primary_owner_idx'),
-        'indexes.sql must define task_one_primary_owner_idx'
+        sqlContent.includes('task_actors_one_primary_dri_idx'),
+        'indexes.sql must define task_actors_one_primary_dri_idx'
       );
       assert.ok(
-        /CREATE UNIQUE INDEX IF NOT EXISTS task_one_primary_owner_idx\s+ON\s+"task_assignees"\s*\("task_id"\)\s*WHERE\s+"role"\s*=\s*'PRIMARY_OWNER';/i.test(
+        /CREATE UNIQUE INDEX IF NOT EXISTS task_actors_one_primary_dri_idx\s+ON\s+"task_actors"\s*\("task_id"\)\s*WHERE\s+"role"\s*=\s*'DRI'\s+AND\s+"is_primary_dri"\s*=\s*TRUE;/i.test(
           sqlContent
         ),
-        'indexes.sql must create partial unique index on task_assignees(task_id) WHERE role = PRIMARY_OWNER'
+        'indexes.sql must create partial unique index on task_actors(task_id) WHERE role = DRI AND is_primary_dri = TRUE'
       );
     });
 
-    test('defines single primary owner partial unique index on physical PostgreSQL column (role_in_task)', () => {
+    test('không còn câu lệnh SQL trỏ vào bảng legacy task_assignees', () => {
+      // Bỏ phần chú thích: file được phép nhắc tên bảng cũ để giải thích lịch sử,
+      // nhưng không được còn DDL thực thi trên bảng đã bị drop.
+      const executableSql = sqlContent
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n');
       assert.ok(
-        sqlContent.includes('task_assignees_one_primary_owner_idx'),
-        'indexes.sql must define task_assignees_one_primary_owner_idx'
+        !executableSql.includes('task_assignees'),
+        'indexes.sql không được chạy DDL trên bảng đã bị drop'
+      );
+    });
+
+    test('migration thực thi bất biến một DRI chính tồn tại và có guard fail-fast', () => {
+      const migrationPath = path.join(
+        process.cwd(),
+        'prisma/migrations/20260923000005_task_actor_single_primary_dri/migration.sql'
+      );
+      assert.ok(fs.existsSync(migrationPath), 'Migration bất biến DRI phải tồn tại');
+
+      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+      assert.ok(
+        /CREATE UNIQUE INDEX IF NOT EXISTS task_actors_one_primary_dri_idx/i.test(migrationSql),
+        'Migration phải tạo partial unique index task_actors_one_primary_dri_idx'
       );
       assert.ok(
-        /CREATE UNIQUE INDEX IF NOT EXISTS task_assignees_one_primary_owner_idx\s+ON\s+"task_assignees"\s*\("task_id"\)\s*WHERE\s+"role_in_task"\s*=\s*'PRIMARY_OWNER';/i.test(
-          sqlContent
-        ),
-        'indexes.sql must create partial unique index on task_assignees(task_id) WHERE role_in_task = PRIMARY_OWNER'
+        /RAISE EXCEPTION/i.test(migrationSql),
+        'Migration phải fail-fast bằng RAISE EXCEPTION khi dữ liệu đã vi phạm bất biến'
       );
     });
 

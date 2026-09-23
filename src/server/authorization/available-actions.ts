@@ -131,8 +131,10 @@ export function buildDocumentResource(doc: any): AuthorizationResource {
   }
 
   const creatorId = doc.creatorId || doc.createdById || undefined;
-  const leadUnitId = doc.leadUnitId || doc.leadDepartmentId || undefined;
-  const draftingUnitId = doc.draftingUnitId || doc.draftingDeptId || undefined;
+  // Phase 9: `Document.leadDepartmentId` / `draftingDeptId` đã bị drop — chỉ còn
+  // các field canonical (`leadUnitId`, `draftingUnitId`, `unitId`).
+  const leadUnitId = doc.leadUnitId || undefined;
+  const draftingUnitId = doc.draftingUnitId || undefined;
   const unitId = doc.unitId || doc.departmentId || leadUnitId || draftingUnitId || undefined;
 
   return {
@@ -147,8 +149,6 @@ export function buildDocumentResource(doc: any): AuthorizationResource {
     leadUnitId,
     draftingUnitId,
     unitId,
-    leadDepartmentId: leadUnitId,
-    draftingDeptId: draftingUnitId,
     departmentId: doc.departmentId || unitId,
     registeredById: doc.registeredById || undefined,
     signerId: doc.signerId || undefined,
@@ -209,7 +209,6 @@ export function buildTaskResource(task: any): AuthorizationResource {
     id: task.id,
     scope: (task.scope || 'school').toString().toLowerCase(),
     departmentId,
-    leadDepartmentId: leadUnitId,
     leadUnitId,
     creatorId,
     createdById: creatorId,

@@ -74,7 +74,9 @@ export function DocumentQuickEntryModal({
   const [summary, setSummary] = React.useState<string>("");
   const [urgency, setUrgency] = React.useState<DocumentUrgency>("THUONG");
   const [securityLevel, setSecurityLevel] = React.useState<DocumentSecurityLevel>("THUONG");
-  const [leadDepartmentId, setLeadDepartmentId] = React.useState<string>("DT");
+  // Phase 9: đơn vị chủ trì canonical là `OrganizationalUnit.id` — không hardcode
+  // mã legacy ("DT"); mặc định lấy đơn vị đầu tiên trong danh sách đã tải.
+  const [leadUnitId, setLeadUnitId] = React.useState<string>(departments[0]?.id || "");
   const [dueDate, setDueDate] = React.useState<string>("");
 
   // Outgoing specific
@@ -173,8 +175,9 @@ export function DocumentQuickEntryModal({
         summary: summary.trim(),
         urgency,
         securityLevel,
-        leadDepartmentId: docType === "VAN_BAN_DEN" ? leadDepartmentId : undefined,
-        draftingDeptId: docType === "VAN_BAN_DI" ? leadDepartmentId : undefined,
+        // Đơn vị chủ trì canonical chỉ tồn tại cho văn bản đến (quy trình văn bản
+        // đến). Văn bản đi không có trường đơn vị — không gửi để tránh bị từ chối.
+        leadUnitId: docType === "VAN_BAN_DEN" ? leadUnitId || undefined : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         registeredById: user?.id || "system",
       };
@@ -439,8 +442,8 @@ export function DocumentQuickEntryModal({
                 {docType === "VAN_BAN_DI" ? "Đơn vị soạn thảo" : "Đơn vị xử lý / chủ trì"}
               </label>
               <select
-                value={leadDepartmentId}
-                onChange={(e) => setLeadDepartmentId(e.target.value)}
+                value={leadUnitId}
+                onChange={(e) => setLeadUnitId(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {departments.map((dept) => (

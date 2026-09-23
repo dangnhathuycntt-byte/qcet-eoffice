@@ -84,15 +84,15 @@ export async function GET(request?: NextRequest): Promise<NextResponse> {
       // recipient semantics used by /api/notifications — at its source.
       data.activities = [];
 
+      // `departmentId` trên SchoolTask/StaffTask được adapter gán từ `Task.leadUnitId`
+      // (`dashboard-service.ts` mapper). `leadDepartmentId` là bản sao cùng nguồn nên không
+      // cần kiểm tra lại; `assignedToDepartmentId` không bao giờ được populate (field chết).
       if (userDeptId && data.tasks) {
         data.tasks = data.tasks.filter(
           (task) =>
             task.departmentId === userDeptId ||
-            task.leadDepartmentId === userDeptId ||
             task.subTasks?.some(
-              (sub) =>
-                sub.assignedToDepartmentId === userDeptId ||
-                sub.assigneeId === authUser.id
+              (sub) => sub.departmentId === userDeptId || sub.assigneeId === authUser.id
             )
         );
       }

@@ -12,7 +12,6 @@
  */
 
 import type { CapabilityAction } from '@/server/authorization/capability';
-import { ORG_UNIT_READ_CUTOVER } from '@/lib/feature-flags';
 import {
   type ActorContext,
   type TaskContext,
@@ -76,7 +75,7 @@ export function buildSubtaskActorContext(user?: {
   departmentId?: string | null;
   departmentCode?: string | null;
   department?: string | null;
-  /** leadUnitId: OrganizationalUnit ID dùng khi ORG_UNIT_READ_CUTOVER bật */
+  /** leadUnitId: OrganizationalUnit ID — nguồn đơn vị chuẩn tắc (Phase 9) */
   leadUnitId?: string | null;
   isDelegated?: boolean;
   delegatedTaskIds?: string[];
@@ -87,9 +86,10 @@ export function buildSubtaskActorContext(user?: {
 
   // Ưu tiên dbRole (raw DB role) để FSM categorizeRole hoạt động chính xác
   const canonicalRole = user.dbRole || user.role || 'STAFF';
-  const departmentId = ORG_UNIT_READ_CUTOVER
-    ? (user.leadUnitId || user.departmentId || user.departmentCode || user.department || null)
-    : (user.departmentId || user.departmentCode || user.department || null);
+  // Phase 9: legacy `department_id` columns are gone — `leadUnitId` is the sole
+  // unit source; the older flat fields remain only as DTO shape fallbacks.
+  const departmentId =
+    user.leadUnitId || user.departmentId || user.departmentCode || user.department || null;
 
   return buildActorContext({
     id: user.id,
@@ -112,7 +112,7 @@ export function buildSubtaskContext(subtask: {
   assigneeId?: string;
   assigneeName?: string;
   departmentId?: string | null;
-  /** leadUnitId: OrganizationalUnit ID dùng khi ORG_UNIT_READ_CUTOVER bật */
+  /** leadUnitId: OrganizationalUnit ID — nguồn đơn vị chuẩn tắc (Phase 9) */
   leadUnitId?: string | null;
   scope?: string;
   createdById?: string;
@@ -131,9 +131,7 @@ export function buildSubtaskContext(subtask: {
     assigneeIds.push(subtask.assigneeId);
   }
 
-  const effectiveDepartmentId = ORG_UNIT_READ_CUTOVER
-    ? (subtask.leadUnitId || subtask.departmentId || null)
-    : (subtask.departmentId || null);
+  const effectiveDepartmentId = subtask.leadUnitId || subtask.departmentId || null;
 
   return {
     id: subtask.id,

@@ -13,6 +13,7 @@ import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
 import { canReadDocument, buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import {
   isDocumentImmutable,
   mapIncomingWorkflowStatusToDocumentStatus,
@@ -41,10 +42,10 @@ export interface CreateDocumentPayload {
   dueDate?: string | Date | null;
   signerName?: string | null;
   signerTitle?: string | null;
-  draftingDeptId?: string | null;
+  /** Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`). */
+  leadUnitId?: string | null;
   recipientList?: string | null;
   distributedCopies?: number | null;
-  leadDepartmentId?: string | null;
   leadUserId?: string | null;
   status?: DocumentStatus;
   notes?: string | null;
@@ -68,10 +69,10 @@ export interface UpdateDocumentPayload {
   dueDate?: string | Date | null;
   signerName?: string | null;
   signerTitle?: string | null;
-  draftingDeptId?: string | null;
+  /** Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`). */
+  leadUnitId?: string | null;
   recipientList?: string | null;
   distributedCopies?: number | null;
-  leadDepartmentId?: string | null;
   leadUserId?: string | null;
   notes?: string | null;
   linkedTaskId?: string | null;
@@ -83,8 +84,8 @@ export interface ListDocumentsFilter {
   status?: DocumentStatus;
   urgency?: DocumentUrgency;
   securityLevel?: DocumentSecurityLevel;
-  leadDepartmentId?: string;
-  draftingDeptId?: string;
+  /** Lọc theo đơn vị chủ trì — canonical `OrganizationalUnit.id`. */
+  leadUnitId?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -98,21 +99,11 @@ export type ListDocumentsResult = DocumentItem[] & {
   total: number;
 };
 
+// Phase 9: the `Department` model and its `Document.draftingDept` /
+// `Document.leadDepartment` relations were dropped. Unit ownership now travels
+// through the incoming workflow's `leadUnit`, so no phantom relation may appear
+// here — Prisma rejects any unknown include key.
 const defaultInclude = {
-  draftingDept: {
-    select: {
-      id: true,
-      name: true,
-      shortName: true,
-    },
-  },
-  leadDepartment: {
-    select: {
-      id: true,
-      name: true,
-      shortName: true,
-    },
-  },
   leadUser: {
     select: {
       id: true,
@@ -135,16 +126,21 @@ const defaultInclude = {
           name: true,
         },
       },
-      assignedDept: {
-        select: {
-          id: true,
-          name: true,
-          shortName: true,
-        },
-      },
     },
   },
-  incomingWorkflow: true,
+  // The directive's assigned unit is the unit of the task it generated, reached
+  // through the document's `linkedTask`; `DocumentDirective.assignedDeptId` no
+  // longer exists in the schema.
+  linkedTask: {
+    select: {
+      id: true,
+      code: true,
+      leadUnit: { select: { id: true, name: true, code: true } },
+    },
+  },
+  incomingWorkflow: {
+    include: { leadUnit: { select: { id: true, name: true, code: true } } },
+  },
   outgoingWorkflow: true,
   signatures: true,
 };
@@ -178,13 +174,13 @@ export function mapPrismaDocumentToItem(record: any): DocumentItem {
 
     signerName: record.signerName || null,
     signerTitle: record.signerTitle || null,
-    draftingDeptId: record.draftingDeptId || null,
-    draftingDeptName: record.draftingDept?.name || null,
     recipientList: record.recipientList || null,
     distributedCopies: record.distributedCopies ?? 1,
 
-    leadDepartmentId: record.leadDepartmentId || null,
-    leadDepartmentName: record.leadDepartment?.name || null,
+    // Unit ownership is canonical `OrganizationalUnit` via the incoming workflow.
+    leadUnitId: record.incomingWorkflow?.leadUnitId || null,
+    leadUnitName: record.incomingWorkflow?.leadUnit?.name || null,
+    leadUnitCode: record.incomingWorkflow?.leadUnit?.code || null,
     leadUserId: record.leadUserId || null,
     leadUserName: record.leadUser?.name || null,
 
@@ -216,8 +212,11 @@ export function mapPrismaDocumentToItem(record: any): DocumentItem {
           ? dir.deadline.toISOString()
           : String(dir.deadline)
         : null,
-      assignedDeptId: dir.assignedDeptId,
-      assignedDeptName: dir.assignedDept?.name,
+      // The directive's assigned unit is the lead unit of the task it generated.
+      leadUnitId: record.linkedTask?.leadUnit?.id || null,
+      leadUnitName: record.linkedTask?.leadUnit?.name || null,
+      linkedTaskId: record.linkedTask?.id || null,
+      linkedTaskCode: record.linkedTask?.code || null,
       collaboratorIds: dir.collaboratorIds || null,
       isTaskGenerated: dir.isTaskGenerated ?? false,
       createdAt:
@@ -283,15 +282,36 @@ export async function createDocument(
     status: payload.status || "CHO_PHAN_CONG",
     signerName: payload.signerName || null,
     signerTitle: payload.signerTitle || null,
-    draftingDeptId: payload.draftingDeptId || null,
     recipientList: payload.recipientList || null,
     distributedCopies: payload.distributedCopies ?? 1,
     dueDate,
-    leadDepartmentId: payload.leadDepartmentId || null,
     leadUserId: payload.leadUserId || null,
     notes: payload.notes || null,
     registeredById: payload.registeredById,
   };
+
+  // Phase 9: `Document.draftingDeptId` / `leadDepartmentId` were dropped. The only
+  // canonical unit home left is the incoming workflow's `leadUnit`, which drives
+  // the incoming lifecycle — so it may only be created for `VAN_BAN_DEN`.
+  // A unit supplied for any other type would be silently lost, so it is rejected.
+  if (payload.leadUnitId) {
+    if (payload.type !== "VAN_BAN_DEN") {
+      throw new ValidationError(
+        `Đơn vị chủ trì chỉ áp dụng cho văn bản đến; loại "${payload.type}" không có trường đơn vị canonical nào để lưu.`,
+        { leadUnitId: [`Không thể gán đơn vị chủ trì cho văn bản loại "${payload.type}"`] },
+        "LEAD_UNIT_NOT_APPLICABLE"
+      );
+    }
+    const unit = await OrganizationalUnitService.resolveUnitRef(payload.leadUnitId);
+    if (!unit) {
+      throw new ValidationError(
+        `Đơn vị chủ trì "${payload.leadUnitId}" không tồn tại trong hệ thống đơn vị.`,
+        { leadUnitId: [`Không tìm thấy đơn vị với id/mã "${payload.leadUnitId}"`] },
+        "ORG_UNIT_NOT_FOUND"
+      );
+    }
+    createData.incomingWorkflow = { create: { leadUnitId: unit.id } };
+  }
 
   if (payload.attachments && payload.attachments.length > 0) {
     createData.attachments = {
@@ -341,12 +361,13 @@ export async function listDocuments(
   if (filter.securityLevel) {
     queryConditions.push({ securityLevel: filter.securityLevel as any });
   }
-  // Phase 9: leadDepartmentId and draftingDeptId dropped from Document
-  if (filter.leadDepartmentId) {
-    // field removed — skip filter
-  }
-  if (filter.draftingDeptId) {
-    // field removed — skip filter
+  // Phase 9: unit ownership lives on the incoming workflow (canonical
+  // `OrganizationalUnit`); `Document.leadDepartmentId` / `draftingDeptId` no
+  // longer exist, so the filter is expressed through the relation.
+  if (filter.leadUnitId) {
+    queryConditions.push({
+      incomingWorkflow: { is: { leadUnitId: filter.leadUnitId } },
+    });
   }
   if (filter.search && filter.search.trim()) {
     const q = filter.search.trim();
@@ -466,11 +487,36 @@ export async function updateDocument(
   if (payload.status !== undefined) data.status = payload.status;
   if (payload.signerName !== undefined) data.signerName = payload.signerName;
   if (payload.signerTitle !== undefined) data.signerTitle = payload.signerTitle;
-  if (payload.draftingDeptId !== undefined) data.draftingDeptId = payload.draftingDeptId;
   if (payload.recipientList !== undefined) data.recipientList = payload.recipientList;
   if (payload.distributedCopies !== undefined) data.distributedCopies = payload.distributedCopies;
-  if (payload.leadDepartmentId !== undefined) data.leadDepartmentId = payload.leadDepartmentId;
   if (payload.leadUserId !== undefined) data.leadUserId = payload.leadUserId;
+
+  // Phase 9: unit ownership is canonical `OrganizationalUnit` on the incoming
+  // workflow — upserted so a document can receive its lead unit at any step.
+  if (payload.leadUnitId !== undefined) {
+    if (payload.leadUnitId === null) {
+      // Only an existing workflow can be cleared; creating one just to hold a
+      // NULL unit would fabricate an incoming lifecycle for an outgoing document.
+      if (existing.incomingWorkflow) {
+        data.incomingWorkflow = { update: { leadUnitId: null } };
+      }
+    } else {
+      const unit = await OrganizationalUnitService.resolveUnitRef(payload.leadUnitId);
+      if (!unit) {
+        throw new ValidationError(
+          `Đơn vị chủ trì "${payload.leadUnitId}" không tồn tại trong hệ thống đơn vị.`,
+          { leadUnitId: [`Không tìm thấy đơn vị với id/mã "${payload.leadUnitId}"`] },
+          "ORG_UNIT_NOT_FOUND"
+        );
+      }
+      data.incomingWorkflow = {
+        upsert: {
+          update: { leadUnitId: unit.id },
+          create: { leadUnitId: unit.id },
+        },
+      };
+    }
+  }
   if (payload.notes !== undefined) data.notes = payload.notes;
   if (payload.linkedTaskId !== undefined) data.linkedTaskId = payload.linkedTaskId;
 

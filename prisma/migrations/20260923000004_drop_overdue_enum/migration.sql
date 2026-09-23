@@ -1,6 +1,37 @@
 -- Phase 9 WI-9.4: Remove OVERDUE value from TaskStatus enum
--- Prerequisite: All tasks remediated to canonical statuses (auditTaskStatusOverdue() = 0 rows)
--- SAFE: state-machine already blocks new OVERDUE writes since Stage B
+-- SAFE: state-machine already blocks new OVERDUE writes since Stage B.
+--
+-- Guard thực thi: OVERDUE là giá trị hợp lệ của enum cũ, nên nếu còn bản ghi nào
+-- đang mang giá trị này thì bước cast bên dưới sẽ thất bại với lỗi enum khó truy
+-- vết. Đếm trước và dừng sớm với thông báo rõ ràng.
+DO $$
+DECLARE
+  overdue_rows integer;
+BEGIN
+  IF to_regtype('"TaskStatus"') IS NULL THEN
+    RAISE NOTICE 'Enum TaskStatus không tồn tại — bỏ qua guard OVERDUE.';
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_enum e
+    JOIN pg_type t ON t.oid = e.enumtypid
+    WHERE t.typname = 'TaskStatus' AND e.enumlabel = 'OVERDUE'
+  ) THEN
+    RAISE NOTICE 'TaskStatus không còn giá trị OVERDUE — bỏ qua guard.';
+    RETURN;
+  END IF;
+
+  EXECUTE 'SELECT COUNT(*) FROM "tasks" WHERE "status"::text = ''OVERDUE'''
+    INTO overdue_rows;
+
+  IF overdue_rows > 0 THEN
+    RAISE EXCEPTION
+      'Không thể loại bỏ OVERDUE khỏi TaskStatus: còn % nhiệm vụ đang mang trạng thái này. Chạy remediation về trạng thái canonical trước khi migrate.',
+      overdue_rows;
+  END IF;
+END $$;
 
 -- PostgreSQL does not support DROP VALUE from enum directly.
 -- Rename current enum, create new enum without OVERDUE, update column, drop old enum.

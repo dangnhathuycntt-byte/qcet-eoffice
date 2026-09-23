@@ -21,15 +21,38 @@ import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-cont
 
 export interface TaskEntity {
   id: string;
+  /**
+   * Đơn vị chủ trì canonical (`OrganizationalUnit.id`). Phase 9 đã drop
+   * `Task.departmentId` / quan hệ `department`; `departmentId` giữ lại chỉ để đọc
+   * các shape cũ trong bộ nhớ.
+   */
+  leadUnitId?: string | null;
   departmentId?: string | null;
   creatorId?: string | null;
   createdById?: string | null;
   assigneeId?: string | null;
   collaboratorIds?: string[] | string | null;
+  /** Quan hệ ReBAC canonical thay cho `assignees` đã bị drop. */
+  actors?: Array<{
+    userId?: string | null;
+    role?: string;
+    isPrimaryDRI?: boolean;
+    user?: { id?: string } | null;
+    [key: string]: any;
+  }> | null;
+  /** Hình dạng legacy chỉ còn xuất hiện trên object trong bộ nhớ. */
   assignees?: Array<{ userId?: string; id?: string; roleInTask?: string; [key: string]: any }> | null;
   status?: string | null;
   scope?: string | null;
   [key: string]: any;
+}
+
+/** Actor chủ trì canonical: ưu tiên `isPrimaryDRI`, fallback role `DRI`. */
+function findPrimaryActor(
+  actors: TaskEntity['actors']
+): NonNullable<TaskEntity['actors']>[number] | undefined {
+  if (!Array.isArray(actors)) return undefined;
+  return actors.find((a) => a?.isPrimaryDRI === true) || actors.find((a) => a?.role === 'DRI');
 }
 
 function isAdmin(user: AuthenticatedUser): boolean {
@@ -51,11 +74,22 @@ function getCreatorId(task: TaskEntity): string | null {
 function getAssigneeId(task: TaskEntity): string | null {
   if (task.assigneeId) return task.assigneeId;
   if (task.leadAssignee?.id) return task.leadAssignee.id;
+
+  // Phase 9: nguồn canonical là `actors` (role DRI / isPrimaryDRI).
+  const primaryActor = findPrimaryActor(task.actors);
+  const actorUserId = primaryActor?.userId || primaryActor?.user?.id;
+  if (actorUserId) return actorUserId;
+
   if (Array.isArray(task.assignees)) {
     const primary = task.assignees.find((a) => a.roleInTask === 'PRIMARY_OWNER');
     if (primary) return primary.userId || primary.id || null;
   }
   return null;
+}
+
+/** Đơn vị chủ trì của nhiệm vụ — ưu tiên `leadUnitId` canonical. */
+function getUnitId(task: TaskEntity): string | null {
+  return task.leadUnitId || task.departmentId || (task as any).department?.id || null;
 }
 
 function isCollaborator(
@@ -91,6 +125,15 @@ function isCollaborator(
 
 function isUserCollaborator(user: AuthenticatedUser, task: TaskEntity): boolean {
   if (isCollaborator(user, task.collaboratorIds)) return true;
+
+  // Phase 9: `actors` là nguồn canonical (role COLLABORATOR).
+  if (Array.isArray(task.actors)) {
+    const matched = task.actors.some(
+      (a) => a?.role === 'COLLABORATOR' && (a.userId === user.id || a.user?.id === user.id)
+    );
+    if (matched) return true;
+  }
+
   if (Array.isArray(task.assignees)) {
     return task.assignees.some(
       (a: any) =>
@@ -120,7 +163,7 @@ export function canReadTask(user: AuthenticatedUser, task: TaskEntity): boolean 
   if (isUserCollaborator(user, task)) return true;
 
   // 3. Department boundary: Members of the same department can view department tasks
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (deptId && user.departmentId && deptId === user.departmentId) {
     return true;
   }
@@ -167,7 +210,7 @@ export function canUpdateTask(user: AuthenticatedUser, task: TaskEntity): boolea
   if (assigneeId && assigneeId === user.id) return true;
 
   // Department manager of the task's department can update
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (
     isManager(user) &&
     user.departmentId &&
@@ -205,7 +248,7 @@ export function canApproveTask(user: AuthenticatedUser, task: TaskEntity): boole
   }
 
   // Department manager can approve tasks within their own department
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (
     isManager(user) &&
     user.departmentId &&
@@ -240,7 +283,7 @@ export function canChangeTaskStatus(
   }
 
   const creatorId = getCreatorId(task);
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
 
   // Cancellation requires Admin, Dept Manager, or Creator
   if (statusUpper === 'CANCELLED' || statusUpper === 'HUY') {
@@ -295,7 +338,7 @@ export function canSubmitDeliverable(
   if (assigneeId && assigneeId === user.id) return true;
   if (isUserCollaborator(user, task)) return true;
 
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (
     isManager(user) &&
     user.departmentId &&
@@ -319,7 +362,7 @@ export function canDeleteTask(user: AuthenticatedUser, task: TaskEntity): boolea
   const creatorId = getCreatorId(task);
   if (creatorId && creatorId === user.id) return true;
 
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (
     isManager(user) &&
     user.departmentId &&
@@ -349,7 +392,7 @@ export function canDeleteDeliverable(
   const creatorId = getCreatorId(task);
   if (creatorId && creatorId === user.id) return true;
 
-  const deptId = task.departmentId || (task as any).department?.id;
+  const deptId = getUnitId(task);
   if (isManager(user) && user.departmentId && deptId && user.departmentId === deptId) {
     return true;
   }

@@ -164,12 +164,12 @@ export function validateDirectivePayload(payload: any): ValidationResult {
     errors.push("Nội dung chỉ đạo bút phê (instruction) là bắt buộc");
   }
 
-  // 2. Đơn vị chủ trì tiếp nhận nhiệm vụ (assignedDeptId)
+  // 2. Đơn vị chủ trì tiếp nhận nhiệm vụ (leadUnitId — OrganizationalUnit.id|code)
   if (
-    typeof payload.assignedDeptId !== "string" ||
-    !payload.assignedDeptId.trim()
+    typeof payload.leadUnitId !== "string" ||
+    !payload.leadUnitId.trim()
   ) {
-    errors.push("Đơn vị chủ trì thực hiện (assignedDeptId) là bắt buộc");
+    errors.push("Đơn vị chủ trì thực hiện (leadUnitId) là bắt buộc");
   }
 
   // 3. Hạn hoàn thành báo cáo (deadline) nếu có
@@ -216,7 +216,7 @@ export const ALLOWED_DOCUMENT_UPDATE_FIELDS = [
   "recipientList",
   "distributedCopies",
   "dueDate",
-  "leadDepartmentId",
+  "leadUnitId",
   "leadUserId",
 ] as const;
 

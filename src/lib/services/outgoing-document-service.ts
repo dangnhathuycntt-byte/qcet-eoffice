@@ -327,7 +327,6 @@ export class OutgoingDocumentService {
       primaryOwnerId: existing.document.registeredById,
       createdById: existing.document.registeredById,
       drafterId: existing.document.registeredById,
-      draftingDeptId: (existing.document as any).draftingDeptId || undefined,
     };
 
     await assertAuthorized(user, "document.outgoing.submit_content_review", resource);
@@ -425,7 +424,6 @@ export class OutgoingDocumentService {
       createdById: existing.document.registeredById,
       drafterId: existing.document.registeredById,
       draftingUserId: existing.document.registeredById,
-      draftingDeptId: (existing.document as any).draftingDeptId || undefined,
     };
 
     await assertAuthorized(user, "document.outgoing.approve_content", resource);

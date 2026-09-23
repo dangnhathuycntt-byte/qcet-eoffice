@@ -189,10 +189,12 @@ describe("DACUM & VTVL Framework (Nghị định 106/2020 & Ma trận DACUM)", (
         academicMonth: 9,
         dueDate: new Date("2026-09-30T17:00:00.000Z"),
         scope: "DEPARTMENT",
-        department: { name: "Khoa Công nghệ thông tin" },
-        assignees: [
+        leadUnit: { id: "k-cntt", name: "Khoa Công nghệ thông tin" },
+        actors: [
           {
-            roleInTask: "PRIMARY_OWNER",
+            userId: "user-1",
+            role: "DRI",
+            isPrimaryDRI: true,
             user: { id: "user-1", name: "Nguyễn Văn A" },
           },
         ],

@@ -681,12 +681,16 @@ export interface CreateDocumentDirectiveAtomicPayload {
   documentId: string;
   leaderId: string;
   instruction: string;
-  assignedDeptId: string;
+  /**
+   * Đơn vị chủ trì nhận chỉ đạo — canonical `OrganizationalUnit.id`.
+   * Phase 9: không ghi vào `DocumentDirective` (cột `assignedDeptId` đã bị drop);
+   * đơn vị được thể hiện qua `Task.leadUnitId` của nhiệm vụ sinh ra.
+   */
+  leadUnitId: string;
   deadline?: Date | string | null;
   collaboratorIds?: string | string[] | null;
   isTaskGenerated?: boolean;
   targetDocumentStatus?: DocumentStatus;
-  leadDepartmentId?: string | null;
   linkedTaskId?: string | null;
   expectedDocumentVersion?: number;
   audit?: TransactionAuditPayload;
@@ -705,7 +709,7 @@ export interface CreateDocumentDirectiveAtomicResult {
  *
  * Sequence of operations in tx:
  * 1. DocumentDirective record creation.
- * 2. Document status update (defaults to DANG_XU_LY, leadDepartmentId, optional linkedTaskId)
+ * 2. Document status update (defaults to DANG_XU_LY, optional linkedTaskId)
  *    optionally validated with OCC.
  * 3. Audit trail entry.
  */
@@ -735,7 +739,6 @@ export async function createDocumentDirectiveAtomic(
           leaderId: payload.leaderId,
           instruction: payload.instruction,
           deadline: payload.deadline ? new Date(payload.deadline) : null,
-          assignedDeptId: payload.assignedDeptId,
           collaboratorIds: serializedCollaborators,
           isTaskGenerated: payload.isTaskGenerated ?? false,
         },
@@ -747,9 +750,11 @@ export async function createDocumentDirectiveAtomic(
 
       // 2. Touch & update Document record
       const targetStatus = payload.targetDocumentStatus ?? DocumentStatus.DANG_XU_LY;
+      // Phase 9: `Document.leadDepartmentId` was dropped — unit ownership is
+      // canonical `OrganizationalUnit` and only exists once the directive's task
+      // is created (`Task.leadUnitId`).
       const docUpdateData: any = {
         status: targetStatus,
-        leadDepartmentId: payload.leadDepartmentId ?? payload.assignedDeptId,
       };
       if (payload.linkedTaskId !== undefined) {
         docUpdateData.linkedTaskId = payload.linkedTaskId;
@@ -784,7 +789,7 @@ export async function createDocumentDirectiveAtomic(
           actorId: payload.audit?.actorId ?? payload.leaderId,
           metadata: {
             documentId: payload.documentId,
-            assignedDeptId: payload.assignedDeptId,
+            leadUnitId: payload.leadUnitId,
             isTaskGenerated: directive.isTaskGenerated,
             newDocumentStatus: targetStatus,
             ...(payload.audit?.metadata ?? {}),

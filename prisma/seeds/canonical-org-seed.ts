@@ -423,6 +423,375 @@ export async function seedCanonicalOrg(prisma: PrismaClient) {
   };
 }
 
+// ============================================================================
+// DANH MỤC VỊ TRÍ VIỆC LÀM (POSITION DEFINITIONS) — NĐ 106/2020 & TT 12/2022
+// ============================================================================
+//
+// Nguồn dữ liệu (không suy diễn):
+// 1. `src/lib/dacum-definitions.ts#QCET_VTVL_ROLES` — danh mục VTVL pháp lý đã có
+//    trong repo (Nghị định 106/2020/NĐ-CP Điều 4, Thông tư 12/2022/TT-BLĐTBXH).
+// 2. Các mã vị trí mà tầng authorization thực sự tra cứu
+//    (`document-policy.ts`, `document-classification.ts`, `user-directory-policy.ts`,
+//    `dossier-policy.ts`): HIEU_TRUONG, PHO_HIEU_TRUONG, TRUONG_PHONG,
+//    PHO_TRUONG_PHONG, TRUONG_KHOA, PHO_TRUONG_KHOA, GIAM_DOC_TRUNG_TAM,
+//    PHO_GIAM_DOC_TRUNG_TAM, GIANG_VIEN, CHUYEN_VIEN, VAN_THU.
+//
+// Nhóm (`JobCatalogGroup`) lấy đúng định nghĩa trong `prisma/schema.prisma`:
+//   LDPU = Lãnh đạo, quản lý (Điều 4 NĐ 106)
+//   VCMN = Chức danh nghề nghiệp chuyên ngành (Giảng viên, Giáo viên GDNN)
+//   VCDC = Chức danh nghề nghiệp chuyên môn dùng chung (Kế toán, CNTT, Hành chính)
+//   HTPV = Vị trí việc làm hỗ trợ, phục vụ (Văn thư, Bảo vệ, Phục vụ xưởng)
+
+export interface CanonicalPositionSeedData {
+  code: string;
+  title: string;
+  group: 'LDPU' | 'VCMN' | 'VCDC' | 'HTPV';
+  isLeadership: boolean;
+  legalBasis: string;
+}
+
+export const CANONICAL_POSITION_DEFINITIONS: CanonicalPositionSeedData[] = [
+  // --- Lãnh đạo, quản lý (LDPU) ---
+  {
+    code: 'HIEU_TRUONG',
+    title: 'Hiệu trưởng',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1; Luật GDNN Điều 16',
+  },
+  {
+    code: 'PHO_HIEU_TRUONG',
+    title: 'Phó Hiệu trưởng',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1; Luật GDNN Điều 16',
+  },
+  {
+    code: 'TRUONG_PHONG',
+    title: 'Trưởng phòng / Trưởng đơn vị chức năng',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'PHO_TRUONG_PHONG',
+    title: 'Phó Trưởng phòng / Phó Trưởng đơn vị chức năng',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_TRUONG_KHOA]`
+    code: 'TRUONG_KHOA',
+    title: 'Trưởng khoa / Trưởng bộ môn trực thuộc',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_PHO_TRUONG_KHOA]`
+    code: 'PHO_TRUONG_KHOA',
+    title: 'Phó Trưởng khoa phụ trách chuyên môn',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'GIAM_DOC_TRUNG_TAM',
+    title: 'Giám đốc trung tâm',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'PHO_GIAM_DOC_TRUNG_TAM',
+    title: 'Phó Giám đốc trung tâm',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+
+  // --- Chức danh nghề nghiệp chuyên ngành (VCMN) ---
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_GV_CHUYEN_NGANH]`
+    code: 'GIANG_VIEN',
+    title: 'Giảng viên chuyên ngành',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH; Nghị định 106/2020/NĐ-CP Điều 4',
+  },
+
+  // --- Chức danh nghề nghiệp chuyên môn dùng chung (VCDC) ---
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_CV_DAO_TAO]`
+    code: 'CHUYEN_VIEN',
+    title: 'Chuyên viên nghiệp vụ',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH; Nghị định 106/2020/NĐ-CP Điều 4',
+  },
+  {
+    code: 'KE_TOAN',
+    title: 'Kế toán viên',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'NHAN_VIEN_CNTT',
+    title: 'Nhân viên công nghệ thông tin',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+
+  // --- Vị trí việc làm hỗ trợ, phục vụ (HTPV) ---
+  {
+    code: 'VAN_THU',
+    title: 'Văn thư',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Nghị định 30/2020/NĐ-CP; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_KTV_PHONG_MAY]`
+    code: 'KTV_PHONG_MAY',
+    title: 'Kỹ thuật viên quản trị phòng thực hành',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+];
+
+export interface SeedPositionsResult {
+  definitionsCount: number;
+  assignmentsCount: number;
+  unresolvedUsers: string[];
+}
+
+/**
+ * Gieo danh mục `PositionDefinition` (chuẩn tắc, không phụ thuộc dữ liệu người dùng).
+ */
+export async function seedCanonicalPositions(prisma: PrismaClient): Promise<number> {
+  console.log('--- Bắt đầu gieo danh mục Vị trí việc làm (NĐ 106/2020 & TT 12/2022) ---');
+
+  for (const position of CANONICAL_POSITION_DEFINITIONS) {
+    await prisma.positionDefinition.upsert({
+      where: { code: position.code },
+      update: {
+        title: position.title,
+        group: position.group,
+        isLeadership: position.isLeadership,
+      },
+      create: {
+        code: position.code,
+        title: position.title,
+        group: position.group,
+        isLeadership: position.isLeadership,
+      },
+    });
+  }
+
+  console.log(`--- Đã gieo ${CANONICAL_POSITION_DEFINITIONS.length} vị trí việc làm chuẩn tắc ---`);
+  return CANONICAL_POSITION_DEFINITIONS.length;
+}
+
+/** Bỏ dấu tiếng Việt để so khớp chức danh với tên đơn vị. */
+export function normalizeVietnamese(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase();
+}
+
+/**
+ * Suy ra mã vị trí việc làm từ chức danh + role hệ thống.
+ * Thứ tự kiểm tra quan trọng: "Phó ..." phải xét trước để không khớp nhầm vào
+ * vị trí trưởng tương ứng.
+ *
+ * Trả `null` khi chức danh không thuộc danh mục canonical — caller phải báo cáo
+ * tường minh, không được gán bừa.
+ */
+export function resolvePositionCode(
+  title: string | null | undefined,
+  role: string | null | undefined
+): string | null {
+  const normalizedTitle = normalizeVietnamese(title || '');
+  const normalizedRole = (role || '').toUpperCase();
+
+  if (/pho hieu truong/.test(normalizedTitle)) return 'PHO_HIEU_TRUONG';
+  if (/hieu truong/.test(normalizedTitle)) return 'HIEU_TRUONG';
+  if (/pho truong khoa/.test(normalizedTitle)) return 'PHO_TRUONG_KHOA';
+  if (/truong khoa/.test(normalizedTitle)) return 'TRUONG_KHOA';
+  if (/pho giam doc/.test(normalizedTitle)) return 'PHO_GIAM_DOC_TRUNG_TAM';
+  if (/giam doc/.test(normalizedTitle)) return 'GIAM_DOC_TRUNG_TAM';
+  if (/truong phong/.test(normalizedTitle)) return 'TRUONG_PHONG';
+  if (/giang vien/.test(normalizedTitle)) return 'GIANG_VIEN';
+  // Tài khoản đại diện đơn vị đôi khi chỉ mang tên đơn vị làm chức danh
+  // ("Phòng Quản lý Đào tạo") — role vẫn là trưởng đơn vị.
+  if (normalizedRole === 'TRUONG_PHONG') return 'TRUONG_PHONG';
+  if (normalizedRole === 'VAN_THU') return 'VAN_THU';
+  if (normalizedRole === 'CHUYEN_VIEN') return 'CHUYEN_VIEN';
+  // ADMIN là vai trò kỹ thuật, không thuộc danh mục VTVL — không gán bừa.
+  return null;
+}
+
+/**
+ * Khớp chức danh với một đơn vị canonical.
+ *
+ * Cách làm: bỏ cụm chức danh đứng trước ("Trưởng phòng", "Giảng viên", ...) để lấy
+ * phần tên đơn vị, rồi so khớp với các "token đặc trưng" của tên đơn vị canonical.
+ *
+ * Quy tắc khớp dùng `endsWith` (không dùng `includes`/`startsWith`) vì tên đơn vị
+ * tiếng Việt có phần đầu tố đứng cuối: dùng `includes` sẽ khiến chức danh
+ * "Quản trị viên" bị khớp nhầm vào "Phòng Tổ chức Hành chính - Quản trị".
+ *
+ * Trả `null` khi không khớp, hoặc khi có nhiều đơn vị cùng điểm khớp (không đoán bừa).
+ */
+export function matchUnitCodeByTitle(
+  title: string | null | undefined,
+  units: Array<{ code: string; name: string }>
+): string | null {
+  const normalizedTitle = normalizeVietnamese(title || '');
+  if (!normalizedTitle) return null;
+
+  // Chỉ chức danh thuộc một trong hai dạng mới mang thông tin đơn vị:
+  //  (a) bắt đầu bằng cụm chức danh: "Trưởng phòng ...", "Giảng viên ...";
+  //  (b) bắt đầu bằng loại đơn vị: "Phòng ...", "Khoa ...", "Trung tâm ...".
+  // Dạng khác ("Quản trị viên") mô tả một *người*, không phải một đơn vị — nếu vẫn
+  // đem so khớp thì "Quản trị viên" sẽ khớp nhầm vào "... - Quản trị".
+  const POSITION_PREFIX =
+    /^(pho\s+)?(truong\s+(phong|khoa|trung tam|tt|bo mon)|giam doc\s+(tt|trung tam)|giang vien)\s+/;
+  const UNIT_PREFIX = /^(phong|khoa|trung tam)\s+/;
+
+  const hasPositionPrefix = POSITION_PREFIX.test(normalizedTitle);
+  const hasUnitPrefix = UNIT_PREFIX.test(normalizedTitle);
+  if (!hasPositionPrefix && !hasUnitPrefix) return null;
+
+  const subject = normalizedTitle
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(POSITION_PREFIX, '')
+    .replace(UNIT_PREFIX, '')
+    .trim();
+
+  const haystack = subject.length >= 4 ? subject : normalizedTitle;
+
+  const scored = units
+    .map((unit) => {
+      const tokens = normalizeVietnamese(unit.name)
+        .replace(UNIT_PREFIX, '')
+        .split(/[-–&]/)
+        .map((part) => part.trim())
+        .filter((part) => part.length >= 4);
+      const matches = tokens.filter(
+        (token) => haystack === token || haystack.startsWith(token) || haystack.endsWith(token)
+      ).length;
+      return { code: unit.code, matches };
+    })
+    .filter((entry) => entry.matches > 0)
+    .sort((a, b) => b.matches - a.matches);
+
+  if (scored.length === 0) return null;
+  // Nhiều đơn vị cùng điểm khớp → không đủ căn cứ để chọn, báo cáo thay vì đoán.
+  if (scored.length > 1 && scored[0].matches === scored[1].matches) return null;
+  return scored[0].code;
+}
+
+/**
+ * Gieo `PositionAssignment` cho người dùng mẫu: gắn mỗi người vào đơn vị canonical
+ * của mình theo chức danh.
+ *
+ * Không suy diễn: nếu chức danh không khớp được với một đơn vị canonical nào, người
+ * đó được **báo cáo tường minh** trong `unresolvedUsers` và bỏ qua — tuyệt đối không
+ * gán bừa vào một đơn vị để seed "chạy cho xong".
+ */
+export async function seedCanonicalAssignments(
+  prisma: PrismaClient,
+  users: Array<{ id: string; name: string; role: string; title: string | null }>
+): Promise<SeedPositionsResult> {
+  const units = await prisma.organizationalUnit.findMany({
+    select: { id: true, code: true, name: true },
+  });
+  const unitByCode = new Map(units.map((u) => [u.code, u]));
+  const positionByCode = new Map(
+    (await prisma.positionDefinition.findMany({ select: { id: true, code: true } })).map((p) => [
+      p.code,
+      p.id,
+    ])
+  );
+
+  const unresolvedUsers: string[] = [];
+  let assignmentsCount = 0;
+
+  for (const user of users) {
+    const positionCode = resolvePositionCode(user.title, user.role);
+
+    if (!positionCode) {
+      unresolvedUsers.push(`${user.name} <${user.title ?? 'không có chức danh'}>`);
+      continue;
+    }
+
+    // Ban Giám hiệu thuộc đơn vị cấp Trường; các vị trí khác khớp theo tên đơn vị.
+    const unitCode =
+      positionCode === 'HIEU_TRUONG' || positionCode === 'PHO_HIEU_TRUONG'
+        ? 'QCET'
+        : positionCode === 'VAN_THU'
+        ? 'P_TCHC_QT'
+        : matchUnitCodeByTitle(user.title, units);
+
+    if (!unitCode || !unitByCode.has(unitCode)) {
+      unresolvedUsers.push(`${user.name} <${user.title ?? 'không có chức danh'}>`);
+      continue;
+    }
+
+    const positionDefinitionId = positionByCode.get(positionCode);
+    if (!positionDefinitionId) {
+      unresolvedUsers.push(`${user.name} (thiếu PositionDefinition ${positionCode})`);
+      continue;
+    }
+
+    const unit = unitByCode.get(unitCode)!;
+
+    const existing = await prisma.positionAssignment.findFirst({
+      where: { userId: user.id, positionDefinitionId, unitId: unit.id },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: user.id,
+        positionDefinitionId,
+        unitId: unit.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+        sourceDecisionNumber: '282/QĐ-CĐKTCNQN',
+      },
+    });
+    assignmentsCount++;
+  }
+
+  if (unresolvedUsers.length > 0) {
+    console.warn(
+      `--- CẢNH BÁO: ${unresolvedUsers.length} người dùng chưa xác định được đơn vị canonical (bỏ qua, KHÔNG gán bừa):`
+    );
+    for (const entry of unresolvedUsers) {
+      console.warn(`    - ${entry}`);
+    }
+  }
+
+  console.log(
+    `--- Đã gieo ${assignmentsCount} phân công vị trí việc làm; ${unresolvedUsers.length} chưa resolve được ---`
+  );
+
+  return {
+    definitionsCount: CANONICAL_POSITION_DEFINITIONS.length,
+    assignmentsCount,
+    unresolvedUsers,
+  };
+}
+
 // Cho phép chạy trực tiếp qua `npx tsx prisma/seeds/canonical-org-seed.ts`
 if (process.argv[1]?.includes('canonical-org-seed')) {
   const prisma = new PrismaClient();

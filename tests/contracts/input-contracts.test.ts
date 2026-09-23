@@ -698,11 +698,11 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
         const parsed = CreateDirectiveSchema.parse({
           title: 'Chỉ đạo khẩn về công tác tuyển sinh',
           content: 'Yêu cầu phòng Đào tạo phối hợp các khoa hoàn tất kế hoạch trước thứ Sáu.',
-          assignedToDepartmentId: 'dept_qldt',
+          leadUnitId: 'dept_qldt',
           deadline: '2026-09-18T17:00:00Z',
         });
         assert.strictEqual(parsed.title, 'Chỉ đạo khẩn về công tác tuyển sinh');
-        assert.strictEqual(parsed.assignedToDepartmentId, 'dept_qldt');
+        assert.strictEqual(parsed.leadUnitId, 'dept_qldt');
       });
 
       it('rejects title shorter than 2 or longer than 255 characters', () => {

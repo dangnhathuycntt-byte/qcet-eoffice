@@ -28,9 +28,12 @@ import { isDocumentImmutable } from '@/lib/documents/state-machine';
 
 export interface DocumentEntity extends DocumentClassificationTarget {
   id: string;
-  departmentId?: string | null;
-  leadDepartmentId?: string | null;
-  draftingDeptId?: string | null;
+  /**
+   * Canonical unit ownership (`OrganizationalUnit.id`). Phase 9 dropped
+   * `Document.departmentId` / `leadDepartmentId` / `draftingDeptId`, so unit
+   * scope is read from this single field.
+   */
+  leadUnitId?: string | null;
   creatorId?: string | null;
   registeredById?: string | null;
   leadUserId?: string | null;
@@ -91,13 +94,11 @@ export function canUpdateDocument(
   if (doc.creatorId && doc.creatorId === userId) return true;
   if (doc.registeredById && doc.registeredById === userId) return true;
 
-  // Department manager of the document's department
+  // Unit manager of the document's lead unit
   const deptId =
     (userOrContext as any).primaryUnitIds?.[0] || (user as any)?.departmentId;
   if (isManager(user as AuthenticatedUser) && deptId) {
-    if (doc.departmentId && deptId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
+    if (doc.leadUnitId && deptId === doc.leadUnitId) return true;
   }
 
   // Clerical staff (Văn thư) for internal registry handling
@@ -143,9 +144,7 @@ export function canDirectDocument(
   if (isExecutive) return true;
 
   if (isManager(user as AuthenticatedUser) && deptId) {
-    if (doc.departmentId && deptId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
+    if (doc.leadUnitId && deptId === doc.leadUnitId) return true;
   }
 
   return false;
@@ -175,9 +174,7 @@ export function canDeleteDocument(
   const deptId =
     (userOrContext as any).primaryUnitIds?.[0] || (user as any)?.departmentId;
   if (isManager(user as AuthenticatedUser) && deptId) {
-    if (doc.departmentId && deptId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
+    if (doc.leadUnitId && deptId === doc.leadUnitId) return true;
   }
 
   return false;
@@ -192,7 +189,8 @@ export function canDeleteDocument(
  * - Admin / Clerical / Leadership: (VAN_THU / ADMIN / BAN_GIAM_HIEU) can read all non-confidential documents
  * - Creator / Registered by: registeredById = user.id, or linkedTask createdById = user.id
  * - Lead user: leadUserId = user.id
- * - Department match: departmentId = user.departmentId (leadDepartmentId, draftingDeptId, directives, linkedTask)
+ * - Unit match: user's unit = incomingWorkflow.leadUnitId, or the lead unit of
+ *   the task generated from a directive (linkedTask.leadUnitId)
  * - Handling confidential / restricted documents: securityLevel != TUYET_MAT
  */
 export function buildDocumentReadWhere(
@@ -254,8 +252,11 @@ export function buildDocumentReadWhere(
 
   if (departmentId) {
     orConditions.push(
-      // Phase 9: leadDepartmentId and draftingDeptId dropped from Document
-      { directives: { some: { assignedDeptId: departmentId } } },
+      // Phase 9: unit scope is canonical `OrganizationalUnit`. `Document` has no
+      // unit column and `DocumentDirective.assignedDeptId` was dropped, so the
+      // only unit-scoped predicates left are the incoming workflow's lead unit
+      // and the lead unit of the task a directive generated.
+      { incomingWorkflow: { is: { leadUnitId: departmentId } } },
       { linkedTask: { is: { leadUnitId: departmentId } } }
     );
   }

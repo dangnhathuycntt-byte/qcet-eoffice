@@ -1054,65 +1054,50 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
       });
       assert.strictEqual(deletedUser.id, restrictedUser.id);
 
-      // 2. Prevent Department deletion when referenced in DocumentDirective.assignedDept (onDelete: Restrict)
-      const restrictedDept = await prisma.organizationalUnit.create({
+      // 2. Unit deletion semantics after Phase 9.
+      // The legacy `document_directives.assigned_dept_id -> departments` RESTRICT
+      // foreign key was dropped together with the `Department` model. Every
+      // remaining unit reference (`Task.leadUnitId`, `DocumentIncomingWorkflow.leadUnitId`)
+      // is `onDelete: SetNull`, so deleting a unit must succeed and detach — never
+      // leave a dangling reference and never block the delete.
+      const deletedUnit = await prisma.organizationalUnit.create({
         data: {
-          id: `dept-restrict-${Date.now()}`,
-          code: `dept-restrict-${Date.now()}`,
-          name: `Phòng Ràng Buộc Khóa Ngoại ${testRunId}`,
+          id: `unit-detach-${Date.now()}`,
+          code: `unit-detach-${Date.now()}`,
+          name: `Đơn vị kiểm thử tách tham chiếu ${testRunId}`,
           type: "PHONG_BAN" as any,
           status: "ACTIVE" as any,
         },
       });
 
-      const directiveDoc = await prisma.document.create({
+      const detachedTask = await prisma.task.create({
         data: {
-          type: "VAN_BAN_DEN",
-          registrationNumber: 99805,
-          documentYear: testYear,
-          originalNumber: `${testRunId}/DOC-DIRECTIVE-DEPT`,
-          issuedDate: new Date(),
-          issuingAuthority: "QCET Leadership",
-          category: "Chỉ thị",
-          summary: `Văn bản giao nhiệm vụ ${testRunId}`,
-          registeredById: testUserId1,
+          code: `${testRunId}-DETACH-UNIT`,
+          title: `Nhiệm vụ kiểm thử tách đơn vị ${testRunId}`,
+          scope: "DEPARTMENT" as any,
+          status: "NOT_STARTED" as any,
+          priority: "NORMAL" as any,
+          dueDate: new Date(),
+          academicMonth: 9,
+          academicYear: "2026-2027",
+          createdById: testUserId1,
+          leadUnitId: deletedUnit.id,
         },
       });
 
-      const directive = await prisma.documentDirective.create({
-        data: {
-          documentId: directiveDoc.id,
-          leaderId: testUserId1,
-          assignedDeptId: restrictedDept.id,
-          instruction: "Nghiêm túc tổ chức thực hiện",
-        },
-      });
+      await prisma.organizationalUnit.delete({ where: { id: deletedUnit.id } });
 
-      // Attempting to delete restrictedDept must fail with foreign key constraint violation
-      await assert.rejects(
-        async () => {
-          await prisma.organizationalUnit.delete({
-            where: { id: restrictedDept.id },
-          });
-        },
-        (err: any) => {
-          assert.ok(
-            err.code === "P2003" ||
-              err.message?.includes("Foreign key constraint failed") ||
-              err.message?.includes("violates foreign key constraint"),
-            `Expected foreign key constraint violation on department delete, got: ${err.message}`
-          );
-          return true;
-        }
+      const reloadedTask = await prisma.task.findUnique({
+        where: { id: detachedTask.id },
+        select: { leadUnitId: true },
+      });
+      assert.strictEqual(
+        reloadedTask?.leadUnitId,
+        null,
+        "Xóa đơn vị phải tách tham chiếu (SetNull) chứ không để lại FK treo"
       );
 
-      // Clean up directive, then department deletion succeeds
-      await prisma.documentDirective.delete({ where: { id: directive.id } });
-      await prisma.document.delete({ where: { id: directiveDoc.id } });
-      const deletedDept = await prisma.organizationalUnit.delete({
-        where: { id: restrictedDept.id },
-      });
-      assert.strictEqual(deletedDept.id, restrictedDept.id);
+      await prisma.task.delete({ where: { id: detachedTask.id } });
     });
   });
 });
