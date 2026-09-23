@@ -9,7 +9,7 @@
  *    MUST NOT silently become task.approve, ALL, synthetic one-year validity, or broader authority.
  * 2. Ambiguous Record Quarantine: Records lacking statutory requisites are quarantined for remediation.
  * 3. Deterministic Resolution: Ties across multiple active PositionAssignments are resolved deterministically
- *    by unit alignment, leadership role, latest appointedAt, and stable primary key order.
+ *    by unit alignment, leadership role, latest effectiveFrom, and stable primary key order.
  */
 
 import {
@@ -42,6 +42,8 @@ export interface DelegationParityReport {
   isParityMatched: boolean;
   totalDacumDelegations: number;
   matchedGrants: number;
+  fullyMatchedGrants: number;
+  partialMatchGrants: number;
   unmatchedDacumIds: string[];
   quarantinedRecords: QuarantinedDelegation[];
 }
@@ -66,20 +68,21 @@ export function resolveDelegationStatus(
 /**
  * Resolves active PositionAssignment deterministically for a user:
  * 1. Unit alignment (if preferredUnitId provided).
- * 2. Leadership positions first (isLeadership DESC).
- * 3. Most recently appointed assignment (appointedAt DESC).
+ * 2. Leadership positions first (positionDefinition.isLeadership DESC).
+ * 3. Most recent assignment (effectiveFrom DESC).
  * 4. Stable tie-breaker on primary key (id ASC).
  */
 export async function resolveDeterministicPositionAssignment(
   db: DbClient,
   userId: string,
   preferredUnitId?: string | null
-): Promise<{ id: string; unitId: string | null } | null> {
-  const assignments: Array<{
+): Promise<{ id: string; unitId: string | null; userId: string } | null> {
+  const rawAssignments: Array<{
     id: string;
+    userId: string;
     unitId: string | null;
-    isLeadership: boolean;
-    appointedAt: Date;
+    effectiveFrom: Date;
+    positionDefinition: { isLeadership: boolean };
   }> = await (db as any).positionAssignment.findMany({
     where: {
       userId,
@@ -87,31 +90,43 @@ export async function resolveDeterministicPositionAssignment(
     },
     select: {
       id: true,
+      userId: true,
       unitId: true,
-      isLeadership: true,
-      appointedAt: true,
+      effectiveFrom: true,
+      positionDefinition: {
+        select: { isLeadership: true },
+      },
     },
-    orderBy: [
-      { isLeadership: 'desc' },
-      { appointedAt: 'desc' },
-      { id: 'asc' },
-    ],
   });
 
-  if (assignments.length === 0) {
+  if (rawAssignments.length === 0) {
     return null;
   }
+
+  // Sort in application code: isLeadership DESC, effectiveFrom DESC, id ASC
+  const assignments = [...rawAssignments].sort((a, b) => {
+    const aLeader = a.positionDefinition.isLeadership ? 1 : 0;
+    const bLeader = b.positionDefinition.isLeadership ? 1 : 0;
+    if (bLeader !== aLeader) return bLeader - aLeader;
+    const timeDiff = b.effectiveFrom.getTime() - a.effectiveFrom.getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
 
   // If unit alignment is requested and available, prefer the matched assignment
   if (preferredUnitId) {
     const unitMatch = assignments.find((a) => a.unitId === preferredUnitId);
     if (unitMatch) {
-      return { id: unitMatch.id, unitId: unitMatch.unitId };
+      return { id: unitMatch.id, unitId: unitMatch.unitId, userId: unitMatch.userId };
     }
   }
 
   // Return the highest-priority deterministic assignment
-  return { id: assignments[0].id, unitId: assignments[0].unitId };
+  return {
+    id: assignments[0].id,
+    unitId: assignments[0].unitId,
+    userId: assignments[0].userId,
+  };
 }
 
 /**
@@ -214,7 +229,7 @@ export async function syncDacumToDelegationGrant(
       validUntil: input.expiresAt!,
       sourceDocumentNumber: docNumber,
       status,
-      notes: input.id
+      reason: input.id
         ? `Synced from DacumDelegation [${input.id}]`
         : 'Dual-write from DacumDelegation',
     },
@@ -223,9 +238,17 @@ export async function syncDacumToDelegationGrant(
   return { grantId: grant.id, created: true };
 }
 
+/** Acceptable date range tolerance for parity check (ms) */
+const DATE_TOLERANCE_MS = 24 * 60 * 60 * 1000; // 1 day
+
 /**
  * Verifies parity between DacumDelegation and DelegationGrant tables.
  * Quarantines any invalid/ambiguous legacy records without silent conversion.
+ *
+ * Strengthened checks:
+ * - Grantor userId must match via grantorAssignment.userId
+ * - Grantee userId must match via granteeAssignment.userId
+ * - validFrom / validUntil must be within DATE_TOLERANCE_MS of dacum startDate / expiresAt
  */
 export async function verifyDelegationGrantParity(
   db: DbClient
@@ -257,6 +280,8 @@ export async function verifyDelegationGrantParity(
   const unmatchedDacumIds: string[] = [];
   const quarantinedRecords: QuarantinedDelegation[] = [];
   let matchedGrants = 0;
+  let fullyMatchedGrants = 0;
+  let partialMatchGrants = 0;
 
   for (const dacum of dacumDelegations) {
     const validation = validateDacumDelegationStatutoryRequirements(dacum);
@@ -273,13 +298,39 @@ export async function verifyDelegationGrantParity(
       where: {
         sourceDocumentNumber: dacum.documentRef!.trim(),
       },
-      select: { id: true },
+      select: {
+        id: true,
+        validFrom: true,
+        validUntil: true,
+        grantorAssignment: { select: { userId: true } },
+        granteeAssignment: { select: { userId: true } },
+      },
     });
 
-    if (grant) {
-      matchedGrants++;
-    } else {
+    if (!grant) {
       unmatchedDacumIds.push(dacum.id);
+      continue;
+    }
+
+    matchedGrants++;
+
+    // Verify grantor/grantee userId and date range
+    const grantorMatch = grant.grantorAssignment?.userId === dacum.grantorId;
+    const granteeMatch = grant.granteeAssignment?.userId === dacum.delegateId;
+
+    const validFromDiff = dacum.startDate
+      ? Math.abs(new Date(grant.validFrom).getTime() - dacum.startDate.getTime())
+      : Infinity;
+    const validUntilDiff = dacum.expiresAt
+      ? Math.abs(new Date(grant.validUntil).getTime() - dacum.expiresAt.getTime())
+      : Infinity;
+    const datesMatch =
+      validFromDiff <= DATE_TOLERANCE_MS && validUntilDiff <= DATE_TOLERANCE_MS;
+
+    if (grantorMatch && granteeMatch && datesMatch) {
+      fullyMatchedGrants++;
+    } else {
+      partialMatchGrants++;
     }
   }
 
@@ -288,7 +339,24 @@ export async function verifyDelegationGrantParity(
       unmatchedDacumIds.length === 0 && quarantinedRecords.length === 0,
     totalDacumDelegations: dacumDelegations.length,
     matchedGrants,
+    fullyMatchedGrants,
+    partialMatchGrants,
     unmatchedDacumIds,
     quarantinedRecords,
   };
+}
+
+/**
+ * Formats quarantined delegation records as a JSON string for manual review export.
+ */
+export function writeQuarantineReport(records: QuarantinedDelegation[]): string {
+  return JSON.stringify(
+    {
+      generatedAt: new Date().toISOString(),
+      totalQuarantined: records.length,
+      records,
+    },
+    null,
+    2
+  );
 }
