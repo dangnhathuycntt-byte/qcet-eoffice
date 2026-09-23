@@ -118,7 +118,7 @@ describe('Task Code Generator (Atomic O(1) Sequencing)', () => {
           data: {
             code: 'NV-2026-10-008',
             title: 'Test Seed Task for Code Sync',
-            departmentId: dept.id,
+            leadUnitId: dept.id,
             createdById: user.id,
             academicMonth: 10,
             academicYear: '2026-2027',
