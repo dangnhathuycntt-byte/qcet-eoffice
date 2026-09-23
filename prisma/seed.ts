@@ -11,7 +11,11 @@ import {
   DocumentStatus,
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { seedCanonicalOrg } from './seeds/canonical-org-seed';
+import {
+  seedCanonicalOrg,
+  seedCanonicalPositions,
+  seedCanonicalAssignments,
+} from './seeds/canonical-org-seed';
 import { DEPARTMENT_TO_ORG_UNIT_MAP } from './seeds/migrate-task-relations';
 
 const prisma = new PrismaClient();
@@ -66,6 +70,9 @@ async function main() {
   // Phải chạy TRƯỚC users/tasks/documents vì mọi tham chiếu đơn vị dưới đây là FK
   // tới `organizational_units.id`.
   await seedCanonicalOrg(prisma);
+
+  // Danh mục vị trí việc làm (NĐ 106/2020 & TT 12/2022) — cần trước khi gán vị trí.
+  await seedCanonicalPositions(prisma);
 
   const orgUnits = await prisma.organizationalUnit.findMany({
     select: { id: true, code: true },
@@ -145,6 +152,19 @@ async function main() {
     });
     userMap[u.email] = created.id;
   }
+
+  // Phân công vị trí việc làm (PositionAssignment) cho người dùng mẫu theo RFC-02 Bước 5.
+  // Người dùng có chức danh không khớp đơn vị canonical nào sẽ được báo cáo tường
+  // minh và bỏ qua thay vì gán bừa.
+  await seedCanonicalAssignments(
+    prisma,
+    users.map((u) => ({
+      id: userMap[u.email],
+      name: u.name,
+      role: u.role,
+      title: u.title ?? null,
+    }))
+  );
 
   // 3. Tạo 40 Nhiệm vụ mẫu trải đều qua 12 tháng học vụ và 11 đơn vị
     const adminId = userMap["admin@cdktcnqn.edu.vn"];
