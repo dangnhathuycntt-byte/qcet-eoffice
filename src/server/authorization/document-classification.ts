@@ -52,8 +52,6 @@ export interface DocumentClassificationTarget {
   isPublic?: boolean | null;
   scope?: string | null;
   departmentId?: string | null;
-  leadDepartmentId?: string | null;
-  draftingDeptId?: string | null;
   leadUnitId?: string | null;
   draftingUnitId?: string | null;
   owningUnitId?: string | null;

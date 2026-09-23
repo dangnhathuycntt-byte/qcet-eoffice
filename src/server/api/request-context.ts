@@ -165,19 +165,32 @@ export async function getApiContext(
     try {
       currentSession = await resolveCurrentSession(request);
       if (currentSession) {
-        // Single DB query for role/title — resolveCurrentSession already
+        // Single DB query for role/title/unit — resolveCurrentSession already
         // verified the session and user.isActive; this adds the profile fields only.
         let dbRole = 'CHUYEN_VIEN';
         let dbTitle: string | null = null;
+        let dbUnitId: string | null = null;
 
         try {
           const fullDbUser = await prisma.user.findUnique({
             where: { id: currentSession.userId },
-            select: { role: true, title: true },
+            select: {
+              role: true,
+              title: true,
+              // `User.departmentId` đã bị drop (Phase 9). Đơn vị công tác canonical là phân
+              // công vị trí việc làm chính đang hiệu lực — `position_assignments.unit_id`.
+              positionAssignments: {
+                where: { type: 'PRIMARY', status: 'ACTIVE' },
+                orderBy: { effectiveFrom: 'desc' },
+                take: 1,
+                select: { unitId: true },
+              },
+            },
           });
           if (fullDbUser) {
             dbRole = fullDbUser.role || dbRole;
             dbTitle = fullDbUser.title ?? dbTitle;
+            dbUnitId = fullDbUser.positionAssignments[0]?.unitId ?? null;
           }
         } catch {
           // Gracefully keep default values
@@ -188,7 +201,7 @@ export async function getApiContext(
           email: currentSession.user.email,
           name: currentSession.user.name,
           role: dbRole,
-          departmentId: null,
+          departmentId: dbUnitId,
           title: dbTitle,
         };
       }

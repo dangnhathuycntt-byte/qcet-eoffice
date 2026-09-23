@@ -348,7 +348,8 @@ describe('Task Authorization Policy (task-policy.ts)', () => {
 describe('Document Authorization Policy (document-policy.ts)', () => {
   const publicDoc: DocumentEntity = {
     id: 'doc-pub-1',
-    departmentId: 'dept-cntt',
+    // Phase 9: DocumentEntity dùng `leadUnitId` (OrganizationalUnit canonical).
+    leadUnitId: 'dept-cntt',
     creatorId: 'u-mgr-a',
     scope: 'SCHOOL',
     isPublic: true,
@@ -356,7 +357,7 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
 
   const internalDeptADoc: DocumentEntity = {
     id: 'doc-priv-a',
-    departmentId: 'dept-cntt',
+    leadUnitId: 'dept-cntt',
     creatorId: 'u-mgr-a',
     scope: 'DEPARTMENT',
     isPublic: false,
@@ -406,7 +407,7 @@ describe('Document Authorization Policy (document-policy.ts)', () => {
     it('allows staff creator to update their document', () => {
       const staffDoc: DocumentEntity = {
         id: 'doc-staff',
-        departmentId: 'dept-cntt',
+        leadUnitId: 'dept-cntt',
         creatorId: 'u-staff-a1',
         isPublic: false,
       };

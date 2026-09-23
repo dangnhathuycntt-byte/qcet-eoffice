@@ -137,7 +137,9 @@ export function isUserAuthorizedApprover(task: any, userContext: UserContext): b
   if (isUserExecutive(userContext)) return true;
 
   // Department-level / Waiting approval
-  const taskDeptId = task.departmentId || task.leadDepartmentId || null;
+  // `task.departmentId` trên domain model đã là `Task.leadUnitId` canonical
+  // (xem `src/domain/tasks/mappers.ts`), nên không còn fallback legacy.
+  const taskDeptId = task.departmentId ?? null;
   if (isUserUnitHead(userContext, taskDeptId)) {
     return true;
   }
