@@ -48,6 +48,9 @@ import {
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
+import { motionTransition } from "@/lib/motion/tokens";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -367,14 +370,14 @@ export function AppSidebar() {
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
-          <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
+          <div className={cn("px-2 pt-2.5 pb-1 flex items-center gap-1 w-full", isCollapsed ? "justify-center" : "justify-between")}>
             {/* Left: User Identity / Account Menu Trigger */}
             <Menu.Trigger
               ref={accountTriggerRef}
               type="button"
               className={cn(
-                "h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
-                isCollapsed && "size-8 flex-none justify-center px-0",
+                "h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
+                isCollapsed ? "size-8 flex-none justify-center px-0" : "min-w-0 flex-1",
                 isProfileDropdownOpen
                   ? "bg-black/[0.06]"
                   : "hover:bg-black/[0.04]"
