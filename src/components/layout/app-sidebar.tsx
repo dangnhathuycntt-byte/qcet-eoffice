@@ -49,7 +49,6 @@ import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
-import { motionTransition } from "@/lib/motion/tokens";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -172,7 +171,7 @@ export function AppSidebar() {
   const {
     isCollapsed,
     toggleCollapse,
-    sidebarWidth,
+    sidebarWidthMotion,
     badgeCounts,
   } = useSidebar();
   const pathname = usePathname();
@@ -360,8 +359,7 @@ export function AppSidebar() {
         id="app-sidebar"
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
-        animate={{ width: sidebarWidth }}
-        transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.8 }}
+        style={{ width: sidebarWidthMotion }}
         className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] text-foreground select-none group/sidebar overflow-hidden"
       >
         {/* ========================================================= */}
@@ -370,14 +368,13 @@ export function AppSidebar() {
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
-          <div className={cn("px-2 pt-2.5 pb-1 flex items-center gap-1 w-full", isCollapsed ? "justify-center" : "justify-between")}>
+          <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
             <Menu.Trigger
               ref={accountTriggerRef}
               type="button"
               className={cn(
-                "h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
-                isCollapsed ? "size-8 flex-none justify-center px-0" : "min-w-0 flex-1",
+                "h-7 min-w-0 flex-1 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
                 isProfileDropdownOpen
                   ? "bg-black/[0.06]"
                   : "hover:bg-black/[0.04]"
@@ -585,7 +582,8 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-label={item.label}
                           className={cn(
-                            "group relative flex items-center gap-2.5 rounded-[6px] h-[34px] px-2 text-[13px] transition-colors select-none tracking-tight overflow-hidden whitespace-nowrap",
+                            "group relative flex items-center rounded-[6px] h-[34px] text-[13px] transition-[colors,padding,gap] duration-[200ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none tracking-tight overflow-hidden whitespace-nowrap",
+                            isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-2",
                             active
                               ? "bg-black/[0.06] text-foreground font-medium"
                               : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
@@ -603,8 +601,14 @@ export function AppSidebar() {
                               )}
                             />
                           </span>
-                          <span className="truncate flex-1 text-[13px]">{item.label}</span>
-                          {badge ? (
+                          <span
+                            aria-hidden={isCollapsed}
+                            className={cn(
+                              "truncate flex-1 text-[13px] transition-[opacity,max-width] duration-[200ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                              isCollapsed ? "opacity-0 max-w-0 pointer-events-none" : "opacity-100 max-w-full"
+                            )}
+                          >{item.label}</span>
+                          {badge && !isCollapsed ? (
                             <span
                               className={cn(
                                 "inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0",
@@ -661,9 +665,9 @@ export function AppSidebar() {
       </m.aside>
 
       {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
-      <div
+      <m.div
+        style={{ left: sidebarWidthMotion }}
         className="fixed top-1/2 z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
-        style={{ left: `${sidebarWidth}px` }}
         aria-hidden="true"
       >
         <Tooltip delayDuration={400}>
@@ -687,7 +691,7 @@ export function AppSidebar() {
             {isCollapsed ? "Mở rộng thanh bên ⌘B" : "Thu gọn thanh bên ⌘B"}
           </TooltipContent>
         </Tooltip>
-      </div>
+      </m.div>
 
       {/* User Profile Modal Container */}
       <UserProfileModal />

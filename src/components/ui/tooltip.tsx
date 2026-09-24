@@ -58,7 +58,7 @@ export const TooltipContent = React.forwardRef<
         <BaseTooltip.Popup
           ref={ref}
           className={cn(
-            "z-50 overflow-hidden rounded-md border border-border/80 bg-popover/95 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-popover-foreground shadow-md whitespace-nowrap pointer-events-none animate-in fade-in-0 zoom-in-95",
+            "z-50 overflow-hidden rounded-md bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none animate-in fade-in-0 zoom-in-95 data-[starting-style]:opacity-0 data-[starting-style]:scale-95",
             className,
           )}
           {...props}

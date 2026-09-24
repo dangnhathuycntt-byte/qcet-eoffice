@@ -32,6 +32,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { WorkspaceZone } from "@/types/workspace";
+import { animate, useMotionValue, type MotionValue } from "motion/react";
+import { motionTransition } from "@/lib/motion/tokens";
 
 export type NavigationModule = "work" | "documents" | "org";
 export type NavigationSection = "work" | "org" | "operations" | "personal" | "workspace";
@@ -438,6 +440,7 @@ export interface SidebarLayoutContextType {
   setCurrentModule: (module: NavigationModule) => void;
   isMounted: boolean;
   sidebarWidth: number;
+  sidebarWidthMotion: MotionValue<number>;
   breadcrumbItems: Array<{ label: string; href?: string; mono?: boolean }> | null;
   setBreadcrumbItems: React.Dispatch<
     React.SetStateAction<Array<{ label: string; href?: string; mono?: boolean }> | null>
@@ -515,6 +518,12 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
   const sidebarWidth = effectiveCollapsed
     ? SIDEBAR_COLLAPSED_WIDTH
     : SIDEBAR_EXPANDED_WIDTH;
+  const sidebarWidthMotion = useMotionValue(sidebarWidth);
+
+  React.useEffect(() => {
+    const controls = animate(sidebarWidthMotion, sidebarWidth, motionTransition.gentleSpring);
+    return () => controls.stop();
+  }, [sidebarWidth, sidebarWidthMotion]);
 
   const value = React.useMemo<SidebarLayoutContextType>(
     () => ({
@@ -528,6 +537,7 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
       setCurrentModule,
       isMounted,
       sidebarWidth,
+      sidebarWidthMotion,
       breadcrumbItems,
       setBreadcrumbItems,
     }),
@@ -541,6 +551,7 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
       currentModule,
       isMounted,
       sidebarWidth,
+      sidebarWidthMotion,
       breadcrumbItems,
     ]
   );

@@ -14,8 +14,8 @@ import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
-import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
+import { useTransform } from "motion/react";
 
 const CommandSearchModal = dynamic(
   () => import("@/components/layout/command-search-modal").then((mod) => mod.CommandSearchModal),
@@ -62,13 +62,23 @@ function MobileAppInstallModalContainer() {
 }
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
-  const { sidebarWidth } = useSidebarLayout();
+  const { sidebarWidth, sidebarWidthMotion } = useSidebarLayout();
   const pathname = usePathname();
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);
+  // Chỉ apply sidebarWidth padding trên màn hình md+; mobile luôn là 0
+  const [isMd, setIsMd] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsMd(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMd(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  const desktopPaddingLeft = useTransform(sidebarWidthMotion, (v) => isMd ? v : 0);
 
   React.useEffect(() => {
     const handleOpen = () => setIsMobileMenuOpen(true);
@@ -126,9 +136,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
         className="min-h-[100dvh] flex-1 flex flex-col"
-        animate={{ paddingLeft: sidebarWidth }}
-        transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.8 }}
-        style={{ paddingLeft: sidebarWidth }}
+        style={{ paddingLeft: desktopPaddingLeft }}
       >
         {/* Mobile Header (Only visible below md) */}
         <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>
