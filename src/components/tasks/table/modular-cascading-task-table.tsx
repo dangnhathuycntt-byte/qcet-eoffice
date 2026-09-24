@@ -42,6 +42,7 @@ import {
   filterTasks,
   paginateTasks,
 } from "./utils/table-filter-engine";
+import { deleteTask } from "@/lib/tasks/task-actions";
 import { formatTableDate } from "./utils/table-date-helpers";
 import { sortTasks } from "./utils/table-sorters";
 import { useTaskTableState } from "./hooks/use-task-table-state";
@@ -454,13 +455,16 @@ export function ModularCascadingTaskTable({
     async (taskId: string) => {
       if (onDeleteTask) {
         await onDeleteTask(taskId);
-      } else if (onBulkDelete) {
-        await onBulkDelete([taskId]);
-      } else if (onStatusChange) {
-        await onStatusChange(taskId, "CANCELLED");
+      } else {
+        // Default: archive via API directly
+        const task = tasks.find((t) => t.id === taskId);
+        const result = await deleteTask(taskId, Number((task as any)?.version ?? 1) || 0);
+        if (!result.ok) {
+          throw new Error(result.error || "Không thể xóa nhiệm vụ");
+        }
       }
     },
-    [onDeleteTask, onBulkDelete, onStatusChange]
+    [onDeleteTask, tasks]
   );
 
   // 5. Data Filtering

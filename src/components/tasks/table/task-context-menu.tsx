@@ -22,6 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import {
   updateTaskStatus,
@@ -72,6 +73,7 @@ export function TaskContextMenu({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const feedback = useFeedback();
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -202,11 +204,16 @@ export function TaskContextMenu({
       if (onDeleteTask) {
         await onDeleteTask(task.id);
       } else {
-        await deleteTask(task.id, Number((task as any).version ?? 1));
+        const result = await deleteTask(task.id, Number((task as any).version ?? 1) || 0);
+        if (!result.ok) {
+          feedback.notifyError(result.error || "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại.");
+          return;
+        }
       }
       feedback.notifySuccess(`Nhiệm vụ "${taskTitle}" đã được lưu trữ thành công.`);
       setShowDeleteConfirm(false);
       onClose();
+      router.refresh();
     } catch (err) {
       feedback.notifyError(
         err instanceof Error ? err.message : "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại."
