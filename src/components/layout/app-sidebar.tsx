@@ -387,11 +387,11 @@ export function AppSidebar() {
                 <img
                   src={user.avatar}
                   alt={formatDisplayName(user?.name)}
-                  className="size-5 rounded-[5px] object-cover shrink-0 shadow-2xs"
+                  className="size-5 rounded-full object-cover shrink-0 shadow-2xs"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="size-5 rounded-[5px] flex items-center justify-center bg-pink-500/90 text-white font-medium text-[10px] shrink-0 shadow-2xs">
+                <div className="size-5 rounded-full flex items-center justify-center bg-blue-500 text-white font-medium text-[10px] shrink-0 shadow-2xs">
                   {getInitials(user?.name)}
                 </div>
               )}
