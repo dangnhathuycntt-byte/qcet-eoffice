@@ -9,6 +9,13 @@
  * - Empty document serializes to "".
  */
 
+// Deterministic block ID counter — avoids Date.now()/Math.random() hydration mismatch
+let _blockIdCounter = 0;
+function nextBlockId(suffix?: string): string {
+  _blockIdCounter += 1;
+  return `b-auto-${_blockIdCounter}${suffix ? `-${suffix}` : ""}`;
+}
+
 import type { ContentBlockItem, ContentBlockType } from "./task-block-editor";
 
 // ---------------------------------------------------------------------------
@@ -182,7 +189,7 @@ function textOf(el: PlateElement): string {
 }
 
 function plateElementToBlock(el: PlateElement): ContentBlockItem {
-  const id = el.id || `b-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const id = el.id || nextBlockId();
   const content = textOf(el);
 
   // List items (indent + listStyleType)
@@ -283,7 +290,7 @@ export function isMeaningfulBlock(b: ContentBlockItem | null | undefined): boole
 
 export function parseContentToBlocks(raw?: string | null): ContentBlockItem[] {
   if (!raw || !raw.trim()) {
-    return [{ id: `b-${Date.now()}-1`, type: "text", content: "" }];
+    return [{ id: nextBlockId("1"), type: "text", content: "" }];
   }
 
   try {
@@ -294,14 +301,14 @@ export function parseContentToBlocks(raw?: string | null): ContentBlockItem[] {
           (b: any) => b && !LEGACY_STRIP_TYPES.has(b.type) && isMeaningfulBlock(b)
         );
         if (cleanedBlocks.length > 0) return cleanedBlocks;
-        return [{ id: `b-${Date.now()}-1`, type: "text", content: "" }];
+        return [{ id: nextBlockId("1"), type: "text", content: "" }];
       }
     }
   } catch {
     // fallback plain text
   }
 
-  return [{ id: `b-${Date.now()}-legacy`, type: "text", content: raw }];
+  return [{ id: nextBlockId("legacy"), type: "text", content: raw }];
 }
 
 export function serializeBlocksToContent(blocks: ContentBlockItem[]): string {

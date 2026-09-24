@@ -1799,16 +1799,17 @@ export function TaskBlockEditor({
       let objectUrl = "";
       try { objectUrl = URL.createObjectURL(file); } catch {}
 
-      // Background upload → replace blob URL with server URL + create deliverable
-      uploadFileToServer(file).then((result) => {
+      // Background upload → create deliverable first → then set server URL on editor node
+      uploadFileToServer(file).then(async (result) => {
         if (!result) return;
+        // Create deliverable FIRST so /api/files/ authorization check passes
+        await createDeliverable(result.fileUrl, file.name);
+        // Now set server URL on editor node — file is registered, auth will pass
         const nodes = editor.children as PlateElemT[];
         const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
         if (nodeIdx >= 0) {
           editor.tf.setNodes({ url: result.fileUrl } as any, { at: [nodeIdx] });
         }
-        // Create deliverable for non-image files (or all files)
-        createDeliverable(result.fileUrl, file.name);
       });
 
       if (isImageFile(file)) {
