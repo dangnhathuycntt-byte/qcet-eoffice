@@ -213,6 +213,7 @@ export function TaskContextMenu({
       feedback.notifySuccess(`Nhiệm vụ "${taskTitle}" đã được lưu trữ thành công.`);
       setShowDeleteConfirm(false);
       onClose();
+      window.dispatchEvent(new CustomEvent("qcet:task-archived"));
       router.refresh();
     } catch (err) {
       feedback.notifyError(

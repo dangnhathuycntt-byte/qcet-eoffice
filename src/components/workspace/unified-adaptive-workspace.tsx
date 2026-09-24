@@ -1966,6 +1966,13 @@ function UnifiedAdaptiveWorkspaceInner({
     }
   }, [onRefresh]);
 
+  // Sync internal task list after archive/delete from context menu
+  React.useEffect(() => {
+    const handler = () => { handleRefresh(); };
+    window.addEventListener("qcet:task-archived", handler);
+    return () => window.removeEventListener("qcet:task-archived", handler);
+  }, [handleRefresh]);
+
   // Task-creation reconciliation (T73 / Server-Truth-Wins).
   //
   // `CreateTaskModal` is the single writer for the create command: it maps the
