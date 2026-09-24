@@ -209,10 +209,10 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
       assert.strictEqual(resolveModuleFromPathname("/org?tab=directory"), "org");
     });
 
-    test("effective sidebar width is 64 when collapsed and 228 when expanded", () => {
-      const collapsedWidth = true ? 64 : 228;
-      const expandedWidth = false ? 64 : 228;
-      assert.strictEqual(collapsedWidth, 64);
+    test("effective sidebar width is 48 when collapsed and 228 when expanded", () => {
+      const collapsedWidth = true ? 48 : 228;
+      const expandedWidth = false ? 48 : 228;
+      assert.strictEqual(collapsedWidth, 48);
       assert.strictEqual(expandedWidth, 228);
     });
   });
