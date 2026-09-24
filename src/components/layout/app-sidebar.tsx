@@ -367,12 +367,7 @@ export function AppSidebar() {
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
-          <div
-            className={cn(
-              "px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full",
-              isCollapsed && "flex-col gap-2"
-            )}
-          >
+          <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
             <Menu.Trigger
               ref={accountTriggerRef}
@@ -407,8 +402,9 @@ export function AppSidebar() {
               )}
             </Menu.Trigger>
 
-            {/* Right: Quick Action Buttons (Search & Floating Create Task) */}
-            <div className="flex items-center gap-1 shrink-0 ml-0.5">
+            {/* Right: Quick Action Buttons — hidden when collapsed (shown below as rail items) */}
+            {!isCollapsed && (
+              <div className="flex items-center gap-1 shrink-0 ml-0.5">
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
                   <button
@@ -441,6 +437,7 @@ export function AppSidebar() {
                 </TooltipContent>
               </Tooltip>
             </div>
+            )}
           </div>
 
           {/* Account dropdown via Base UI Popover */}
@@ -665,7 +662,7 @@ export function AppSidebar() {
 
       {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
       <div
-        className="fixed top-0 bottom-0 z-50 hidden w-8 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
+        className="fixed top-[30%] z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
         style={{ left: `${sidebarWidth}px` }}
         aria-hidden="true"
       >
