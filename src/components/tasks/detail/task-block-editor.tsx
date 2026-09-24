@@ -720,24 +720,23 @@ function ImageEl({ attributes, children, element }: any) {
 
 function AttachmentEl({ attributes, children, element }: any) {
   const { fileName, fileSize, fileType, url } = element;
+  const meta = [fileType, fileSize].filter(Boolean).join(" · ");
+  const inner = (
+    <div className="inline-flex items-center gap-1.5 py-0.5 px-1.5 my-0.5 rounded-md bg-muted/40 hover:bg-muted/70 border border-border/40 transition-colors text-xs max-w-full group/file">
+      <FileText className="size-3.5 text-muted-foreground shrink-0" />
+      <span className="font-medium text-foreground truncate">{fileName || "Tệp"}</span>
+      {meta && <span className="text-muted-foreground shrink-0 font-mono">{meta}</span>}
+      {url && <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0" />}
+    </div>
+  );
   return (
     <div {...attributes}>
       <div contentEditable={false} className="py-0.5">
-        <div className="flex items-center gap-2.5 p-2.5 my-1 rounded-xl bg-muted/30 border border-border/60 hover:bg-muted/50 transition-colors text-xs">
-          <div className="p-1.5 rounded-lg bg-primary/10 shrink-0"><FileText className="size-4 text-primary" /></div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-foreground text-sm truncate">{fileName || "Tệp"}</div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-              {fileType && <span className="font-mono">{fileType}</span>}
-              {fileSize && <span>{fileSize}</span>}
-            </div>
-          </div>
-          {url && (
-            <a href={url} target="_blank" rel="noreferrer" className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
-              <ExternalLink className="size-3.5" />
-            </a>
-          )}
-        </div>
+        {url ? (
+          <a href={url} target="_blank" rel="noreferrer" className="block w-fit">
+            {inner}
+          </a>
+        ) : inner}
       </div>
       {children}
     </div>
