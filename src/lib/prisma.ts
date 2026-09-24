@@ -12,7 +12,13 @@ import { PrismaClient } from "@prisma/client";
  * Mọi test đều đi qua Prisma singleton này, nên đây là chốt chặn duy nhất cần thiết.
  */
 function guardTestDatabase(): void {
-  if (process.env.NODE_ENV !== "test") return;
+  const isTest =
+    process.env.NODE_ENV === "test" ||
+    process.argv.includes("--test") ||
+    Boolean(process.env.NODE_TEST_CONTEXT) ||
+    Boolean(process.env.QCET_ALLOW_DB_TESTS);
+
+  if (!isTest) return;
 
   const url = process.env.DATABASE_URL;
   if (!url) return; // Prisma sẽ tự báo lỗi thiếu biến môi trường

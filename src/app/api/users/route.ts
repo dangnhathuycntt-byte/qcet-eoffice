@@ -27,13 +27,31 @@ export async function GET(req: Request) {
       await assertRateLimit(authUser.id, "SEARCH");
     }
 
-    const where: any = {};
-    // Phase 9: User.departmentId dropped — filter by unit membership instead if provided
+    const activeAssignmentFilter = {
+      status: "ACTIVE" as const,
+      effectiveFrom: { lte: new Date() },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+      unit: { status: "ACTIVE" as const },
+    };
+
+    const where: any = {
+      isActive: true,
+    };
+
+    // Canonical membership: User must have active PositionAssignment in an active unit
     if (validatedQuery.departmentId) {
       where.positionAssignments = {
-        some: { unitId: validatedQuery.departmentId, status: "ACTIVE" },
+        some: {
+          unitId: validatedQuery.departmentId,
+          ...activeAssignmentFilter,
+        },
+      };
+    } else {
+      where.positionAssignments = {
+        some: activeAssignmentFilter,
       };
     }
+
     if (validatedQuery.role) {
       where.role = validatedQuery.role;
     }
@@ -50,12 +68,45 @@ export async function GET(req: Request) {
       orderBy: { name: "asc" },
       take,
       skip: (validatedQuery.page - 1) * take,
+      include: {
+        positionAssignments: {
+          where: activeAssignmentFilter,
+          include: {
+            positionDefinition: true,
+            unit: true,
+          },
+        },
+      },
+    });
+
+    const enrichedUsers = users.map((u) => {
+      const chosenAssignment =
+        (validatedQuery.departmentId
+          ? u.positionAssignments.find((pa) => pa.unitId === validatedQuery.departmentId)
+          : null) ??
+        u.positionAssignments.find((pa) => pa.type === "PRIMARY") ??
+        u.positionAssignments[0];
+
+      return {
+        ...u,
+        position: chosenAssignment?.positionDefinition?.title ?? null,
+        title: chosenAssignment?.positionDefinition?.title ?? null,
+        departmentId: chosenAssignment?.unit?.id ?? null,
+        department: chosenAssignment?.unit
+          ? {
+              id: chosenAssignment.unit.id,
+              code: chosenAssignment.unit.code,
+              shortName: chosenAssignment.unit.code,
+              name: chosenAssignment.unit.name,
+            }
+          : null,
+      };
     });
 
     return apiSuccess(
       {
         success: true,
-        users: toUserPublicDTOArray(users, authUser),
+        users: toUserPublicDTOArray(enrichedUsers, authUser),
       },
       {
         headers: { "Cache-Control": "private, no-store" },

@@ -15,6 +15,7 @@ describe("Create Task Modal Constraints & Helpers", () => {
     name: "Hiệu trưởng",
     email: "bgh@cdktcnqn.edu.vn",
     role: "ADMIN",
+    dbRole: "BAN_GIAM_HIEU",
     roleLabel: "Ban Giám hiệu",
     department: "Ban Giám hiệu",
     departmentCode: "BGH",
@@ -25,6 +26,7 @@ describe("Create Task Modal Constraints & Helpers", () => {
     name: "Trần Hùng",
     email: "daotao@cdktcnqn.edu.vn",
     role: "MANAGER",
+    dbRole: "TRUONG_PHONG",
     roleLabel: "Trưởng phòng Đào tạo",
     department: "Phòng Đào tạo & QLKH",
     departmentCode: "DAO_TAO",
@@ -198,7 +200,20 @@ describe("Create Task Modal Constraints & Helpers", () => {
       requiredDeliverables: "Báo cáo bảo mật",
     };
 
-    const errors = validateTaskForm(externalAssignForm, undefined, managerDaoTao);
+    const errors = validateTaskForm(
+      externalAssignForm,
+      undefined,
+      managerDaoTao,
+      undefined,
+      [
+        {
+          id: "cntt",
+          code: "CNTT",
+          name: "Phòng Công nghệ thông tin",
+          personnel: [{ id: "vinh", name: "Nguyễn Ngọc Vinh", role: "CHUYEN_VIEN" }],
+        },
+      ]
+    );
     assert.ok(errors.leadAssigneeName);
     assert.ok(errors.leadAssigneeName.includes("Phiếu yêu cầu phối hợp"));
 

@@ -17,9 +17,18 @@ describe("API Route: /api/users", () => {
 
   before(async () => {
     const user = await prisma.user.findFirst({
+      where: {
+        isActive: true,
+        positionAssignments: {
+          some: {
+            status: "ACTIVE",
+            unit: { status: "ACTIVE" },
+          },
+        },
+      },
       select: { id: true, name: true, email: true, role: true },
     });
-    assert.ok(user, "Expected at least one user with department in database");
+    assert.ok(user, "Expected at least one active user with an active organizational assignment");
     sampleUser = user;
     // Lấy unitId từ positionAssignment để dùng cho filter test
     const assignment = await prisma.positionAssignment.findFirst({
@@ -81,7 +90,7 @@ describe("API Route: /api/users", () => {
   });
 
   test("GET /api/users?q=... filters by name or email keyword", async () => {
-    const keyword = sampleUser.name.split(" ")[0].toLowerCase();
+    const keyword = sampleUser.name.split(" ").at(-1)!.toLowerCase();
     const req = new NextRequest(
       `http://localhost:3001/api/users?q=${encodeURIComponent(keyword)}`,
       {

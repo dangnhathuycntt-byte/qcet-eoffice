@@ -35,7 +35,7 @@ import {
 } from '@/contracts/tasks';
 import { buildTaskContext, taskStateMachine } from '@/domain/tasks/state-machine';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
-import { authorize } from '@/server/authorization/authorization-engine';
+import { authorize, isExecutivePosition } from '@/server/authorization/authorization-engine';
 import { buildTaskResource } from '@/server/authorization/available-actions';
 import type { CapabilityAction } from '@/server/authorization/capability';
 
@@ -486,7 +486,12 @@ export class TaskCommandService {
       const validLeadUnitId = orgUnit.id;
 
       // Verify and filter real existing user IDs to prevent Foreign Key constraint violations
-      const candidateUserIds = validAssigneeId ? [validAssigneeId] : [];
+      const candidateUserIds = Array.from(
+        new Set([
+          ...(validAssigneeId ? [validAssigneeId] : []),
+          ...(Array.isArray(collaboratorIds) ? collaboratorIds : []),
+        ])
+      );
       const existingUsers =
         candidateUserIds.length > 0
           ? await tx.user.findMany({
@@ -498,6 +503,45 @@ export class TaskCommandService {
 
       if (existingUserIdSet.size !== candidateUserIds.length) {
         throw new NotFoundError('Một hoặc nhiều người được phân công không tồn tại');
+      }
+
+      // Policy: User cùng OU - Nhân sự được phân công (DRI & phối hợp) phải cùng OU với đơn vị chủ trì nhiệm vụ (trừ BGH hoặc có ủy quyền)
+      const targetUserIds = [
+        ...(validAssigneeId ? [validAssigneeId] : []),
+        ...(Array.isArray(collaboratorIds) ? collaboratorIds : []),
+      ].filter(Boolean);
+
+      if (targetUserIds.length > 0) {
+        const creatorAuth = await loadAuthorizationContext(user.id);
+        const isBgh = creatorAuth.positions?.some((p) => isExecutivePosition(p.positionCode));
+        const hasCrossUnitDelegation = creatorAuth.delegations?.some(
+          (d) =>
+            d.granteeUserId === user.id &&
+            (d.action === '*' || d.action === 'task.create' || d.action === 'task.assign') &&
+            d.status === 'ACTIVE' &&
+            d.revokedAt === null &&
+            new Date(d.validFrom).getTime() <= Date.now() &&
+            new Date(d.validUntil).getTime() >= Date.now()
+        );
+
+        if (!isBgh && !hasCrossUnitDelegation) {
+          const activeAssignments = await tx.positionAssignment.findMany({
+            where: {
+              userId: { in: targetUserIds },
+              unitId: validLeadUnitId,
+              status: 'ACTIVE',
+              unit: { status: 'ACTIVE' },
+            },
+            select: { userId: true },
+          });
+          const validUserIds = new Set(activeAssignments.map((a) => a.userId));
+          const invalidUser = targetUserIds.find((uid) => !validUserIds.has(uid));
+          if (invalidUser) {
+            throw new AuthorizationError(
+              'Chỉ được giao việc cho nhân sự thuộc cùng đơn vị. Chỉ Ban Giám hiệu hoặc người được ủy quyền mới có thể giao việc liên đơn vị.'
+            );
+          }
+        }
       }
 
       // Phase 9: TaskAssignee dropped — validate assignee existence; DRI set via TaskActor below.
@@ -912,6 +956,34 @@ export class TaskCommandService {
 
         if (validAssigneeId) {
           effectivePrimaryOwnerId = validAssigneeId;
+
+          const updateAuthContext = await loadAuthorizationContext(user.id);
+          const isExecutive = updateAuthContext.positions?.some((p) => isExecutivePosition(p.positionCode));
+          const hasCrossUnitDelegation = updateAuthContext.delegations?.some(
+            (d) =>
+              d.granteeUserId === user.id &&
+              (d.action === '*' || d.action === 'task.assign' || d.action === 'task.create') &&
+              d.status === 'ACTIVE' &&
+              d.revokedAt === null
+          );
+          const taskUnitId = existing.leadUnitId;
+          if (taskUnitId && !isExecutive && !hasCrossUnitDelegation) {
+            const assigneeAssignment = await tx.positionAssignment.findFirst({
+              where: {
+                userId: validAssigneeId,
+                unitId: taskUnitId,
+                status: 'ACTIVE',
+                unit: { status: 'ACTIVE' },
+              },
+              select: { id: true },
+            });
+            if (!assigneeAssignment) {
+              throw new AuthorizationError(
+                'Chỉ được giao việc cho nhân sự thuộc cùng đơn vị. Chỉ Ban Giám hiệu hoặc người được ủy quyền mới có thể giao việc liên đơn vị.'
+              );
+            }
+          }
+
           // Synchronize canonical TaskActor
           await tx.taskActor.deleteMany({
             where: { taskId, role: TaskActorRole.DRI },
@@ -923,6 +995,7 @@ export class TaskCommandService {
             data: {
               taskId,
               userId: validAssigneeId,
+              unitId: taskUnitId,
               role: TaskActorRole.DRI,
               isPrimaryDRI: true,
               assignedById: user.id,

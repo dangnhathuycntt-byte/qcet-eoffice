@@ -23,7 +23,12 @@ export async function GET(req: Request) {
         code: true,
         ...(includePersonnel && {
           positionAssignments: {
-            where: { status: "ACTIVE" },
+            where: {
+              status: "ACTIVE",
+              effectiveFrom: { lte: new Date() },
+              OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+              user: { isActive: true },
+            },
             select: {
               user: {
                 select: {
@@ -42,21 +47,33 @@ export async function GET(req: Request) {
       orderBy: { name: "asc" },
     });
 
-    const mapped = units.map((u) => ({
-      id: u.id,
-      name: u.name,
-      code: u.code || u.id,
-      color: null,
-      ...(includePersonnel && {
-        personnel: ((u as any).positionAssignments ?? []).map((pa: any) => ({
-          id: pa.user.id,
-          name: pa.user.name,
-          email: pa.user.email,
-          role: pa.user.role,
-          title: pa.user.title,
-        })),
-      }),
-    }));
+    const mapped = units.map((u) => {
+      let personnel: Array<{ id: string; name: string; email: string; role: string; title: string | null }> | undefined;
+      if (includePersonnel) {
+        const seenUserIds = new Set<string>();
+        personnel = [];
+        for (const pa of (u as any).positionAssignments ?? []) {
+          if (pa.user && !seenUserIds.has(pa.user.id)) {
+            seenUserIds.add(pa.user.id);
+            personnel.push({
+              id: pa.user.id,
+              name: pa.user.name,
+              email: pa.user.email,
+              role: pa.user.role,
+              title: pa.user.title,
+            });
+          }
+        }
+      }
+
+      return {
+        id: u.id,
+        name: u.name,
+        code: u.code || u.id,
+        color: null,
+        ...(includePersonnel && { personnel }),
+      };
+    });
 
     return apiSuccess(
       { success: true, departments: mapped },

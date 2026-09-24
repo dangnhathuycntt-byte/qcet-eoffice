@@ -872,6 +872,7 @@ export function authorize(
   // --------------------------------------------------------------------------
   // STEP 7: ORGANIZATIONAL SCOPE BOUNDARY
   // --------------------------------------------------------------------------
+  const isExecutive = positions.some((p) => isExecutivePosition(p.positionCode));
   const isUnitLeader = positions.some((p) => isUnitLeaderPosition(p.positionCode));
   const resourceUnitId =
     resource?.leadUnitId ||
@@ -883,12 +884,26 @@ export function authorize(
   let scopeDeniedReason = '';
   let scopeDeniedCode: RejectionCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
 
-  if (isUnitLeader && resourceUnitId) {
-    const userUnitIds = new Set([
-      ...positions.map((p) => p.unitId),
-      ...(context.primaryUnitIds || []),
-    ]);
+  const userUnitIds = new Set([
+    ...positions.flatMap((p) => [p.unitId, p.unitCode]),
+    ...(context.primaryUnitIds || []),
+  ]);
 
+  // Policy: User cùng OU (Mọi user có PositionAssignment active được tạo task trong OU của mình; BGH/delegation mới được liên OU)
+  if (action === 'task.create' && !isExecutive) {
+    const isSchoolWide = resource?.scope === 'school' || resource?.scope === 'SCHOOL';
+    if (isSchoolWide) {
+      scopeDenied = true;
+      scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+      scopeDeniedReason = 'Chỉ Ban Giám hiệu hoặc người được ủy quyền mới có thẩm quyền tạo nhiệm vụ cấp Trường.';
+    } else if (resourceUnitId && !userUnitIds.has(resourceUnitId)) {
+      scopeDenied = true;
+      scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+      scopeDeniedReason = 'Người dùng chỉ được tạo nhiệm vụ trong phạm vi đơn vị mình công tác hoặc theo ủy quyền hợp lệ.';
+    }
+  }
+
+  if (isUnitLeader && resourceUnitId) {
     const isOwnUnit = userUnitIds.has(resourceUnitId);
     const isSchoolWide =
       resource?.scope === 'SCHOOL' || resource?.scope === 'school';
@@ -925,7 +940,9 @@ export function authorize(
   // --------------------------------------------------------------------------
   // STEP 8: VALID DELEGATION FALLBACK
   // --------------------------------------------------------------------------
-  const delegations = context.delegations || [];
+  const delegations = (context.delegations || []).filter(
+    (grant) => grant.granteeUserId === userId
+  );
 
   if (delegations.length > 0) {
     for (const grant of delegations) {

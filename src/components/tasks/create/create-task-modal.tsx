@@ -131,7 +131,11 @@ export function CreateTaskModal({
 }: CreateTaskModalProps) {
   const { user } = useAuth();
   const { departments } = useDepartmentList({ includePersonnel: true });
-  const defaultDepartmentCode = initialDepartmentCode || toCanonicalUnitCode(user?.departmentCode || user?.department || "") || "P_QLDT";
+  const defaultDepartmentCode =
+    initialDepartmentCode ||
+    toCanonicalUnitCode(user?.departmentCode || user?.department || "") ||
+    departments[0]?.code ||
+    "";
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -218,18 +222,8 @@ export function CreateTaskModal({
   }, [selectedDeptCode, departments]);
 
   const availablePersonnel = React.useMemo(() => {
-    const deptPersonnel = currentDept?.personnel || [];
-    if (deptPersonnel.length > 0) return deptPersonnel;
-    // Fallback: khi đơn vị chưa có PositionAssignment (user mới đăng nhập qua
-    // OAuth chưa được phân công vị trí), dùng danh sách tất cả user active.
-    return dbUsers.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      title: u.title,
-    }));
-  }, [currentDept, dbUsers]);
+    return currentDept?.personnel || [];
+  }, [currentDept]);
 
   // Try restoring draft from sessionStorage on open
   React.useEffect(() => {
@@ -269,10 +263,14 @@ export function CreateTaskModal({
     }
   }, [isOpen, initialTitle, availablePersonnel, leadAssigneeName]);
 
-  // Set default DRI if empty and personnel changes
+  // Set default DRI if empty or if previous DRI is not in current department
   React.useEffect(() => {
-    if (!leadAssigneeName && availablePersonnel.length > 0) {
-      setLeadAssigneeName(availablePersonnel[0].name);
+    if (availablePersonnel.length > 0) {
+      if (!leadAssigneeName || !availablePersonnel.some((p) => p.name === leadAssigneeName)) {
+        setLeadAssigneeName(availablePersonnel[0].name);
+      }
+    } else {
+      setLeadAssigneeName("");
     }
   }, [availablePersonnel, leadAssigneeName]);
 
@@ -461,7 +459,7 @@ export function CreateTaskModal({
         },
         {
           personnel: personnelRefs,
-          departmentId: currentDept?.code || currentDept?.id,
+          departmentId: currentDept?.id || currentDept?.code,
           assigneeId: matchedDri?.id,
           collaboratorIds: matchedCoIds.length > 0 ? matchedCoIds : undefined,
         }
@@ -851,33 +849,39 @@ export function CreateTaskModal({
               <Popover.Portal>
               <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
               <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-60 p-1 space-y-0.5 max-h-56 rounded-xl border border-border bg-popover shadow-2xl overflow-y-auto" aria-label="Chọn người chủ trì">
-                {availablePersonnel.map((person) => (
-                  <button
-                    key={person.name}
-                    type="button"
-                    onClick={() => {
-                      setLeadAssigneeName(person.name);
-                      if (fieldErrors.lead) {
-                        setFieldErrors((prev) => ({ ...prev, lead: undefined }));
-                      }
-                      setOpenDropdown(null);
-                    }}
-                    className={cn(
-                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
-                      leadAssigneeName === person.name
-                        ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground hover:bg-accent/70"
-                    )}
-                  >
-                    <div>
-                      <div className="font-medium">{person.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{person.role}</div>
-                    </div>
-                    {leadAssigneeName === person.name && (
-                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
-                    )}
-                  </button>
-                ))}
+                {availablePersonnel.length === 0 ? (
+                  <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                    Chưa có nhân sự trong đơn vị này
+                  </div>
+                ) : (
+                  availablePersonnel.map((person) => (
+                    <button
+                      key={person.name}
+                      type="button"
+                      onClick={() => {
+                        setLeadAssigneeName(person.name);
+                        if (fieldErrors.lead) {
+                          setFieldErrors((prev) => ({ ...prev, lead: undefined }));
+                        }
+                        setOpenDropdown(null);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
+                        leadAssigneeName === person.name
+                          ? "font-semibold text-foreground bg-accent"
+                          : "text-foreground hover:bg-accent/70"
+                      )}
+                    >
+                      <div>
+                        <div className="font-medium">{person.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{person.role}</div>
+                      </div>
+                      {leadAssigneeName === person.name && (
+                        <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  ))
+                )}
               </Popover.Popup>
               </Popover.Positioner>
               </Popover.Portal>

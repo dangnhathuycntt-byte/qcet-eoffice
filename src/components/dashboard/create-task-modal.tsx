@@ -70,6 +70,23 @@ export function getDefaultTaskLevelForRole(role: UserRole): TaskLevel {
   return "DON_VI";
 }
 
+function getCanonicalDbRole(user: AuthUser): string {
+  return String(user.dbRole || user.role || "").toUpperCase();
+}
+
+function isExecutiveUser(user?: AuthUser | null): boolean {
+  const role = user ? getCanonicalDbRole(user) : "";
+  return [
+    "BAN_GIAM_HIEU",
+    "HIEU_TRUONG",
+    "PHO_HIEU_TRUONG",
+    "BGH",
+    "BGH_HT",
+    "BGH_PHT_DT",
+    "BGH_PHT_CSVC",
+  ].includes(role);
+}
+
 export interface CreateTaskFormData {
   level: TaskLevel;
   category: TaskCategory;
@@ -237,7 +254,13 @@ export interface CreateTaskPolicy {
 }
 
 export function resolveCreateTaskPolicy(user?: AuthUser | null): CreateTaskPolicy {
-  const institutionalLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
+  const institutionalLevels = user
+    ? isExecutiveUser(user)
+      ? (["TRUONG", "DON_VI"] as TaskLevel[])
+      : ["TRUONG_PHONG", "MANAGER"].includes(getCanonicalDbRole(user))
+        ? (["DON_VI"] as TaskLevel[])
+        : []
+    : [];
   if (!user) {
     return {
       canCreate: false,
@@ -248,18 +271,18 @@ export function resolveCreateTaskPolicy(user?: AuthUser | null): CreateTaskPolic
   }
 
   const hasInstitutionalScope = institutionalLevels.length > 0;
-  const canSelfAssign = canRoleSelectAssignee(
-    user,
-    user.departmentCode ?? "",
-    false,
-    user.name
-  ).allowed;
+  const canSelfAssign = Boolean(user.departmentCode && user.departmentCode !== "QCET") &&
+    (!hasInstitutionalScope || isExecutiveUser(user));
 
   return {
     canCreate: hasInstitutionalScope || canSelfAssign,
     mode: hasInstitutionalScope ? "INSTITUTIONAL" : "PERSONAL",
     institutionalLevels,
-    defaultLevel: hasInstitutionalScope ? getDefaultTaskLevelForRole(user.role) : "STAFF",
+    defaultLevel: hasInstitutionalScope
+      ? isExecutiveUser(user)
+        ? "TRUONG"
+        : "DON_VI"
+      : "STAFF",
   };
 }
 
@@ -419,10 +442,18 @@ export function validateTaskForm(
     } else {
       const dept = findDeptForMember(data.leadAssigneeName, departments || []);
       if (dept) {
-        const check = canRoleSelectAssignee(currentUser, dept.code, false, data.leadAssigneeName);
-        if (!check.allowed) {
+        const targetDepartmentCode = dept.code;
+        const currentDepartmentCode = currentUser.departmentCode;
+        const isSameDepartment = targetDepartmentCode === currentDepartmentCode;
+        if (["MANAGER", "TRUONG_PHONG"].includes(getCanonicalDbRole(currentUser)) && !isSameDepartment) {
           errors.leadAssigneeName =
-            check.message || "Không có thẩm quyền phân công cho nhân sự này";
+            "Trưởng đơn vị chỉ được giao việc cho nhân sự thuộc cùng đơn vị. Phiếu yêu cầu phối hợp là bắt buộc khi cần liên đơn vị.";
+        } else {
+          const check = canRoleSelectAssignee(currentUser, targetDepartmentCode, false, data.leadAssigneeName);
+          if (!check.allowed) {
+            errors.leadAssigneeName =
+              check.message || "Không có thẩm quyền phân công cho nhân sự này";
+          }
         }
       }
     }
@@ -625,7 +656,7 @@ export function CreateTaskModal({
   const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
   const allowedLevels = createPolicy.institutionalLevels;
   const isStaff = createPolicy.mode === "PERSONAL";
-  const isManager = user?.role === "MANAGER";
+  const isManager = getCanonicalDbRole(user || ({} as AuthUser)) === "TRUONG_PHONG";
   const isSubtaskMode = Boolean(initialParentTaskId);
 
   const getEffectiveLevel = React.useCallback(
@@ -804,6 +835,13 @@ export function CreateTaskModal({
   }, [assigneeSearchQuery, isComboboxOpen]);
 
   // Selected assignee department & delegation checks
+  const selectedAssignee = React.useMemo(
+    () => personnelList.find(
+      (u) => u.name.trim().toLowerCase() === formData.leadAssigneeName.trim().toLowerCase()
+    ),
+    [personnelList, formData.leadAssigneeName]
+  );
+
   const selectedAssigneeDept = React.useMemo((): DepartmentOption | undefined => {
     if (personnelList.length > 0) {
       const p = personnelList.find(
@@ -829,14 +867,10 @@ export function CreateTaskModal({
     return selectedAssigneeDept.code !== user.departmentCode;
   }, [isStaff, isManager, selectedAssigneeDept, user, formData.leadAssigneeName]);
 
-  const isAdminBypassActive = React.useMemo(() => {
-    if (user?.role !== "ADMIN" || !selectedAssigneeDept) return false;
-    return selectedAssigneeDept.code !== "BGH";
-  }, [user?.role, selectedAssigneeDept]);
+  const isAdminBypassActive = false;
 
   const handleAssigneeSelect = React.useCallback(
     (assigneeName: string) => {
-      let targetDeptCode: string | undefined;
       let autoVtvl = formData.vtvlRole;
 
       if (personnelList.length > 0) {
@@ -844,17 +878,15 @@ export function CreateTaskModal({
           (u) => u.name.trim().toLowerCase() === assigneeName.trim().toLowerCase()
         );
         if (p) {
-          targetDeptCode = p.department?.shortName || p.departmentId || undefined;
           if (!formData.vtvlRole || formData.vtvlRole.trim().length === 0) {
             autoVtvl = p.title || p.role;
           }
         }
       }
 
-      if (!targetDeptCode) {
+      if (personnelList.length === 0) {
         const targetDept = findDeptForMember(assigneeName, deptList);
         if (targetDept) {
-          targetDeptCode = targetDept.code;
           const member = targetDept.personnel?.find((m) => m.name === assigneeName);
           if (member && (!formData.vtvlRole || formData.vtvlRole.trim().length === 0)) {
             autoVtvl = member.title || member.role;
@@ -862,16 +894,11 @@ export function CreateTaskModal({
         }
       }
 
-      const isAdminBypass =
-        user?.role === "ADMIN" &&
-        targetDeptCode !== undefined &&
-        targetDeptCode !== "BGH";
-
       setFormData((prev) => ({
         ...prev,
         leadAssigneeName: assigneeName,
         vtvlRole: autoVtvl,
-        isBypassWarning: isAdminBypass,
+        isBypassWarning: false,
       }));
 
       setIsComboboxOpen(false);
@@ -1079,33 +1106,12 @@ export function CreateTaskModal({
       return;
     }
 
-    let targetDeptCode: string | undefined;
-    if (personnelList.length > 0) {
-      const p = personnelList.find(
-        (u) => u.name.trim().toLowerCase() === formData.leadAssigneeName.trim().toLowerCase()
-      );
-      if (p) {
-        targetDeptCode = p.department?.shortName || p.departmentId || undefined;
-      }
-    }
-    if (!targetDeptCode) {
-      const targetDept = findDeptForMember(formData.leadAssigneeName, deptList);
-      if (targetDept) {
-        targetDeptCode = targetDept.code;
-      }
-    }
-
-    const isAdminBypass =
-      user?.role === "ADMIN" &&
-      targetDeptCode !== undefined &&
-      targetDeptCode !== "BGH";
-
     const draft: CreateTaskFormData = {
       ...formData,
       parentTaskId: formData.parentTaskId || initialParentTaskId,
       leadAssigneeName: formData.leadAssigneeName,
       coAssignees: [],
-      isBypassWarning: formData.isBypassWarning || isAdminBypass,
+      isBypassWarning: formData.isBypassWarning,
     };
 
     // Stable per-create idempotency key: generated once and reused for any safe
@@ -1131,7 +1137,7 @@ export function CreateTaskModal({
           departmentId: p.departmentId,
         })),
         assigneeId: identity.assigneeId,
-        departmentId: identity.departmentId,
+        departmentId: selectedAssignee?.departmentId ?? identity.departmentId,
         idempotencyKey: idempotencyKeyRef.current,
       });
 
