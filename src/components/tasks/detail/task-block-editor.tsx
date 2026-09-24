@@ -1636,7 +1636,9 @@ export function TaskBlockEditor({
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const lastSavedContentRef = React.useRef<string | null>(initialDescription || null);
+  const lastSavedContentRef = React.useRef<string | null>(initialDescription ?? null);
+  // Track whether editor has been interacted with — avoid saving on initial mount
+  const hasUserEditedRef = React.useRef(false);
 
   // Compute initial Plate value from persisted description
   const initialValue = React.useMemo(() => parseToPlateValue(initialDescription), []);
@@ -1888,6 +1890,7 @@ export function TaskBlockEditor({
 
   const triggerAutoSave = React.useCallback(
     (plateValue: PlateValue) => {
+      if (!hasUserEditedRef.current) return;
       const contentBlocks = plateToBlocks(plateValue);
       if (contentBlocks.some((b) => b.url?.startsWith("blob:"))) return;
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -2053,6 +2056,7 @@ export function TaskBlockEditor({
                   readOnly={!canEdit}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
                   className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-32 flex-1"
+                  onKeyDown={() => { hasUserEditedRef.current = true; }}
                   onBlur={() => {
                     // Xoá block rỗng (heading, list, etc.) khi editor mất focus
                     // Giữ lại paragraph rỗng vì đó là block mặc định

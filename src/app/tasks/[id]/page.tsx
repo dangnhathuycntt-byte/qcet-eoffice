@@ -12,6 +12,9 @@ import { taskQueryService } from "@/server/tasks";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { resolveTaskDetailContext } from "@/server/tasks/task-detail-context";
 
+// Always fetch fresh from DB — task detail contains user-edited content
+export const dynamic = "force-dynamic";
+
 interface TaskDetailPageParams {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
