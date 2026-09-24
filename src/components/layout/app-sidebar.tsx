@@ -586,7 +586,7 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-label={item.label}
                           className={cn(
-                            "group relative flex items-center gap-2.5 rounded-[6px] h-[34px] px-2 text-[13px] transition-colors select-none tracking-tight overflow-hidden",
+                            "group relative flex items-center gap-2.5 rounded-[6px] h-[34px] px-2 text-[13px] transition-colors select-none tracking-tight overflow-hidden whitespace-nowrap",
                             active
                               ? "bg-black/[0.06] text-foreground font-medium"
                               : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
