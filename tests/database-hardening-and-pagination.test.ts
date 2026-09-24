@@ -7,13 +7,14 @@ import { prisma } from '../src/lib/prisma';
 import { taskQueryService } from '../src/server/tasks/task-query-service';
 import { GET as getTasksRoute } from '../src/app/api/tasks/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, UserRole } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, UserRole, JobCatalogGroup } from '@prisma/client';
 
 describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagination Tests', () => {
   let testDept: any;
   let otherDept: any;
   let staffUser: any;
   let managerUser: any;
+  let bghUser: any;
   let adminUser: any;
   let sessionToken: string;
 
@@ -22,7 +23,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
   const REFERENCE_DATE_STR = '2026-09-09';
   const PAST_START_DATE = new Date('2026-08-01T00:00:00.000Z');
   const OVERDUE_DUE_DATE = new Date('2026-09-01T00:00:00.000Z');
-  const FUTURE_DUE_DATE = new Date('2026-09-20T00:00:00.000Z');
+  const FUTURE_DUE_DATE = new Date('2026-10-20T00:00:00.000Z');
 
   before(async () => {
     // 1. Setup departments
@@ -33,7 +34,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         id: 'DEPT-HARDEN-01',
         code: 'DEPT-HARDEN-01',
         name: 'Phòng Đào tạo Thử nghiệm',
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });
@@ -45,7 +46,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         id: 'DEPT-HARDEN-02',
         code: 'DEPT-HARDEN-02',
         name: 'Phòng Nghiên cứu Thử nghiệm',
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });
@@ -75,24 +76,60 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       },
     });
 
-    adminUser = await prisma.user.upsert({
-      where: { id: 'user-harden-admin' },
-      update: { role: UserRole.ADMIN},
+    bghUser = await prisma.user.upsert({
+      where: { id: 'user-harden-bgh' },
+      update: { role: UserRole.BAN_GIAM_HIEU },
       create: {
-        id: 'user-harden-admin',
-        email: 'admin.harden@cdktcnqn.edu.vn',
-        name: 'Admin Hardening',
-        role: UserRole.ADMIN,
+        id: 'user-harden-bgh',
+        email: 'bgh.harden@cdktcnqn.edu.vn',
+        name: 'BGH Hardening',
+        role: UserRole.BAN_GIAM_HIEU,
+      },
+    });
 
+    const bghUnit = await prisma.organizationalUnit.upsert({
+      where: { id: 'UNIT_SCHOOL_BGH_HARDEN' },
+      update: { name: 'Ban Giám Hiệu' },
+      create: {
+        id: 'UNIT_SCHOOL_BGH_HARDEN',
+        code: 'BGH',
+        name: 'Ban Giám Hiệu',
+        type: 'SCHOOL',
+        status: 'ACTIVE',
+      },
+    });
+
+    const posDef = await prisma.positionDefinition.upsert({
+      where: { code: 'HIEU_TRUONG' },
+      update: { title: 'Hiệu trưởng' },
+      create: {
+        code: 'HIEU_TRUONG',
+        title: 'Hiệu trưởng',
+        isLeadership: true,
+        group: 'LDPU',
+      },
+    });
+
+    await prisma.positionAssignment.deleteMany({
+      where: { userId: bghUser.id },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: bghUser.id,
+        positionDefinitionId: posDef.id,
+        unitId: bghUnit.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+        effectiveFrom: new Date('2026-01-01'),
       },
     });
 
     sessionToken = signSessionToken({
-      id: staffUser.id,
-      email: staffUser.email,
-      name: staffUser.name,
-      role: staffUser.role,
-
+      id: bghUser.id,
+      email: bghUser.email,
+      name: bghUser.name,
+      role: bghUser.role,
     });
 
     // 3. Create test tasks representing diverse scopes, statuses, and overdue states
@@ -108,8 +145,10 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         progressPercent: 30,
 
         createdById: managerUser.id,
+        leadUnitId: testDept.id,
         academicYear: '2026-2027',
         academicMonth: 9,
+        startDate: PAST_START_DATE,
         dueDate: FUTURE_DUE_DATE,
         actors: {
           create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
@@ -131,6 +170,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
         createdById: managerUser.id,
         parentTaskId: task1.id,
+        leadUnitId: testDept.id,
         academicYear: '2026-2027',
         academicMonth: 9,
         startDate: PAST_START_DATE,
@@ -158,6 +198,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         academicMonth: 9,
         startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Past due date but COMPLETED
+        completedAt: OVERDUE_DUE_DATE,
         actors: {
           create: [{ userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
         },
@@ -177,8 +218,10 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         progressPercent: 0,
 
         createdById: managerUser.id,
+        leadUnitId: otherDept.id,
         academicYear: '2026-2027',
         academicMonth: 10,
+        startDate: PAST_START_DATE,
         dueDate: FUTURE_DUE_DATE,
         actors: {
           create: [{ userId: managerUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true, appointedAt: new Date() }],
@@ -302,7 +345,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
   describe('2. Server-Side Offset Pagination (Phase 13)', () => {
     test('calculates correct pagination metadata (page, limit, totalPages, hasMore)', async () => {
       const result = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           page: 1,
@@ -323,7 +366,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     test('handles second page and boundary limits correctly', async () => {
       const page1 = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           page: 1,
@@ -332,7 +375,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       );
 
       const page2 = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           page: 2,
@@ -352,7 +395,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     test('supports all: true to bypass pagination limits', async () => {
       const result = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           all: true,
@@ -370,7 +413,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     test('fetches forward pages using cursor and take parameters', async () => {
       // 1. Get first page with take: 2
       const firstPage = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           take: 2,
@@ -385,7 +428,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
       // 2. Query next page using cursor
       const secondPage = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           cursor: firstCursor!,
@@ -406,7 +449,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       // 3. Query beyond second page using new nextCursor
       if (secondPage.hasMore && secondPage.nextCursor) {
         const thirdPage = await taskQueryService.queryTasks(
-          { user: staffUser },
+          { user: bghUser },
           {
 
             cursor: secondPage.nextCursor,
@@ -475,7 +518,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     test('filters by status: overdue logic correctly excludes COMPLETED and CANCELLED', async () => {
       const overdueResult = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
 
           status: 'overdue',
@@ -519,9 +562,9 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     test('filters by departmentId and dept alias', async () => {
       const res1 = await taskQueryService.queryTasks(
-        { user: adminUser },
+        { user: bghUser },
         {
-
+          departmentId: otherDept.id,
           all: true,
         }
       );
@@ -529,7 +572,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       assert.equal(res1.tasks[0].id, createdTaskIds[3]);
 
       const res2 = await taskQueryService.queryTasks(
-        { user: adminUser },
+        { user: bghUser },
         {
           dept: otherDept.id,
           all: true,
@@ -542,9 +585,9 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     test('filters by academicMonth/month and academicYear/year', async () => {
       // 1. Scoped to otherDept where task4 is the only task created
       const month10 = await taskQueryService.queryTasks(
-        { user: adminUser },
+        { user: bghUser },
         {
-
+          departmentId: otherDept.id,
           month: 10,
           year: '2026-2027',
           all: true,
@@ -557,7 +600,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
       // 2. Global query also verifies all returned tasks have month 10
       const allMonth10 = await taskQueryService.queryTasks(
-        { user: adminUser },
+        { user: bghUser },
         {
           month: 10,
           year: '2026-2027',
@@ -600,7 +643,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     test('performs case-insensitive search on title, code, and description', async () => {
       // Search by title (case-insensitive: lowercase "kiểm toán" matches "Kiểm toán")
       const titleSearch = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
           search: 'kiểm toán',
           all: true,
@@ -611,7 +654,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
       // Search by code (case-insensitive: "qcet-hd-002" matches "QCET-HD-002")
       const codeSearch = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
           q: 'qcet-hd-002',
           all: true,
@@ -622,7 +665,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
       // Search by description (case-insensitive: "dacum" matches "DACUM")
       const descSearch = await taskQueryService.queryTasks(
-        { user: staffUser },
+        { user: bghUser },
         {
           search: 'dacum',
           all: true,
