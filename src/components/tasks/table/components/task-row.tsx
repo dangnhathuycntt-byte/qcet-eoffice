@@ -502,8 +502,9 @@ export const TaskRow = React.memo(function TaskRow({
             )}
           </div>
 
-          {/* Title - Clean & Straight Aligned */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Title + Description */}
+          <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+            <div className="flex items-center gap-2 min-w-0">
             {showTaskCode && (task.code || task.taskCode) && (
               <span className="font-mono text-[11px] font-semibold text-muted-foreground/80 tabular-nums shrink-0">
                 {task.code || task.taskCode}
@@ -534,6 +535,12 @@ export const TaskRow = React.memo(function TaskRow({
                 title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
               >
                 Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
+              </span>
+            )}
+            </div>
+            {task.description && (
+              <span className="text-[11.5px] text-muted-foreground/70 truncate leading-snug">
+                {task.description}
               </span>
             )}
           </div>
