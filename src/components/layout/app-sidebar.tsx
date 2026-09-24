@@ -49,7 +49,6 @@ import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
 
 const UserProfileModal = dynamic(
@@ -604,24 +603,11 @@ export function AppSidebar() {
                               )}
                             />
                           </span>
-                          <AnimatePresence initial={false}>
-                            {!isCollapsed && (
-                              <m.span
-                                key="label"
-                                className="truncate flex-1 text-[13px]"
-                                initial={{ opacity: 0, x: -6 }}
-                                animate={{ opacity: 1, x: 0, transition: { duration: 0.14, delay: 0.1, ease: [0.16, 1, 0.3, 1] } }}
-                                exit={{ opacity: 0, x: -4, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
-                              >
-                                {item.label}
-                              </m.span>
-                            )}
-                          </AnimatePresence>
+                          <span className="truncate flex-1 text-[13px]">{item.label}</span>
                           {badge ? (
                             <span
                               className={cn(
                                 "inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0",
-                                isCollapsed && "absolute right-0.5 top-0.5 min-w-0 size-3 px-0 text-[7px] ring-2 ring-[#f8f9fa]",
                                 badge.variant === "rose" && "bg-rose-500/15 text-rose-600 border border-rose-500/20",
                                 badge.variant === "primary" && "bg-primary/10 text-primary border border-primary/20",
                                 badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border border-sky-500/20",
@@ -629,7 +615,7 @@ export function AppSidebar() {
                                 (!badge.variant || badge.variant === "muted") && "bg-muted/70 text-muted-foreground border border-border/40"
                               )}
                             >
-                              {!isCollapsed && badge.text}
+                              {badge.text}
                             </span>
                           ) : null}
                         </Link>
