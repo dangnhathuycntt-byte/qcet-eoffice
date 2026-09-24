@@ -1868,6 +1868,11 @@ export function TaskBlockEditor({
       }
     };
     const handleWindowDrop = (e: DragEvent) => {
+      if (e.defaultPrevented) {
+        // Already handled by container onDrop — avoid duplicate insert
+        resetGlobalDrag();
+        return;
+      }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         e.preventDefault();
         resetGlobalDrag();
