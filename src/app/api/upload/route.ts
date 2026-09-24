@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
+import { assertCsrf } from "@/server/security/csrf";
 import { isAllowedFileExtension } from "@/lib/storage";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -13,6 +14,7 @@ const UPLOADS_DIR = path.resolve(process.env.UPLOADS_DIR || "./uploads");
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
+    assertCsrf(req);
     const context = await getApiContext(req);
     const authUser = requireAuthenticated(context);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
