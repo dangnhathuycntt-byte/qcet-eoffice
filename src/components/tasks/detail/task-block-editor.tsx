@@ -1637,8 +1637,9 @@ export function TaskBlockEditor({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const lastSavedContentRef = React.useRef<string | null>(initialDescription ?? null);
-  // Track whether editor has been interacted with — avoid saving on initial mount
-  const hasUserEditedRef = React.useRef(false);
+  // Skip very first onValueChange (Plate mount); mark ready after 1st tick
+  const editorReadyRef = React.useRef(false);
+  React.useEffect(() => { const t = setTimeout(() => { editorReadyRef.current = true; }, 100); return () => clearTimeout(t); }, []);
 
   // Compute initial Plate value from persisted description
   const initialValue = React.useMemo(() => parseToPlateValue(initialDescription), []);
@@ -1777,6 +1778,46 @@ export function TaskBlockEditor({
     } catch { /* best-effort */ }
   }, [taskId]);
 
+  const triggerAutoSave = React.useCallback(
+    (plateValue: PlateValue) => {
+      // Skip the initial onValueChange from Plate mount
+      if (!editorReadyRef.current) return;
+      const contentBlocks = plateToBlocks(plateValue);
+      // Filter out blocks with blob: URLs (still uploading) instead of skipping entire save
+      const savableBlocks = contentBlocks.filter((b) => !b.url?.startsWith("blob:"));
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          const payload = serializeBlocksToContent(savableBlocks);
+          if (payload === lastSavedContentRef.current) return;
+          await onSaveContent(payload);
+          lastSavedContentRef.current = payload;
+          setSaveError(null);
+        } catch (err: unknown) {
+          setSaveError(err instanceof Error ? err.message : "Lỗi lưu nội dung");
+        }
+      }, 800);
+    },
+    [onSaveContent],
+  );
+
+  // Flush pending save on unmount / navigate away
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        try {
+          const blocks = plateToBlocks(editor.children as PlateValue);
+          const savable = blocks.filter((b) => !b.url?.startsWith("blob:"));
+          const payload = serializeBlocksToContent(savable);
+          if (payload && payload !== lastSavedContentRef.current) {
+            onSaveContent(payload);
+          }
+        } catch { /* best-effort on unmount */ }
+      }
+    };
+  }, [editor, onSaveContent]);
+
   // Process dropped files
   const handleProcessDroppedFiles = React.useCallback((files: FileList | File[], clientY?: number) => {
     if (!canEdit || editor.api.isReadOnly()) return;
@@ -1809,6 +1850,8 @@ export function TaskBlockEditor({
         const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
         if (nodeIdx >= 0) {
           editor.tf.setNodes({ url: result.fileUrl } as any, { at: [nodeIdx] });
+          // Trigger autosave now that blob URL is replaced with server URL
+          triggerAutoSave(editor.children as PlateValue);
         }
       });
 
@@ -1835,7 +1878,7 @@ export function TaskBlockEditor({
       insertAt = [editor.children.length];
     }
     editor.tf.insertNodes(newNodes as any, { at: insertAt });
-  }, [canEdit, editor, uploadFileToServer, createDeliverable]);
+  }, [canEdit, editor, uploadFileToServer, createDeliverable, triggerAutoSave]);
 
   // Container paste and drop handlers
   const handleContainerPaste = React.useCallback((e: React.ClipboardEvent) => {
@@ -1902,28 +1945,6 @@ export function TaskBlockEditor({
       window.removeEventListener("drop", handleWindowDrop);
     };
   }, [globalFileDrop, canEdit, resetGlobalDrag, handleProcessDroppedFiles]);
-
-  const triggerAutoSave = React.useCallback(
-    (plateValue: PlateValue) => {
-      if (!hasUserEditedRef.current) return;
-      const contentBlocks = plateToBlocks(plateValue);
-      if (contentBlocks.some((b) => b.url?.startsWith("blob:"))) return;
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(async () => {
-        try {
-          const payload = serializeBlocksToContent(contentBlocks);
-          // Skip save if content unchanged from last saved or initial state
-          if (payload === lastSavedContentRef.current) return;
-          await onSaveContent(payload);
-          lastSavedContentRef.current = payload;
-          setSaveError(null);
-        } catch (err: unknown) {
-          setSaveError(err instanceof Error ? err.message : "Lỗi lưu nội dung");
-        }
-      }, 800);
-    },
-    [onSaveContent],
-  );
 
   // Sync external description changes
   React.useEffect(() => {
@@ -2071,7 +2092,6 @@ export function TaskBlockEditor({
                   readOnly={!canEdit}
                   placeholder={placeholder || "Nhập nội dung hoặc gõ / để chèn..."}
                   className="outline-none text-sm leading-relaxed pl-8 sm:pl-9 pr-4 pb-32 flex-1"
-                  onKeyDown={() => { hasUserEditedRef.current = true; }}
                   onBlur={() => {
                     // Xoá block rỗng (heading, list, etc.) khi editor mất focus
                     // Giữ lại paragraph rỗng vì đó là block mặc định
