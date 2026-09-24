@@ -374,7 +374,8 @@ export function AppSidebar() {
               ref={accountTriggerRef}
               type="button"
               className={cn(
-                "h-7 min-w-0 flex-1 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
+                "h-7 min-w-0 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
+                isCollapsed ? "w-full justify-center px-0" : "flex-1",
                 isProfileDropdownOpen
                   ? "bg-black/[0.06]"
                   : "hover:bg-black/[0.04]"
@@ -382,9 +383,18 @@ export function AppSidebar() {
               aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              <div className="size-5 rounded-[5px] flex items-center justify-center bg-pink-500/90 text-white font-medium text-[10px] shrink-0 shadow-2xs">
-                {getInitials(user?.name)}
-              </div>
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={formatDisplayName(user?.name)}
+                  className="size-5 rounded-[5px] object-cover shrink-0 shadow-2xs"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="size-5 rounded-[5px] flex items-center justify-center bg-pink-500/90 text-white font-medium text-[10px] shrink-0 shadow-2xs">
+                  {getInitials(user?.name)}
+                </div>
+              )}
               {!isCollapsed && (
                 <>
                   <span className="text-[13px] font-medium text-foreground/90 truncate leading-none group-hover/user:text-foreground transition-colors">
