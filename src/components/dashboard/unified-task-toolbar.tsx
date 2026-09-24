@@ -51,6 +51,12 @@ import {
   type SavedViewsSelectorProps,
 } from "@/components/tasks/saved-views-selector";
 import {
+  PopoverRoot,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { StandardMenu } from "@/components/ui/menu";
+import {
   type SavedTaskView,
   type TaskViewCriteria,
   type SavedViewRole,
@@ -546,28 +552,30 @@ export function UnifiedTaskToolbar({
     onSearchChange("");
   }, [onSearchChange]);
 
-  // Display / Presentation options menu state
-  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
-  const displayMenuRef = React.useRef<HTMLDivElement>(null);
-
   // Filter dropdown states
   const [isMonthOpen, setIsMonthOpen] = React.useState(false);
-  const monthMenuRef = React.useRef<HTMLDivElement>(null);
-
   const [isStatusOpen, setIsStatusOpen] = React.useState(false);
-  const statusMenuRef = React.useRef<HTMLDivElement>(null);
-
   const [isDeadlineOpen, setIsDeadlineOpen] = React.useState(false);
-  const deadlineMenuRef = React.useRef<HTMLDivElement>(null);
-
   const [isPriorityOpen, setIsPriorityOpen] = React.useState(false);
-  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
-
   const [isDepartmentOpen, setIsDepartmentOpen] = React.useState(false);
-  const departmentMenuRef = React.useRef<HTMLDivElement>(null);
-
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
+  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
+
+  const closeAllMenus = React.useCallback(() => {
+    setIsMonthOpen(false);
+    setIsStatusOpen(false);
+    setIsDeadlineOpen(false);
+    setIsPriorityOpen(false);
+    setIsDepartmentOpen(false);
+    setIsCollapsedFilterOpen(false);
+    setIsDisplayOpen(false);
+  }, []);
+  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
+
+  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
+  const departmentMenuRef = React.useRef<HTMLDivElement>(null);
   const collapsedFilterRef = React.useRef<HTMLDivElement>(null);
+  const displayMenuRef = React.useRef<HTMLDivElement>(null);
 
   const closeAllMenus = React.useCallback(() => {
     setIsMonthOpen(false);
@@ -763,47 +771,6 @@ export function UnifiedTaskToolbar({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  // 3. Dropdowns outside click and Esc listener
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (monthMenuRef.current && !monthMenuRef.current.contains(target)) {
-        setIsMonthOpen(false);
-      }
-      if (statusMenuRef.current && !statusMenuRef.current.contains(target)) {
-        setIsStatusOpen(false);
-      }
-      if (deadlineMenuRef.current && !deadlineMenuRef.current.contains(target)) {
-        setIsDeadlineOpen(false);
-      }
-      if (priorityMenuRef.current && !priorityMenuRef.current.contains(target)) {
-        setIsPriorityOpen(false);
-      }
-      if (departmentMenuRef.current && !departmentMenuRef.current.contains(target)) {
-        setIsDepartmentOpen(false);
-      }
-      if (collapsedFilterRef.current && !collapsedFilterRef.current.contains(target)) {
-        setIsCollapsedFilterOpen(false);
-      }
-      if (displayMenuRef.current && !displayMenuRef.current.contains(target)) {
-        setIsDisplayOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeAllMenus();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [closeAllMenus]);
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
@@ -1274,355 +1241,345 @@ export function UnifiedTaskToolbar({
         </div>
 
         {/* 2. Thời gian Filter */}
-        <div className="relative shrink-0" ref={monthMenuRef}>
-          <button
-            type="button"
-            aria-label="Chọn kỳ tháng"
-            aria-expanded={isMonthOpen}
-            onClick={() => {
-              const next = !isMonthOpen;
-              closeAllMenus();
-              setIsMonthOpen(next);
-            }}
-            className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              isMonthActive
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                : "border-border/80 bg-background text-foreground hover:bg-accent"
-            )}
-          >
-            <span>{timeLabel}</span>
-            {isMonthActive ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                }}
-                title="Xóa lọc thời gian"
-                aria-label="Xóa lọc thời gian"
-                className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+        <PopoverRoot open={isMonthOpen} onOpenChange={setIsMonthOpen}>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Chọn kỳ tháng"
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+                  isMonthActive
+                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                    : "border-border/80 bg-background text-foreground hover:bg-accent"
+                )}
               >
-                <X className="size-3" strokeWidth={2} />
-              </span>
-            ) : (
-              <ChevronDown
-                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isMonthOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
-            )}
-          </button>
+                <span>{timeLabel}</span>
+                {isMonthActive ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTimeFilterChange(NO_TASK_TIME_FILTER);
+                    }}
+                    title="Xóa lọc thời gian"
+                    aria-label="Xóa lọc thời gian"
+                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+                  >
+                    <X className="size-3" strokeWidth={2} />
+                  </span>
+                ) : (
+                  <ChevronDown
+                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isMonthOpen && "rotate-180")}
+                    strokeWidth={1.5}
+                  />
+                )}
+              </button>
+            }
+          />
 
-          {isMonthOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-border bg-popover p-2 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-              role="dialog"
-              aria-label="Chọn thời gian làm việc"
-            >
-              <div className="space-y-0.5">
-                {([
-                  ["today", "Hôm nay"],
-                  ["this_week", "Tuần này"],
-                  ["this_month", "Tháng này"],
-                  ["overdue", "Quá hạn"],
-                ] as Array<[TaskTimePreset, string]>).map(([preset, label]) => {
-                  const selected = effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === preset;
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => { handleTimeFilterChange({ kind: "preset", preset }); setIsMonthOpen(false); }}
-                      className={cn("w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors", selected ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent")}
-                    >
-                      <span>{label}</span>
-                      {selected && <Check className="size-3.5" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="border-t border-border/60 my-2" />
-
-              <div className="grid grid-cols-3 gap-1">
-                {academicMonths.map((period) => {
-                  const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                  return (
-                    <button
-                      key={period.monthNumber}
-                      type="button"
-                      onClick={() => {
-                        handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                        setIsMonthOpen(false);
-                      }}
-                      className={cn(
-                        "h-7 px-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center",
-                        isSelected
-                          ? "bg-primary/10 text-primary font-semibold"
-                          : "hover:bg-accent text-foreground"
-                      )}
-                    >
-                      <span>{period.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="border-t border-border/60 my-2" />
-              {!showDateRange ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDateRange(true)}
-                  className="w-full px-2.5 py-1.5 rounded-md text-left font-medium hover:bg-accent transition-colors"
-                >
-                  Chọn khoảng ngày…
-                </button>
-              ) : (
-                <div className="space-y-2 px-1 pb-1">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <label className="space-y-1 text-[10px] text-muted-foreground">Từ ngày
-                      <input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">Đến ngày
-                      <input type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
-                    </label>
-                  </div>
-                  <div className="flex justify-end gap-1.5">
-                    <button type="button" onClick={() => setShowDateRange(false)} className="h-7 px-2 rounded-md hover:bg-accent">Hủy</button>
-                    <button
-                      type="button"
-                      disabled={!isValidTaskDateRange(rangeFrom, rangeTo)}
-                      onClick={() => {
-                        if (!isValidTaskDateRange(rangeFrom, rangeTo)) return;
-                        handleTimeFilterChange({ kind: "range", from: rangeFrom, to: rangeTo });
-                        setShowDateRange(false);
-                        setIsMonthOpen(false);
-                      }}
-                      className="h-7 px-2.5 rounded-md bg-primary text-primary-foreground disabled:opacity-40"
-                    >Áp dụng</button>
-                  </div>
-                </div>
-              )}
+          <PopoverContent
+            align="start"
+            side="bottom"
+            sideOffset={6}
+            className="w-64 rounded-xl border border-border bg-popover p-2 shadow-xl z-50 text-xs text-popover-foreground"
+          >
+            <div className="space-y-0.5">
+              {([
+                ["today", "Hôm nay"],
+                ["this_week", "Tuần này"],
+                ["this_month", "Tháng này"],
+                ["overdue", "Quá hạn"],
+              ] as Array<[TaskTimePreset, string]>).map(([preset, label]) => {
+                const selected = effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => { handleTimeFilterChange({ kind: "preset", preset }); setIsMonthOpen(false); }}
+                    className={cn("w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer", selected ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent")}
+                  >
+                    <span>{label}</span>
+                    {selected && <Check className="size-3.5" />}
+                  </button>
+                );
+              })}
             </div>
-          )}
-        </div>
+
+            <div className="border-t border-border/60 my-2" />
+
+            <div className="grid grid-cols-3 gap-1">
+              {academicMonths.map((period) => {
+                const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
+                return (
+                  <button
+                    key={period.monthNumber}
+                    type="button"
+                    onClick={() => {
+                      handleTimeFilterChange({ kind: "month", month: period.monthNumber });
+                      setIsMonthOpen(false);
+                    }}
+                    className={cn(
+                      "h-7 px-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center",
+                      isSelected
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-accent text-foreground"
+                    )}
+                  >
+                    <span>{period.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-border/60 my-2" />
+            {!showDateRange ? (
+              <button
+                type="button"
+                onClick={() => setShowDateRange(true)}
+                className="w-full px-2.5 py-1.5 rounded-md text-left font-medium hover:bg-accent transition-colors cursor-pointer"
+              >
+                Chọn khoảng ngày…
+              </button>
+            ) : (
+              <div className="space-y-2 px-1 pb-1">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="space-y-1 text-[10px] text-muted-foreground">Từ ngày
+                    <input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">Đến ngày
+                    <input type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
+                  </label>
+                </div>
+                <div className="flex justify-end gap-1.5">
+                  <button type="button" onClick={() => setShowDateRange(false)} className="h-7 px-2 rounded-md hover:bg-accent cursor-pointer">Hủy</button>
+                  <button
+                    type="button"
+                    disabled={!isValidTaskDateRange(rangeFrom, rangeTo)}
+                    onClick={() => {
+                      if (!isValidTaskDateRange(rangeFrom, rangeTo)) return;
+                      handleTimeFilterChange({ kind: "range", from: rangeFrom, to: rangeTo });
+                      setShowDateRange(false);
+                      setIsMonthOpen(false);
+                    }}
+                    className="h-7 px-2.5 rounded-md bg-primary text-primary-foreground disabled:opacity-40 cursor-pointer"
+                  >Áp dụng</button>
+                </div>
+              </div>
+            )}
+          </PopoverContent>
+        </PopoverRoot>
 
         {/* 3. Trạng thái Filter */}
-        <div className="relative shrink-0" ref={statusMenuRef}>
-          <button
-            type="button"
-            aria-label="Lọc trạng thái"
-            aria-expanded={isStatusOpen}
-            onClick={() => {
-              const next = !isStatusOpen;
-              closeAllMenus();
-              setIsStatusOpen(next);
-            }}
-            className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              isStatusActive
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                : "border-border/80 bg-background text-foreground hover:bg-accent"
-            )}
-          >
-            <span>{statusLabel}</span>
-            {isStatusActive ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onStatusChange) {
-                    onStatusChange("all");
-                  } else {
-                    onTabChange?.("all");
-                  }
-                }}
-                title="Xóa lọc trạng thái"
-                aria-label="Xóa lọc trạng thái"
-                className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+        <PopoverRoot open={isStatusOpen} onOpenChange={setIsStatusOpen}>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Lọc trạng thái"
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+                  isStatusActive
+                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                    : "border-border/80 bg-background text-foreground hover:bg-accent"
+                )}
               >
-                <X className="size-3" strokeWidth={2} />
-              </span>
-            ) : (
-              <ChevronDown
-                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isStatusOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
-            )}
-          </button>
-
-          {isStatusOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-              role="dialog"
-              aria-label="Chọn trạng thái"
-            >
-              {statusOptions.map((opt) => {
-                const norm = (effectiveStatus || "all").toLowerCase();
-                const isSelected =
-                  opt.value === "new"
-                    ? norm === "new" || norm === "not_started" || norm === "assigned"
-                    : opt.value === "in_progress"
-                    ? norm === "in_progress"
-                    : opt.value === "waiting_approval" || opt.value === "review"
-                    ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
-                    : opt.value === "completed"
-                    ? norm === "completed"
-                    : opt.value === "all"
-                    ? !effectiveStatus || norm === "all"
-                    : norm === opt.value.toLowerCase();
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
+                <span>{statusLabel}</span>
+                {isStatusActive ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (onStatusChange) {
-                        onStatusChange(opt.value);
+                        onStatusChange("all");
                       } else {
-                        onTabChange?.(opt.value);
+                        onTabChange?.("all");
                       }
-                      setIsStatusOpen(false);
                     }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                    )}
+                    title="Xóa lọc trạng thái"
+                    aria-label="Xóa lọc trạng thái"
+                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
                   >
-                    <span>{opt.label}</span>
-                    {isSelected && <Check className="size-3.5 text-primary" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                    <X className="size-3" strokeWidth={2} />
+                  </span>
+                ) : (
+                  <ChevronDown
+                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isStatusOpen && "rotate-180")}
+                    strokeWidth={1.5}
+                  />
+                )}
+              </button>
+            }
+          />
+
+          <PopoverContent
+            align="start"
+            side="bottom"
+            sideOffset={6}
+            className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+          >
+            {statusOptions.map((opt) => {
+              const norm = (effectiveStatus || "all").toLowerCase();
+              const isSelected =
+                opt.value === "new"
+                  ? norm === "new" || norm === "not_started" || norm === "assigned"
+                  : opt.value === "in_progress"
+                  ? norm === "in_progress"
+                  : opt.value === "waiting_approval" || opt.value === "review"
+                  ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
+                  : opt.value === "completed"
+                  ? norm === "completed"
+                  : opt.value === "all"
+                  ? !effectiveStatus || norm === "all"
+                  : norm === opt.value.toLowerCase();
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    if (onStatusChange) {
+                      onStatusChange(opt.value);
+                    } else {
+                      onTabChange?.(opt.value);
+                    }
+                    setIsStatusOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                    isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {isSelected && <Check className="size-3.5 text-primary" />}
+                </button>
+              );
+            })}
+          </PopoverContent>
+        </PopoverRoot>
 
         {/* 4. Thời hạn Filter */}
-        <div className="relative shrink-0" ref={deadlineMenuRef}>
-          <button
-            type="button"
-            aria-label="Lọc thời hạn"
-            aria-expanded={isDeadlineOpen}
-            onClick={() => {
-              const next = !isDeadlineOpen;
-              closeAllMenus();
-              setIsDeadlineOpen(next);
-            }}
-            className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              isDeadlineActive
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                : "border-border/80 bg-background text-foreground hover:bg-accent"
-            )}
-          >
-            <span>{deadlineLabel}</span>
-            {isDeadlineActive ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onDeadlineChange) {
-                    onDeadlineChange("all");
-                  } else {
-                    onTabChange?.("all");
-                  }
-                }}
-                title="Xóa lọc thời hạn"
-                aria-label="Xóa lọc thời hạn"
-                className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+        <PopoverRoot open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                aria-label="Lọc thời hạn"
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+                  isDeadlineActive
+                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                    : "border-border/80 bg-background text-foreground hover:bg-accent"
+                )}
               >
-                <X className="size-3" strokeWidth={2} />
-              </span>
-            ) : (
-              <ChevronDown
-                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDeadlineOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
-            )}
-          </button>
-
-          {isDeadlineOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-              role="dialog"
-              aria-label="Chọn thời hạn"
-            >
-              {deadlineOptions.map((opt) => {
-                const isSelected = (effectiveDeadline === opt.value || (!effectiveDeadline && opt.value === "all"));
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
+                <span>{deadlineLabel}</span>
+                {isDeadlineActive ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (onDeadlineChange) {
-                        onDeadlineChange(opt.value);
+                        onDeadlineChange("all");
                       } else {
-                        onTabChange?.(opt.value);
+                        onTabChange?.("all");
                       }
-                      setIsDeadlineOpen(false);
                     }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                    )}
+                    title="Xóa lọc thời hạn"
+                    aria-label="Xóa lọc thời hạn"
+                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
                   >
-                    <span>{opt.label}</span>
-                    {isSelected && <Check className="size-3.5 text-primary" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                    <X className="size-3" strokeWidth={2} />
+                  </span>
+                ) : (
+                  <ChevronDown
+                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDeadlineOpen && "rotate-180")}
+                    strokeWidth={1.5}
+                  />
+                )}
+              </button>
+            }
+          />
+
+          <PopoverContent
+            align="start"
+            side="bottom"
+            sideOffset={6}
+            className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+          >
+            {deadlineOptions.map((opt) => {
+              const isSelected = (effectiveDeadline === opt.value || (!effectiveDeadline && opt.value === "all"));
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    if (onDeadlineChange) {
+                      onDeadlineChange(opt.value);
+                    } else {
+                      onTabChange?.(opt.value);
+                    }
+                    setIsDeadlineOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
+                    isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {isSelected && <Check className="size-3.5 text-primary" />}
+                </button>
+              );
+            })}
+          </PopoverContent>
+        </PopoverRoot>
 
         {/* 5. Ưu tiên Filter (Direct on desktop >= lg) */}
-        <div className="hidden lg:block relative shrink-0" ref={priorityMenuRef}>
-          <button
-            type="button"
-            aria-label="Lọc mức độ ưu tiên"
-            aria-expanded={isPriorityOpen}
-            onClick={() => {
-              const next = !isPriorityOpen;
-              closeAllMenus();
-              setIsPriorityOpen(next);
-            }}
-            className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              isPriorityActive
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                : "border-border/80 bg-background text-foreground hover:bg-accent"
-            )}
-          >
-            <span>{priorityLabel}</span>
-            {isPriorityActive ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPriorityChange?.("ALL");
-                }}
-                title="Xóa lọc mức ưu tiên"
-                aria-label="Xóa lọc mức ưu tiên"
-                className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-              >
-                <X className="size-3" strokeWidth={2} />
-              </span>
-            ) : (
-              <ChevronDown
-                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isPriorityOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
-            )}
-          </button>
+        <div className="hidden lg:block shrink-0">
+          <PopoverRoot open={isPriorityOpen} onOpenChange={setIsPriorityOpen}>
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Lọc mức độ ưu tiên"
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+                    isPriorityActive
+                      ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                      : "border-border/80 bg-background text-foreground hover:bg-accent"
+                  )}
+                >
+                  <span>{priorityLabel}</span>
+                  {isPriorityActive ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPriorityChange?.("ALL");
+                      }}
+                      title="Xóa lọc mức ưu tiên"
+                      aria-label="Xóa lọc mức ưu tiên"
+                      className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+                    >
+                      <X className="size-3" strokeWidth={2} />
+                    </span>
+                  ) : (
+                    <ChevronDown
+                      className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isPriorityOpen && "rotate-180")}
+                      strokeWidth={1.5}
+                    />
+                  )}
+                </button>
+              }
+            />
 
-          {isPriorityOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-              role="dialog"
-              aria-label="Chọn mức độ ưu tiên"
+            <PopoverContent
+              align="start"
+              side="bottom"
+              sideOffset={6}
+              className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
             >
               <button
                 type="button"
@@ -1662,8 +1619,8 @@ export function UnifiedTaskToolbar({
                   </button>
                 );
               })}
-            </div>
-          )}
+            </PopoverContent>
+          </PopoverRoot>
         </div>
 
         {/* 6. Đơn vị Filter (Direct on desktop >= lg - only when relevant to scope) */}
