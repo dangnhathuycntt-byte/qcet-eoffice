@@ -206,6 +206,12 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         where: { id: { in: createdTaskIds } },
       });
     }
+    const testUserIds = [adminUser?.id, managerUser?.id, staffUser?.id, foreignStaffUser?.id].filter(Boolean);
+    if (testUserIds.length > 0) {
+      await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
+    }
+    const testUnitCodes = ['dept-test-doc-1', 'dept-test-doc-2'];
+    await prisma.organizationalUnit.deleteMany({ where: { code: { in: testUnitCodes } } });
   });
 
   beforeEach(() => {

@@ -155,6 +155,11 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
       await prisma.taskActor.deleteMany({ where: { taskId: { in: createdTaskIds } } });
       await prisma.task.deleteMany({ where: { id: { in: createdTaskIds } } });
     }
+    const testUserIds = [staffUser?.id, leaderUser?.id, bghUser?.id].filter(Boolean);
+    if (testUserIds.length > 0) {
+      await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
+    }
+    await prisma.organizationalUnit.deleteMany({ where: { id: 'TEST_DEPT' } });
   });
 
   test('buildTaskContext uses canonical TaskActor/leadUnitId and excludes reviewers from makers', () => {

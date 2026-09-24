@@ -378,6 +378,67 @@ describe('Unified Authorization Engine (Task 4)', () => {
       assert.equal(resOther.allowed, false);
       assert.equal(resOther.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
     });
+
+    test('User cùng OU policy: staff can create task in own unit, but denied for other unit or school-wide', () => {
+      const ctx = createContext({
+        userId: 'staff_cntt',
+        positions: [createPosition({ positionCode: 'CHUYEN_VIEN', unitId: 'dept_cntt' })],
+        primaryUnitIds: ['dept_cntt'],
+      });
+
+      // Allowed in own unit
+      const ownTask: TaskResource = {
+        id: 't_create_own',
+        type: 'task',
+        leadUnitId: 'dept_cntt',
+        scope: 'department',
+      };
+      assert.equal(authorize(ctx, 'task.create', ownTask).allowed, true);
+
+      // Denied for another unit
+      const otherTask: TaskResource = {
+        id: 't_create_other',
+        type: 'task',
+        leadUnitId: 'dept_kh',
+        scope: 'department',
+      };
+      const resOther = authorize(ctx, 'task.create', otherTask);
+      assert.equal(resOther.allowed, false);
+      assert.equal(resOther.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+
+      // Denied for school-wide scope
+      const schoolTask: TaskResource = {
+        id: 't_create_school',
+        type: 'task',
+        leadUnitId: 'dept_cntt',
+        scope: 'school',
+      };
+      const resSchool = authorize(ctx, 'task.create', schoolTask);
+      assert.equal(resSchool.allowed, false);
+      assert.equal(resSchool.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+    });
+
+    test('BGH can create task school-wide and for any unit', () => {
+      const bghCtx = createContext({
+        userId: 'bgh_user',
+        positions: [createPosition({ positionCode: 'HIEU_TRUONG', unitId: 'bgh', isLeadership: true })],
+      });
+
+      const schoolTask: TaskResource = {
+        id: 't_school_bgh',
+        type: 'task',
+        scope: 'school',
+      };
+      assert.equal(authorize(bghCtx, 'task.create', schoolTask).allowed, true);
+
+      const anyUnitTask: TaskResource = {
+        id: 't_any_unit',
+        type: 'task',
+        leadUnitId: 'dept_cntt',
+        scope: 'department',
+      };
+      assert.equal(authorize(bghCtx, 'task.create', anyUnitTask).allowed, true);
+    });
   });
 
   // Step 8: Valid Delegation Fallback

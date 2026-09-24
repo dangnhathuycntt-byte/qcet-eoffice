@@ -1020,7 +1020,10 @@ export function ModularCascadingTaskTable({
   }, [selectedAcademicMonth]);
 
   const monthlyIndicator = React.useMemo(() => {
-    if (selectedAcademicMonth === undefined || selectedAcademicMonth === "ALL") return null;
+    if (selectedAcademicMonth === undefined) return null;
+    if (selectedAcademicMonth === "ALL") {
+      return `Toàn năm học - ${filteredTasks.length} nhiệm vụ`;
+    }
     const dateSpan = monthPeriod
       ? `(${monthPeriod.shortDateSpan}/${monthPeriod.endDate.slice(0, 4)})`
       : "";

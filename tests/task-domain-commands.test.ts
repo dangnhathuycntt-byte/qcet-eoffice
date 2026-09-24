@@ -43,6 +43,8 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
   const createdTaskIds: string[] = [];
   const createdUserIds: string[] = [];
   const createdAssignmentIds: string[] = [];
+  let createdDeptId: string | null = null;
+  let createdOrgUnitId: string | null = null;
 
   function makeRequest(
     url: string,
@@ -78,6 +80,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           status: 'ACTIVE' as any,
         },
       });
+      createdDeptId = dept.id;
     }
 
     orgUnit = await prisma.organizationalUnit.findFirst({
@@ -91,6 +94,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           type: "DEPARTMENT",
         },
       });
+      createdOrgUnitId = orgUnit.id;
     }
 
     // 2. Position definitions (ensure canonical code)
@@ -342,6 +346,13 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
 
     if (createdUserIds.length > 0) {
       await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+    }
+
+    if (createdOrgUnitId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: createdOrgUnitId } });
+    }
+    if (createdDeptId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: createdDeptId } });
     }
   });
 
