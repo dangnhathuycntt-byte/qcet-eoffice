@@ -1752,6 +1752,31 @@ export function TaskBlockEditor({
     setUrlPastePopover(null);
   }, [editor]);
 
+  // Upload a file to /api/upload, return server URL
+  const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.data ?? json;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Create deliverable record after successful upload
+  const createDeliverable = React.useCallback(async (fileUrl: string, title: string) => {
+    try {
+      await fetch(`/api/tasks/${taskId}/deliverables`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, fileUrl }),
+      });
+    } catch { /* best-effort */ }
+  }, [taskId]);
+
   // Process dropped files
   const handleProcessDroppedFiles = React.useCallback((files: FileList | File[], clientY?: number) => {
     if (!canEdit || editor.api.isReadOnly()) return;
@@ -1770,45 +1795,29 @@ export function TaskBlockEditor({
 
     const newNodes: PlateElemT[] = fileArray.map((file, idx) => {
       const nodeId = `b-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
-      if (isImageFile(file)) {
-        let objectUrl = "";
-        try { objectUrl = URL.createObjectURL(file); } catch {}
-        if (typeof FileReader !== "undefined") {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
-            if (dataUrl) {
-              const nodes = editor.children as PlateElemT[];
-              const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
-              if (nodeIdx >= 0) {
-                editor.tf.setNodes({ url: dataUrl } as any, { at: [nodeIdx] });
-              }
-            }
-          };
-          reader.readAsDataURL(file);
+      // Insert placeholder with blob URL immediately, then upload in background
+      let objectUrl = "";
+      try { objectUrl = URL.createObjectURL(file); } catch {}
+
+      // Background upload → replace blob URL with server URL + create deliverable
+      uploadFileToServer(file).then((result) => {
+        if (!result) return;
+        const nodes = editor.children as PlateElemT[];
+        const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
+        if (nodeIdx >= 0) {
+          editor.tf.setNodes({ url: result.fileUrl } as any, { at: [nodeIdx] });
         }
+        // Create deliverable for non-image files (or all files)
+        createDeliverable(result.fileUrl, file.name);
+      });
+
+      if (isImageFile(file)) {
         return {
           id: nodeId, type: PT.image, children: [{ text: file.name }],
           url: objectUrl, imageWidth: 100,
         } as PlateElemT;
       } else {
-        let objectUrl = "";
-        try { objectUrl = URL.createObjectURL(file); } catch {}
         const ext = file.name.split(".").pop()?.toUpperCase() || "TỆP";
-        if (file.size < 5 * 1024 * 1024 && typeof FileReader !== "undefined") {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
-            if (dataUrl) {
-              const nodes = editor.children as PlateElemT[];
-              const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
-              if (nodeIdx >= 0) {
-                editor.tf.setNodes({ url: dataUrl } as any, { at: [nodeIdx] });
-              }
-            }
-          };
-          reader.readAsDataURL(file);
-        }
         return {
           id: nodeId, type: PT.attachment, children: [{ text: file.name }],
           url: objectUrl, fileName: file.name, fileSize: formatSize(file.size), fileType: ext,
@@ -1825,7 +1834,7 @@ export function TaskBlockEditor({
       insertAt = [editor.children.length];
     }
     editor.tf.insertNodes(newNodes as any, { at: insertAt });
-  }, [canEdit, editor]);
+  }, [canEdit, editor, uploadFileToServer, createDeliverable]);
 
   // Container paste and drop handlers
   const handleContainerPaste = React.useCallback((e: React.ClipboardEvent) => {
