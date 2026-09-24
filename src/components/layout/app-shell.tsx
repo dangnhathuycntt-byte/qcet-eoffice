@@ -127,9 +127,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
+    <div className="relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
       {/* Desktop Sidebar (Fixed width) */}
-      <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-[#f8f9fa]" style={{ width: `${sidebarWidth}px` }} />}>
+      <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-sidebar" style={{ width: `${sidebarWidth}px` }} />}>
         <AppSidebar />
       </React.Suspense>
 
@@ -144,7 +144,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         </React.Suspense>
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
-        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
+        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950" />}>
           <DesktopTopbar />
         </React.Suspense>
 

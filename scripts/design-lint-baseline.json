@@ -3680,6 +3680,31 @@
       "ruleId": "no-uppercase-heading",
       "file": "src/components/tasks/table/task-context-menu.tsx",
       "text": "<div className=\"font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-wider\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/ui/tooltip.tsx",
+      "text": "\"z-[9999] overflow-hidden rounded-md bg-zinc-600/90 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/layout/app-shell.tsx",
+      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/app-shell.tsx",
+      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/layout/app-shell.tsx",
+      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950\" />}>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/app-shell.tsx",
+      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950\" />}>"
     }
   ]
 }

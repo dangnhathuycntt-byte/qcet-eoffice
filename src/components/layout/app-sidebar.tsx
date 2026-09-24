@@ -360,7 +360,7 @@ export function AppSidebar() {
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
         style={{ width: sidebarWidthMotion }}
-        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] text-foreground select-none group/sidebar overflow-hidden"
+        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
       >
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
@@ -374,7 +374,7 @@ export function AppSidebar() {
               ref={accountTriggerRef}
               type="button"
               className={cn(
-                "h-7 min-w-0 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-1 focus-visible:ring-black/10 group/user",
+                "h-7 min-w-0 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 group/user",
                 isCollapsed ? "w-full justify-center px-0" : "flex-1",
                 isProfileDropdownOpen
                   ? "bg-black/[0.06]"
@@ -420,7 +420,7 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleOpenSearch}
-                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-black/10"
+                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     aria-label="Tìm kiếm (⌘K)"
                   >
                     <Search size={14} strokeWidth={1.5} />
@@ -436,7 +436,7 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleQuickCreate}
-                    className="size-7 rounded-full flex items-center justify-center bg-white border border-black/10 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-zinc-50 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    className="size-7 rounded-full flex items-center justify-center bg-background border border-border text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-muted hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     aria-label="Giao việc mới (C)"
                   >
                     <SquarePen size={13.5} strokeWidth={1.75} />
@@ -691,9 +691,9 @@ export function AppSidebar() {
               className="inline-flex size-9 items-center justify-center text-border/60 hover:text-muted-foreground transition-colors duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
             >
               {isCollapsed ? (
-                <ChevronRight size={28} strokeWidth={1.25} aria-hidden="true" />
+                <ChevronRight size={28} strokeWidth={1.5} aria-hidden="true" />
               ) : (
-                <ChevronLeft size={28} strokeWidth={1.25} aria-hidden="true" />
+                <ChevronLeft size={28} strokeWidth={1.5} aria-hidden="true" />
               )}
             </button>
           </TooltipTrigger>
