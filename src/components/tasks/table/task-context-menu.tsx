@@ -199,6 +199,10 @@ export function TaskContextMenu({
   };
 
   const handleConfirmDelete = async () => {
+    // Optimistic: remove từ UI ngay lập tức
+    window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: true } }));
+    setShowDeleteConfirm(false);
+    onClose();
     setIsDeleting(true);
     try {
       if (onDeleteTask) {
@@ -206,16 +210,18 @@ export function TaskContextMenu({
       } else {
         const result = await deleteTask(task.id, Number((task as any).version ?? 1) || 0);
         if (!result.ok) {
+          // Rollback: trả task về danh sách
+          window.dispatchEvent(new CustomEvent("qcet:task-archive-rollback", { detail: { taskId: task.id } }));
           feedback.notifyError(result.error || "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại.");
           return;
         }
       }
-      feedback.notifySuccess(`Nhiệm vụ "${taskTitle}" đã được lưu trữ thành công.`);
-      setShowDeleteConfirm(false);
-      onClose();
-      window.dispatchEvent(new CustomEvent("qcet:task-archived"));
+      feedback.notifySuccess(`Đã lưu trữ "${taskTitle}".`);
+      // Confirm: refresh để sync server truth
+      window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: false } }));
       router.refresh();
     } catch (err) {
+      window.dispatchEvent(new CustomEvent("qcet:task-archive-rollback", { detail: { taskId: task.id } }));
       feedback.notifyError(
         err instanceof Error ? err.message : "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại."
       );

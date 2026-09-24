@@ -1968,9 +1968,26 @@ function UnifiedAdaptiveWorkspaceInner({
 
   // Sync internal task list after archive/delete from context menu
   React.useEffect(() => {
-    const handler = () => { handleRefresh(); };
-    window.addEventListener("qcet:task-archived", handler);
-    return () => window.removeEventListener("qcet:task-archived", handler);
+    const handleArchived = (e: Event) => {
+      const { taskId, optimistic } = (e as CustomEvent).detail ?? {};
+      if (taskId && optimistic) {
+        // Optimistic: xóa ngay khỏi UI
+        setInternalTasks((prev) => prev.filter((t) => t.id !== taskId));
+      } else if (!optimistic) {
+        // Confirmed: sync từ server
+        handleRefresh();
+      }
+    };
+    const handleRollback = (e: Event) => {
+      // API fail: reload lại từ server để restore task
+      handleRefresh();
+    };
+    window.addEventListener("qcet:task-archived", handleArchived);
+    window.addEventListener("qcet:task-archive-rollback", handleRollback);
+    return () => {
+      window.removeEventListener("qcet:task-archived", handleArchived);
+      window.removeEventListener("qcet:task-archive-rollback", handleRollback);
+    };
   }, [handleRefresh]);
 
   // Task-creation reconciliation (T73 / Server-Truth-Wins).
