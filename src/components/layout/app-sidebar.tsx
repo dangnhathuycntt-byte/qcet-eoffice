@@ -662,7 +662,7 @@ export function AppSidebar() {
 
       {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
       <div
-        className="fixed top-[30%] z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
+        className="fixed top-1/2 z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
         style={{ left: `${sidebarWidth}px` }}
         aria-hidden="true"
       >
