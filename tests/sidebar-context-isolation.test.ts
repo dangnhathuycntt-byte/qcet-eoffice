@@ -118,7 +118,7 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
 
       assert.ok(capturedLayout !== null, "Captured layout should be populated");
       assert.strictEqual((capturedLayout as SidebarLayoutContextType).isCollapsed, false);
-      assert.strictEqual((capturedLayout as SidebarLayoutContextType).sidebarWidth, 248);
+      assert.strictEqual((capturedLayout as SidebarLayoutContextType).sidebarWidth, 228);
       assert.ok(html.includes("false"));
 
       // Inside SidebarLayoutProvider alone, useSidebarBadges must still throw
@@ -170,7 +170,7 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
       assert.strictEqual(layout.isCollapsed, false);
       assert.strictEqual(layout.isMobileOpen, false);
       assert.strictEqual(layout.currentModule, "work");
-      assert.strictEqual(layout.sidebarWidth, 248);
+      assert.strictEqual(layout.sidebarWidth, 228);
       assert.strictEqual(typeof layout.toggleCollapse, "function");
       assert.strictEqual(typeof layout.setCollapsed, "function");
       assert.strictEqual(typeof layout.toggleMobile, "function");
@@ -192,7 +192,7 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
       assert.strictEqual(sidebar.badgeCounts, badges.badgeCounts);
       assert.strictEqual(sidebar.setBadgeCounts, badges.setBadgeCounts);
 
-      assert.ok(html.includes("w:248|n:0|mod:work"));
+      assert.ok(html.includes("w:228|n:0|mod:work"));
     });
   });
 
@@ -209,11 +209,11 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
       assert.strictEqual(resolveModuleFromPathname("/org?tab=directory"), "org");
     });
 
-    test("effective sidebar width is 64 when collapsed and 248 when expanded", () => {
-      const collapsedWidth = true ? 64 : 248;
-      const expandedWidth = false ? 64 : 248;
+    test("effective sidebar width is 64 when collapsed and 228 when expanded", () => {
+      const collapsedWidth = true ? 64 : 228;
+      const expandedWidth = false ? 64 : 228;
       assert.strictEqual(collapsedWidth, 64);
-      assert.strictEqual(expandedWidth, 248);
+      assert.strictEqual(expandedWidth, 228);
     });
   });
 

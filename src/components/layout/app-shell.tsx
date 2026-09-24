@@ -61,7 +61,7 @@ function MobileAppInstallModalContainer() {
 }
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
-  const { isCollapsed } = useSidebarLayout();
+  const { sidebarWidth } = useSidebarLayout();
   const pathname = usePathname();
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
   const router = useRouter();
@@ -118,15 +118,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
       {/* Desktop Sidebar (Fixed width) */}
-      <React.Suspense fallback={<aside className="hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950" />}>
+      <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-[#f8f9fa]" style={{ width: `${sidebarWidth}px` }} />}>
         <AppSidebar />
       </React.Suspense>
 
       {/* Main Content Area: Content Panel on Desktop */}
       <div
         className={cn(
-          "min-h-[100dvh] flex-1 flex flex-col transition-all duration-200 ease-in-out md:pl-[228px]"
+          "min-h-[100dvh] flex-1 flex flex-col transition-[padding] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:pl-[var(--qcet-sidebar-width)]"
         )}
+        style={{ "--qcet-sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
       >
         {/* Mobile Header (Only visible below md) */}
         <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>

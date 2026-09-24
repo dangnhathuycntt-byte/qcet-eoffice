@@ -422,6 +422,8 @@ export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
 ];
 
 export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
+export const SIDEBAR_EXPANDED_WIDTH = 228;
+export const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export { resolveBreadcrumb };
 
@@ -510,7 +512,9 @@ export function SidebarLayoutProvider({ children }: { children?: React.ReactNode
   }, []);
 
   const effectiveCollapsed = isMounted ? isCollapsed : false;
-  const sidebarWidth = effectiveCollapsed ? 64 : 248;
+  const sidebarWidth = effectiveCollapsed
+    ? SIDEBAR_COLLAPSED_WIDTH
+    : SIDEBAR_EXPANDED_WIDTH;
 
   const value = React.useMemo<SidebarLayoutContextType>(
     () => ({
