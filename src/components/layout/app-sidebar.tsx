@@ -674,7 +674,7 @@ export function AppSidebar() {
               aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
               aria-expanded={!isCollapsed}
               aria-controls="app-sidebar"
-              className="inline-flex size-9 items-center justify-center text-[#f8f9fa] group-hover/collapse-trigger:text-border hover:!text-muted-foreground transition-colors duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
+              className="inline-flex size-9 items-center justify-center text-border/60 hover:text-muted-foreground transition-colors duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
             >
               {isCollapsed ? (
                 <ChevronRight size={28} strokeWidth={1.25} aria-hidden="true" />
