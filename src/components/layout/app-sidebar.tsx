@@ -357,12 +357,13 @@ export function AppSidebar() {
   return (
     <TooltipProvider>
       <>
-      <aside
+      <m.aside
         id="app-sidebar"
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
-        style={{ width: `${sidebarWidth}px` }}
-        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] text-foreground select-none group/sidebar transition-[width] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none overflow-hidden"
+        animate={{ width: sidebarWidth }}
+        transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.8 }}
+        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] text-foreground select-none group/sidebar overflow-hidden"
       >
         {/* ========================================================= */}
         {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
@@ -585,16 +586,15 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-label={item.label}
                           className={cn(
-                            "group relative flex items-center rounded-[6px] h-[34px] text-[13px] transition-colors select-none tracking-tight",
-                            isCollapsed ? "justify-center px-0" : "gap-2.5 px-2",
+                            "group relative flex items-center gap-2.5 rounded-[6px] h-[34px] px-2 text-[13px] transition-colors select-none tracking-tight overflow-hidden",
                             active
                               ? "bg-black/[0.06] text-foreground font-medium"
                               : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
                           )}
                         >
-                          <span className={cn("shrink-0 flex items-center justify-center", isCollapsed ? "size-8" : "size-4")}>
+                          <span className="shrink-0 flex items-center justify-center size-4">
                             <Icon
-                              size={isCollapsed ? 18 : 16}
+                              size={16}
                               strokeWidth={active ? 1.75 : 1.5}
                               className={cn(
                                 "shrink-0 transition-colors",
@@ -604,13 +604,24 @@ export function AppSidebar() {
                               )}
                             />
                           </span>
-                          {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                          <AnimatePresence initial={false}>
+                            {!isCollapsed && (
+                              <m.span
+                                key="label"
+                                className="truncate flex-1 text-[13px]"
+                                initial={{ opacity: 0, x: -6 }}
+                                animate={{ opacity: 1, x: 0, transition: { duration: 0.14, delay: 0.1, ease: [0.16, 1, 0.3, 1] } }}
+                                exit={{ opacity: 0, x: -4, transition: { duration: 0.07, ease: [0.4, 0, 1, 1] } }}
+                              >
+                                {item.label}
+                              </m.span>
+                            )}
+                          </AnimatePresence>
                           {badge ? (
                             <span
                               className={cn(
-                                "inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none",
+                                "inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0",
                                 isCollapsed && "absolute right-0.5 top-0.5 min-w-0 size-3 px-0 text-[7px] ring-2 ring-[#f8f9fa]",
-                                !isCollapsed && "ml-auto",
                                 badge.variant === "rose" && "bg-rose-500/15 text-rose-600 border border-rose-500/20",
                                 badge.variant === "primary" && "bg-primary/10 text-primary border border-primary/20",
                                 badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border border-sky-500/20",
@@ -618,7 +629,7 @@ export function AppSidebar() {
                                 (!badge.variant || badge.variant === "muted") && "bg-muted/70 text-muted-foreground border border-border/40"
                               )}
                             >
-                              {badge.text}
+                              {!isCollapsed && badge.text}
                             </span>
                           ) : null}
                         </Link>
@@ -661,7 +672,7 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         </div>
-      </aside>
+      </m.aside>
 
       {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
       <div

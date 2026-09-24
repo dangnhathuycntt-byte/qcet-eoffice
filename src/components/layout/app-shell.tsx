@@ -15,6 +15,7 @@ import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
+import * as m from "motion/react-m";
 
 const CommandSearchModal = dynamic(
   () => import("@/components/layout/command-search-modal").then((mod) => mod.CommandSearchModal),
@@ -123,11 +124,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </React.Suspense>
 
       {/* Main Content Area: Content Panel on Desktop */}
-      <div
-        className={cn(
-          "min-h-[100dvh] flex-1 flex flex-col transition-[padding] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:pl-[var(--qcet-sidebar-width)]"
-        )}
-        style={{ "--qcet-sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
+      <m.div
+        className="min-h-[100dvh] flex-1 flex flex-col"
+        animate={{ paddingLeft: sidebarWidth }}
+        transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.8 }}
+        style={{ paddingLeft: sidebarWidth }}
       >
         {/* Mobile Header (Only visible below md) */}
         <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>
@@ -153,7 +154,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
-      </div>
+      </m.div>
 
       {/* Mobile Navigation */}
       <React.Suspense fallback={null}>
