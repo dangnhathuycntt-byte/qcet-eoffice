@@ -58,6 +58,29 @@ export const DocumentStatusSchema = z.enum([
 export type DocumentStatusInput = z.infer<typeof DocumentStatusSchema>;
 
 /**
+ * Outgoing document workflow status values (matches Prisma OutgoingDocumentStatus).
+ */
+export const OutgoingDocumentStatusSchema = z.enum([
+  'DRAFT',
+  'DEPARTMENT_REVIEW',
+  'LEGAL_REVIEW',
+  'EXECUTIVE_REVIEW',
+  'CONTENT_REVIEW',
+  'FORMAT_CHECK',
+  'AUTHORIZED_SIGN',
+  'NUMBERED',
+  'ORGANIZATION_SIGNED',
+  'PROMULGATED',
+  'ISSUED',
+  'DELIVERED',
+  'REJECTED',
+  'CANCELLED',
+  'FILED',
+  'ARCHIVED',
+]);
+export type OutgoingDocumentStatus = z.infer<typeof OutgoingDocumentStatusSchema>;
+
+/**
  * Document query filters schema.
  */
 export const DocumentQuerySchema = PaginationQuerySchema.extend({
@@ -217,6 +240,16 @@ export const CreateDocumentSchema = z
     distributedCopies: z.coerce.number().int().optional().nullable(),
     notes: z.string().trim().max(2000).optional().nullable(),
     attachments: z.array(AttachmentInputSchema).optional().nullable(),
+    /**
+     * Người ký thẩm quyền cho văn bản đi (VAN_BAN_DI).
+     * Bỏ qua với các loại văn bản khác.
+     */
+    authorizedSignerId: z
+      .string()
+      .trim()
+      .max(64)
+      .optional()
+      .nullable(),
   })
   .strict()
   .refine(
@@ -316,3 +349,57 @@ export const CreateDirectiveSchema = z
   });
 
 export type CreateDirectiveInput = z.infer<typeof CreateDirectiveSchema>;
+
+/**
+ * Batch document action types.
+ */
+export const BatchDocumentActionSchema = z.enum([
+  'MARK_RESOLVED',
+  'ASSIGN_LEAD_UNIT',
+  'FILE_DOCUMENTS',
+  'ARCHIVE_DOCUMENTS',
+]);
+export type BatchDocumentAction = z.infer<typeof BatchDocumentActionSchema>;
+
+/**
+ * Batch document request schema.
+ * Supports bulk operations on multiple documents within an atomic transaction.
+ */
+export const BatchDocumentRequestSchema = z
+  .object({
+    action: BatchDocumentActionSchema,
+    documentIds: z
+      .array(z.string().trim().min(1, 'Mã văn bản không được để trống'))
+      .min(1, 'Danh sách văn bản không được để trống')
+      .max(100, 'Chỉ được thực hiện tối đa 100 văn bản trong một lần'),
+    // For ASSIGN_LEAD_UNIT
+    leadUnitId: z.string().trim().max(64).optional().nullable(),
+    leadershipInstruction: z.string().trim().max(5000).optional().nullable(),
+    instruction: z.string().trim().max(5000).optional().nullable(),
+    deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
+    // For FILE_DOCUMENTS / ARCHIVE_DOCUMENTS
+    dossierId: z.string().trim().max(100).optional().nullable(),
+    storageLocation: z.string().trim().max(255).optional().nullable(),
+    filingNotes: z.string().trim().max(2000).optional().nullable(),
+    archiveReason: z.string().trim().max(2000).optional().nullable(),
+    archiveNow: z.boolean().optional(),
+    // For MARK_RESOLVED
+    resolutionSummary: z.string().trim().max(5000).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      if (data.action === 'ASSIGN_LEAD_UNIT') {
+        return Boolean(data.leadUnitId && data.leadUnitId.trim().length > 0);
+      }
+      return true;
+    },
+    {
+      message: 'Đơn vị chủ trì (leadUnitId) là bắt buộc khi thực hiện gán đơn vị chủ trì',
+      path: ['leadUnitId'],
+    }
+  );
+
+export type BatchDocumentRequest = z.infer<typeof BatchDocumentRequestSchema>;
+

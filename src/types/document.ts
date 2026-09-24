@@ -132,6 +132,7 @@ export interface OfficialDocument {
     size: string;
     url?: string;
   };
+  signatures?: any[];
 }
 
 export interface DocumentStats {
