@@ -538,11 +538,26 @@ export const TaskRow = React.memo(function TaskRow({
               </span>
             )}
             </div>
-            {task.description && (
-              <span className="text-[11.5px] text-muted-foreground/70 truncate leading-snug">
-                {task.description}
-              </span>
-            )}
+            {task.description && (() => {
+              // Strip qcetBlocks JSON → plain text preview
+              let preview = task.description;
+              try {
+                if (preview.includes('"qcetBlocks":true')) {
+                  const parsed = JSON.parse(preview);
+                  preview = (parsed.blocks as Array<{content?: string}>)
+                    .map((b) => b.content || "")
+                    .join(" ")
+                    .trim();
+                }
+              } catch { /* keep raw */ }
+              // Clamp to 120 chars
+              preview = preview.length > 120 ? preview.slice(0, 120) + "…" : preview;
+              return preview ? (
+                <span className="text-[11.5px] text-muted-foreground/60 truncate leading-snug max-w-full">
+                  {preview}
+                </span>
+              ) : null;
+            })()}
           </div>
         </div>
       </td>
