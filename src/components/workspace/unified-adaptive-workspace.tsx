@@ -2639,6 +2639,7 @@ function UnifiedAdaptiveWorkspaceInner({
         onClose={() => setIsCreateModalOpen(false)}
         onSubmitSuccess={async () => {
           setIsCreateModalOpen(false);
+          await new Promise((r) => setTimeout(r, 300));
           await handleRefresh();
         }}
         initialLevel={createInitialLevel}

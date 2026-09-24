@@ -231,6 +231,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       parentTaskTitle: (t as any).parentTask?.title || undefined,
       parentTaskCode: (t as any).parentTask?.code || undefined,
       parentTask: (t as any).parentTask || undefined,
+      description: (t as any).description || '',
     } as SchoolTask;
   });
 
