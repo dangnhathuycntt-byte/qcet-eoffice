@@ -51,6 +51,7 @@ export interface PrismaTaskWithRelations {
   scope: string;
   status: string;
   priority: string;
+  version?: number | null;
   progressPercent: number;
   academicMonth: number;
   academicYear: string;
@@ -388,6 +389,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
       dutyTitle: raw.dacumTaskDef.duty?.title,
     } : undefined,
     isOverdue: isTaskOverdue(raw.status, raw.dueDate, referenceDate || getSystemReferenceDateStr()),
+    version: typeof raw.version === 'number' ? raw.version : 1,
   };
 }
 
