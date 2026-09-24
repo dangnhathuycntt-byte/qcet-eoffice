@@ -663,44 +663,33 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* ================================================================= */}
-      {/* SIDEBAR COLLAPSE TOGGLE — Edge indicator + accessible button       */}
-      {/* Positioned at the right edge of sidebar; always keyboard focusable */}
-      {/* ================================================================= */}
+      {/* Sidebar collapse toggle — bare arrow, appears on hover near the edge */}
       <div
-        className="fixed top-1/2 z-50 hidden -translate-y-1/2 md:flex group/collapse-trigger"
-        style={{ left: `${sidebarWidth - 8}px` }}
+        className="fixed top-0 bottom-0 z-50 hidden w-4 -translate-x-1/2 cursor-pointer md:flex items-center justify-center group/collapse-trigger"
+        style={{ left: `${sidebarWidth}px` }}
         aria-hidden="true"
       >
-        {/* Thin separator line — always visible */}
-        <div className="w-px h-8 bg-border/50 rounded-full transition-opacity duration-[140ms] group-hover/collapse-trigger:opacity-0" />
-        {/* Pill handle — appears on hover */}
-        <div
-          className="absolute -translate-x-1/2 left-1/2 flex items-center justify-center w-4 h-10 rounded-full bg-background border border-border/70 shadow-xs opacity-0 transition-opacity duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/collapse-trigger:opacity-100 motion-reduce:transition-none"
-          aria-hidden="true"
-        >
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
-                aria-expanded={!isCollapsed}
-                aria-controls="app-sidebar"
-                className="inline-flex size-full items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors duration-[140ms] outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-full active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
-              >
-                {isCollapsed ? (
-                  <ChevronRight size={12} strokeWidth={2} aria-hidden="true" />
-                ) : (
-                  <ChevronLeft size={12} strokeWidth={2} aria-hidden="true" />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={12}>
-              {isCollapsed ? "Mở rộng thanh bên ⌘B" : "Thu gọn thanh bên ⌘B"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        <Tooltip delayDuration={400}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
+              aria-expanded={!isCollapsed}
+              aria-controls="app-sidebar"
+              className="inline-flex size-5 items-center justify-center text-muted-foreground/0 opacity-0 group-hover/collapse-trigger:opacity-100 group-hover/collapse-trigger:text-muted-foreground/50 hover:!text-foreground transition-[opacity,color] duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:opacity-100 focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
+            >
+              {isCollapsed ? (
+                <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" />
+              ) : (
+                <ChevronLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {isCollapsed ? "Mở rộng thanh bên ⌘B" : "Thu gọn thanh bên ⌘B"}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* User Profile Modal Container */}
