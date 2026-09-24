@@ -1411,6 +1411,9 @@ export class OutgoingDocumentService {
         where: { documentId: input.documentId },
         data: {
           status: targetStatus,
+          filedAt: now,
+          filedById: user.id,
+          ...(input.archiveNow ? { archivedAt: now, archivedById: user.id } : {}),
         },
       });
 
@@ -1418,9 +1421,8 @@ export class OutgoingDocumentService {
         where: { id: input.documentId },
         data: {
           status: mapOutgoingWorkflowStatusToDocumentStatus(targetStatus),
-          archivedAt: now,
-          archivedById: user.id,
           archiveReason: input.filingNotes,
+          ...(input.archiveNow ? { archivedAt: now, archivedById: user.id } : {}),
         },
       });
 

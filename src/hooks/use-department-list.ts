@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { QCET_ORG_UNITS } from "@/lib/org/org-structure";
 
 export interface DepartmentPersonnel {
   id: string;
@@ -17,6 +18,14 @@ export interface DepartmentOption {
   color?: string | null;
   personnel?: DepartmentPersonnel[];
 }
+
+export const STATIC_FALLBACK_DEPARTMENTS: DepartmentOption[] = QCET_ORG_UNITS.map((u) => ({
+  id: u.id,
+  name: u.name,
+  code: u.code,
+  color: null,
+  personnel: [],
+}));
 
 /**
  * Module-level cache — avoids re-fetching when multiple components mount
@@ -82,7 +91,7 @@ export function useDepartmentList(
   const key = includePersonnel ? "with-personnel" : "basic";
 
   const [departments, setDepartments] = React.useState<DepartmentOption[]>(
-    _cache[key] ?? [],
+    _cache[key] ?? STATIC_FALLBACK_DEPARTMENTS,
   );
   const [isLoading, setIsLoading] = React.useState(!_cache[key] && enabled);
 

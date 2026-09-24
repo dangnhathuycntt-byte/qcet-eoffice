@@ -1,29 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import {
-  X,
   UploadCloud,
   Link as LinkIcon,
-  FileText,
   Loader2,
   AlertCircle,
-  Trash2,
   Paperclip,
   Send,
   CheckCircle2,
-  FileSpreadsheet,
-  FileArchive,
-  ExternalLink,
+  Trash2,
 } from "lucide-react";
 import type { DeliverableSubmissionPayload } from "@/types/workspace";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 // ============================================================================
 // 1. Constants & Helper Utilities
@@ -152,7 +145,6 @@ export function SubmitDeliverableModal({
   onSubmit,
   isSubmitting = false,
 }: SubmitDeliverableModalProps) {
-  const [mounted, setMounted] = React.useState(false);
   const effectiveTaskId = taskId || task?.id || "";
   const effectiveTaskTitle = taskTitle || task?.title || "Nhiệm vụ chuyên môn";
 
@@ -168,15 +160,9 @@ export function SubmitDeliverableModal({
   const [hasDraftRestored, setHasDraftRestored] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [localSubmitting, setLocalSubmitting] = React.useState(false);
-  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
-  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Restore draft from sessionStorage when modal opens with a valid taskId
   React.useEffect(() => {
@@ -219,18 +205,6 @@ export function SubmitDeliverableModal({
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
-
-  // Handle ESC key to close modal
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isSubmitting && !localSubmitting) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, isSubmitting, localSubmitting]);
 
   // Auto-save draft to sessionStorage on field changes
   const saveDraft = React.useCallback(
@@ -396,72 +370,25 @@ export function SubmitDeliverableModal({
     }
   };
 
-  if (!isOpen || !mounted) return null;
-
   const submittingNow = isSubmitting || localSubmitting;
 
-  const modalContent = (
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="submit-deliverable-modal-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
-    >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in"
-        onClick={submittingNow ? undefined : onClose}
-      />
-
-      {/* Modal Dialog Card */}
-      <div
-        style={
-          isKeyboardOpen && keyboardHeight > 0
-            ? { maxHeight: `calc(90dvh - ${keyboardHeight}px)` }
-            : undefined
+  return (
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !submittingNow) {
+          onClose();
         }
-        className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden my-0 sm:my-auto animate-in zoom-in-95 duration-200"
-      >
-        {/* Mobile Drag Handle */}
-        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 px-4 sm:px-6 py-3.5 sm:py-4 bg-muted/20 gap-2">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
-              <UploadCloud className="size-5" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h2
-                id="submit-deliverable-modal-title"
-                className="text-base sm:text-lg font-semibold text-foreground tracking-tight"
-              >
-                Nộp Minh Chứng Hoàn Thành
-              </h2>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 line-clamp-1 max-w-xs sm:max-w-md">
-                <span>Nhiệm vụ:</span>
-                <span className="font-semibold text-foreground truncate">
-                  {effectiveTaskTitle}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submittingNow}
-            aria-label="Đóng cửa sổ"
-            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 active:scale-[0.98] shrink-0"
-          >
-            <X className="size-5 sm:size-4" strokeWidth={1.5} />
-          </button>
-        </div>
-
+      }}
+      title="Nộp Minh Chứng Hoàn Thành"
+      description={`Nhiệm vụ: ${effectiveTaskTitle}`}
+      size="lg"
+      className="p-0 sm:max-w-xl max-h-[90dvh] flex flex-col overflow-hidden"
+    >
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-y-auto">
-          <div className="p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
             {/* Restored Draft Alert */}
             {hasDraftRestored && (
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-700 flex items-center justify-between gap-2 animate-in fade-in">
@@ -555,8 +482,9 @@ export function SubmitDeliverableModal({
                       e.stopPropagation();
                       handleRemoveFile();
                     }}
-                    className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                    title="Bỏ chọn tệp"
+                    title="Xóa tệp đính kèm"
+                    aria-label="Xóa tệp đính kèm"
+                    className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
                   >
                     <Trash2 className="size-3.5" strokeWidth={1.5} />
                   </button>
@@ -564,25 +492,30 @@ export function SubmitDeliverableModal({
               )}
             </div>
 
-            {/* Field 1: Deliverable Name (Required) */}
+            {/* Field 1: Deliverable Name */}
             <div className="space-y-1.5">
               <label
-                htmlFor="deliverable-title"
-                className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+                htmlFor="deliverable-name-input"
+                className="text-xs font-semibold text-foreground flex items-center justify-between"
               >
-                <FileText className="size-3.5 text-primary" strokeWidth={1.5} />
-                <span>Tên minh chứng / Sản phẩm bàn giao <span className="text-destructive">*</span></span>
+                <span>
+                  Tên hồ sơ / Minh chứng <span className="text-destructive">*</span>
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {deliverableName.length}/120
+                </span>
               </label>
               <input
                 ref={nameInputRef}
-                id="deliverable-title"
+                id="deliverable-name-input"
                 type="text"
+                maxLength={120}
                 value={deliverableName}
                 onChange={handleNameChange}
                 onFocus={() => scrollActiveInputIntoView()}
-                placeholder="Ví dụ: Báo cáo tổng kết đề tài khoa học K48.pdf"
+                placeholder="VD: Báo cáo kết quả kiểm định số 12/BC-KĐCL.pdf"
                 className={cn(
-                  "w-full min-h-[44px] h-11 sm:h-10 rounded-xl border bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-ring focus:ring-1 focus:ring-ring",
+                  "w-full min-h-[44px] h-11 sm:h-10 rounded-xl border bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors",
                   errorMessage && !deliverableName.trim()
                     ? "border-destructive focus:border-destructive focus:ring-destructive/30"
                     : "border-border/70"
@@ -666,7 +599,7 @@ export function SubmitDeliverableModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="sticky bottom-0 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-4 py-3 sm:px-6 sm:py-3.5 bg-card/95 backdrop-blur-md mt-auto pb-[max(0.75rem,env(safe-area-inset-bottom))] pb-safe">
+          <div className="shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-4 py-3 sm:px-6 sm:py-3.5 bg-muted/20 mt-auto">
             <Button
               type="button"
               variant="outline"
@@ -698,10 +631,8 @@ export function SubmitDeliverableModal({
           </div>
         </form>
       </div>
-    </div>
+    </StandardDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }
 
 export default SubmitDeliverableModal;

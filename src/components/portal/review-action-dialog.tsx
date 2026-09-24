@@ -1,18 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
   MessageSquare,
   Loader2,
-  X,
   ExternalLink,
   FileText,
-  ShieldCheck,
-  RotateCcw,
 } from "lucide-react";
 import type {
   ApprovalDecision,
@@ -22,9 +18,9 @@ import type { UserRole } from "@/types/auth";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 // ============================================================================
 // 1. Constants & Validation Helpers
@@ -169,13 +165,10 @@ export function ReviewActionDialog({
   reviewerName = "Người thẩm định",
   isSubmitting = false,
 }: ReviewActionDialogProps) {
-  const [mounted, setMounted] = React.useState(false);
   const [decision, setDecision] = React.useState<ApprovalDecision>("approved");
   const [comment, setComment] = React.useState("");
   const [validationError, setValidationError] = React.useState<string | null>(null);
   const [localSubmitting, setLocalSubmitting] = React.useState(false);
-  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
-  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   // Derive task data from either explicit props or task object
   const effectiveTaskId = taskId || task?.id || "";
@@ -197,11 +190,6 @@ export function ReviewActionDialog({
       : "")) ||
     "";
 
-  // Mount check for client portal
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // Reset dialog state on open
   React.useEffect(() => {
     if (isOpen) {
@@ -211,24 +199,6 @@ export function ReviewActionDialog({
       setLocalSubmitting(false);
     }
   }, [isOpen]);
-
-  // Handle ESC key press
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isSubmitting && !localSubmitting) {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isSubmitting, localSubmitting, onClose]);
-
-  if (!isOpen || !mounted) {
-    return null;
-  }
 
   const activeDecisionConfig =
     DECISION_OPTIONS.find((opt) => opt.id === decision) || DECISION_OPTIONS[0];
@@ -255,12 +225,6 @@ export function ReviewActionDialog({
     setComment(e.target.value);
     if (validationError) {
       setValidationError(null);
-    }
-  };
-
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && !isSubmitting && !localSubmitting) {
-      onClose();
     }
   };
 
@@ -300,59 +264,20 @@ export function ReviewActionDialog({
 
   const isProcessing = isSubmitting || localSubmitting;
 
-  return createPortal(
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="review-dialog-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
-      onClick={handleBackdropClick}
+  return (
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="Thẩm định & Phê duyệt Nhiệm vụ"
+      description={`Người thẩm định: ${reviewerName} (${reviewerRole})`}
+      size="md"
+      className="p-0 sm:max-w-lg max-h-[90dvh] flex flex-col overflow-hidden"
     >
-      <div
-        style={
-          isKeyboardOpen && keyboardHeight > 0
-            ? { maxHeight: `calc(90dvh - ${keyboardHeight}px)` }
-            : undefined
-        }
-        className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden"
-      >
-        {/* Mobile Drag Handle */}
-        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
-
-        {/* Header */}
-        <div className="flex items-start justify-between border-b border-border/80 px-4 sm:px-6 py-3.5 sm:py-4 bg-muted/30 gap-2">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <h2
-                id="review-dialog-title"
-                className="text-base sm:text-lg font-semibold tracking-tight text-foreground"
-              >
-                Thẩm định & Phê duyệt Nhiệm vụ
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Người thẩm định:{" "}
-                <span className="font-medium text-foreground">{reviewerName}</span> (
-                <span className="font-mono text-xs">{reviewerRole}</span>)
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            aria-label="Đóng cửa sổ"
-            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer shrink-0 active:scale-[0.98]"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Body Content */}
-        <div className="overflow-y-auto px-6 py-5 space-y-5">
+        <div className="overflow-y-auto px-6 py-5 space-y-5 flex-1">
           {/* Task Info Summary */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -566,7 +491,7 @@ export function ReviewActionDialog({
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur-md gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pb-safe">
+        <div className="shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-muted/20 gap-2.5">
           <Button
             type="button"
             variant="ghost"
@@ -607,8 +532,7 @@ export function ReviewActionDialog({
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </StandardDialog>
   );
 }
 

@@ -86,11 +86,8 @@ export async function generateTaskCodeAtomic(
   let nextVal: number;
 
   const seqKey = `${year}:${seqScope}:${seqDept}`;
-  let initialValue = 1;
-  if (!initializedSequences.has(seqKey)) {
-    const maxExisting = await getMaxExistingTaskNumber(client, prefix);
-    initialValue = maxExisting + 1;
-  }
+  const maxExisting = await getMaxExistingTaskNumber(client, prefix);
+  const initialValue = maxExisting + 1;
 
   if (options?.useRawSql && typeof client?.$queryRaw === 'function') {
     // Atomic raw SQL sequence upsert with RETURNING

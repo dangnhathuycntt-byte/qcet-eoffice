@@ -215,6 +215,7 @@ export function filterTasksForTable(
         matchCoDept ||
         resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
         resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
+        resolveDepartmentId(undefined, undefined, task.category) === canonicalDept ||
         task.coAssignees?.some(
           (name) =>
             resolveDepartmentId(name) === canonicalDept ||

@@ -306,7 +306,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       });
     }
 
-    assert.equal(mock395Tasks.length, 394, "Total mock tasks must equal 394");
+    assert.equal(mock395Tasks.length, 395, "Total mock tasks must equal 395");
 
     const grouped = groupTasksByStatus(mock395Tasks);
 
@@ -322,7 +322,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       grouped.NEEDS_REVIEW.length +
       grouped.COMPLETED.length;
 
-    assert.equal(sumVisible, 394, "All 394 tasks must be visible on the Kanban board with zero silent loss");
+    assert.equal(sumVisible, 395, "All 395 tasks must be visible on the Kanban board with zero silent loss");
 
     // Render component and verify count notice header
     const html = renderToStaticMarkup(

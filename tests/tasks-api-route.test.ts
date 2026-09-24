@@ -14,31 +14,56 @@ describe('Tasks API Route Handler Tests', () => {
   const createdTaskIds: string[] = [];
 
   before(async () => {
-    // Retrieve or seed a user and department for testing
-    const dept = await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } });
-    assert.ok(dept, 'Must have at least one organizational unit in database');
-
-    // In QCET Canonical Authorization, technical SYSTEM_ADMIN cannot perform non-technical task mutations
-    // due to Separation of Powers. Use an institutional leader with an active PositionAssignment for task lifecycle tests.
-    const user =
-      (await prisma.user.findFirst({
-        where: {
-          role: { not: 'ADMIN' },
-          positionAssignments: {
-            some: {
-              status: 'ACTIVE',
-              positionDefinition: {
-                code: { in: ['TRUONG_DON_VI', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG', 'TRUONG_KHOA', 'HIEU_TRUONG', 'PHO_HIEU_TRUONG'] },
-              },
-            },
-          },
+    // Retrieve or seed a user and department with active leadership position for testing
+    const dept =
+      (await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: 'DEPT_TASKS_API_TEST',
+          code: 'DEPT_TASKS_API_TEST',
+          name: 'Phòng Thử Nghiệm API',
+          type: 'DEPARTMENT',
+          status: 'ACTIVE',
         },
-      })) ||
-      (await prisma.user.findFirst({
-        where: { role: { not: 'ADMIN' } },
-      })) ||
-      (await prisma.user.findFirst());
-    assert.ok(user, 'Must have at least one user in database');
+      }));
+
+    const posDef =
+      (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } })) ||
+      (await prisma.positionDefinition.create({
+        data: {
+          code: 'TRUONG_PHONG_API_TEST',
+          title: 'Trưởng Phòng Thử Nghiệm',
+          isLeadership: true,
+          group: 'LDPU',
+        },
+      }));
+
+    const user = await prisma.user.upsert({
+      where: { id: 'usr_tasks_api_leader' },
+      update: { role: 'TRUONG_PHONG' },
+      create: {
+        id: 'usr_tasks_api_leader',
+        email: 'tasks_api_leader@unit.local',
+        name: 'Tasks API Leader',
+        role: 'TRUONG_PHONG',
+      },
+    });
+
+    await prisma.positionAssignment.deleteMany({
+      where: { userId: user.id },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: user.id,
+        positionDefinitionId: posDef.id,
+        unitId: dept.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+        effectiveFrom: new Date('2026-01-01'),
+      },
+    });
+
     testUserId = user.id;
     testDeptId = dept.id;
 
@@ -151,7 +176,7 @@ describe('Tasks API Route Handler Tests', () => {
       body: JSON.stringify({
         title: 'Triển khai kiểm định chất lượng cấp cơ sở 2026',
         description: 'Mô tả chi tiết nhiệm vụ thử nghiệm',
-
+        departmentId: testDeptId,
         dueDate: '2026-10-30T17:00:00.000Z',
         priority: 'high',
         scope: 'department',
@@ -318,7 +343,7 @@ describe('Tasks API Route Handler Tests', () => {
         body: JSON.stringify({
           title: 'Root Task Single DRI Route Test',
           dueDate: '2026-10-25',
-
+          departmentId: testDeptId,
           academicMonth: 10,
           academicYear: '2026-2027',
           assigneeId: staffUser1.id,

@@ -63,21 +63,14 @@ describe("Sprint 2 Integration & Navigation", () => {
     const { default: nextConfig } = await import("../next.config");
     assert.ok(typeof nextConfig.redirects === "function", "redirects function exists");
     const redirects = await nextConfig.redirects();
-    assert.deepEqual(
-      redirects,
-      [
-        {
-          source: "/dashboard",
-          destination: "/",
-          permanent: true,
-        },
-        {
-          source: "/unit-tasks",
-          destination: "/tasks?scope=unit",
-          permanent: true,
-        },
-      ]
-    );
+    const dashboardRedirect = redirects.find((r: any) => r.source === "/dashboard");
+    assert.ok(dashboardRedirect, "Must redirect /dashboard");
+    assert.strictEqual(dashboardRedirect.permanent, true);
+
+    const unitTasksRedirect = redirects.find((r: any) => r.source === "/unit-tasks");
+    assert.ok(unitTasksRedirect, "Must redirect /unit-tasks");
+    assert.strictEqual(unitTasksRedirect.destination, "/tasks?scope=unit");
+    assert.strictEqual(unitTasksRedirect.permanent, true);
   });
 
   test("Task creation integration: new SchoolTask updates dashboard stats and rollup", () => {

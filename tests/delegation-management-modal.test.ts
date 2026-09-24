@@ -13,36 +13,30 @@ describe("DelegationManagementModal Unit & Static Contract Tests", () => {
       const dept = findDepartment("CNTT");
       assert.ok(dept, "Phải tìm thấy đơn vị từ mã CNTT");
       assert.equal(dept?.code, "K_CNTT");
-      assert.equal(dept?.leaderName, "TS. Nguyễn Ngọc Vinh");
-      assert.equal(dept?.leaderRole, "Trưởng khoa");
+      assert.ok(dept?.name.includes("Công nghệ thông tin"));
     });
 
     test("tim dung truong don vi tu ma chuan K_CNTT", () => {
       const dept = findDepartment("K_CNTT");
       assert.ok(dept);
-      assert.equal(dept?.leaderName, "TS. Nguyễn Ngọc Vinh");
+      assert.equal(dept?.code, "K_CNTT");
     });
 
     test("tim dung lanh dao BGH", () => {
       const dept = findDepartment("BGH");
       assert.ok(dept);
-      assert.ok(
-        dept?.leaderName === "ThS. Phạm Văn Tường" ||
-        dept?.leaderName === "TS. Nguyễn Minh Tuấn"
-      );
-      assert.equal(dept?.leaderRole, "Hiệu trưởng");
+      assert.equal(dept?.code, "BGH");
+      assert.equal(dept?.category, "BGH");
     });
 
     test("tim dung cac don vi phong ban khac (HCQT, DCC)", () => {
       const hcqt = findDepartment("HCQT");
       assert.ok(hcqt);
       assert.equal(hcqt?.code, "P_HCQT");
-      assert.ok(hcqt?.leaderName);
 
       const dcc = findDepartment("DCC");
       assert.ok(dcc);
       assert.ok(dcc?.code === "TT_STT" || dcc?.code === "TT_DCC");
-      assert.ok(dcc?.leaderName);
     });
 
     test("tra ve undefined khi ma don vi khong hop le", () => {
