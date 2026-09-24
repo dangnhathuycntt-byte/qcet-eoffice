@@ -42,6 +42,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     scope: { in: [TaskScope.SCHOOL, TaskScope.DEPARTMENT] },
     parentTaskId: null,
     status: { not: TaskStatus.CANCELLED },
+    archivedAt: null,
   };
   if (options?.academicMonth) whereTask.academicMonth = options.academicMonth;
   if (options?.academicYear) whereTask.academicYear = options.academicYear;
@@ -57,6 +58,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   // Ma trận 11 phòng ban
   const deptTaskWhere: any = {
     status: { not: TaskStatus.CANCELLED },
+    archivedAt: null,
   };
   if (options?.academicMonth) deptTaskWhere.academicMonth = options.academicMonth;
   if (options?.academicYear) deptTaskWhere.academicYear = options.academicYear;
