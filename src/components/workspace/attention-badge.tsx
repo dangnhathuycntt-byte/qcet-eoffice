@@ -130,7 +130,7 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
       sizeConfig.container,
       config.classes,
       asButton &&
-        "cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 min-h-[44px]",
+        "cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 min-h-[44px]",
       className
     );
 

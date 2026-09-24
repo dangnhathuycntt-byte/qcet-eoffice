@@ -266,7 +266,7 @@ export function MobileAppInstallModal({
                       await installApp();
                       handleClose();
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-95 transition-all cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
@@ -620,7 +620,7 @@ export function MobileAppInstallModal({
                           await installApp();
                           handleClose();
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all cursor-pointer shadow-sm active:scale-95"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                       >
                         <Laptop size={15} />
                         <span>Cài đặt ngay lên máy tính này</span>

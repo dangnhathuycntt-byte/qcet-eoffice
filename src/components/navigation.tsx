@@ -176,7 +176,7 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
                 href={tab.href}
                 onClick={() => triggerHaptic("light")}
                 className={cn(
-                  "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium transition-colors active:scale-95 touch-manipulation select-none",
+                  "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium transition-colors active:scale-[0.98] touch-manipulation select-none",
                   tab.active
                     ? "text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -211,7 +211,7 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
               setDrawerOpen(true);
             }}
             className={cn(
-              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-[0.98] touch-manipulation cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
               drawerOpen && "text-primary font-semibold"
             )}
             aria-label="Menu mở rộng và tài khoản"

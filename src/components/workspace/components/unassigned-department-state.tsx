@@ -32,7 +32,7 @@ export function UnassignedDepartmentState({ onOpenProfile }: UnassignedDepartmen
         <Button
           type="button"
           onClick={onOpenProfile}
-          className="h-10 px-5 rounded-xl font-medium text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-98"
+          className="h-10 px-5 rounded-xl font-medium text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
         >
           <Building2 className="size-4" strokeWidth={1.5} />
           <span>Cập nhật đơn vị công tác</span>

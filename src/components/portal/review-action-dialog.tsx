@@ -345,7 +345,7 @@ export function ReviewActionDialog({
             onClick={onClose}
             disabled={isProcessing}
             aria-label="Đóng cửa sổ"
-            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer shrink-0 active:scale-95"
+            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer shrink-0 active:scale-[0.98]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -555,7 +555,7 @@ export function ReviewActionDialog({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleQuickTemplateSelect(tmpl)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 cursor-pointer active:scale-95"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 cursor-pointer active:scale-[0.98]"
                   >
                     <span>{tmpl}</span>
                   </button>

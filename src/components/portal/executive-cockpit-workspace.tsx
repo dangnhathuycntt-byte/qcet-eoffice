@@ -1072,7 +1072,7 @@ export function LegacyExecutiveCockpitWorkspace({
               }
             }}
             size="sm"
-            className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg cursor-pointer active:scale-95"
+            className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg cursor-pointer active:scale-[0.98]"
             title="Giao chỉ đạo nhiệm vụ BGH trọng tâm cấp trường"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1727,7 +1727,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               type="button"
                               variant="outline"
                               onClick={() => handleTriggerReminder(item.departmentCode, item.title)}
-                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
                               title="Gửi thông báo đôn đốc tức thì tới đơn vị"
                             >
                               <Bell className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1736,7 +1736,7 @@ export function LegacyExecutiveCockpitWorkspace({
                             <Button
                               type="button"
                               onClick={() => handleExtend(item, 3)}
-                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
                               title="Gia hạn tiến độ thêm 3 ngày và gỡ nghẽn tức thì"
                             >
                               <Clock className="w-3.5 h-3.5" />

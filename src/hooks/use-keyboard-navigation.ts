@@ -172,7 +172,7 @@ export interface KeyboardNavHandlerOptions {
 }
 
 /**
- * Điều phối sự kiện bàn phím chuẩn Linear / Superhuman / WCAG 2.1 AA
+ * Điều phối sự kiện bàn phím chuẩn phím tắt tương tác & WCAG 2.1 AA
  * Trả về true nếu sự kiện phím đã được xử lý và tiêu thụ
  */
 export function handleKeyboardNavigation(
@@ -382,7 +382,7 @@ export interface UseKeyboardNavigationReturn {
 }
 
 /**
- * Hook quản lý điều hướng phím công thái học chuẩn WCAG 2.1 AA / Linear style
+ * Hook quản lý điều hướng phím công thái học chuẩn tiếp cận WCAG 2.1 AA
  */
 export function useKeyboardNavigation<T = { id: string }>(
   options: UseKeyboardNavigationOptions<T>

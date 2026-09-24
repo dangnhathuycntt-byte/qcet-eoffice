@@ -10,7 +10,7 @@ export interface UseTaskShortcutsOptions {
 }
 
 /**
- * Global keyboard shortcut hook inspired by Linear:
+ * Global keyboard shortcut hook:
  * - Holding `n` then pressing `p`, or sequential `n` followed by `p` within 500ms
  * - Single key `c` shortcut for quick task creation
  * - Safely ignores typing in inputs, textareas, selects, and contenteditable elements via shouldIgnoreShortcut

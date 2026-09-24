@@ -23,7 +23,7 @@ export interface OrgUnitConfig {
   phone: string;
   email: string;
   groupField?: "Nhóm" | "Nhóm công tác";
-  notionDbKey?: string;
+  externalDbKey?: string;
 }
 
 export const QCET_ORG_UNITS: OrgUnitConfig[] = [
@@ -52,7 +52,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 479",
     email: "hanhchinh@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "hanh_chinh_quan_tri",
+    externalDbKey: "hanh_chinh_quan_tri",
   },
   {
     id: "dept-p-tcdbcl",
@@ -66,7 +66,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 481",
     email: "tochuc@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "to_chuc_dbcl",
+    externalDbKey: "to_chuc_dbcl",
   },
   {
     id: "dept-p-qldt",
@@ -80,7 +80,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 477",
     email: "daotao@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "quan_ly_dao_tao",
+    externalDbKey: "quan_ly_dao_tao",
   },
   {
     id: "dept-p-tshtqt",
@@ -94,7 +94,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 482",
     email: "tuyensinh@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "tuyen_sinh_htqt",
+    externalDbKey: "tuyen_sinh_htqt",
   },
   {
     id: "dept-p-tc",
@@ -108,7 +108,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 480",
     email: "taichinh@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "tai_chinh",
+    externalDbKey: "tai_chinh",
   },
   {
     id: "dept-tt-stt",
@@ -122,7 +122,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 486",
     email: "quantrimang@cdktcnqn.edu.vn",
     groupField: "Nhóm",
-    notionDbKey: "so_truyen_thong",
+    externalDbKey: "so_truyen_thong",
   },
   {
     id: "dept-tt-nnth",
@@ -149,7 +149,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 483",
     email: "khoadientutinhoc@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dien_tu_tin_hoc",
+    externalDbKey: "khoa_dien_tu_tin_hoc",
   },
   {
     id: "dept-k-ck",
@@ -163,7 +163,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 488",
     email: "khoacokhi@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_co_khi",
+    externalDbKey: "khoa_co_khi",
   },
   {
     id: "dept-k-cnoto",
@@ -177,7 +177,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 489",
     email: "khoaoto@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_cong_nghe_o_to",
+    externalDbKey: "khoa_cong_nghe_o_to",
   },
   {
     id: "dept-k-dien",
@@ -191,7 +191,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 490",
     email: "khoadien@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dien",
+    externalDbKey: "khoa_dien",
   },
   {
     id: "dept-k-dulich",
@@ -205,7 +205,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 491",
     email: "khoadulich@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_du_lich",
+    externalDbKey: "khoa_du_lich",
   },
   {
     id: "dept-k-ktth",
@@ -219,7 +219,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 484",
     email: "khoaktth@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_kinh_te_tong_hop",
+    externalDbKey: "khoa_kinh_te_tong_hop",
   },
   {
     id: "dept-k-ktnn",
@@ -233,7 +233,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 492",
     email: "khoann@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_ky_thuat_nong_nghiep",
+    externalDbKey: "khoa_ky_thuat_nong_nghiep",
   },
   {
     id: "dept-k-vhnt",
@@ -247,7 +247,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 493",
     email: "khoavhnt@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_van_hoa_nghe_thuat",
+    externalDbKey: "khoa_van_hoa_nghe_thuat",
   },
   {
     id: "dept-k-daicuong",
@@ -261,7 +261,7 @@ export const QCET_ORG_UNITS: OrgUnitConfig[] = [
     phone: "0256 3846 494",
     email: "khoadaicuong@cdktcnqn.edu.vn",
     groupField: "Nhóm công tác",
-    notionDbKey: "khoa_dai_cuong",
+    externalDbKey: "khoa_dai_cuong",
   }
 ];
 

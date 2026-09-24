@@ -167,7 +167,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                 e.stopPropagation();
                 onOpenSubmitModal(subTask);
               }}
-              className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md border border-blue-500/20 bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums cursor-pointer active:scale-95 transition-colors"
+              className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md border border-blue-500/20 bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums cursor-pointer active:scale-[0.98] transition-colors"
               title="Nộp minh chứng hoàn thành"
             >
               <UploadCloud className="size-3" strokeWidth={1.5} />
@@ -185,7 +185,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                     e.stopPropagation();
                     onStatusChange(subTask.id, "IN_PROGRESS", true, parentTask.id);
                   }}
-                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 cursor-pointer active:scale-95 transition-colors"
+                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                   title="Tiếp nhận thực hiện"
                 >
                   <ArrowRight className="size-3" strokeWidth={1.5} />
@@ -200,7 +200,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                     e.stopPropagation();
                     onStatusChange(subTask.id, "COMPLETED", true, parentTask.id);
                   }}
-                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 text-xs font-semibold tabular-nums border border-emerald-500/20 cursor-pointer active:scale-95 transition-colors"
+                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 text-xs font-semibold tabular-nums border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                   title="Báo cáo hoàn thành"
                 >
                   <Check className="size-3" strokeWidth={1.5} />
@@ -215,7 +215,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                     e.stopPropagation();
                     onStatusChange(subTask.id, "IN_PROGRESS", true, parentTask.id);
                   }}
-                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-95 transition-colors"
+                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                   title="Tiếp nhận chỉnh sửa"
                 >
                   <RotateCcw className="size-3" strokeWidth={1.5} />

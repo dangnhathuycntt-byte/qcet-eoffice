@@ -550,7 +550,7 @@ export function LegacyDepartmentManagerWorkspace({
             onClick={() => {
               window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-[0.98] whitespace-nowrap"
             title="Khởi tạo nhiệm vụ mới hoặc phân công cho nhân sự trong đơn vị"
           >
             <Plus className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />

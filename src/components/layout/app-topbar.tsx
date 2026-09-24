@@ -130,7 +130,7 @@ function DesktopHeaderTitleFallback({ pathname }: { pathname: string }) {
 }
 
 /**
- * Desktop-only topbar (>= 768px). Linear-style header bar with matching background.
+ * Desktop-only topbar (>= 768px). Compact header bar with matching background.
  */
 export function DesktopTopbar() {
   const pathname = usePathname();

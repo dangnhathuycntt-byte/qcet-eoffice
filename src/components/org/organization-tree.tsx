@@ -72,7 +72,7 @@ export interface DepartmentNode {
   leaderRole: string;
   members: StaffMember[];
   groupField?: "Nhóm" | "Nhóm công tác";
-  notionDbKey?: string;
+  externalDbKey?: string;
 }
 
 // ============================================================================

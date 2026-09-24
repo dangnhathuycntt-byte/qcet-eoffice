@@ -379,7 +379,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "all"}
             onClick={() => onTabChange("all")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-[0.98]",
               activeTab === "all"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -398,7 +398,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "my_tasks"}
             onClick={() => onTabChange("my_tasks")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-[0.98]",
               activeTab === "my_tasks"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -417,7 +417,7 @@ export function TaskTableToolbar({
             aria-selected={activeTab === "review"}
             onClick={() => onTabChange("review")}
             className={cn(
-              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-[0.98]",
               activeTab === "review"
                 ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
@@ -437,7 +437,7 @@ export function TaskTableToolbar({
               aria-selected={activeTab === "overdue"}
               onClick={() => onTabChange("overdue")}
               className={cn(
-                "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+                "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-[0.98]",
                 activeTab === "overdue"
                   ? "bg-rose-600 text-white font-semibold shadow-2xs"
                   : "border border-rose-200 bg-rose-50/70 text-rose-700 font-medium"
@@ -459,7 +459,7 @@ export function TaskTableToolbar({
               type="button"
               onClick={() => setIsMobileFilterOpen(true)}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-95 shadow-2xs",
+                "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs",
                 activeAdvancedFilterCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary font-semibold"
                   : "border-border/80 bg-card text-foreground hover:bg-muted/60"
@@ -488,7 +488,7 @@ export function TaskTableToolbar({
                       : "dueDate";
                   onSort(nextSort);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation cursor-pointer active:scale-95 shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs"
                 aria-label="Sắp xếp danh sách công việc"
               >
                 <ArrowUpDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
@@ -514,7 +514,7 @@ export function TaskTableToolbar({
               <button
                 type="button"
                 onClick={onAddTask}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs active:scale-95 transition-all touch-manipulation cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-all touch-manipulation cursor-pointer"
               >
                 <Plus className="size-4" strokeWidth={1.5} />
                 <span>Tạo nhiệm vụ</span>
@@ -571,7 +571,7 @@ export function TaskTableToolbar({
                       type="button"
                       onClick={() => onTabChange(tab.id)}
                       className={cn(
-                        "inline-flex items-center justify-between min-h-[44px] px-3 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-98",
+                        "inline-flex items-center justify-between min-h-[44px] px-3 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98]",
                         activeTab === tab.id
                           ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
                           : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
@@ -676,7 +676,7 @@ export function TaskTableToolbar({
                 <button
                   type="button"
                   onClick={handleResetMobileFilters}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   <RotateCcw className="size-3.5 text-muted-foreground" />
                   <span>Đặt lại bộ lọc</span>
@@ -684,7 +684,7 @@ export function TaskTableToolbar({
                 <button
                   type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors cursor-pointer active:scale-98"
+                  className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   <span>Áp dụng</span>
                 </button>

@@ -127,7 +127,7 @@ export function MaintenanceView({
               Trạng thái
             </div>
             <div className="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="size-2 rounded-full bg-amber-500 motion-safe:animate-pulse" />
               Đang hoàn thiện
             </div>
           </div>

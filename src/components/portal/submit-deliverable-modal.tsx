@@ -453,7 +453,7 @@ export function SubmitDeliverableModal({
             onClick={onClose}
             disabled={submittingNow}
             aria-label="Đóng cửa sổ"
-            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
+            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 active:scale-[0.98] shrink-0"
           >
             <X className="size-5 sm:size-4" strokeWidth={1.5} />
           </button>

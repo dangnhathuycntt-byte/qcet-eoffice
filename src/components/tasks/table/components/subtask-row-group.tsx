@@ -83,7 +83,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                   <button
                     type="button"
                     onClick={() => onAddSubTask(parentTask.id)}
-                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-95 transition-colors"
+                    className="inline-flex items-center gap-1 h-6 px-2.5 rounded-md border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-[0.98] transition-colors"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
                     <span>Thêm việc con</span>

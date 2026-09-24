@@ -160,7 +160,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
           aria-label="Trung tâm thông báo"
           finalFocus={() => containerRef?.current?.querySelector<HTMLElement>("button") ?? true}
           style={{ maxWidth: "var(--available-width)", maxHeight: "min(580px, 85vh, var(--available-height))" }}
-          className="w-[calc(100vw-16px)] sm:w-[420px] bg-card rounded-2xl border border-border/80 shadow-2xl flex flex-col overflow-hidden select-none animate-in fade-in-0 zoom-in-95"
+          className="w-[calc(100vw-16px)] sm:w-[420px] bg-card rounded-2xl border border-border/80 shadow-2xl flex flex-col overflow-hidden select-none motion-safe:animate-in fade-in-0 zoom-in-95"
         >
       {/* Header Container */}
       <div className="p-3.5 pb-2.5 border-b border-border/50 bg-muted/20 shrink-0">
@@ -257,14 +257,14 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               disabled={isLoading}
               className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
             </button>
           </div>
         ) : viewState === "loading" ? (
           <div className="py-3 px-3 space-y-2" data-testid="notification-loading-state" aria-label="Đang tải thông báo...">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-3 p-2.5 animate-pulse">
+              <div key={i} className="flex items-start gap-3 p-2.5 motion-safe:animate-pulse">
                 <div className="size-10 rounded-full bg-muted/60 shrink-0" />
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="h-3.5 w-3/4 rounded bg-muted/60" />

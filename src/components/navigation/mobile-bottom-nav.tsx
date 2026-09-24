@@ -94,7 +94,7 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
                 "group flex flex-col items-center justify-center",
                 "min-h-[48px] min-w-[48px] h-full w-full",
                 "touch-manipulation cursor-pointer select-none rounded-lg",
-                "active:scale-95 transition-all duration-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
+                "active:scale-[0.98] transition-all duration-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
             >

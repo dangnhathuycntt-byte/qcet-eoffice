@@ -138,7 +138,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
             onClick={onResetFilters}
             title="Đặt lại bộ lọc"
             aria-label="Xóa bộ lọc"
-            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg border border-border bg-card text-xs font-semibold text-foreground shadow-2xs hover:bg-muted hover:text-foreground cursor-pointer active:scale-95 transition-all"
+            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg border border-border bg-card text-xs font-semibold text-foreground shadow-2xs hover:bg-muted hover:text-foreground cursor-pointer active:scale-[0.98] transition-all"
           >
             <RotateCcw className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
             <span>Xóa bộ lọc</span>
@@ -149,7 +149,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           <button
             type="button"
             onClick={onAddTask}
-            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer active:scale-95 transition-all"
+            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer active:scale-[0.98] transition-all"
           >
             <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ mới</span>

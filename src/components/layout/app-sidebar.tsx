@@ -363,7 +363,7 @@ export function AppSidebar() {
         className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
       >
         {/* ========================================================= */}
-        {/* 1. LINEAR-STYLE TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
+        {/* 1. SIDEBAR TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
         {/* ========================================================= */}
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
@@ -436,7 +436,7 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleQuickCreate}
-                    className="size-7 rounded-full flex items-center justify-center bg-background border border-border text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-muted hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="size-7 rounded-full flex items-center justify-center bg-background border border-border text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-muted hover:shadow-xs active:scale-[0.98] transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     aria-label="Giao việc mới (C)"
                   >
                     <SquarePen size={13.5} strokeWidth={1.75} />
@@ -649,7 +649,7 @@ export function AppSidebar() {
         </div>
 
         {/* ========================================================= */}
-        {/* 3. LINEAR-STYLE BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
+        {/* 3. SIDEBAR BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
         {/* ========================================================= */}
         <div className="shrink-0 px-3 py-2.5 mt-auto flex items-center">
           <Tooltip delayDuration={300}>

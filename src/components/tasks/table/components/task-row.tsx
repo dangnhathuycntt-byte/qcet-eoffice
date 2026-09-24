@@ -488,7 +488,7 @@ export const TaskRow = React.memo(function TaskRow({
             />
             {isSelected ? (
               <div
-                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-95 pointer-events-none"
+                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
                 aria-hidden="true"
               >
                 <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
@@ -496,7 +496,7 @@ export const TaskRow = React.memo(function TaskRow({
             ) : (
               /* Minimalist Subtle Checkbox: Quiet and visible when idle for rhythmic scannability, highlighted on hover */
               <div
-                className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-95 shadow-2xs pointer-events-none"
+                className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
                 aria-hidden="true"
               />
             )}

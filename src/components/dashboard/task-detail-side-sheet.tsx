@@ -1031,7 +1031,7 @@ export function TaskDetailSideSheet({
           <button
             type="button"
             onClick={onClose}
-            className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 shrink-0"
+            className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98] shrink-0"
             aria-label="Quay lại danh sách nhiệm vụ"
           >
             <ArrowLeft className="size-5" strokeWidth={1.5} />
@@ -1072,7 +1072,7 @@ export function TaskDetailSideSheet({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
+              className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-[0.98]"
               aria-label="Đóng bảng chi tiết"
             >
               <X className="size-4" strokeWidth={1.5} />
@@ -2225,7 +2225,7 @@ export function TaskDetailSideSheet({
                 type="button"
                 variant="outline"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted cursor-pointer inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-95"
+                className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted cursor-pointer inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-[0.98]"
                 aria-label="Thao tác khác"
               >
                 <MoreHorizontal className="size-5 text-muted-foreground" strokeWidth={1.5} />

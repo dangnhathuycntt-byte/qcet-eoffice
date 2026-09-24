@@ -130,7 +130,7 @@ export function MobileNotificationInbox({
               title="Làm mới"
               aria-label="Làm mới"
             >
-              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
             </button>
           )}
 
@@ -239,7 +239,7 @@ export function MobileNotificationInbox({
               disabled={isLoading}
               className="mt-3 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "motion-safe:animate-spin" : ""} />
               <span>Thử lại</span>
             </button>
           )}
@@ -249,7 +249,7 @@ export function MobileNotificationInbox({
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 min-h-[48px] rounded-xl border border-border/70 bg-card animate-pulse"
+              className="flex items-start gap-3 p-3 min-h-[48px] rounded-xl border border-border/70 bg-card motion-safe:animate-pulse"
             >
               <div className="size-10 rounded-full bg-muted/60 shrink-0" />
               <div className="space-y-2 flex-1 min-w-0">

@@ -400,7 +400,7 @@ export function DelegationManagementModal({
                               type="button"
                               onClick={() => handleSelectMember(member.name, member.role)}
                               className={cn(
-                                "text-xs rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors cursor-pointer active:scale-95",
+                                "text-xs rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors cursor-pointer active:scale-[0.98]",
                                 granteeName === member.name && "bg-primary/15 border-primary text-primary font-medium"
                               )}
                             >
@@ -422,7 +422,7 @@ export function DelegationManagementModal({
                       type="button"
                       onClick={() => setGranteeRole("STAFF")}
                       className={cn(
-                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-95",
+                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-[0.98]",
                         granteeRole === "STAFF"
                           ? "border-primary bg-primary/10 text-primary font-semibold"
                           : "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
@@ -434,7 +434,7 @@ export function DelegationManagementModal({
                       type="button"
                       onClick={() => setGranteeRole("MANAGER")}
                       className={cn(
-                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-95",
+                        "rounded-lg border px-3 py-2 text-center font-medium transition-all cursor-pointer active:scale-[0.98]",
                         granteeRole === "MANAGER"
                           ? "border-primary bg-primary/10 text-primary font-semibold"
                           : "border-border/60 bg-background text-muted-foreground hover:bg-muted/40"
@@ -565,7 +565,7 @@ export function DelegationManagementModal({
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full font-medium active:scale-95 cursor-pointer"
+                  className="w-full font-medium active:scale-[0.98] cursor-pointer"
                 >
                   <UserCheck className="size-4" strokeWidth={1.5} />
                   <span>Ký & Kích hoạt ủy quyền</span>
@@ -664,7 +664,7 @@ export function DelegationManagementModal({
                               variant="destructive"
                               size="xs"
                               onClick={() => onRevokeDelegation(del.id)}
-                              className="active:scale-95 text-xs gap-1 cursor-pointer shrink-0"
+                              className="active:scale-[0.98] text-xs gap-1 cursor-pointer shrink-0"
                             >
                               <Trash2 className="size-3" strokeWidth={1.5} />
                               <span>Thu hồi</span>
@@ -725,7 +725,7 @@ export function DelegationManagementModal({
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="cursor-pointer active:scale-95"
+            className="cursor-pointer active:scale-[0.98]"
           >
             Đóng
           </Button>

@@ -23,6 +23,7 @@ import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/sub
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
 import { TaskDetailSplitLayout } from "@/components/tasks/detail/task-detail-split-layout";
 import { TaskPropertiesSidebar, type AuditLogItem } from "@/components/tasks/detail/task-properties-sidebar";
+import { TaskSourceDocumentBadge } from "@/components/tasks/detail/task-source-document-badge";
 import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
@@ -919,6 +920,14 @@ export function TaskDetailPage({
                 onDeleteDeliverable={handleDeleteDeliverable}
                 showInlineProperties={!showInspector}
               />
+
+              {isSchoolTask(task) && (task as any).sourceDocument && (
+                <div className="px-4 pb-3">
+                  <TaskSourceDocumentBadge
+                    sourceDocument={(task as any).sourceDocument}
+                  />
+                </div>
+              )}
 
               <TaskBlockEditor
                 globalFileDrop={!activeSubtask}
