@@ -663,9 +663,9 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* Sidebar collapse toggle — bare arrow, appears on hover near the edge */}
+      {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
       <div
-        className="fixed top-0 bottom-0 z-50 hidden w-4 -translate-x-1/2 cursor-pointer md:flex items-center justify-center group/collapse-trigger"
+        className="fixed top-0 bottom-0 z-50 hidden w-8 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
         style={{ left: `${sidebarWidth}px` }}
         aria-hidden="true"
       >
@@ -677,16 +677,16 @@ export function AppSidebar() {
               aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
               aria-expanded={!isCollapsed}
               aria-controls="app-sidebar"
-              className="inline-flex size-5 items-center justify-center text-muted-foreground/0 opacity-0 group-hover/collapse-trigger:opacity-100 group-hover/collapse-trigger:text-muted-foreground/50 hover:!text-foreground transition-[opacity,color] duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:opacity-100 focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
+              className="inline-flex size-7 items-center justify-center text-[#f8f9fa] group-hover/collapse-trigger:text-border hover:!text-muted-foreground transition-colors duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
             >
               {isCollapsed ? (
-                <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" />
+                <ChevronRight size={20} strokeWidth={1.5} aria-hidden="true" />
               ) : (
-                <ChevronLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+                <ChevronLeft size={20} strokeWidth={1.5} aria-hidden="true" />
               )}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
+          <TooltipContent side="right" sideOffset={6}>
             {isCollapsed ? "Mở rộng thanh bên ⌘B" : "Thu gọn thanh bên ⌘B"}
           </TooltipContent>
         </Tooltip>
