@@ -14,6 +14,8 @@ import {
   SignalMedium,
   SignalLow,
   Eye,
+  MessageSquare,
+  Paperclip,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
@@ -595,7 +597,25 @@ export const TaskRow = React.memo(function TaskRow({
         )}
       </td>
 
-      {/* 4. Thời hạn (Due Date) */}
+      {/* 4. Nội dung & Tệp đính kèm */}
+      <td className={cn("w-28 min-w-[96px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+        <div className="flex items-center gap-2.5 text-muted-foreground/60">
+          {(task.subTasks?.length ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1" title={`${task.subTasks!.length} nhiệm vụ con`}>
+              <MessageSquare size={12} strokeWidth={1.5} />
+              <span className="text-[11px] font-mono tabular-nums">{task.subTasks!.length}</span>
+            </span>
+          )}
+          {(task.deliverables?.length ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1" title={`${task.deliverables!.length} tệp đính kèm`}>
+              <Paperclip size={12} strokeWidth={1.5} />
+              <span className="text-[11px] font-mono tabular-nums">+{task.deliverables!.length}</span>
+            </span>
+          )}
+        </div>
+      </td>
+
+      {/* 5. Thời hạn (Due Date) */}
       <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div className="flex flex-col gap-0.5">
           {task.dueDate ? (
@@ -635,11 +655,13 @@ export const TaskRow = React.memo(function TaskRow({
 
       {/* 5. Tình trạng (Status) */}
       <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
-        <HealthIndicator
-          status={task.status}
-          isOverdue={Boolean(slaStatus.isOverdue)}
-          isWaitingApproval={isWaitingApproval}
-        />
+        <div className="flex items-center -translate-y-px">
+          <HealthIndicator
+            status={task.status}
+            isOverdue={Boolean(slaStatus.isOverdue)}
+            isWaitingApproval={isWaitingApproval}
+          />
+        </div>
       </td>
 
       {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}

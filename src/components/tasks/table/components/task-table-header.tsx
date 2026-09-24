@@ -34,7 +34,7 @@ export interface TaskTableHeaderProps {
 }
 
 interface ColumnDefinition {
-  id: TaskSortField | "subtasks" | "actions";
+  id: TaskSortField | "subtasks" | "meta" | "actions";
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
@@ -46,6 +46,7 @@ const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
   { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-48 lg:w-56 min-w-[160px]" },
   { id: "subtasks", label: "Phối hợp", sortable: false, widthClass: "w-36 min-w-[120px]" },
+  { id: "meta", label: "", sortable: false, widthClass: "w-28 min-w-[96px]" },
   { id: "dueDate", label: "Thời hạn", sortable: true, widthClass: "w-32 min-w-[110px]" },
   { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-36 min-w-[120px]" },
   { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8 min-w-[32px]" },
