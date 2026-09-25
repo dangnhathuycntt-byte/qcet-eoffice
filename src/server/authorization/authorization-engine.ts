@@ -97,18 +97,23 @@ export function isUnitLeaderPosition(posCode?: string): boolean {
     code === 'TRUONG_DON_VI_CANONICAL' ||
     code === 'TRUONG_PHONG' ||
     code === 'TRUONG_KHOA' ||
-    code === 'GIAM_DOC_TRUNG_TAM'
+    code === 'GIAM_DOC_TRUNG_TAM' ||
+    code === 'TRUONG_BO_MON' ||
+    code === 'TRUONG_XUONG' ||
+    code === 'KE_TOAN_TRUONG'
   );
 }
 
-function isDeputyUnitLeaderPosition(posCode?: string): boolean {
+export function isDeputyUnitLeaderPosition(posCode?: string): boolean {
   const code = (posCode || '').toUpperCase();
   return (
     code === 'PHO_TRUONG_DON_VI' ||
     code === 'PHO_TRUONG_PHONG' ||
     code === 'PHO_TRUONG_KHOA' ||
     code === 'PHO_GIAM_DOC_TRUNG_TAM' ||
-    code === 'PHO_DON_VI'
+    code === 'PHO_DON_VI' ||
+    code === 'PHO_TRUONG_BO_MON' ||
+    code === 'PHO_TRUONG_XUONG'
   );
 }
 
@@ -748,14 +753,24 @@ export function authorize(
       }
     }
 
-    // GIANG_VIEN_CHUYEN_VIEN (Staff / Lecturer)
-    if (
-      code === 'GIANG_VIEN_CHUYEN_VIEN' ||
-      code === 'CHUYEN_VIEN' ||
-      code === 'GIANG_VIEN' ||
+    // GIANG_VIEN / CHUYEN_VIEN / NHAN_VIEN (Staff / Lecturer / Specialist / Technician)
+    // Mọi viên chức, giảng viên, chuyên viên, kỹ thuật viên có bổ nhiệm vị trí việc làm đều có thẩm quyền công tác cơ bản
+    const isSpecialistStaff =
+      code.startsWith('GIANG_VIEN') ||
+      code.startsWith('CHUYEN_VIEN') ||
+      code.startsWith('NHAN_VIEN') ||
+      code.startsWith('KTV') ||
+      code.startsWith('CAN_BO') ||
+      code.startsWith('THU_') ||
+      code === 'KE_TOAN' ||
+      code === 'TRO_GIANG' ||
+      code === 'GIAO_VIEN_CHU_NHIEM' ||
       code === 'VIEN_CHUC' ||
-      code === 'CAN_BO_CHUYEN_VIEN_CANONICAL'
-    ) {
+      code === 'CAN_BO_CHUYEN_VIEN_CANONICAL' ||
+      code === 'CHUYEN_VIEN' ||
+      code === 'GIANG_VIEN';
+
+    if (isSpecialistStaff || (!isClerkPosition(code) && !isArchivistPosition(code))) {
       if (
         action === 'task.read' ||
         action === 'task.create' ||

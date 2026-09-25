@@ -1,13 +1,11 @@
 "use client";
 
 import * as React from "react";
-import {
-  Inbox,
-  Plus,
-  RotateCcw,
-  SearchX,
-} from "lucide-react";
+import * as m from "motion/react-m";
+import { useReducedMotion } from "motion/react";
+import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motionTransition } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 
 export interface TaskEmptyStateProps {
@@ -29,6 +27,284 @@ export interface TaskEmptyStateProps {
   className?: string;
 }
 
+type MockTask = {
+  title: string;
+  summary: string;
+  assignee: string;
+  initial: string;
+  date: string;
+  status: "WAITING_APPROVAL" | "IN_PROGRESS" | "TODO" | "COMPLETED";
+};
+
+const MOCK_TASKS: MockTask[] = [
+  {
+    title: "Hoàn thiện kế hoạch kiểm định chất lượng HK1",
+    summary: "Rà soát tiêu chí 3 và 4 theo chuẩn Bộ GD&ĐT",
+    assignee: "Đặng Nhật Huy",
+    initial: "H",
+    date: "03/10/2026",
+    status: "WAITING_APPROVAL",
+  },
+  {
+    title: "Rà soát đề cương chi tiết học phần CNTT",
+    summary: "Cập nhật chuẩn đầu ra đáp ứng thực tiễn doanh nghiệp",
+    assignee: "Trần Minh Tuấn",
+    initial: "T",
+    date: "08/10/2026",
+    status: "IN_PROGRESS",
+  },
+  {
+    title: "Tổng hợp đăng ký đề tài NCKH giảng viên",
+    summary: "Thu thập hồ sơ thuyết minh đề tài cấp cơ sở",
+    assignee: "Nguyễn Thị Nam",
+    initial: "N",
+    date: "15/10/2026",
+    status: "TODO",
+  },
+  {
+    title: "Chuẩn bị hồ sơ nghiệm thu công trình CSVC",
+    summary: "Biên bản bàn giao thiết bị phòng thực hành mới",
+    assignee: "Lê Văn Khoa",
+    initial: "K",
+    date: "22/10/2026",
+    status: "TODO",
+  },
+  {
+    title: "Gửi báo cáo tổng kết đợt thực tập sinh viên",
+    summary: "Đánh giá kết quả thực tập tại doanh nghiệp đối tác",
+    assignee: "Phạm Thu Hằng",
+    initial: "P",
+    date: "28/10/2026",
+    status: "COMPLETED",
+  },
+];
+
+const SKELETON_WIDTHS = [
+  { title: "65%", desc: "45%" },
+  { title: "75%", desc: "55%" },
+  { title: "55%", desc: "38%" },
+  { title: "70%", desc: "50%" },
+  { title: "60%", desc: "42%" },
+];
+
+function MockStatusBadge({ status }: { status: MockTask["status"] }) {
+  if (status === "COMPLETED") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90">
+        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <span className="font-medium">Hoàn thành</span>
+      </div>
+    );
+  }
+  if (status === "WAITING_APPROVAL") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700">
+        <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
+        <span className="font-medium">Chờ duyệt</span>
+      </div>
+    );
+  }
+  if (status === "IN_PROGRESS") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground">
+        <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
+        <span className="font-medium">Đang làm</span>
+      </div>
+    );
+  }
+  return (
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
+      <span className="font-medium">Mới</span>
+    </div>
+  );
+}
+
+interface SkeletonTaskRowProps {
+  data: MockTask;
+  widths: { title: string; desc: string };
+  isHovered: boolean;
+  anyHovered: boolean;
+  reducedMotion: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+function SkeletonTaskRow({
+  data,
+  widths,
+  isHovered,
+  anyHovered,
+  reducedMotion,
+  onMouseEnter,
+  onMouseLeave,
+}: SkeletonTaskRowProps) {
+  const isDimmed = anyHovered && !isHovered;
+
+  return (
+    <div
+      className={cn(
+        "relative h-[44px] flex-shrink-0 w-full border-b border-border/40 cursor-pointer transition-opacity duration-200 select-none",
+        isDimmed ? "opacity-25" : "opacity-100"
+      )}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Layer 1: Skeleton (Default visible, fades out on hover) */}
+      <m.div
+        className="absolute inset-0 flex items-center gap-3 sm:gap-4 px-3 sm:px-4"
+        animate={isHovered ? { opacity: 0 } : { opacity: 1 }}
+        transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
+      >
+        {/* Checkbox */}
+        <div className="size-4 rounded-[4px] bg-muted shrink-0 animate-pulse" />
+
+        {/* Task Title + Subtitle */}
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
+          <div
+            className="h-2.5 sm:h-3 rounded bg-muted animate-pulse"
+            style={{ width: widths.title }}
+          />
+          <div
+            className="h-2 sm:h-2.5 rounded bg-muted/70 animate-pulse hidden xs:block"
+            style={{ width: widths.desc }}
+          />
+        </div>
+
+        {/* Lead Assignee */}
+        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
+          <div className="size-5 rounded-full bg-muted animate-pulse shrink-0" />
+          <div className="h-2.5 rounded bg-muted w-16 sm:w-20 animate-pulse" />
+        </div>
+
+        {/* Coordination (Subtasks) */}
+        <div className="hidden sm:block w-16 shrink-0 text-center">
+          <div className="h-2.5 rounded bg-muted/50 w-3 mx-auto animate-pulse" />
+        </div>
+
+        {/* Due Date */}
+        <div className="hidden md:block w-24 shrink-0">
+          <div className="h-2.5 rounded bg-muted w-16 animate-pulse" />
+        </div>
+
+        {/* Status */}
+        <div className="flex items-center gap-1.5 w-24 sm:w-28 shrink-0">
+          <div className="size-1.5 rounded-full bg-muted animate-pulse shrink-0" />
+          <div className="h-2.5 rounded bg-muted w-12 sm:w-14 animate-pulse" />
+        </div>
+      </m.div>
+
+      {/* Layer 2: Real Mock Data (Hidden by default, reveals on hover with subtle blur fade) */}
+      <m.div
+        className="absolute inset-0 flex items-center gap-3 sm:gap-4 px-3 sm:px-4 pointer-events-none"
+        animate={
+          isHovered
+            ? { opacity: 0.65, filter: "blur(0px)" }
+            : { opacity: 0, filter: "blur(3px)" }
+        }
+        transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
+      >
+        {/* Checkbox */}
+        <div className="size-4 rounded-[4px] border border-border/70 bg-background/60 shrink-0" />
+
+        {/* Task Title + Subtitle */}
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-2">
+          <span className="text-[12.5px] sm:text-[13px] font-medium text-foreground truncate">
+            {data.title}
+          </span>
+          <span className="text-[11px] text-muted-foreground/70 truncate hidden xs:block">
+            {data.summary}
+          </span>
+        </div>
+
+        {/* Lead Assignee */}
+        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white">
+            {data.initial}
+          </span>
+          <span className="text-xs font-medium text-foreground truncate">
+            {data.assignee}
+          </span>
+        </div>
+
+        {/* Coordination */}
+        <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">
+          —
+        </div>
+
+        {/* Due Date */}
+        <div className="hidden md:block w-24 shrink-0">
+          <span className="font-mono text-xs text-muted-foreground">
+            {data.date}
+          </span>
+        </div>
+
+        {/* Status */}
+        <div className="w-24 sm:w-28 shrink-0">
+          <MockStatusBadge status={data.status} />
+        </div>
+      </m.div>
+    </div>
+  );
+}
+
+function SkeletonMarquee({ reducedMotion }: { reducedMotion: boolean }) {
+  const [isMarqueeHovered, setIsMarqueeHovered] = React.useState(false);
+  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+
+  // Duplicate items array for seamless infinite vertical slide
+  const items = React.useMemo(() => {
+    if (reducedMotion) return MOCK_TASKS.slice(0, 4);
+    return [...MOCK_TASKS, ...MOCK_TASKS];
+  }, [reducedMotion]);
+
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-xs"
+      style={{
+        maskImage:
+          "linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)",
+        WebkitMaskImage:
+          "linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)",
+        maxHeight: "176px",
+      }}
+      onMouseEnter={() => setIsMarqueeHovered(true)}
+      onMouseLeave={() => {
+        setIsMarqueeHovered(false);
+        setHoveredIndex(null);
+      }}
+    >
+      <m.div
+        className="flex flex-col"
+        animate={
+          reducedMotion || isMarqueeHovered
+            ? false
+            : { y: ["0%", "-50%"] }
+        }
+        transition={{
+          ease: "linear",
+          duration: 20,
+          repeat: Infinity,
+          repeatType: "loop",
+        }}
+      >
+        {items.map((task, i) => (
+          <SkeletonTaskRow
+            key={i}
+            data={task}
+            widths={SKELETON_WIDTHS[i % SKELETON_WIDTHS.length]}
+            isHovered={hoveredIndex === i}
+            anyHovered={hoveredIndex !== null}
+            reducedMotion={reducedMotion}
+            onMouseEnter={() => setHoveredIndex(i)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          />
+        ))}
+      </m.div>
+    </div>
+  );
+}
+
 export const TaskEmptyState = React.memo(function TaskEmptyState({
   title,
   description,
@@ -46,6 +322,8 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   canAddTask = false,
   className,
 }: TaskEmptyStateProps) {
+  const reducedMotion = useReducedMotion() ?? false;
+
   // Determine contextual heading and description
   let displayTitle = title;
   let displayDescription = description;
@@ -107,17 +385,13 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       role="status"
       aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center py-14 px-6 text-center select-none",
+        "flex flex-col items-center justify-center min-h-[54vh] sm:min-h-[58vh] py-12 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
         className
       )}
     >
-      {/* Icon Container with subtle layered circle styling */}
-      <div className="relative mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/60 border border-border/80 shadow-2xs">
-        {isSearchEmpty ? (
-          <SearchX className="size-6 text-muted-foreground" strokeWidth={1.5} />
-        ) : (
-          <Inbox className="size-6 text-muted-foreground" strokeWidth={1.5} />
-        )}
+      {/* Skeleton Marquee with Hover Reveal */}
+      <div className="w-full max-w-3xl mb-8">
+        <SkeletonMarquee reducedMotion={reducedMotion} />
       </div>
 
       {/* Title */}

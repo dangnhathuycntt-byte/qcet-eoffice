@@ -2299,42 +2299,9 @@ function UnifiedAdaptiveWorkspaceInner({
               </div>
             )}
 
-            {/* Unassigned Department State or Empty State or Table/Kanban */}
+            {/* Unassigned Department State or Table/Kanban */}
             {activeScope === "unit" && isUnassigned ? (
               <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
-            ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
-              <div
-                data-slot="workspace-empty-state"
-                className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border/80 bg-card/40 my-2"
-              >
-                <div className="size-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
-                  <Inbox className="size-6" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">
-                  Chưa có nhiệm vụ nào được phân công trong kỳ này
-                </h3>
-                <p className="text-xs text-muted-foreground max-w-md mb-5 leading-relaxed">
-                  Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleCreateTaskClick}
-                    className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
-                  >
-                    Tạo nhiệm vụ mới
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleRefresh}
-                    disabled={effectiveIsRefreshing}
-                    className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
-                  >
-                    Làm mới dữ liệu
-                  </Button>
-                </div>
-              </div>
             ) : (
               <div className="pt-0.5">
                 {viewMode === "table" ? (
@@ -2369,6 +2336,7 @@ function UnifiedAdaptiveWorkspaceInner({
                       onResetFilters: handleResetFilters,
                       onAddTask: () =>
                         openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                      canAddTask: true,
                     }}
                   />
                 ) : (
@@ -2461,42 +2429,9 @@ function UnifiedAdaptiveWorkspaceInner({
             data-slot="full-width-task-canvas"
             className="w-full space-y-1 min-w-0"
           >
-            {/* Unassigned Department State or Empty State or Table/Kanban */}
+            {/* Unassigned Department State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
             <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
-          ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
-            <div
-              data-slot="workspace-empty-state"
-              className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border/80 bg-card/40 my-2"
-            >
-              <div className="size-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
-                <Inbox className="size-6" strokeWidth={1.5} />
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">
-                Chưa có nhiệm vụ nào được phân công trong kỳ này
-              </h3>
-              <p className="text-xs text-muted-foreground max-w-md mb-5 leading-relaxed">
-                Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleCreateTaskClick}
-                  className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
-                >
-                  Tạo nhiệm vụ mới
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleRefresh}
-                  disabled={effectiveIsRefreshing}
-                  className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
-                >
-                  Làm mới dữ liệu
-                </Button>
-              </div>
-            </div>
           ) : (
             <div>
               {viewMode === "table" ? (
@@ -2531,6 +2466,7 @@ function UnifiedAdaptiveWorkspaceInner({
                     onResetFilters: handleResetFilters,
                     onAddTask: () =>
                       openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                    canAddTask: true,
                   }}
                 />
               ) : (
