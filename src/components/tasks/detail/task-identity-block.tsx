@@ -422,7 +422,6 @@ export function TaskIdentityBlock({
 
         {/* Ngày bắt đầu → Hạn chót */}
         <div className="inline-flex items-center gap-1 text-xs text-foreground">
-          <Calendar className="size-3.5 text-muted-foreground shrink-0" />
           {canEdit && onStartDateChange ? (
             <VietnameseDatePicker
               value={startDateIso}

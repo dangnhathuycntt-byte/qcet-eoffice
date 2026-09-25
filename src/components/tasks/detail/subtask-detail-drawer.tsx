@@ -74,13 +74,10 @@ export function SubtaskDetailDrawer({
 
   React.useEffect(() => {
     setSubtask(initialSubtask);
-    setIsDeadlineEditorOpen(false);
   }, [initialSubtask]);
 
   // Dropdown states
-  const [isDeadlineEditorOpen, setIsDeadlineEditorOpen] = React.useState(false);
   const [isReassigning, setIsReassigning] = React.useState(false);
-  const deadlineRef = React.useRef<HTMLDivElement>(null);
   const { personnel: personnelList } = usePersonnelList();
 
   // FSM guard: compute allowed status transitions
@@ -157,18 +154,6 @@ export function SubtaskDetailDrawer({
   }, [onPeekWidthChange]);
 
 
-  // Close deadline popover on outside click
-  React.useEffect(() => {
-    if (!isDeadlineEditorOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (deadlineRef.current && !deadlineRef.current.contains(e.target as Node)) {
-        setIsDeadlineEditorOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isDeadlineEditorOpen]);
-
   // Status & Priority objects
   const currentStatusObj =
     STATUS_OPTIONS.find((s) => s.value === subtask?.status) || STATUS_OPTIONS[0];
@@ -195,47 +180,6 @@ export function SubtaskDetailDrawer({
       ? subtask.dueDate.slice(0, 10)
       : new Date(subtask.dueDate).toISOString().slice(0, 10)
     : "";
-
-  const dueInfo = computeDueStatus(subtask?.dueDate);
-
-  // nearDue: reuse computeDueStatus text to detect ≤2-day window without re-parsing
-  const nearDue = !dueInfo.isOverdue && dueDateIso && (
-    dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" ||
-    dueInfo.text === "Còn 2 ngày"
-  );
-
-  // Status icon map (static, no spinners)
-  const STATUS_ICONS: Record<string, React.ElementType> = {
-    NOT_STARTED: CircleDashed,
-    IN_PROGRESS: Activity,
-    WAITING_APPROVAL: Clock,
-    COMPLETED: CheckCircle2,
-  };
-  const StatusIcon = STATUS_ICONS[currentStatusObj.value] ?? CircleDashed;
-
-  // Atomic clear of both dates
-  const handleClearDates = async () => {
-    if (!subtask) return;
-    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
-    const [resStart, resDue] = await Promise.allSettled([
-      updateTaskStartDate(subtask.id, "", currentVersion),
-      updateTaskDueDate(subtask.id, "", currentVersion),
-    ]);
-    const startOk = resStart.status === "fulfilled" && resStart.value.ok;
-    const dueOk = resDue.status === "fulfilled" && resDue.value.ok;
-    if (!startOk && !dueOk) {
-      notifyError("Không thể xóa ngày", "Lỗi cập nhật");
-      return;
-    }
-    const nextVersion =
-      (dueOk ? (resDue as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
-      (startOk ? (resStart as PromiseFulfilledResult<any>).value.data?.data?.version : undefined) ??
-      currentVersion;
-    const updated = { ...subtask, startDate: "", dueDate: "", version: nextVersion } as StaffTask;
-    setSubtask(updated);
-    onSubtaskUpdated?.(updated);
-    notifySuccess("Đã xóa ngày");
-  };
 
   // Handlers
   const handleTitleChange = async (newTitle: string) => {
@@ -430,9 +374,6 @@ export function SubtaskDetailDrawer({
 
   const rawDescription = (subtask as any).description || subtask.deliverableDescription || "";
   const description = rawDescription.replace(/^\[Tóm tắt\]\s*/i, "");
-
-  const startDateLabel = startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt";
-  const dueDateLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt";
   const selectedAssignee = personnelList.find((person) =>
     person.id === (subtask as any).assigneeId || person.name === subtask.assigneeName
   ) || null;
@@ -609,16 +550,18 @@ export function SubtaskDetailDrawer({
             />
           </div>
 
-          <section aria-label="Thuộc tính việc thành phần" className="mt-4 flex flex-row flex-wrap items-center gap-x-3 gap-y-1 text-xs select-none">
+          <section aria-label="Thuộc tính việc thành phần" className="mt-3 flex items-center gap-2 flex-wrap text-xs text-muted-foreground font-normal select-none">
             <Select.Root
               value={subtask.status}
               onValueChange={(value) => void handleStatusChange(value as TaskStatus)}
               disabled={!canEdit}
             >
-              <Select.Trigger className="group inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
-                <StatusIcon className={cn("size-3.5 shrink-0", currentStatusObj.iconClass)} />
-                <Select.Value>{() => <span className="font-normal text-foreground">{currentStatusObj.label}</span>}</Select.Value>
-                {canEdit && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" /></Select.Icon>}
+              <Select.Trigger className={cn(
+                "inline-flex items-center gap-1.5 py-0.5 rounded text-xs font-normal text-foreground transition-colors outline-none",
+                canEdit ? "cursor-pointer hover:text-foreground/70" : "cursor-default"
+              )}>
+                <CircleDashed className={cn("size-3.5", currentStatusObj.value === "COMPLETED" ? "text-emerald-600" : currentStatusObj.value === "IN_PROGRESS" ? "text-amber-500" : "text-amber-500")} strokeWidth={1.5} />
+                <Select.Value>{() => <span>{currentStatusObj.label}</span>}</Select.Value>
               </Select.Trigger>
               <Select.Portal>
                 <Select.Positioner className="z-50" align="start" sideOffset={4}>
@@ -649,6 +592,8 @@ export function SubtaskDetailDrawer({
               </Select.Portal>
             </Select.Root>
 
+            <span>·</span>
+
             <Combobox.Root
               items={personnelList}
               value={selectedAssignee}
@@ -668,17 +613,20 @@ export function SubtaskDetailDrawer({
               autoHighlight
               disabled={!canEdit || isReassigning}
             >
-              <Combobox.Trigger className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-muted/60 disabled:cursor-default">
+              <Combobox.Trigger
+                className={cn(
+                  "inline-flex items-center gap-1.5 py-0.5 px-1.5 -mx-1.5 rounded text-xs font-normal text-foreground transition-colors select-none outline-none",
+                  canEdit ? "cursor-pointer hover:bg-muted/40 hover:text-foreground" : "cursor-default"
+                )}
+                title={`Người phụ trách: ${assigneeDisplay} (nhấp để thay đổi)`}
+              >
                 {isReassigning ? (
                   <Clock3 className="size-3.5 shrink-0 animate-spin text-primary" />
                 ) : (
-                  <UserPlus className={cn(
-                    "size-3.5 shrink-0",
-                    selectedAssignee ? "text-muted-foreground" : "text-primary/60"
-                  )} />
+                  <UserPlus className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 )}
                 <span className={cn(
-                  "truncate font-normal",
+                  "font-normal whitespace-nowrap",
                   selectedAssignee ? "text-foreground" : "text-muted-foreground"
                 )}>{assigneeDisplay}</span>
               </Combobox.Trigger>
@@ -715,76 +663,46 @@ export function SubtaskDetailDrawer({
             </Combobox.Root>
 
             {Array.isArray(subtask.coAssignees) && subtask.coAssignees.length > 0 && (
-              <div className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted/40">
-                <Users className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate text-muted-foreground">
-                  {subtask.coAssignees.map((co: any) => co.name).join(", ")}
-                </span>
-              </div>
+              <>
+                <span>·</span>
+                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="size-3.5 shrink-0" />
+                  <span className="truncate">
+                    {subtask.coAssignees.map((co: any) => co.name).join(", ")}
+                  </span>
+                </div>
+              </>
             )}
 
-            <div ref={deadlineRef} className="relative group/date-row">
-              <button
-                type="button"
-                onClick={() => canEdit && setIsDeadlineEditorOpen((open) => !open)}
-                disabled={!canEdit}
-                aria-expanded={isDeadlineEditorOpen}
-                className={cn(
-                  "inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors",
-                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default",
-                  dueInfo.isOverdue && "text-rose-700"
-                )}
-              >
-                <Clock3 className={cn(
-                  "size-3.5 shrink-0",
-                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground"
-                )} />
-                <span className={cn(
-                  "tabular-nums font-normal",
-                  dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "text-foreground"
-                )}>
-                  {startDateLabel} <span className="px-1 text-muted-foreground">→</span> {dueDateLabel}
-                </span>
-              </button>
-              {canEdit && (startDateIso || dueDateIso) && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); void handleClearDates(); }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="Xóa ngày"
-                  title="Xóa ngày"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
+            <span>·</span>
 
-              {isDeadlineEditorOpen && canEdit && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 grid grid-cols-2 gap-2 rounded-lg border border-border bg-popover p-2.5 shadow-lg ">
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Bắt đầu</span>
-                    <VietnameseDatePicker
-                      value={startDateIso}
-                      onChange={handleStartDateChange}
-                      placeholder="Bắt đầu"
-                      variant="chip"
-                      align="left"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground">Hạn chót</span>
-                    <VietnameseDatePicker
-                      value={dueDateIso}
-                      onChange={handleDueDateChange}
-                      placeholder="Hạn chót"
-                      variant="chip"
-                      align="right"
-                      className="w-full"
-                      triggerClassName="h-7 w-full justify-start rounded-md border border-border/60 bg-background px-2 text-xs"
-                    />
-                  </div>
-                </div>
+            {/* Ngày bắt đầu → Hạn chót */}
+            <div className="inline-flex items-center gap-1 text-xs text-foreground">
+              {canEdit ? (
+                <VietnameseDatePicker
+                  value={startDateIso}
+                  onChange={handleStartDateChange}
+                  placeholder="Bắt đầu"
+                  variant="chip"
+                  align="left"
+                  className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+                />
+              ) : (
+                <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "—"}</span>
+              )}
+              <span className="text-muted-foreground/60 px-0.5">→</span>
+              {canEdit ? (
+                <VietnameseDatePicker
+                  value={dueDateIso}
+                  onChange={handleDueDateChange}
+                  placeholder="Hạn chót"
+                  variant="chip"
+                  showPresets={true}
+                  align="left"
+                  className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
+                />
+              ) : (
+                <span className="text-muted-foreground">{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
               )}
             </div>
           </section>
