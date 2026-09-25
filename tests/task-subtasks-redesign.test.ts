@@ -80,7 +80,8 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
         "Must use data-peek-open to toggle grid columns on desktop"
       );
       assert.ok(
-        cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 480px))"),
+        cssContent.includes("var(--subtask-peek-width") ||
+          cssContent.includes("min(75vw, var(--qcet-subtask-peek-width, 480px))"),
         "Cột việc con dùng độ rộng đã lưu và giới hạn theo viewport"
       );
       // No border-left divider

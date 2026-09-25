@@ -798,7 +798,10 @@ export function TaskDetailPage({
   const splitWorkspaceStyle = React.useMemo(
     () =>
       activeSubtask
-        ? ({ "--subtask-peek-width": `${peekWidth}px` } as React.CSSProperties)
+        ? ({
+            "--subtask-peek-width": `${peekWidth}px`,
+            "--qcet-subtask-peek-width": `${peekWidth}px`,
+          } as React.CSSProperties)
         : undefined,
     [activeSubtask, peekWidth]
   );
