@@ -266,8 +266,12 @@ export function CreateTaskModal({
           setStartDate(draft.startDate || "");
           setDueDate(draft.dueDate || "");
           setCategory(draft.category || "CHUYEN_DOI_SO");
-          if (draft.selectedDeptCode) setSelectedDeptCode(draft.selectedDeptCode);
-          if (draft.level) setLevel(draft.level);
+          if (draft.selectedDeptCode) {
+            setSelectedDeptCode(!isExecutive && userDeptCode ? userDeptCode : draft.selectedDeptCode);
+          }
+          if (draft.level) {
+            setLevel(!isExecutive && draft.level === "TRUONG" ? "DON_VI" : draft.level);
+          }
           setHasRestoredDraft(true);
           return;
         }
@@ -463,9 +467,12 @@ export function CreateTaskModal({
         )
         .filter((id): id is string => Boolean(id));
 
+      const effectiveLevel: CreateTaskLevel = isExecutive ? level : (level === "TRUONG" ? "DON_VI" : level);
+      const effectiveDeptId = currentDept?.code || currentDept?.id || userDeptCode;
+
       const res = await submitCreateTask(
         {
-          level,
+          level: effectiveLevel,
           title: title.trim(),
           startDate: startDate || undefined,
           dueDate,
@@ -478,7 +485,7 @@ export function CreateTaskModal({
         },
         {
           personnel: personnelRefs,
-          departmentId: currentDept?.id || currentDept?.code,
+          departmentId: effectiveDeptId,
           assigneeId: matchedDri?.id,
           collaboratorIds: matchedCoIds.length > 0 ? matchedCoIds : undefined,
         }
