@@ -67,11 +67,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
         }
 
-        // 6. Update avatar if user doesn't have one
-        if (!dbUser.avatarUrl && profile?.picture) {
+        // 6. Synchronize avatar from Google Workspace profile picture
+        const googleAvatar = (profile?.picture as string) || (user.image as string);
+        if (googleAvatar && dbUser.avatarUrl !== googleAvatar) {
           await prisma.user.update({
             where: { id: dbUser.id },
-            data: { avatarUrl: profile.picture as string },
+            data: { avatarUrl: googleAvatar },
           });
         }
 

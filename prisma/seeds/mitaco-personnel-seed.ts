@@ -61,9 +61,9 @@ export const KNOWN_PERSONNEL_OVERRIDE: Record<
     email?: string;
   }
 > = {
-  // Trung tâm Số & Truyền thông / Quản trị hệ thống
+  // Trung tâm Số & Truyền thông
   '00258': {
-    role: UserRole.ADMIN,
+    role: UserRole.CHUYEN_VIEN,
     positionCode: 'NHAN_VIEN_CNTT',
     unitCode: 'TT_SO_TT',
     title: 'Chuyên viên chuyển đổi số',

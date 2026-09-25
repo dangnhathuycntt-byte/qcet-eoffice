@@ -104,7 +104,7 @@ async function main() {
     { email: "kiemtt@cdktcnqn.edu.vn", name: "ThS. Trần Trọng Kiệm (Phó Hiệu trưởng Đào tạo & NCKH)", role: UserRole.BAN_GIAM_HIEU, title: "Phó Hiệu trưởng", phone: "0256.3846.479", passwordHash: defaultPasswordHash },
     { email: "nguyenlx@cdktcnqn.edu.vn", name: "ThS. Lê Xuân Nguyên (Phó Hiệu trưởng HC & CSVC)", role: UserRole.BAN_GIAM_HIEU, title: "Phó Hiệu trưởng", phone: "0256.3846.480", passwordHash: defaultPasswordHash },
     { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường", role: UserRole.BAN_GIAM_HIEU, title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
-    { email: "dangnhathuy@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy (Chuyên viên chuyển đổi số / Quản trị hệ thống)", role: UserRole.ADMIN, title: "Chuyên viên chuyển đổi số", phone: "0256.3846.484", passwordHash: defaultPasswordHash },
+    { email: "dangnhathuy@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy (Chuyên viên chuyển đổi số)", role: UserRole.CHUYEN_VIEN, title: "Chuyên viên chuyển đổi số", phone: "0256.3846.484", passwordHash: defaultPasswordHash },
     { email: "admin@cdktcnqn.edu.vn", name: "Quản trị hệ thống QCET", role: UserRole.ADMIN, title: "Quản trị viên", phone: "0900.000.001", passwordHash: defaultPasswordHash },
     { email: "vanthu@cdktcnqn.edu.vn", name: "CN. Trương Thị Hồng Nhung (Văn thư trường)", role: UserRole.VAN_THU, title: "Văn thư trường", phone: "0256.3846.481", passwordHash: defaultPasswordHash },
 

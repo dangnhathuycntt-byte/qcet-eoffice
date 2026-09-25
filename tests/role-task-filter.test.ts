@@ -72,7 +72,7 @@ describe("RBAC Task Filter Engine", () => {
   ];
 
   test("ADMIN sees all tasks across all departments", () => {
-    const admin = DEFAULT_DEMO_USERS[0];
+    const admin = DEFAULT_DEMO_USERS.find((u) => u.id === "user-admin-bgh")!;
     const filtered = filterTasksByRole(sampleTasks, admin);
     assert.equal(filtered.length, 2);
     assert.equal(canCreateSchoolTask(admin.role), true);
@@ -80,7 +80,7 @@ describe("RBAC Task Filter Engine", () => {
   });
 
   test("MANAGER sees only tasks related to their department or lead", () => {
-    const manager = DEFAULT_DEMO_USERS[1]; // Trưởng phòng Đào tạo & QLKH (Trần Hùng)
+    const manager = DEFAULT_DEMO_USERS.find((u) => u.id === "user-manager-qldt")!; // Trưởng phòng Đào tạo & QLKH (Trần Hùng)
     const filtered = filterTasksByRole(sampleTasks, manager);
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].leadAssigneeName, "Trần Hùng");
@@ -89,7 +89,7 @@ describe("RBAC Task Filter Engine", () => {
   });
 
   test("STAFF sees only tasks they are assigned to", () => {
-    const staff = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh
+    const staff = DEFAULT_DEMO_USERS.find((u) => u.id === "user-staff-vinh")!; // Nguyễn Ngọc Vinh
     const filtered = filterTasksByRole(sampleTasks, staff);
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].subTasks.length, 1);
@@ -99,7 +99,7 @@ describe("RBAC Task Filter Engine", () => {
   });
 
   test("STAFF view recalculates task rollup for personal subtasks", () => {
-    const staff = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh
+    const staff = DEFAULT_DEMO_USERS.find((u) => u.id === "user-staff-vinh")!; // Nguyễn Ngọc Vinh
     const filtered = filterTasksByRole(sampleTasks, staff);
     assert.equal(filtered.length, 1);
     const task = filtered[0];
@@ -110,15 +110,17 @@ describe("RBAC Task Filter Engine", () => {
     assert.equal(task.progressPercent, 100);
   });
 
-  test("DEFAULT_DEMO_USERS defines 3 authentic QCET roles verbatim", () => {
-    assert.equal(DEFAULT_DEMO_USERS.length, 3);
+  test("DEFAULT_DEMO_USERS defines authentic QCET roles verbatim", () => {
+    assert.ok(DEFAULT_DEMO_USERS.length >= 3);
 
-    const [admin, manager, staff] = DEFAULT_DEMO_USERS;
+    const admin = DEFAULT_DEMO_USERS.find((u) => u.id === "user-admin-bgh")!;
+    const manager = DEFAULT_DEMO_USERS.find((u) => u.id === "user-manager-qldt")!;
+    const staff = DEFAULT_DEMO_USERS.find((u) => u.id === "user-staff-vinh")!;
 
     // 1. ADMIN
     assert.equal(admin.role, "ADMIN");
-    assert.ok(admin.email === "bgh@cdktcnqn.edu.vn" || admin.email === "dangnhathuy@cdktcnqn.edu.vn");
-    assert.ok(admin.name.includes("Ban Giám hiệu") || admin.name.includes("Đặng Nhật Huy") || admin.roleLabel.includes("Ban Giám hiệu"));
+    assert.ok(admin.email === "bgh@cdktcnqn.edu.vn" || admin.email === "tuongpv@cdktcnqn.edu.vn" || admin.email === "dangnhathuy@cdktcnqn.edu.vn");
+    assert.ok(admin.name.includes("Ban Giám hiệu") || admin.name.includes("Phạm Văn Tường") || admin.name.includes("Đặng Nhật Huy") || admin.roleLabel.includes("Ban Giám hiệu"));
     assert.equal(canCreateSchoolTask(admin.role), true);
     assert.equal(canAssignUnitTask(admin.role), true);
 

@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { UserRole } from '@prisma/client';
 import {
   MITACO_DEPT_TO_CANONICAL,
   KNOWN_PERSONNEL_OVERRIDE,
@@ -60,6 +61,7 @@ describe('Mitaco Personnel Seed & Mapping Suite', () => {
   test('5. Bảo lưu tài khoản lãnh đạo và cấu hình đặc biệt', () => {
     assert.equal(KNOWN_PERSONNEL_OVERRIDE['00258'].email, 'dangnhathuy@cdktcnqn.edu.vn');
     assert.equal(KNOWN_PERSONNEL_OVERRIDE['00258'].positionCode, 'NHAN_VIEN_CNTT');
+    assert.equal(KNOWN_PERSONNEL_OVERRIDE['00258'].role, UserRole.CHUYEN_VIEN);
     assert.equal(KNOWN_PERSONNEL_OVERRIDE['00081'].positionCode, 'HIEU_TRUONG');
     assert.equal(KNOWN_PERSONNEL_OVERRIDE['00003'].unitCode, 'P_QLDT');
     assert.equal(KNOWN_PERSONNEL_OVERRIDE['00105'].unitCode, 'P_TCKT');
