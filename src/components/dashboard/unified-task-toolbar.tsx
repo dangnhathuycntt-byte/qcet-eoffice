@@ -1266,7 +1266,7 @@ export function UnifiedTaskToolbar({
             align="start"
             side="bottom"
             sideOffset={6}
-            className="w-64 rounded-xl border border-border bg-popover p-2 shadow-xl z-50 text-xs text-popover-foreground"
+            className="w-64 rounded-xl border border-border/80 bg-popover p-1.5 shadow-dropdown z-50 text-xs text-popover-foreground"
           >
             <div className="space-y-0.5">
               {([
@@ -1281,10 +1281,15 @@ export function UnifiedTaskToolbar({
                     key={preset}
                     type="button"
                     onClick={() => { handleTimeFilterChange({ kind: "preset", preset }); setIsMonthOpen(false); }}
-                    className={cn("w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer", selected ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent")}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer select-none",
+                      selected
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                    )}
                   >
                     <span>{label}</span>
-                    {selected && <Check className="size-3.5" />}
+                    {selected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
                   </button>
                 );
               })}
@@ -1304,10 +1309,10 @@ export function UnifiedTaskToolbar({
                       setIsMonthOpen(false);
                     }}
                     className={cn(
-                      "h-7 px-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center",
+                      "h-7 px-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center select-none",
                       isSelected
                         ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent text-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
                     )}
                   >
                     <span>{period.label}</span>
@@ -1321,7 +1326,7 @@ export function UnifiedTaskToolbar({
               <button
                 type="button"
                 onClick={() => setShowDateRange(true)}
-                className="w-full px-2.5 py-1.5 rounded-md text-left font-medium hover:bg-accent transition-colors cursor-pointer"
+                className="w-full px-2.5 py-1.5 rounded-lg text-left font-medium hover:bg-accent hover:text-accent-foreground text-foreground transition-colors cursor-pointer select-none"
               >
                 Chọn khoảng ngày…
               </button>
@@ -1401,44 +1406,48 @@ export function UnifiedTaskToolbar({
             align="start"
             side="bottom"
             sideOffset={6}
-            className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+            className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
           >
-            {statusOptions.map((opt) => {
-              const norm = (effectiveStatus || "all").toLowerCase();
-              const isSelected =
-                opt.value === "new"
-                  ? norm === "new" || norm === "not_started" || norm === "assigned"
-                  : opt.value === "in_progress"
-                  ? norm === "in_progress"
-                  : opt.value === "waiting_approval" || opt.value === "review"
-                  ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
-                  : opt.value === "completed"
-                  ? norm === "completed"
-                  : opt.value === "all"
-                  ? !effectiveStatus || norm === "all"
-                  : norm === opt.value.toLowerCase();
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    if (onStatusChange) {
-                      onStatusChange(opt.value);
-                    } else {
-                      onTabChange?.(opt.value);
-                    }
-                    setIsStatusOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                    isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                  )}
-                >
-                  <span>{opt.label}</span>
-                  {isSelected && <Check className="size-3.5 text-primary" />}
-                </button>
-              );
-            })}
+            <div className="space-y-0.5">
+              {statusOptions.map((opt) => {
+                const norm = (effectiveStatus || "all").toLowerCase();
+                const isSelected =
+                  opt.value === "new"
+                    ? norm === "new" || norm === "not_started" || norm === "assigned"
+                    : opt.value === "in_progress"
+                    ? norm === "in_progress"
+                    : opt.value === "waiting_approval" || opt.value === "review"
+                    ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
+                    : opt.value === "completed"
+                    ? norm === "completed"
+                    : opt.value === "all"
+                    ? !effectiveStatus || norm === "all"
+                    : norm === opt.value.toLowerCase();
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (onStatusChange) {
+                        onStatusChange(opt.value);
+                      } else {
+                        onTabChange?.(opt.value);
+                      }
+                      setIsStatusOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                      isSelected
+                        ? "text-primary font-semibold bg-primary/10"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                  </button>
+                );
+              })}
+            </div>
           </PopoverContent>
         </PopoverRoot>
 
@@ -1489,32 +1498,36 @@ export function UnifiedTaskToolbar({
             align="start"
             side="bottom"
             sideOffset={6}
-            className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+            className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
           >
-            {deadlineOptions.map((opt) => {
-              const isSelected = (effectiveDeadline === opt.value || (!effectiveDeadline && opt.value === "all"));
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    if (onDeadlineChange) {
-                      onDeadlineChange(opt.value);
-                    } else {
-                      onTabChange?.(opt.value);
-                    }
-                    setIsDeadlineOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                    isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                  )}
-                >
-                  <span>{opt.label}</span>
-                  {isSelected && <Check className="size-3.5 text-primary" />}
-                </button>
-              );
-            })}
+            <div className="space-y-0.5">
+              {deadlineOptions.map((opt) => {
+                const isSelected = (effectiveDeadline === opt.value || (!effectiveDeadline && opt.value === "all"));
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (onDeadlineChange) {
+                        onDeadlineChange(opt.value);
+                      } else {
+                        onTabChange?.(opt.value);
+                      }
+                      setIsDeadlineOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                      isSelected
+                        ? "text-primary font-semibold bg-primary/10"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                  </button>
+                );
+              })}
+            </div>
           </PopoverContent>
         </PopoverRoot>
 
@@ -1562,46 +1575,50 @@ export function UnifiedTaskToolbar({
               align="start"
               side="bottom"
               sideOffset={6}
-              className="w-48 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+              className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  onPriorityChange?.("ALL");
-                  setIsPriorityOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                  !isPriorityActive
-                    ? "text-primary font-semibold bg-primary/10"
-                    : "text-foreground"
-                )}
-              >
-                <span>Tất cả mức ưu tiên</span>
-                {!isPriorityActive && (
-                  <Check className="size-3.5 text-primary" />
-                )}
-              </button>
-              {PRIORITY_FILTER_OPTIONS.filter((p) => p.id !== "ALL").map((prio) => {
-                const isSelected = selectedPriority === prio.id;
-                return (
-                  <button
-                    key={prio.id}
-                    type="button"
-                    onClick={() => {
-                      onPriorityChange?.(prio.id);
-                      setIsPriorityOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                      isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                    )}
-                  >
-                    <span>{prio.label}</span>
-                    {isSelected && <Check className="size-3.5 text-primary" />}
-                  </button>
-                );
-              })}
+              <div className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPriorityChange?.("ALL");
+                    setIsPriorityOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                    !isPriorityActive
+                      ? "text-primary font-semibold bg-primary/10"
+                      : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <span>Tất cả mức ưu tiên</span>
+                  {!isPriorityActive && (
+                    <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                  )}
+                </button>
+                {PRIORITY_FILTER_OPTIONS.filter((p) => p.id !== "ALL").map((prio) => {
+                  const isSelected = selectedPriority === prio.id;
+                  return (
+                    <button
+                      key={prio.id}
+                      type="button"
+                      onClick={() => {
+                        onPriorityChange?.(prio.id);
+                        setIsPriorityOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                        isSelected
+                          ? "text-primary font-semibold bg-primary/10"
+                          : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <span>{prio.label}</span>
+                      {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                    </button>
+                  );
+                })}
+              </div>
             </PopoverContent>
           </PopoverRoot>
         </div>
@@ -1651,48 +1668,52 @@ export function UnifiedTaskToolbar({
                 align="start"
                 side="bottom"
                 sideOffset={6}
-                className="w-56 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground max-h-60 overflow-y-auto"
+                className="w-56 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground max-h-60 overflow-y-auto"
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDepartmentChange?.("ALL");
-                    setIsDepartmentOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                    !isDepartmentActive
-                      ? "text-primary font-semibold bg-primary/10"
-                      : "text-foreground"
-                  )}
-                >
-                  <span>Tất cả đơn vị</span>
-                  {!isDepartmentActive && (
-                    <Check className="size-3.5 text-primary" />
-                  )}
-                </button>
-                {availableDepartments
-                  .filter((d) => d.code !== "ALL")
-                  .map((dept) => {
-                    const isSelected = selectedDepartment === dept.code;
-                    return (
-                      <button
-                        key={dept.code}
-                        type="button"
-                        onClick={() => {
-                          onDepartmentChange?.(dept.code);
-                          setIsDepartmentOpen(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-accent cursor-pointer",
-                          isSelected ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                        )}
-                      >
-                        <span className="truncate">{dept.name}</span>
-                        {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
-                      </button>
-                    );
-                  })}
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDepartmentChange?.("ALL");
+                      setIsDepartmentOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                      !isDepartmentActive
+                        ? "text-primary font-semibold bg-primary/10"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <span>Tất cả đơn vị</span>
+                    {!isDepartmentActive && (
+                      <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                    )}
+                  </button>
+                  {availableDepartments
+                    .filter((d) => d.code !== "ALL")
+                    .map((dept) => {
+                      const isSelected = selectedDepartment === dept.code;
+                      return (
+                        <button
+                          key={dept.code}
+                          type="button"
+                          onClick={() => {
+                            onDepartmentChange?.(dept.code);
+                            setIsDepartmentOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                            isSelected
+                              ? "text-primary font-semibold bg-primary/10"
+                              : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                          )}
+                        >
+                          <span className="truncate">{dept.name}</span>
+                          {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                        </button>
+                      );
+                    })}
+                </div>
               </PopoverContent>
             </PopoverRoot>
           </div>
@@ -1728,7 +1749,7 @@ export function UnifiedTaskToolbar({
               align="start"
               side="bottom"
               sideOffset={6}
-              className="w-72 rounded-xl border border-border bg-popover p-3 shadow-xl z-50 text-xs text-popover-foreground"
+              className="w-72 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
             >
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
                 <span className="font-semibold text-foreground">Bộ lọc</span>
@@ -1756,10 +1777,10 @@ export function UnifiedTaskToolbar({
                         type="button"
                         onClick={() => onPriorityChange?.(prio.id)}
                         className={cn(
-                          "px-2 py-1.5 rounded text-left transition-colors cursor-pointer text-xs",
+                          "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
                           isSelected
                             ? "bg-primary/10 text-primary font-semibold"
-                            : "hover:bg-accent text-foreground"
+                            : "hover:bg-accent hover:text-accent-foreground text-foreground"
                         )}
                       >
                         {prio.label}
@@ -1778,7 +1799,7 @@ export function UnifiedTaskToolbar({
                   <select
                     value={selectedDepartment || "ALL"}
                     onChange={(e) => onDepartmentChange?.(e.target.value)}
-                    className="w-full h-8 px-2 rounded border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
+                    className="w-full h-8 px-2 rounded-lg border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
                   >
                     <option value="ALL">Tất cả đơn vị</option>
                     {availableDepartments
@@ -1852,43 +1873,49 @@ export function UnifiedTaskToolbar({
                 align="end"
                 side="bottom"
                 sideOffset={6}
-                className="w-36 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
+                className="w-36 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onViewModeChange("table");
-                    setIsDisplayOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer hover:bg-accent",
-                    viewMode === "table" ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    <span>Bảng</span>
-                  </div>
-                  {viewMode === "table" && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
-                </button>
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onViewModeChange("table");
+                      setIsDisplayOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                      viewMode === "table"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <span>Bảng</span>
+                    </div>
+                    {viewMode === "table" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    onViewModeChange("kanban");
-                    setIsDisplayOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer hover:bg-accent",
-                    viewMode === "kanban" ? "text-primary font-semibold bg-primary/10" : "text-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    <span>Kanban</span>
-                  </div>
-                  {viewMode === "kanban" && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onViewModeChange("kanban");
+                      setIsDisplayOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                      viewMode === "kanban"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <span>Kanban</span>
+                    </div>
+                    {viewMode === "kanban" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                  </button>
+                </div>
               </PopoverContent>
             </PopoverRoot>
           </div>

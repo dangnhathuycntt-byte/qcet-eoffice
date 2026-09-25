@@ -44,7 +44,7 @@ export function DensityToggle({
 
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={200}>
+      <Tooltip>
         <TooltipTrigger asChild>
           <Button
             type="button"

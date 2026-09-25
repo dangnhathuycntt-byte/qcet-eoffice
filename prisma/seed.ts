@@ -15,6 +15,7 @@ import {
   seedCanonicalOrg,
   seedCanonicalPositions,
   seedCanonicalAssignments,
+  seedMitacoPersonnel,
 } from './seeds/canonical-org-seed';
 import { DEPARTMENT_TO_ORG_UNIT_MAP } from './seeds/migrate-task-relations';
 
@@ -99,11 +100,11 @@ async function main() {
 
   const users = [
     // Ban Giám hiệu
-    { email: "dangnhathuy@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy (Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
-    { email: "tuongpv@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường (Phó Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, title: "Phó Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
+    { email: "tuongpv@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường (Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
     { email: "kiemtt@cdktcnqn.edu.vn", name: "ThS. Trần Trọng Kiệm (Phó Hiệu trưởng Đào tạo & NCKH)", role: UserRole.BAN_GIAM_HIEU, title: "Phó Hiệu trưởng", phone: "0256.3846.479", passwordHash: defaultPasswordHash },
     { email: "nguyenlx@cdktcnqn.edu.vn", name: "ThS. Lê Xuân Nguyên (Phó Hiệu trưởng HC & CSVC)", role: UserRole.BAN_GIAM_HIEU, title: "Phó Hiệu trưởng", phone: "0256.3846.480", passwordHash: defaultPasswordHash },
-    { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy", role: UserRole.BAN_GIAM_HIEU, title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
+    { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường", role: UserRole.BAN_GIAM_HIEU, title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
+    { email: "dangnhathuy@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy (Chuyên viên chuyển đổi số / Quản trị hệ thống)", role: UserRole.ADMIN, title: "Chuyên viên chuyển đổi số", phone: "0256.3846.484", passwordHash: defaultPasswordHash },
     { email: "admin@cdktcnqn.edu.vn", name: "Quản trị hệ thống QCET", role: UserRole.ADMIN, title: "Quản trị viên", phone: "0900.000.001", passwordHash: defaultPasswordHash },
     { email: "vanthu@cdktcnqn.edu.vn", name: "CN. Trương Thị Hồng Nhung (Văn thư trường)", role: UserRole.VAN_THU, title: "Văn thư trường", phone: "0256.3846.481", passwordHash: defaultPasswordHash },
 
@@ -166,9 +167,15 @@ async function main() {
     }))
   );
 
+  // Gieo 258 nhân sự thực tế từ MITACOSQL (bao gồm bảo lưu các email key/đặc biệt)
+  await seedMitacoPersonnel(prisma, {
+    defaultPasswordHash,
+    preservedEmails: new Set(users.map((u) => u.email)),
+  });
+
   // 3. Tạo 40 Nhiệm vụ mẫu trải đều qua 12 tháng học vụ và 11 đơn vị
-    const adminId = userMap["admin@cdktcnqn.edu.vn"];
-  const bghOwnerId = userMap["dangnhathuy@cdktcnqn.edu.vn"] || userMap["bgh@cdktcnqn.edu.vn"];
+  const adminId = userMap["admin@cdktcnqn.edu.vn"] || userMap["dangnhathuy@cdktcnqn.edu.vn"];
+  const bghOwnerId = userMap["tuongpv@cdktcnqn.edu.vn"] || userMap["bgh@cdktcnqn.edu.vn"];
   const pdtOwnerId = userMap["levanthi@cdktcnqn.edu.vn"] || userMap["daotao@cdktcnqn.edu.vn"];
   const cnttOwnerId = userMap["k.cntt@cdktcnqn.edu.vn"] || userMap["vinhnn@cdktcnqn.edu.vn"];
   const gvId = userMap["khoipd@cdktcnqn.edu.vn"] || userMap["hungth@cdktcnqn.edu.vn"];
@@ -2546,9 +2553,16 @@ async function main() {
 
     if (assigneeId) {
       const existingDRI = await prisma.taskActor.findFirst({
-        where: { taskId: task.id, userId: assigneeId, role: TaskActorRole.DRI },
+        where: { taskId: task.id, role: TaskActorRole.DRI, isPrimaryDRI: true },
       });
-      if (!existingDRI) {
+      if (existingDRI) {
+        if (existingDRI.userId !== assigneeId) {
+          await prisma.taskActor.update({
+            where: { id: existingDRI.id },
+            data: { userId: assigneeId },
+          });
+        }
+      } else {
         await prisma.taskActor.create({
           data: {
             taskId: task.id,

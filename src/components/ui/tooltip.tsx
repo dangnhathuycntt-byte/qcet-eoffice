@@ -4,15 +4,31 @@ import * as React from "react";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
 import { cn } from "@/lib/utils";
 
-export function TooltipProvider({ children }: { children: React.ReactNode }) {
-  return <BaseTooltip.Provider delay={300}>{children}</BaseTooltip.Provider>;
+export interface TooltipProviderProps {
+  children: React.ReactNode;
+  delay?: number;
+  closeDelay?: number;
+  timeout?: number;
+}
+
+export function TooltipProvider({
+  children,
+  delay = 100,
+  closeDelay = 0,
+  timeout = 400,
+}: TooltipProviderProps) {
+  return (
+    <BaseTooltip.Provider delay={delay} closeDelay={closeDelay} timeout={timeout}>
+      {children}
+    </BaseTooltip.Provider>
+  );
 }
 
 export function Tooltip({
   children,
   open,
   onOpenChange,
-  delayDuration: _delay,
+  delayDuration,
 }: {
   children: React.ReactNode;
   open?: boolean;
@@ -20,14 +36,23 @@ export function Tooltip({
   delayDuration?: number;
 }) {
   const handleChange = React.useCallback(
-    (nextOpen: boolean) => { onOpenChange?.(nextOpen); },
+    (nextOpen: boolean) => {
+      onOpenChange?.(nextOpen);
+    },
     [onOpenChange],
   );
-  return (
+
+  const root = (
     <BaseTooltip.Root open={open} onOpenChange={handleChange}>
       {children}
     </BaseTooltip.Root>
   );
+
+  if (delayDuration !== undefined) {
+    return <BaseTooltip.Provider delay={delayDuration}>{root}</BaseTooltip.Provider>;
+  }
+
+  return root;
 }
 
 export const TooltipTrigger = React.forwardRef<
@@ -59,7 +84,7 @@ export const TooltipContent = React.forwardRef<
           ref={ref}
           className={cn(
             "z-[9999] overflow-hidden rounded-md bg-zinc-600/90 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none",
-            "origin-[var(--transform-origin)] transition-[opacity,scale] duration-150 ease-out",
+            "origin-[var(--transform-origin)] transition-[opacity,scale] duration-100 ease-out",
             "data-[starting-style]:opacity-0 data-[starting-style]:scale-95",
             "data-[ending-style]:opacity-0 data-[ending-style]:scale-95",
             className,

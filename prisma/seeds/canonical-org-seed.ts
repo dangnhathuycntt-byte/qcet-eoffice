@@ -80,12 +80,21 @@ export const CANONICAL_FUNCTIONAL_DEPARTMENTS: CanonicalUnitSeedData[] = [
 
 export const CANONICAL_CENTERS: CanonicalUnitSeedData[] = [
   {
+    code: 'TT_SO_TT',
+    name: 'Trung tâm Số và Truyền thông',
+    shortName: 'TT Số & Truyền thông',
+    type: UnitType.CENTER,
+    level: 1,
+    displayOrder: 6,
+    description: 'Chuyển đổi số, hạ tầng CNTT, an toàn thông tin và truyền thông theo QĐ 282/QĐ-CĐKTCNQN',
+  },
+  {
     code: 'TT_NN_TH',
     name: 'Trung tâm Ngoại ngữ - Tin học',
     shortName: 'Trung tâm Ngoại ngữ - Tin học',
     type: UnitType.CENTER,
     level: 1,
-    displayOrder: 6,
+    displayOrder: 7,
     description: 'Đào tạo, bồi dưỡng và sát hạch ngoại ngữ, tin học theo QĐ 282/QĐ-CĐKTCNQN',
   },
   {
@@ -94,7 +103,7 @@ export const CANONICAL_CENTERS: CanonicalUnitSeedData[] = [
     shortName: 'Trung tâm Tuyển sinh & HTVL',
     type: UnitType.CENTER,
     level: 1,
-    displayOrder: 7,
+    displayOrder: 8,
     description: 'Công tác tuyển sinh, tư vấn hướng nghiệp và hợp tác việc làm doanh nghiệp theo QĐ 282/QĐ-CĐKTCNQN',
   },
 ];
@@ -510,18 +519,95 @@ export const CANONICAL_POSITION_DEFINITIONS: CanonicalPositionSeedData[] = [
     isLeadership: true,
     legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
   },
+  {
+    code: 'TRUONG_BO_MON',
+    title: 'Trưởng bộ môn trực thuộc khoa',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1; Điều lệ trường Cao đẳng',
+  },
+  {
+    code: 'PHO_TRUONG_BO_MON',
+    title: 'Phó Trưởng bộ môn',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'TRUONG_XUONG',
+    title: 'Trưởng xưởng thực hành',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'PHO_TRUONG_XUONG',
+    title: 'Phó Trưởng xưởng thực hành',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Nghị định 106/2020/NĐ-CP Điều 4 Khoản 1',
+  },
+  {
+    code: 'KE_TOAN_TRUONG',
+    title: 'Kế toán trưởng / Phụ trách kế toán',
+    group: 'LDPU',
+    isLeadership: true,
+    legalBasis: 'Luật Kế toán 2015 Điều 53; Nghị định 106/2020/NĐ-CP',
+  },
 
   // --- Chức danh nghề nghiệp chuyên ngành (VCMN) ---
   {
-    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_GV_CHUYEN_NGANH]`
-    code: 'GIANG_VIEN',
-    title: 'Giảng viên chuyên ngành',
+    code: 'GIANG_VIEN_CAO_CAP',
+    title: 'Giảng viên cao cấp (Hạng I)',
     group: 'VCMN',
     isLeadership: false,
-    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH; Nghị định 106/2020/NĐ-CP Điều 4',
+    legalBasis: 'Thông tư 10/2024/TT-BLĐTBXH; Thông tư 07/2023/TT-BLĐTBXH',
+  },
+  {
+    code: 'GIANG_VIEN_CHINH',
+    title: 'Giảng viên chính (Hạng II)',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 10/2024/TT-BLĐTBXH; Thông tư 07/2023/TT-BLĐTBXH',
+  },
+  {
+    // Tương ứng `QCET_VTVL_ROLES[code=VTVL_GV_CHUYEN_NGANH]`
+    code: 'GIANG_VIEN',
+    title: 'Giảng viên chuyên ngành (Hạng III)',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 10/2024/TT-BLĐTBXH; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'GIANG_VIEN_THUC_HANH',
+    title: 'Giảng viên thực hành',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 10/2024/TT-BLĐTBXH; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'TRO_GIANG',
+    title: 'Trợ giảng',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 04/2024/TT-BGDĐT; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'GIAO_VIEN_CHU_NHIEM',
+    title: 'Cố vấn học tập / Giáo viên chủ nhiệm',
+    group: 'VCMN',
+    isLeadership: false,
+    legalBasis: 'Thông tư 15/2021/TT-BLĐTBXH; Điều lệ trường Cao đẳng',
   },
 
   // --- Chức danh nghề nghiệp chuyên môn dùng chung (VCDC) ---
+  {
+    code: 'CHUYEN_VIEN_CHINH',
+    title: 'Chuyên viên chính',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH; Nghị định 106/2020/NĐ-CP',
+  },
   {
     // Tương ứng `QCET_VTVL_ROLES[code=VTVL_CV_DAO_TAO]`
     code: 'CHUYEN_VIEN',
@@ -529,6 +615,34 @@ export const CANONICAL_POSITION_DEFINITIONS: CanonicalPositionSeedData[] = [
     group: 'VCDC',
     isLeadership: false,
     legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH; Nghị định 106/2020/NĐ-CP Điều 4',
+  },
+  {
+    code: 'CHUYEN_VIEN_KHAO_THI',
+    title: 'Chuyên viên khảo thí & đảm bảo chất lượng',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'CHUYEN_VIEN_PHAP_CHE',
+    title: 'Chuyên viên pháp chế & thanh tra',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Nghị định 55/2011/NĐ-CP; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'CHUYEN_VIEN_TRUYEN_THONG',
+    title: 'Chuyên viên truyền thông & sự kiện',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'CHUYEN_VIEN_QL_SINH_VIEN',
+    title: 'Chuyên viên quản lý học sinh - sinh viên',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
   },
   {
     code: 'KE_TOAN',
@@ -544,6 +658,20 @@ export const CANONICAL_POSITION_DEFINITIONS: CanonicalPositionSeedData[] = [
     isLeadership: false,
     legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
   },
+  {
+    code: 'THU_VIEN_VIEN',
+    title: 'Quản lý thư viện & học liệu số',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư 02/2022/TT-BVHTTDL; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'CAN_BO_Y_TE',
+    title: 'Cán bộ y tế học đường',
+    group: 'VCDC',
+    isLeadership: false,
+    legalBasis: 'Thông tư liên tịch 13/2016/TTLT-BYT-BGDĐT; Thông tư 12/2022/TT-BLĐTBXH',
+  },
 
   // --- Vị trí việc làm hỗ trợ, phục vụ (HTPV) ---
   {
@@ -557,6 +685,41 @@ export const CANONICAL_POSITION_DEFINITIONS: CanonicalPositionSeedData[] = [
     // Tương ứng `QCET_VTVL_ROLES[code=VTVL_KTV_PHONG_MAY]`
     code: 'KTV_PHONG_MAY',
     title: 'Kỹ thuật viên quản trị phòng thực hành',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'THU_QUY',
+    title: 'Thủ quỹ cơ quan',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'THU_KHO',
+    title: 'Thủ kho vật tư & thiết bị đào tạo',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'NHAN_VIEN_BAO_VE',
+    title: 'Nhân viên bảo vệ cơ quan',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Nghị định 111/2022/NĐ-CP; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'NHAN_VIEN_LAI_XE',
+    title: 'Nhân viên lái xe phục vụ công tác',
+    group: 'HTPV',
+    isLeadership: false,
+    legalBasis: 'Nghị định 111/2022/NĐ-CP; Thông tư 12/2022/TT-BLĐTBXH',
+  },
+  {
+    code: 'NHAN_VIEN_QUAN_TRI_KTX',
+    title: 'Nhân viên quản lý ký túc xá',
     group: 'HTPV',
     isLeadership: false,
     legalBasis: 'Thông tư 12/2022/TT-BLĐTBXH',
@@ -626,8 +789,34 @@ export function resolvePositionCode(
   if (/truong khoa/.test(normalizedTitle)) return 'TRUONG_KHOA';
   if (/pho giam doc/.test(normalizedTitle)) return 'PHO_GIAM_DOC_TRUNG_TAM';
   if (/giam doc/.test(normalizedTitle)) return 'GIAM_DOC_TRUNG_TAM';
+  if (/pho truong bo mon/.test(normalizedTitle)) return 'PHO_TRUONG_BO_MON';
+  if (/truong bo mon/.test(normalizedTitle)) return 'TRUONG_BO_MON';
+  if (/pho truong xuong/.test(normalizedTitle)) return 'PHO_TRUONG_XUONG';
+  if (/truong xuong/.test(normalizedTitle)) return 'TRUONG_XUONG';
+  if (/ke toan truong/.test(normalizedTitle)) return 'KE_TOAN_TRUONG';
   if (/truong phong/.test(normalizedTitle)) return 'TRUONG_PHONG';
+  if (/pho truong phong/.test(normalizedTitle)) return 'PHO_TRUONG_PHONG';
+  if (/giang vien cao cap/.test(normalizedTitle)) return 'GIANG_VIEN_CAO_CAP';
+  if (/giang vien chinh/.test(normalizedTitle)) return 'GIANG_VIEN_CHINH';
+  if (/giang vien thuc hanh/.test(normalizedTitle)) return 'GIANG_VIEN_THUC_HANH';
   if (/giang vien/.test(normalizedTitle)) return 'GIANG_VIEN';
+  if (/tro giang/.test(normalizedTitle)) return 'TRO_GIANG';
+  if (/co van hoc tap|giao vien chu nhiem/.test(normalizedTitle)) return 'GIAO_VIEN_CHU_NHIEM';
+  if (/chuyen vien chinh/.test(normalizedTitle)) return 'CHUYEN_VIEN_CHINH';
+  if (/khao thi|dam bao chat luong/.test(normalizedTitle)) return 'CHUYEN_VIEN_KHAO_THI';
+  if (/phap che|thanh tra/.test(normalizedTitle)) return 'CHUYEN_VIEN_PHAP_CHE';
+  if (/truyen thong/.test(normalizedTitle)) return 'CHUYEN_VIEN_TRUYEN_THONG';
+  if (/y te/.test(normalizedTitle)) return 'CAN_BO_Y_TE';
+  if (/thu vien/.test(normalizedTitle)) return 'THU_VIEN_VIEN';
+  if (/thu quy/.test(normalizedTitle)) return 'THU_QUY';
+  if (/thu kho/.test(normalizedTitle)) return 'THU_KHO';
+  if (/bao ve/.test(normalizedTitle)) return 'NHAN_VIEN_BAO_VE';
+  if (/lai xe/.test(normalizedTitle)) return 'NHAN_VIEN_LAI_XE';
+  if (/ky tuc xa/.test(normalizedTitle)) return 'NHAN_VIEN_QUAN_TRI_KTX';
+  if (/ke toan/.test(normalizedTitle)) return 'KE_TOAN';
+  if (/cntt|cong nghe thong tin|quan tri mang/.test(normalizedTitle)) return 'NHAN_VIEN_CNTT';
+  if (/van thu/.test(normalizedTitle)) return 'VAN_THU';
+  if (/chuyen vien/.test(normalizedTitle)) return 'CHUYEN_VIEN';
   // Tài khoản đại diện đơn vị đôi khi chỉ mang tên đơn vị làm chức danh
   // ("Phòng Quản lý Đào tạo") — role vẫn là trưởng đơn vị.
   if (normalizedRole === 'TRUONG_PHONG') return 'TRUONG_PHONG';
@@ -792,7 +981,17 @@ export async function seedCanonicalAssignments(
   };
 }
 
-// Cho phép chạy trực tiếp qua `npx tsx prisma/seeds/canonical-org-seed.ts`
+export {
+  seedMitacoPersonnel,
+  MITACO_DEPT_TO_CANONICAL,
+  KNOWN_PERSONNEL_OVERRIDE,
+  FIXED_PERSONNEL_NAMES,
+  generateBaseEmail,
+  type MitacoRawPersonnel,
+  type MitacoDeptMapping,
+  type SeedMitacoResult,
+} from './mitaco-personnel-seed';
+
 if (process.argv[1]?.includes('canonical-org-seed')) {
   const prisma = new PrismaClient();
   seedCanonicalOrg(prisma)

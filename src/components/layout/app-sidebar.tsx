@@ -415,7 +415,7 @@ export function AppSidebar() {
             {/* Right: Quick Action Buttons — hidden when collapsed (shown below as rail items) */}
             {!isCollapsed && (
               <div className="flex items-center gap-1 shrink-0 ml-0.5">
-              <Tooltip delayDuration={300}>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
@@ -431,7 +431,7 @@ export function AppSidebar() {
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip delayDuration={300}>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
@@ -574,7 +574,7 @@ export function AppSidebar() {
                     const Icon = item.icon;
                     const badge = getBadgeInfo(item);
                     return (
-                      <Tooltip key={item.id} delayDuration={isCollapsed ? 200 : 600}>
+                      <Tooltip key={item.id}>
                         <TooltipTrigger asChild>
                         <Link
                           href={item.href}
@@ -652,7 +652,7 @@ export function AppSidebar() {
         {/* 3. SIDEBAR BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
         {/* ========================================================= */}
         <div className="shrink-0 px-3 py-2.5 mt-auto flex items-center">
-          <Tooltip delayDuration={300}>
+          <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
@@ -680,7 +680,7 @@ export function AppSidebar() {
         className="fixed top-1/2 z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
         aria-hidden="true"
       >
-        <Tooltip delayDuration={400}>
+        <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
