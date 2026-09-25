@@ -701,18 +701,28 @@ export function CreateTaskModal({
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 flex flex-col space-y-2.5 min-h-0">
           {/* Error banner if any */}
           {errorMessage && (
-            <div className="flex items-center gap-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0">
-              <AlertCircle className="size-4 shrink-0 text-rose-500" />
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="flex items-center gap-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0"
+            >
+              <AlertCircle className="size-4 shrink-0 text-rose-500" aria-hidden="true" />
               <span className="flex-1 font-medium">{errorMessage}</span>
             </div>
           )}
 
           {/* 1. Task Title (P0 Field) */}
           <div className="space-y-0.5 shrink-0">
+            <label htmlFor="create-task-title" className="sr-only">
+              {initialParentTaskId ? "Tên việc con" : "Tên nhiệm vụ"}
+            </label>
             <input
+              id="create-task-title"
               ref={titleInputRef}
               type="text"
               value={title}
+              aria-invalid={Boolean(fieldErrors.title)}
+              aria-describedby={fieldErrors.title ? "create-task-title-error" : undefined}
               onChange={(e) => {
                 setTitle(e.target.value);
                 if (fieldErrors.title) {
@@ -732,7 +742,7 @@ export function CreateTaskModal({
               )}
             />
             {fieldErrors.title && (
-              <p className="text-[11px] text-rose-600 font-medium">
+              <p id="create-task-title-error" role="alert" className="text-[11px] text-rose-600 font-medium">
                 {fieldErrors.title}
               </p>
             )}
@@ -740,7 +750,11 @@ export function CreateTaskModal({
 
           {/* 2. Short Summary */}
           <div className="shrink-0">
+            <label htmlFor="create-task-summary" className="sr-only">
+              Mô tả ngắn hoặc kết quả kỳ vọng
+            </label>
             <input
+              id="create-task-summary"
               ref={summaryInputRef}
               type="text"
               value={summary}
@@ -927,7 +941,11 @@ export function CreateTaskModal({
 
           {/* 4. Detailed Description / Canvas */}
           <div className="pt-0.5 flex-1 flex flex-col min-h-[120px]">
+            <label htmlFor="create-task-description" className="sr-only">
+              Mô tả chi tiết nhiệm vụ
+            </label>
             <textarea
+              id="create-task-description"
               ref={descriptionTextareaRef}
               value={description}
               onChange={(e) => setDescription(e.target.value)}

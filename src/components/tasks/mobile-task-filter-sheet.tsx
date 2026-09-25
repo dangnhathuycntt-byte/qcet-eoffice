@@ -2,10 +2,17 @@
 
 import * as React from "react";
 import { X, RotateCcw, Check } from "lucide-react";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
 import { Button } from "@/components/ui/button";
-import { fadeVariants, bottomSheetVariants } from "@/lib/motion/variants";
+import {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetHeader,
+  BottomSheetTitle,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetClose,
+} from "@/components/ui/bottom-sheet";
+import { cn } from "@/lib/utils";
 
 export interface MobileTaskFilterSheetProps {
   isOpen: boolean;
@@ -34,98 +41,86 @@ export function MobileTaskFilterSheet({
   onReset,
   activeFilterCount,
 }: MobileTaskFilterSheetProps) {
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!isOpen && !mounted) return null;
-
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Bộ lọc công việc"
-          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden !m-0"
-        >
-          {/* Backdrop */}
-          <m.div
-            key="mobile-filter-backdrop"
-            variants={fadeVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs !m-0"
-            onClick={onClose}
-            aria-hidden="true"
-          />
+    <BottomSheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <BottomSheetContent
+        className="max-h-[85dvh] flex flex-col sm:hidden"
+        aria-label="Bộ lọc công việc"
+      >
+        <BottomSheetHeader className="flex flex-row items-center justify-between pb-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <BottomSheetTitle className="text-base font-semibold text-foreground">
+              Bộ lọc công việc
+            </BottomSheetTitle>
+            {activeFilterCount > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                {activeFilterCount}
+              </span>
+            )}
+            <BottomSheetDescription className="sr-only">
+              Chọn các tiêu chí để lọc danh sách công việc
+            </BottomSheetDescription>
+          </div>
+          <BottomSheetClose asChild>
+            <button
+              type="button"
+              className="size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              aria-label="Đóng bộ lọc"
+            >
+              <X className="h-5 w-5" strokeWidth={1.5} />
+            </button>
+          </BottomSheetClose>
+        </BottomSheetHeader>
 
-          <m.div
-            key="mobile-filter-panel"
-            variants={bottomSheetVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="relative z-10 bg-background rounded-t-xl border-t border-border p-4 max-h-[85vh] flex flex-col shadow-lg overflow-y-auto"
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-foreground">Bộ lọc công việc</h2>
-                {activeFilterCount > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Đóng"
-                className="p-2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
-              >
-                <X className="h-5 w-5" strokeWidth={1.5} />
-              </button>
-            </div>
-
-        <div className="py-4 space-y-4 flex-1">
+        <div className="py-4 space-y-4 flex-1 overflow-y-auto px-5 thin-scrollbar">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-2">Đơn vị</label>
+            <label className="text-xs font-medium text-muted-foreground block mb-2">
+              Đơn vị
+            </label>
             <div className="space-y-1">
               <button
                 type="button"
                 onClick={() => onDepartmentChange("ALL")}
-                className={`w-full text-left px-3 py-2 text-sm rounded-md min-h-[44px] flex items-center justify-between ${
+                className={cn(
+                  "w-full text-left px-3 py-2 text-sm rounded-md min-h-[44px] flex items-center justify-between transition-colors cursor-pointer",
                   departmentFilter === "ALL"
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-foreground hover:bg-muted"
-                }`}
+                )}
               >
                 <span>Tất cả đơn vị</span>
-                {departmentFilter === "ALL" && <Check className="h-4 w-4" strokeWidth={1.5} />}
+                {departmentFilter === "ALL" && (
+                  <Check className="h-4 w-4" strokeWidth={1.5} />
+                )}
               </button>
               {availableDepartments.map((dept) => (
                 <button
                   key={dept.code}
                   type="button"
                   onClick={() => onDepartmentChange(dept.code)}
-                  className={`w-full text-left px-3 py-2 text-sm rounded-md min-h-[44px] flex items-center justify-between ${
+                  className={cn(
+                    "w-full text-left px-3 py-2 text-sm rounded-md min-h-[44px] flex items-center justify-between transition-colors cursor-pointer",
                     departmentFilter === dept.code
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-foreground hover:bg-muted"
-                  }`}
+                  )}
                 >
                   <span>{dept.name}</span>
-                  {departmentFilter === dept.code && <Check className="h-4 w-4" strokeWidth={1.5} />}
+                  {departmentFilter === dept.code && (
+                    <Check className="h-4 w-4" strokeWidth={1.5} />
+                  )}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="pt-3 border-t border-border flex items-center gap-2">
+        <BottomSheetFooter className="pt-3 border-t border-border flex flex-row items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -142,10 +137,8 @@ export function MobileTaskFilterSheet({
           >
             Áp dụng
           </Button>
-        </div>
-          </m.div>
-        </div>
-      )}
-    </AnimatePresence>
+        </BottomSheetFooter>
+      </BottomSheetContent>
+    </BottomSheet>
   );
 }

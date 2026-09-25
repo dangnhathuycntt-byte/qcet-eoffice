@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import {
-  X,
   Printer,
   Copy,
   Check,
@@ -11,9 +9,6 @@ import {
   AlertTriangle,
   FileCheck,
   TrendingUp,
-  User,
-  Calendar,
-  Layers,
   Download,
 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
@@ -27,7 +22,7 @@ import type {
 } from "./executive-cockpit-workspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export interface ExecutiveBriefingModalProps {
@@ -51,29 +46,11 @@ export function ExecutiveBriefingModal({
   approvalQueue,
   referenceDate,
 }: ExecutiveBriefingModalProps): React.JSX.Element | null {
-  const [mounted, setMounted] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
-
-  const dialogRef = useFocusTrap<HTMLDivElement>({
-    isOpen: mounted && isOpen,
-    onClose,
-  });
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Sort departments by completion rate descending for briefing review
   const sortedDepartments = React.useMemo(() => {
     return [...radarItems].sort((a, b) => b.completionRate - a.completionRate);
-  }, [radarItems]);
-
-  // Delayed / red departments
-  const laggingDepartments = React.useMemo(() => {
-    return radarItems.filter(
-      (dept) =>
-        dept.healthStatus === "RED" || dept.delayedTasks + dept.blockedTasks > 0
-    );
   }, [radarItems]);
 
   const handlePrint = () => {
@@ -168,64 +145,20 @@ export function ExecutiveBriefingModal({
     });
   };
 
-  if (!mounted || !isOpen) return null;
-
-  return createPortal(
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="briefing-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+  return (
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="Báo Cáo Giao Ban Điều Hành Ban Giám Hiệu"
+      description={`TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN · ${user.name} (${user.roleLabel || "Ban Giám Hiệu"}) · Học kỳ I · Năm học 2026-2027`}
+      size="xl"
+      className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-4xl"
     >
-      <div
-        className={cn(
-          "relative flex flex-col w-full max-w-4xl max-h-[90vh] bg-background text-foreground",
-          "rounded-2xl border border-border/80 shadow-2xl overflow-hidden"
-        )}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-border/70 bg-muted/30">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground">
-                TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN
-              </span>
-            </div>
-            <h2
-              id="briefing-modal-title"
-              className="text-lg sm:text-xl font-bold tracking-tight text-foreground"
-            >
-              Báo Cáo Giao Ban Điều Hành Ban Giám Hiệu
-            </h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1">
-                <User className="w-3.5 h-3.5" />
-                {user.name} ({user.roleLabel || "Ban Giám Hiệu"})
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" />
-                Học kỳ I · Năm học 2026-2027
-              </span>
-              <span>•</span>
-              <span>11 phòng, khoa, trung tâm</span>
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="print:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg cursor-pointer transition-colors"
-            aria-label="Đóng báo cáo giao ban"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Modal Body: Printable Briefing Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
+        {/* Printable Briefing Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Section 1: Executive KPI Strip */}
           <div className="space-y-2.5">
             <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
@@ -483,12 +416,12 @@ export function ExecutiveBriefingModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="print:hidden flex items-center justify-between p-4 border-t border-border/70 bg-muted/20">
+        <div className="print:hidden flex flex-col sm:flex-row items-center justify-between gap-3 p-4 px-6 border-t border-border/70 bg-muted/20">
           <div className="text-xs text-muted-foreground">
             Bản quyền hệ sinh thái số QCET · Phục vụ họp giao ban lãnh đạo
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -542,7 +475,6 @@ export function ExecutiveBriefingModal({
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </StandardDialog>
   );
 }

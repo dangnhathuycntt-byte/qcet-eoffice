@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import {
-  X,
   ShieldAlert,
   Calendar,
   UserCheck,
@@ -18,6 +16,7 @@ import { QCET_UNIT_CANONICAL_MAP } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -146,8 +145,6 @@ export function DelegationManagementModal({
   onSaveDelegation,
   onRevokeDelegation,
 }: DelegationManagementModalProps) {
-  const [mounted, setMounted] = React.useState(false);
-
   // Department metadata
   const dept = React.useMemo(() => {
     return findDepartment(departmentCode);
@@ -169,10 +166,6 @@ export function DelegationManagementModal({
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Filter delegations for current department
   const currentDeptDelegations = React.useMemo(() => {
@@ -268,68 +261,28 @@ export function DelegationManagementModal({
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
-  if (!isOpen || !mounted) return null;
-
-  const modalContent = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delegation-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+  return (
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="Quản lý Quyết định Ủy quyền Thẩm quyền"
+      description={`Đơn vị: ${dept?.name || effectiveDeptCode} (${effectiveDeptCode})`}
+      size="xl"
+      className="max-h-[92vh] flex flex-col overflow-hidden sm:max-w-5xl"
     >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-        onClick={onClose}
-      />
-
-      {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl border border-border/80 bg-card shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden my-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-6 bg-muted/20">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <ShieldAlert className="size-5" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h2
-                id="delegation-modal-title"
-                className="text-base sm:text-lg font-semibold text-foreground tracking-tight"
-              >
-                Quản lý Quyết định Ủy quyền Thẩm quyền
-              </h2>
-              <p className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                <span>Đơn vị:</span>
-                <span className="font-semibold text-foreground">
-                  {dept?.name || effectiveDeptCode}
-                </span>
-                <span className="font-mono tabular-nums px-1.5 py-0.2 rounded border border-border/70 bg-muted/50 text-xs">
-                  {effectiveDeptCode}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng cửa sổ"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-          >
-            <X className="size-4" strokeWidth={1.5} />
-          </button>
-        </div>
-
+      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
         {/* Success Alert Banner */}
         {successMessage && (
-          <div className="mx-5 mt-4 sm:mx-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 flex items-center gap-2">
+          <div className="mx-6 mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 flex items-center gap-2">
             <UserCheck className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />
             <span className="font-medium">{successMessage}</span>
           </div>
         )}
 
         {/* Modal Body: Split 2 columns (Form & List) */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 thin-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-4 thin-scrollbar">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column: Form Tạo Ủy Quyền (5 cols) */}
             <div className="lg:col-span-5 space-y-4 rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-xs">
@@ -715,7 +668,7 @@ export function DelegationManagementModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-border/60 px-5 py-3 sm:px-6 bg-muted/10 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border/60 px-6 py-3 bg-muted/10 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <ShieldAlert className="size-3.5 text-primary" strokeWidth={1.5} />
             Hệ thống phân quyền ủy quyền chuẩn Stanford / QCET E-Office
@@ -731,8 +684,6 @@ export function DelegationManagementModal({
           </Button>
         </div>
       </div>
-    </div>
+    </StandardDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

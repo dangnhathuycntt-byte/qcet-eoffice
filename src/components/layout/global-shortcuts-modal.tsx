@@ -7,6 +7,7 @@ import {
   Command,
   ListTodo,
   Sparkles,
+  X,
 } from "lucide-react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -120,11 +121,34 @@ export function GlobalShortcutsModal() {
       title="Phím tắt bàn phím"
       description="Tra cứu nhanh các phím tắt điều phối công việc trong hệ thống QCET"
       size="lg"
+      showHeader={false}
+      showCloseButton={false}
       className="max-h-[85vh] flex flex-col p-0 overflow-hidden"
     >
       <div className="flex flex-col flex-1 min-h-0">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/40">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+              <Keyboard className="size-4.5 text-primary" strokeWidth={1.5} />
+              <span>Phím tắt bàn phím</span>
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Tra cứu nhanh các phím tắt điều phối công việc trong hệ thống QCET
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] cursor-pointer"
+            aria-label="Đóng"
+          >
+            <X className="size-4" strokeWidth={1.5} />
+          </button>
+        </div>
+
         {/* Quick Search in Shortcuts */}
-        <div className="border-b border-border px-4 py-2.5 flex items-center gap-2 bg-muted/20">
+        <div className="border-b border-border px-6 py-2.5 flex items-center gap-2 bg-muted/20">
           <Search size={14} className="text-muted-foreground/60 shrink-0" />
           <input
             type="text"
@@ -146,7 +170,7 @@ export function GlobalShortcutsModal() {
         </div>
 
         {/* Body List */}
-        <div className="overflow-y-auto p-4 space-y-4 thin-scrollbar flex-1 max-h-[50vh]">
+        <div className="overflow-y-auto px-6 py-4 space-y-4 thin-scrollbar flex-1 max-h-[50vh]">
           {filteredGroups.length === 0 ? (
             <div className="text-center py-8 text-xs text-muted-foreground">
               Không tìm thấy phím tắt phù hợp với từ khóa &ldquo;{searchQuery}&rdquo;
@@ -201,7 +225,7 @@ export function GlobalShortcutsModal() {
         </div>
 
         {/* Footer Note */}
-        <div className="border-t border-border px-4 py-2 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="border-t border-border px-6 py-2.5 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
           <span>
             Nhấn <kbd className="px-1 py-0.5 font-mono text-[10px] bg-background rounded border border-border/80 text-foreground">?</kbd> bất cứ lúc nào để mở bảng này
           </span>

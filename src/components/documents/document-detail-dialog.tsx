@@ -2,15 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { StandardDialog } from "@/components/ui/dialog";
 import {
-  X,
   FileText,
   Calendar,
   Building2,
   User,
   ExternalLink,
   Download,
-  AlertTriangle,
   CheckCircle2,
   Clock,
   Send,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { OfficialDocument, DocumentUrgency, DocumentStatus } from "@/types/document";
 import { Button } from "@/components/ui/button";
+import { DocumentAuditTimeline } from "./document-audit-timeline";
 
 interface DocumentDetailDialogProps {
   document: OfficialDocument | null;
@@ -35,21 +35,25 @@ export function getUrgencyBadgeConfig(urgency: DocumentUrgency): {
 } {
   switch (urgency) {
     case "flash":
+    case "HOA_TOC":
       return {
         label: "Hỏa tốc",
         className: "bg-red-500/15 text-red-700 border-red-500/30 font-bold animate-pulse",
       };
     case "top_urgent":
+    case "THUONG_KHAN":
       return {
         label: "Thượng khẩn",
         className: "bg-rose-500/15 text-rose-700 border-rose-500/30 font-semibold",
       };
     case "urgent":
+    case "KHAN":
       return {
         label: "Khẩn",
         className: "bg-amber-500/15 text-amber-700 border-amber-500/30 font-medium",
       };
     case "normal":
+    case "THUONG":
     default:
       return {
         label: "Thường",
@@ -65,12 +69,14 @@ export function getStatusBadgeConfig(status: DocumentStatus): {
 } {
   switch (status) {
     case "pending_assignment":
+    case "CHO_PHAN_CONG":
       return {
         label: "Chờ bút phê",
         className: "bg-amber-500/10 text-amber-700 border-amber-500/20",
         icon: Clock,
       };
     case "processing":
+    case "DANG_XU_LY":
       return {
         label: "Đang xử lý",
         className: "bg-blue-500/10 text-blue-700 border-blue-500/20",
@@ -83,12 +89,15 @@ export function getStatusBadgeConfig(status: DocumentStatus): {
         icon: CheckCircle2,
       };
     case "approved":
+    case "CHO_PHE_DUYET":
       return {
         label: "Đã ký duyệt",
         className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
         icon: ShieldCheck,
       };
     case "completed":
+    case "DA_HOAN_THANH":
+    case "LUU_THEO_DOI":
     default:
       return {
         label: "Hoàn tất & Lưu trữ",
@@ -104,17 +113,7 @@ export function DocumentDetailDialog({
   onClose,
   onViewPdf,
 }: DocumentDetailDialogProps) {
-  // ESC key handler
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen || !doc) return null;
+  if (!doc) return null;
 
   const urgencyConfig = getUrgencyBadgeConfig(doc.urgency);
   const statusConfig = getStatusBadgeConfig(doc.status);
@@ -132,63 +131,42 @@ export function DocumentDetailDialog({
   const TypeIcon = currentType.icon;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="doc-detail-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={onClose}
+    <StandardDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={doc.documentNumber}
+      description={doc.summary}
+      size="xl"
+      className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-2xl lg:max-w-3xl"
     >
-      <div
-        className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-card border-0 sm:border border-border/70 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="flex items-start justify-between p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-          <div className="flex items-start gap-3 min-w-0 pr-2">
-            <div
-              className={`p-2.5 rounded-xl border border-border/40 shrink-0 ${currentType.color}`}
-            >
-              <TypeIcon className="size-5" strokeWidth={1.5} />
+      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
+        {/* Modal Scrollable Body */}
+        <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
+          {/* Header Badges Bar */}
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+            <div className={`p-2 rounded-lg border border-border/40 shrink-0 ${currentType.color}`}>
+              <TypeIcon className="size-4" strokeWidth={1.5} />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {currentType.label}
-                </span>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs border ${urgencyConfig.className}`}
-                >
-                  {urgencyConfig.label}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border ${statusConfig.className}`}
-                >
-                  <StatusIcon className="size-3" strokeWidth={1.5} />
-                  <span>{statusConfig.label}</span>
-                </span>
-              </div>
-              <h2
-                id="doc-detail-title"
-                className="text-base sm:text-lg font-bold font-mono text-foreground tracking-tight tabular-nums"
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground">
+                {currentType.label}
+              </span>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs border ${urgencyConfig.className}`}
               >
-                {doc.documentNumber}
-              </h2>
+                {urgencyConfig.label}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border ${statusConfig.className}`}
+              >
+                <StatusIcon className="size-3" strokeWidth={1.5} />
+                <span>{statusConfig.label}</span>
+              </span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 cursor-pointer"
-          >
-            <X className="size-5" strokeWidth={1.5} />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Summary */}
           <div>
             <span className="text-xs font-semibold text-muted-foreground block mb-1.5">
@@ -229,14 +207,21 @@ export function DocumentDetailDialog({
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Calendar className="size-3.5" strokeWidth={1.5} />
                 <span className="font-medium">
-                  {doc.type === "inbox" ? "Ngày vào sổ đến:" : "Đơn vị chủ trì:"}
+                  {doc.type === "inbox" || doc.type === "VAN_BAN_DEN"
+                    ? "Ngày vào sổ đến:"
+                    : "Đơn vị chủ trì:"}
                 </span>
               </div>
               <p className="font-medium text-foreground pl-5">
-                {doc.type === "inbox" ? doc.receivedDate || doc.issuedDate : doc.leadDepartment}
+                {doc.type === "inbox" || doc.type === "VAN_BAN_DEN"
+                  ? doc.receivedDate || doc.issuedDate
+                  : doc.leadDepartment}
               </p>
             </div>
           </div>
+
+          {/* Document Audit Timeline & Circulation Stepper */}
+          <DocumentAuditTimeline documentId={doc.id} initialDoc={doc} />
 
           {/* Leadership Directives (Bút phê chỉ đạo) */}
           <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-1.5">
@@ -324,24 +309,43 @@ export function DocumentDetailDialog({
                     <span>Xem PDF</span>
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="min-h-[44px] px-3 gap-1.5 text-xs rounded-xl font-medium cursor-pointer"
-                  onClick={() => {
-                    alert(`Đang mở tải tệp đính kèm: ${doc.fileAttachment?.name}`);
-                  }}
-                >
-                  <Download className="size-4" strokeWidth={1.5} />
-                  <span className="hidden sm:inline">Tải về</span>
-                </Button>
+                {doc.fileAttachment.url ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[44px] px-3 gap-1.5 text-xs rounded-xl font-medium cursor-pointer"
+                  >
+                    <a
+                      href={doc.fileAttachment.url}
+                      download={doc.fileAttachment.name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Download className="size-4" strokeWidth={1.5} />
+                      <span className="hidden sm:inline">Tải về</span>
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-[44px] px-3 gap-1.5 text-xs rounded-xl font-medium cursor-pointer"
+                    onClick={() => {
+                      alert(`Đang mở tải tệp đính kèm: ${doc.fileAttachment?.name}`);
+                    }}
+                  >
+                    <Download className="size-4" strokeWidth={1.5} />
+                    <span className="hidden sm:inline">Tải về</span>
+                  </Button>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between p-3.5 sm:p-4 border-t border-border/60 bg-muted/20">
+        <div className="flex items-center justify-between p-3.5 sm:p-4 border-t border-border/60 bg-muted/20 shrink-0 px-6">
           <Button
             variant="ghost"
             size="sm"
@@ -364,6 +368,6 @@ export function DocumentDetailDialog({
           </div>
         </div>
       </div>
-    </div>
+    </StandardDialog>
   );
 }

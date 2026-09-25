@@ -917,7 +917,7 @@ export function ExecutiveCalendarWorkspace({
           {[
             { id: "ALL", label: "Tất cả mốc" },
             { id: "school_milestone", label: "Mốc trường" },
-            { id: "deliverable", label: "Sản phẩm minh chứng" },
+            { id: "deliverable", label: "Sản phẩm DACUM" },
             { id: "subtask", label: "Việc đơn vị" },
           ].map((typeOpt) => (
             <button

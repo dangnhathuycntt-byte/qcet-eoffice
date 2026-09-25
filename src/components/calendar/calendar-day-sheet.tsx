@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence } from "motion/react";
-import * as m from "motion/react-m";
+import { Dialog as BaseDialog } from "@base-ui/react/dialog";
+import { Menu as BaseMenu } from "@base-ui/react/menu";
 import {
   AlertTriangle,
   Calendar as CalendarIcon,
@@ -28,7 +27,6 @@ import {
   type CalendarAttentionState,
   type CalendarDayFilter,
 } from "@/lib/calendar/calendar-presentation";
-import { sideSheetVariants } from "@/lib/motion/variants";
 
 export interface DayTaskItem {
   id: string;
@@ -119,61 +117,14 @@ export function CalendarDaySheet({
   onAddEventOnDate,
   className,
 }: CalendarDaySheetProps) {
-  const [mounted, setMounted] = React.useState(false);
   const [filter, setFilter] = React.useState<CalendarDayFilter>("all");
   const [query, setQuery] = React.useState("");
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false);
-  const [isCreateMenuOpen, setIsCreateMenuOpen] = React.useState(false);
-  const filterMenuRef = React.useRef<HTMLDivElement>(null);
-  const createMenuRef = React.useRef<HTMLDivElement>(null);
-  const panelRef = React.useRef<HTMLElement>(null);
   const referenceDate = getSystemReferenceDate();
-
-  React.useEffect(() => setMounted(true), []);
-
-  // Focus panel on open for accessibility without trapping background pointer events
-  React.useEffect(() => {
-    if (isOpen && panelRef.current) {
-      panelRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Click outside listener for dropdown menus
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (createMenuRef.current && !createMenuRef.current.contains(target)) {
-        setIsCreateMenuOpen(false);
-      }
-      if (filterMenuRef.current && !filterMenuRef.current.contains(target)) {
-        setIsFilterMenuOpen(false);
-      }
-    };
-    if (isCreateMenuOpen || isFilterMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCreateMenuOpen, isFilterMenuOpen]);
-
-  // Keyboard Escape listener (no body scroll lock so background calendar is interactive)
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
 
   // Reset filters and query whenever active date changes
   React.useEffect(() => {
     setFilter("all");
     setQuery("");
-    setIsFilterMenuOpen(false);
-    setIsCreateMenuOpen(false);
   }, [selectedDate]);
 
   const summary = React.useMemo(
@@ -210,8 +161,6 @@ export function CalendarDaySheet({
     () => visibleTasks.filter((item) => !isAttention(item)),
     [visibleTasks, isAttention]
   );
-
-  if (!mounted) return null;
 
   const formattedDate = selectedDate ? formatDateVi(selectedDate) : "Chưa chọn ngày";
 
@@ -336,162 +285,125 @@ export function CalendarDaySheet({
     );
   };
 
-  const content = (
-    <AnimatePresence>
-      {isOpen && (
-        <m.aside
-          key="calendar-day-sheet-panel"
-          ref={panelRef}
-          tabIndex={-1}
+  return (
+    <BaseDialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <BaseDialog.Portal keepMounted={isOpen}>
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-150 motion-safe:transition-opacity motion-safe:duration-150" />
+        <BaseDialog.Popup
           data-slot="calendar-day-sheet-panel"
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby="calendar-day-sheet-title"
-          variants={sideSheetVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
           className={cn(
-            "fixed inset-y-0 right-0 z-40 flex h-full flex-col bg-card border-l border-border/70 shadow-2xl outline-none w-full sm:w-[440px]",
+            "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:w-[440px] flex-col bg-card border-l border-border/70 shadow-2xl outline-none",
+            "motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-200",
             className
           )}
         >
           {/* Sticky Side Peek Header */}
-          <header className="sticky top-0 z-10 border-b border-border/60 bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2
-                id="calendar-day-sheet-title"
-                className="text-sm font-semibold text-foreground truncate font-heading tracking-tight"
-              >
+          <header className="sticky top-0 z-10 border-b border-border/60 bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-2 shrink-0">
+            <div className="min-w-0 flex-1">
+              <BaseDialog.Title className="text-sm font-semibold text-foreground truncate font-heading tracking-tight">
                 {formattedDate}
-              </h2>
+              </BaseDialog.Title>
+              <BaseDialog.Description className="sr-only">
+                Chi tiết các nhiệm vụ và sự kiện trong ngày {formattedDate}
+              </BaseDialog.Description>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* [filter] compact control */}
-              <div className="relative" ref={filterMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsFilterMenuOpen((prev) => !prev)}
+              {/* [filter] BaseMenu dropdown */}
+              <BaseMenu.Root>
+                <BaseMenu.Trigger
                   className={cn(
-                    "inline-flex items-center gap-1 h-7.5 px-2 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+                    "inline-flex items-center gap-1 h-7.5 px-2 rounded-md text-xs font-medium border transition-colors cursor-pointer active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     filter !== "all"
                       ? "border-primary/40 bg-primary/10 text-primary font-semibold"
                       : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   )}
-                  aria-haspopup="true"
-                  aria-expanded={isFilterMenuOpen}
                   aria-label="Lọc trạng thái"
                 >
                   <Filter className="size-3" strokeWidth={1.5} />
                   <span>{filterLabels[filter]}</span>
                   <ChevronDown className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
-                </button>
+                </BaseMenu.Trigger>
+                <BaseMenu.Portal>
+                  <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
+                    <BaseMenu.Popup className="z-50 w-36 rounded-lg border border-border/70 bg-popover p-1 text-popover-foreground shadow-lg outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+                      {(["all", "attention", "overdue", "waiting"] as const).map((key) => {
+                        const counts = {
+                          all: summary.total,
+                          attention: summary.attention,
+                          overdue: summary.overdue,
+                          waiting: summary.waiting,
+                        };
+                        return (
+                          <BaseMenu.Item
+                            key={key}
+                            onClick={() => setFilter(key)}
+                            className={cn(
+                              "w-full flex items-center justify-between rounded px-2 py-1.5 text-xs text-left transition-colors cursor-pointer outline-none select-none",
+                              filter === key
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60"
+                            )}
+                          >
+                            <span>{filterLabels[key]}</span>
+                            <span className="font-mono tabular-nums text-muted-foreground text-xs">
+                              {counts[key]}
+                            </span>
+                          </BaseMenu.Item>
+                        );
+                      })}
+                    </BaseMenu.Popup>
+                  </BaseMenu.Positioner>
+                </BaseMenu.Portal>
+              </BaseMenu.Root>
 
-                {isFilterMenuOpen && (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-border/70 bg-card p-1 shadow-lg z-20 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
-                  >
-                    {(["all", "attention", "overdue", "waiting"] as const).map((key) => {
-                      const counts = {
-                        all: summary.total,
-                        attention: summary.attention,
-                        overdue: summary.overdue,
-                        waiting: summary.waiting,
-                      };
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setFilter(key);
-                            setIsFilterMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center justify-between rounded px-2 py-1.5 text-left transition-colors cursor-pointer",
-                            filter === key
-                              ? "bg-primary/10 text-primary font-semibold"
-                              : "text-foreground hover:bg-muted/60"
-                          )}
-                        >
-                          <span>{filterLabels[key]}</span>
-                          <span className="font-mono tabular-nums text-muted-foreground text-xs">
-                            {counts[key]}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* [+ Tạo] action */}
+              {/* [+ Tạo] action BaseMenu dropdown */}
               {selectedDate && (
-                <div className="relative" ref={createMenuRef}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsCreateMenuOpen((prev) => !prev)}
-                    className="h-7.5 px-2 text-xs font-medium gap-1 rounded-md border-border/70 hover:bg-muted/50 cursor-pointer"
-                    aria-haspopup="true"
-                    aria-expanded={isCreateMenuOpen}
+                <BaseMenu.Root>
+                  <BaseMenu.Trigger
+                    className="inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label="Tạo mới nhiệm vụ hoặc sự kiện"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
                     <span>Tạo</span>
                     <ChevronDown className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
-                  </Button>
-                  {isCreateMenuOpen && (
-                    <div
-                      role="menu"
-                      className="absolute right-0 top-full mt-1 w-44 rounded-lg border border-border/70 bg-card p-1 shadow-lg z-20 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setIsCreateMenuOpen(false);
-                          onAddTaskOnDate?.(selectedDate);
-                        }}
-                        className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-left text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-                      >
-                        <CheckSquare className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
-                        <span>Nhiệm vụ hạn ngày này</span>
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setIsCreateMenuOpen(false);
-                          onAddEventOnDate?.(selectedDate);
-                        }}
-                        className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-left text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-                      >
-                        <CalendarIcon className="size-3.5 text-sky-600 shrink-0" strokeWidth={1.5} />
-                        <span>Sự kiện ngày này</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  </BaseMenu.Trigger>
+                  <BaseMenu.Portal>
+                    <BaseMenu.Positioner side="bottom" align="end" sideOffset={4} className="z-50 outline-none">
+                      <BaseMenu.Popup className="z-50 w-44 rounded-lg border border-border/70 bg-popover p-1 text-popover-foreground shadow-lg outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+                        <BaseMenu.Item
+                          onClick={() => onAddTaskOnDate?.(selectedDate)}
+                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
+                        >
+                          <CheckSquare className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                          <span>Nhiệm vụ hạn ngày này</span>
+                        </BaseMenu.Item>
+                        <BaseMenu.Item
+                          onClick={() => onAddEventOnDate?.(selectedDate)}
+                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left text-foreground hover:bg-muted/60 data-[highlighted]:bg-muted/60 transition-colors cursor-pointer outline-none select-none"
+                        >
+                          <CalendarIcon className="size-3.5 text-sky-600 shrink-0" strokeWidth={1.5} />
+                          <span>Sự kiện ngày này</span>
+                        </BaseMenu.Item>
+                      </BaseMenu.Popup>
+                    </BaseMenu.Positioner>
+                  </BaseMenu.Portal>
+                </BaseMenu.Root>
               )}
 
-              {/* [×] close */}
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex size-7.5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              {/* [×] Close */}
+              <BaseDialog.Close
+                className="inline-flex size-7.5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Đóng chi tiết ngày"
               >
                 <X className="size-4" strokeWidth={1.5} />
-              </button>
+              </BaseDialog.Close>
             </div>
           </header>
 
           {/* Compact search: only visible if total tasks > 10 */}
           {tasks.length > 10 && (
-            <div className="px-4 py-1.5 border-b border-border/40 bg-muted/10">
+            <div className="px-4 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
               <div className="relative">
                 <Search
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground/60"
@@ -565,12 +477,10 @@ export function CalendarDaySheet({
               </div>
             )}
           </div>
-        </m.aside>
-      )}
-    </AnimatePresence>
+        </BaseDialog.Popup>
+      </BaseDialog.Portal>
+    </BaseDialog.Root>
   );
-
-  return createPortal(content, document.body);
 }
 
 export default CalendarDaySheet;

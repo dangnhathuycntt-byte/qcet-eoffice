@@ -55,7 +55,6 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { StandardMenu } from "@/components/ui/menu";
 import {
   type SavedTaskView,
   type TaskViewCriteria,
@@ -560,22 +559,6 @@ export function UnifiedTaskToolbar({
   const [isDepartmentOpen, setIsDepartmentOpen] = React.useState(false);
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
-
-  const closeAllMenus = React.useCallback(() => {
-    setIsMonthOpen(false);
-    setIsStatusOpen(false);
-    setIsDeadlineOpen(false);
-    setIsPriorityOpen(false);
-    setIsDepartmentOpen(false);
-    setIsCollapsedFilterOpen(false);
-    setIsDisplayOpen(false);
-  }, []);
-  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
-
-  const priorityMenuRef = React.useRef<HTMLDivElement>(null);
-  const departmentMenuRef = React.useRef<HTMLDivElement>(null);
-  const collapsedFilterRef = React.useRef<HTMLDivElement>(null);
-  const displayMenuRef = React.useRef<HTMLDivElement>(null);
 
   const closeAllMenus = React.useCallback(() => {
     setIsMonthOpen(false);
@@ -1625,51 +1608,50 @@ export function UnifiedTaskToolbar({
 
         {/* 6. Đơn vị Filter (Direct on desktop >= lg - only when relevant to scope) */}
         {showDepartmentFilter && (
-          <div className="hidden lg:block relative shrink-0" ref={departmentMenuRef}>
-            <button
-              type="button"
-              aria-label="Lọc đơn vị"
-              aria-expanded={isDepartmentOpen}
-              onClick={() => {
-                const next = !isDepartmentOpen;
-                closeAllMenus();
-                setIsDepartmentOpen(next);
-              }}
-              className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                isDepartmentActive
-                  ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                  : "border-border/80 bg-background text-foreground hover:bg-accent"
-              )}
-            >
-              <span>{departmentLabel}</span>
-              {isDepartmentActive ? (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDepartmentChange?.("ALL");
-                  }}
-                  title="Xóa lọc đơn vị"
-                  aria-label="Xóa lọc đơn vị"
-                  className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                >
-                  <X className="size-3" strokeWidth={2} />
-                </span>
-              ) : (
-                <ChevronDown
-                  className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDepartmentOpen && "rotate-180")}
-                  strokeWidth={1.5}
-                />
-              )}
-            </button>
+          <div className="hidden lg:block shrink-0">
+            <PopoverRoot open={isDepartmentOpen} onOpenChange={setIsDepartmentOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label="Lọc đơn vị"
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
+                      isDepartmentActive
+                        ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                        : "border-border/80 bg-background text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <span>{departmentLabel}</span>
+                    {isDepartmentActive ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDepartmentChange?.("ALL");
+                        }}
+                        title="Xóa lọc đơn vị"
+                        aria-label="Xóa lọc đơn vị"
+                        className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
+                      >
+                        <X className="size-3" strokeWidth={2} />
+                      </span>
+                    ) : (
+                      <ChevronDown
+                        className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDepartmentOpen && "rotate-180")}
+                        strokeWidth={1.5}
+                      />
+                    )}
+                  </button>
+                }
+              />
 
-            {isDepartmentOpen && (
-              <div
-                className="absolute left-0 top-full mt-1.5 z-50 w-56 rounded-xl border border-border bg-popover py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground max-h-60 overflow-y-auto"
-                role="dialog"
-                aria-label="Chọn đơn vị"
+              <PopoverContent
+                align="start"
+                side="bottom"
+                sideOffset={6}
+                className="w-56 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground max-h-60 overflow-y-auto"
               >
                 <button
                   type="button"
@@ -1711,43 +1693,42 @@ export function UnifiedTaskToolbar({
                       </button>
                     );
                   })}
-              </div>
-            )}
+              </PopoverContent>
+            </PopoverRoot>
           </div>
         )}
 
         {/* Collapsed Secondary Filters on Narrower Screens (< 1024px / lg:hidden) */}
-        <div className="lg:hidden relative shrink-0" ref={collapsedFilterRef}>
-          <button
-            type="button"
-            aria-label="Bộ lọc bổ sung"
-            aria-expanded={isCollapsedFilterOpen}
-            onClick={() => {
-              const next = !isCollapsedFilterOpen;
-              closeAllMenus();
-              setIsCollapsedFilterOpen(next);
-            }}
-            className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-              isCollapsedFilterOpen || secondaryFiltersActiveCount > 0
-                ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                : "border-border/80 bg-background text-foreground hover:bg-accent"
-            )}
-          >
-            <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-            <span>Bộ lọc</span>
-            {secondaryFiltersActiveCount > 0 && (
-              <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary text-primary-foreground">
-                {secondaryFiltersActiveCount}
-              </span>
-            )}
-          </button>
+        <div className="lg:hidden shrink-0">
+          <PopoverRoot open={isCollapsedFilterOpen} onOpenChange={setIsCollapsedFilterOpen}>
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Bộ lọc bổ sung"
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                    isCollapsedFilterOpen || secondaryFiltersActiveCount > 0
+                      ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                      : "border-border/80 bg-background text-foreground hover:bg-accent"
+                  )}
+                >
+                  <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <span>Bộ lọc</span>
+                  {secondaryFiltersActiveCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary text-primary-foreground">
+                      {secondaryFiltersActiveCount}
+                    </span>
+                  )}
+                </button>
+              }
+            />
 
-          {isCollapsedFilterOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-50 w-72 rounded-xl border border-border bg-popover p-3 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-              role="dialog"
-              aria-label="Bảng chọn bộ lọc bổ sung"
+            <PopoverContent
+              align="start"
+              side="bottom"
+              sideOffset={6}
+              className="w-72 rounded-xl border border-border bg-popover p-3 shadow-xl z-50 text-xs text-popover-foreground"
             >
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
                 <span className="font-semibold text-foreground">Bộ lọc</span>
@@ -1823,8 +1804,8 @@ export function UnifiedTaskToolbar({
                   </button>
                 </div>
               )}
-            </div>
-          )}
+            </PopoverContent>
+          </PopoverRoot>
         </div>
 
         {/* Active Filter Summary & Xóa tất cả Action */}
@@ -1848,31 +1829,30 @@ export function UnifiedTaskToolbar({
 
         {/* 8. Hiển thị Menu Trigger (Right side - pinned, compact icon + tooltip) */}
         {onViewModeChange && (
-          <div className="ml-auto relative shrink-0" ref={displayMenuRef}>
-            <button
-              type="button"
-              title="Hiển thị"
-              aria-label="Tùy chọn hiển thị"
-              aria-expanded={isDisplayOpen}
-              onClick={() => {
-                const next = !isDisplayOpen;
-                closeAllMenus();
-                setIsDisplayOpen(next);
-              }}
-              className={cn(
-                "inline-flex h-8 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-                isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
-              )}
-            >
-              <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-              <span className="hidden sm:inline">Hiển thị</span>
-            </button>
+          <div className="ml-auto shrink-0">
+            <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    title="Hiển thị"
+                    aria-label="Tùy chọn hiển thị"
+                    className={cn(
+                      "inline-flex h-8 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
+                      isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <span className="hidden sm:inline">Hiển thị</span>
+                  </button>
+                }
+              />
 
-            {isDisplayOpen && (
-              <div
-                className="absolute right-0 top-full mt-1.5 z-50 w-36 rounded-xl border border-border bg-popover py-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100 text-xs text-popover-foreground"
-                role="dialog"
-                aria-label="Tùy chọn hiển thị"
+              <PopoverContent
+                align="end"
+                side="bottom"
+                sideOffset={6}
+                className="w-36 rounded-xl border border-border bg-popover py-1.5 shadow-xl z-50 text-xs text-popover-foreground"
               >
                 <button
                   type="button"
@@ -1909,8 +1889,8 @@ export function UnifiedTaskToolbar({
                   </div>
                   {viewMode === "kanban" && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
                 </button>
-              </div>
-            )}
+              </PopoverContent>
+            </PopoverRoot>
           </div>
         )}
       </div>
