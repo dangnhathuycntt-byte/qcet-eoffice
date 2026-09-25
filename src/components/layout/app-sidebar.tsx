@@ -95,7 +95,7 @@ export interface DesktopSidebarItem extends CanonicalRouteConfig {
 }
 
 export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
-  .filter((item) => item.id !== "settings" && item.id !== "documents" && item.id !== "desk")
+  .filter((item) => item.id !== "settings" && item.id !== "desk")
   .map((item) => ({
     ...item,
     icon: ICON_MAP[item.iconName] || LayoutDashboard,

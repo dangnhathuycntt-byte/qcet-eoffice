@@ -38,6 +38,7 @@ import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { DirectInlineEditor } from "./direct-inline-editor";
+import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import {
   taskStateMachine,
   buildActorContext,
@@ -215,6 +216,13 @@ export function TaskIdentityBlock({
 
   return (
     <section data-slot="task-identity-block" className={cn("space-y-4 relative z-30", className)}>
+      {/* 0. Linked Official Source Document (nếu có) */}
+      {isSchoolTask(task) && task.sourceDocument && (
+        <div className="pb-1">
+          <TaskSourceDocumentBadge sourceDocument={task.sourceDocument} />
+        </div>
+      )}
+
       {/* 1. Title Area */}
       <div className="w-full min-w-0 space-y-1">
           {/* Direct Inline Editable Title with exact caret positioning */}
