@@ -312,6 +312,35 @@ describe("plate-block-codec", () => {
       const serialized = serializePlateValue(plateValue);
       assert.equal(serialized, "");
     });
+
+    it("image with caption updates and serializes properly to QCET JSON", () => {
+      const raw = JSON.stringify({
+        qcetBlocks: true,
+        version: 1,
+        blocks: [
+          {
+            id: "img-1",
+            type: "image",
+            url: "https://qcet.edu.vn/logo.png",
+            caption: "Logo QCET ban đầu",
+            imageWidth: 75,
+          },
+        ],
+      });
+      const plateValue = parseToPlateValue(raw);
+      assert.equal(plateValue[0].caption, "Logo QCET ban đầu");
+
+      // Simulate caption update in editor
+      plateValue[0].caption = "Logo QCET cập nhật mới";
+      plateValue[0].children = [{ text: "Logo QCET cập nhật mới" }];
+
+      const serialized = serializePlateValue(plateValue);
+      const parsed = JSON.parse(serialized);
+      assert.equal(parsed.blocks[0].type, "image");
+      assert.equal(parsed.blocks[0].caption, "Logo QCET cập nhật mới");
+      assert.equal(parsed.blocks[0].url, "https://qcet.edu.vn/logo.png");
+      assert.equal(parsed.blocks[0].imageWidth, 75);
+    });
   });
 
   describe("isMeaningfulBlock", () => {

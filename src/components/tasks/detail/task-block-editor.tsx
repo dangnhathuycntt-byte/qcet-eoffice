@@ -675,9 +675,36 @@ function TocEl({ attributes, children }: any) {
 function ImageEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const { url, caption, imageWidth = 100 } = element;
+  const [captionValue, setCaptionValue] = React.useState(caption || "");
+
+  React.useEffect(() => {
+    setCaptionValue(caption || "");
+  }, [caption]);
+
+  const commitCaption = React.useCallback((newCaption: string) => {
+    if (editor.api.isReadOnly()) return;
+    const path = editor.api.findPath(element);
+    if (path) {
+      editor.tf.setNodes(
+        { caption: newCaption, content: newCaption } as any,
+        { at: path }
+      );
+    }
+  }, [editor, element]);
+
   const setImageUrl = React.useCallback((newUrl: string, newCaption?: string) => {
     const path = editor.api.findPath(element);
-    if (path) editor.tf.setNodes({ url: newUrl, content: newCaption || element.children?.[0]?.text || "", imageWidth: 100 } as any, { at: path });
+    if (path) {
+      editor.tf.setNodes(
+        {
+          url: newUrl,
+          caption: newCaption !== undefined ? newCaption : (element.caption || ""),
+          content: newCaption !== undefined ? newCaption : (element.content || element.children?.[0]?.text || ""),
+          imageWidth: 100,
+        } as any,
+        { at: path }
+      );
+    }
   }, [editor, element]);
   return (
     <div {...attributes}>
@@ -695,7 +722,31 @@ function ImageEl({ attributes, children, element }: any) {
                 </button>
               </div>
             </div>
-            {!editor.api.isReadOnly() && <input type="text" defaultValue={caption || ""} placeholder="Thêm chú thích..." onBlur={(ev) => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ content: ev.target.value } as any, { at: p }); }} className="block w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40" style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }} />}
+            {!editor.api.isReadOnly() ? (
+              <input
+                type="text"
+                value={captionValue}
+                placeholder="Thêm chú thích..."
+                onChange={(ev) => setCaptionValue(ev.target.value)}
+                onBlur={() => commitCaption(captionValue)}
+                onKeyDown={(ev) => {
+                  if (ev.key === "Enter") {
+                    ev.preventDefault();
+                    commitCaption(captionValue);
+                    (ev.target as HTMLElement).blur();
+                  }
+                }}
+                className="block w-full mt-1.5 text-xs text-muted-foreground text-center bg-transparent border-0 outline-none focus:text-foreground placeholder:text-muted-foreground/40"
+                style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}
+              />
+            ) : caption ? (
+              <p
+                className="block w-full mt-1.5 text-xs text-muted-foreground text-center italic"
+                style={{ maxWidth: `${imageWidth}%`, margin: "6px auto 0" }}
+              >
+                {caption}
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">

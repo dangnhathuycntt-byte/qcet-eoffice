@@ -673,6 +673,10 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         componentContent.includes("imageWidth") && componentContent.includes("max-h-[640px]"),
         "Must render direct image tag with aspect ratio, width controls, and caption"
       );
+      assert.ok(
+        componentContent.includes("commitCaption") && componentContent.includes("caption: newCaption"),
+        "Must commit image caption to editor state node to enable autosave"
+      );
     });
 
     it("renders files as compact document rows with icon and metadata instead of tall cards", () => {

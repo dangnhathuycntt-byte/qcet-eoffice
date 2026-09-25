@@ -135,7 +135,7 @@ function blockToPlateElement(block: ContentBlockItem): PlateElement {
         ...base,
         type: PT.image,
         url: block.url,
-        caption: block.caption,
+        caption: block.caption ?? (block.content || undefined),
         imageWidth: block.imageWidth,
       };
 
@@ -225,8 +225,12 @@ function plateElementToBlock(el: PlateElement): ContentBlockItem {
 
     case PT.image:
       return {
-        id, type: "image", content,
-        url: el.url, caption: el.caption, imageWidth: el.imageWidth,
+        id,
+        type: "image",
+        content: el.caption || content || "",
+        url: el.url,
+        caption: el.caption !== undefined ? el.caption : (content || undefined),
+        imageWidth: el.imageWidth,
       };
 
     case PT.attachment:
