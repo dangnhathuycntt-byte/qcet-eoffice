@@ -53,8 +53,13 @@ async function fetchDepartments(
   _inflight[key] = fetch(url)
     .then((r) => r.json())
     .then((data): DepartmentOption[] => {
-      if (data.success && Array.isArray(data.departments)) {
-        _cache[key] = data.departments;
+      const items = Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data.departments)
+        ? data.departments
+        : null;
+      if (items) {
+        _cache[key] = items;
         _cacheTimestamp[key] = Date.now();
       } else {
         _cache[key] = [];

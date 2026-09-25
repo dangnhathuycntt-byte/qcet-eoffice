@@ -1,42 +1,80 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
+import { apiError, apiSuccess } from "@/server/api/response";
+import { ValidationError } from "@/server/api/errors";
+import { parseAndValidateJson } from "@/server/api/validation";
 import { getVapidPublicKey } from "@/lib/push-service";
 import {
   DEFAULT_PUSH_PREFERENCES,
   type PushPreferences,
 } from "@/lib/pwa/push-preferences";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const PushPreferencesSchema = z.object({
+  taskAssigned: z.boolean().optional(),
+  taskReview: z.boolean().optional(),
+  deadlineReminder: z.boolean().optional(),
+  documentDirective: z.boolean().optional(),
+});
+
+const PushPostSchema = z.object({
+  preferences: PushPreferencesSchema.optional(),
+  endpoint: z.string().trim().max(1024).optional(),
+  p256dh: z.string().trim().max(255).optional(),
+  auth: z.string().trim().max(255).optional(),
+  keys: z
+    .object({
+      p256dh: z.string().trim().max(255).optional(),
+      auth: z.string().trim().max(255).optional(),
+    })
+    .optional(),
+  deviceType: z.string().trim().max(50).optional().nullable(),
+  platform: z.string().trim().max(50).optional().nullable(),
+  userAgent: z.string().trim().max(500).optional().nullable(),
+});
+
+const PushDeleteSchema = z.object({
+  endpoint: z.string().trim().max(1024).optional().nullable(),
+});
 
 /**
  * GET /api/notifications/push
  * Returns VAPID public key and current user's push status & preferences.
  */
 export async function GET(request: NextRequest) {
+  let requestId = crypto.randomUUID();
   try {
     const publicKey = getVapidPublicKey();
-    const session = await getSessionFromRequest(request);
+    const context = await getApiContext(request);
+    requestId = context.requestId;
 
-    if (!session?.id) {
-      return NextResponse.json({
-        success: true,
-        publicKey,
-        preferences: DEFAULT_PUSH_PREFERENCES,
-        subscriptionsCount: 0,
-      });
+    if (!context.user?.id) {
+      return apiSuccess(
+        {
+          publicKey,
+          preferences: DEFAULT_PUSH_PREFERENCES,
+          subscriptionsCount: 0,
+        },
+        { requestId, legacyCompat: true }
+      );
     }
 
+    const userId = context.user.id;
     const [user, activeSubsCount] = await Promise.all([
       prisma.user.findUnique({
-        where: { id: session.id },
+        where: { id: userId },
         select: { onboardingData: true },
       }),
       prisma.pushSubscription.count({
         where: {
-          userId: session.id,
+          userId,
           status: "ACTIVE",
         },
       }),
@@ -48,18 +86,16 @@ export async function GET(request: NextRequest) {
       ...((onboardingData?.pushPreferences as Partial<PushPreferences>) || {}),
     };
 
-    return NextResponse.json({
-      success: true,
-      publicKey,
-      preferences,
-      subscriptionsCount: activeSubsCount,
-    });
-  } catch (error) {
-    console.error("Failed to GET push info:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 }
+    return apiSuccess(
+      {
+        publicKey,
+        preferences,
+        subscriptionsCount: activeSubsCount,
+      },
+      { requestId, legacyCompat: true }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
@@ -68,27 +104,22 @@ export async function GET(request: NextRequest) {
  * Subscribes to push notifications or updates push preferences.
  */
 export async function POST(request: NextRequest) {
+  let requestId = crypto.randomUUID();
   try {
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json(
-        { success: false, error: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
+    assertCsrf(request);
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    const session = await getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    await assertRateLimit(authUser.id, "MUTATION");
+
+    const body = await parseAndValidateJson(request, PushPostSchema);
 
     // 1. Handle preference updates
-    if (body.preferences && typeof body.preferences === "object") {
+    if (body.preferences) {
       const existingUser = await prisma.user.findUnique({
-        where: { id: session.id },
+        where: { id: authUser.id },
         select: { onboardingData: true },
       });
 
@@ -107,7 +138,7 @@ export async function POST(request: NextRequest) {
       };
 
       await prisma.user.update({
-        where: { id: session.id },
+        where: { id: authUser.id },
         data: {
           onboardingData: {
             ...currentData,
@@ -117,10 +148,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (!body.endpoint) {
-        return NextResponse.json({
-          success: true,
-          preferences: updatedPrefs,
-        });
+        return apiSuccess(
+          {
+            preferences: updatedPrefs,
+          },
+          { requestId, legacyCompat: true }
+        );
       }
     }
 
@@ -132,34 +165,23 @@ export async function POST(request: NextRequest) {
     const userAgent = body.userAgent || request.headers.get("user-agent") || null;
 
     if (!endpoint || !p256dh || !auth) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing required fields: endpoint, p256dh, and auth are required",
-        },
-        { status: 400 }
-      );
+      throw new ValidationError("Missing required fields: endpoint, p256dh, and auth are required");
     }
 
     try {
       const parsedEndpoint = new URL(endpoint);
       if (parsedEndpoint.protocol !== "https:") {
-        return NextResponse.json(
-          { success: false, error: "Push endpoint must be a valid HTTPS URL" },
-          { status: 400 }
-        );
+        throw new ValidationError("Push endpoint must be a valid HTTPS URL");
       }
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Push endpoint must be a valid HTTPS URL" },
-        { status: 400 }
-      );
+    } catch (err: any) {
+      if (err instanceof ValidationError) throw err;
+      throw new ValidationError("Push endpoint must be a valid HTTPS URL");
     }
 
     const subscription = await prisma.pushSubscription.upsert({
       where: { endpoint },
       update: {
-        userId: session.id,
+        userId: authUser.id,
         p256dh,
         auth,
         deviceType: deviceType || null,
@@ -171,7 +193,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
       create: {
-        userId: session.id,
+        userId: authUser.id,
         endpoint,
         p256dh,
         auth,
@@ -182,16 +204,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      subscriptionId: subscription.id,
-    });
-  } catch (error) {
-    console.error("Failed to process POST push:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 }
+    return apiSuccess(
+      {
+        subscriptionId: subscription.id,
+      },
+      { requestId, legacyCompat: true }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
@@ -200,22 +220,24 @@ export async function POST(request: NextRequest) {
  * Deactivates or revokes a push subscription.
  */
 export async function DELETE(request: NextRequest) {
+  let requestId = crypto.randomUUID();
   try {
-    const body = await request.json().catch(() => null);
-    const session = await getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    assertCsrf(request);
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
+
+    await assertRateLimit(authUser.id, "MUTATION");
+
+    const body = await parseAndValidateJson(request, PushDeleteSchema, { allowEmpty: true });
 
     const endpoint = body?.endpoint;
     if (endpoint) {
       await prisma.pushSubscription.updateMany({
         where: {
           endpoint,
-          userId: session.id,
+          userId: authUser.id,
         },
         data: {
           status: "REVOKED",
@@ -226,7 +248,7 @@ export async function DELETE(request: NextRequest) {
       // Revoke all subscriptions for this user
       await prisma.pushSubscription.updateMany({
         where: {
-          userId: session.id,
+          userId: authUser.id,
         },
         data: {
           status: "REVOKED",
@@ -235,15 +257,13 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Push subscription revoked successfully",
-    });
-  } catch (error) {
-    console.error("Failed to delete push subscription:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 }
+    return apiSuccess(
+      {
+        message: "Push subscription revoked successfully",
+      },
+      { requestId, legacyCompat: true }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

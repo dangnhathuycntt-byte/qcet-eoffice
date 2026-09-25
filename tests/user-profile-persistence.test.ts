@@ -71,7 +71,7 @@ describe("R7: User Profile Persistence & Security Suite", () => {
     test("strictly rejects departmentId tampering attempts", () => {
       const tamperingPayload = {
         name: "Hacker",
-
+        departmentId: "dep-123",
       };
       const result = UpdateUserProfileSchema.safeParse(tamperingPayload);
       assert.strictEqual(result.success, false);

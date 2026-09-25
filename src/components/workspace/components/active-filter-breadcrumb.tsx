@@ -29,6 +29,33 @@ export function getWorkboxDisplayLabel(workbox: string): string {
   }
 }
 
+export function getStatusDisplayLabel(status: string): string {
+  switch (status.toUpperCase()) {
+    case "WAITING_APPROVAL":
+    case "PENDING_EXECUTIVE_APPROVAL":
+      return "Chờ duyệt";
+    case "NEEDS_REVIEW":
+      return "Cần chỉnh sửa";
+    case "IN_PROGRESS":
+      return "Đang thực hiện";
+    case "COMPLETED":
+      return "Hoàn thành";
+    case "CANCELLED":
+    case "CANCELED":
+      return "Đã hủy";
+    case "TODO":
+    case "NOT_STARTED":
+    case "ASSIGNED":
+    case "NEW":
+      return "Mới";
+    case "OVERDUE":
+      return "Quá hạn";
+    default:
+      return status;
+  }
+}
+
+
 export function getActiveFilterSummary(params: ActiveFilterSummaryParams): string[] {
   const parts: string[] = [];
   if (params.dept && params.dept !== "ALL") {
@@ -163,7 +190,7 @@ export function ActiveFilterBreadcrumb({
             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 border border-border/70 text-foreground text-xs font-medium"
           >
             <span>
-              Trạng thái: <strong className="font-semibold">{status}</strong>
+              Trạng thái: <strong className="font-semibold">{getStatusDisplayLabel(status!)}</strong>
             </span>
             {(onRemoveStatus || onRemoveFilter) && (
               <button

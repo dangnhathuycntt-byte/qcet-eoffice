@@ -705,6 +705,7 @@ export function buildTaskReadWhere(
   // 4. Build Filter Conditions for Manager / Staff
   const authConditions: Prisma.TaskWhereInput[] = [
     { actors: { some: { userId } } },
+    { createdById: userId },
   ];
 
   if (unitIds.length === 1) {

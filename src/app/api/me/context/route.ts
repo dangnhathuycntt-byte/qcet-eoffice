@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { resolveCurrentSession } from '@/server/auth/current-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { UserContextService } from '@/server/services/user-context-service';
 
@@ -17,16 +17,17 @@ import { UserContextService } from '@/server/services/user-context-service';
  * AuthorityResolutionService, and domain policies) with server database truth.
  */
 export async function GET(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+  let requestId = crypto.randomUUID();
   try {
-    // 1. Authenticate and validate session & user against live DB truth
-    // Rejects missing/expired/revoked session or deactivated accounts with 401
-    const session = await resolveCurrentSession(req);
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    // 2. Load canonical authorization context & map to UI response DTO
-    const context = await UserContextService.getUserContext(session.userId);
+    const authUser = requireAuthenticated(context);
 
-    return apiSuccess(context, {
+    // Load canonical authorization context & map to UI response DTO
+    const userContext = await UserContextService.getUserContext(authUser.id);
+
+    return apiSuccess(userContext, {
       requestId,
       headers: {
         'Cache-Control': 'private, no-cache, no-store, must-revalidate',

@@ -3,21 +3,22 @@ import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
-import {
-  assertJsonContentType,
-  assertRequestBodySize,
-  extractFieldErrors,
-  MAX_JSON_BODY_SIZE,
-} from '@/server/api/validation';
+import { parseAndValidateJson } from '@/server/api/validation';
 import { PushSubscriptionSchema } from '@/contracts/notifications';
 import { getVapidPublicKey } from '@/lib/push-service';
 import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { z } from 'zod';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const DeletePushSubscriptionSchema = z.object({
+  endpoint: z.string().trim().min(1, 'Missing endpoint'),
+});
+
 export async function GET(request: NextRequest) {
-  let requestId = 'req-push-key';
+  let requestId = crypto.randomUUID();
   try {
     const context = await getApiContext(request);
     requestId = context.requestId;
@@ -35,41 +36,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let requestId = 'req-push-subscribe';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);
     const authUser = context.user!;
 
-    assertCsrf(request);
-    assertJsonContentType(request);
-    assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
+    await assertRateLimit(authUser.id, 'MUTATION');
 
-    let rawBody: unknown;
-    try {
-      rawBody = await request.json();
-    } catch {
-      throw new ValidationError('Invalid JSON body');
-    }
+    const validated = await parseAndValidateJson(request, PushSubscriptionSchema);
 
-    if (!rawBody || typeof rawBody !== 'object') {
-      throw new ValidationError('Invalid JSON body');
-    }
-
-    const parseResult = PushSubscriptionSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      const firstIssue = parseResult.error.issues[0];
-      throw new ValidationError(
-        firstIssue?.message || 'Thiếu thông tin endpoint, p256dh hoặc auth',
-        extractFieldErrors(parseResult.error)
-      );
-    }
-
-    const validated = parseResult.data;
     const p256dh = validated.keys?.p256dh || validated.p256dh;
     const auth = validated.keys?.auth || validated.auth;
-    const deviceType = validated.deviceType || (rawBody as Record<string, any>).platform || null;
+    const deviceType = validated.deviceType || null;
     const userAgent = validated.userAgent || request.headers.get('user-agent') || null;
 
     const subscription = await prisma.pushSubscription.upsert({
@@ -113,25 +94,17 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  let requestId = 'req-push-unsubscribe';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);
     const authUser = context.user!;
 
-    assertCsrf(request);
+    await assertRateLimit(authUser.id, 'MUTATION');
 
-    let body: any;
-    try {
-      body = await request.json();
-    } catch {
-      throw new ValidationError('Invalid JSON body');
-    }
-
-    if (!body || !body.endpoint) {
-      throw new ValidationError('Missing endpoint');
-    }
+    const body = await parseAndValidateJson(request, DeletePushSubscriptionSchema);
 
     await prisma.pushSubscription.updateMany({
       where: {

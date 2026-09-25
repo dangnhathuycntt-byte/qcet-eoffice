@@ -312,6 +312,14 @@ export function filterTasksByScope(
   if (normScope === "MY_TASKS") {
     if (!user) return tasks;
     return tasks.filter((t) => {
+      if ((t as any).viewerContext?.relation) return true;
+      const isCreator = Boolean(
+        user.id &&
+          ((t as any).createdById === user.id ||
+            (t as any).assignedById === user.id ||
+            (t as any).createdBy === user.id ||
+            (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
+      );
       const isLead =
         t.leadAssigneeName === user.name ||
         matchesUser(t.leadAssigneeName, user) ||
@@ -325,7 +333,7 @@ export function filterTasksByScope(
       const isCo = Boolean(
         t.coAssignees?.some((ca) => matchesUser(ca, user))
       );
-      return Boolean(isLead || hasSub || isCo);
+      return Boolean(isLead || hasSub || isCo || isCreator);
     });
   }
 
@@ -340,7 +348,7 @@ export function filterTasksByScope(
     const targetDept =
       departmentCode && departmentCode !== "ALL"
         ? departmentCode
-        : user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
+        : user?.departmentCode || (user as any)?.departmentId || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
 
     if (targetDept && targetDept !== "ALL") {
       return filterTasksForTable(tasks, "ALL", "", targetDept);
@@ -559,6 +567,7 @@ export function UnifiedTaskToolbar({
   const [isDepartmentOpen, setIsDepartmentOpen] = React.useState(false);
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
+  const [searchFocused, setSearchFocused] = React.useState(false);
 
   const closeAllMenus = React.useCallback(() => {
     setIsMonthOpen(false);
@@ -676,7 +685,7 @@ export function UnifiedTaskToolbar({
       id: "related",
       legacyScope: "my",
       legacyId: "MY_TASKS",
-      label: "Liên quan đến tôi",
+      label: "Của tôi",
       shortLabel: "Của tôi",
       icon: User,
       isAuthorized: true,
@@ -685,7 +694,7 @@ export function UnifiedTaskToolbar({
       id: "unit",
       legacyScope: "unit",
       legacyId: "UNIT_TASKS",
-      label: "Đơn vị tôi",
+      label: "Đơn vị",
       shortLabel: "Đơn vị",
       icon: Building2,
       isAuthorized: canViewUnitScope,
@@ -694,8 +703,8 @@ export function UnifiedTaskToolbar({
       id: "all",
       legacyScope: "school",
       legacyId: "SCHOOL_TASKS",
-      label: "Tất cả",
-      shortLabel: "Tất cả",
+      label: "Toàn trường",
+      shortLabel: "Toàn trường",
       icon: School,
       isAuthorized: canViewSchoolScope,
     },
@@ -1084,335 +1093,172 @@ export function UnifiedTaskToolbar({
     <div
       data-slot="unified-task-toolbar"
       className={cn(
-        "flex flex-col gap-2 border-b border-border/60 pb-2.5 bg-transparent relative z-40 overflow-visible",
+        "flex items-center gap-1.5 border-b border-border/60 pb-2 bg-transparent relative z-40 overflow-visible flex-wrap",
         className
       )}
     >
-      {/* ==================================================================== */}
-      {/* ROW 1: Scope Switcher + Unit Name (text only) + Primary Action       */}
-      {/* ==================================================================== */}
+      {/* ================================================================ */}
+      {/* SINGLE ROW: Search | Bộ lọc | [chips] | Hiển thị | + Giao việc  */}
+      {/* ================================================================ */}
+
+      {/* 1. Search (pushed right via ml-auto) */}
       <div
-        data-slot="unified-task-toolbar-row-1"
-        className="flex items-center justify-between gap-2"
+        className={cn(
+          "relative shrink-0 transition-all duration-200 ml-auto",
+          searchFocused ? "w-[240px]" : "w-[140px] sm:w-[180px]"
+        )}
       >
-        {/* Left: Scope Switcher + Unit Name */}
-        <div className="flex items-center gap-1.5 shrink-0 min-w-0">
-          {authorizedScopes.length > 1 && (
-            <div
-              data-slot="adaptive-scope-header"
-              data-scope-switcher="true"
-              className="inline-flex items-center gap-0.5 shrink-0"
-              role="tablist"
-              aria-label="Phạm vi công việc"
-            >
-              {authorizedScopes.map((opt) => {
-                const Icon = opt.icon;
-                const isActive = normalizedTaskView === opt.id;
-                const count = (effectiveScopeBadgeCounts as any)[opt.id];
-                const showBadge = typeof count === "number" && !isNaN(count) && (opt.id !== "approval" || count > 0);
-
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    role="tab"
-                    data-scope={opt.id}
-                    aria-selected={isActive}
-                    onClick={() => handleScopeSelect(opt.id, opt.legacyScope)}
-                    className={cn(
-                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer select-none",
-                      isActive
-                        ? "bg-muted text-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    )}
-                  >
-                    <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                    <span>{opt.label}</span>
-                    {showBadge && (
-                      <span
-                        data-slot="scope-badge-count"
-                        data-scope={opt.id}
-                        className={cn(
-                          "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold",
-                          isActive
-                            ? "bg-background text-foreground border border-border/60 shadow-2xs"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        <Search
+          className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+          strokeWidth={1.5}
+        />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={localSearch}
+          onChange={(e) => handleSearchInputChange(e.target.value)}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          placeholder="Tìm nhiệm vụ… /"
+          aria-label="Tìm nhiệm vụ"
+          className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-[11px] text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          {loading && (
+            <Loader2
+              className="size-3.5 animate-spin text-muted-foreground"
+              aria-label="Đang tải dữ liệu"
+            />
           )}
-
-          {/* Unit Scope Clean Secondary Text (No border, no dropdown) */}
-          {normalizedScope === "unit" && !isUnassigned && (
-            <span
-              className="text-xs text-muted-foreground font-normal truncate max-w-[240px] sm:max-w-[320px] select-none"
-              title={resolvedUnitDisplayName}
+          {localSearch ? (
+            <button
+              type="button"
+              onClick={handleSearchClear}
+              aria-label="Xóa từ khóa tìm kiếm"
+              className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
             >
-              ({resolvedUnitDisplayName})
-            </span>
+              <X className="size-3" strokeWidth={1.5} />
+            </button>
+          ) : (
+            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
+              /
+            </kbd>
           )}
         </div>
-
-        {/* Right: Primary Page Action Button (Compact Neutral Style) */}
-        {canCreateTask && handlePrimaryAction && (
-          <button
-            type="button"
-            onClick={() => handlePrimaryAction()}
-            title="Giao việc mới (C)"
-            aria-label="Giao việc mới (Phím C)"
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 sm:px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
-          >
-            <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-            <span>{primaryActionLabel}</span>
-            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-muted/60 border border-border/50 rounded select-none pointer-events-none ml-1">
-              C
-            </kbd>
-          </button>
-        )}
       </div>
 
-      {/* ==================================================================== */}
-      {/* ROW 2: Search → Thời gian → Trạng thái → Thời hạn → Ưu tiên → Đơn vị → Danh mục ··· Hiển thị */}
-      {/* ==================================================================== */}
-      <div
-        data-slot="unified-task-toolbar-row-2"
-        className="flex items-center gap-1.5 sm:gap-2 pt-1 flex-wrap sm:flex-nowrap relative z-40 overflow-visible"
-      >
-        {/* 1. Search Input: Scoped to Current Scope */}
-        <div className="relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[260px] shrink-0">
-          <Search
-            className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-            strokeWidth={1.5}
-          />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={localSearch}
-            onChange={(e) => handleSearchInputChange(e.target.value)}
-            placeholder="Tìm nhiệm vụ… /"
-            aria-label="Tìm nhiệm vụ"
-            className="h-8 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            {loading && (
-              <Loader2
-                className="size-3.5 animate-spin text-muted-foreground"
-                aria-label="Đang tải dữ liệu"
+      {/* 2. Bộ lọc — gộp tất cả filter vào 1 popover */}
+      <PopoverRoot open={isCollapsedFilterOpen} onOpenChange={setIsCollapsedFilterOpen}>
+        <PopoverTrigger
+          render={
+            <button
+              type="button"
+              aria-label="Bộ lọc"
+              className={cn(
+                "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium transition-colors cursor-pointer select-none shrink-0",
+                isCollapsedFilterOpen || (isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive))
+                  ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                  : "border-border/80 bg-background text-foreground hover:bg-accent"
+              )}
+            >
+              <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <span>Bộ lọc</span>
+              {(isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive)) && (
+                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary text-primary-foreground">
+                  {[isMonthActive, isStatusActive, isDeadlineActive, isPriorityActive, showDepartmentFilter && isDepartmentActive].filter(Boolean).length}
+                </span>
+              )}
+              <ChevronDown
+                className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isCollapsedFilterOpen && "rotate-180")}
+                strokeWidth={1.5}
               />
-            )}
-            {localSearch ? (
-              <button
-                type="button"
-                onClick={handleSearchClear}
-                aria-label="Xóa từ khóa tìm kiếm"
-                className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
-                /
-              </kbd>
-            )}
+            </button>
+          }
+        />
+
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={6}
+          className="w-80 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
+        >
+          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/60">
+            <span className="font-semibold text-foreground">Bộ lọc</span>
+            <button
+              type="button"
+              onClick={() => setIsCollapsedFilterOpen(false)}
+              aria-label="Đóng bộ lọc"
+              className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+            >
+              <X className="size-3.5" strokeWidth={1.5} />
+            </button>
           </div>
-        </div>
 
-        {/* 2. Thời gian Filter */}
-        <PopoverRoot open={isMonthOpen} onOpenChange={setIsMonthOpen}>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                aria-label="Chọn kỳ tháng"
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                  isMonthActive
-                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                    : "border-border/80 bg-background text-foreground hover:bg-accent"
-                )}
-              >
-                <span>{timeLabel}</span>
-                {isMonthActive ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                    }}
-                    title="Xóa lọc thời gian"
-                    aria-label="Xóa lọc thời gian"
-                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                  >
-                    <X className="size-3" strokeWidth={2} />
-                  </span>
-                ) : (
-                  <ChevronDown
-                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isMonthOpen && "rotate-180")}
-                    strokeWidth={1.5}
-                  />
-                )}
-              </button>
-            }
-          />
-
-          <PopoverContent
-            align="start"
-            side="bottom"
-            sideOffset={6}
-            className="w-64 rounded-xl border border-border/80 bg-popover p-1.5 shadow-dropdown z-50 text-xs text-popover-foreground"
-          >
-            <div className="space-y-0.5">
+          {/* Thời gian */}
+          <div className="mb-3">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Thời gian</div>
+            <div className="grid grid-cols-2 gap-1">
               {([
+                ["none", "Tất cả"],
                 ["today", "Hôm nay"],
                 ["this_week", "Tuần này"],
                 ["this_month", "Tháng này"],
                 ["overdue", "Quá hạn"],
-              ] as Array<[TaskTimePreset, string]>).map(([preset, label]) => {
-                const selected = effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === preset;
+              ] as Array<[string, string]>).map(([val, label]) => {
+                const isNone = val === "none";
+                const selected = isNone
+                  ? effectiveTimeFilter.kind === "none"
+                  : effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === val;
                 return (
                   <button
-                    key={preset}
+                    key={val}
                     type="button"
-                    onClick={() => { handleTimeFilterChange({ kind: "preset", preset }); setIsMonthOpen(false); }}
+                    onClick={() => {
+                      if (isNone) handleTimeFilterChange(NO_TASK_TIME_FILTER);
+                      else handleTimeFilterChange({ kind: "preset", preset: val as any });
+                    }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer select-none",
+                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
                       selected
                         ? "bg-primary/10 text-primary font-semibold"
                         : "hover:bg-accent hover:text-accent-foreground text-foreground"
                     )}
                   >
-                    <span>{label}</span>
-                    {selected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                    {label}
                   </button>
                 );
               })}
-            </div>
-
-            <div className="border-t border-border/60 my-2" />
-
-            <div className="grid grid-cols-3 gap-1">
-              {academicMonths.map((period) => {
+              {academicMonths.slice(0, 4).map((period) => {
                 const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
                 return (
                   <button
                     key={period.monthNumber}
                     type="button"
-                    onClick={() => {
-                      handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                      setIsMonthOpen(false);
-                    }}
+                    onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
                     className={cn(
-                      "h-7 px-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center select-none",
+                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
                       isSelected
                         ? "bg-primary/10 text-primary font-semibold"
                         : "hover:bg-accent hover:text-accent-foreground text-foreground"
                     )}
                   >
-                    <span>{period.label}</span>
+                    {period.label}
                   </button>
                 );
               })}
             </div>
+          </div>
 
-            <div className="border-t border-border/60 my-2" />
-            {!showDateRange ? (
-              <button
-                type="button"
-                onClick={() => setShowDateRange(true)}
-                className="w-full px-2.5 py-1.5 rounded-lg text-left font-medium hover:bg-accent hover:text-accent-foreground text-foreground transition-colors cursor-pointer select-none"
-              >
-                Chọn khoảng ngày…
-              </button>
-            ) : (
-              <div className="space-y-2 px-1 pb-1">
-                <div className="grid grid-cols-2 gap-1.5">
-                  <label className="space-y-1 text-[10px] text-muted-foreground">Từ ngày
-                    <input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
-                  </label>
-                  <label className="space-y-1 text-[10px] text-muted-foreground">Đến ngày
-                    <input type="date" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)} className="h-8 w-full rounded-md border border-border bg-background px-2 text-[11px] text-foreground" />
-                  </label>
-                </div>
-                <div className="flex justify-end gap-1.5">
-                  <button type="button" onClick={() => setShowDateRange(false)} className="h-7 px-2 rounded-md hover:bg-accent cursor-pointer">Hủy</button>
-                  <button
-                    type="button"
-                    disabled={!isValidTaskDateRange(rangeFrom, rangeTo)}
-                    onClick={() => {
-                      if (!isValidTaskDateRange(rangeFrom, rangeTo)) return;
-                      handleTimeFilterChange({ kind: "range", from: rangeFrom, to: rangeTo });
-                      setShowDateRange(false);
-                      setIsMonthOpen(false);
-                    }}
-                    className="h-7 px-2.5 rounded-md bg-primary text-primary-foreground disabled:opacity-40 cursor-pointer"
-                  >Áp dụng</button>
-                </div>
-              </div>
-            )}
-          </PopoverContent>
-        </PopoverRoot>
-
-        {/* 3. Trạng thái Filter */}
-        <PopoverRoot open={isStatusOpen} onOpenChange={setIsStatusOpen}>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                aria-label="Lọc trạng thái"
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                  isStatusActive
-                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                    : "border-border/80 bg-background text-foreground hover:bg-accent"
-                )}
-              >
-                <span>{statusLabel}</span>
-                {isStatusActive ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onStatusChange) {
-                        onStatusChange("all");
-                      } else {
-                        onTabChange?.("all");
-                      }
-                    }}
-                    title="Xóa lọc trạng thái"
-                    aria-label="Xóa lọc trạng thái"
-                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                  >
-                    <X className="size-3" strokeWidth={2} />
-                  </span>
-                ) : (
-                  <ChevronDown
-                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isStatusOpen && "rotate-180")}
-                    strokeWidth={1.5}
-                  />
-                )}
-              </button>
-            }
-          />
-
-          <PopoverContent
-            align="start"
-            side="bottom"
-            sideOffset={6}
-            className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
-          >
-            <div className="space-y-0.5">
+          {/* Trạng thái */}
+          <div className="border-t border-border/60 pt-2.5 mb-3">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Trạng thái</div>
+            <div className="grid grid-cols-2 gap-1">
               {statusOptions.map((opt) => {
                 const norm = (effectiveStatus || "all").toLowerCase();
                 const isSelected =
-                  opt.value === "new"
+                  opt.value === "all"
+                    ? !effectiveStatus || norm === "all"
+                    : opt.value === "new"
                     ? norm === "new" || norm === "not_started" || norm === "assigned"
                     : opt.value === "in_progress"
                     ? norm === "in_progress"
@@ -1420,507 +1266,233 @@ export function UnifiedTaskToolbar({
                     ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
                     : opt.value === "completed"
                     ? norm === "completed"
-                    : opt.value === "all"
-                    ? !effectiveStatus || norm === "all"
-                    : norm === opt.value.toLowerCase();
+                    : norm === opt.value;
                 return (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => {
-                      if (onStatusChange) {
-                        onStatusChange(opt.value);
-                      } else {
-                        onTabChange?.(opt.value);
-                      }
-                      setIsStatusOpen(false);
+                      if (onStatusChange) onStatusChange(opt.value);
+                      else onTabChange?.(opt.value);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
+                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
                       isSelected
-                        ? "text-primary font-semibold bg-primary/10"
-                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
                     )}
                   >
-                    <span>{opt.label}</span>
-                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                    {opt.label}
                   </button>
                 );
               })}
             </div>
-          </PopoverContent>
-        </PopoverRoot>
+          </div>
 
-        {/* 4. Thời hạn Filter */}
-        <PopoverRoot open={isDeadlineOpen} onOpenChange={setIsDeadlineOpen}>
+          {/* Thời hạn */}
+          <div className="border-t border-border/60 pt-2.5 mb-3">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Thời hạn</div>
+            <div className="grid grid-cols-2 gap-1">
+              {deadlineOptions.map((opt) => {
+                const isSelected = effectiveDeadline === opt.value || (opt.value === "all" && (effectiveDeadline === "all" || !effectiveDeadline));
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (onDeadlineChange) onDeadlineChange(opt.value);
+                      else onTabChange?.(opt.value === "all" ? "all" : opt.value);
+                    }}
+                    className={cn(
+                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      isSelected
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                    {opt.count !== undefined && opt.count > 0 && (
+                      <span className="ml-1 text-muted-foreground font-mono">({opt.count})</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ưu tiên */}
+          <div className="border-t border-border/60 pt-2.5 mb-3">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Mức độ ưu tiên</div>
+            <div className="grid grid-cols-2 gap-1">
+              {PRIORITY_FILTER_OPTIONS.map((prio) => {
+                const isSelected = (selectedPriority || "ALL") === prio.id;
+                return (
+                  <button
+                    key={prio.id}
+                    type="button"
+                    onClick={() => onPriorityChange?.(prio.id)}
+                    className={cn(
+                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      isSelected
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                    )}
+                  >
+                    {prio.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Đơn vị */}
+          {showDepartmentFilter && (
+            <div className="border-t border-border/60 pt-2.5 mb-3">
+              <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Đơn vị</div>
+              <select
+                value={selectedDepartment || "ALL"}
+                onChange={(e) => onDepartmentChange?.(e.target.value)}
+                className="w-full h-8 px-2 rounded-lg border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
+              >
+                <option value="ALL">Tất cả đơn vị</option>
+                {availableDepartments
+                  .filter((d) => d.code !== "ALL")
+                  .map((dept) => (
+                    <option key={dept.code} value={dept.code}>
+                      {dept.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+
+          {/* Reset */}
+          {(isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive)) && (
+            <div className="pt-2 border-t border-border/60">
+              <button
+                type="button"
+                onClick={() => { handleResetFilters(); setIsCollapsedFilterOpen(false); }}
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center gap-1"
+              >
+                <RotateCcw className="size-3" strokeWidth={1.5} />
+                Xóa tất cả bộ lọc
+              </button>
+            </div>
+          )}
+        </PopoverContent>
+      </PopoverRoot>
+
+      {/* 3. Active filter chips — inline */}
+      {isAnyFilterActive && (
+        <>
+          {activeFilterChips.map((chip) => (
+            <span
+              key={chip.id}
+              className="inline-flex items-center gap-1 h-5.5 px-1.5 rounded-md bg-primary/8 border border-primary/20 text-primary text-[11px] font-medium shrink-0"
+            >
+              <span>{chip.label}</span>
+              <button
+                type="button"
+                onClick={chip.onRemove}
+                aria-label={`Xóa lọc ${chip.label}`}
+                className="size-3.5 flex items-center justify-center rounded hover:bg-primary/20 text-primary/80 cursor-pointer transition-colors"
+              >
+                <X className="size-2.5" strokeWidth={2} />
+              </button>
+            </span>
+          ))}
+          <span className="text-[11px] text-muted-foreground font-mono tabular-nums select-none whitespace-nowrap shrink-0">
+            ({effectiveFilteredTasksCount}/{effectiveTotalTasksCount})
+          </span>
+        </>
+      )}
+
+      {/* 4. Hiển thị */}
+      {onViewModeChange && (
+        <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
           <PopoverTrigger
             render={
               <button
                 type="button"
-                aria-label="Lọc thời hạn"
+                title="Hiển thị"
+                aria-label="Tùy chọn hiển thị"
                 className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                  isDeadlineActive
-                    ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                    : "border-border/80 bg-background text-foreground hover:bg-accent"
+                  "inline-flex h-7 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0",
+                  isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
                 )}
               >
-                <span>{deadlineLabel}</span>
-                {isDeadlineActive ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onDeadlineChange) {
-                        onDeadlineChange("all");
-                      } else {
-                        onTabChange?.("all");
-                      }
-                    }}
-                    title="Xóa lọc thời hạn"
-                    aria-label="Xóa lọc thời hạn"
-                    className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                  >
-                    <X className="size-3" strokeWidth={2} />
-                  </span>
-                ) : (
-                  <ChevronDown
-                    className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDeadlineOpen && "rotate-180")}
-                    strokeWidth={1.5}
-                  />
-                )}
+                <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <span className="hidden sm:inline">Hiển thị</span>
               </button>
             }
           />
 
           <PopoverContent
-            align="start"
+            align="end"
             side="bottom"
             sideOffset={6}
-            className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
+            className="w-36 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
           >
             <div className="space-y-0.5">
-              {deadlineOptions.map((opt) => {
-                const isSelected = (effectiveDeadline === opt.value || (!effectiveDeadline && opt.value === "all"));
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      if (onDeadlineChange) {
-                        onDeadlineChange(opt.value);
-                      } else {
-                        onTabChange?.(opt.value);
-                      }
-                      setIsDeadlineOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
-                      isSelected
-                        ? "text-primary font-semibold bg-primary/10"
-                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <span>{opt.label}</span>
-                    {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => { onViewModeChange("table"); setIsDisplayOpen(false); }}
+                className={cn(
+                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                  viewMode === "table"
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <span>Bảng</span>
+                </div>
+                {viewMode === "table" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { onViewModeChange("kanban"); setIsDisplayOpen(false); }}
+                className={cn(
+                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                  viewMode === "kanban"
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <span>Kanban</span>
+                </div>
+                {viewMode === "kanban" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+              </button>
             </div>
           </PopoverContent>
         </PopoverRoot>
+      )}
 
-        {/* 5. Ưu tiên Filter (Direct on desktop >= lg) */}
-        <div className="hidden lg:block shrink-0">
-          <PopoverRoot open={isPriorityOpen} onOpenChange={setIsPriorityOpen}>
-            <PopoverTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label="Lọc mức độ ưu tiên"
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                    isPriorityActive
-                      ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                      : "border-border/80 bg-background text-foreground hover:bg-accent"
-                  )}
-                >
-                  <span>{priorityLabel}</span>
-                  {isPriorityActive ? (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPriorityChange?.("ALL");
-                      }}
-                      title="Xóa lọc mức ưu tiên"
-                      aria-label="Xóa lọc mức ưu tiên"
-                      className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                    >
-                      <X className="size-3" strokeWidth={2} />
-                    </span>
-                  ) : (
-                    <ChevronDown
-                      className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isPriorityOpen && "rotate-180")}
-                      strokeWidth={1.5}
-                    />
-                  )}
-                </button>
-              }
-            />
+      {/* Divider trước CTA */}
+      {canCreateTask && handlePrimaryAction && (
+        <div className="h-4 w-px bg-border/60 shrink-0" />
+      )}
 
-            <PopoverContent
-              align="start"
-              side="bottom"
-              sideOffset={6}
-              className="w-48 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
-            >
-              <div className="space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onPriorityChange?.("ALL");
-                    setIsPriorityOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
-                    !isPriorityActive
-                      ? "text-primary font-semibold bg-primary/10"
-                      : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  <span>Tất cả mức ưu tiên</span>
-                  {!isPriorityActive && (
-                    <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
-                  )}
-                </button>
-                {PRIORITY_FILTER_OPTIONS.filter((p) => p.id !== "ALL").map((prio) => {
-                  const isSelected = selectedPriority === prio.id;
-                  return (
-                    <button
-                      key={prio.id}
-                      type="button"
-                      onClick={() => {
-                        onPriorityChange?.(prio.id);
-                        setIsPriorityOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
-                        isSelected
-                          ? "text-primary font-semibold bg-primary/10"
-                          : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      <span>{prio.label}</span>
-                      {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </PopoverContent>
-          </PopoverRoot>
-        </div>
-
-        {/* 6. Đơn vị Filter (Direct on desktop >= lg - only when relevant to scope) */}
-        {showDepartmentFilter && (
-          <div className="hidden lg:block shrink-0">
-            <PopoverRoot open={isDepartmentOpen} onOpenChange={setIsDepartmentOpen}>
-              <PopoverTrigger
-                render={
-                  <button
-                    type="button"
-                    aria-label="Lọc đơn vị"
-                    className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer select-none touch-manipulation",
-                      isDepartmentActive
-                        ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                        : "border-border/80 bg-background text-foreground hover:bg-accent"
-                    )}
-                  >
-                    <span>{departmentLabel}</span>
-                    {isDepartmentActive ? (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDepartmentChange?.("ALL");
-                        }}
-                        title="Xóa lọc đơn vị"
-                        aria-label="Xóa lọc đơn vị"
-                        className="size-3.5 flex items-center justify-center rounded-xs hover:bg-primary/20 text-primary transition-colors cursor-pointer -mr-0.5"
-                      >
-                        <X className="size-3" strokeWidth={2} />
-                      </span>
-                    ) : (
-                      <ChevronDown
-                        className={cn("size-3 text-muted-foreground shrink-0 transition-transform", isDepartmentOpen && "rotate-180")}
-                        strokeWidth={1.5}
-                      />
-                    )}
-                  </button>
-                }
-              />
-
-              <PopoverContent
-                align="start"
-                side="bottom"
-                sideOffset={6}
-                className="w-56 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground max-h-60 overflow-y-auto"
-              >
-                <div className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDepartmentChange?.("ALL");
-                      setIsDepartmentOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
-                      !isDepartmentActive
-                        ? "text-primary font-semibold bg-primary/10"
-                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <span>Tất cả đơn vị</span>
-                    {!isDepartmentActive && (
-                      <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
-                    )}
-                  </button>
-                  {availableDepartments
-                    .filter((d) => d.code !== "ALL")
-                    .map((dept) => {
-                      const isSelected = selectedDepartment === dept.code;
-                      return (
-                        <button
-                          key={dept.code}
-                          type="button"
-                          onClick={() => {
-                            onDepartmentChange?.(dept.code);
-                            setIsDepartmentOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer select-none",
-                            isSelected
-                              ? "text-primary font-semibold bg-primary/10"
-                              : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                          )}
-                        >
-                          <span className="truncate">{dept.name}</span>
-                          {isSelected && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                        </button>
-                      );
-                    })}
-                </div>
-              </PopoverContent>
-            </PopoverRoot>
-          </div>
-        )}
-
-        {/* Collapsed Secondary Filters on Narrower Screens (< 1024px / lg:hidden) */}
-        <div className="lg:hidden shrink-0">
-          <PopoverRoot open={isCollapsedFilterOpen} onOpenChange={setIsCollapsedFilterOpen}>
-            <PopoverTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label="Bộ lọc bổ sung"
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-                    isCollapsedFilterOpen || secondaryFiltersActiveCount > 0
-                      ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
-                      : "border-border/80 bg-background text-foreground hover:bg-accent"
-                  )}
-                >
-                  <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                  <span>Bộ lọc</span>
-                  {secondaryFiltersActiveCount > 0 && (
-                    <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary text-primary-foreground">
-                      {secondaryFiltersActiveCount}
-                    </span>
-                  )}
-                </button>
-              }
-            />
-
-            <PopoverContent
-              align="start"
-              side="bottom"
-              sideOffset={6}
-              className="w-72 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
-            >
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
-                <span className="font-semibold text-foreground">Bộ lọc</span>
-                <button
-                  type="button"
-                  onClick={() => setIsCollapsedFilterOpen(false)}
-                  aria-label="Đóng bộ lọc"
-                  className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
-                >
-                  <X className="size-3.5" strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Priority */}
-              <div className="mb-2.5">
-                <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
-                  Mức độ ưu tiên
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  {PRIORITY_FILTER_OPTIONS.map((prio) => {
-                    const isSelected = (selectedPriority || "ALL") === prio.id;
-                    return (
-                      <button
-                        key={prio.id}
-                        type="button"
-                        onClick={() => onPriorityChange?.(prio.id)}
-                        className={cn(
-                          "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
-                          isSelected
-                            ? "bg-primary/10 text-primary font-semibold"
-                            : "hover:bg-accent hover:text-accent-foreground text-foreground"
-                        )}
-                      >
-                        {prio.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Department */}
-              {showDepartmentFilter && (
-                <div className="border-t border-border/60 pt-2 mb-2.5">
-                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
-                    Đơn vị
-                  </div>
-                  <select
-                    value={selectedDepartment || "ALL"}
-                    onChange={(e) => onDepartmentChange?.(e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
-                  >
-                    <option value="ALL">Tất cả đơn vị</option>
-                    {availableDepartments
-                      .filter((d) => d.code !== "ALL")
-                      .map((dept) => (
-                        <option key={dept.code} value={dept.code}>
-                          {dept.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Reset */}
-              {secondaryFiltersActiveCount > 0 && (
-                <div className="pt-2 border-t border-border/60 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    Xóa tất cả
-                  </button>
-                </div>
-              )}
-            </PopoverContent>
-          </PopoverRoot>
-        </div>
-
-        {/* Active Filter Summary & Xóa tất cả Action */}
-        {isAnyFilterActive && (
-          <div className="flex items-center gap-1.5 shrink-0 pl-1">
-            <span className="text-xs text-muted-foreground font-medium tabular-nums select-none whitespace-nowrap">
-              ({effectiveFilteredTasksCount} / {effectiveTotalTasksCount} nhiệm vụ)
-            </span>
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              title="Xóa tất cả bộ lọc"
-              aria-label="Xóa tất cả bộ lọc"
-              className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer select-none"
-            >
-              <RotateCcw className="size-3 shrink-0" strokeWidth={1.5} />
-              <span>Xóa tất cả</span>
-            </button>
-          </div>
-        )}
-
-        {/* 8. Hiển thị Menu Trigger (Right side - pinned, compact icon + tooltip) */}
-        {onViewModeChange && (
-          <div className="ml-auto shrink-0">
-            <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
-              <PopoverTrigger
-                render={
-                  <button
-                    type="button"
-                    title="Hiển thị"
-                    aria-label="Tùy chọn hiển thị"
-                    className={cn(
-                      "inline-flex h-8 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
-                      isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
-                    )}
-                  >
-                    <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    <span className="hidden sm:inline">Hiển thị</span>
-                  </button>
-                }
-              />
-
-              <PopoverContent
-                align="end"
-                side="bottom"
-                sideOffset={6}
-                className="w-36 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
-              >
-                <div className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onViewModeChange("table");
-                      setIsDisplayOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
-                      viewMode === "table"
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                      <span>Bảng</span>
-                    </div>
-                    {viewMode === "table" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onViewModeChange("kanban");
-                      setIsDisplayOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
-                      viewMode === "kanban"
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                      <span>Kanban</span>
-                    </div>
-                    {viewMode === "kanban" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
-                  </button>
-                </div>
-              </PopoverContent>
-            </PopoverRoot>
-          </div>
-        )}
-      </div>
+      {/* 5. + Giao việc CTA */}
+      {canCreateTask && handlePrimaryAction && (
+        <button
+          type="button"
+          onClick={() => handlePrimaryAction()}
+          title="Giao việc mới (C)"
+          aria-label="Giao việc mới (Phím C)"
+          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
+        >
+          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+          <span>{primaryActionLabel}</span>
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-muted/60 border border-border/50 rounded select-none pointer-events-none ml-0.5">
+            C
+          </kbd>
+        </button>
+      )}
     </div>
   );
 }

@@ -9,9 +9,12 @@ import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { CreateOrganizationalBodySchema } from '@/contracts/meeting';
-import { logAuditEvent, AuditAction } from '@/lib/db/audit';
+import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { assertCanManageOrganizationalBodies } from '@/server/policies';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { parseAndValidateJson } from '@/server/api/validation';
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -64,15 +67,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
+
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE', {
+      requestId,
+      endpoint: 'POST /api/organization/bodies',
+      userId: authUser.id,
+    });
+
     const authContext = await loadAuthorizationContext(authUser.id);
     assertCanManageOrganizationalBodies(authContext);
 
-    const body = await request.json();
-    const input = CreateOrganizationalBodySchema.parse(body);
+    const input = await parseAndValidateJson(request, CreateOrganizationalBodySchema);
 
     const created = await prisma.organizationalBody.create({
       data: {
@@ -88,8 +98,8 @@ export async function POST(request: NextRequest) {
 
     await logAuditEvent({
       actorId: authUser.id,
-      action: AuditAction.TASK_CREATED,
-      entityType: 'OrganizationalBody',
+      action: AuditAction.ORGANIZATIONAL_BODY_CREATED,
+      entityType: AuditEntityType.ORGANIZATIONAL_BODY,
       entityId: created.id,
       requestId,
       afterData: { code: created.code, name: created.name, type: created.type },

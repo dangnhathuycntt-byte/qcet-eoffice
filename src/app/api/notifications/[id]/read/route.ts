@@ -6,6 +6,9 @@ import { NotFoundError, AuthorizationError } from '@/server/api/errors';
 import { canReadNotification } from '@/server/policies/notification-policy';
 import { toNotificationDTO } from '@/server/dto/notification-dto';
 import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { parseAndValidateJson } from '@/server/api/validation';
+import { z } from 'zod';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,15 +17,20 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+const MarkReadBodySchema = z.object({
+  isRead: z.boolean().optional().default(true),
+});
+
 async function markNotificationAsRead(request: NextRequest, context: RouteContext) {
-  let requestId = 'req-notification-read';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const apiContext = await getApiContext(request);
     requestId = apiContext.requestId;
     requireAuthenticated(apiContext);
     const authUser = apiContext.user!;
 
-    assertCsrf(request);
+    await assertRateLimit(authUser.id, 'MUTATION');
 
     const resolvedParams = await Promise.resolve(context.params);
     const id = resolvedParams?.id?.trim();
@@ -42,8 +50,8 @@ async function markNotificationAsRead(request: NextRequest, context: RouteContex
       throw new AuthorizationError('Không có quyền thao tác trên thông báo này');
     }
 
-    const reqBody = await request.json().catch(() => ({}));
-    const isReadTarget = typeof reqBody?.isRead === 'boolean' ? reqBody.isRead : true;
+    const reqBody = await parseAndValidateJson(request, MarkReadBodySchema, { allowEmpty: true });
+    const isReadTarget = reqBody.isRead;
 
     const updated = await prisma.notification.update({
       where: { id },

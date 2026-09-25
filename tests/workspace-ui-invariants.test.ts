@@ -39,8 +39,8 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
         "ScopeSwitcher must render 'my' scope tab"
       );
       assert.ok(
-        scopeMarkup.includes("Cá nhân"),
-        "ScopeSwitcher must display 'Cá nhân' label"
+        scopeMarkup.includes("Của tôi"),
+        "ScopeSwitcher must display 'Của tôi' label"
       );
 
       // 2. DEFAULT_STATUS_OPTIONS check

@@ -5,72 +5,51 @@
  */
 
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { ApiError, ForbiddenError, ValidationError } from '@/server/api/errors';
+import { parseAndValidateJson } from '@/server/api/validation';
 import { DelegationStatus, AssignmentStatus, Prisma } from '@prisma/client';
-import { NON_DELEGABLE_CAPABILITIES } from '@/server/authorization/capability';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
-import { isExecutivePosition } from '@/server/authorization/authorization-engine';
+import {
+  isExecutiveAdministrator,
+  isNonDelegableAction,
+} from '@/server/authorization/delegation-policy';
 import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { authorizationContextCache } from '@/server/authorization/authorization-context-cache';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 
-export function isExecutiveAdministrator(context: AuthorizationContext): boolean {
-  if (context.isSystemAdmin() || context.user.role === 'ADMIN') {
-    return true;
-  }
-  if (context.user.role === 'BAN_GIAM_HIEU') {
-    return true;
-  }
-  return context.positions.some((pos) => isExecutivePosition(pos.positionCode));
-}
+export { isExecutiveAdministrator, isNonDelegableAction };
 
-export function isNonDelegableAction(action: string): boolean {
-  if (!action) return true;
-  const trimmed = action.trim();
-  const lower = trimmed.toLowerCase();
-
-  // 1. Statutory non-delegable capabilities
-  if ((NON_DELEGABLE_CAPABILITIES as readonly string[]).includes(trimmed)) {
-    return true;
-  }
-
-  // 2. Budget sign-off & treasury disbursement
-  if (
-    lower.includes('budget') ||
-    lower.includes('finance') ||
-    lower.includes('disbursement') ||
-    lower.includes('treasury') ||
-    lower.includes('chi_tieu') ||
-    lower.includes('ngan_sach') ||
-    lower.includes('tai_chinh')
-  ) {
-    return true;
-  }
-
-  // 3. Disciplinary actions
-  if (
-    lower.includes('disciplinary') ||
-    lower.includes('ky_luat') ||
-    lower.includes('kỷ luật')
-  ) {
-    return true;
-  }
-
-  // 4. Institutional leadership & statutory governance
-  if (
-    lower.includes('position.manage_leadership') ||
-    lower.includes('regulation.institutional_amend') ||
-    lower.includes('system.configure') ||
-    lower.includes('account.manage')
-  ) {
-    return true;
-  }
-
-  return false;
-}
+const CreateDelegationSchema = z
+  .object({
+    grantorAssignmentId: z.string().trim().optional().nullable(),
+    grantorUserId: z.string().trim().optional().nullable(),
+    grantorId: z.string().trim().optional().nullable(),
+    delegatorPositionId: z.string().trim().optional().nullable(),
+    delegatorAssignmentId: z.string().trim().optional().nullable(),
+    delegatorUserId: z.string().trim().optional().nullable(),
+    delegatorId: z.string().trim().optional().nullable(),
+    granteeAssignmentId: z.string().trim().optional().nullable(),
+    granteeUserId: z.string().trim().optional().nullable(),
+    granteeId: z.string().trim().optional().nullable(),
+    delegateePositionId: z.string().trim().optional().nullable(),
+    delegateeAssignmentId: z.string().trim().optional().nullable(),
+    delegateeUserId: z.string().trim().optional().nullable(),
+    delegateeId: z.string().trim().optional().nullable(),
+    responsibilityAreaId: z.string().trim().optional().nullable(),
+    action: z.string().trim().optional().nullable(),
+    capability: z.string().trim().optional().nullable(),
+    capabilities: z.array(z.string()).optional().nullable(),
+    resourceScope: z.string().trim().optional().nullable(),
+    validFrom: z.any().optional().nullable(),
+    validUntil: z.any().optional().nullable(),
+    sourceDocumentNumber: z.any().optional().nullable(),
+    reason: z.string().trim().optional().nullable(),
+  })
+  .passthrough();
 
 /**
  * GET /api/delegations
@@ -254,7 +233,7 @@ export async function POST(request: NextRequest) {
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    const body = await request.json();
+    const body = (await parseAndValidateJson(request, CreateDelegationSchema)) as Record<string, any>;
 
     const {
       grantorAssignmentId,

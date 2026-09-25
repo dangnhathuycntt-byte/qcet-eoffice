@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
 import {
@@ -9,7 +8,7 @@ import {
   assertRequestBodySize,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/security/rate-limit";
+import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded, assertRateLimit } from "@/server/security/rate-limit";
 import { ExportDocumentQuerySchema } from "@/contracts/documents";
 import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
@@ -130,27 +129,7 @@ export async function POST(request: NextRequest) {
     assertCsrf(request);
     assertJsonContentType(request);
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
-    const rateResult = await checkRateLimit('BULK_EXPORT', authUser.id);
-    if (!rateResult.success) {
-      const retryAfter = rateResult.retryAfter;
-      logRateLimitExceeded('BULK_EXPORT', authUser.id, request.url, authUser.id).catch(() => undefined);
-      return NextResponse.json(
-        {
-          error: 'Too Many Requests',
-          code: 'RATE_LIMITED',
-          message: 'Too many requests',
-          retryAt: rateResult.resetAt.toISOString(),
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, retryAfter)),
-            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.BULK_EXPORT.limit),
-            'X-RateLimit-Remaining': String(rateResult.remaining),
-          },
-        },
-      );
-    }
+    await assertRateLimit(authUser.id, 'REPORTS_EXPORT');
 
     if (!isFeatureEnabled("largeExcelExport")) {
       return NextResponse.json(

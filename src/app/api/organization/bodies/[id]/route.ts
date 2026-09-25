@@ -9,10 +9,13 @@ import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { AddBodyMembershipSchema } from '@/contracts/meeting';
-import { logAuditEvent, AuditAction } from '@/lib/db/audit';
+import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { NotFoundError } from '@/server/api/errors';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember, canManageOrganizationalBodies } from '@/server/policies';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { parseAndValidateJson } from '@/server/api/validation';
 
 export async function GET(
   request: NextRequest,
@@ -79,10 +82,18 @@ export async function POST(
 ) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
+
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
+
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE', {
+      requestId,
+      endpoint: `POST /api/organization/bodies/${params.id}`,
+      userId: authUser.id,
+    });
 
     const authContext = await loadAuthorizationContext(authUser.id);
     assertCanManageOrganizationalBodies(authContext);
@@ -95,8 +106,7 @@ export async function POST(
       throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
     }
 
-    const reqBody = await request.json();
-    const input = AddBodyMembershipSchema.parse(reqBody);
+    const input = await parseAndValidateJson(request, AddBodyMembershipSchema);
 
     assertCanAppointBodyMember(authContext, input.userId, input.role);
 
@@ -113,8 +123,8 @@ export async function POST(
 
     await logAuditEvent({
       actorId: authUser.id,
-      action: AuditAction.USER_ROLE_CHANGED,
-      entityType: 'BodyMembership',
+      action: AuditAction.ORGANIZATIONAL_BODY_MEMBERSHIP_ADDED,
+      entityType: AuditEntityType.BODY_MEMBERSHIP,
       entityId: membership.id,
       requestId,
       afterData: { bodyId: params.id, userId: input.userId, role: input.role },

@@ -9,14 +9,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  let requestId = 'req-notifications-read-all';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);
     const authUser = context.user!;
 
-    assertCsrf(request);
     await assertRateLimit(authUser.id, 'MUTATION');
 
     const result = await prisma.notification.updateMany({

@@ -7,6 +7,8 @@ import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
 
 export async function POST(
   request: NextRequest,
@@ -14,10 +16,13 @@ export async function POST(
 ) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
+
+    await assertRateLimit(authUser.id, 'MUTATION');
 
     const meeting = await MeetingService.holdMeeting(params.id, authUser.id, requestId);
     return apiSuccess(meeting, { requestId, status: 200 });

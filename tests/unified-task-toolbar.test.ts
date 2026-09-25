@@ -30,7 +30,7 @@ import { TaskEmptyState } from "../src/components/tasks/table/components/task-em
 
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
-  const staffUser = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh (CNTT)
+  const staffUser = DEFAULT_DEMO_USERS.find((u) => u.name.includes("Vinh")) || DEFAULT_DEMO_USERS[3]; // Nguyễn Ngọc Vinh (CNTT)
   const managerUser = DEFAULT_DEMO_USERS[1]; // Lê Văn Thí (DAO_TAO)
   const adminUser = DEFAULT_DEMO_USERS[0]; // BGH
 

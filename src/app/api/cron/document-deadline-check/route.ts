@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { scanAndDispatchDocumentDeadlines } from "@/lib/documents/document-deadline-scanner";
 import { serverEnv } from "@/config/env.server";
+import { logger } from "@/server/observability/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       data: scanResult,
     });
   } catch (error) {
-    console.error("[Cron /api/cron/document-deadline-check Error]:", error);
+    logger.error("cron.document_deadline_check_failed", { error }, error);
     return Response.json(
       {
         success: false,

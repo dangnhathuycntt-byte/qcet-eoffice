@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ArchiveTaskSchema } from "@/contracts/tasks";
 import { taskCommandService } from "@/server/tasks";
+import { apiSuccess } from "@/server/api/response";
 import {
   ActionRouteContext,
   handleActionError,
@@ -8,16 +9,18 @@ import {
 } from "../shared";
 
 export async function POST(request: NextRequest, context: ActionRouteContext) {
+  let requestId = crypto.randomUUID();
   try {
-    const { session, taskId, body } = await resolveActionContext(
+    const { session, taskId, body, requestId: reqId } = await resolveActionContext(
       request,
       context,
       ArchiveTaskSchema,
       "task.archive"
     );
-    const result = await taskCommandService.archiveTask({ user: session as any }, taskId, body);
-    return NextResponse.json({ success: true, data: result }, { status: 200 });
+    requestId = reqId;
+    const result = await taskCommandService.archiveTask({ user: session }, taskId, body);
+    return apiSuccess({ success: true, data: result }, { requestId });
   } catch (error) {
-    return handleActionError(error);
+    return handleActionError(error, requestId);
   }
 }

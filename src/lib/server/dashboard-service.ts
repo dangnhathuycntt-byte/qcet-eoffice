@@ -50,9 +50,10 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     whereTask.leadUnitId = scopedDepartmentId;
   }
   if (options?.userId) {
-    whereTask.actors = {
-      some: { userId: options.userId },
-    };
+    whereTask.OR = [
+      { actors: { some: { userId: options.userId } } },
+      { createdById: options.userId },
+    ];
   }
 
   // Ma trận 11 phòng ban
@@ -213,12 +214,13 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       leadAssigneeAvatar: leadAssignee?.user?.avatarUrl || undefined,
       assignedTo: leadAssignee?.user?.name || "Chưa phân công",
       leadDepartment: t.leadUnit?.name,
-      leadDepartmentCode: t.leadUnit?.id,
+      leadDepartmentCode: t.leadUnit?.code || t.leadUnit?.id,
       leadDepartmentId: t.leadUnit?.id,
       department: t.leadUnit?.name,
-      departmentCode: t.leadUnit?.id,
+      departmentCode: t.leadUnit?.code || t.leadUnit?.id,
       departmentId: t.leadUnit?.id,
       departmentName: t.leadUnit?.name,
+      createdById: t.createdById,
       coAssignees,
       assignedDate: formatLocalDate(t.startDate),
       dueDate: formatLocalDate(t.dueDate),

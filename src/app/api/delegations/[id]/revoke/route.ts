@@ -4,15 +4,23 @@
  */
 
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { ApiError, ForbiddenError, NotFoundError } from '@/server/api/errors';
+import { parseAndValidateJson } from '@/server/api/validation';
 import { DelegationStatus } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { authorizationContextCache } from '@/server/authorization/authorization-context-cache';
-import { isExecutiveAdministrator } from '@/app/api/delegations/route';
+import { isExecutiveAdministrator } from '@/server/authorization/delegation-policy';
+
+const RevokeDelegationSchema = z
+  .object({
+    reason: z.string().trim().optional().nullable(),
+  })
+  .passthrough();
 
 interface RouteParams {
   params: Promise<{
@@ -85,7 +93,7 @@ export async function POST(request: NextRequest, props: RouteParams) {
     // Read reason if provided
     let reason: string | undefined;
     try {
-      const body = await request.json();
+      const body = await parseAndValidateJson(request, RevokeDelegationSchema, { allowEmpty: true });
       if (body && typeof body.reason === 'string') {
         reason = body.reason.trim();
       }

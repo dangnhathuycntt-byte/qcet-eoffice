@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { NextRequest } from "next/server";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
 import {
@@ -9,7 +8,7 @@ import {
   assertQueryStringLength,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded, assertRateLimit } from "@/server/security/rate-limit";
+import { assertRateLimit } from "@/server/security/rate-limit";
 import { canReadDocument, canCreateDocument } from "@/server/policies/document-policy";
 import { toDocumentListDTOArray, toDocumentDetailDTO } from "@/server/dto/document-dto";
 import { DocumentQuerySchema, CreateDocumentSchema } from "@/contracts/documents";
@@ -106,22 +105,7 @@ export async function POST(request: NextRequest) {
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
     // 3. Rate limiting on mutations
-    const rateResult = await checkRateLimit('MUTATION', authUser.id);
-    if (!rateResult.success) {
-      const retryAfter = rateResult.retryAfter;
-      logRateLimitExceeded('MUTATION', authUser.id, request.url, authUser.id).catch(() => undefined);
-      return NextResponse.json(
-        { error: 'Too Many Requests', code: 'RATE_LIMITED', retryAt: rateResult.resetAt.toISOString() },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, retryAfter)),
-            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATION.limit),
-            'X-RateLimit-Remaining': String(rateResult.remaining),
-          },
-        },
-      );
-    }
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     // 4. Authorization check
     if (!canCreateDocument(authUser)) {

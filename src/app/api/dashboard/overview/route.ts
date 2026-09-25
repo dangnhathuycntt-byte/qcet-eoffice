@@ -1,22 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getLiveDashboardData, LiveDashboardOptions } from '@/lib/server/dashboard-service';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
+import { AuthenticationError } from '@/server/api/errors';
 import { isAdmin } from '@/server/policies/document-policy';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(request: NextRequest): Promise<NextResponse>;
-export async function GET(): Promise<NextResponse>;
-export async function GET(request?: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<Response>;
+export async function GET(): Promise<Response>;
+export async function GET(request?: NextRequest): Promise<Response> {
   let requestId = 'req-dashboard-overview';
   try {
     if (!request) {
-      return NextResponse.json(
-        { success: false, error: 'Chưa xác thực danh tính' },
-        { status: 401 }
-      );
+      throw new AuthenticationError('Chưa xác thực danh tính', 'AUTH_REQUIRED');
     }
 
     const context = await getApiContext(request);
@@ -92,6 +90,8 @@ export async function GET(request?: NextRequest): Promise<NextResponse> {
         data.tasks = data.tasks.filter(
           (task) =>
             task.departmentId === userDeptId ||
+            task.leadAssigneeId === authUser.id ||
+            task.createdById === authUser.id ||
             task.subTasks?.some(
               (sub) => sub.departmentId === userDeptId || sub.assigneeId === authUser.id
             )

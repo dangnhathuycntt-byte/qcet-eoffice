@@ -34,6 +34,16 @@ export function filterTasksByScope(
 
     return tasks
       .map((task) => {
+        const isRelatedByContext = Boolean((task as any).viewerContext?.relation);
+
+        const isCreator = Boolean(
+          user.id &&
+            ((task as any).createdById === user.id ||
+              (task as any).assignedById === user.id ||
+              (task as any).createdBy === user.id ||
+              (Array.isArray((task as any).actors) && (task as any).actors.some((a: any) => a.userId === user.id)))
+        );
+
         const isLead =
           matchesUser(task.leadAssigneeName, user) ||
           (user.id && (task as any).leadAssigneeId === user.id) ||
@@ -67,8 +77,8 @@ export function filterTasksByScope(
           return Boolean(isSubAssignee || isSubCollab);
         });
 
-        // If user is DRI (lead), retain full task with all subtasks for coordination
-        if (isLead) {
+        // If user is DRI (lead), creator, or has viewer context, retain full task with all subtasks for coordination
+        if (isLead || isCreator || isRelatedByContext) {
           return { ...task };
         }
 
@@ -94,7 +104,7 @@ export function filterTasksByScope(
   const targetDept =
     selectedDepartment && selectedDepartment !== "ALL"
       ? selectedDepartment
-      : user?.departmentCode || user?.department;
+      : user?.departmentCode || (user as any)?.departmentId || user?.department;
 
   if (!targetDept || targetDept === "ALL") {
     return tasks;
@@ -107,13 +117,14 @@ export function filterTasksByScope(
     .map((task) => {
       const taskDeptCode = (task.departmentCode || task.leadDepartmentCode || "").toUpperCase();
       const taskDeptName = (task.department || task.leadDepartment || "").toLowerCase();
-      const taskDeptId = (task as any).departmentId || (task as any).leadDepartmentId || "";
+      const taskDeptId = ((task as any).departmentId || (task as any).leadDepartmentId || "").toUpperCase();
+      const userDeptId = (((user as any)?.departmentId || (user as any)?.unitId || "") as string).toUpperCase();
 
       const isLeadDept =
         taskDeptCode === deptUpper ||
         taskDeptName === deptLower ||
         taskDeptName.includes(deptLower) ||
-        (taskDeptId && taskDeptId.toUpperCase() === deptUpper);
+        (taskDeptId && (taskDeptId === deptUpper || (userDeptId && taskDeptId === userDeptId)));
 
       const isCoDept = Boolean(
         task.coDepartmentCodes?.some((c) => c.toUpperCase() === deptUpper) ||

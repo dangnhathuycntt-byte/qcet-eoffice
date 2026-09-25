@@ -51,7 +51,8 @@ describe('Sprint 2: Task 5 (F05: Meeting Authorization & Lifecycle Security)', (
   let testMeeting: any;
 
   const authHeaders = (token: string) => ({
-    cookie: `${SESSION_COOKIE_NAME}=${token}`,
+    authorization: `Bearer ${token}`,
+    origin: 'http://localhost:3000',
     'content-type': 'application/json',
   });
 

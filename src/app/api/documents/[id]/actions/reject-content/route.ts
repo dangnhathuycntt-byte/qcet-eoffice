@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
+import { parseAndValidateJson } from "@/server/api/validation";
+import { RejectContentDocumentSchema } from "@/contracts/documents";
 import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
 
 interface RouteContext {
@@ -17,21 +19,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const authUser = requireAuthenticated(apiCtx);
 
     const { id } = await context.params;
-    const body = await req.json().catch(() => ({}));
+    const body = await parseAndValidateJson(req, RejectContentDocumentSchema, { allowEmpty: true });
 
     const result = await OutgoingDocumentService.rejectContent(
       {
         documentId: id,
-        notes: body.notes,
+        notes: body.notes ?? undefined,
       },
-      authUser as any,
+      authUser,
       { requestId }
     );
 
-    return apiSuccess(
-      { workflow: result },
-      { requestId, status: 200 }
-    );
+    return apiSuccess({ workflow: result }, { requestId });
   } catch (error) {
     return apiError(error, requestId);
   }

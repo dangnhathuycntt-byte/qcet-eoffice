@@ -44,6 +44,7 @@ import {
   ValidationError,
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
+import type { AuthenticatedUser } from "@/server/api/request-context";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
 import {
   IncomingDocumentStateMachine,
@@ -147,7 +148,7 @@ export type IncomingDocumentWorkflowWithDetails = DocumentIncomingWorkflow & {
 // ============================================================================
 
 export async function resolveUserContext(
-  actor: AuthenticatedUserContext | SessionPayload
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser
 ): Promise<AuthenticatedUserContext> {
   // If already full AuthenticatedUserContext
   if ("systemRole" in actor && "activePositionCode" in actor) {
@@ -275,7 +276,7 @@ export async function resolveUserContext(
  */
 export async function registerIncomingDocument(
   input: RegisterIncomingDocumentInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<{ document: Document; workflow: DocumentIncomingWorkflow }> {
   const user = await resolveUserContext(actor);
@@ -399,7 +400,7 @@ export async function registerIncomingDocument(
  */
 export async function presentDocument(
   input: PresentDocumentInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<DocumentIncomingWorkflow> {
   const user = await resolveUserContext(actor);
@@ -497,7 +498,7 @@ export async function presentDocument(
  */
 export async function directDocument(
   input: DirectDocumentInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<DocumentIncomingWorkflow> {
   const user = await resolveUserContext(actor);
@@ -642,7 +643,7 @@ export async function directDocument(
  */
 export async function assignUnitWork(
   input: AssignUnitWorkInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<{ assignment: UnitWorkAssignment; workflow: DocumentIncomingWorkflow }> {
   const user = await resolveUserContext(actor);
@@ -858,7 +859,7 @@ export async function assignUnitWork(
  */
 export async function resolveDocument(
   input: ResolveDocumentInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<DocumentIncomingWorkflow> {
   const user = await resolveUserContext(actor);
@@ -986,7 +987,7 @@ export async function resolveDocument(
  */
 export async function fileDocument(
   input: FileDocumentInput,
-  actor: AuthenticatedUserContext | SessionPayload,
+  actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
 ): Promise<DocumentIncomingWorkflow> {
   const user = await resolveUserContext(actor);

@@ -4,12 +4,12 @@
  * POST - Tạo mới cuộc họp
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
 import { CreateMeetingSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from '@/server/security/rate-limit';
+import { assertRateLimit } from '@/server/security/rate-limit';
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -44,22 +44,7 @@ export async function POST(request: NextRequest) {
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    const rateResult = await checkRateLimit('MUTATION', authUser.id);
-    if (!rateResult.success) {
-      const retryAfter = rateResult.retryAfter;
-      logRateLimitExceeded('MUTATION', authUser.id, request.url, authUser.id).catch(() => undefined);
-      return NextResponse.json(
-        { error: 'Too Many Requests', code: 'RATE_LIMITED', retryAt: rateResult.resetAt.toISOString() },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, retryAfter)),
-            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.MUTATION.limit),
-            'X-RateLimit-Remaining': String(rateResult.remaining),
-          },
-        },
-      );
-    }
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const body = await request.json();
     const input = CreateMeetingSchema.parse(body);

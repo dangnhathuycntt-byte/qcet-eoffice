@@ -165,7 +165,11 @@ export async function parseAndValidateJson<T>(
   // 5. Validate with Zod schema
   const parseResult = schema.safeParse(rawJson);
   if (!parseResult.success) {
-    throw new ValidationError('Validation failed', extractFieldErrors(parseResult.error));
+    const firstMessage = parseResult.error.issues[0]?.message;
+    throw new ValidationError(
+      firstMessage || 'Validation failed',
+      extractFieldErrors(parseResult.error)
+    );
   }
 
   return parseResult.data;

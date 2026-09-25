@@ -338,6 +338,7 @@ describe('API Routes: Push & Notifications System', () => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${testUserToken}`,
+          'Content-Type': 'application/json',
         },
       });
 
@@ -462,6 +463,7 @@ describe('API Routes: Push & Notifications System', () => {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${testUserToken}`,
+          'Content-Type': 'application/json',
         },
       });
 

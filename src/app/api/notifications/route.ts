@@ -79,14 +79,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  let requestId = 'req-notifications-patch';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);
     const authUser = context.user!;
 
-    assertCsrf(request);
     await assertRateLimit(authUser.id, 'MUTATION');
 
     const result = await prisma.notification.updateMany({

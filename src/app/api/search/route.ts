@@ -1,13 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
-import { getSessionFromRequest } from '@/lib/jwt-session';
-void getSessionFromRequest;
 import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';
 import { SearchQuerySchema } from '@/contracts/common';
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from '@/server/security/rate-limit';
+import { assertRateLimit } from '@/server/security/rate-limit';
 import {
   foldVietnamese,
   normalizeTelexQuery,
@@ -88,26 +86,14 @@ export async function GET(request: NextRequest) {
   try {
     const context = await getApiContext(request);
     requestId = context.requestId;
-    requireAuthenticated(context);
-    const authUser = context.user!;
+    const authUser = requireAuthenticated(context);
 
     // Enforce SENSITIVE_READ rate limit tier
-    const rateResult = await checkRateLimit('SENSITIVE_READ', authUser.id);
-    if (!rateResult.success) {
-      const retryAfter = rateResult.retryAfter;
-      logRateLimitExceeded('SENSITIVE_READ', authUser.id, request.url, authUser.id).catch(() => undefined);
-      return NextResponse.json(
-        { error: 'Too Many Requests', code: 'RATE_LIMITED', retryAt: rateResult.resetAt.toISOString() },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(Math.max(1, retryAfter)),
-            'X-RateLimit-Limit': String(RATE_LIMIT_TIERS.SENSITIVE_READ.limit),
-            'X-RateLimit-Remaining': String(rateResult.remaining),
-          },
-        },
-      );
-    }
+    await assertRateLimit(authUser.id, 'SENSITIVE_READ', {
+      requestId,
+      endpoint: 'GET /api/search',
+      userId: authUser.id,
+    });
 
     const searchParams = request.nextUrl.searchParams;
     const queryParams: Record<string, any> = {};

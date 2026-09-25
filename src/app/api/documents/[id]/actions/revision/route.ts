@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
+import { parseAndValidateJson } from "@/server/api/validation";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { CreateDocumentRevisionSchema } from "@/contracts/documents";
 import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
 
 interface RouteContext {
@@ -10,30 +14,32 @@ interface RouteContext {
 export async function POST(req: NextRequest, context: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(req);
+
     const apiCtx = await getApiContext(req);
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id } = await context.params;
-    const body = await req.json().catch(() => ({}));
+    const body = await parseAndValidateJson(req, CreateDocumentRevisionSchema, { allowEmpty: true });
 
     const result = await OutgoingDocumentService.createDocumentRevision(
       {
         documentId: id,
         changeReason: body.changeReason,
-        title: body.title,
-        summary: body.summary,
-        fileUrl: body.fileUrl,
-        fileName: body.fileName,
-        fileSize: body.fileSize,
+        title: body.title ?? undefined,
+        summary: body.summary ?? undefined,
+        fileUrl: body.fileUrl ?? undefined,
+        fileName: body.fileName ?? undefined,
+        fileSize: body.fileSize ?? undefined,
       },
-      authUser as any,
+      authUser,
       { requestId }
     );
 
     return apiSuccess(result, {
       requestId,
-      status: 200,
     });
   } catch (error) {
     return apiError(error, requestId);

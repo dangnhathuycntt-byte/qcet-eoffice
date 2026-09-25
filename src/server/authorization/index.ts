@@ -8,3 +8,4 @@ export * from './available-actions';
 export * from './errors';
 export * from './authorization-audit';
 export * from './authorization-context-cache';
+export * from './delegation-policy';

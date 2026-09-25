@@ -45,6 +45,7 @@ import {
   ForbiddenError,
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
+import type { AuthenticatedUser } from "@/server/api/request-context";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
 import {
@@ -180,7 +181,7 @@ export class OutgoingDocumentService {
    */
   static async createOutgoingDraft(
     input: CreateOutgoingDraftInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -304,7 +305,7 @@ export class OutgoingDocumentService {
    */
   static async submitContentReview(
     input: SubmitContentReviewInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -391,7 +392,7 @@ export class OutgoingDocumentService {
    */
   static async approveContent(
     input: ApproveContentInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -488,7 +489,7 @@ export class OutgoingDocumentService {
    */
   static async rejectContent(
     input: RejectContentInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -583,7 +584,7 @@ export class OutgoingDocumentService {
    */
   static async submitFormatCheck(
     input: SubmitFormatCheckInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -657,7 +658,7 @@ export class OutgoingDocumentService {
    */
   static async approveFormat(
     input: ApproveFormatInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -744,7 +745,7 @@ export class OutgoingDocumentService {
    */
   static async signDocument(
     input: SignDocumentInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -886,7 +887,7 @@ export class OutgoingDocumentService {
    */
   static async assignOutgoingNumber(
     input: AssignOutgoingNumberInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -1000,7 +1001,7 @@ export class OutgoingDocumentService {
    */
   static async organizationSign(
     input: OrganizationSignInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -1124,7 +1125,7 @@ export class OutgoingDocumentService {
    */
   static async issueDocument(
     input: IssueDocumentInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -1223,7 +1224,7 @@ export class OutgoingDocumentService {
    */
   static async createDocumentRevision(
     input: CreateDocumentRevisionInput,
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -1352,7 +1353,7 @@ export class OutgoingDocumentService {
   static async updateDraftContent(
     documentId: string,
     data: { summary?: string; notes?: string },
-    actor: AuthenticatedUserContext | SessionPayload
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser
   ) {
     const existing = await prisma.documentOutgoingWorkflow.findUnique({
       where: { documentId },
@@ -1403,7 +1404,7 @@ export class OutgoingDocumentService {
    */
   static async deliverDocument(
     input: { documentId: string; deliveryNotes?: string },
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);
@@ -1470,7 +1471,7 @@ export class OutgoingDocumentService {
    */
   static async fileOutgoingDocument(
     input: { documentId: string; archiveNow?: boolean; filingNotes?: string },
-    actor: AuthenticatedUserContext | SessionPayload,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
     const user = await resolveUserContext(actor);

@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { getSessionFromRequest } from "@/lib/jwt-session";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { toUserPublicDTO } from "@/server/dto";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { AuthenticationError, ValidationError } from "@/server/api/errors";
 import { assertCsrf } from "@/server/security/csrf";
-import { assertJsonContentType, assertRequestBodySize } from "@/server/api/validation";
+import { parseAndValidateJson } from "@/server/api/validation";
 import { UpdateUserProfileSchema } from "@/contracts/users";
 
 export async function GET(req: Request) {
@@ -14,10 +13,7 @@ export async function GET(req: Request) {
     const context = await getApiContext(req);
     requestId = context.requestId;
 
-    // Verify server session truth using getSessionFromRequest(req) supporting cookies and Authorization: Bearer <token>
-    const session = (await getSessionFromRequest(req as any)) || (context.user ? { id: context.user.id } : null);
-
-    if (!session || !session.id) {
+    if (!context.user) {
       return apiSuccess(
         { authenticated: false, user: null },
         {
@@ -27,8 +23,10 @@ export async function GET(req: Request) {
       );
     }
 
+    const authUser = context.user;
+
     const dbUser = await prisma.user.findUnique({
-      where: { id: session.id },
+      where: { id: authUser.id },
       include: {
         // Phase 9: `User.departmentId` dropped — đơn vị canonical là phân công vị trí
         // việc làm chính đang hiệu lực.
@@ -102,33 +100,15 @@ export async function PATCH(req: Request) {
   let requestId = crypto.randomUUID();
   try {
     assertCsrf(req);
-    assertJsonContentType(req);
-    assertRequestBodySize(req, 16 * 1024);
 
     const context = await getApiContext(req);
     requestId = context.requestId;
 
     const authUser = requireAuthenticated(context);
 
-    let rawBody: unknown;
-    try {
-      rawBody = await req.json();
-    } catch {
-      throw new ValidationError('Payload JSON không hợp lệ', undefined, 'INVALID_JSON');
-    }
+    const validatedData = await parseAndValidateJson(req, UpdateUserProfileSchema, { maxBytes: 16 * 1024 });
 
-    const parseResult = UpdateUserProfileSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      const issue = parseResult.error.issues[0];
-      const field = issue.path.join('.');
-      throw new ValidationError(
-        issue.message || `Dữ liệu hồ sơ không hợp lệ: ${field}`,
-        field ? { [field]: [issue.message] } : undefined,
-        'VALIDATION_FAILED'
-      );
-    }
-
-    const { name, phone, title } = parseResult.data;
+    const { name, phone, title } = validatedData;
 
     if (name === undefined && phone === undefined && title === undefined) {
       throw new ValidationError('Cần cung cấp ít nhất một trường thông tin để cập nhật', undefined, 'EMPTY_UPDATE');

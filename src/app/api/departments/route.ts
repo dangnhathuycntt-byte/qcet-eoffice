@@ -76,10 +76,15 @@ export async function GET(req: Request) {
     });
 
     return apiSuccess(
-      { success: true, departments: mapped },
+      {
+        data: mapped,
+        departments: mapped,
+        total: mapped.length,
+      },
       {
         headers: { "Cache-Control": "private, max-age=60" },
-        requestId: context.requestId,
+        requestId,
+        legacyCompat: true,
       },
     );
   } catch (error) {

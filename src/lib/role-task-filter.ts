@@ -104,32 +104,65 @@ export function filterTasksByRole(tasks: SchoolTask[], user?: AuthUser | null): 
 
   if (user.role === "MANAGER") {
     return tasks.filter((task) => {
+      // 0. Creator
+      if (
+        user.id &&
+        ((task as any).createdById === user.id ||
+          (task as any).assignedById === user.id ||
+          (task as any).createdBy === user.id)
+      ) {
+        return true;
+      }
       // 1. Lead assignee matches manager
-      if (matchesUser(task.leadAssigneeName, user)) return true;
+      if (
+        matchesUser(task.leadAssigneeName, user) ||
+        (user.id && ((task as any).leadAssigneeId === user.id || (task as any).assignedTo === user.id))
+      ) {
+        return true;
+      }
       // 2. Co-assignees include manager
       if (task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))) return true;
       // 3. Any subtask belongs to manager's unit/name
-      if (task.subTasks && task.subTasks.some((sub) => matchesUser(sub.assigneeName, user))) return true;
+      if (
+        task.subTasks &&
+        task.subTasks.some(
+          (sub) =>
+            matchesUser(sub.assigneeName, user) ||
+            (user.id && ((sub as any).assigneeId === user.id || (sub as any).assignedTo === user.id))
+        )
+      ) {
+        return true;
+      }
       return false;
     });
   }
 
   // STAFF role:
-  // 1. If staff is DRI (leadAssigneeName), they see the task with all subtasks for coordination.
+  // 1. If staff is DRI or creator, they see the task with all subtasks for coordination.
   // 2. If staff is coAssignee without subtasks, they see the task in observing/awaiting assignment mode.
   // 3. If staff has assigned subtasks, they see the task filtered down to their subtasks.
   const result: SchoolTask[] = [];
   for (const task of tasks) {
-    const isLead = matchesUser(task.leadAssigneeName, user);
+    const isCreator = Boolean(
+      user.id &&
+        ((task as any).createdById === user.id ||
+          (task as any).assignedById === user.id ||
+          (task as any).createdBy === user.id)
+    );
+    const isLead =
+      matchesUser(task.leadAssigneeName, user) ||
+      (user.id && ((task as any).leadAssigneeId === user.id || (task as any).assignedTo === user.id));
     const isCoAssignee = Boolean(
       task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))
     );
-    const userSubTasks = (task.subTasks || []).filter((sub) =>
-      matchesUser(sub.assigneeName, user)
+    const userSubTasks = (task.subTasks || []).filter(
+      (sub) =>
+        matchesUser(sub.assigneeName, user) ||
+        (user.id && ((sub as any).assigneeId === user.id || (sub as any).assignedTo === user.id))
     );
 
-    if (isLead) {
-      // DRI retains full task with all subtasks
+    if (isLead || isCreator) {
+      // DRI or Creator retains full task with all subtasks
       result.push({ ...task });
     } else if (userSubTasks.length > 0) {
       // Participant with assigned subtasks: filtered to user's subtasks, with recalculated rollup

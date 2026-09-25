@@ -56,6 +56,9 @@ export interface PrismaTaskWithRelations {
   progressPercent: number;
   academicMonth: number;
   academicYear: string;
+  createdById?: string | null;
+  assignedById?: string | null;
+  viewerContext?: any;
   startDate: Date;
   dueDate: Date;
   updatedAt?: Date | string | null;
@@ -372,6 +375,10 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     taskCode: raw.code,
     title: raw.title,
     description: raw.description || '',
+    createdById: raw.createdById || undefined,
+    assignedById: (raw as any).assignedById || undefined,
+    viewerContext: (raw as any).viewerContext || undefined,
+    actors: raw.actors || undefined,
     department: raw.leadUnit?.name || 'Chưa phân bổ',
     assignedTo: primaryOwner?.user?.name || 'Chưa phân công',
     leadAssigneeName: primaryOwner?.user?.name || 'Chưa phân công',

@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
+import { parseAndValidateJson } from "@/server/api/validation";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { ResolveDocumentSchema } from "@/contracts/documents";
 import { resolveDocument } from "@/lib/services/incoming-document-service";
 
 interface RouteContext {
@@ -10,27 +14,29 @@ interface RouteContext {
 export async function POST(req: NextRequest, context: RouteContext) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(req);
+
     const apiCtx = await getApiContext(req);
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
 
     const { id } = await context.params;
-    const body = await req.json();
+    const body = await parseAndValidateJson(req, ResolveDocumentSchema, { allowEmpty: true });
 
     const result = await resolveDocument(
       {
         documentId: id,
         resolutionSummary: body.resolutionSummary,
-        resolutionDocUrl: body.resolutionDocUrl,
-        notes: body.notes,
+        resolutionDocUrl: body.resolutionDocUrl ?? undefined,
+        notes: body.notes ?? undefined,
       },
-      authUser as any,
+      authUser,
       requestId
     );
 
     return apiSuccess(result, {
       requestId,
-      status: 200,
     });
   } catch (error) {
     return apiError(error, requestId);

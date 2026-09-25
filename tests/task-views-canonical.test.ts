@@ -347,7 +347,7 @@ describe('Canonical Task Views Test Matrix (Issue #26)', () => {
     // Verify read authorization restricts staff to unit_cntt and direct participation
     const authOr = (readWhere as any).OR;
     assert.ok(Array.isArray(authOr), 'Staff auth filter must have OR conditions');
-    const hasDeptFilter = authOr.some((c: any) => c.departmentId === 'unit_cntt');
+    const hasDeptFilter = authOr.some((c: any) => c.leadUnitId === 'unit_cntt' || c.departmentId === 'unit_cntt');
     assert.ok(hasDeptFilter, 'Staff auth filter must restrict to own unit_cntt');
   });
 

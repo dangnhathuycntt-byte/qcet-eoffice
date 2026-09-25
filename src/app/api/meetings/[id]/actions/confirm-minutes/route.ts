@@ -8,6 +8,9 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
 import { ConfirmMinutesSchema } from '@/contracts/meeting';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { parseAndValidateJson } from '@/server/api/validation';
 
 export async function POST(
   request: NextRequest,
@@ -15,13 +18,15 @@ export async function POST(
 ) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    const body = await request.json().catch(() => ({}));
-    const input = ConfirmMinutesSchema.parse(body);
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const input = await parseAndValidateJson(request, ConfirmMinutesSchema, { allowEmpty: true });
 
     const meeting = await MeetingService.confirmMinutes(params.id, input, authUser.id, requestId);
     return apiSuccess(meeting, { requestId, status: 200 });

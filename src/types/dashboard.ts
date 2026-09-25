@@ -190,6 +190,7 @@ export interface SchoolTask {
   departmentCode?: string;
   departmentId?: string;
   departmentName?: string;
+  createdById?: string;
   assignedTo?: string;
   leadAssigneeName: string;
   leadAssigneeId?: string;

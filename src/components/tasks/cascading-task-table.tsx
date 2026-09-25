@@ -185,18 +185,26 @@ export function filterTasksForTable(
   if (department !== "ALL") {
     const canonicalDept = resolveDepartmentId(department) || department;
     result = result.filter((task) => {
-      const taskDept =
-        task.departmentId ||
-        task.leadDepartmentId ||
-        task.departmentCode ||
-        task.leadDepartmentCode ||
-        task.department ||
-        task.leadDepartment;
-
-      const matchTaskDept =
-        taskDept &&
-        (taskDept === canonicalDept ||
-          resolveDepartmentId(taskDept) === canonicalDept);
+      const matchTaskDept = Boolean(
+        (task.departmentCode &&
+          (task.departmentCode === canonicalDept ||
+            task.departmentCode === department ||
+            resolveDepartmentId(task.departmentCode) === canonicalDept)) ||
+        (task.leadDepartmentCode &&
+          (task.leadDepartmentCode === canonicalDept ||
+            task.leadDepartmentCode === department ||
+            resolveDepartmentId(task.leadDepartmentCode) === canonicalDept)) ||
+        (task.department &&
+          (task.department === canonicalDept ||
+            task.department === department ||
+            resolveDepartmentId(task.department) === canonicalDept)) ||
+        (task.leadDepartment &&
+          (task.leadDepartment === canonicalDept ||
+            task.leadDepartment === department ||
+            resolveDepartmentId(task.leadDepartment) === canonicalDept)) ||
+        (task.departmentId && (task.departmentId === canonicalDept || task.departmentId === department)) ||
+        (task.leadDepartmentId && (task.leadDepartmentId === canonicalDept || task.leadDepartmentId === department))
+      );
 
       const matchCoDept =
         task.coDepartmentCodes?.some(
@@ -211,7 +219,12 @@ export function filterTasksForTable(
         );
 
       const matchFallback =
-        !taskDept &&
+        !task.departmentCode &&
+        !task.leadDepartmentCode &&
+        !task.department &&
+        !task.leadDepartment &&
+        !task.departmentId &&
+        !task.leadDepartmentId &&
         (resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
           resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
           resolveDepartmentId(undefined, undefined, task.category) === canonicalDept);

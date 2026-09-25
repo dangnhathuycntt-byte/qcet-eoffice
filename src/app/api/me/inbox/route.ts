@@ -1,18 +1,17 @@
 import { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { AuthenticationError } from '@/server/api/errors';
 import { ActionInboxService } from '@/server/services/action-inbox-service';
 
 export async function GET(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+  let requestId = crypto.randomUUID();
   try {
-    const session = await getSessionFromRequest(req as any);
-    if (!session || !session.id) {
-      return apiError(new AuthenticationError('Chưa xác thực người dùng', 'UNAUTHORIZED'), requestId);
-    }
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    const inbox = await ActionInboxService.getActionInbox(session.id);
+    const authUser = requireAuthenticated(context);
+
+    const inbox = await ActionInboxService.getActionInbox(authUser.id);
     return apiSuccess(inbox, {
       requestId,
       headers: {

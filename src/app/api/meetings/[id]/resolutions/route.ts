@@ -10,6 +10,9 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
 import { CreateMeetingResolutionSchema } from '@/contracts/meeting';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { parseAndValidateJson } from '@/server/api/validation';
 
 export async function GET(
   request: NextRequest,
@@ -51,13 +54,15 @@ export async function POST(
 ) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
-    const body = await request.json();
-    const input = CreateMeetingResolutionSchema.parse(body);
+    await assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const input = await parseAndValidateJson(request, CreateMeetingResolutionSchema);
 
     const resolution = await MeetingService.createResolution(params.id, input, authUser.id, requestId);
     return apiSuccess(resolution, { requestId, status: 201 });

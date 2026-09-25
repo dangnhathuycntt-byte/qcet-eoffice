@@ -403,3 +403,105 @@ export const BatchDocumentRequestSchema = z
 
 export type BatchDocumentRequest = z.infer<typeof BatchDocumentRequestSchema>;
 
+/**
+ * Signature type enum schema (matches Prisma SignatureType).
+ */
+export const SignatureTypeSchema = z.enum([
+  'PERSONAL_DIGITAL',
+  'ORGANIZATION_DIGITAL',
+  'PHYSICAL',
+]);
+export type SignatureTypeInput = z.infer<typeof SignatureTypeSchema>;
+
+/**
+ * Present incoming document to leadership schema.
+ */
+export const PresentDocumentSchema = z
+  .object({
+    presenterNotes: z.string().trim().max(2000).optional().nullable(),
+    clerkNotes: z.string().trim().max(2000).optional().nullable(),
+    suggestedLeaderId: z.string().trim().max(64).optional().nullable(),
+  })
+  .strict();
+export type PresentDocumentInput = z.infer<typeof PresentDocumentSchema>;
+
+/**
+ * Reject outgoing document content schema.
+ */
+export const RejectContentDocumentSchema = z
+  .object({
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type RejectContentDocumentInput = z.infer<typeof RejectContentDocumentSchema>;
+
+/**
+ * Resolve incoming document schema.
+ */
+export const ResolveDocumentSchema = z
+  .object({
+    resolutionSummary: z
+      .string()
+      .trim()
+      .min(1, 'Nội dung/kết quả giải quyết văn bản không được để trống')
+      .max(5000, 'Nội dung giải quyết không được vượt quá 5000 ký tự'),
+    resolutionDocUrl: z.string().trim().max(1024).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type ResolveDocumentInput = z.infer<typeof ResolveDocumentSchema>;
+
+/**
+ * Create outgoing document revision schema.
+ */
+export const CreateDocumentRevisionSchema = z
+  .object({
+    changeReason: z
+      .string()
+      .trim()
+      .min(1, 'Lý do tạo bản sửa đổi văn bản là bắt buộc')
+      .max(2000, 'Lý do không được vượt quá 2000 ký tự'),
+    title: z.string().trim().max(500).optional().nullable(),
+    summary: z.string().trim().max(2000).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).optional().nullable(),
+    fileName: z.string().trim().max(255).optional().nullable(),
+    fileSize: z.coerce.number().int().nonnegative().optional().nullable(),
+  })
+  .strict();
+export type CreateDocumentRevisionInput = z.infer<typeof CreateDocumentRevisionSchema>;
+
+/**
+ * Sign outgoing document schema.
+ */
+export const SignDocumentSchema = z
+  .object({
+    signingCapacity: z.string().trim().max(255).optional().nullable(),
+    signatureType: SignatureTypeSchema.optional().nullable(),
+    certificateMetadata: z.record(z.string(), z.unknown()).optional().nullable(),
+    signingNotes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SignDocumentInput = z.infer<typeof SignDocumentSchema>;
+
+/**
+ * Submit outgoing document for content review schema.
+ */
+export const SubmitContentReviewSchema = z
+  .object({
+    contentReviewerId: z.string().trim().max(64).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SubmitContentReviewInput = z.infer<typeof SubmitContentReviewSchema>;
+
+/**
+ * Submit outgoing document for format check schema.
+ */
+export const SubmitFormatCheckSchema = z
+  .object({
+    formatReviewerId: z.string().trim().max(64).optional().nullable(),
+    notes: z.string().trim().max(2000).optional().nullable(),
+  })
+  .strict();
+export type SubmitFormatCheckInput = z.infer<typeof SubmitFormatCheckSchema>;
+

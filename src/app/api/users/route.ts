@@ -21,10 +21,14 @@ export async function GET(req: Request) {
     const rawParams = Object.fromEntries(url.searchParams.entries());
     const validatedQuery = UserQuerySchema.parse(rawParams);
 
-    // If search q is provided, apply await assertRateLimit(context.user.id, 'SEARCH')
+    // If search q is provided, apply await assertRateLimit(authUser.id, 'SEARCH')
     const searchQuery = validatedQuery.q || validatedQuery.search;
     if (searchQuery && searchQuery.trim().length > 0) {
-      await assertRateLimit(authUser.id, "SEARCH");
+      await assertRateLimit(authUser.id, "SEARCH", {
+        requestId,
+        endpoint: "GET /api/users",
+        userId: authUser.id,
+      });
     }
 
     const activeAssignmentFilter = {

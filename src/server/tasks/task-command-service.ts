@@ -622,6 +622,42 @@ export class TaskCommandService {
         });
       }
 
+      // Luôn ghi nhận creator là ASSIGNER trên task nếu creator không đồng thời là DRI chính
+      if (effectiveCreatorId !== validAssigneeId) {
+        await tx.taskActor.create({
+          data: {
+            taskId: task.id,
+            userId: effectiveCreatorId,
+            unitId: validLeadUnitId,
+            role: TaskActorRole.ASSIGNER,
+            isPrimaryDRI: false,
+            assignedById: effectiveCreatorId,
+          },
+        });
+      }
+
+      // Ghi nhận TaskActor cho các nhân sự phối hợp (collaborators)
+      if (Array.isArray(collaboratorIds) && collaboratorIds.length > 0) {
+        for (const coId of collaboratorIds) {
+          if (
+            existingUserIdSet.has(coId) &&
+            coId !== validAssigneeId &&
+            coId !== effectiveCreatorId
+          ) {
+            await tx.taskActor.create({
+              data: {
+                taskId: task.id,
+                userId: coId,
+                unitId: validLeadUnitId,
+                role: TaskActorRole.COLLABORATOR,
+                isPrimaryDRI: false,
+                assignedById: effectiveCreatorId,
+              },
+            });
+          }
+        }
+      }
+
       const requestId =
         ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
           ? ctx.requestId

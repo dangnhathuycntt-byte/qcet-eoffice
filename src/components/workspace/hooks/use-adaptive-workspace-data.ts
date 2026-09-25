@@ -54,7 +54,18 @@ export interface DerivedWorkspaceData {
 
 export function isTaskAssignedToUser(t: SchoolTask, user: AuthUser | null): boolean {
   if (!user) return false;
-  if (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id)) return true;
+  if ((t as any).viewerContext?.relation) return true;
+  if (
+    user.id &&
+    (t.leadAssigneeId === user.id ||
+      t.assignedTo === user.id ||
+      (t as any).createdById === user.id ||
+      (t as any).assignedById === user.id ||
+      (t as any).createdBy === user.id ||
+      (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
+  ) {
+    return true;
+  }
   if (matchesUser(t.assignedTo, user)) return true;
   if (matchesUser(t.leadAssigneeName, user)) return true;
   if (t.coAssignees?.some((ca) => matchesUser(ca, user))) return true;
@@ -133,6 +144,14 @@ export function countScopeTasks(
   // scope === "my"
   if (!user) return cleanTasks.length;
   return cleanTasks.filter((t) => {
+    if ((t as any).viewerContext?.relation) return true;
+    const isCreator = Boolean(
+      user.id &&
+        ((t as any).createdById === user.id ||
+          (t as any).assignedById === user.id ||
+          (t as any).createdBy === user.id ||
+          (Array.isArray((t as any).actors) && (t as any).actors.some((a: any) => a.userId === user.id)))
+    );
     const isLead =
       t.leadAssigneeName === user.name ||
       matchesUser(t.leadAssigneeName, user) ||
@@ -146,7 +165,7 @@ export function countScopeTasks(
     const isCo = Boolean(
       t.coAssignees?.some((ca) => matchesUser(ca, user))
     );
-    return Boolean(isLead || hasSub || isCo);
+    return Boolean(isLead || hasSub || isCo || isCreator);
   }).length;
 }
 

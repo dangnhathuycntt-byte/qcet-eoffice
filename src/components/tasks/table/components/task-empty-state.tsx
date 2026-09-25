@@ -69,14 +69,6 @@ const MOCK_TASKS: MockTask[] = [
     date: "22/10/2026",
     status: "TODO",
   },
-  {
-    title: "Gửi báo cáo tổng kết đợt thực tập sinh viên",
-    summary: "Đánh giá kết quả thực tập tại doanh nghiệp đối tác",
-    assignee: "Phạm Thu Hằng",
-    initial: "P",
-    date: "28/10/2026",
-    status: "COMPLETED",
-  },
 ];
 
 const SKELETON_WIDTHS = [
@@ -84,7 +76,6 @@ const SKELETON_WIDTHS = [
   { title: "75%", desc: "55%" },
   { title: "55%", desc: "38%" },
   { title: "70%", desc: "50%" },
-  { title: "60%", desc: "42%" },
 ];
 
 function MockStatusBadge({ status }: { status: MockTask["status"] }) {
@@ -120,7 +111,7 @@ function MockStatusBadge({ status }: { status: MockTask["status"] }) {
   );
 }
 
-interface SkeletonTaskRowProps {
+interface GhostTaskRowProps {
   data: MockTask;
   widths: { title: string; desc: string };
   isHovered: boolean;
@@ -130,7 +121,7 @@ interface SkeletonTaskRowProps {
   onMouseLeave: () => void;
 }
 
-function SkeletonTaskRow({
+function GhostTaskRow({
   data,
   widths,
   isHovered,
@@ -138,29 +129,30 @@ function SkeletonTaskRow({
   reducedMotion,
   onMouseEnter,
   onMouseLeave,
-}: SkeletonTaskRowProps) {
+}: GhostTaskRowProps) {
   const isDimmed = anyHovered && !isHovered;
 
   return (
     <div
       className={cn(
-        "relative h-[44px] flex-shrink-0 w-full border-b border-border/40 cursor-pointer transition-opacity duration-200 select-none",
-        isDimmed ? "opacity-25" : "opacity-100"
+        "relative h-[46px] w-full flex items-center border-b border-border/40 cursor-pointer transition-all duration-200 select-none",
+        isHovered
+          ? "bg-muted/40 rounded-lg border-transparent"
+          : isDimmed
+          ? "opacity-30"
+          : "opacity-85 hover:opacity-100"
       )}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {/* Layer 1: Skeleton (Default visible, fades out on hover) */}
       <m.div
-        className="absolute inset-0 flex items-center gap-3 sm:gap-4 px-3 sm:px-4"
+        className="absolute inset-0 flex items-center gap-4 px-3 sm:px-4"
         animate={isHovered ? { opacity: 0 } : { opacity: 1 }}
         transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
       >
-        {/* Checkbox */}
-        <div className="size-4 rounded-[4px] bg-muted shrink-0 animate-pulse" />
-
         {/* Task Title + Subtitle */}
-        <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-4">
           <div
             className="h-2.5 sm:h-3 rounded bg-muted animate-pulse"
             style={{ width: widths.title }}
@@ -172,9 +164,9 @@ function SkeletonTaskRow({
         </div>
 
         {/* Lead Assignee */}
-        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
+        <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
           <div className="size-5 rounded-full bg-muted animate-pulse shrink-0" />
-          <div className="h-2.5 rounded bg-muted w-16 sm:w-20 animate-pulse" />
+          <div className="h-2.5 rounded bg-muted w-20 sm:w-24 animate-pulse" />
         </div>
 
         {/* Coordination (Subtasks) */}
@@ -183,43 +175,40 @@ function SkeletonTaskRow({
         </div>
 
         {/* Due Date */}
-        <div className="hidden md:block w-24 shrink-0">
-          <div className="h-2.5 rounded bg-muted w-16 animate-pulse" />
+        <div className="hidden md:block w-28 shrink-0">
+          <div className="h-2.5 rounded bg-muted w-18 animate-pulse" />
         </div>
 
         {/* Status */}
         <div className="flex items-center gap-1.5 w-24 sm:w-28 shrink-0">
           <div className="size-1.5 rounded-full bg-muted animate-pulse shrink-0" />
-          <div className="h-2.5 rounded bg-muted w-12 sm:w-14 animate-pulse" />
+          <div className="h-2.5 rounded bg-muted w-14 sm:w-16 animate-pulse" />
         </div>
       </m.div>
 
-      {/* Layer 2: Real Mock Data (Hidden by default, reveals on hover with subtle blur fade) */}
+      {/* Layer 2: Real Mock Data (Reveals on hover with subtle blur fade) */}
       <m.div
-        className="absolute inset-0 flex items-center gap-3 sm:gap-4 px-3 sm:px-4 pointer-events-none"
+        className="absolute inset-0 flex items-center gap-4 px-3 sm:px-4 pointer-events-none"
         animate={
           isHovered
-            ? { opacity: 0.65, filter: "blur(0px)" }
+            ? { opacity: 0.95, filter: "blur(0px)" }
             : { opacity: 0, filter: "blur(3px)" }
         }
         transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
       >
-        {/* Checkbox */}
-        <div className="size-4 rounded-[4px] border border-border/70 bg-background/60 shrink-0" />
-
         {/* Task Title + Subtitle */}
-        <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-2">
-          <span className="text-[12.5px] sm:text-[13px] font-medium text-foreground truncate">
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-4">
+          <span className="text-[13px] font-medium text-foreground truncate">
             {data.title}
           </span>
-          <span className="text-[11px] text-muted-foreground/70 truncate hidden xs:block">
+          <span className="text-[11.5px] text-muted-foreground/75 truncate hidden xs:block">
             {data.summary}
           </span>
         </div>
 
         {/* Lead Assignee */}
-        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white">
+        <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white shadow-2xs">
             {data.initial}
           </span>
           <span className="text-xs font-medium text-foreground truncate">
@@ -233,7 +222,7 @@ function SkeletonTaskRow({
         </div>
 
         {/* Due Date */}
-        <div className="hidden md:block w-24 shrink-0">
+        <div className="hidden md:block w-28 shrink-0">
           <span className="font-mono text-xs text-muted-foreground">
             {data.date}
           </span>
@@ -248,48 +237,23 @@ function SkeletonTaskRow({
   );
 }
 
-function SkeletonMarquee({ reducedMotion }: { reducedMotion: boolean }) {
-  const [isMarqueeHovered, setIsMarqueeHovered] = React.useState(false);
+function GhostTablePreview({ reducedMotion }: { reducedMotion: boolean }) {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
-
-  // Duplicate items array for seamless infinite vertical slide
-  const items = React.useMemo(() => {
-    if (reducedMotion) return MOCK_TASKS.slice(0, 4);
-    return [...MOCK_TASKS, ...MOCK_TASKS];
-  }, [reducedMotion]);
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-xs"
+      className="relative w-full overflow-hidden select-none"
       style={{
         maskImage:
-          "linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)",
+          "linear-gradient(to bottom, black 40%, transparent 100%)",
         WebkitMaskImage:
-          "linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)",
-        maxHeight: "176px",
+          "linear-gradient(to bottom, black 40%, transparent 100%)",
       }}
-      onMouseEnter={() => setIsMarqueeHovered(true)}
-      onMouseLeave={() => {
-        setIsMarqueeHovered(false);
-        setHoveredIndex(null);
-      }}
+      onMouseLeave={() => setHoveredIndex(null)}
     >
-      <m.div
-        className="flex flex-col"
-        animate={
-          reducedMotion || isMarqueeHovered
-            ? false
-            : { y: ["0%", "-50%"] }
-        }
-        transition={{
-          ease: "linear",
-          duration: 20,
-          repeat: Infinity,
-          repeatType: "loop",
-        }}
-      >
-        {items.map((task, i) => (
-          <SkeletonTaskRow
+      <div className="flex flex-col w-full">
+        {MOCK_TASKS.map((task, i) => (
+          <GhostTaskRow
             key={i}
             data={task}
             widths={SKELETON_WIDTHS[i % SKELETON_WIDTHS.length]}
@@ -300,7 +264,7 @@ function SkeletonMarquee({ reducedMotion }: { reducedMotion: boolean }) {
             onMouseLeave={() => setHoveredIndex(null)}
           />
         ))}
-      </m.div>
+      </div>
     </div>
   );
 }
@@ -374,24 +338,25 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = "Không có nhiệm vụ phù hợp";
       displayDescription = "Thử thay đổi hoặc xóa bộ lọc hiện tại";
     } else {
-      displayTitle = "Chưa có nhiệm vụ nào trong danh sách";
+      displayTitle = "Chưa có nhiệm vụ nào được phân công trong kỳ này";
       displayDescription =
-        "Hệ thống chưa ghi nhận nhiệm vụ nào phù hợp với phạm vi hiển thị hiện thời.";
+        "Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.";
     }
   }
 
   return (
     <div
+      data-slot="workspace-empty-state"
       role="status"
       aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center min-h-[54vh] sm:min-h-[58vh] py-12 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
+        "flex flex-col items-center justify-center min-h-[48vh] sm:min-h-[54vh] py-8 px-4 sm:px-6 text-center select-none max-w-4xl mx-auto w-full",
         className
       )}
     >
-      {/* Skeleton Marquee with Hover Reveal */}
+      {/* Ghost Table Skeleton Preview (Seamless, No Outer Box, Bottom Fade Mask) */}
       <div className="w-full max-w-3xl mb-8">
-        <SkeletonMarquee reducedMotion={reducedMotion} />
+        <GhostTablePreview reducedMotion={reducedMotion} />
       </div>
 
       {/* Title */}
@@ -423,7 +388,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           <button
             type="button"
             onClick={onAddTask}
-            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer active:scale-[0.98] transition-all"
+            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg bg-foreground text-background text-xs font-semibold shadow-xs hover:bg-foreground/90 cursor-pointer active:scale-[0.98] transition-all"
           >
             <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ mới</span>

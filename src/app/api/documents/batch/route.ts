@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { NextRequest } from "next/server";
+import { getApiContext, requireAuthenticated, type AuthenticatedUser, normalizeRole } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
 import {
@@ -8,7 +7,7 @@ import {
   assertRequestBodySize,
   MAX_JSON_BODY_SIZE,
 } from "@/server/api/validation";
-import { checkRateLimit, RATE_LIMIT_TIERS, logRateLimitExceeded } from "@/server/security/rate-limit";
+import { assertRateLimit } from "@/server/security/rate-limit";
 import { prisma } from "@/lib/prisma";
 import {
   BatchDocumentRequestSchema,
@@ -29,7 +28,6 @@ import {
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import { UnitWorkAssignmentStatusValues } from "@/domain/documents/unit-assignment-status";
-import { type AuthenticatedUser, normalizeRole } from "@/server/api/request-context";
 import { isAdmin, isManager, isClerk } from "@/server/policies/document-policy";
 
 /**
@@ -105,26 +103,7 @@ export async function POST(request: NextRequest) {
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
     // 4. Rate limiting on mutations
-    const rateResult = await checkRateLimit("MUTATION", authUser.id);
-    if (!rateResult.success) {
-      const retryAfter = rateResult.retryAfter;
-      logRateLimitExceeded("MUTATION", authUser.id, request.url, authUser.id).catch(() => undefined);
-      return NextResponse.json(
-        {
-          error: "Too Many Requests",
-          code: "RATE_LIMITED",
-          retryAt: rateResult.resetAt.toISOString(),
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.max(1, retryAfter)),
-            "X-RateLimit-Limit": String(RATE_LIMIT_TIERS.MUTATION.limit),
-            "X-RateLimit-Remaining": String(rateResult.remaining),
-          },
-        }
-      );
-    }
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     // 5. Parse and validate JSON input
     const rawBody = await request.json();

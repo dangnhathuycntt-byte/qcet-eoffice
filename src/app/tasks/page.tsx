@@ -59,7 +59,7 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   }
 
   const scope: WorkspaceScope | undefined =
-    canonicalView === "related" ? "my" : canonicalView === "unit" ? "unit" : "school";
+    canonicalView === "related" ? "my" : canonicalView === "unit" ? "unit" : canonicalView === "all" ? "school" : undefined;
 
   const authorizationContext = await loadAuthorizationContext(session.id);
   const { tasks } = await taskQueryService.queryTasksForList(authorizationContext, {

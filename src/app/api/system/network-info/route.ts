@@ -8,7 +8,7 @@ import { isAdmin } from '@/server/policies/document-policy';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  let requestId = 'req-system-network-info';
+  let requestId = crypto.randomUUID();
   try {
     const context = await getApiContext(request);
     requestId = context.requestId;

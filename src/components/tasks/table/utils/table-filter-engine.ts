@@ -65,18 +65,22 @@ export function matchTaskDepartment(
   if (canonicalDept === "ALL") return true;
 
   // 1. Kiểm tra trực tiếp các trường phòng ban của nhiệm vụ cha
-  const taskDept =
-    task.departmentId ||
-    task.leadDepartmentId ||
-    task.departmentCode ||
-    task.leadDepartmentCode ||
-    task.department ||
-    task.leadDepartment;
-
-  const matchTaskDept =
-    taskDept &&
-    (taskDept === canonicalDept ||
-      resolveDepartmentId(taskDept) === canonicalDept);
+  const matchTaskDept = Boolean(
+    (task.departmentCode &&
+      (task.departmentCode === canonicalDept ||
+        resolveDepartmentId(task.departmentCode) === canonicalDept)) ||
+    (task.leadDepartmentCode &&
+      (task.leadDepartmentCode === canonicalDept ||
+        resolveDepartmentId(task.leadDepartmentCode) === canonicalDept)) ||
+    (task.department &&
+      (task.department === canonicalDept ||
+        resolveDepartmentId(task.department) === canonicalDept)) ||
+    (task.leadDepartment &&
+      (task.leadDepartment === canonicalDept ||
+        resolveDepartmentId(task.leadDepartment) === canonicalDept)) ||
+    (task.departmentId && task.departmentId === canonicalDept) ||
+    (task.leadDepartmentId && task.leadDepartmentId === canonicalDept)
+  );
 
   if (matchTaskDept) return true;
 
@@ -135,6 +139,16 @@ export function isTaskAssignedToUser(
   currentUserName?: string
 ): boolean {
   if (!currentUserId && !currentUserName) return true;
+
+  // 0. Người dùng là người tạo/giao việc (Creator / Assigner)
+  if (
+    currentUserId &&
+    ((task as any).createdById === currentUserId ||
+      (task as any).assignedById === currentUserId ||
+      (task as any).createdBy === currentUserId)
+  ) {
+    return true;
+  }
 
   // 1. Người dùng là DRI chính của nhiệm vụ cha
   const isLead = isUserMatch(

@@ -2,13 +2,8 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { AuthorizationError, ValidationError } from '@/server/api/errors';
-import {
-  assertJsonContentType,
-  assertRequestBodySize,
-  extractFieldErrors,
-  MAX_JSON_BODY_SIZE,
-} from '@/server/api/validation';
+import { AuthorizationError } from '@/server/api/errors';
+import { parseAndValidateJson } from '@/server/api/validation';
 import { TestPushSchema } from '@/contracts/notifications';
 import {
   formatTaskPushPayload,
@@ -22,8 +17,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  let requestId = 'req-push-test';
+  let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);
@@ -34,32 +30,9 @@ export async function POST(request: NextRequest) {
       throw new AuthorizationError('Tính năng này chỉ khả dụng cho Quản trị viên trong môi trường sản xuất');
     }
 
-    assertCsrf(request);
     await assertRateLimit(authUser.id, 'PUSH_TEST');
 
-    let rawBody: unknown = {};
-    const contentType = request.headers.get('content-type');
-    if (contentType) {
-      assertJsonContentType(request);
-      assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
-      try {
-        const text = await request.text();
-        if (text.trim().length > 0) {
-          rawBody = JSON.parse(text);
-        }
-      } catch {
-        throw new ValidationError('Invalid JSON body');
-      }
-    }
-
-    const parseResult = TestPushSchema.safeParse(rawBody);
-    if (!parseResult.success) {
-      throw new ValidationError(
-        parseResult.error.issues[0]?.message || 'Validation failed',
-        extractFieldErrors(parseResult.error)
-      );
-    }
-    const body = parseResult.data;
+    const body = await parseAndValidateJson(request, TestPushSchema, { allowEmpty: true });
 
     let safeLinkHref = '/tasks';
     if (body.linkHref) {

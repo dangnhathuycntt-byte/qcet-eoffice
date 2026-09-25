@@ -4,7 +4,7 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 
-describe("TaskEmptyState Skeleton Reveal Upgrade", () => {
+describe("TaskEmptyState Ghost Table Preview", () => {
   it("renders contextual empty state title and description", () => {
     const html = renderToString(
       React.createElement(TaskEmptyState, {
@@ -49,7 +49,7 @@ describe("TaskEmptyState Skeleton Reveal Upgrade", () => {
     assert.ok(html.includes("Tạo nhiệm vụ mới"));
   });
 
-  it("renders mock task rows inside skeleton container", () => {
+  it("renders mock task rows inside ghost table container", () => {
     const html = renderToString(
       React.createElement(TaskEmptyState, {})
     );

@@ -169,10 +169,16 @@ export const QCET_DEPARTMENT_DEFINITIONS: DepartmentDefinition[] = [
   },
   {
     id: "TRUYEN_THONG",
-    code: "TT_STT",
-    name: "TT Truyền thông & Số hóa",
+    code: "TT_SO_TT",
+    name: "Trung tâm Số và Truyền thông",
     leadName: "ThS. Mai Đinh Thị Xuân",
     alternateCodes: [
+      "TT_SO_TT",
+      "tt_so_tt",
+      "tt-so-tt",
+      "Trung tâm Số và Truyền thông",
+      "TT Số & Truyền thông",
+      "trung-tam-so-va-truyen-thong",
       "dept-tt-stt",
       "TT_STT",
       "dept-tt-dcc",

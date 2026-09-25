@@ -30,6 +30,7 @@ export const RATE_LIMIT_TIERS = {
   MUTATIONS_SENSITIVE: { limit: 30, windowSeconds: 60 }, // 30 req / phút
   SEARCH:              { limit: 30, windowSeconds: 60 }, // 30 req / phút
   EXPORT:              { limit: 5,  windowSeconds: 60 }, // 5 req / phút
+  REPORTS_EXPORT:      { limit: 5,  windowSeconds: 60 }, // 5 req / phút
   FILE_DOWNLOAD:       { limit: 60, windowSeconds: 60 }, // 60 req / phút
   DEFAULT_API:         { limit: 100, windowSeconds: 60 }, // 100 req / phút
   AUTH_REGISTER:       { limit: 5,  windowSeconds: 3600 }, // 5 req / 1h
