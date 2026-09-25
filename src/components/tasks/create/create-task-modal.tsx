@@ -130,11 +130,30 @@ export function CreateTaskModal({
   initialDueDate = "",
 }: CreateTaskModalProps) {
   const { user } = useAuth();
-  const { departments } = useDepartmentList({ includePersonnel: true });
+  const { departments: allDepartments } = useDepartmentList({ includePersonnel: true });
+
+  const role = (user?.role || "").toUpperCase();
+  const isExecutive = role === "ADMIN" || role === "BAN_GIAM_HIEU" || role === "BGH";
+
+  const userDeptCode = React.useMemo(() => {
+    return toCanonicalUnitCode(user?.departmentCode || user?.department || "") || "";
+  }, [user]);
+
+  // Non-executive users (chuyên viên, trưởng phòng/khoa) only see & create within their own assigned unit
+  const departments = React.useMemo(() => {
+    if (isExecutive) return allDepartments;
+    if (!userDeptCode) return allDepartments;
+    const filtered = allDepartments.filter(
+      (d) => d.code === userDeptCode || d.name === user?.department
+    );
+    return filtered.length > 0 ? filtered : allDepartments;
+  }, [isExecutive, allDepartments, userDeptCode, user?.department]);
+
   const defaultDepartmentCode =
     initialDepartmentCode ||
-    toCanonicalUnitCode(user?.departmentCode || user?.department || "") ||
+    userDeptCode ||
     departments[0]?.code ||
+    allDepartments[0]?.code ||
     "";
   const [isMounted, setIsMounted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -596,61 +615,65 @@ export function CreateTaskModal({
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
 
-            {/* Department dropdown selector */}
-            <Popover.Root open={openDropdown === "dept"} onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}>
-            <div ref={deptTriggerRef} className="relative inline-block text-left">
-              <Popover.Trigger
-                type="button"
-                className={cn(
-                  "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
-                  openDropdown === "dept"
-                    ? "text-foreground bg-accent shadow-2xs"
-                    : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
-                )}
-              >
-                <span>{currentDept?.name ?? "Đang tải..."}</span>
-                <ChevronDown
-                  className={cn(
-                    "size-3 text-muted-foreground transition-transform duration-200 ease-out",
-                    openDropdown === "dept" && "rotate-180 text-foreground"
-                  )}
-                />
-              </Popover.Trigger>
-
-              {/* Department Floating Portal Dropdown */}
-
-              <Popover.Portal>
-              <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
-              <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl" aria-label="Chọn đơn vị phòng ban">
-                {departments.map((dept) => (
-                  <button
-                    key={dept.code}
+            {/* Department selector (Dropdown for BGH/Executive, locked to unit for non-executive) */}
+            {departments.length > 1 ? (
+              <Popover.Root open={openDropdown === "dept"} onOpenChange={(open) => setOpenDropdown(open ? "dept" : null)}>
+                <div ref={deptTriggerRef} className="relative inline-block text-left">
+                  <Popover.Trigger
                     type="button"
-                    onClick={() => {
-                      setSelectedDeptCode(dept.code);
-                      setLeadAssigneeName("");
-                      setCoAssignees([]);
-                      setOpenDropdown(null);
-                    }}
                     className={cn(
-                      "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
-                      selectedDeptCode === dept.code
-                        ? "font-semibold text-foreground bg-accent"
-                        : "text-foreground hover:bg-accent/70"
+                      "inline-flex items-center gap-1 font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1.5 py-0.5 cursor-pointer",
+                      openDropdown === "dept"
+                        ? "text-foreground bg-accent shadow-2xs"
+                        : "text-foreground hover:text-foreground/80 hover:bg-accent/50"
                     )}
                   >
-                    <span className="truncate">{dept.name}</span>
-                    {selectedDeptCode === dept.code && (
-                      <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
-                    )}
-                  </button>
-                ))}
-              </Popover.Popup>
-              </Popover.Positioner>
-              </Popover.Portal>
+                    <span>{currentDept?.name ?? "Đang tải..."}</span>
+                    <ChevronDown
+                      className={cn(
+                        "size-3 text-muted-foreground transition-transform duration-200 ease-out",
+                        openDropdown === "dept" && "rotate-180 text-foreground"
+                      )}
+                    />
+                  </Popover.Trigger>
 
-            </div>
-            </Popover.Root>
+                  {/* Department Floating Portal Dropdown */}
+                  <Popover.Portal>
+                    <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
+                      <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }} className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl" aria-label="Chọn đơn vị phòng ban">
+                        {departments.map((dept) => (
+                          <button
+                            key={dept.code}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDeptCode(dept.code);
+                              setLeadAssigneeName("");
+                              setCoAssignees([]);
+                              setOpenDropdown(null);
+                            }}
+                            className={cn(
+                              "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-all duration-150 active:scale-[0.99] cursor-pointer",
+                              selectedDeptCode === dept.code
+                                ? "font-semibold text-foreground bg-accent"
+                                : "text-foreground hover:bg-accent/70"
+                            )}
+                          >
+                            <span className="truncate">{dept.name}</span>
+                            {selectedDeptCode === dept.code && (
+                              <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
+                            )}
+                          </button>
+                        ))}
+                      </Popover.Popup>
+                    </Popover.Positioner>
+                  </Popover.Portal>
+                </div>
+              </Popover.Root>
+            ) : (
+              <span className="font-semibold text-foreground px-1.5 py-0.5 rounded bg-accent/40">
+                {currentDept?.name ?? user?.department ?? "Đơn vị"}
+              </span>
+            )}
 
             {initialParentTaskTitle && (
               <>
