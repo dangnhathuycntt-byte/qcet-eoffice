@@ -52,8 +52,8 @@ describe('Issue #28: nested resource parent/child mismatch', () => {
   const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
   before(async () => {
-    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, code: `DEPT_NA_${runId}`, name: `Dept A ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
-    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, code: `DEPT_NB_${runId}`, name: `Dept B ${runId}`, type: 'PHONG_BAN' as any, status: 'ACTIVE' as any } });
+    deptA = await prisma.organizationalUnit.create({ data: { id: `DEPT_NA_${runId}`, code: `DEPT_NA_${runId}`, name: `Dept A ${runId}`, type: "DEPARTMENT" as any, status: 'ACTIVE' as any } });
+    deptB = await prisma.organizationalUnit.create({ data: { id: `DEPT_NB_${runId}`, code: `DEPT_NB_${runId}`, name: `Dept B ${runId}`, type: "DEPARTMENT" as any, status: 'ACTIVE' as any } });
 
     alice = await prisma.user.create({
       data: { email: `alice.${runId}@qcet.edu.vn`, name: `Alice ${runId}`, role: UserRole.CHUYEN_VIEN, isActive: true },

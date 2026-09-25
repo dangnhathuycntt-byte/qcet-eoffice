@@ -23,7 +23,7 @@ describe('Tasks 3.15-3.16: Outbox Worker & Transactional Reliability', () => {
           id: `dept-worker-${Date.now()}`,
           code: `dept-worker-${Date.now()}`,
           name: 'Phòng Outbox Worker Test',
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });

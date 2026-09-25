@@ -15,6 +15,17 @@ import {
 import { isTaskOverdue } from '@/lib/academic-calendar';
 import type { TaskViewerContext } from '@/domain/tasks';
 
+export interface TaskSourceDocumentDTO {
+  id: string;
+  originalNumber: string;     // Số/Ký hiệu văn bản (vd: 128/TCGDNN-VP)
+  summary: string;            // Trích yếu nội dung
+  type: string;               // VAN_BAN_DEN | VAN_BAN_DI
+  issuedDate: string;         // Ngày ban hành
+  issuingAuthority: string;   // Cơ quan ban hành
+  registrationNumber: number; // Số vào sổ
+  documentYear: number;
+}
+
 export interface TaskSummaryDTO {
   id: string;
   code: string;
@@ -89,6 +100,7 @@ export interface TaskDetailDTO extends TaskListDTO {
   dacumTaskDefId?: string | null;
   academicMonth?: number;
   academicYear?: string;
+  sourceDocument?: TaskSourceDocumentDTO | null;
 }
 
 function toISOStringSafe(val: unknown): string {
@@ -541,7 +553,15 @@ export function toTaskDetailDTO(rawTask: unknown): TaskDetailDTO | null {
         })
       : null,
     createdById: task.createdById ? String(task.createdById) : (task.createdBy?.id ? String(task.createdBy.id) : null),
-    departmentId: task.departmentId ? String(task.departmentId) : (task.department?.id ? String(task.department.id) : null),
+    departmentId: task.departmentId
+      ? String(task.departmentId)
+      : task.leadUnitId
+      ? String(task.leadUnitId)
+      : task.leadUnit?.id
+      ? String(task.leadUnit.id)
+      : task.department?.id
+      ? String(task.department.id)
+      : null,
     parentTaskId: task.parentTaskId ? String(task.parentTaskId) : null,
     parentTask: task.parentTask ? toTaskSummaryDTO(task.parentTask) : null,
     subTasks: Array.isArray(task.subTasks)
@@ -554,6 +574,20 @@ export function toTaskDetailDTO(rawTask: unknown): TaskDetailDTO | null {
     dacumTaskDefId: task.dacumTaskDefId ? String(task.dacumTaskDefId) : null,
     academicMonth: typeof task.academicMonth === 'number' ? task.academicMonth : undefined,
     academicYear: task.academicYear ? String(task.academicYear) : undefined,
+    sourceDocument: task.linkedDocument
+      ? {
+          id: String(task.linkedDocument.id ?? ''),
+          originalNumber: String(task.linkedDocument.originalNumber ?? ''),
+          summary: String(task.linkedDocument.summary ?? ''),
+          type: String(task.linkedDocument.type ?? ''),
+          issuedDate: task.linkedDocument.issuedDate
+            ? extractDateString(task.linkedDocument.issuedDate)
+            : '',
+          issuingAuthority: String(task.linkedDocument.issuingAuthority ?? ''),
+          registrationNumber: Number(task.linkedDocument.registrationNumber ?? 0),
+          documentYear: Number(task.linkedDocument.documentYear ?? 0),
+        }
+      : null,
   };
 }
 

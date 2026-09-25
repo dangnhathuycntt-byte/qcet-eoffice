@@ -648,12 +648,21 @@ function KanbanCard({
 
   return (
     <div
+      role="button"
+      tabIndex={isDragOverlay ? -1 : 0}
       onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      aria-label={`Xem chi tiết nhiệm vụ: ${item.title}`}
       aria-busy={isPending}
       data-slot="kanban-card"
       className={cn(
         "group/card relative flex flex-col gap-1.5 rounded-[8px] border border-border/50 bg-card p-2.5 text-card-foreground transition-all duration-100 cursor-pointer select-none",
-        "hover:bg-accent/40 hover:border-border/80 active:bg-accent/60",
+        "hover:bg-accent/40 hover:border-border/80 active:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isPending && "opacity-70 pointer-events-none",
         isDragOverlay && "shadow-lg border-border rotate-[1.5deg] scale-[1.02] bg-card opacity-95 cursor-grabbing"
       )}

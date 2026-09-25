@@ -73,7 +73,7 @@ describe('Milestone 21: Negative Authorization & Concurrency Invariants', () => 
         id: `dept_m21_${runId}`,
         code: `dept_m21_${runId}`,
         name: `Phòng Ban Thử Nghiệm M21 ${runId}`,
-        type: "PHONG_BAN" as any,
+        type: "DEPARTMENT" as any,
         status: "ACTIVE" as any,
       },
     });

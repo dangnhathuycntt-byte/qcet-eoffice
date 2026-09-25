@@ -16,6 +16,7 @@ import { DocumentQuerySchema, CreateDocumentSchema } from "@/contracts/documents
 import {
   createDocument,
   listDocuments,
+  mapPrismaDocumentToItem,
   type CreateDocumentPayload,
   type ListDocumentsFilter,
 } from "@/lib/documents/document-service";
@@ -155,6 +156,40 @@ export async function POST(request: NextRequest) {
       docType = "VAN_BAN_DI";
     } else if (validated.type === "TO_TRINH_NOI_BO" || validated.type === "INTERNAL") {
       docType = "TO_TRINH_NOI_BO";
+    }
+
+    // Nhánh văn bản đi: gọi OutgoingDocumentService để đảm bảo DocumentOutgoingWorkflow
+    // luôn được tạo cùng Document (Decree 30/2020/ND-CP compliance).
+    if (docType === "VAN_BAN_DI") {
+      const { OutgoingDocumentService } = await import(
+        "@/lib/services/outgoing-document-service"
+      );
+      const result = await OutgoingDocumentService.createOutgoingDraft(
+        {
+          title: (validated.summary || validated.title)!,
+          summary: (validated.summary || validated.title) ?? undefined,
+          category: validated.category ?? undefined,
+          urgency: validated.urgency as any,
+          securityLevel: validated.securityLevel as any,
+          authorizedSignerId: validated.authorizedSignerId ?? undefined,
+          recipientList: validated.recipientList ?? undefined,
+          notes: validated.notes ?? undefined,
+        },
+        authUser as any,
+        { requestId }
+      );
+      return apiSuccess(
+        {
+          success: true,
+          data: result.document,
+          document: toDocumentDetailDTO(mapPrismaDocumentToItem(result.document as any)),
+        },
+        {
+          status: 201,
+          headers: { "Cache-Control": "private, no-store" },
+          requestId: context.requestId,
+        }
+      );
     }
 
     const payload: CreateDocumentPayload = {

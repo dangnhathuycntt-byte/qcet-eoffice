@@ -407,9 +407,9 @@ export function useTaskMutations(
         };
       });
 
-      let actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-      let actionBody: any = { note: payload.comment };
-      let actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
+      let actionUrl: string;
+      let actionBody: Record<string, unknown>;
+      let actionDesc: string;
 
       if (payload.decision === "approved") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
@@ -423,6 +423,10 @@ export function useTaskMutations(
         actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
         actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment };
         actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
+      } else {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
+        actionBody = { note: payload.comment };
+        actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       }
 
       // API call or offline enqueue

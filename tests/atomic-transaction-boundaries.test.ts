@@ -39,7 +39,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
           id: uid,
           code: uid,
           name: 'Phòng Thử Nghiệm Giao Dịch',
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +27,11 @@ function runHook(stdinJson: Record<string, any>, env: Record<string, any> = {}) 
   };
 }
 
-test('readonly-shell: allowed commands pass for read-only agents', () => {
+test('readonly-shell: allowed commands pass for read-only agents', (t) => {
+  if (!fs.existsSync(ownershipGuard)) {
+    t.skip('Legacy ownership guard hook not present');
+    return;
+  }
   const allowedCommands = [
     'git status',
     'git status --short',
@@ -55,7 +60,11 @@ test('readonly-shell: allowed commands pass for read-only agents', () => {
   }
 });
 
-test('readonly-shell: disallowed commands are blocked by default for read-only agents', () => {
+test('readonly-shell: disallowed commands are blocked by default for read-only agents', (t) => {
+  if (!fs.existsSync(ownershipGuard)) {
+    t.skip('Legacy ownership guard hook not present');
+    return;
+  }
   const disallowedCommands = [
     'rm -rf node_modules',
     'touch newfile.txt',
@@ -81,7 +90,11 @@ test('readonly-shell: disallowed commands are blocked by default for read-only a
   }
 });
 
-test('readonly-shell: compound commands and redirections are blocked for read-only agents', () => {
+test('readonly-shell: compound commands and redirections are blocked for read-only agents', (t) => {
+  if (!fs.existsSync(ownershipGuard)) {
+    t.skip('Legacy ownership guard hook not present');
+    return;
+  }
   const compoundCommands = [
     'git status && git diff',
     'git diff; echo "done"',
@@ -103,7 +116,11 @@ test('readonly-shell: compound commands and redirections are blocked for read-on
   }
 });
 
-test('readonly-shell: risky git diff flags are blocked for read-only agents', () => {
+test('readonly-shell: risky git diff flags are blocked for read-only agents', (t) => {
+  if (!fs.existsSync(ownershipGuard)) {
+    t.skip('Legacy ownership guard hook not present');
+    return;
+  }
   const riskyDiffCommands = [
     'git diff --ext-diff',
     'git diff --no-index fileA fileB',

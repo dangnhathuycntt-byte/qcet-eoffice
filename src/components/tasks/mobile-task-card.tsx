@@ -266,9 +266,12 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         className
       )}
     >
-      {/* Top Row: Department / Context + Priority & Status badge */}
+      {/* Top Row: Task Code + Department / Context + Priority & Status badge */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md shrink-0">
+            {formattedCode}
+          </span>
           <span className="text-xs font-semibold text-slate-700 truncate bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md">
             {departmentName}
           </span>

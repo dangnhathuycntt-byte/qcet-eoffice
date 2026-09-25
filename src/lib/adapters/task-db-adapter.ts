@@ -1,4 +1,4 @@
-import type { StaffTask, TaskStatus, TaskPriority } from '@/types/dashboard';
+import type { StaffTask, TaskStatus, TaskPriority, TaskSourceDocument } from '@/types/dashboard';
 import { isTaskOverdue, getSystemReferenceDateStr } from '@/lib/academic-calendar';
 
 export interface SchoolTask {
@@ -40,6 +40,7 @@ export interface SchoolTask {
   totalSubTasks?: number;
   completedSubTasks?: number;
   isOverdue?: boolean;
+  sourceDocument?: TaskSourceDocument | null;
   [key: string]: any;
 }
 
@@ -107,6 +108,16 @@ export interface PrismaTaskWithRelations {
       title: string;
     } | null;
   } | null;
+  linkedDocument?: {
+    id?: string | null;
+    originalNumber?: string | null;
+    summary?: string | null;
+    type?: string | null;
+    issuedDate?: Date | string | null;
+    issuingAuthority?: string | null;
+    registrationNumber?: number | null;
+    documentYear?: number | null;
+  } | null;
 }
 
 export interface PrismaTaskCreateInput {
@@ -147,6 +158,21 @@ export function findPrimaryActor(
 ): NonNullable<PrismaTaskWithRelations['actors']>[number] | undefined {
   if (!Array.isArray(actors)) return undefined;
   return actors.find((a) => a.isPrimaryDRI) || actors.find((a) => a.role === 'DRI');
+}
+
+function mapLinkedDocument(raw: any): TaskSourceDocument | null {
+  if (!raw?.linkedDocument) return null;
+  const d = raw.linkedDocument;
+  return {
+    id: String(d.id ?? ''),
+    originalNumber: String(d.originalNumber ?? ''),
+    summary: String(d.summary ?? ''),
+    type: String(d.type ?? ''),
+    issuedDate: d.issuedDate instanceof Date ? d.issuedDate.toISOString() : String(d.issuedDate ?? ''),
+    issuingAuthority: String(d.issuingAuthority ?? ''),
+    registrationNumber: Number(d.registrationNumber ?? 0),
+    documentYear: Number(d.documentYear ?? 0),
+  };
 }
 
 export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTask {
@@ -211,6 +237,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     collaborators,
     coAssignees: collaborators,
     progressPercent: raw.progressPercent ?? 0,
+    sourceDocument: mapLinkedDocument(raw),
   };
 }
 
@@ -390,6 +417,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     } : undefined,
     isOverdue: isTaskOverdue(raw.status, raw.dueDate, referenceDate || getSystemReferenceDateStr()),
     version: typeof raw.version === 'number' ? raw.version : 1,
+    sourceDocument: mapLinkedDocument(raw),
   };
 }
 

@@ -19,6 +19,7 @@ import { DirectInlineEditor } from "./direct-inline-editor";
 import { updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { motionTransition } from "@/lib/motion/tokens";
 
 export interface TaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -191,17 +192,21 @@ export function TaskDetailView({
     if (onTitleChange) {
       await onTitleChange(taskId, newTitle);
     } else {
-      await fetch(`/api/tasks/${taskId}`, {
+      const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTitle }),
       });
+      if (!res.ok) {
+        notifyError("Không thể cập nhật tiêu đề nhiệm vụ");
+        throw new Error("Không thể cập nhật tiêu đề nhiệm vụ");
+      }
     }
     setTask((prev) => ({
       ...prev,
       title: newTitle,
     }));
-  }, [onTitleChange]);
+  }, [onTitleChange, notifyError]);
 
   const handleSaveDescription = React.useCallback(async (newDesc: string) => {
     const trimmed = newDesc.trim();
@@ -553,7 +558,7 @@ export function TaskDetailView({
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 300, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              transition={motionTransition.panel}
               className="hidden lg:block shrink-0 border-l border-border/50 bg-muted/30 overflow-y-auto overflow-x-hidden self-start sticky top-0 max-h-screen"
             >
               <div className="w-[300px] px-5 py-6">

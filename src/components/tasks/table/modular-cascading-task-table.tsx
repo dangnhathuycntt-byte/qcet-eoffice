@@ -175,35 +175,18 @@ export function ModularCascadingTaskTable({
   selectedTaskId,
   emptyStateProps,
 }: ModularCascadingTaskTableProps) {
-  // 1. Context & User Resolution
-  let user: ReturnType<typeof useAuth>["user"] = null;
-  try {
-    const auth = useAuth();
-    user = auth?.user ?? null;
-  } catch {
-    user = null;
-  }
+  // 1. Context & User Resolution (Unconditional Hook calls)
+  const auth = useAuth();
+  const user = auth?.user ?? null;
 
-  let contextDensity: TableDensity | undefined = undefined;
-  try {
-    const densityCtx = useDisplayDensity();
-    if (densityCtx?.density) {
-      contextDensity = densityCtx.density;
-    }
-  } catch {
-    contextDensity = undefined;
-  }
+  const densityCtx = useDisplayDensity();
+  const contextDensity: TableDensity | undefined = densityCtx?.density;
 
   const effectiveInitialDensity =
     initialDensity ?? contextDensity ?? DEFAULT_DENSITY;
   const canAssignUnit = canAssign ?? (user ? canAssignUnitTask(user) : true);
 
-  let dashboardModal: any = null;
-  try {
-    dashboardModal = React.useContext(DashboardModalContext);
-  } catch {
-    dashboardModal = null;
-  }
+  const dashboardModal = React.useContext(DashboardModalContext);
 
   const effectiveOnAddSubTask = React.useMemo(() => {
     if (onAddSubTask) {

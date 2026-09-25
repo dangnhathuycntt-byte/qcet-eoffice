@@ -273,11 +273,11 @@ export function ReviewActionDialog({
       title="Thẩm định & Phê duyệt Nhiệm vụ"
       description={`Người thẩm định: ${reviewerName} (${reviewerRole})`}
       size="md"
-      className="p-0 sm:max-w-lg max-h-[90dvh] flex flex-col overflow-hidden"
+      className="max-h-[90dvh] flex flex-col overflow-hidden sm:max-w-lg"
     >
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
         {/* Body Content */}
-        <div className="overflow-y-auto px-6 py-5 space-y-5 flex-1">
+        <div className="overflow-y-auto px-6 py-4 space-y-5 flex-1">
           {/* Task Info Summary */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -349,7 +349,7 @@ export function ReviewActionDialog({
                     onClick={() => handleDecisionChange(opt.id)}
                     disabled={isProcessing}
                     className={cn(
-                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none min-h-[56px] active:scale-[0.99]",
+                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none min-h-[56px] active:scale-[0.98]",
                       "hover:border-primary/50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
                       isSelected
                         ? opt.accentColor === "emerald"

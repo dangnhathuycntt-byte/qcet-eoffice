@@ -25,7 +25,7 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
         id: deptId,
         code: deptId,
         name: 'Phòng Khảo thí & ĐBCL Regression Test',
-        type: "PHONG_BAN" as any,
+        type: "DEPARTMENT" as any,
         status: "ACTIVE" as any,
       },
     });

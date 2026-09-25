@@ -12,8 +12,18 @@ export interface ListScrollRestoreReturn {
 }
 
 export function useListScrollRestore(): ListScrollRestoreReturn {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  let router: ReturnType<typeof useRouter> | null = null;
+  let searchParams: ReturnType<typeof useSearchParams> | null = null;
+  try {
+    router = useRouter();
+  } catch {
+    // App router context not mounted
+  }
+  try {
+    searchParams = useSearchParams();
+  } catch {
+    // Search params context not mounted
+  }
 
   const saveScrollAndParams = React.useCallback(() => {
     if (typeof window === "undefined") return;
@@ -33,7 +43,7 @@ export function useListScrollRestore(): ListScrollRestoreReturn {
   const restoreScrollAndNavigateBack = React.useCallback(
     (fallbackPath: string = "/portal") => {
       if (typeof window === "undefined") {
-        router.push(fallbackPath);
+        if (router) router.push(fallbackPath);
         return;
       }
 
@@ -55,9 +65,17 @@ export function useListScrollRestore(): ListScrollRestoreReturn {
           }
         }
 
-        router.push(targetUrl);
+        if (router) {
+          router.push(targetUrl);
+        } else {
+          window.location.href = targetUrl;
+        }
       } catch {
-        router.push(fallbackPath);
+        if (router) {
+          router.push(fallbackPath);
+        } else {
+          window.location.href = fallbackPath;
+        }
       }
     },
     [router]

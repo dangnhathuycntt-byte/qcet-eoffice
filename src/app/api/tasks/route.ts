@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     if (rawParams.pageSize !== undefined) {
       const parsed = Number(rawParams.pageSize);
       if (!Number.isNaN(parsed)) {
-        rawParams.pageSize = String(Math.min(Math.max(1, Math.floor(parsed)), 200));
+        rawParams.pageSize = String(Math.min(Math.max(1, Math.floor(parsed)), 100));
       }
     }
     if (rawParams.limit !== undefined && rawParams.limit !== 'all') {

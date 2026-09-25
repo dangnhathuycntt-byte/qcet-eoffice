@@ -281,6 +281,7 @@ const env = {
   QCET_ALLOW_DB_TESTS: "1",
   DATABASE_URL: testDbUrl,
 };
+delete env.NEXT_PUBLIC_REFERENCE_DATE;
 
 const result = spawnSync(bin, ["--test", `--test-concurrency=${concurrency}`, ...testFiles], {
   cwd: rootDir,

@@ -25,8 +25,8 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, code: deptAId, name: `Phòng Ban A WF ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
-        { id: deptBId, code: deptBId, name: `Phòng Ban B WF ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptAId, code: deptAId, name: `Phòng Ban A WF ${testRunId}`, type: "DEPARTMENT" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng Ban B WF ${testRunId}`, type: "DEPARTMENT" as any, status: "ACTIVE" as any },
       ],
     });
 

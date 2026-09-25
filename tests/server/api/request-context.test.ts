@@ -1,5 +1,6 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { prisma } from '@/lib/prisma';
 import {
   getApiContext,
   requireAuthenticated,
@@ -12,6 +13,75 @@ import { AuthenticationError, AuthorizationError } from '@/server/api/errors';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 
 describe('Central API Request Context & Auth Extraction', () => {
+  let testGvUser: any;
+  let testBghUser: any;
+  let testUnit: any;
+  let testPosDef: any;
+
+  before(async () => {
+    testUnit =
+      (await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: `UNIT_REQ_CTX_${Date.now()}`,
+          code: `UNIT_REQ_CTX_${Date.now()}`,
+          name: 'Khoa CNTT',
+          type: 'DEPARTMENT',
+          status: 'ACTIVE',
+        },
+      }));
+
+    testPosDef =
+      (await prisma.positionDefinition.findFirst()) ||
+      (await prisma.positionDefinition.create({
+        data: {
+          code: `POS_REQ_CTX_${Date.now()}`,
+          title: 'Giang vien CNTT',
+          group: 'VCDC',
+          isLeadership: false,
+        },
+      }));
+
+    testGvUser = await prisma.user.create({
+      data: {
+        id: `usr-gv-${Date.now()}`,
+        email: `gv.${Date.now()}@qncet.edu.vn`,
+        name: 'Nguyen Van A',
+        role: 'CHUYEN_VIEN',
+        title: 'Giang vien CNTT',
+        isActive: true,
+      },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: testGvUser.id,
+        unitId: testUnit.id,
+        positionDefinitionId: testPosDef.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+        effectiveFrom: new Date('2026-01-01'),
+      },
+    });
+
+    testBghUser = await prisma.user.create({
+      data: {
+        id: `usr-bgh-${Date.now()}`,
+        email: `bgh.${Date.now()}@qncet.edu.vn`,
+        name: 'Tran Thi B',
+        role: 'BAN_GIAM_HIEU',
+        isActive: true,
+      },
+    });
+  });
+
+  after(async () => {
+    const userIds = [testGvUser?.id, testBghUser?.id].filter(Boolean);
+    if (userIds.length > 0) {
+      await prisma.positionAssignment.deleteMany({ where: { userId: { in: userIds } } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: { in: userIds } } }).catch(() => {});
+    }
+  });
   describe('normalizeRole', () => {
     it('normalizes executive and admin Vietnamese aliases to ADMIN', () => {
       assert.strictEqual(normalizeRole('ADMIN'), 'ADMIN');
@@ -151,12 +221,11 @@ describe('Central API Request Context & Auth Extraction', () => {
 
     it('extracts AuthenticatedUser from valid session cookie', async () => {
       const token = signSessionToken({
-        id: 'user-gv-01',
-        email: 'gv01@qncet.edu.vn',
-        name: 'Nguyen Van A',
-        role: 'CHUYEN_VIEN',
-
-        title: 'Giang vien CNTT',
+        id: testGvUser.id,
+        email: testGvUser.email,
+        name: testGvUser.name,
+        role: testGvUser.role,
+        title: testGvUser.title,
       });
 
       const req = new Request('http://localhost:3000/api/tasks', {
@@ -167,21 +236,20 @@ describe('Central API Request Context & Auth Extraction', () => {
 
       const ctx = await getApiContext(req);
       assert.ok(ctx.user);
-      assert.strictEqual(ctx.user.id, 'user-gv-01');
-      assert.strictEqual(ctx.user.email, 'gv01@qncet.edu.vn');
-      assert.strictEqual(ctx.user.name, 'Nguyen Van A');
+      assert.strictEqual(ctx.user.id, testGvUser.id);
+      assert.strictEqual(ctx.user.email, testGvUser.email);
+      assert.strictEqual(ctx.user.name, testGvUser.name);
       assert.strictEqual(ctx.user.role, 'CHUYEN_VIEN');
-      assert.strictEqual(ctx.user.departmentId, 'CNTT');
+      assert.strictEqual(ctx.user.departmentId, testUnit.id);
       assert.strictEqual(ctx.user.title, 'Giang vien CNTT');
     });
 
     it('extracts AuthenticatedUser from Authorization Bearer token', async () => {
       const token = signSessionToken({
-        id: 'user-bgh-01',
-        email: 'hieutruong@qncet.edu.vn',
-        name: 'Tran Thi B',
-        role: 'BAN_GIAM_HIEU',
-
+        id: testBghUser.id,
+        email: testBghUser.email,
+        name: testBghUser.name,
+        role: testBghUser.role,
       });
 
       const req = new Request('http://localhost:3000/api/tasks', {
@@ -192,20 +260,28 @@ describe('Central API Request Context & Auth Extraction', () => {
 
       const ctx = await getApiContext(req);
       assert.ok(ctx.user);
-      assert.strictEqual(ctx.user.id, 'user-bgh-01');
+      assert.strictEqual(ctx.user.id, testBghUser.id);
       assert.strictEqual(ctx.user.role, 'BAN_GIAM_HIEU');
       assert.strictEqual(ctx.user.title, null);
     });
 
-    it('returns user: null when session token is invalid or tampered with', async () => {
+    it('rejects with AuthenticationError when session token is invalid or tampered with', async () => {
       const req = new Request('http://localhost:3000/api/tasks', {
         headers: {
           authorization: 'Bearer invalid-garbage-token-12345',
         },
       });
 
-      const ctx = await getApiContext(req);
-      assert.strictEqual(ctx.user, null);
+      await assert.rejects(
+        async () => {
+          await getApiContext(req);
+        },
+        (err: any) => {
+          assert.ok(err instanceof AuthenticationError);
+          assert.strictEqual(err.code, 'SESSION_INVALID');
+          return true;
+        }
+      );
     });
 
     it('enforces backend-security: ignores spoofed client user headers', async () => {

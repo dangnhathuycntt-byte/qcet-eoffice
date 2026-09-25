@@ -76,7 +76,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
           id: `dept_${timestamp}`,
           code: `dept_${timestamp}`,
           name: "Phòng Quản lý Đào tạo",
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });

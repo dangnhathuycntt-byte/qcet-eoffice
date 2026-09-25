@@ -66,7 +66,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
           id: `dept_st_${timestamp}`,
           code: `dept_st_${timestamp}`,
           name: "Phòng Hành chính - Tổng hợp",
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });

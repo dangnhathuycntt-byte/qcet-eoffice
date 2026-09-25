@@ -68,6 +68,17 @@ export interface Deliverable {
   fileUrl?: string;
 }
 
+export interface TaskSourceDocument {
+  id: string;
+  originalNumber: string;
+  summary: string;
+  type: string;
+  issuedDate: string;
+  issuingAuthority: string;
+  registrationNumber: number;
+  documentYear: number;
+}
+
 export interface StaffTask {
   id: string;
   taskId?: string;
@@ -96,6 +107,9 @@ export interface StaffTask {
   updatedAt: string;
   deliverables?: DeliverableItem[];
   deliverableDescription?: string;
+  description?: string;
+  priority?: TaskPriority;
+  scope?: string;
   weight?: number;
   vtvlRole?: string;
   blockedReason?: string;
@@ -133,9 +147,20 @@ export interface StaffTask {
   }[];
   progressPercent?: number;
   version?: number;
+  sourceDocument?: TaskSourceDocument | null;
 }
 
 export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
+
+export interface TaskAssigneeInfo {
+  id: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+  departmentId?: string;
+  departmentName?: string;
+  role?: string;
+}
 
 export interface SchoolTask {
   id: string;
@@ -148,7 +173,8 @@ export interface SchoolTask {
   academicMonth?: number;
   academicYear?: string;
   status: TaskStatus;
-  priority?: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+  priority?: TaskPriority;
+  scope?: string;
   dueDate: string;
   startDate?: string;
   progressPercent: number;
@@ -201,7 +227,7 @@ export interface SchoolTask {
     reportUrl?: string;
   };
   deliverables?: Deliverable[];
-  assignees?: any[];
+  assignees?: TaskAssigneeInfo[];
   createdAt?: string;
   updatedAt?: string;
   version?: number;
@@ -209,6 +235,7 @@ export interface SchoolTask {
     relation: 'DRI' | 'ASSIGNER' | 'FOLLOWER' | 'SUBTASK_DRI' | 'APPROVER' | null;
     matchedSubtaskCount: number;
   };
+  sourceDocument?: TaskSourceDocument | null;
 }
 
 export function isSchoolTask(task: unknown): task is SchoolTask {

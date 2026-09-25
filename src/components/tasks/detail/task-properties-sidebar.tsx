@@ -6,6 +6,8 @@ import {
   Users,
   Building2,
   Calendar,
+  CalendarDays,
+  CalendarCheck,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -15,6 +17,7 @@ import {
   UserPlus,
   CircleDashed,
   Loader2,
+  FileText,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -36,6 +39,7 @@ import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
+import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import {
   taskStateMachine,
@@ -118,37 +122,23 @@ function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: 
 
 function StartDateIcon({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" />
-      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" />
-      <path d="M5.5 10h3M7 8.5l1.5 1.5-1.5 1.5" />
-    </svg>
+    <CalendarDays
+      className={cn("size-3.5 text-muted-foreground", className)}
+      strokeWidth={1.5}
+    />
   );
 }
 
 function TargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect x="2.5" y="3.5" width="11" height="9.5" rx="2" className={isOverdue ? "stroke-rose-500" : ""} />
-      <path d="M5 2v2.5M11 2v2.5M2.5 6.5h11" className={isOverdue ? "stroke-rose-500" : ""} />
-      <path d="M8 8.5v3M6.5 10h3" className={isOverdue ? "stroke-rose-500" : ""} />
-    </svg>
+    <CalendarCheck
+      className={cn(
+        "size-3.5",
+        isOverdue ? "text-rose-500" : "text-muted-foreground",
+        className
+      )}
+      strokeWidth={1.5}
+    />
   );
 }
 
@@ -478,7 +468,7 @@ export function TaskPropertiesSidebar({
                   variant="inline"
                   icon={
                     <div className="size-4 shrink-0 flex items-center justify-center">
-                      <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <CalendarDays className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                     </div>
                   }
                   showPresets={false}
@@ -490,7 +480,7 @@ export function TaskPropertiesSidebar({
                   className="inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
                 >
                   <div className="size-4 shrink-0 flex items-center justify-center">
-                    <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <CalendarDays className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                   </div>
                   <span className="tabular-nums font-normal">
                     {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
@@ -512,7 +502,7 @@ export function TaskPropertiesSidebar({
                   variant="inline"
                   icon={
                     <div className="size-4 shrink-0 flex items-center justify-center">
-                      <Calendar
+                      <CalendarCheck
                         className={cn(
                           "size-3.5",
                           dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
@@ -540,7 +530,7 @@ export function TaskPropertiesSidebar({
                   )}
                 >
                   <div className="size-4 shrink-0 flex items-center justify-center">
-                    <Calendar
+                    <CalendarCheck
                       className={cn(
                         "size-3.5",
                         dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
@@ -587,6 +577,16 @@ export function TaskPropertiesSidebar({
               </span>
             </div>
           </PropertyRow>
+
+          {/* Row 8: Source Document */}
+          {isSchoolTask(task) && task.sourceDocument && (
+            <PropertyRow label="Văn bản gốc" icon={<FileText className="size-3" strokeWidth={1.5} />}>
+              <TaskSourceDocumentBadge
+                sourceDocument={task.sourceDocument}
+                compact
+              />
+            </PropertyRow>
+          )}
         </div>
       </div>
 

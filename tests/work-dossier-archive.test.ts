@@ -65,7 +65,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         id: `dept-acad-${testRunId}`,
         code: `dept-acad-${testRunId}`.slice(0, 50),
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });
@@ -85,7 +85,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         id: `dept-admin-${testRunId}`,
         code: `dept-admin-${testRunId}`.slice(0, 50),
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });
@@ -105,7 +105,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         id: `dept-unrel-${testRunId}`,
         code: `dept-unrel-${testRunId}`.slice(0, 50),
         name: `Khoa CNTT ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });

@@ -102,7 +102,7 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
         id: deptId,
         code: deptId,
         name: `MeContext Dept ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });

@@ -127,6 +127,8 @@ import {
   AlignRight,
   AlignJustify,
   BookOpen,
+  IndentIncrease,
+  IndentDecrease,
   MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -1282,11 +1284,87 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
           })}
         </div>
       )}
+      <button
+        type="button"
+        onClick={() => {
+          plateIndent(editor as any);
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+      >
+        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          plateOutdent(editor as any);
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left"
+      >
+        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
+      </button>
       <button type="button" onClick={duplicateBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-left">
         <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
       </button>
       <button type="button" onClick={deleteBlock} className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left">
         <Trash2 className="size-3.5" /> {isMulti ? `Xóa ${selectedIds?.size} blocks` : "Xóa block"}
+      </button>
+    </div>
+  );
+}
+
+function MultiBlockToolbar({ editor }: { editor: any }) {
+  const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
+  const isReadOnly = editor.api.isReadOnly();
+
+  if (isReadOnly || !selectedIds || selectedIds.size <= 1) {
+    return null;
+  }
+
+  return (
+    <div
+      data-slot="multi-block-toolbar"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-card shadow-xl text-xs font-medium text-foreground animate-in fade-in-0 slide-in-from-bottom-2 duration-150"
+    >
+      <span className="text-muted-foreground mr-1">
+        Đã chọn {selectedIds.size} blocks
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate();
+        }}
+        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+      >
+        <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          plateIndent(editor as any);
+        }}
+        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+      >
+        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          plateOutdent(editor as any);
+        }}
+        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
+      >
+        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes();
+        }}
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+      >
+        <Trash2 className="size-3.5" /> Xóa
       </button>
     </div>
   );
@@ -1769,12 +1847,17 @@ export function TaskBlockEditor({
   // Create deliverable record after successful upload
   const createDeliverable = React.useCallback(async (fileUrl: string, title: string) => {
     try {
-      await fetch(`/api/tasks/${taskId}/deliverables`, {
+      const res = await fetch(`/api/tasks/${taskId}/deliverables`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, fileUrl }),
       });
-    } catch { /* best-effort */ }
+      if (!res.ok) {
+        console.warn(`[TaskBlockEditor] Không thể tạo deliverable (${res.status}): ${res.statusText}`);
+      }
+    } catch (err) {
+      console.warn("[TaskBlockEditor] Lỗi mạng khi tạo deliverable:", err);
+    }
   }, [taskId]);
 
   const triggerAutoSave = React.useCallback(
@@ -1841,7 +1924,16 @@ export function TaskBlockEditor({
 
       // Background upload → create deliverable first → then set server URL on editor node
       uploadFileToServer(file).then(async (result) => {
-        if (!result) return;
+        if (!result) {
+          // Clean up placeholder node on failure
+          const nodes = editor.children as PlateElemT[];
+          const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
+          if (nodeIdx >= 0) {
+            editor.tf.removeNodes({ at: [nodeIdx] });
+          }
+          setSaveError("Không thể tải lên tệp đính kèm");
+          return;
+        }
         // Create deliverable FIRST so /api/files/ authorization check passes
         await createDeliverable(result.fileUrl, file.name);
         // Now set server URL on editor node — file is registered, auth will pass
@@ -2118,6 +2210,7 @@ export function TaskBlockEditor({
                   }}
                 />
                 <FloatingToolbar editor={editor} />
+                <MultiBlockToolbar editor={editor} />
               </PlateContainer>
             </Plate>
           </PlateDndContainer>

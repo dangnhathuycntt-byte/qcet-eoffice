@@ -627,6 +627,13 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       assert.ok(typeof json.data.total === 'number');
       assert.ok(typeof json.data.incoming === 'number');
       assert.ok(typeof json.data.outgoing === 'number');
+      assert.ok(typeof json.data.internal === 'number');
+      assert.ok(typeof json.data.pending === 'number');
+      assert.ok(typeof json.data.processing === 'number');
+      assert.ok(typeof json.data.completed === 'number');
+      assert.ok(typeof json.data.overdue === 'number');
+      assert.ok(typeof json.data.urgent === 'number');
+      assert.ok(typeof json.data.linkedTasks === 'number');
     });
 
     it('GET & POST /api/documents/export-excel outputs spreadsheet buffer with correct headers', async () => {

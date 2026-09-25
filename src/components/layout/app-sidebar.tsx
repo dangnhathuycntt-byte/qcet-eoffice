@@ -592,7 +592,7 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-label={item.label}
                           className={cn(
-                            "group relative flex items-center rounded-[6px] h-[34px] text-[13px] transition-[colors,padding,gap] duration-[200ms] ease-[cubic-bezier(0.16,1,0.3,1)] select-none tracking-tight overflow-hidden whitespace-nowrap",
+                            "group relative flex items-center rounded-[6px] h-[34px] text-[13px] transition-[colors,padding,gap] duration-[200ms] ease-[var(--motion-ease-enter)] select-none tracking-tight overflow-hidden whitespace-nowrap",
                             isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-2",
                             active
                               ? "bg-black/[0.06] text-foreground font-medium"
@@ -614,7 +614,7 @@ export function AppSidebar() {
                           <span
                             aria-hidden={isCollapsed}
                             className={cn(
-                              "truncate flex-1 text-[13px] transition-[opacity,max-width] duration-[200ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                              "truncate flex-1 text-[13px] transition-[opacity,max-width] duration-[200ms] ease-[var(--motion-ease-enter)]",
                               isCollapsed ? "opacity-0 max-w-0 pointer-events-none" : "opacity-100 max-w-full"
                             )}
                           >{item.label}</span>
@@ -688,7 +688,7 @@ export function AppSidebar() {
               aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
               aria-expanded={!isCollapsed}
               aria-controls="app-sidebar"
-              className="inline-flex size-9 items-center justify-center text-border/60 hover:text-muted-foreground transition-colors duration-[140ms] ease-[cubic-bezier(0.16,1,0.3,1)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
+              className="inline-flex size-9 items-center justify-center text-border/60 hover:text-muted-foreground transition-colors duration-[140ms] ease-[var(--motion-ease-enter)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
             >
               {isCollapsed ? (
                 <ChevronRight size={28} strokeWidth={1.5} aria-hidden="true" />

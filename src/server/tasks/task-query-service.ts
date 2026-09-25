@@ -152,6 +152,18 @@ const TASK_INCLUDE = {
       duty: true,
     },
   },
+  linkedDocument: {
+    select: {
+      id: true,
+      originalNumber: true,
+      summary: true,
+      type: true,
+      issuedDate: true,
+      issuingAuthority: true,
+      registrationNumber: true,
+      documentYear: true,
+    },
+  },
   parentTask: {
     select: { id: true, code: true, title: true, scope: true },
   },
@@ -888,6 +900,9 @@ export class TaskQueryService {
       return st;
     };
 
+    const defaultOrderBy: Prisma.TaskOrderByWithRelationInput[] = [{ dueDate: 'asc' }, { id: 'asc' }];
+    const effectiveOrderBy = filters.orderBy || defaultOrderBy;
+
     if (hasCursor) {
       const cursor = String(filters.cursor).trim();
       const takeRaw = filters.take ?? filters.limit ?? 20;
@@ -901,7 +916,7 @@ export class TaskQueryService {
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
-          orderBy: filters.orderBy || { dueDate: 'asc' },
+          orderBy: effectiveOrderBy,
           cursor: { id: cursor },
           skip: 1,
           take: limit + 1,
@@ -925,7 +940,7 @@ export class TaskQueryService {
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
-          orderBy: filters.orderBy || { dueDate: 'asc' },
+          orderBy: effectiveOrderBy,
         }),
       ]);
       total = totalCount;
@@ -949,7 +964,7 @@ export class TaskQueryService {
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
-          orderBy: filters.orderBy || { dueDate: 'asc' },
+          orderBy: effectiveOrderBy,
           skip,
           take: limit,
         }),
@@ -1276,6 +1291,18 @@ export class TaskQueryService {
         dacumTaskDef: {
           include: {
             duty: true,
+          },
+        },
+        linkedDocument: {
+          select: {
+            id: true,
+            originalNumber: true,
+            summary: true,
+            type: true,
+            issuedDate: true,
+            issuingAuthority: true,
+            registrationNumber: true,
+            documentYear: true,
           },
         },
         parentTask: {

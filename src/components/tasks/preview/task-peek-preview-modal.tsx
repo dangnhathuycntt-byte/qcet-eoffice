@@ -213,7 +213,8 @@ export function TaskPeekPreviewModal({
       description={`Mã công việc: ${taskCode} - ${departmentName}`}
       size="lg"
       showCloseButton={false}
-      className="max-w-2xl p-5 space-y-3.5 max-h-[85vh] overflow-hidden flex flex-col [&>div:first-child]:hidden [&>p:first-of-type]:hidden"
+      showHeader={false}
+      className="max-w-2xl p-5 space-y-3.5 max-h-[85vh] overflow-hidden flex flex-col"
     >
       {/* Header cực gọn: ID · Đơn vị bên trái, controls tối thiểu bên phải */}
       <div className="flex items-center justify-between shrink-0">

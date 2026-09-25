@@ -50,8 +50,9 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
     const d1 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-acad-${testRunId}`,
+        code: `DEPT_QLDT_${testRunId.slice(-4)}`,
         name: `Phòng Quản lý Đào tạo ${testRunId}`,
-        shortName: `QLDT_${testRunId.slice(-4)}`,
+        type: UnitType.DEPARTMENT,
       },
     });
     deptAcademicId = d1.id;
@@ -67,8 +68,9 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
     const d2 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-admin-${testRunId}`,
+        code: `DEPT_HCTH_${testRunId.slice(-4)}`,
         name: `Phòng Hành chính - Tổng hợp ${testRunId}`,
-        shortName: `HCTH_${testRunId.slice(-4)}`,
+        type: UnitType.DEPARTMENT,
       },
     });
     deptAdminId = d2.id;
@@ -84,8 +86,9 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
     const d3 = await prisma.organizationalUnit.create({
       data: {
         id: `dept-unrel-${testRunId}`,
+        code: `DEPT_CNTT_${testRunId.slice(-4)}`,
         name: `Khoa CNTT ${testRunId}`,
-        shortName: `CNTT_${testRunId.slice(-4)}`,
+        type: UnitType.FACULTY,
       },
     });
     deptUnrelatedId = d3.id;

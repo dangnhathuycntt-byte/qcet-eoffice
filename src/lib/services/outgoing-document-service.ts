@@ -84,6 +84,11 @@ export interface ApproveContentInput {
   notes?: string;
 }
 
+export interface RejectContentInput {
+  documentId: string;
+  notes?: string;
+}
+
 export interface SubmitFormatCheckInput {
   documentId: string;
   formatReviewerId?: string;
@@ -470,6 +475,101 @@ export class OutgoingDocumentService {
           documentId: input.documentId,
           contentReviewerId: user.id,
           status: updatedWorkflow.status,
+        },
+      });
+
+      return updatedWorkflow;
+    });
+  }
+
+  /**
+   * REJECT CONTENT / RETURN FOR DRAFTING
+   * Reviewer rejects content and returns the document to DRAFT status for edits.
+   */
+  static async rejectContent(
+    input: RejectContentInput,
+    actor: AuthenticatedUserContext | SessionPayload,
+    context?: { requestId?: string }
+  ) {
+    const user = await resolveUserContext(actor);
+    const requestId = context?.requestId || `req_${Date.now()}`;
+
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId: input.documentId },
+      include: { document: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    }
+
+    if (existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW) {
+      throw new InvalidTransitionError(
+        `Không thể trả lại soạn thảo ở trạng thái hiện tại (${existing.status}). Yêu cầu trạng thái CONTENT_REVIEW.`
+      );
+    }
+
+    // Separation of Duties check: Drafter cannot review/reject content as reviewer
+    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
+      existing.document.registeredById,
+      user.id
+    );
+
+    const resource: AuthorizationResource = {
+      id: input.documentId,
+      type: "document",
+      scope: "unit",
+      primaryOwnerId: existing.document.registeredById,
+      createdById: existing.document.registeredById,
+      drafterId: existing.document.registeredById,
+      draftingUserId: existing.document.registeredById,
+    };
+
+    await assertAuthorized(user, "document.outgoing.review_content", resource);
+
+    return prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
+        where: { documentId: input.documentId },
+        data: {
+          status: OutgoingDocumentStatus.DRAFT,
+          contentReviewNotes: input.notes
+            ? `[Trả lại]: ${input.notes}`
+            : "[Trả lại soạn thảo để chỉnh sửa nội dung]",
+          contentReviewSubmittedAt: null,
+        },
+      });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: {
+          status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DRAFT),
+          updatedAt: now,
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "DOCUMENT_CONTENT_REJECTED",
+        entityType: AuditEntityType.DOCUMENT,
+        entityId: input.documentId,
+        requestId,
+        beforeData: { status: existing.status },
+        afterData: {
+          status: updatedWorkflow.status,
+          contentReviewNotes: updatedWorkflow.contentReviewNotes,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: "DOCUMENT_CONTENT_REJECTED",
+        aggregateType: OutboxAggregateType.DOCUMENT,
+        aggregateId: input.documentId,
+        payload: {
+          documentId: input.documentId,
+          reviewerId: user.id,
+          status: updatedWorkflow.status,
+          notes: input.notes,
         },
       });
 

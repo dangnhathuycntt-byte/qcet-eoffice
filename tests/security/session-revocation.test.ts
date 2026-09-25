@@ -103,7 +103,7 @@ describe('Sprint 2: Task 1 (F06: Session Revocation & Identity Resolution)', () 
         id: deptId,
         code: deptId,
         name: `Sprint 2 Dept ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });

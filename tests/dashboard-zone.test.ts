@@ -19,7 +19,10 @@ describe("Dashboard Zone & Orchestrator Contracts", () => {
       TasksZone,
       DashboardModalsHost,
     ]) {
-      assert.equal(typeof component, "object");
+      assert.ok(
+        typeof component === "function" || typeof component === "object",
+        "Component must be a function or memoized React component"
+      );
     }
   });
 });

@@ -36,6 +36,6 @@ export type UseTaskKeyboardNavOptions<T = { id: string }> =
 export type UseTaskKeyboardNavReturn = UseKeyboardNavigationReturn;
 
 /**
- * Hook quản lý điều hướng phím WCAG 2.1 AA / Linear style cho bảng nhiệm vụ
+ * Hook quản lý điều hướng phím chuẩn WCAG 2.1 AA cho bảng nhiệm vụ
  */
 export const useTaskKeyboardNav = useKeyboardNavigation;

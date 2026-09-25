@@ -59,8 +59,8 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
         id: `dept-harden-${Date.now()}`,
         code: `dept-harden-${Date.now()}`,
         name: `Phòng Khảo Thí & Đảm Bảo Chất Lượng ${testRunId}`,
-        type: "PHONG_BAN" as any,
-        status: "ACTIVE" as any,
+        type: "DEPARTMENT",
+        status: "ACTIVE",
       },
     });
     testDepartmentId = dept.id;
@@ -1065,8 +1065,8 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           id: `unit-detach-${Date.now()}`,
           code: `unit-detach-${Date.now()}`,
           name: `Đơn vị kiểm thử tách tham chiếu ${testRunId}`,
-          type: "PHONG_BAN" as any,
-          status: "ACTIVE" as any,
+          type: "DEPARTMENT",
+          status: "ACTIVE",
         },
       });
 
@@ -1077,7 +1077,8 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           scope: "DEPARTMENT" as any,
           status: "NOT_STARTED" as any,
           priority: "NORMAL" as any,
-          dueDate: new Date(),
+          startDate: new Date(Date.now() - 86400000),
+          dueDate: new Date(Date.now() + 86400000),
           academicMonth: 9,
           academicYear: "2026-2027",
           createdById: testUserId1,

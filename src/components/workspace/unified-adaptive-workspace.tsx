@@ -2242,6 +2242,32 @@ function UnifiedAdaptiveWorkspaceInner({
         </div>
       )}
 
+      {/* Active Filter Breadcrumb */}
+      <ActiveFilterBreadcrumb
+        scope={activeScope}
+        department={currentDept}
+        workbox={currentWorkbox}
+        status={currentStatus}
+        search={currentSearch}
+        overdue={Boolean(currentOverdue)}
+        totalFilteredCount={displayedTasks.length}
+        totalCount={scopedTasks.length}
+        onResetFilters={handleResetFilters}
+        onClearAll={handleResetFilters}
+        onRemoveDepartment={() => {
+          onDepartmentChange?.("ALL");
+          workspaceQuery?.setUnit(undefined, { shallow: true, replace: true });
+        }}
+        onRemoveWorkbox={() => setInternalWorkbox("ALL")}
+        onRemoveStatus={() => handleStatusFilterChange("ALL")}
+        onRemoveSearch={() => {
+          setInternalSearch(undefined);
+          onSearchChange?.("");
+          workspaceQuery?.setSearchQuery("", { shallow: true, replace: true });
+        }}
+        onRemoveOverdue={() => handleDeadlineFilterChange("all")}
+      />
+
       {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}
       {enableSplitCockpit ? (
         <div

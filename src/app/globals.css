@@ -93,6 +93,15 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Motion Tokens — sync với src/lib/motion/tokens.ts */
+  --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-duration-micro: 80ms;
+  --motion-duration-fast: 140ms;
+  --motion-duration-normal: 180ms;
+  --motion-duration-panel: 260ms;
 }
 
 :root,

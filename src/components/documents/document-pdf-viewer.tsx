@@ -10,6 +10,7 @@ import {
   FileQuestion,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isSafeUrl } from "@/lib/url-utils";
 
 export interface DocumentPdfViewerProps {
   fileUrl?: string | null;
@@ -72,7 +73,9 @@ export function DocumentPdfViewer({
 
   const formattedSize = formatFileSize(fileSize);
 
-  if (!fileUrl) {
+  const isSafe = React.useMemo(() => isSafeUrl(fileUrl), [fileUrl]);
+
+  if (!fileUrl || !isSafe) {
     return (
       <div
         className={`flex flex-col items-center justify-center p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/80 min-h-[420px] ${className}`}
@@ -81,10 +84,12 @@ export function DocumentPdfViewer({
           <FileQuestion className="size-8" strokeWidth={1.5} />
         </div>
         <h4 className="text-sm font-semibold text-foreground mb-1">
-          Chưa có bản scan PDF
+          {!fileUrl ? "Chưa có bản scan PDF" : "Đường dẫn tệp không an toàn hoặc không hợp lệ"}
         </h4>
         <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-          Văn bản này hiện chưa được số hóa hoặc chưa tải lên tệp PDF scan có dấu đỏ lưu trữ.
+          {!fileUrl
+            ? "Văn bản này hiện chưa được số hóa hoặc chưa tải lên tệp PDF scan có dấu đỏ lưu trữ."
+            : "Chỉ hỗ trợ giao thức HTTP, HTTPS hoặc Blob an toàn."}
         </p>
       </div>
     );

@@ -83,8 +83,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
     // 1. Setup departments
     await prisma.organizationalUnit.createMany({
       data: [
-        { id: deptAId, code: deptAId, name: `Phòng Gate0 A ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
-        { id: deptBId, code: deptBId, name: `Phòng Gate0 B ${testRunId}`, type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+        { id: deptAId, code: deptAId, name: `Phòng Gate0 A ${testRunId}`, type: "DEPARTMENT" as any, status: "ACTIVE" as any },
+        { id: deptBId, code: deptBId, name: `Phòng Gate0 B ${testRunId}`, type: "DEPARTMENT" as any, status: "ACTIVE" as any },
       ],
     });
 

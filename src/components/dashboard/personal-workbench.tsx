@@ -19,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { SchoolTask, StaffTask, TaskStatus, DashboardStats } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus, TaskPriority, DashboardStats } from "@/types/dashboard";
 import type { ExecutiveActionStats } from "@/lib/executive-matrix-aggregator";
 import type { AuthUser } from "@/types/auth";
 import type { WorkspaceScope } from "@/types/workspace";
@@ -66,7 +66,7 @@ export interface AttentionQueueItem {
   dueDate?: string;
   isOverdue: boolean;
   progressPercent: number;
-  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  priority: TaskPriority;
   status: TaskStatus | string;
   statusLabel: string;
   actionType: AttentionActionType;

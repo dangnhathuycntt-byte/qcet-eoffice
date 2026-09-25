@@ -243,6 +243,17 @@ export async function createDocument(
   client?: any
 ): Promise<DocumentItem> {
   const db = client || defaultPrisma;
+
+  // Guard: VAN_BAN_DI phải tạo qua OutgoingDocumentService để đảm bảo
+  // DocumentOutgoingWorkflow được khởi tạo cùng Document.
+  if (payload.type === 'VAN_BAN_DI') {
+    throw new ValidationError(
+      'Văn bản đi (VAN_BAN_DI) phải được tạo qua OutgoingDocumentService.createOutgoingDraft() để khởi tạo DocumentOutgoingWorkflow đi kèm. Xem src/lib/services/outgoing-document-service.ts.',
+      undefined,
+      'USE_OUTGOING_SERVICE'
+    );
+  }
+
   const year = payload.documentYear || new Date().getFullYear();
 
   const registrationNumber =

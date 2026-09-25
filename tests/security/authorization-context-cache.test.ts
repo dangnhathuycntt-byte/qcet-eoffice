@@ -98,7 +98,7 @@ describe('Sprint 2: Task 12 - AuthorizationContext Cache Strategy', () => {
         id: deptId,
         code: deptId,
         name: `Phòng Ban Test Cache ${testRunId}`,
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });

@@ -73,7 +73,12 @@ export function TaskContextMenu({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const feedback = useFeedback();
-  const router = useRouter();
+  let router: ReturnType<typeof useRouter> | null = null;
+  try {
+    router = useRouter();
+  } catch {
+    // Graceful fallback for non-App-Router or test environments
+  }
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -219,7 +224,7 @@ export function TaskContextMenu({
       feedback.notifySuccess(`Đã lưu trữ "${taskTitle}".`);
       // Confirm: refresh để sync server truth
       window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: false } }));
-      router.refresh();
+      router?.refresh();
     } catch (err) {
       window.dispatchEvent(new CustomEvent("qcet:task-archive-rollback", { detail: { taskId: task.id } }));
       feedback.notifyError(

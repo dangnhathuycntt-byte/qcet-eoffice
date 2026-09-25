@@ -244,6 +244,96 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
   };
 }
 
+export interface DocumentPushInput {
+  event: "DOCUMENT_OVERDUE" | "DOCUMENT_EXPIRING_SOON" | "DOCUMENT_ASSIGNED" | "DOCUMENT_DIRECTIVE" | string;
+  documentId: string;
+  documentNumber?: string;
+  summary: string;
+  dueDateStr?: string;
+  urgency?: string;
+  actorName?: string;
+  linkHref?: string;
+}
+
+/**
+ * Formats a standardized Vietnamese push notification payload for documents
+ * adhering to Decree 30/2020 terminology and lock screen budgets (Title <= 35 chars, Body <= 90 chars).
+ */
+export function formatDocumentPushPayload(input: DocumentPushInput): PushNotificationPayload {
+  const { event, documentId, documentNumber, summary, dueDateStr, urgency, actorName, linkHref } = input;
+
+  let rawTitle = "";
+  let rawBody = "";
+  let eventShort = "doc";
+  const docRef = documentNumber ? `Số ${documentNumber}` : "Văn bản";
+
+  switch (event) {
+    case "DOCUMENT_OVERDUE": {
+      eventShort = "overdue";
+      rawTitle = `[QUÁ HẠN XỬ LÝ] ${docRef}`;
+      rawBody = dueDateStr
+        ? `${docRef}: "${summary}". Đã quá hạn ngày ${dueDateStr}`
+        : `${docRef}: "${summary}" đã quá hạn xử lý`;
+      break;
+    }
+    case "DOCUMENT_EXPIRING_SOON": {
+      eventShort = "expiring";
+      rawTitle = `[SẮP HẾT HẠN] ${docRef}`;
+      rawBody = dueDateStr
+        ? `${docRef}: "${summary}". Hạn xử lý: ${dueDateStr}`
+        : `${docRef}: "${summary}" sắp hết hạn xử lý (<24h)`;
+      break;
+    }
+    case "DOCUMENT_ASSIGNED": {
+      eventShort = "assigned";
+      rawTitle = `[GIAO XỬ LÝ VB] ${docRef}`;
+      rawBody = `${actorName || "Hệ thống"} đã giao xử lý văn bản: "${summary}"`;
+      break;
+    }
+    case "DOCUMENT_DIRECTIVE": {
+      eventShort = "directive";
+      rawTitle = `[BÚT PHÊ CHỈ ĐẠO] ${docRef}`;
+      rawBody = `${actorName || "Lãnh đạo"} đã ban hành bút phê chỉ đạo cho: "${summary}"`;
+      break;
+    }
+    default: {
+      eventShort = event.toLowerCase();
+      rawTitle = `[VĂN BẢN] ${docRef}`;
+      rawBody = `${docRef}: ${summary}`;
+      break;
+    }
+  }
+
+  const title = truncatePushText(rawTitle, 35);
+  const body = truncatePushText(rawBody, 90);
+  const tag = `doc-${documentId}-${eventShort}`;
+  const targetHref = linkHref || `/documents?id=${encodeURIComponent(documentId)}`;
+
+  return {
+    title,
+    body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-72x72.png",
+    tag,
+    renotify: true,
+    data: {
+      entityId: documentId,
+      documentId,
+      type: event,
+      route: targetHref,
+      url: targetHref,
+      linkHref: targetHref,
+      event,
+    },
+    actions: [
+      {
+        action: "open",
+        title: "Xem văn bản",
+      },
+    ],
+  };
+}
+
 /**
  * Dispatches a push notification to all active devices/subscriptions of a user.
  * Self-healing: if an endpoint returns 404 Not Found or 410 Gone, marks subscription as REVOKED.

@@ -60,6 +60,7 @@ export const ServerEnvSchema = z
     // self-hosted Redis, otherwise limits do not hold across
     // instances/restarts and the limiter fails closed (503).
     // A set but malformed value is rejected in every environment.
+    CRON_SECRET: z.string().optional(),
     REDIS_URL: z
       .string()
       .optional()

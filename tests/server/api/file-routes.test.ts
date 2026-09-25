@@ -61,16 +61,43 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     fs.writeFileSync(path.join(testSandboxAbs, "secret_doc.pdf"), samplePdfContent);
 
     // 2. Identify departments (non-BGH)
-    const deptA = await prisma.organizationalUnit.findUnique({ where: { id: "P_TC" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { not: "BGH" } } });
-    const deptB = await prisma.organizationalUnit.findUnique({ where: { id: "K_CNTT" } }) || await prisma.organizationalUnit.findFirst({ where: { id: { notIn: ["BGH", deptA!.id] } } });
+    const deptA =
+      (await prisma.organizationalUnit.findUnique({ where: { id: "P_TC" } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: `DEPT_A_FILE_${Date.now()}`,
+          code: `DEPT_A_${Date.now()}`,
+          name: "Phòng A Thử Nghiệm",
+          type: "DEPARTMENT",
+          status: "ACTIVE",
+        },
+      }));
+    const deptB =
+      (await prisma.organizationalUnit.findUnique({ where: { id: "K_CNTT" } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: `DEPT_B_FILE_${Date.now()}`,
+          code: `DEPT_B_${Date.now()}`,
+          name: "Phòng B Thử Nghiệm",
+          type: "DEPARTMENT",
+          status: "ACTIVE",
+        },
+      }));
     assert.ok(deptA && deptB, "At least 2 non-BGH departments required for BOLA tests");
     deptAId = deptA.id;
     deptBId = deptB.id;
 
     // 3. Identify users
-    const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-    assert.ok(admin, "ADMIN user required");
-    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role};
+    const admin =
+      (await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } })) ||
+      (await prisma.user.create({
+        data: {
+          email: `test-bgh-${Date.now()}@qcet.edu.vn`,
+          name: "Ban Giám Hiệu Kiểm Thử",
+          role: "BAN_GIAM_HIEU",
+        },
+      }));
+    adminUser = { id: admin.id, email: admin.email, name: admin.name, role: admin.role };
 
     // Create explicit test staff users in Dept A and Dept B
     const userA = await prisma.user.create({
@@ -78,7 +105,6 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         email: `test-staff-a-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept A",
         role: "CHUYEN_VIEN",
-
       },
     });
     deptAUser = { id: userA.id, email: userA.email, name: userA.name, role: userA.role};
@@ -88,10 +114,74 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         email: `test-staff-b-${Date.now()}@qcet.edu.vn`,
         name: "Test Staff Dept B",
         role: "CHUYEN_VIEN",
-
       },
     });
     deptBUser = { id: userB.id, email: userB.email, name: userB.name, role: userB.role};
+
+    const bghUnit =
+      (await prisma.organizationalUnit.findFirst({ where: { type: "SCHOOL" } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: `UNIT_BGH_FILE_${Date.now()}`,
+          code: `BGH_FILE_${Date.now()}`,
+          name: "Ban Giám Hiệu",
+          type: "SCHOOL",
+          status: "ACTIVE",
+        },
+      }));
+
+    const posDefLeadership =
+      (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } })) ||
+      (await prisma.positionDefinition.create({
+        data: {
+          code: `ADMIN_LEAD_${Date.now()}`,
+          title: "Hiệu trưởng",
+          group: "LDPU",
+          isLeadership: true,
+        },
+      }));
+
+    const posDefStaff = await prisma.positionDefinition.create({
+      data: {
+        code: `STAFF_DEF_${Date.now()}`,
+        title: "Chuyên viên Thử Nghiệm",
+        group: "VCDC",
+        isLeadership: false,
+      },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: adminUser.id,
+        unitId: bghUnit.id,
+        positionDefinitionId: posDefLeadership.id,
+        type: "PRIMARY",
+        status: "ACTIVE",
+        effectiveFrom: new Date("2026-01-01"),
+      },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: userA.id,
+        unitId: deptA.id,
+        positionDefinitionId: posDefStaff.id,
+        type: "PRIMARY",
+        status: "ACTIVE",
+        effectiveFrom: new Date("2026-01-01"),
+      },
+    });
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: userB.id,
+        unitId: deptB.id,
+        positionDefinitionId: posDefStaff.id,
+        type: "PRIMARY",
+        status: "ACTIVE",
+        effectiveFrom: new Date("2026-01-01"),
+      },
+    });
 
     // 4. Generate tokens
     adminToken = signSessionToken({ id: adminUser.id, email: adminUser.email, name: adminUser.name, role: adminUser.role });
@@ -153,7 +243,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       data: {
         title: "BOLA Protected Task Dept B",
         code: `TASK-${Date.now()}`,
-
+        leadUnitId: deptB.id,
         createdById: deptBUser.id,
         scope: "DEPARTMENT",
         status: "IN_PROGRESS",
@@ -190,6 +280,10 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       if (testDocId) {
         await prisma.documentAttachment.deleteMany({ where: { documentId: testDocId } }).catch(() => {});
         await prisma.document.delete({ where: { id: testDocId } }).catch(() => {});
+      }
+      const userIdsToClean = [deptAUser?.id, deptBUser?.id, adminUser?.id].filter(Boolean) as string[];
+      if (userIdsToClean.length > 0) {
+        await prisma.positionAssignment.deleteMany({ where: { userId: { in: userIdsToClean } } }).catch(() => {});
       }
       if (deptAUser?.id) {
         await prisma.user.delete({ where: { id: deptAUser.id } }).catch(() => {});
@@ -441,7 +535,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
   describe("7. Range Requests (HTTP 206 & HTTP 416)", () => {
     test("Returns 206 Partial Content when Range header is valid", async () => {
       const req = createRequest(`http://localhost:3000/api/files/${testSandboxRel}/sample.txt`, {
-        token: adminToken,
+        token: deptBToken,
         headers: { range: "bytes=0-10" },
       });
       const res = await getFileRoute(req, { params: Promise.resolve({ path: [testSandboxRel, "sample.txt"] }) });
@@ -455,7 +549,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
     test("Returns 416 Range Not Satisfiable when Range header is out of bounds", async () => {
       const req = createRequest(`http://localhost:3000/api/files/${testSandboxRel}/sample.txt`, {
-        token: adminToken,
+        token: deptBToken,
         headers: { range: "bytes=99999-999999" },
       });
       const res = await getFileRoute(req, { params: Promise.resolve({ path: [testSandboxRel, "sample.txt"] }) });
@@ -467,7 +561,7 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
     test("GET /api/documents/download also supports byte range requests", async () => {
       const req = createRequest(`http://localhost:3000/api/documents/download?file=${testSandboxRel}/sample.txt`, {
-        token: adminToken,
+        token: deptBToken,
         headers: { range: "bytes=5-15" },
       });
       const res = await downloadDocumentRoute(req);

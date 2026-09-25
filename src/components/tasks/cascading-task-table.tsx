@@ -210,12 +210,16 @@ export function filterTasksForTable(
             resolveDepartmentId(dept) === canonicalDept
         );
 
+      const matchFallback =
+        !taskDept &&
+        (resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, undefined, task.category) === canonicalDept);
+
       const matchSchoolTask =
         matchTaskDept ||
         matchCoDept ||
-        resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
-        resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
-        resolveDepartmentId(undefined, undefined, task.category) === canonicalDept ||
+        matchFallback ||
         task.coAssignees?.some(
           (name) =>
             resolveDepartmentId(name) === canonicalDept ||

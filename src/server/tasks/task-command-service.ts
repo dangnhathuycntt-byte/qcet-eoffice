@@ -6,6 +6,10 @@ import {
   TaskOriginLevel,
   TaskActorRole,
   DeliverableReviewStatus,
+  DocumentStatus,
+  DocumentType,
+  IncomingDocumentStatus,
+  OutgoingDocumentStatus,
   Prisma,
 } from '@prisma/client';
 // Phase 9: AssigneeRole removed — TaskAssignee table dropped. TaskActor is sole authority.
@@ -1160,6 +1164,113 @@ export class TaskCommandService {
         await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
       }
 
+      // 6. Hook đồng bộ hai chiều: khi Task chuyển sang COMPLETED -> tự động giải quyết Document nếu có linked document
+      if (scalarUpdateData.status === TaskStatus.COMPLETED) {
+        const linkedDoc = await tx.document.findFirst({
+          where: { linkedTaskId: taskId },
+          include: {
+            incomingWorkflow: { select: { id: true, status: true } },
+            outgoingWorkflow: { select: { id: true, status: true } },
+          },
+        });
+        if (linkedDoc?.incomingWorkflow && linkedDoc.type !== DocumentType.VAN_BAN_DI) {
+          const wf = linkedDoc.incomingWorkflow;
+          const resolvable: (string | IncomingDocumentStatus)[] = [
+            IncomingDocumentStatus.UNIT_ASSIGNED_PERSON,
+            IncomingDocumentStatus.IN_PROGRESS,
+            IncomingDocumentStatus.DIRECTED,
+            IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT,
+            IncomingDocumentStatus.RECEIVED,
+            IncomingDocumentStatus.REGISTERED,
+            IncomingDocumentStatus.PRESENTED,
+          ];
+          if (resolvable.includes(wf.status)) {
+            await tx.documentIncomingWorkflow.update({
+              where: { id: wf.id },
+              data: {
+                status: IncomingDocumentStatus.RESOLVED,
+                resolvedAt: new Date(),
+                resolvedById: user.id,
+                resolutionSummary: `Tự động giải quyết khi Nhiệm vụ ${taskId} hoàn thành`,
+              },
+            });
+            await tx.document.update({
+              where: { id: linkedDoc.id },
+              data: { status: DocumentStatus.DA_HOAN_THANH },
+            });
+
+            await logAuditEvent(tx, {
+              actorId: user.id,
+              action: AuditAction.TASK_COMPLETED_DOCUMENT_RESOLVED,
+              entityType: AuditEntityType.DOCUMENT,
+              entityId: linkedDoc.id,
+              requestId,
+              beforeData: {
+                documentStatus: linkedDoc.status,
+                workflowStatus: wf.status,
+              },
+              afterData: {
+                documentStatus: DocumentStatus.DA_HOAN_THANH,
+                workflowStatus: IncomingDocumentStatus.RESOLVED,
+              },
+              metadata: {
+                taskId,
+                triggerReason: `Tự động giải quyết khi Nhiệm vụ ${taskId} hoàn thành`,
+              },
+            });
+          }
+        } else if (linkedDoc?.outgoingWorkflow || (linkedDoc?.type === DocumentType.VAN_BAN_DI && linkedDoc.outgoingWorkflow)) {
+          const outWf = linkedDoc.outgoingWorkflow;
+          if (outWf) {
+            const resolvableOutgoing: (string | OutgoingDocumentStatus)[] = [
+              OutgoingDocumentStatus.DRAFT,
+              OutgoingDocumentStatus.CONTENT_REVIEW,
+              OutgoingDocumentStatus.FORMAT_CHECK,
+              OutgoingDocumentStatus.AUTHORIZED_SIGN,
+              OutgoingDocumentStatus.NUMBERED,
+              OutgoingDocumentStatus.ORGANIZATION_SIGNED,
+              'DEPARTMENT_REVIEW',
+              'LEGAL_REVIEW',
+              'EXECUTIVE_REVIEW',
+            ];
+            if (resolvableOutgoing.includes(outWf.status)) {
+              await tx.documentOutgoingWorkflow.update({
+                where: { id: outWf.id },
+                data: {
+                  status: OutgoingDocumentStatus.ISSUED,
+                  issuedAt: new Date(),
+                  issuerId: user.id,
+                },
+              });
+              await tx.document.update({
+                where: { id: linkedDoc.id },
+                data: { status: DocumentStatus.DA_HOAN_THANH },
+              });
+
+              await logAuditEvent(tx, {
+                actorId: user.id,
+                action: AuditAction.TASK_COMPLETED_DOCUMENT_RESOLVED,
+                entityType: AuditEntityType.DOCUMENT,
+                entityId: linkedDoc.id,
+                requestId,
+                beforeData: {
+                  documentStatus: linkedDoc.status,
+                  workflowStatus: outWf.status,
+                },
+                afterData: {
+                  documentStatus: DocumentStatus.DA_HOAN_THANH,
+                  workflowStatus: OutgoingDocumentStatus.ISSUED,
+                },
+                metadata: {
+                  taskId,
+                  triggerReason: `Tự động giải quyết văn bản đi khi Nhiệm vụ ${taskId} hoàn thành`,
+                },
+              });
+            }
+          }
+        }
+      }
+
       return updatedTask;
     });
 
@@ -1201,12 +1312,80 @@ export class TaskCommandService {
         parentIds = childIds;
       }
 
-      if (allSubtaskIds.length > 0) {
-        await tx.document.updateMany({
-          where: { linkedTaskId: { in: allSubtaskIds } },
-          data: { linkedTaskId: null },
-        });
+      // 1. Hook deleteTask: reset các văn bản liên kết trước khi xóa nhiệm vụ hoặc việc con
+      const allTaskIdsToDelete = [taskId, ...allSubtaskIds];
+      const linkedDocs = await tx.document.findMany({
+        where: { linkedTaskId: { in: allTaskIdsToDelete } },
+        select: {
+          id: true,
+          status: true,
+          linkedTaskId: true,
+          incomingWorkflow: { select: { id: true, status: true } },
+        },
+      });
 
+      for (const linkedDoc of linkedDocs) {
+        const isResettable = linkedDoc.status === DocumentStatus.DANG_XU_LY;
+        if (isResettable && linkedDoc.incomingWorkflow) {
+          const wf = linkedDoc.incomingWorkflow;
+          const nonTerminalStatuses = [
+            'DIRECTED',
+            'ASSIGNED_TO_LEAD_UNIT',
+            'UNIT_ASSIGNED_PERSON',
+            'IN_PROGRESS',
+          ];
+          if (nonTerminalStatuses.includes(wf.status as string)) {
+            await tx.documentIncomingWorkflow.update({
+              where: { id: wf.id },
+              data: { status: IncomingDocumentStatus.DIRECTED },
+            });
+            await tx.document.update({
+              where: { id: linkedDoc.id },
+              data: { status: DocumentStatus.CHO_PHAN_CONG, linkedTaskId: null },
+            });
+
+            const requestId =
+              ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+                ? ctx.requestId
+                : undefined;
+
+            await logAuditEvent(tx, {
+              actorId: user.id,
+              action: AuditAction.TASK_DELETED_DOCUMENT_RESET,
+              entityType: AuditEntityType.DOCUMENT,
+              entityId: linkedDoc.id,
+              requestId,
+              beforeData: {
+                documentStatus: linkedDoc.status,
+                workflowStatus: wf.status,
+                linkedTaskId: linkedDoc.linkedTaskId,
+              },
+              afterData: {
+                documentStatus: DocumentStatus.CHO_PHAN_CONG,
+                workflowStatus: IncomingDocumentStatus.DIRECTED,
+                linkedTaskId: null,
+              },
+              metadata: {
+                deletedTaskId: linkedDoc.linkedTaskId,
+                triggerReason: `Tự động hoàn tác trạng thái văn bản khi nhiệm vụ ${linkedDoc.linkedTaskId} bị xóa`,
+              },
+            });
+          } else {
+            await tx.document.update({
+              where: { id: linkedDoc.id },
+              data: { linkedTaskId: null },
+            });
+          }
+        } else {
+          await tx.document.update({
+            where: { id: linkedDoc.id },
+            data: { linkedTaskId: null },
+          });
+        }
+      }
+
+      // 2. Cascade delete các việc con
+      if (allSubtaskIds.length > 0) {
         await tx.taskActor.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         // Phase 9: TaskAssignee table dropped — no longer deleted here.
         await tx.taskDeliverable.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
@@ -1215,12 +1394,6 @@ export class TaskCommandService {
 
         await tx.task.deleteMany({ where: { id: { in: allSubtaskIds } } });
       }
-
-      // 2. Gỡ liên kết văn bản của nhiệm vụ gốc
-      await tx.document.updateMany({
-        where: { linkedTaskId: taskId },
-        data: { linkedTaskId: null },
-      });
 
       // 3. Dọn dẹp quan hệ
       await tx.taskActor.deleteMany({ where: { taskId } });

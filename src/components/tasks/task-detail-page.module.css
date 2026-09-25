@@ -43,7 +43,7 @@
 /* Desktop: independent card in second grid column */
 @media (min-width: 1024px) {
   .splitWorkspace[data-peek-open='true'] {
-    grid-template-columns: minmax(0, 1fr) min(75vw, var(--subtask-peek-width, 480px));
+    grid-template-columns: minmax(0, 1fr) min(75vw, var(--qcet-subtask-peek-width, 480px));
   }
   .peekSurface {
     position: relative;

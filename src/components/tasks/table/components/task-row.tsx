@@ -209,7 +209,7 @@ function HealthIndicator({
 }
 
 /**
- * Circular Progress Ring (Linear style)
+ * Circular Progress Ring (Minimal circular indicator)
  * Clean: When progress is 0%, render subtle plain text to avoid visual clutter
  */
 export function CircularProgressRing({ percent }: { percent: number }) {

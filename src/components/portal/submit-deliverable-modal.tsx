@@ -383,12 +383,12 @@ export function SubmitDeliverableModal({
       title="Nộp Minh Chứng Hoàn Thành"
       description={`Nhiệm vụ: ${effectiveTaskTitle}`}
       size="lg"
-      className="p-0 sm:max-w-xl max-h-[90dvh] flex flex-col overflow-hidden"
+      className="max-h-[90dvh] flex flex-col overflow-hidden sm:max-w-xl"
     >
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
             {/* Restored Draft Alert */}
             {hasDraftRestored && (
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-700 flex items-center justify-between gap-2 animate-in fade-in">

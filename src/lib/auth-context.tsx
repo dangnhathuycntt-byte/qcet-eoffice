@@ -276,6 +276,21 @@ async function fetchSessionOnce(
   }
 }
 
+function toCachedUser(u: AuthUser): CachedUser {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    roleLabel: u.roleLabel,
+    department: u.department,
+    departmentCode: u.departmentCode,
+    avatar: u.avatar,
+    title: u.title,
+    dbRole: u.dbRole,
+  };
+}
+
 export async function performSessionSync(
   fetchFn: typeof fetch = fetch,
   storage: { getItem: (key: string) => string | null; setItem?: (key: string, value: string) => void } | null = typeof window !== "undefined" ? localStorage : null,
@@ -305,7 +320,7 @@ export async function performSessionSync(
 
   if (resolution.isAuthenticated && resolution.user && storage?.setItem) {
     try {
-      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resolution.user));
+      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(toCachedUser(resolution.user as AuthUser)));
     } catch {
       // ignore
     }

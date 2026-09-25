@@ -161,12 +161,12 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     await prisma.organizationalUnit.upsert({
       where: { id: "dept-daotao" },
       update: {},
-      create: { id: "dept-daotao", code: "dept-daotao", name: "Phòng Đào tạo (Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+      create: { id: "dept-daotao", code: "dept-daotao", name: "Phòng Đào tạo (Test)", type: "DEPARTMENT" as any, status: "ACTIVE" as any },
     });
     await prisma.organizationalUnit.upsert({
       where: { id: "dept-cntt" },
       update: {},
-      create: { id: "dept-cntt", code: "dept-cntt", name: "Khoa CNTT (Test)", type: "PHONG_BAN" as any, status: "ACTIVE" as any },
+      create: { id: "dept-cntt", code: "dept-cntt", name: "Khoa CNTT (Test)", type: "DEPARTMENT" as any, status: "ACTIVE" as any },
     });
 
     // Setup test users

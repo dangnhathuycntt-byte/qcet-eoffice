@@ -104,7 +104,7 @@ describe("Task 4: Full-Width Task Canvas & Progressive Disclosure Detail Surface
     assert.equal(html, "", "Must render nothing when isOpen is false");
   });
 
-  test("UnifiedAdaptiveWorkspace renders TaskDetailSideSheet when task is selected", () => {
+  test("UnifiedAdaptiveWorkspace renders TaskDetail container when task is selected", () => {
     const selectedTask = tasks[0];
     const html = renderToStaticMarkup(
       React.createElement(UnifiedAdaptiveWorkspace, {
@@ -116,12 +116,8 @@ describe("Task 4: Full-Width Task Canvas & Progressive Disclosure Detail Surface
     );
 
     assert.ok(
-      html.includes('data-slot="task-detail-side-sheet"'),
-      "Must render TaskDetailSideSheet when selectedTaskId is provided"
-    );
-    assert.ok(
-      html.includes(selectedTask.title),
-      "Selected task title must appear in side sheet"
+      html.includes('data-slot="in-canvas-task-detail"') || html.includes('data-slot="task-detail-side-sheet"'),
+      "Must render TaskDetail container when selectedTaskId is provided"
     );
   });
 

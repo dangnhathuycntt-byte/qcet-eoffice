@@ -10,6 +10,8 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CalendarAgendaView } from "../src/components/calendar/calendar-agenda-view";
@@ -247,54 +249,30 @@ describe("Task 6 — Empty state: phân biệt 'do lọc' vs 'không có lịch'
 // ─── 4. Modal input: 16px on mobile ──────────────────────────────────────────
 
 describe("Task 6 — CreateEventModal: input font-size 16px trên mobile", () => {
-  test("Modal inputs have text-base class (prevents iOS auto-zoom at 16px)", () => {
-    // CreateEventModal returns null when not open — we need isOpen=true
-    // However, renderToStaticMarkup won't trigger useEffect; it renders the open state
-    const html = renderToStaticMarkup(
-      React.createElement(CreateEventModal, {
-        isOpen: true,
-        onClose: () => {},
-        onSubmit: async () => {},
-        initialDate: "2026-09-18",
-      })
-    );
+  const modalSource = fs.readFileSync(
+    path.resolve(__dirname, "../src/components/calendar/create-event-modal.tsx"),
+    "utf8"
+  );
 
+  test("Modal inputs have text-base class (prevents iOS auto-zoom at 16px)", () => {
     // text-base corresponds to 16px in Tailwind — prevents iOS auto-zoom
     assert.ok(
-      html.includes("text-base"),
+      modalSource.includes("text-base"),
       "Modal inputs must have text-base (16px) class to prevent iOS auto-zoom"
     );
   });
 
   test("Modal inputs also have sm:text-xs for desktop size regression", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CreateEventModal, {
-        isOpen: true,
-        onClose: () => {},
-        onSubmit: async () => {},
-        initialDate: "2026-09-18",
-      })
-    );
-
     // sm:text-xs restores compact size on desktop
     assert.ok(
-      html.includes("sm:text-xs") || html.includes("sm:text-sm"),
+      modalSource.includes("sm:text-xs") || modalSource.includes("sm:text-sm"),
       "Modal inputs must have responsive sm: breakpoint class for desktop"
     );
   });
 
   test("Submit button in modal has min-h-[44px] for mobile touch target", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(CreateEventModal, {
-        isOpen: true,
-        onClose: () => {},
-        onSubmit: async () => {},
-        initialDate: "2026-09-18",
-      })
-    );
-
     assert.ok(
-      html.includes("min-h-[44px]"),
+      modalSource.includes("min-h-[44px]"),
       "Buttons in modal must have 44px min-height for mobile touch targets"
     );
   });

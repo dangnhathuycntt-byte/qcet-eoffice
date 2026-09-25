@@ -62,6 +62,8 @@ export const OutboxEventType = {
   DOCUMENT_ASSIGNED_NOTIFICATION: "DOCUMENT_ASSIGNED_NOTIFICATION",
   DOCUMENT_RESOLVED_NOTIFICATION: "DOCUMENT_RESOLVED_NOTIFICATION",
   DOCUMENT_FILED_NOTIFICATION: "DOCUMENT_FILED_NOTIFICATION",
+  DOCUMENT_OVERDUE_NOTIFICATION: "DOCUMENT_OVERDUE_NOTIFICATION",
+  DOCUMENT_EXPIRING_SOON_NOTIFICATION: "DOCUMENT_EXPIRING_SOON_NOTIFICATION",
 
   // External Webhook & Sync Events
   WEBHOOK_DISPATCH: "WEBHOOK_DISPATCH",
@@ -252,7 +254,7 @@ export interface OutboxHandlerContext {
  */
 export type OutboxEventHandler = (
   event: OutboxEvent,
-  context: OutboxHandlerContext
+  context?: OutboxHandlerContext
 ) => Promise<any> | any;
 
 /**

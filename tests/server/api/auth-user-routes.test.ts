@@ -34,13 +34,52 @@ describe('Authentication and User API Routes Hardening', () => {
         passwordHash,
         role: 'CHUYEN_VIEN',
         isActive: true,
-
       },
     });
     testUserId = user.id;
+
+    // Attach active position assignment for canonical user directory discovery
+    const dept =
+      (await prisma.organizationalUnit.findFirst({ where: { status: 'ACTIVE' } })) ||
+      (await prisma.organizationalUnit.create({
+        data: {
+          id: `dept-auth-${testRunId}`,
+          code: `dept-auth-${testRunId}`,
+          name: 'Phòng Khảo Thí Test',
+          type: 'DEPARTMENT',
+          status: 'ACTIVE',
+        },
+      }));
+
+    const posDef =
+      (await prisma.positionDefinition.findFirst()) ||
+      (await prisma.positionDefinition.create({
+        data: {
+          code: `CV_TEST_${testRunId}`,
+          title: 'Chuyên viên Kiểm thử',
+          group: 'VCDC',
+          isLeadership: false,
+        },
+      }));
+
+    await prisma.positionAssignment.create({
+      data: {
+        userId: user.id,
+        unitId: dept.id,
+        positionDefinitionId: posDef.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+        effectiveFrom: new Date('2026-01-01'),
+      },
+    });
   });
 
   after(async () => {
+    if (testUserId) {
+      await prisma.positionAssignment.deleteMany({
+        where: { userId: testUserId },
+      });
+    }
     await prisma.user.deleteMany({
       where: {
         email: {

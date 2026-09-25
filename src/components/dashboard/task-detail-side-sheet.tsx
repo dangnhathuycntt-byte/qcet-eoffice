@@ -36,6 +36,7 @@ import { DashboardModalContext } from "@/components/dashboard/dashboard-context"
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
+import { isSafeUrl } from "@/lib/url-utils";
 import {
   type SchoolTask,
   type StaffTask,
@@ -1331,7 +1332,7 @@ export function TaskDetailSideSheet({
                           )}
                         </div>
                       </div>
-                      {item.url && (
+                      {item.url && isSafeUrl(item.url) && (
                         <a
                           href={item.url}
                           target="_blank"

@@ -26,7 +26,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         id: deptId,
         code: deptId,
         name: 'Phòng Đào tạo - Quản lý Khoa học OCC',
-        type: 'PHONG_BAN' as any,
+        type: "DEPARTMENT" as any,
         status: 'ACTIVE' as any,
       },
     });

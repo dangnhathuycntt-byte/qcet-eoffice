@@ -39,7 +39,7 @@ describe('Task 9: Immutable AuditEvent Model & Service', () => {
           id: uid,
           code: uid,
           name: 'Phòng Kiểm Thử Kiểm Toán',
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });

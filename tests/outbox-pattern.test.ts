@@ -31,7 +31,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
           id: `dept-outbox-${Date.now()}`,
           code: `dept-outbox-${Date.now()}`,
           name: 'Phòng Kiểm Thử Outbox',
-          type: 'PHONG_BAN' as any,
+          type: "DEPARTMENT" as any,
           status: 'ACTIVE' as any,
         },
       });
