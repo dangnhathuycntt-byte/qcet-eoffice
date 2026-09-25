@@ -468,7 +468,7 @@ export function SubtaskDetailDrawer({
           title="Kéo để điều chỉnh độ rộng bảng phụ hoặc nhấp đúp để đặt lại"
           onMouseDown={handleResizeMouseDown}
           onDoubleClick={handleResetWidth}
-          className="hidden lg:block absolute -left-1.5 top-0 bottom-0 w-3 z-50 cursor-col-resize select-none hover:bg-muted/40 active:bg-primary/20 transition-colors focus-visible:outline-2 focus-visible:outline-ring"
+          className="hidden lg:block absolute -left-1.5 top-0 bottom-0 w-3 z-50 cursor-col-resize select-none bg-transparent focus:outline-none focus-visible:outline-none"
         />
 
         {/* Header chi tiết việc con */}
