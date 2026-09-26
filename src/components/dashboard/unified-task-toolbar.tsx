@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   ArrowUpDown,
   ChevronDown,
-  ChevronRight,
   RotateCcw,
   FileText,
   Clock,
@@ -1335,14 +1334,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1362,14 +1360,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1389,14 +1386,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{cat.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1420,14 +1416,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{dept.code === "ALL" ? "Tất cả đơn vị" : dept.name}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1462,14 +1457,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1494,14 +1488,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1523,9 +1516,9 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1535,7 +1528,6 @@ export function UnifiedTaskToolbar({
                       <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
                     )}
                   </div>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1565,14 +1557,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1642,14 +1633,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1676,14 +1666,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                    "flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none",
                     selected
-                      ? "bg-accent/80 font-medium text-foreground"
+                      ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                 </MenuItem>
               );
             })}
@@ -1975,7 +1964,7 @@ export function UnifiedTaskToolbar({
           openOnHover
           delay={60}
           closeDelay={180}
-          className="group flex h-7.5 w-full items-center justify-between rounded-md px-2.5 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+          className="group flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <category.icon className="size-4 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
@@ -1983,10 +1972,6 @@ export function UnifiedTaskToolbar({
               {category.label}
             </span>
           </div>
-          <ChevronRight
-            className="size-3 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors"
-            strokeWidth={1.5}
-          />
         </MenuSubmenuTrigger>
         <MenuPortal>
           <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -2128,14 +2113,13 @@ export function UnifiedTaskToolbar({
                         <MenuItem
                           key={match.id}
                           onClick={match.onSelect}
-                          className="flex h-7.5 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
+                          className="flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <match.icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                             <span className="text-muted-foreground text-[11px]">{match.categoryLabel}:</span>
                             <span className="truncate font-medium text-foreground">{match.label}</span>
                           </div>
-                          {match.selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
                         </MenuItem>
                       ))}
                     </div>
