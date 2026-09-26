@@ -1382,29 +1382,11 @@ export function UnifiedTaskToolbar({
         </PopoverContent>
       </PopoverRoot>
 
-      {/* 3. Active filter chips — inline */}
+      {/* 3. Filter count summary — inline (chips moved to ActiveFilterBreadcrumb row below) */}
       {isAnyFilterActive && (
-        <>
-          {activeFilterChips.map((chip) => (
-            <span
-              key={chip.id}
-              className="inline-flex items-center gap-1 h-5.5 px-1.5 rounded-md bg-primary/8 border border-primary/20 text-primary text-[11px] font-medium shrink-0"
-            >
-              <span>{chip.label}</span>
-              <button
-                type="button"
-                onClick={chip.onRemove}
-                aria-label={`Xóa lọc ${chip.label}`}
-                className="size-3.5 flex items-center justify-center rounded hover:bg-primary/20 text-primary/80 cursor-pointer transition-colors"
-              >
-                <X className="size-2.5" strokeWidth={2} />
-              </button>
-            </span>
-          ))}
-          <span className="text-[11px] text-muted-foreground font-mono tabular-nums select-none whitespace-nowrap shrink-0">
-            ({effectiveFilteredTasksCount}/{effectiveTotalTasksCount})
-          </span>
-        </>
+        <span className="text-[11px] text-muted-foreground font-mono tabular-nums select-none whitespace-nowrap shrink-0">
+          ({effectiveFilteredTasksCount}/{effectiveTotalTasksCount})
+        </span>
       )}
 
       {/* 4. Hiển thị */}

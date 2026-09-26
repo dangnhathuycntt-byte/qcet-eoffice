@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Filter, X, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface ActiveFilterSummaryParams {
   dept?: string;
@@ -87,6 +88,17 @@ export function getActiveFilterSummary(params: ActiveFilterSummaryParams): strin
   return parts;
 }
 
+// ─── Chip styling per filter type ─────────────────────────���──
+const chipStyles = {
+  base: "inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-xs font-medium transition-colors",
+  department: "bg-blue-50 text-blue-700 border border-blue-200/80",
+  status: "bg-amber-50 text-amber-800 border border-amber-200/80",
+  search: "bg-slate-100 text-slate-700 border border-slate-200",
+  overdue: "bg-rose-50 text-rose-700 border border-rose-200/80",
+  workbox: "bg-violet-50 text-violet-700 border border-violet-200/80",
+  dismiss: "size-4 flex items-center justify-center rounded-sm hover:bg-black/8 cursor-pointer transition-colors ml-0.5",
+} as const;
+
 export interface ActiveFilterBreadcrumbProps {
   scope?: string;
   department?: string;
@@ -134,7 +146,6 @@ export function ActiveFilterBreadcrumb({
   const hasStatus = Boolean(status && status !== "ALL" && status !== "all");
   const hasOverdue = Boolean(overdue);
 
-  // If there are no secondary filters applied, render nothing to maintain a seamless flush layout
   const hasAnySecondaryFilter =
     hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue;
 
@@ -147,148 +158,98 @@ export function ActiveFilterBreadcrumb({
     else if (onClearAll) onClearAll();
   };
 
+  const handleRemove = (
+    specific?: () => void,
+    fallbackType?: string
+  ) => {
+    if (specific) specific();
+    else if (onRemoveFilter && fallbackType) onRemoveFilter(fallbackType);
+  };
+
   return (
     <div
       data-slot="active-filter-breadcrumb"
-      className={`flex flex-wrap items-center gap-1.5 py-1 text-xs font-sans ${className}`}
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 py-1.5 text-xs",
+        className
+      )}
     >
-      <div className="flex items-center gap-1 text-muted-foreground font-medium shrink-0 mr-1">
-        <Filter className="size-3 text-primary" strokeWidth={1.5} />
-        <span className="text-[11px]">Đang lọc:</span>
+      {/* Label */}
+      <div className="flex items-center gap-1 text-muted-foreground shrink-0 mr-0.5">
+        <Filter className="size-3 text-muted-foreground/70" strokeWidth={1.5} />
+        <span className="text-[11px] font-medium">Đang lọc:</span>
       </div>
 
+      {/* Chips */}
       <div className="flex flex-wrap items-center gap-1.5">
-        {/* Department chip */}
-        {hasDept && (
-          <div
-            data-slot="filter-chip-department"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 border border-border/70 text-foreground text-xs font-medium"
-          >
-            <span>
-              Đơn vị: <strong className="font-semibold">{department}</strong>
-            </span>
-            {(onRemoveDepartment || onRemoveFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveDepartment) onRemoveDepartment();
-                  else if (onRemoveFilter) onRemoveFilter("department");
-                }}
-                aria-label={`Xóa lọc Đơn vị: ${department}`}
-                className="hover:text-foreground text-muted-foreground p-0.5 rounded hover:bg-muted transition-colors focus:outline-hidden cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Status chip */}
         {hasStatus && (
-          <div
-            data-slot="filter-chip-status"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 border border-border/70 text-foreground text-xs font-medium"
-          >
-            <span>
-              Trạng thái: <strong className="font-semibold">{getStatusDisplayLabel(status!)}</strong>
-            </span>
+          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.status)}>
+            <span>Trạng thái: <strong className="font-semibold">{getStatusDisplayLabel(status!)}</strong></span>
             {(onRemoveStatus || onRemoveFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveStatus) onRemoveStatus();
-                  else if (onRemoveFilter) onRemoveFilter("status");
-                }}
-                aria-label={`Xóa lọc Trạng thái: ${status}`}
-                className="hover:text-foreground text-muted-foreground p-0.5 rounded hover:bg-muted transition-colors focus:outline-hidden cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
+              <button type="button" onClick={() => handleRemove(onRemoveStatus, "status")}
+                aria-label={`Xóa lọc Trạng thái: ${status}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
               </button>
             )}
-          </div>
+          </span>
         )}
 
-        {/* Search chip */}
-        {hasSearch && (
-          <div
-            data-slot="filter-chip-search"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 border border-border/70 text-foreground text-xs font-medium"
-          >
-            <span>
-              Từ khóa: <strong className="font-semibold">&quot;{search!.trim()}&quot;</strong>
-            </span>
-            {(onRemoveSearch || onRemoveFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveSearch) onRemoveSearch();
-                  else if (onRemoveFilter) onRemoveFilter("search");
-                }}
-                aria-label={`Xóa lọc từ khóa "${search!.trim()}"`}
-                className="hover:text-foreground text-muted-foreground p-0.5 rounded hover:bg-muted transition-colors focus:outline-hidden cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
+        {hasDept && (
+          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.department)}>
+            <span>Đơn vị: <strong className="font-semibold">{department}</strong></span>
+            {(onRemoveDepartment || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveDepartment, "department")}
+                aria-label={`Xóa lọc Đơn vị: ${department}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
               </button>
             )}
-          </div>
+          </span>
         )}
 
-        {/* Overdue chip */}
         {hasOverdue && (
-          <div
-            data-slot="filter-chip-overdue"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium"
-          >
+          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.overdue)}>
             <span>Quá hạn</span>
             {(onRemoveOverdue || onRemoveFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveOverdue) onRemoveOverdue();
-                  else if (onRemoveFilter) onRemoveFilter("overdue");
-                }}
-                aria-label="Xóa lọc Quá hạn"
-                className="hover:text-rose-950 text-rose-700 p-0.5 rounded hover:bg-rose-100 transition-colors focus:outline-hidden cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
+              <button type="button" onClick={() => handleRemove(onRemoveOverdue, "overdue")}
+                aria-label="Xóa lọc Quá hạn" className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
               </button>
             )}
-          </div>
+          </span>
         )}
 
-        {/* Workbox chip */}
         {hasWorkbox && (
-          <div
-            data-slot="filter-chip-workbox"
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/70 border border-border/70 text-foreground text-xs font-medium"
-          >
-            <span>
-              Hộp việc: <strong className="font-semibold">{getWorkboxDisplayLabel(workbox!)}</strong>
-            </span>
+          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.workbox)}>
+            <span>Hộp việc: <strong className="font-semibold">{getWorkboxDisplayLabel(workbox!)}</strong></span>
             {(onRemoveWorkbox || onRemoveFilter) && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onRemoveWorkbox) onRemoveWorkbox();
-                  else if (onRemoveFilter) onRemoveFilter("workbox");
-                }}
-                aria-label={`Xóa lọc Hộp việc: ${getWorkboxDisplayLabel(workbox!)}`}
-                className="hover:text-foreground text-muted-foreground p-0.5 rounded hover:bg-muted transition-colors focus:outline-hidden cursor-pointer"
-              >
-                <X className="size-3" strokeWidth={1.5} />
+              <button type="button" onClick={() => handleRemove(onRemoveWorkbox, "workbox")}
+                aria-label={`Xóa lọc Hộp việc: ${getWorkboxDisplayLabel(workbox!)}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
               </button>
             )}
-          </div>
+          </span>
         )}
 
-        {/* Clear all filters button */}
+        {hasSearch && (
+          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.search)}>
+            <span>Từ khóa: <strong className="font-semibold">&quot;{search!.trim()}&quot;</strong></span>
+            {(onRemoveSearch || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveSearch, "search")}
+                aria-label={`Xóa lọc từ khóa "${search!.trim()}"`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {/* Clear all */}
         {(onResetFilters || onClearAll) && (
           <button
             type="button"
             data-slot="clear-all-filters"
             onClick={handleClearAll}
-            aria-label="Xóa tất cả bộ lọc bổ sung"
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground hover:underline ml-1 cursor-pointer transition-colors"
+            aria-label="Xóa tất cả bộ lọc"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors ml-0.5 cursor-pointer rounded px-1 py-0.5 hover:bg-muted"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
@@ -296,9 +257,9 @@ export function ActiveFilterBreadcrumb({
         )}
       </div>
 
-      {/* Match count badge */}
+      {/* Result count — pushed right */}
       {totalFilteredCount !== undefined && (
-        <span className="text-muted-foreground text-[11px] font-mono tabular-nums ml-auto">
+        <span className="text-muted-foreground text-[11px] font-mono tabular-nums ml-auto shrink-0">
           {totalFilteredCount} kết quả{totalCount !== undefined ? ` / ${totalCount}` : ""}
         </span>
       )}
