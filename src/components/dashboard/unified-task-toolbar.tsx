@@ -23,6 +23,7 @@ import {
   CircleDot,
   ArrowUpDown,
   ChevronDown,
+  ChevronRight,
   RotateCcw,
   Layers,
   Clock,
@@ -66,6 +67,8 @@ import {
   MenuPopup,
   MenuItem,
   MenuSeparator,
+  MenuSubmenuRoot,
+  MenuSubmenuTrigger,
 } from "@/components/ui/menu";
 import {
   type SavedTaskView,
@@ -595,7 +598,6 @@ export function UnifiedTaskToolbar({
   const [searchFocused, setSearchFocused] = React.useState(false);
   const [menuSearch, setMenuSearch] = React.useState("");
   const menuSearchInputRef = React.useRef<HTMLInputElement>(null);
-  const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null);
   const [selectedLead, setSelectedLead] = React.useState<string | null>(null);
   const [internalHealth, setInternalHealth] = React.useState<string | null>(null);
   const selectedHealth = propSelectedHealth !== undefined ? propSelectedHealth : internalHealth;
@@ -1506,117 +1508,153 @@ export function UnifiedTaskToolbar({
       }
       case "dates": {
         return (
-          <div className="space-y-2">
-            {/* Section 1: Hạn chốt nhiệm vụ */}
-            <div>
-              <p className="px-2 pb-1 text-[10px] font-semibold text-muted-foreground/70">
-                Hạn chốt nhiệm vụ
-              </p>
-              <div className="space-y-0.5">
-                {deadlineOptions.map((opt) => {
-                  const selected = effectiveDeadline === opt.value || (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
-                  return (
-                    <MenuItem
-                      key={opt.value}
-                      onClick={() => {
-                        if (onDeadlineChange) onDeadlineChange(opt.value);
-                        else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                        setIsCollapsedFilterOpen(false);
-                      }}
-                      className={cn(
-                        "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                        selected
-                          ? "bg-accent/80 font-medium text-foreground"
-                          : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate">{opt.label}</span>
-                        {opt.count !== undefined && opt.count > 0 && (
-                          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
-                        )}
-                      </div>
-                      {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
-                    </MenuItem>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px bg-border/40 mx-2" />
-
-            {/* Section 2: Kỳ tháng công tác */}
-            <div>
-              <p className="px-2 pb-1 text-[10px] font-semibold text-muted-foreground/70">
-                Kỳ tháng công tác
-              </p>
-              <div className="space-y-0.5">
-                <MenuItem
-                  onClick={() => {
-                    handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                    setIsCollapsedFilterOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                    effectiveTimeFilter.kind === "none"
-                      ? "bg-accent/80 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+          <div className="space-y-0.5">
+            {/* Sub-dropdown 1: Hạn chốt nhiệm vụ */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-8 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calendar className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" strokeWidth={1.5} />
+                  <span className="truncate">Hạn chốt nhiệm vụ</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  {isDeadlineActive && (
+                    <span className="size-2 rounded-full bg-primary shrink-0" />
                   )}
-                >
-                  <span>Tất cả thời gian</span>
-                  {effectiveTimeFilter.kind === "none" && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    handleTimeFilterChange({ kind: "preset", preset: "this_month" });
-                    setIsCollapsedFilterOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                    effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month"
-                      ? "bg-accent/80 font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                  )}
-                >
-                  <span>Tháng hiện tại</span>
-                  {effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month" && (
-                    <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
-                  )}
-                </MenuItem>
-              </div>
+                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="w-52 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-0.5">
+                      {deadlineOptions.map((opt) => {
+                        const selected = effectiveDeadline === opt.value || (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
+                        return (
+                          <MenuItem
+                            key={opt.value}
+                            onClick={() => {
+                              if (onDeadlineChange) onDeadlineChange(opt.value);
+                              else onTabChange?.(opt.value === "all" ? "all" : opt.value);
+                              setIsCollapsedFilterOpen(false);
+                            }}
+                            className={cn(
+                              "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                              selected
+                                ? "bg-accent/80 font-medium text-foreground"
+                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="truncate">{opt.label}</span>
+                              {opt.count !== undefined && opt.count > 0 && (
+                                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
+                              )}
+                            </div>
+                            {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
+                          </MenuItem>
+                        );
+                      })}
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
 
-              {/* Month grid */}
-              <div className="px-2 pt-1.5">
-                <p className="mb-1 text-[10px] font-medium text-muted-foreground">
-                  Năm học {academicYear}
-                </p>
-                <div className="grid grid-cols-4 gap-1">
-                  {academicMonths.map((period) => {
-                    const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                    return (
-                      <button
-                        key={period.monthNumber}
-                        type="button"
-                        aria-pressed={selected}
+            {/* Sub-dropdown 2: Kỳ tháng công tác */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-8 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Clock className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" strokeWidth={1.5} />
+                  <span className="truncate">Kỳ tháng công tác</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  {isMonthActive && (
+                    <span className="size-2 rounded-full bg-primary shrink-0" />
+                  )}
+                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="w-56 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-0.5">
+                      <MenuItem
                         onClick={() => {
-                          handleTimeFilterChange({ kind: "month", month: period.monthNumber });
+                          handleTimeFilterChange(NO_TASK_TIME_FILTER);
                           setIsCollapsedFilterOpen(false);
                         }}
                         className={cn(
-                          "flex h-6.5 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
-                          selected
-                            ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                          effectiveTimeFilter.kind === "none"
+                            ? "bg-accent/80 font-medium text-foreground"
+                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                         )}
                       >
-                        T{period.monthNumber}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+                        <span>Tất cả thời gian</span>
+                        {effectiveTimeFilter.kind === "none" && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => {
+                          handleTimeFilterChange({ kind: "preset", preset: "this_month" });
+                          setIsCollapsedFilterOpen(false);
+                        }}
+                        className={cn(
+                          "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
+                          effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month"
+                            ? "bg-accent/80 font-medium text-foreground"
+                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                        )}
+                      >
+                        <span>Tháng hiện tại</span>
+                        {effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month" && (
+                          <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
+                        )}
+                      </MenuItem>
+                      <MenuSeparator className="h-px bg-border/60 my-1.5" />
+                      <div className="px-2 py-1">
+                        <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
+                          Năm học {academicYear}
+                        </p>
+                        <div className="grid grid-cols-4 gap-1">
+                          {academicMonths.map((period) => {
+                            const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
+                            return (
+                              <button
+                                key={period.monthNumber}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  handleTimeFilterChange({ kind: "month", month: period.monthNumber });
+                                  setIsCollapsedFilterOpen(false);
+                                }}
+                                className={cn(
+                                  "flex h-6.5 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
+                                  selected
+                                    ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                )}
+                              >
+                                T{period.monthNumber}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
           </div>
         );
       }
@@ -2080,20 +2118,14 @@ export function UnifiedTaskToolbar({
   }, [menuSearch, filterCategories]);
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
-    const isExpanded = expandedCategory === category.key;
     const activeValue = getActiveValueLabel(category.key);
     return (
-      <div key={category.key} data-slot="filter-category">
-        {/* Category trigger — click to toggle inline expand */}
-        <MenuItem
-          onClick={(e: React.MouseEvent) => {
-            e.preventDefault();
-            setExpandedCategory(isExpanded ? null : category.key);
-          }}
-          className={cn(
-            "group flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground",
-            isExpanded && "bg-accent/60 text-foreground"
-          )}
+      <MenuSubmenuRoot key={category.key}>
+        <MenuSubmenuTrigger
+          openOnHover
+          delay={60}
+          closeDelay={180}
+          className="group flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
         >
           <div className="flex items-center gap-2 min-w-0">
             <category.icon className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" strokeWidth={1.5} />
@@ -2110,30 +2142,20 @@ export function UnifiedTaskToolbar({
             {category.isActive && !activeValue && (
               <span className="size-2 rounded-full bg-primary shrink-0" />
             )}
-            <ChevronDown
-              className={cn(
-                "size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform duration-150",
-                isExpanded && "rotate-180"
-              )}
+            <ChevronRight
+              className="size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform group-hover:translate-x-0.5"
               strokeWidth={1.5}
             />
           </div>
-        </MenuItem>
-
-        {/* Inline expand — collapsible content via grid rows */}
-        <div
-          className="grid transition-[grid-template-rows] duration-150 ease-out"
-          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
-        >
-          <div className="overflow-hidden">
-            {isExpanded && (
-              <div className="pl-2 pr-1 py-1">
-                {renderCategorySubmenuItems(category.key)}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        </MenuSubmenuTrigger>
+        <MenuPortal>
+          <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+            <MenuPopup className="w-52 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+              {renderCategorySubmenuItems(category.key)}
+            </MenuPopup>
+          </MenuPositioner>
+        </MenuPortal>
+      </MenuSubmenuRoot>
     );
   };
 
@@ -2196,7 +2218,7 @@ export function UnifiedTaskToolbar({
       </div>
 
       {/* 2. Bộ lọc — Cascading fly-out menu */}
-      <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) { setExpandedCategory(null); setMenuSearch(""); } }}>
+      <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
         <MenuTrigger
           render={
             <button
@@ -2228,7 +2250,7 @@ export function UnifiedTaskToolbar({
           <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
             <MenuPopup
               data-slot="task-filter-menu"
-              className="w-64 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+              className="w-56 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {/* Header: Add Filter... [F] */}
               <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/60 mb-1">

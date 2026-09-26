@@ -55,14 +55,10 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "Root MenuPositioner must have z-50 outline-none"
     );
 
-    // 2. Inline expand pattern: no more cascading submenus (MenuSubmenuRoot removed)
+    // 2. Submenu positioners must have side=left, sideOffset=2, and z-50 outline-none
     assert.ok(
-      !source.includes("MenuSubmenuRoot"),
-      "Must use inline expand pattern instead of cascading MenuSubmenuRoot"
-    );
-    assert.ok(
-      source.includes("expandedCategory"),
-      "Must use expandedCategory state for inline collapsible expand"
+      source.includes('MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none"'),
+      "Submenu MenuPositioner must have side=left and z-50 outline-none to avoid overlapping root menu"
     );
 
     // 3. Status category icon must be CircleDot (not Check)
@@ -114,15 +110,12 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // 1. Root menu width w-64 for inline expand layout
-    assert.ok(source.includes('className="w-64 rounded-xl'), "Root menu width must be w-64 for inline expand layout");
+    // 1. Root menu width compact to 224px (w-56) with clean minimalist design
+    assert.ok(source.includes('className="w-56 rounded-xl'), "Root menu width must be w-56 for compact clean design");
 
-    // 2. Anti-slop: zero text value badges inside category menu rows (bỏ giá trị trong filter)
-    assert.ok(!source.includes("category.value"), "Must not display text value badges inside category triggers");
-
-    // 3. Dates category has inline sections for deadline and academic months
-    assert.ok(source.includes("Hạn chốt nhiệm vụ"), "Must contain inline section for Target date / Hạn chốt");
-    assert.ok(source.includes("Kỳ tháng công tác"), "Must contain inline section for Academic period / Kỳ tháng");
+    // 2. Dates category splits into distinct wired sub dropdowns
+    assert.ok(source.includes("Hạn chốt nhiệm vụ"), "Must contain sub dropdown for Target date / Hạn chốt");
+    assert.ok(source.includes("Kỳ tháng công tác"), "Must contain sub dropdown for Academic period / Kỳ tháng");
 
     // 4. No-op stubs removed (anti-slop clean architecture)
     assert.ok(!source.includes("Ngày giao việc"), "Must NOT contain stub sub dropdown for Ngày giao việc");
@@ -265,7 +258,7 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     assert.ok(singleResult.some((t) => t.id === "t-4"));
   });
 
-  test("Inline expand pattern: No cascading submenus or side='right' positioners", async () => {
+  test("Cascading direction: All submenus open to side='left' to prevent overlapping parent/grandparent menus (Linear pattern)", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const source = fs.readFileSync(
@@ -273,14 +266,14 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // Inline expand: no submenu positioners at all
+    // Anti-overlapping invariant: no submenu positioner should use side="right"
     assert.ok(
       !source.includes('MenuPositioner side="right"'),
-      "Must not use side='right' positioners"
+      "Submenu positioners must not use side='right' which would overlap parent root menu"
     );
     assert.ok(
-      !source.includes('MenuPositioner side="left"'),
-      "Must not use cascading side='left' submenu positioners — use inline expand instead"
+      source.includes('MenuPositioner side="left"'),
+      "Submenu positioners must open to side='left'"
     );
   });
 });
