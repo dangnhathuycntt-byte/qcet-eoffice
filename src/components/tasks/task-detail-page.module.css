@@ -53,25 +53,23 @@
   }
 }
 
-/* ── Tab bar — pill style ─────────────────────────────────────── */
-.workspace > nav[role='tablist'] {
-  flex-shrink: 0;
-  position: static;
-  padding: 8px;
+/* ── Tab bar — delegated to Tabs component (variant=line) ─────── */
+.workspace [data-slot='tabs'] { flex-shrink: 0; }
+.workspace [data-slot='tabs-list'] { border-radius: 0; padding: 0; }
+.workspace [data-slot='tabs-trigger'] {
+  font-size: 12px;
+  flex: none;
   border: 0;
-  background: var(--card);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
-.workspace > nav [role='tab'] {
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  font-weight: 500;
-  background: var(--card);
-}
-.workspace > nav [aria-selected='true'] {
-  background: var(--muted);
-  border-color: transparent;
-  font-weight: 500;
+.workspace [data-slot='tabs-trigger']:focus-visible {
+  border: 0;
+  box-shadow: none;
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  border-radius: 2px;
 }
 
 /* ── Header nav ───────────────────────────────────────────────── */

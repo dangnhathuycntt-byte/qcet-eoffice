@@ -840,34 +840,25 @@ export function TaskDetailPage({
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as DetailTab)}
+        className="shrink-0"
       >
         <TabsList
           variant="line"
           aria-label="Các phân mục chi tiết nhiệm vụ"
-          className="flex items-center gap-1 px-4 sm:px-6 h-9 border-b border-border/30 bg-background/70 text-xs font-normal sticky top-12 z-20 backdrop-blur-xs select-none w-full rounded-none p-0"
+          className="px-4 sm:px-6 h-9 w-full rounded-none border-b border-border/30 bg-background/70 sticky top-12 z-20 backdrop-blur-xs select-none"
         >
           <TabsTrigger
             value="overview"
-            className={cn(
-              "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px rounded-none",
-              activeTab === "overview"
-                ? "border-primary text-foreground font-medium"
-                : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
-            )}
+            className="text-xs rounded-none border-0 shadow-none bg-transparent ring-0 focus-visible:ring-0 focus-visible:border-0"
           >
-            <span>Tổng quan</span>
+            Tổng quan
           </TabsTrigger>
 
           <TabsTrigger
             value="activity"
-            className={cn(
-              "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px rounded-none",
-              activeTab === "activity"
-                ? "border-primary text-foreground font-medium"
-                : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
-            )}
+            className="text-xs rounded-none border-0 shadow-none bg-transparent ring-0 focus-visible:ring-0 focus-visible:border-0"
           >
-            <span>Hoạt động</span>
+            Hoạt động
             {feedActivityEvents.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">
                 {feedActivityEvents.length}
