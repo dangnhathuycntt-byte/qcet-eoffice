@@ -32,6 +32,26 @@ import {
   Layers,
   Activity,
 } from "lucide-react";
+import {
+  StatusSubAll,
+  StatusSubNew,
+  StatusSubInProgress,
+  StatusSubReview,
+  StatusSubCompleted,
+  PrioritySubBars,
+  HealthSubOnTrack,
+  HealthSubAtRisk,
+  HealthSubOverdue,
+  HealthSubCompleted,
+  FilterIconHealth,
+  FilterIconLead,
+  FilterIconCollaborator,
+  FilterIconCategory,
+  FilterIconDept,
+  FilterIconDeadline,
+  FilterIconMonth,
+  FilterIconOrigin,
+} from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
 import {
@@ -1346,15 +1366,15 @@ export function UnifiedTaskToolbar({
                   )}
                 >
                   {opt.value === "all" ? (
-                    <Layers className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                    <StatusSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
                   ) : opt.value === "new" ? (
-                    <Circle className="size-2.5 text-sky-500 fill-sky-500/20 shrink-0 ml-0.5" strokeWidth={1.5} />
+                    <StatusSubNew className="size-3.5 text-muted-foreground/70 shrink-0" />
                   ) : opt.value === "in_progress" ? (
-                    <Clock className="size-3.5 text-amber-500 shrink-0" strokeWidth={1.5} />
+                    <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "waiting_approval" || opt.value === "review" ? (
-                    <AlertCircle className="size-3.5 text-orange-500 shrink-0" strokeWidth={1.5} />
+                    <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "completed" ? (
-                    <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" strokeWidth={1.5} />
+                    <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
                   ) : (
                     <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
                   )}
@@ -1370,6 +1390,7 @@ export function UnifiedTaskToolbar({
           <div className="space-y-px">
             {PRIORITY_FILTER_OPTIONS.map((opt) => {
               const selected = (selectedPriority || "ALL").split(",").includes(opt.id);
+              const level = opt.id === "URGENT" ? 3 : opt.id === "HIGH" ? 2 : opt.id === "NORMAL" ? 1 : 0;
               return (
                 <MenuItem
                   key={opt.id}
@@ -1384,18 +1405,12 @@ export function UnifiedTaskToolbar({
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <Flag
+                  <PrioritySubBars
+                    level={level as 0 | 1 | 2 | 3}
                     className={cn(
                       "size-3.5 shrink-0",
-                      opt.id === "URGENT"
-                        ? "text-rose-500 fill-rose-500/20"
-                        : opt.id === "HIGH"
-                        ? "text-amber-500 fill-amber-500/20"
-                        : opt.id === "NORMAL"
-                        ? "text-blue-500"
-                        : "text-muted-foreground/50"
+                      selected ? "text-foreground" : "text-muted-foreground/70"
                     )}
-                    strokeWidth={1.5}
                   />
                   <span>{opt.label}</span>
                 </MenuItem>
@@ -1423,7 +1438,7 @@ export function UnifiedTaskToolbar({
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <Tag className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                  <FilterIconCategory className="size-3.5 text-muted-foreground/60 shrink-0" />
                   <span>{cat.label}</span>
                 </MenuItem>
               );
@@ -1497,13 +1512,13 @@ export function UnifiedTaskToolbar({
                   )}
                 >
                   {opt.value === "my" ? (
-                    <User className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                    <FilterIconLead className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "bgh" ? (
-                    <School className="size-3.5 text-purple-500 shrink-0" strokeWidth={1.5} />
+                    <FilterIconDept className="size-3.5 text-muted-foreground/70 shrink-0" />
                   ) : opt.value === "assigned" ? (
-                    <User className="size-3.5 text-muted-foreground/80 shrink-0" strokeWidth={1.5} />
+                    <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
                   ) : opt.value === "unassigned" ? (
-                    <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                    <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
                   ) : (
                     <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                   )}
@@ -1539,9 +1554,9 @@ export function UnifiedTaskToolbar({
                   )}
                 >
                   {opt.value === "has_collab" ? (
-                    <Users className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                    <FilterIconCollaborator className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "single" ? (
-                    <User className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                    <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
                   ) : (
                     <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
                   )}
@@ -1693,15 +1708,15 @@ export function UnifiedTaskToolbar({
                   )}
                 >
                   {opt.value === "on_track" ? (
-                    <span className="size-2 rounded-full bg-emerald-500 shrink-0 ml-0.5" />
+                    <HealthSubOnTrack className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "at_risk" ? (
-                    <span className="size-2 rounded-full bg-amber-500 shrink-0 ml-0.5" />
+                    <HealthSubAtRisk className="size-3.5 text-foreground/80 shrink-0" />
                   ) : opt.value === "overdue" ? (
-                    <span className="size-2 rounded-full bg-rose-500 shrink-0 ml-0.5" />
+                    <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
                   ) : opt.value === "completed" ? (
-                    <span className="size-2 rounded-full bg-blue-500 shrink-0 ml-0.5" />
+                    <HealthSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
                   ) : (
-                    <Activity className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                    <FilterIconHealth className="size-3.5 text-muted-foreground/60 shrink-0" />
                   )}
                   <span>{opt.label}</span>
                 </MenuItem>
@@ -1736,7 +1751,7 @@ export function UnifiedTaskToolbar({
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <FileText className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                  <FilterIconOrigin className="size-3.5 text-muted-foreground/60 shrink-0" />
                   <span>{opt.label}</span>
                 </MenuItem>
               );
