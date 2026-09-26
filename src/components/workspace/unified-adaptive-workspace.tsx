@@ -117,6 +117,9 @@ export interface FilterDisplayedTasksOptions {
   workbox?: string;
   user?: AuthUser | null;
   referenceDate?: string;
+  health?: "on_track" | "at_risk" | "overdue" | "completed" | "all" | string | null;
+  origin?: string | null;
+  collaborator?: "has_collab" | "single" | "all" | string | null;
 }
 
 /**
@@ -135,6 +138,9 @@ export function filterDisplayedTasks({
   workbox,
   user,
   referenceDate,
+  health,
+  origin,
+  collaborator,
 }: FilterDisplayedTasksOptions): SchoolTask[] {
   // Issue #21: Only show top-level (parent) tasks in the list.
   // Child tasks are still available as nested subTasks on each parent.
@@ -314,6 +320,61 @@ export function filterDisplayedTasks({
   // 7. Overdue flag
   if (overdue) {
     result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
+  }
+
+  // 8. Health / Tiến độ
+  if (health && health !== "all") {
+    const refDate = activeRefDate;
+    if (health === "overdue") {
+      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
+    } else if (health === "at_risk") {
+      const soon = new Date(refDate);
+      soon.setDate(soon.getDate() + 7);
+      const soonStr = soon.toISOString().split("T")[0];
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED") return false;
+        const due = t.dueDate;
+        return Boolean(due && due >= refDate && due <= soonStr);
+      });
+    } else if (health === "completed") {
+      result = result.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
+    } else if (health === "on_track") {
+      const soon = new Date(refDate);
+      soon.setDate(soon.getDate() + 7);
+      const soonStr = soon.toISOString().split("T")[0];
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED") return false;
+        if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) return false;
+        const due = t.dueDate;
+        if (due && due >= refDate && due <= soonStr) return false;
+        return true;
+      });
+    }
+  }
+
+  // 9. Origin / Nguồn gốc
+  if (origin && origin !== "all") {
+    result = result.filter((t) => {
+      const taskOrigin = (t as any).originLevel || (t as any).origin;
+      return taskOrigin === origin;
+    });
+  }
+
+  // 10. Collaborator / Phối hợp
+  if (collaborator && collaborator !== "all") {
+    if (collaborator === "has_collab") {
+      result = result.filter((t) =>
+        Boolean(
+          (t.coDepartmentCodes && t.coDepartmentCodes.length > 0) ||
+          (t.coAssignees && t.coAssignees.length > 0)
+        )
+      );
+    } else if (collaborator === "single") {
+      result = result.filter((t) =>
+        (!t.coDepartmentCodes || t.coDepartmentCodes.length === 0) &&
+        (!t.coAssignees || t.coAssignees.length === 0)
+      );
+    }
   }
 
   // API payloads may contain the same child both flattened and nested. React rows
@@ -832,6 +893,9 @@ function UnifiedAdaptiveWorkspaceInner({
       setInternalSearch(undefined);
       setCurrentPriority("ALL");
       setCurrentCategory("ALL");
+      setHealthFilter(null);
+      setOriginFilter(null);
+      setCollaboratorFilter(null);
       if (newScope !== "unit") {
         setInternalDept("ALL");
       }
@@ -1012,6 +1076,9 @@ function UnifiedAdaptiveWorkspaceInner({
   });
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
+  const [healthFilter, setHealthFilter] = React.useState<string | null>(null);
+  const [originFilter, setOriginFilter] = React.useState<string | null>(null);
+  const [collaboratorFilter, setCollaboratorFilter] = React.useState<string | null>(null);
 
   // Controlled props take absolute precedence when defined; undefined delegates to internal state (uncontrolled)
   const currentDept = selectedDepartment !== undefined ? selectedDepartment : (internalDept ?? "ALL");
@@ -1613,6 +1680,9 @@ function UnifiedAdaptiveWorkspaceInner({
       timeFilter,
       overdue: currentOverdue,
       user,
+      health: healthFilter,
+      origin: originFilter,
+      collaborator: collaboratorFilter,
     });
   }, [
     scopedTasks,
@@ -1626,6 +1696,9 @@ function UnifiedAdaptiveWorkspaceInner({
     timeFilter,
     currentOverdue,
     user,
+    healthFilter,
+    originFilter,
+    collaboratorFilter,
   ]);
 
   const handlePeekNext = React.useCallback(() => {
@@ -1706,6 +1779,9 @@ function UnifiedAdaptiveWorkspaceInner({
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
     setCurrentMonth("ALL");
+    setHealthFilter(null);
+    setOriginFilter(null);
+    setCollaboratorFilter(null);
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -2193,6 +2269,12 @@ function UnifiedAdaptiveWorkspaceInner({
           onCategoryChange={handleCategoryChange}
           selectedPriority={currentPriority}
           onPriorityChange={handlePriorityChange}
+          selectedHealth={healthFilter}
+          onHealthChange={setHealthFilter}
+          selectedOrigin={originFilter}
+          onOriginChange={setOriginFilter}
+          selectedCollaborator={collaboratorFilter}
+          onCollaboratorChange={setCollaboratorFilter}
           selectedAcademicMonth={currentMonth}
           selectedTimeFilter={timeFilter}
           onTimeFilterChange={(next) => {
@@ -2280,6 +2362,14 @@ function UnifiedAdaptiveWorkspaceInner({
         }}
         onRemoveDeadline={() => handleDeadlineFilterChange("all")}
         onRemovePriority={() => handlePriorityChange("ALL")}
+        category={currentCategory}
+        onRemoveCategory={() => handleCategoryChange("ALL")}
+        health={healthFilter}
+        onRemoveHealth={() => setHealthFilter(null)}
+        origin={originFilter}
+        onRemoveOrigin={() => setOriginFilter(null)}
+        collaborator={collaboratorFilter}
+        onRemoveCollaborator={() => setCollaboratorFilter(null)}
       />
 
       {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}

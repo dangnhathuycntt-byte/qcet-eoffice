@@ -89,6 +89,57 @@ function getPriorityDisplayLabel(priority: string): string {
   }
 }
 
+function getCategoryDisplayLabel(category: string): string {
+  switch (category) {
+    case "CHUYEN_DOI_SO": return "Chuyển đổi số";
+    case "TRUYEN_THONG": return "Truyền thông";
+    case "CNTT": return "Công nghệ thông tin";
+    case "ATTT": return "An toàn thông tin";
+    case "THU_VIEN": return "Thư viện & Học liệu";
+    case "BAO_CAO": return "Báo cáo & Tổng hợp";
+    case "KHAC": return "Khác";
+    default: return category;
+  }
+}
+
+function getHealthDisplayLabel(health: string): string {
+  switch (health) {
+    case "on_track": return "Đúng tiến độ";
+    case "at_risk": return "Nguy cơ trễ";
+    case "overdue": return "Trễ hạn";
+    case "completed": return "Đạt 100%";
+    default: return health;
+  }
+}
+
+function getLeadDisplayLabel(lead: string): string {
+  switch (lead) {
+    case "my": return "Tôi chủ trì";
+    case "bgh": return "Lãnh đạo BGH";
+    case "assigned": return "Đã phân công";
+    case "unassigned": return "Chưa phân công";
+    default: return lead;
+  }
+}
+
+function getOriginDisplayLabel(origin: string): string {
+  switch (origin) {
+    case "KE_HOACH_NAM": return "Kế hoạch năm";
+    case "NGHI_QUYET": return "Nghị quyết BGH";
+    case "GIAO_BAN": return "Giao ban";
+    case "DON_VI": return "Đơn vị đề xuất";
+    default: return origin;
+  }
+}
+
+function getCollaboratorDisplayLabel(collaborator: string): string {
+  switch (collaborator) {
+    case "has_collab": return "Có phối hợp";
+    case "single": return "Tự thực hiện";
+    default: return collaborator;
+  }
+}
+
 
 export function getActiveFilterSummary(params: ActiveFilterSummaryParams): string[] {
   const parts: string[] = [];
@@ -137,6 +188,11 @@ export interface ActiveFilterBreadcrumbProps {
   timeFilter?: TaskTimeFilter;
   deadline?: string;
   priority?: string;
+  category?: string;
+  health?: string | null;
+  lead?: string | null;
+  origin?: string | null;
+  collaborator?: string | null;
   totalFilteredCount?: number;
   totalCount?: number;
   onResetFilters?: () => void;
@@ -150,6 +206,11 @@ export interface ActiveFilterBreadcrumbProps {
   onRemoveTimeFilter?: () => void;
   onRemoveDeadline?: () => void;
   onRemovePriority?: () => void;
+  onRemoveCategory?: () => void;
+  onRemoveHealth?: () => void;
+  onRemoveLead?: () => void;
+  onRemoveOrigin?: () => void;
+  onRemoveCollaborator?: () => void;
   onRemoveFilter?: (filterType: string) => void;
   className?: string;
 }
@@ -164,6 +225,11 @@ export function ActiveFilterBreadcrumb({
   timeFilter,
   deadline,
   priority,
+  category,
+  health,
+  lead,
+  origin,
+  collaborator,
   totalFilteredCount,
   totalCount,
   onResetFilters,
@@ -177,6 +243,11 @@ export function ActiveFilterBreadcrumb({
   onRemoveTimeFilter,
   onRemoveDeadline,
   onRemovePriority,
+  onRemoveCategory,
+  onRemoveHealth,
+  onRemoveLead,
+  onRemoveOrigin,
+  onRemoveCollaborator,
   onRemoveFilter,
   className = "",
 }: ActiveFilterBreadcrumbProps) {
@@ -188,9 +259,15 @@ export function ActiveFilterBreadcrumb({
   const hasTimeFilter = Boolean(timeFilter && timeFilter.kind !== "none");
   const hasDeadline = Boolean(deadline && deadline !== "all" && deadline !== "ALL");
   const hasPriority = Boolean(priority && priority !== "ALL");
+  const hasCategory = Boolean(category && category !== "ALL");
+  const hasHealth = Boolean(health && health !== "all");
+  const hasLead = Boolean(lead && lead !== "all");
+  const hasOrigin = Boolean(origin && origin !== "all");
+  const hasCollaborator = Boolean(collaborator && collaborator !== "all");
 
   const hasAnySecondaryFilter =
-    hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue || hasTimeFilter || hasDeadline || hasPriority;
+    hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue || hasTimeFilter || hasDeadline || hasPriority ||
+    hasCategory || hasHealth || hasLead || hasOrigin || hasCollaborator;
 
   if (!hasAnySecondaryFilter) {
     return <div data-slot="active-filter-breadcrumb" className={cn("h-0", className)} />;
@@ -231,7 +308,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveStatus || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveStatus, "status")}
                 aria-label={`Xóa lọc Trạng thái: ${status}`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -243,7 +320,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveDepartment || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveDepartment, "department")}
                 aria-label={`Xóa lọc Đơn vị: ${department}`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -255,7 +332,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveOverdue || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveOverdue, "overdue")}
                 aria-label="Xóa lọc Quá hạn" className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -267,7 +344,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveWorkbox || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveWorkbox, "workbox")}
                 aria-label={`Xóa lọc Hộp việc: ${getWorkboxDisplayLabel(workbox!)}`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -279,7 +356,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveTimeFilter || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveTimeFilter, "time")}
                 aria-label="Xóa lọc thời gian" className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -291,7 +368,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveDeadline || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveDeadline, "deadline")}
                 aria-label={`Xóa lọc thời hạn: ${deadline}`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -303,7 +380,67 @@ export function ActiveFilterBreadcrumb({
             {(onRemovePriority || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemovePriority, "priority")}
                 aria-label={`Xóa lọc ưu tiên: ${priority}`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasCategory && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Danh mục: <strong className="font-semibold">{getCategoryDisplayLabel(category!)}</strong></span>
+            {(onRemoveCategory || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveCategory, "category")}
+                aria-label={`Xóa lọc danh mục: ${category}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasHealth && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Tiến độ: <strong className="font-semibold">{getHealthDisplayLabel(health!)}</strong></span>
+            {(onRemoveHealth || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveHealth, "health")}
+                aria-label={`Xóa lọc tiến độ: ${health}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasLead && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Chủ trì: <strong className="font-semibold">{getLeadDisplayLabel(lead!)}</strong></span>
+            {(onRemoveLead || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveLead, "lead")}
+                aria-label={`Xóa lọc người chủ trì: ${lead}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasOrigin && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Nguồn gốc: <strong className="font-semibold">{getOriginDisplayLabel(origin!)}</strong></span>
+            {(onRemoveOrigin || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveOrigin, "origin")}
+                aria-label={`Xóa lọc nguồn gốc: ${origin}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasCollaborator && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Phối hợp: <strong className="font-semibold">{getCollaboratorDisplayLabel(collaborator!)}</strong></span>
+            {(onRemoveCollaborator || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveCollaborator, "collaborator")}
+                aria-label={`Xóa lọc phối hợp: ${collaborator}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
@@ -315,7 +452,7 @@ export function ActiveFilterBreadcrumb({
             {(onRemoveSearch || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveSearch, "search")}
                 aria-label={`Xóa lọc từ khóa "${search!.trim()}"`} className={chipStyles.dismiss}>
-                <X className="size-2.5" strokeWidth={2} />
+                <X className="size-2.5" strokeWidth={1.5} />
               </button>
             )}
           </span>
