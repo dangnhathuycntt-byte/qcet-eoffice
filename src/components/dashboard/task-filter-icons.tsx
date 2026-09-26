@@ -85,9 +85,20 @@ export const FilterIconMonth = (props: IconProps) => (
 
 export const FilterIconHealth = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M1.5 8.5H4.5L6 4.5L7.75 12L9.5 6L11 8.5H14.5" strokeLinejoin="round" />
+    <path
+      d="M3.75 12.25A6 6 0 1 1 12.25 12.25"
+      strokeOpacity="0.3"
+    />
+    <path
+      d="M3.75 12.25A6 6 0 1 1 12.8 6.5"
+      strokeWidth="1.5"
+    />
+    <line x1="8" y1="8" x2="10.8" y2="5.2" strokeWidth="1.25" />
+    <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
   </svg>
 );
+
+export const FilterIconProgress = FilterIconHealth;
 
 export const FilterIconOrigin = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
@@ -185,33 +196,48 @@ export const PrioritySubLow = (props: IconProps) => (
 
 // ─── Health Submenu Indicators (Neutral Geometric Shapes) ─────────────────────
 
+export const HealthSubAll = (props: IconProps) => (
+  <svg {...baseProps} strokeWidth="1.25" {...props}>
+    <circle cx="8" cy="8" r="5.5" strokeDasharray="6.5 2.2" transform="rotate(-90 8 8)" />
+    <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export const HealthSubOnTrack = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.5" />
-    <circle cx="8" cy="8" r="2.5" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" />
+    <path d="M8 2.5A5.5 5.5 0 1 1 2.5 8" strokeWidth="1.5" />
+    <polyline points="6.5 9.5 8.5 7.5 10.5 9.5" strokeWidth="1.25" />
   </svg>
 );
 
 export const HealthSubAtRisk = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M8 2.5L14 13.5H2L8 2.5Z" strokeLinejoin="round" />
-    <line x1="8" y1="6.5" x2="8" y2="9.5" strokeWidth="1.5" />
-    <circle cx="8" cy="11.5" r="0.75" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" strokeDasharray="2 2" />
+    <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" strokeWidth="1.5" />
+    <line x1="8" y1="5.5" x2="8" y2="8" strokeWidth="1.25" />
+    <circle cx="8" cy="10" r="0.75" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const HealthSubOverdue = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M8 2L14 8L8 14L2 8L8 2Z" strokeLinejoin="round" />
-    <line x1="8" y1="5.5" x2="8" y2="8.5" strokeWidth="1.5" />
-    <circle cx="8" cy="10.5" r="0.75" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" strokeDasharray="2 2" />
+    <path d="M8 2.5A5.5 5.5 0 0 1 12.2 4.2" strokeWidth="1.5" />
+    <line x1="6.5" y1="6.5" x2="9.5" y2="9.5" strokeWidth="1.25" />
+    <line x1="9.5" y1="6.5" x2="6.5" y2="9.5" strokeWidth="1.25" />
   </svg>
 );
 
 export const HealthSubCompleted = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" />
-    <circle cx="8" cy="8" r="3.5" fill="currentColor" fillOpacity="0.25" stroke="none" />
-    <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="5.5" strokeWidth="1.25" />
+    <path d="M5.5 8.25L7.25 10L10.75 6.5" strokeWidth="1.5" />
   </svg>
 );
+
+export const ProgressSubAll = HealthSubAll;
+export const ProgressSubOnTrack = HealthSubOnTrack;
+export const ProgressSubAtRisk = HealthSubAtRisk;
+export const ProgressSubOverdue = HealthSubOverdue;
+export const ProgressSubCompleted = HealthSubCompleted;

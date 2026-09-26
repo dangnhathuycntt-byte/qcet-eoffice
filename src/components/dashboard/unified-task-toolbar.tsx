@@ -14,7 +14,6 @@ import {
   School,
   User,
   Users,
-  TrendingUp,
   Tag,
   Flag,
   SlidersHorizontal,
@@ -39,6 +38,7 @@ import {
   StatusSubReview,
   StatusSubCompleted,
   PrioritySubBars,
+  HealthSubAll,
   HealthSubOnTrack,
   HealthSubAtRisk,
   HealthSubOverdue,
@@ -1310,7 +1310,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Tiến độ",
       isActive: isHealthActive,
-      icon: TrendingUp,
+      icon: FilterIconHealth,
     },
     {
       key: "origin",
@@ -1716,7 +1716,7 @@ export function UnifiedTaskToolbar({
                   ) : opt.value === "completed" ? (
                     <HealthSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
                   ) : (
-                    <FilterIconHealth className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    <HealthSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
                   )}
                   <span>{opt.label}</span>
                 </MenuItem>
@@ -1912,7 +1912,16 @@ export function UnifiedTaskToolbar({
           id: `health-${opt.value}`,
           categoryLabel: "Tiến độ",
           label: opt.label,
-          icon: TrendingUp,
+          icon:
+            opt.value === "on_track"
+              ? HealthSubOnTrack
+              : opt.value === "at_risk"
+                ? HealthSubAtRisk
+                : opt.value === "overdue"
+                  ? HealthSubOverdue
+                  : opt.value === "completed"
+                    ? HealthSubCompleted
+                    : FilterIconHealth,
           selected,
           onSelect: () => {
             handleHealthChange(opt.value);
