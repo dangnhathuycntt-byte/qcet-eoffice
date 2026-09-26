@@ -221,16 +221,18 @@ export interface CategoryDisplayConfig {
   id: string;
   /** Vietnamese label for UI display */
   label: string;
+  /** Tailwind background-color class for category indicator */
+  color: string;
 }
 
 export const CATEGORY_DISPLAY_CONFIG: ReadonlyArray<CategoryDisplayConfig> = [
-  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số" },
-  { id: "TRUYEN_THONG", label: "Truyền thông & Tuyển sinh" },
-  { id: "CNTT", label: "Hạ tầng & CNTT" },
-  { id: "ATTT", label: "An toàn thông tin" },
-  { id: "THU_VIEN", label: "Thư viện & Học liệu" },
-  { id: "BAO_CAO", label: "Báo cáo & Tổng hợp" },
-  { id: "KHAC", label: "Khác" },
+  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số", color: "bg-blue-500" },
+  { id: "TRUYEN_THONG", label: "Truyền thông & Tuyển sinh", color: "bg-purple-500" },
+  { id: "CNTT", label: "Hạ tầng & CNTT", color: "bg-emerald-500" },
+  { id: "ATTT", label: "An toàn thông tin", color: "bg-rose-500" },
+  { id: "THU_VIEN", label: "Thư viện & Học liệu", color: "bg-amber-500" },
+  { id: "BAO_CAO", label: "Báo cáo & Tổng hợp", color: "bg-cyan-500" },
+  { id: "KHAC", label: "Khác", color: "bg-muted-foreground" },
 ];
 
 /** Get category options array for select/dropdown UI controls. */
