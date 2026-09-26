@@ -9,6 +9,7 @@ export interface ModalStateReturn {
   initialTaskLevel: "TRUONG" | "DON_VI";
   initialParentTaskId?: string;
   initialAssigneeName?: string;
+  initialAssigneeId?: string;
   initialTitle?: string;
   isDelegationModalOpen: boolean;
   delegationDeptCode: string;
@@ -23,7 +24,8 @@ export interface ModalStateReturn {
     level?: "TRUONG" | "DON_VI",
     parentId?: string,
     assigneeName?: string,
-    initialTitle?: string
+    initialTitle?: string,
+    assigneeId?: string
   ) => void;
   closeCreateModal: () => void;
   openDelegationModal: (deptCode?: string) => void;
@@ -36,6 +38,7 @@ export function useModalState(): ModalStateReturn {
   const [initialTaskLevel, setInitialTaskLevel] = React.useState<"TRUONG" | "DON_VI">("TRUONG");
   const [initialParentTaskId, setInitialParentTaskId] = React.useState<string | undefined>(undefined);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
+  const [initialAssigneeId, setInitialAssigneeId] = React.useState<string | undefined>(undefined);
   const [initialTitle, setInitialTitle] = React.useState<string | undefined>(undefined);
   const [isDelegationModalOpen, setIsDelegationModalOpen] = React.useState(false);
   const [delegationDeptCode, setDelegationDeptCode] = React.useState("K_CNTT");
@@ -59,13 +62,15 @@ export function useModalState(): ModalStateReturn {
       level: "TRUONG" | "DON_VI" = "TRUONG",
       parentId?: string,
       assigneeName?: string,
-      title?: string
+      title?: string,
+      assigneeId?: string
     ) => {
       // Modal hierarchy rule: Close detail sheet when opening creation modal to prevent nested dialogs
       setSelectedTask(null);
       setInitialTaskLevel(level);
       setInitialParentTaskId(parentId);
       setInitialAssigneeName(assigneeName);
+      setInitialAssigneeId(assigneeId);
       setInitialTitle(title);
       setIsCreateModalOpen(true);
     },
@@ -76,6 +81,7 @@ export function useModalState(): ModalStateReturn {
     setIsCreateModalOpen(false);
     setInitialParentTaskId(undefined);
     setInitialAssigneeName(undefined);
+    setInitialAssigneeId(undefined);
     setInitialTitle(undefined);
   }, []);
 
@@ -96,6 +102,8 @@ export function useModalState(): ModalStateReturn {
     initialTaskLevel,
     initialParentTaskId,
     initialAssigneeName,
+    initialAssigneeId,
+    initialTitle,
     isDelegationModalOpen,
     delegationDeptCode,
     taskDetailNotice,

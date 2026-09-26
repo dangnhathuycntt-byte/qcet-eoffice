@@ -49,6 +49,7 @@ export interface CreateTaskModalProps {
   initialParentTaskId?: string;
   initialParentTaskTitle?: string;
   initialLeadAssigneeName?: string;
+  initialLeadAssigneeId?: string;
   initialDueDate?: string;
 }
 
@@ -61,8 +62,7 @@ interface TaskDraftStorage {
   summary: string;
   description: string;
   priority: CreateTaskPriority;
-  status: "TODO" | "IN_PROGRESS";
-  leadAssigneeName: string;
+  leadAssigneeId: string;
   coAssignees: string[];
   startDate: string;
   dueDate: string;
@@ -127,6 +127,7 @@ export function CreateTaskModal({
   initialParentTaskId,
   initialParentTaskTitle,
   initialLeadAssigneeName = "",
+  initialLeadAssigneeId,
   initialDueDate = "",
 }: CreateTaskModalProps) {
   const { user } = useAuth();
@@ -168,8 +169,7 @@ export function CreateTaskModal({
   const [summary, setSummary] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [priority, setPriority] = React.useState<CreateTaskPriority>("MEDIUM");
-  const [status, setStatus] = React.useState<"TODO" | "IN_PROGRESS">("IN_PROGRESS");
-  const [leadAssigneeName, setLeadAssigneeName] = React.useState(initialLeadAssigneeName);
+  const [leadAssigneeId, setLeadAssigneeId] = React.useState(initialLeadAssigneeId ?? "");
   const [coAssignees, setCoAssignees] = React.useState<string[]>([]);
   const [startDate, setStartDate] = React.useState("");
   const [dueDate, setDueDate] = React.useState(initialDueDate);
@@ -178,12 +178,12 @@ export function CreateTaskModal({
   React.useEffect(() => {
     if (isOpen) {
       if (initialTitle) setTitle(initialTitle);
-      if (initialLeadAssigneeName) setLeadAssigneeName(initialLeadAssigneeName);
+      if (initialLeadAssigneeId) setLeadAssigneeId(initialLeadAssigneeId);
       if (initialDueDate) setDueDate(initialDueDate);
       if (initialLevel) setLevel(initialLevel);
       setSelectedDeptCode(defaultDepartmentCode);
     }
-  }, [isOpen, initialTitle, initialLeadAssigneeName, initialDueDate, initialLevel, defaultDepartmentCode]);
+  }, [isOpen, initialTitle, initialLeadAssigneeId, initialDueDate, initialLevel, defaultDepartmentCode]);
 
   // Database users for foreign key safety
   const [dbUsers, setDbUsers] = React.useState<
@@ -202,11 +202,8 @@ export function CreateTaskModal({
 
   // Trigger Refs for Popover
   const deptTriggerRef = React.useRef<HTMLDivElement>(null);
-  const statusTriggerRef = React.useRef<HTMLDivElement>(null);
   const priorityTriggerRef = React.useRef<HTMLDivElement>(null);
   const driTriggerRef = React.useRef<HTMLDivElement>(null);
-  const coTriggerRef = React.useRef<HTMLDivElement>(null);
-  const catTriggerRef = React.useRef<HTMLDivElement>(null);
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const summaryInputRef = React.useRef<HTMLInputElement>(null);
@@ -244,6 +241,11 @@ export function CreateTaskModal({
     return currentDept?.personnel || [];
   }, [currentDept]);
 
+  const leadAssigneeDisplayName = React.useMemo(
+    () => availablePersonnel.find((p) => p.id === leadAssigneeId)?.name ?? "",
+    [availablePersonnel, leadAssigneeId]
+  );
+
   // Try restoring draft from sessionStorage on open
   React.useEffect(() => {
     if (!isOpen) return;
@@ -260,8 +262,7 @@ export function CreateTaskModal({
           setSummary(draft.summary || "");
           setDescription(draft.description || "");
           setPriority(draft.priority || "MEDIUM");
-          setStatus(draft.status || "IN_PROGRESS");
-          setLeadAssigneeName(draft.leadAssigneeName || "");
+          setLeadAssigneeId(draft.leadAssigneeId || "");
           setCoAssignees(draft.coAssignees || []);
           setStartDate(draft.startDate || "");
           setDueDate(draft.dueDate || "");
@@ -279,23 +280,18 @@ export function CreateTaskModal({
     } catch {
       // Ignore storage read errors
     }
+  }, [isOpen, initialTitle]);
 
-    // Default DRI assignment if empty
-    if (!leadAssigneeName && availablePersonnel.length > 0) {
-      setLeadAssigneeName(availablePersonnel[0].name);
-    }
-  }, [isOpen, initialTitle, availablePersonnel, leadAssigneeName]);
-
-  // Set default DRI if empty or if previous DRI is not in current department
+  // When department changes, clear DRI if not in the new personnel list
   React.useEffect(() => {
     if (availablePersonnel.length > 0) {
-      if (!leadAssigneeName || !availablePersonnel.some((p) => p.name === leadAssigneeName)) {
-        setLeadAssigneeName(availablePersonnel[0].name);
+      if (leadAssigneeId && !availablePersonnel.some((p) => p.id === leadAssigneeId)) {
+        setLeadAssigneeId("");
       }
     } else {
-      setLeadAssigneeName("");
+      setLeadAssigneeId("");
     }
-  }, [availablePersonnel, leadAssigneeName]);
+  }, [availablePersonnel, leadAssigneeId]);
 
   // Dirty state check
   const isDirty = React.useMemo(() => {
@@ -333,8 +329,7 @@ export function CreateTaskModal({
           summary,
           description,
           priority,
-          status,
-          leadAssigneeName,
+          leadAssigneeId,
           coAssignees,
           startDate,
           dueDate,
@@ -357,8 +352,7 @@ export function CreateTaskModal({
     summary,
     description,
     priority,
-    status,
-    leadAssigneeName,
+    leadAssigneeId,
     coAssignees,
     startDate,
     dueDate,
@@ -414,7 +408,7 @@ export function CreateTaskModal({
     if (!title.trim()) {
       errors.title = "Vui lòng nhập tên nhiệm vụ.";
     }
-    if (!leadAssigneeName) {
+    if (!leadAssigneeId) {
       errors.lead = "Vui lòng chỉ định Người chủ trì (DRI).";
     }
     if (!dueDate) {
@@ -454,10 +448,7 @@ export function CreateTaskModal({
               name: p.name,
             }));
 
-      // Find real user IDs for DRI and collaborators if matched
-      const matchedDri = dbUsers.find(
-        (u) => u.name.trim().toLowerCase() === leadAssigneeName.trim().toLowerCase()
-      );
+      // Resolve collaborator IDs from names via dbUsers
       const matchedCoIds = coAssignees
         .map(
           (name) =>
@@ -477,7 +468,7 @@ export function CreateTaskModal({
           startDate: startDate || undefined,
           dueDate,
           description: fullDescription,
-          leadAssigneeName: leadAssigneeName || undefined,
+          leadAssigneeName: leadAssigneeDisplayName || undefined,
           coAssignees: coAssignees.length > 0 ? coAssignees : undefined,
           parentTaskId: initialParentTaskId,
           priority,
@@ -486,7 +477,7 @@ export function CreateTaskModal({
         {
           personnel: personnelRefs,
           departmentId: effectiveDeptId,
-          assigneeId: matchedDri?.id,
+          assigneeId: leadAssigneeId || undefined,
           collaboratorIds: matchedCoIds.length > 0 ? matchedCoIds : undefined,
         }
       );
@@ -508,7 +499,7 @@ export function CreateTaskModal({
                 startDate,
                 dueDate,
                 description: fullDescription,
-                leadAssigneeName,
+                leadAssigneeName: leadAssigneeDisplayName,
                 coAssignees,
                 parentTaskId: initialParentTaskId,
                 priority,
@@ -536,7 +527,8 @@ export function CreateTaskModal({
   }, [
     isSubmitting,
     title,
-    leadAssigneeName,
+    leadAssigneeId,
+    leadAssigneeDisplayName,
     dueDate,
     summary,
     description,
@@ -654,7 +646,7 @@ export function CreateTaskModal({
                             type="button"
                             onClick={() => {
                               setSelectedDeptCode(dept.code);
-                              setLeadAssigneeName("");
+                              setLeadAssigneeId("");
                               setCoAssignees([]);
                               setOpenDropdown(null);
                             }}
@@ -879,7 +871,7 @@ export function CreateTaskModal({
               >
                 <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
                 <span>
-                  {leadAssigneeName ? `Chủ trì: ${leadAssigneeName}` : "Chủ trì *"}
+                  {leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : "Chủ trì *"}
                 </span>
                 <ChevronDown
                   className={cn(
@@ -900,10 +892,10 @@ export function CreateTaskModal({
                 ) : (
                   availablePersonnel.map((person) => (
                     <button
-                      key={person.name}
+                      key={person.id}
                       type="button"
                       onClick={() => {
-                        setLeadAssigneeName(person.name);
+                        setLeadAssigneeId(person.id);
                         if (fieldErrors.lead) {
                           setFieldErrors((prev) => ({ ...prev, lead: undefined }));
                         }
@@ -911,7 +903,7 @@ export function CreateTaskModal({
                       }}
                       className={cn(
                         "w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-[0.99]",
-                        leadAssigneeName === person.name
+                        leadAssigneeId === person.id
                           ? "font-semibold text-foreground bg-accent"
                           : "text-foreground hover:bg-accent/70"
                       )}
@@ -920,7 +912,7 @@ export function CreateTaskModal({
                         <div className="font-medium">{person.name}</div>
                         <div className="text-[10px] text-muted-foreground">{person.role}</div>
                       </div>
-                      {leadAssigneeName === person.name && (
+                      {leadAssigneeId === person.id && (
                         <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />
                       )}
                     </button>
