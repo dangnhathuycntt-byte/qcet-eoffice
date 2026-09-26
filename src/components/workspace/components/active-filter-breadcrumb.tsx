@@ -150,7 +150,7 @@ export function ActiveFilterBreadcrumb({
     hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue;
 
   if (!hasAnySecondaryFilter) {
-    return null;
+    return <div data-slot="active-filter-breadcrumb" className={cn("h-0", className)} />;
   }
 
   const handleClearAll = () => {

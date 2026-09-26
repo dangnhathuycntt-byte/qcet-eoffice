@@ -1180,7 +1180,7 @@ export function UnifiedTaskToolbar({
           align="start"
           side="bottom"
           sideOffset={6}
-          className="w-80 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
+          className="w-72 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
         >
           <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/60">
             <span className="font-semibold text-foreground">Bộ lọc</span>
@@ -1196,7 +1196,7 @@ export function UnifiedTaskToolbar({
 
           {/* Thời gian */}
           <div className="mb-3">
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Thời gian</div>
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Thời gian</h4>
             <div className="grid grid-cols-2 gap-1">
               {([
                 ["none", "Tất cả"],
@@ -1218,17 +1218,18 @@ export function UnifiedTaskToolbar({
                       else handleTimeFilterChange({ kind: "preset", preset: val as any });
                     }}
                     className={cn(
-                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
                       selected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-foreground/80 hover:bg-accent"
                     )}
                   >
+                    {selected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
                     {label}
                   </button>
                 );
               })}
-              {academicMonths.slice(0, 4).map((period) => {
+              {academicMonths.map((period) => {
                 const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
                 return (
                   <button
@@ -1236,12 +1237,13 @@ export function UnifiedTaskToolbar({
                     type="button"
                     onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
                     className={cn(
-                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
                       isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-foreground/80 hover:bg-accent"
                     )}
                   >
+                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
                     {period.label}
                   </button>
                 );
@@ -1250,8 +1252,8 @@ export function UnifiedTaskToolbar({
           </div>
 
           {/* Trạng thái */}
-          <div className="border-t border-border/60 pt-2.5 mb-3">
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Trạng thái</div>
+          <div className="border-t border-border/40 pt-2 mt-2">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Trạng thái</h4>
             <div className="grid grid-cols-2 gap-1">
               {statusOptions.map((opt) => {
                 const norm = (effectiveStatus || "all").toLowerCase();
@@ -1276,12 +1278,13 @@ export function UnifiedTaskToolbar({
                       else onTabChange?.(opt.value);
                     }}
                     className={cn(
-                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
                       isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-foreground/80 hover:bg-accent"
                     )}
                   >
+                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
                     {opt.label}
                   </button>
                 );
@@ -1290,8 +1293,8 @@ export function UnifiedTaskToolbar({
           </div>
 
           {/* Thời hạn */}
-          <div className="border-t border-border/60 pt-2.5 mb-3">
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Thời hạn</div>
+          <div className="border-t border-border/40 pt-2 mt-2">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Thời hạn</h4>
             <div className="grid grid-cols-2 gap-1">
               {deadlineOptions.map((opt) => {
                 const isSelected = effectiveDeadline === opt.value || (opt.value === "all" && (effectiveDeadline === "all" || !effectiveDeadline));
@@ -1304,15 +1307,16 @@ export function UnifiedTaskToolbar({
                       else onTabChange?.(opt.value === "all" ? "all" : opt.value);
                     }}
                     className={cn(
-                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
                       isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-foreground/80 hover:bg-accent"
                     )}
                   >
+                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
                     {opt.label}
                     {opt.count !== undefined && opt.count > 0 && (
-                      <span className="ml-1 text-muted-foreground font-mono">({opt.count})</span>
+                      <span className={cn("ml-0.5 font-mono text-[10px]", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>({opt.count})</span>
                     )}
                   </button>
                 );
@@ -1321,8 +1325,8 @@ export function UnifiedTaskToolbar({
           </div>
 
           {/* Ưu tiên */}
-          <div className="border-t border-border/60 pt-2.5 mb-3">
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Mức độ ưu tiên</div>
+          <div className="border-t border-border/40 pt-2 mt-2">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Mức độ ưu tiên</h4>
             <div className="grid grid-cols-2 gap-1">
               {PRIORITY_FILTER_OPTIONS.map((prio) => {
                 const isSelected = (selectedPriority || "ALL") === prio.id;
@@ -1332,12 +1336,13 @@ export function UnifiedTaskToolbar({
                     type="button"
                     onClick={() => onPriorityChange?.(prio.id)}
                     className={cn(
-                      "px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer text-xs select-none",
+                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
                       isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
+                        : "text-foreground/80 hover:bg-accent"
                     )}
                   >
+                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
                     {prio.label}
                   </button>
                 );
@@ -1347,8 +1352,8 @@ export function UnifiedTaskToolbar({
 
           {/* Đơn vị */}
           {showDepartmentFilter && (
-            <div className="border-t border-border/60 pt-2.5 mb-3">
-              <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">Đơn vị</div>
+            <div className="border-t border-border/40 pt-2 mt-2">
+              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Đơn vị</h4>
               <select
                 value={selectedDepartment || "ALL"}
                 onChange={(e) => onDepartmentChange?.(e.target.value)}
