@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { motionTransition } from "@/lib/motion/tokens";
 
 const MOBILE_BREAKPOINT = 1024;
 
@@ -33,9 +36,20 @@ export function TaskDetailSplitLayout({
     return (
       <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
         <div className="flex-1 min-h-0 flex flex-col">{children}</div>
-        {inspectorOpen && (
-          <div className="w-full border-t border-border/40 pt-4">{inspector}</div>
-        )}
+        <AnimatePresence>
+          {inspectorOpen && (
+            <m.div
+              key="inspector-mobile"
+              className="w-full border-t border-border/40 pt-4"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 8 }}
+              transition={motionTransition.panel}
+            >
+              {inspector}
+            </m.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -45,11 +59,20 @@ export function TaskDetailSplitLayout({
       <div className="flex-1 min-h-0 min-w-0 flex flex-col">
         {children}
       </div>
-      {inspectorOpen && (
-          <div className="w-[300px] shrink-0 min-w-0 pl-8">
+      <AnimatePresence>
+        {inspectorOpen && (
+          <m.div
+            key="inspector-desktop"
+            className="w-[300px] shrink-0 min-w-0 pl-8"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 8 }}
+            transition={motionTransition.panel}
+          >
             {inspector}
-          </div>
-      )}
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

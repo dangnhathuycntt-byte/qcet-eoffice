@@ -242,7 +242,7 @@ export function TaskPropertiesSidebar({
       role: role,
       tooltip: tooltipParts.join(" · ") || leadName,
     };
-  }, [leadName, departmentName]);
+  }, [leadName, departmentName, personnelList]);
 
   // Members / Collaborators: strictly read-only derived data from server truth (Rule 2)
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {

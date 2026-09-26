@@ -18,6 +18,8 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
 import { cn, getInitials } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
@@ -30,6 +32,8 @@ import {
 } from "@/lib/departments";
 import { useAuth } from "@/lib/auth-context";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
+import { useFeedback } from "@/components/ui/feedback-layer";
+import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
@@ -63,6 +67,7 @@ export function TaskSubtasksSection({
 
   const { user } = useAuth();
   const { personnel: hookPersonnel } = usePersonnelList();
+  const { notifyError } = useFeedback();
   const effectiveDeptCode = React.useMemo(() => {
     const raw =
       departmentCode ||
@@ -102,8 +107,8 @@ export function TaskSubtasksSection({
       }
       setQuickAddTitle("");
       setTimeout(() => quickAddInputRef.current?.focus(), 20);
-    } catch {
-      // ignore
+    } catch (err) {
+      notifyError(err instanceof Error ? err.message : "Không thể tạo việc con", "Lỗi tạo việc con");
     } finally {
       setIsQuickAdding(false);
     }
@@ -282,7 +287,7 @@ export function TaskSubtasksSection({
           <p className="text-xs font-medium text-muted-foreground">
             Chưa có việc thành phần
           </p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Gõ vào ô bên dưới hoặc nhấn &quot;Thêm chi tiết&quot; để phân rã nhiệm vụ này.
           </p>
         </div>
@@ -378,7 +383,7 @@ export function TaskSubtasksSection({
 
       {/* 4. Danh sách việc con với layout chuẩn: [Checkbox] Title [Avatar] [Actions] / [Date] - Status */}
       {totalCount > 0 && (
-        <div className="flex flex-col gap-1">
+        <m.div className="flex flex-col gap-1" variants={staggerContainerVariants} initial="initial" animate="animate">
           {subTasks.map((st, idx) => {
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
@@ -386,8 +391,11 @@ export function TaskSubtasksSection({
             const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName, hookPersonnel) || "Chưa giao";
 
             return (
-              <div
+              <m.div
                 key={st.id || `subtask-row-${idx}-${st.title}`}
+                variants={listItemVariants}
+              >
+              <div
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelectSubtask && onSelectSubtask(st)}
@@ -398,7 +406,7 @@ export function TaskSubtasksSection({
                   }
                 }}
                 className={cn(
-                  "group flex items-start gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:bg-muted/40 hover:border-border/40 focus-visible:outline-hidden focus-visible:bg-muted/50 select-none",
+                  "group flex items-start gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:bg-muted/40 hover:border-border/40 focus-visible:outline-hidden focus-visible:bg-muted/50 select-none active:scale-[0.98] transition-transform",
                   isCompleted && "opacity-80"
                 )}
               >
@@ -428,7 +436,7 @@ export function TaskSubtasksSection({
                     <span
                       className={cn(
                         "text-xs font-medium text-foreground transition-all duration-200 truncate",
-                        isCompleted && "line-through text-muted-foreground/60"
+                        isCompleted && "line-through text-muted-foreground"
                       )}
                       title={st.title}
                     >
@@ -497,7 +505,7 @@ export function TaskSubtasksSection({
                         "size-3 shrink-0",
                         dueStatus.isOverdue
                           ? "text-rose-600"
-                          : "text-muted-foreground/60"
+                          : "text-muted-foreground"
                       )}
                       strokeWidth={1.5}
                     />
@@ -522,9 +530,10 @@ export function TaskSubtasksSection({
                   </div>
                 </div>
               </div>
+              </m.div>
             );
           })}
-        </div>
+        </m.div>
       )}
 
       {/* 5. Inline Quick Add: Input ở cuối list "Thêm việc con... (Enter để tạo)" */}

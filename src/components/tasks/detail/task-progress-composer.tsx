@@ -121,7 +121,7 @@ export function TaskProgressComposer({
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
           >
             <Edit2 className="size-3" strokeWidth={1.5} />
             <span>Cập nhật</span>
@@ -135,6 +135,7 @@ export function TaskProgressComposer({
           {/* Status badge + Lead Author + Timestamp */}
           <div className="flex items-center gap-2 flex-wrap text-xs">
             <span
+              aria-live="polite"
               className={cn(
                 "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
                 progress === 100
@@ -188,17 +189,17 @@ export function TaskProgressComposer({
           </p>
 
           {/* Reaction & Activity Footer */}
-          <div className="flex items-center gap-2 pt-1 text-muted-foreground/60">
+          <div className="flex items-center gap-2 pt-1 text-muted-foreground">
             <button
               type="button"
-              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer"
+              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               title="Thêm phản hồi"
             >
               <Smile className="size-3.5" strokeWidth={1.5} />
             </button>
             <button
               type="button"
-              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer"
+              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               title="Bình luận"
             >
               <MessageSquare className="size-3.5" strokeWidth={1.5} />
@@ -244,7 +245,7 @@ export function TaskProgressComposer({
                   disabled={isSubmitting}
                   aria-pressed={progress === value}
                   className={cn(
-                    "h-8 rounded-md border text-[11px] font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40",
+                    "h-8 rounded-md border text-[11px] font-medium tabular-nums transition-colors cursor-pointer disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
                     progress === value
                       ? "border-foreground/20 bg-foreground text-background"
                       : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -290,14 +291,14 @@ export function TaskProgressComposer({
                   setIsEditing(false);
                 }}
                 disabled={isSubmitting}
-                className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
+                className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 shadow-2xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               >
                 {isSubmitting ? (
                   <>

@@ -367,9 +367,19 @@ export function DirectInlineEditor({
           <Tag
             ref={viewContainerRef}
             onClick={handleViewClick}
+            {...(canEdit ? {
+              tabIndex: 0,
+              role: "button",
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setIsEditing(true);
+                }
+              },
+            } : {})}
             className={cn(
               "block w-full cursor-text select-text transition-colors p-0 m-0",
-              canEdit && "hover:text-foreground/85",
+              canEdit && "hover:text-foreground/85 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
               viewClassName
             )}
             title={canEdit ? "Nhấp vào vị trí bất kỳ để chỉnh sửa" : undefined}

@@ -2,7 +2,7 @@ import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { computeDueStatus } from "@/components/tasks/detail/task-identity-block";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
 
 describe("Task Detail V2 — Full-Detail Productivity Workspace Suite", () => {
   it("computeDueStatus calculates correct relative due dates and overdue flags", () => {

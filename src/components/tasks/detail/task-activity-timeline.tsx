@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import * as m from "motion/react-m";
 import {
   Activity,
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
+import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
 export interface ActivityEvent {
   id: string;
@@ -89,12 +91,17 @@ export function TaskActivityTimeline({
         </h2>
       </div>
 
-      <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/80">
+      <m.div
+        className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/80"
+        variants={staggerContainerVariants}
+        initial="initial"
+        animate="animate"
+      >
         {events.map((ev, index) => {
           const isLatest = index === 0;
 
           return (
-            <div key={ev.id || index} className="relative group/event">
+            <m.div key={ev.id || index} className="relative group/event" variants={listItemVariants}>
               {/* Event bullet point */}
               <div
                 className={cn(
@@ -129,10 +136,10 @@ export function TaskActivityTimeline({
                   </p>
                 )}
               </div>
-            </div>
+            </m.div>
           );
         })}
-      </div>
+      </m.div>
     </section>
   );
 }

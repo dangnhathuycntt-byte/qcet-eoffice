@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
@@ -23,7 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS, computeDueStatus } from "./task-identity-block";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "@/domain/tasks/display-config";
+import { computeDueStatus } from "@/domain/tasks/deadlines";
+import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
@@ -212,25 +216,14 @@ export function SubtaskDetailDrawer({
     const currentDesc = (subtask as any).description || subtask.deliverableDescription || "";
     if (trimmed === currentDesc.trim()) return;
 
-    // Fetch latest version from server to avoid OCC conflict
-    let latestVersion: number | undefined;
-    try {
-      const freshRes = await fetch(`/api/tasks/${subtask.id}`);
-      if (freshRes.ok) {
-        const freshData = await freshRes.json().catch(() => null);
-        const freshTask = freshData?.data ?? freshData?.task;
-        latestVersion = typeof freshTask?.version === "number" ? freshTask.version : undefined;
-      }
-    } catch { /* proceed without fresh version */ }
-
-    const versionToSend = latestVersion ?? (typeof (subtask as any).version === "number" ? (subtask as any).version : undefined);
+    const currentVersion = typeof (subtask as any).version === "number" ? (subtask as any).version : undefined;
 
     const res = await fetch(`/api/tasks/${subtask.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description: trimmed,
-        ...(versionToSend !== undefined ? { expectedVersion: versionToSend } : {}),
+        ...(currentVersion !== undefined ? { expectedVersion: currentVersion } : {}),
       }),
     });
 
@@ -241,7 +234,7 @@ export function SubtaskDetailDrawer({
     }
 
     const data = await res.json().catch(() => null);
-    const nextVersion = data?.data?.version ?? data?.task?.version ?? (versionToSend ? versionToSend + 1 : 1);
+    const nextVersion = data?.data?.version ?? data?.task?.version ?? (currentVersion ? currentVersion + 1 : 1);
     const updated = { ...subtask, deliverableDescription: trimmed, description: trimmed, version: nextVersion } as StaffTask;
     setSubtask(updated);
     onSubtaskUpdated?.(updated);
@@ -365,7 +358,7 @@ export function SubtaskDetailDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
-  if (!isOpen || !subtask) return null;
+  if (!subtask) return <AnimatePresence mode="wait" />;
 
   // Sibling switcher data
   const currentIndex = siblings.findIndex((st) => st.id === subtask.id);
@@ -379,18 +372,30 @@ export function SubtaskDetailDrawer({
   ) || null;
 
   return (
-    <>
-      <div
-        onClick={onClose}
-        aria-hidden="true"
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs animate-in fade-in duration-200 motion-reduce:animate-none lg:hidden"
-      />
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <>
+          <m.div
+            key="subtask-drawer-backdrop"
+            variants={fadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={onClose}
+            aria-hidden="true"
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs motion-reduce:animate-none lg:hidden"
+          />
 
-      <aside
-        role="dialog"
-        aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
-        className={styles.peekSurface}
-      >
+          <m.aside
+            key="subtask-drawer"
+            variants={sideSheetVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            role="dialog"
+            aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
+            className={styles.peekSurface}
+          >
         {/* Left Resize Handle for Desktop */}
         <div
           role="separator"
@@ -409,7 +414,7 @@ export function SubtaskDetailDrawer({
           title="Kéo để điều chỉnh độ rộng bảng phụ hoặc nhấp đúp để đặt lại"
           onMouseDown={handleResizeMouseDown}
           onDoubleClick={handleResetWidth}
-          className="hidden lg:block absolute -left-3 top-0 bottom-0 w-6 z-50 cursor-col-resize select-none bg-transparent focus:outline-none focus-visible:outline-none touch-none"
+          className="hidden lg:block absolute -left-3 top-0 bottom-0 w-6 z-50 cursor-col-resize select-none bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden touch-none"
         />
 
         {/* Header chi tiết việc con */}
@@ -429,7 +434,7 @@ export function SubtaskDetailDrawer({
                   type="button"
                   disabled={currentIndex <= 0}
                   onClick={() => currentIndex > 0 && onSelectSibling(siblings[currentIndex - 1])}
-                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  className="inline-flex size-8 min-h-[44px] min-w-[44px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                   aria-label="Việc con trước"
                   title="Việc con trước (↑)"
                 >
@@ -439,7 +444,7 @@ export function SubtaskDetailDrawer({
                   type="button"
                   disabled={currentIndex >= siblingTotal - 1}
                   onClick={() => currentIndex < siblingTotal - 1 && onSelectSibling(siblings[currentIndex + 1])}
-                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors"
+                  className="inline-flex size-8 min-h-[44px] min-w-[44px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-default transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                   aria-label="Việc con tiếp theo"
                   title="Việc con tiếp theo (↓)"
                 >
@@ -690,7 +695,7 @@ export function SubtaskDetailDrawer({
               ) : (
                 <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "—"}</span>
               )}
-              <span className="text-muted-foreground/60 px-0.5">→</span>
+              <span className="text-muted-foreground px-0.5">→</span>
               {canEdit ? (
                 <VietnameseDatePicker
                   value={dueDateIso}
@@ -721,7 +726,9 @@ export function SubtaskDetailDrawer({
             />
           </section>
         </div>
-      </aside>
+      </m.aside>
     </>
+    )}
+    </AnimatePresence>
   );
 }

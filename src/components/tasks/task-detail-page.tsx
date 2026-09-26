@@ -6,6 +6,7 @@ import styles from "./task-detail-page.module.css";
 import { DndProvider, DndContext } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Dialog as ProgressDialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -13,6 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useSidebarLayout } from "@/components/layout/sidebar-context";
 import { useListScrollRestore } from "@/hooks/use-list-scroll-restore";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-header-nav";
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
@@ -76,6 +78,9 @@ export function TaskDetailPage({
   // Inspector visibility state
   const [inspectorExpanded, setShowInspector] = React.useState(true);
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
+
+  // Aria-live status announcement (Fix #15)
+  const [statusAnnouncement, setStatusAnnouncement] = React.useState("");
 
   // Sub-Tabs URL sync (REQ-14)
   const tabParam = searchParams.get("tab");
@@ -368,7 +373,7 @@ export function TaskDetailPage({
     const res = await fetch(`/api/tasks/${taskIdRef.current}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: trimmed }),
+      body: JSON.stringify({ description: trimmed, expectedVersion: (task as any).version }),
     });
 
     if (!res.ok) {
@@ -444,7 +449,7 @@ export function TaskDetailPage({
     }));
 
     try {
-      const res = await updateTaskStatus(taskId, newStatus, note);
+      const res = await updateTaskStatus(taskId, newStatus, note, (task as any).version);
       if (!res.ok) {
         // Rollback state
         if (previousTask) setTask(previousTask);
@@ -480,6 +485,7 @@ export function TaskDetailPage({
       ]);
 
       notifySuccess(`Đã chuyển trạng thái sang "${targetLabel}"`);
+      setStatusAnnouncement(`Trạng thái nhiệm vụ đã chuyển sang ${targetLabel}`);
     } catch (err: unknown) {
       if (previousTask) setTask(previousTask);
       setAuditEvents(previousAudit);
@@ -492,7 +498,7 @@ export function TaskDetailPage({
 
   // Priority change handler (REQ-20)
   const handlePriorityChange = React.useCallback(async (taskId: string, newPriority: TaskPriority) => {
-    const res = await updateTaskPriority(taskId, newPriority);
+    const res = await updateTaskPriority(taskId, newPriority, (task as any).version);
     if (!res.ok) {
       notifyError(res.error || "Không thể cập nhật độ ưu tiên", "Lỗi cập nhật");
       return;
@@ -812,6 +818,10 @@ export function TaskDetailPage({
       data-peek-open={Boolean(activeSubtask)}
       style={splitWorkspaceStyle}
     >
+    {/* Visually-hidden aria-live region for status announcements */}
+    <div className="sr-only" aria-live="polite" aria-atomic="true">
+      {statusAnnouncement}
+    </div>
     {/* Parent pane */}
     <div
       data-slot="task-workspace"
@@ -827,50 +837,45 @@ export function TaskDetailPage({
       />
 
       {/* Tabs: Tổng quan + Hoạt động — thanh mảnh, tinh tế */}
-      <nav
-        role="tablist"
-        aria-label="Các phân mục chi tiết nhiệm vụ"
-        className="flex items-center gap-1 px-4 sm:px-6 h-9 border-b border-border/30 bg-background/70 text-xs font-normal sticky top-12 z-20 backdrop-blur-xs select-none"
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => handleTabChange(v as DetailTab)}
       >
-        <button
-          role="tab"
-          id="tab-overview"
-          aria-selected={activeTab === "overview"}
-          aria-controls="panel-overview"
-          type="button"
-          onClick={() => handleTabChange("overview")}
-          className={cn(
-            "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px",
-            activeTab === "overview"
-              ? "border-primary text-foreground font-medium"
-              : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
-          )}
+        <TabsList
+          variant="line"
+          aria-label="Các phân mục chi tiết nhiệm vụ"
+          className="flex items-center gap-1 px-4 sm:px-6 h-9 border-b border-border/30 bg-background/70 text-xs font-normal sticky top-12 z-20 backdrop-blur-xs select-none w-full rounded-none p-0"
         >
-          <span>Tổng quan</span>
-        </button>
+          <TabsTrigger
+            value="overview"
+            className={cn(
+              "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px rounded-none",
+              activeTab === "overview"
+                ? "border-primary text-foreground font-medium"
+                : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
+            )}
+          >
+            <span>Tổng quan</span>
+          </TabsTrigger>
 
-        <button
-          role="tab"
-          id="tab-activity"
-          aria-selected={activeTab === "activity"}
-          aria-controls="panel-activity"
-          type="button"
-          onClick={() => handleTabChange("activity")}
-          className={cn(
-            "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px",
-            activeTab === "activity"
-              ? "border-primary text-foreground font-medium"
-              : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
-          )}
-        >
-          <span>Hoạt động</span>
-          {feedActivityEvents.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground/60 leading-none">
-              {feedActivityEvents.length}
-            </span>
-          )}
-        </button>
-      </nav>
+          <TabsTrigger
+            value="activity"
+            className={cn(
+              "h-full px-2.5 border-b-2 text-xs transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden -mb-px rounded-none",
+              activeTab === "activity"
+                ? "border-primary text-foreground font-medium"
+                : "border-transparent text-muted-foreground/70 hover:text-foreground hover:border-border/40 font-normal"
+            )}
+          >
+            <span>Hoạt động</span>
+            {feedActivityEvents.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">
+                {feedActivityEvents.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Main Workspace Canvas */}
       <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
@@ -1027,34 +1032,37 @@ export function TaskDetailPage({
     />
 
     {/* Modal Cập nhật tiến độ */}
-    {isProgressModalOpen && (
-      <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150">
+    <ProgressDialog.Root open={isProgressModalOpen} onOpenChange={setIsProgressModalOpen}>
+      <ProgressDialog.Portal keepMounted={isProgressModalOpen}>
+        <ProgressDialog.Backdrop className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+        <ProgressDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 outline-none rounded-2xl border border-border bg-popover p-5 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
           <div className="flex items-center justify-between border-b border-border/50 pb-3">
-            <span className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</span>
-            <button
-              type="button"
-              onClick={() => setIsProgressModalOpen(false)}
-              className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            <ProgressDialog.Title className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Title>
+            <ProgressDialog.Close
+              className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Đóng"
             >
               <X className="size-4" strokeWidth={1.5} />
-            </button>
+            </ProgressDialog.Close>
           </div>
+          <ProgressDialog.Description className="sr-only">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Description>
 
-          <TaskProgressComposer
-            taskId={task.id}
-            initialProgress={currentProgressPercent}
-            taskStatus={task.status}
-            leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
-            completedSubtasks={completedSubtasks}
-            totalSubtasks={subTasks.length}
-            canEdit={canEdit}
-            onProgressUpdated={handleProgressModalUpdate}
-            onStatusChange={handleProgressModalStatusChange}
-          />
-        </div>
-      </div>
-    )}
+          <div className="space-y-4 pt-4">
+            <TaskProgressComposer
+              taskId={task.id}
+              initialProgress={currentProgressPercent}
+              taskStatus={task.status}
+              leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
+              completedSubtasks={completedSubtasks}
+              totalSubtasks={subTasks.length}
+              canEdit={canEdit}
+              onProgressUpdated={handleProgressModalUpdate}
+              onStatusChange={handleProgressModalStatusChange}
+            />
+          </div>
+        </ProgressDialog.Popup>
+      </ProgressDialog.Portal>
+    </ProgressDialog.Root>
     </div>
   );
 

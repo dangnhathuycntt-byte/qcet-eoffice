@@ -2,10 +2,13 @@
 
 import * as React from "react";
 import { Plus, User } from "lucide-react";
+import * as m from "motion/react-m";
+import { Collapsible } from "@base-ui/react/collapsible";
 import type { StaffTask } from "@/types/dashboard";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { cn, getInitials } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
+import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
 export interface TaskSubtasksSidebarSectionProps {
   subTasks: StaffTask[];
@@ -55,7 +58,7 @@ function SubtaskAssigneeAvatar({
 
   return (
     <div
-      className="size-4 rounded-full bg-muted/60 text-muted-foreground/50 flex items-center justify-center"
+      className="size-4 rounded-full bg-muted/60 text-muted-foreground flex items-center justify-center"
       title="Chưa phân công"
     >
       <User className="size-2.5" />
@@ -70,7 +73,8 @@ export function TaskSubtasksSidebarSection({
   onAddSubtask,
 }: TaskSubtasksSidebarSectionProps) {
   const [expanded, setExpanded] = React.useState(false);
-  const visible = expanded ? subTasks : subTasks.slice(0, MAX_COLLAPSED);
+  const alwaysVisible = subTasks.slice(0, MAX_COLLAPSED);
+  const collapsibleItems = subTasks.slice(MAX_COLLAPSED);
   const remaining = Math.max(0, subTasks.length - MAX_COLLAPSED);
 
   const completedCount = subTasks.filter((st) => st.status === "COMPLETED").length;
@@ -88,7 +92,7 @@ export function TaskSubtasksSidebarSection({
             {subTasks.length}
           </span>
           {completedCount > 0 && (
-            <span className="text-[10px] text-muted-foreground/70 font-mono tabular-nums shrink-0">
+            <span className="text-[10px] text-muted-foreground font-mono tabular-nums shrink-0">
               ({completedCount} xong)
             </span>
           )}
@@ -97,7 +101,7 @@ export function TaskSubtasksSidebarSection({
           <button
             type="button"
             onClick={onAddSubtask}
-            className="inline-flex items-center gap-1 h-5 px-1.5 rounded text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 h-5 px-1.5 rounded text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             title="Tạo việc con"
           >
             <Plus className="size-3" strokeWidth={1.5} />
@@ -124,9 +128,9 @@ export function TaskSubtasksSidebarSection({
       )}
 
       {/* Rows */}
-      {visible.length > 0 && (
-        <div className="mt-1.5 space-y-0.5">
-          {visible.map((st) => {
+      {alwaysVisible.length > 0 && (
+        <m.div className="mt-1.5 space-y-0.5" variants={staggerContainerVariants} initial="initial" animate="animate">
+          {alwaysVisible.map((st) => {
             const isActive = st.id === activeSubtaskId;
             const statusOpt = getStatusDisplay(st.status);
             const dotClass = statusOpt?.dotClass ?? "bg-muted-foreground/60";
@@ -134,12 +138,12 @@ export function TaskSubtasksSidebarSection({
             const formattedDueDate = st.dueDate ? formatCompactDate(st.dueDate, "") : "";
 
             return (
+              <m.div key={st.id} variants={listItemVariants}>
               <button
-                key={st.id}
                 type="button"
                 onClick={() => onSelectSubtask(st)}
                 className={cn(
-                  "w-full flex items-start gap-2 px-1.5 py-1.5 rounded text-left text-[12px] leading-snug transition-colors cursor-pointer hover:bg-muted/60",
+                  "w-full flex items-start gap-2 px-1.5 py-1.5 rounded text-left text-[12px] leading-snug transition-colors cursor-pointer hover:bg-muted/60 active:scale-[0.98] transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
                   isActive ? "bg-muted/40" : ""
                 )}
                 title={st.title}
@@ -156,7 +160,7 @@ export function TaskSubtasksSidebarSection({
                   className={cn(
                     "flex-1 min-w-0 line-clamp-2 break-words",
                     isCompleted
-                      ? "text-muted-foreground/60 line-through decoration-muted-foreground/30"
+                      ? "text-muted-foreground line-through decoration-muted-foreground/30"
                       : "text-foreground/90"
                   )}
                 >
@@ -166,7 +170,7 @@ export function TaskSubtasksSidebarSection({
                 {/* 3. Hạn hoàn thành: DD/MM */}
                 {formattedDueDate && (
                   <span
-                    className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground/70 mt-0.5"
+                    className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5"
                     title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
                   >
                     {formattedDueDate}
@@ -181,20 +185,74 @@ export function TaskSubtasksSidebarSection({
                   />
                 </div>
               </button>
+              </m.div>
             );
           })}
-        </div>
-      )}
 
-      {/* Expand / Collapse */}
-      {remaining > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-          className="mt-1 text-[11px] text-primary hover:underline cursor-pointer pl-1.5"
-        >
-          {expanded ? "Thu gọn" : `Xem thêm ${remaining} việc con`}
-        </button>
+          {/* Collapsible remaining items */}
+          {collapsibleItems.length > 0 && (
+            <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
+              <Collapsible.Panel className="space-y-0.5">
+                {collapsibleItems.map((st) => {
+                  const isActive = st.id === activeSubtaskId;
+                  const statusOpt = getStatusDisplay(st.status);
+                  const dotClass = statusOpt?.dotClass ?? "bg-muted-foreground/60";
+                  const isCompleted = st.status === "COMPLETED";
+                  const formattedDueDate = st.dueDate ? formatCompactDate(st.dueDate, "") : "";
+
+                  return (
+                    <m.div key={st.id} variants={listItemVariants}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectSubtask(st)}
+                      className={cn(
+                        "w-full flex items-start gap-2 px-1.5 py-1.5 rounded text-left text-[12px] leading-snug transition-colors cursor-pointer hover:bg-muted/60 active:scale-[0.98] transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+                        isActive ? "bg-muted/40" : ""
+                      )}
+                      title={st.title}
+                    >
+                      <span
+                        className={cn("size-2 rounded-full shrink-0 mt-1.5", dotClass)}
+                        role="status"
+                        aria-label={`Trạng thái: ${statusOpt?.label ?? st.status}`}
+                      />
+                      <span
+                        className={cn(
+                          "flex-1 min-w-0 line-clamp-2 break-words",
+                          isCompleted
+                            ? "text-muted-foreground line-through decoration-muted-foreground/30"
+                            : "text-foreground/90"
+                        )}
+                      >
+                        {st.title}
+                      </span>
+                      {formattedDueDate && (
+                        <span
+                          className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5"
+                          title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
+                        >
+                          {formattedDueDate}
+                        </span>
+                      )}
+                      <div className="shrink-0 mt-0.5">
+                        <SubtaskAssigneeAvatar
+                          avatarUrl={st.assigneeAvatar}
+                          name={st.assigneeName}
+                        />
+                      </div>
+                    </button>
+                    </m.div>
+                  );
+                })}
+              </Collapsible.Panel>
+              <Collapsible.Trigger
+                className="mt-1 text-[11px] text-primary hover:underline cursor-pointer pl-1.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
+              >
+                {expanded ? "Thu gọn" : `Xem thêm ${remaining} việc con`}
+              </Collapsible.Trigger>
+            </Collapsible.Root>
+          )}
+        </m.div>
       )}
     </div>
   );

@@ -94,7 +94,7 @@ export function TaskEvidenceSection({
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             title="Đính kèm minh chứng hoặc liên kết kết quả"
             aria-label="Đính kèm minh chứng hoặc liên kết kết quả"
           >
@@ -149,14 +149,14 @@ export function TaskEvidenceSection({
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !title.trim()}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             >
               {isSubmitting ? (
                 <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
@@ -179,7 +179,7 @@ export function TaskEvidenceSection({
             <button
               type="button"
               onClick={() => setIsAdding(true)}
-              className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
+              className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
             >
               <Plus className="size-3" strokeWidth={1.5} />
               <span>Thêm minh chứng đầu tiên</span>
@@ -244,7 +244,7 @@ export function TaskEvidenceSection({
                       href={item.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                       title="Mở liên kết minh chứng"
                     >
                       <ExternalLink className="size-3 text-muted-foreground" strokeWidth={1.5} />
@@ -256,7 +256,7 @@ export function TaskEvidenceSection({
                     <button
                       type="button"
                       onClick={() => onDeleteDeliverable(item.id)}
-                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-rose-600 rounded transition-all cursor-pointer"
+                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-rose-600 rounded transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:opacity-100"
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"
                     >

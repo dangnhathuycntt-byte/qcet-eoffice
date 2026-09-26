@@ -214,6 +214,42 @@ export function getPriorityDisplay(priority: TaskPriority | string): PriorityDis
   );
 }
 
+/* ── Dropdown Option Shapes ─────────────────────────────────────── */
+
+/** Compact option shape used by dropdowns in task identity / detail views. */
+export interface StatusDropdownOption {
+  value: TaskStatus;
+  label: string;
+  colorClass: string;
+  dotClass: string;
+  iconClass: string;
+}
+
+/** Derived from CORE_STATUS_OPTIONS — single source of truth for status dropdowns. */
+export const STATUS_OPTIONS: ReadonlyArray<StatusDropdownOption> = CORE_STATUS_OPTIONS.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  colorClass: opt.colorClass,
+  dotClass: opt.dotClass,
+  iconClass: opt.iconClass,
+}));
+
+/** Compact option shape used by priority dropdowns. */
+export interface PriorityDropdownOption {
+  value: TaskPriority;
+  label: string;
+  colorClass: string;
+  iconClass: string;
+}
+
+/** Derived from PRIORITY_DISPLAY_CONFIG — single source of truth for priority dropdowns. */
+export const PRIORITY_OPTIONS: ReadonlyArray<PriorityDropdownOption> = PRIORITY_DISPLAY_CONFIG.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  colorClass: opt.colorClass,
+  iconClass: opt.iconClass,
+}));
+
 /* ── Category Display ────────────────────────────────────────────── */
 
 export interface CategoryDisplayConfig {
