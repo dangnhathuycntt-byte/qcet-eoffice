@@ -288,6 +288,51 @@ export const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "KHAC", label: "Khác" },
 ];
 
+// ─── Collapsible filter section (accordion row) ───────────────
+function FilterSection({
+  label,
+  value,
+  isActive,
+  children,
+}: {
+  label: string;
+  value?: string;
+  isActive: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="border-t border-border/30 first:border-t-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex items-center justify-between w-full px-1 py-2 text-left cursor-pointer transition-colors rounded hover:bg-accent/50",
+          isActive && "text-primary"
+        )}
+      >
+        <span className="text-[11px] font-semibold text-foreground/80">{label}</span>
+        <span className="flex items-center gap-1.5">
+          {value && (
+            <span className={cn(
+              "text-[10px] font-medium px-1.5 py-0.5 rounded",
+              isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
+            )}>
+              {value}
+            </span>
+          )}
+          <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={1.5} />
+        </span>
+      </button>
+      {open && (
+        <div className="pb-2 px-0.5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "ALL", label: "Tất cả mức độ" },
   { id: "URGENT", label: "Khẩn cấp" },
@@ -1194,10 +1239,13 @@ export function UnifiedTaskToolbar({
             </button>
           </div>
 
-          {/* Thời gian */}
-          <div className="mb-3">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Thời gian</h4>
-            <div className="grid grid-cols-2 gap-1">
+          {/* ─── Collapsible filter sections ─── */}
+          <FilterSection
+            label="Thời gian"
+            value={timeLabel !== "Thời gian" ? timeLabel : undefined}
+            isActive={isMonthActive}
+          >
+            <div className="grid grid-cols-3 gap-0.5">
               {([
                 ["none", "Tất cả"],
                 ["today", "Hôm nay"],
@@ -1218,17 +1266,19 @@ export function UnifiedTaskToolbar({
                       else handleTimeFilterChange({ kind: "preset", preset: val as any });
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
+                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
                       selected
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-foreground/80 hover:bg-accent"
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground/70 hover:bg-accent"
                     )}
                   >
-                    {selected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
+                    {selected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
                     {label}
                   </button>
                 );
               })}
+            </div>
+            <div className="grid grid-cols-4 gap-0.5 mt-1 pt-1 border-t border-border/30">
               {academicMonths.map((period) => {
                 const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
                 return (
@@ -1237,24 +1287,26 @@ export function UnifiedTaskToolbar({
                     type="button"
                     onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
+                      "px-1.5 py-1 rounded text-[11px] text-center transition-all cursor-pointer select-none",
                       isSelected
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-foreground/80 hover:bg-accent"
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground/70 hover:bg-accent"
                     )}
                   >
-                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
-                    {period.label}
+                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
+                    T{period.monthNumber}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </FilterSection>
 
-          {/* Trạng thái */}
-          <div className="border-t border-border/40 pt-2 mt-2">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Trạng thái</h4>
-            <div className="grid grid-cols-2 gap-1">
+          <FilterSection
+            label="Trạng thái"
+            value={statusLabel !== "Trạng thái" ? statusLabel : undefined}
+            isActive={isStatusActive}
+          >
+            <div className="grid grid-cols-2 gap-0.5">
               {statusOptions.map((opt) => {
                 const norm = (effectiveStatus || "all").toLowerCase();
                 const isSelected =
@@ -1278,24 +1330,26 @@ export function UnifiedTaskToolbar({
                       else onTabChange?.(opt.value);
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
+                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
                       isSelected
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-foreground/80 hover:bg-accent"
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground/70 hover:bg-accent"
                     )}
                   >
-                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
+                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
                     {opt.label}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </FilterSection>
 
-          {/* Thời hạn */}
-          <div className="border-t border-border/40 pt-2 mt-2">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Thời hạn</h4>
-            <div className="grid grid-cols-2 gap-1">
+          <FilterSection
+            label="Thời hạn"
+            value={deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined}
+            isActive={isDeadlineActive}
+          >
+            <div className="grid grid-cols-2 gap-0.5">
               {deadlineOptions.map((opt) => {
                 const isSelected = effectiveDeadline === opt.value || (opt.value === "all" && (effectiveDeadline === "all" || !effectiveDeadline));
                 return (
@@ -1307,27 +1361,29 @@ export function UnifiedTaskToolbar({
                       else onTabChange?.(opt.value === "all" ? "all" : opt.value);
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
+                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
                       isSelected
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-foreground/80 hover:bg-accent"
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground/70 hover:bg-accent"
                     )}
                   >
-                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
+                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
                     {opt.label}
                     {opt.count !== undefined && opt.count > 0 && (
-                      <span className={cn("ml-0.5 font-mono text-[10px]", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>({opt.count})</span>
+                      <span className={cn("ml-0.5 font-mono text-[9px]", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>({opt.count})</span>
                     )}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </FilterSection>
 
-          {/* Ưu tiên */}
-          <div className="border-t border-border/40 pt-2 mt-2">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Mức độ ưu tiên</h4>
-            <div className="grid grid-cols-2 gap-1">
+          <FilterSection
+            label="Ưu tiên"
+            value={priorityLabel !== "Ưu tiên" ? priorityLabel : undefined}
+            isActive={isPriorityActive}
+          >
+            <div className="grid grid-cols-2 gap-0.5">
               {PRIORITY_FILTER_OPTIONS.map((prio) => {
                 const isSelected = (selectedPriority || "ALL") === prio.id;
                 return (
@@ -1336,28 +1392,31 @@ export function UnifiedTaskToolbar({
                     type="button"
                     onClick={() => onPriorityChange?.(prio.id)}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-left transition-all cursor-pointer text-xs select-none",
+                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
                       isSelected
-                        ? "bg-primary text-primary-foreground font-medium shadow-xs"
-                        : "text-foreground/80 hover:bg-accent"
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground/70 hover:bg-accent"
                     )}
                   >
-                    {isSelected && <Check className="size-3 shrink-0" strokeWidth={2.5} />}
+                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
                     {prio.label}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </FilterSection>
 
           {/* Đơn vị */}
           {showDepartmentFilter && (
-            <div className="border-t border-border/40 pt-2 mt-2">
-              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1.5 px-0.5">Đơn vị</h4>
+            <FilterSection
+              label="Đơn vị"
+              value={selectedDepartment && selectedDepartment !== "ALL" ? (availableDepartments.find(d => d.code === selectedDepartment)?.name || selectedDepartment) : undefined}
+              isActive={Boolean(selectedDepartment && selectedDepartment !== "ALL")}
+            >
               <select
                 value={selectedDepartment || "ALL"}
                 onChange={(e) => onDepartmentChange?.(e.target.value)}
-                className="w-full h-8 px-2 rounded-lg border border-border/80 bg-background text-xs text-foreground focus:outline-hidden cursor-pointer"
+                className="w-full h-7 px-2 rounded border border-border/80 bg-background text-[11px] text-foreground focus:outline-hidden cursor-pointer"
               >
                 <option value="ALL">Tất cả đơn vị</option>
                 {availableDepartments
@@ -1368,16 +1427,16 @@ export function UnifiedTaskToolbar({
                     </option>
                   ))}
               </select>
-            </div>
+            </FilterSection>
           )}
 
           {/* Reset */}
           {(isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive)) && (
-            <div className="pt-2 border-t border-border/60">
+            <div className="pt-1.5 mt-1 border-t border-border/40">
               <button
                 type="button"
                 onClick={() => { handleResetFilters(); setIsCollapsedFilterOpen(false); }}
-                className="text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center gap-1"
+                className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-[11px] font-medium text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
               >
                 <RotateCcw className="size-3" strokeWidth={1.5} />
                 Xóa tất cả bộ lọc
