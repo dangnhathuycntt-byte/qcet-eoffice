@@ -1620,9 +1620,9 @@ export function UnifiedTaskToolbar({
                 </MenuItem>
               );
             })}
-            <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
-            <div className="px-2 py-1">
-              <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
+            <MenuSeparator className="h-px bg-border/40 my-1" />
+            <div className="px-1.5 py-1">
+              <p className="mb-1 text-[10px] font-medium text-muted-foreground">
                 Năm học {academicYear}
               </p>
               <div className="grid grid-cols-4 gap-1">
@@ -1638,7 +1638,7 @@ export function UnifiedTaskToolbar({
                         setIsCollapsedFilterOpen(false);
                       }}
                       className={cn(
-                        "flex h-6 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
+                        "flex h-5.5 items-center justify-center rounded text-[10.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
                         selected
                           ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -2023,6 +2023,7 @@ export function UnifiedTaskToolbar({
   }, [menuSearch, filterCategories]);
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
+    const activeValue = getActiveValueLabel(category.key);
     return (
       <MenuSubmenuRoot key={category.key}>
         <MenuSubmenuTrigger
@@ -2037,10 +2038,17 @@ export function UnifiedTaskToolbar({
               {category.label}
             </span>
           </div>
-          <ChevronRight
-            className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-            strokeWidth={1.5}
-          />
+          <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
+            {category.isActive && activeValue && (
+              <span className="truncate max-w-[85px] text-[10.5px] font-medium text-primary">
+                {activeValue}
+              </span>
+            )}
+            <ChevronRight
+              className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+              strokeWidth={1.5}
+            />
+          </div>
         </MenuSubmenuTrigger>
         <MenuPortal>
           <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -2220,13 +2228,18 @@ export function UnifiedTaskToolbar({
 
               {activeFilterCount > 0 && (
                 <>
-                  <MenuSeparator className="h-px bg-border/60 my-1" />
+                  <MenuSeparator className="h-px bg-border/50 my-1" />
                   <MenuItem
                     onClick={handleResetFilters}
-                    className="flex h-7.5 w-full items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
+                    className="flex h-7 w-full items-center justify-between rounded-md px-2 text-[11.5px] font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
                   >
-                    <RotateCcw className="size-3" strokeWidth={1.5} />
-                    <span>Xóa toàn bộ bộ lọc ({activeFilterCount})</span>
+                    <div className="flex items-center gap-1.5">
+                      <RotateCcw className="size-3 text-destructive/80" strokeWidth={1.5} />
+                      <span>Xóa bộ lọc</span>
+                    </div>
+                    <span className="text-[10px] font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
+                      {activeFilterCount}
+                    </span>
                   </MenuItem>
                 </>
               )}
