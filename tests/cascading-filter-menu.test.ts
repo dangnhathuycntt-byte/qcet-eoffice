@@ -61,10 +61,10 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "Submenu MenuPositioner must have side=left and z-50 outline-none to avoid overlapping root menu"
     );
 
-    // 3. Status category icon must be CircleDot (not Check)
+    // 3. Status category icon must be CheckCircle2 (clean check circle)
     assert.ok(
-      source.includes('key: "status",\n      group: "core",\n      label: "Trạng thái",\n      isActive: isStatusActive,\n      icon: CircleDot,'),
-      "Status category must use CircleDot icon instead of misleading Check icon"
+      source.includes('key: "status",\n      group: "core",\n      label: "Trạng thái",\n      isActive: isStatusActive,\n      icon: CheckCircle2,'),
+      "Status category must use CheckCircle2 icon for clean professional UI"
     );
   });
 
@@ -102,7 +102,7 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     assert.ok(source.includes('label: "Nguồn gốc"'), "Must include origin category");
   });
 
-  test("Dates category uses nested sub-dropdowns without no-op stub submenus", async () => {
+  test("Dates flattened into direct 1-tier sub-dropdowns (Hạn chốt and Kỳ tháng) without 3-level nesting", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const source = fs.readFileSync(
@@ -113,9 +113,12 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     // 1. Root menu width compact to 224px (w-56) with clean minimalist design
     assert.ok(source.includes('className="w-56 rounded-xl'), "Root menu width must be w-56 for compact clean design");
 
-    // 2. Dates category splits into distinct wired sub dropdowns
-    assert.ok(source.includes("Hạn chốt nhiệm vụ"), "Must contain sub dropdown for Target date / Hạn chốt");
-    assert.ok(source.includes("Kỳ tháng công tác"), "Must contain sub dropdown for Academic period / Kỳ tháng");
+    // 2. Direct 1-tier sub-dropdowns: Hạn chốt & Kỳ tháng directly in root menu
+    assert.ok(source.includes('label: "Hạn chốt"'), "Must contain direct 1-tier item for Target date / Hạn chốt");
+    assert.ok(source.includes('label: "Kỳ tháng"'), "Must contain direct 1-tier item for Academic period / Kỳ tháng");
+
+    // 3. Nested 3-level parent 'Mốc thời gian' eliminated
+    assert.ok(!source.includes('label: "Mốc thời gian"'), "Must NOT contain redundant 3-level wrapper 'Mốc thời gian'");
 
     // 4. No-op stubs removed (anti-slop clean architecture)
     assert.ok(!source.includes("Ngày giao việc"), "Must NOT contain stub sub dropdown for Ngày giao việc");

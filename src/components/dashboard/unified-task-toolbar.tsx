@@ -9,23 +9,23 @@ import {
   Filter,
   List,
   Kanban,
-  Building2,
+  Building,
   Calendar,
-  AlertTriangle,
   School,
   User,
   Users,
-  Activity,
+  TrendingUp,
+  Tag,
   Flag,
   SlidersHorizontal,
   Loader2,
   Check,
-  CircleDot,
+  CheckCircle2,
   ArrowUpDown,
   ChevronDown,
   ChevronRight,
   RotateCcw,
-  Layers,
+  FileText,
   Clock,
 } from "lucide-react";
 import type { TaskView } from "@/domain/tasks";
@@ -282,7 +282,7 @@ export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
   { id: "table", label: "Bảng", icon: List },
   { id: "kanban", label: "Kanban", icon: Kanban },
   { id: "calendar", label: "Lịch", icon: Calendar },
-  { id: "department", label: "Theo đơn vị", icon: Building2 },
+  { id: "department", label: "Theo đơn vị", icon: Building },
   { id: "executive", label: "Chỉ huy BGH", icon: School },
 ];
 
@@ -744,7 +744,7 @@ export function UnifiedTaskToolbar({
       legacyId: "UNIT_TASKS",
       label: "Đơn vị",
       shortLabel: "Đơn vị",
-      icon: Building2,
+      icon: Building,
       isAuthorized: canViewUnitScope,
     },
     {
@@ -1202,7 +1202,7 @@ export function UnifiedTaskToolbar({
     return undefined;
   }, [selectedCollaborator]);
 
-  // Active value labels for inline expand indicator (Fix #5)
+  // Active value labels for sub dropdown indicators
   const getActiveValueLabel = React.useCallback((categoryKey: string): string | undefined => {
     switch (categoryKey) {
       case "status": return statusLabel !== "Trạng thái" ? statusLabel : undefined;
@@ -1211,11 +1211,8 @@ export function UnifiedTaskToolbar({
       case "dept": return departmentLabel !== "Đơn vị" ? departmentLabel : undefined;
       case "lead": return leadLabel;
       case "collaborator": return collaboratorLabel;
-      case "dates": {
-        if (isDeadlineActive && deadlineLabel !== "Thời hạn") return deadlineLabel;
-        if (isMonthActive && timeLabel) return timeLabel;
-        return undefined;
-      }
+      case "deadline": return isDeadlineActive && deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined;
+      case "month": return isMonthActive && timeLabel ? timeLabel : undefined;
       case "health": return healthLabel;
       case "origin": return originLabel;
       default: return undefined;
@@ -1229,21 +1226,21 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Trạng thái",
       isActive: isStatusActive,
-      icon: CircleDot,
+      icon: CheckCircle2,
     },
     {
       key: "priority",
       group: "core",
       label: "Mức ưu tiên",
       isActive: isPriorityActive,
-      icon: AlertTriangle,
+      icon: Flag,
     },
     {
       key: "category",
       group: "core",
       label: "Danh mục",
       isActive: isCategoryActive,
-      icon: Layers,
+      icon: Tag,
     },
 
     // 2. Nhóm đơn vị & nhân sự
@@ -1252,7 +1249,7 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Đơn vị",
       isActive: isDepartmentActive,
-      icon: Building2,
+      icon: Building,
     },
     {
       key: "lead",
@@ -1269,29 +1266,34 @@ export function UnifiedTaskToolbar({
       icon: Users,
     },
 
-    // 3. Nhóm thời gian & SLA
+    // 3. Nhóm thời gian, tiến độ & nguồn gốc
     {
-      key: "dates",
+      key: "deadline",
       group: "time",
-      label: "Mốc thời gian",
-      isActive: isDeadlineActive || isMonthActive,
+      label: "Hạn chốt",
+      isActive: isDeadlineActive,
       icon: Calendar,
+    },
+    {
+      key: "month",
+      group: "time",
+      label: "Kỳ tháng",
+      isActive: isMonthActive,
+      icon: Clock,
     },
     {
       key: "health",
       group: "time",
       label: "Tiến độ",
       isActive: isHealthActive,
-      icon: Activity,
+      icon: TrendingUp,
     },
-
-    // 4. Nhóm nguồn gốc
     {
       key: "origin",
-      group: "origin",
+      group: "time",
       label: "Nguồn gốc",
       isActive: isOriginActive,
-      icon: Flag,
+      icon: FileText,
     },
   ], [
     isStatusActive,
@@ -1506,158 +1508,6 @@ export function UnifiedTaskToolbar({
           </div>
         );
       }
-      case "dates": {
-        return (
-          <div className="space-y-0.5">
-            {/* Sub-dropdown 1: Hạn chốt nhiệm vụ */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-8 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Calendar className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" strokeWidth={1.5} />
-                  <span className="truncate">Hạn chốt nhiệm vụ</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  {isDeadlineActive && (
-                    <span className="size-2 rounded-full bg-primary shrink-0" />
-                  )}
-                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-                </div>
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="w-52 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-0.5">
-                      {deadlineOptions.map((opt) => {
-                        const selected = effectiveDeadline === opt.value || (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
-                        return (
-                          <MenuItem
-                            key={opt.value}
-                            onClick={() => {
-                              if (onDeadlineChange) onDeadlineChange(opt.value);
-                              else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                              setIsCollapsedFilterOpen(false);
-                            }}
-                            className={cn(
-                              "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                              selected
-                                ? "bg-accent/80 font-medium text-foreground"
-                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="truncate">{opt.label}</span>
-                              {opt.count !== undefined && opt.count > 0 && (
-                                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
-                              )}
-                            </div>
-                            {selected && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
-                          </MenuItem>
-                        );
-                      })}
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
-
-            {/* Sub-dropdown 2: Kỳ tháng công tác */}
-            <MenuSubmenuRoot>
-              <MenuSubmenuTrigger
-                openOnHover
-                delay={60}
-                closeDelay={180}
-                className="group flex h-8 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors hover:bg-accent text-foreground/90 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" strokeWidth={1.5} />
-                  <span className="truncate">Kỳ tháng công tác</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  {isMonthActive && (
-                    <span className="size-2 rounded-full bg-primary shrink-0" />
-                  )}
-                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-                </div>
-              </MenuSubmenuTrigger>
-              <MenuPortal>
-                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
-                  <MenuPopup className="w-56 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                    <div className="space-y-0.5">
-                      <MenuItem
-                        onClick={() => {
-                          handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                          setIsCollapsedFilterOpen(false);
-                        }}
-                        className={cn(
-                          "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                          effectiveTimeFilter.kind === "none"
-                            ? "bg-accent/80 font-medium text-foreground"
-                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                        )}
-                      >
-                        <span>Tất cả thời gian</span>
-                        {effectiveTimeFilter.kind === "none" && <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />}
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => {
-                          handleTimeFilterChange({ kind: "preset", preset: "this_month" });
-                          setIsCollapsedFilterOpen(false);
-                        }}
-                        className={cn(
-                          "flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none",
-                          effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month"
-                            ? "bg-accent/80 font-medium text-foreground"
-                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                        )}
-                      >
-                        <span>Tháng hiện tại</span>
-                        {effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === "this_month" && (
-                          <Check className="size-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
-                        )}
-                      </MenuItem>
-                      <MenuSeparator className="h-px bg-border/60 my-1.5" />
-                      <div className="px-2 py-1">
-                        <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
-                          Năm học {academicYear}
-                        </p>
-                        <div className="grid grid-cols-4 gap-1">
-                          {academicMonths.map((period) => {
-                            const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                            return (
-                              <button
-                                key={period.monthNumber}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => {
-                                  handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                                  setIsCollapsedFilterOpen(false);
-                                }}
-                                className={cn(
-                                  "flex h-6.5 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
-                                  selected
-                                    ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                                )}
-                              >
-                                T{period.monthNumber}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuSubmenuRoot>
-          </div>
-        );
-      }
       case "deadline": {
         return (
           <div className="space-y-0.5">
@@ -1692,6 +1542,7 @@ export function UnifiedTaskToolbar({
           </div>
         );
       }
+      case "month":
       case "time": {
         const timePresets: Array<{ value: TaskTimePreset | "none"; label: string }> = [
           { value: "none", label: "Tất cả thời gian" },
@@ -1865,7 +1716,7 @@ export function UnifiedTaskToolbar({
           id: `status-${opt.value}`,
           categoryLabel: "Trạng thái",
           label: opt.label,
-          icon: CircleDot,
+          icon: CheckCircle2,
           selected,
           onSelect: () => {
             if (onStatusChange) onStatusChange(opt.value);
@@ -1884,7 +1735,7 @@ export function UnifiedTaskToolbar({
           id: `prio-${opt.id}`,
           categoryLabel: "Mức ưu tiên",
           label: opt.label,
-          icon: AlertTriangle,
+          icon: Flag,
           selected,
           onSelect: () => {
             onPriorityChange?.(opt.id);
@@ -1902,7 +1753,7 @@ export function UnifiedTaskToolbar({
           id: `cat-${cat.id}`,
           categoryLabel: "Danh mục",
           label: cat.label,
-          icon: Layers,
+          icon: Tag,
           selected,
           onSelect: () => {
             onCategoryChange?.(cat.id);
@@ -1920,7 +1771,7 @@ export function UnifiedTaskToolbar({
           id: `dept-${dept.code}`,
           categoryLabel: "Đơn vị",
           label: dept.name,
-          icon: Building2,
+          icon: Building,
           selected,
           onSelect: () => {
             onDepartmentChange?.(dept.code);
@@ -1992,7 +1843,7 @@ export function UnifiedTaskToolbar({
           id: `health-${opt.value}`,
           categoryLabel: "Tiến độ",
           label: opt.label,
-          icon: Activity,
+          icon: TrendingUp,
           selected,
           onSelect: () => {
             handleHealthChange(opt.value);
@@ -2029,7 +1880,7 @@ export function UnifiedTaskToolbar({
           id: `origin-${opt.value}`,
           categoryLabel: "Nguồn gốc",
           label: opt.label,
-          icon: Flag,
+          icon: FileText,
           selected,
           onSelect: () => {
             handleOriginChange(opt.value);
@@ -2323,34 +2174,18 @@ export function UnifiedTaskToolbar({
                   )}
                 </div>
               ) : (
-                /* Grouped Categories with headings */
-                <div className="max-h-[min(450px,65vh)] overflow-y-auto space-y-0.5">
-                  {/* Group 1: Thuộc tính cốt lõi */}
-                  <div className="px-2.5 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                    Thuộc tính
-                  </div>
+                /* Grouped Categories — Clean, minimalist Linear/Raycast style */
+                <div className="space-y-0.5">
+                  {/* Nhóm thuộc tính cốt lõi */}
                   {filterCategories.filter((c) => c.group === "core").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/60 my-1.5" />
+                  <MenuSeparator className="h-px bg-border/40 my-1" />
 
-                  {/* Group 2: Đơn vị & Nhân sự */}
-                  <div className="px-2.5 pt-0.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                    Đơn vị & Nhân sự
-                  </div>
+                  {/* Nhóm đơn vị & nhân sự */}
                   {filterCategories.filter((c) => c.group === "team").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/60 my-1.5" />
+                  <MenuSeparator className="h-px bg-border/40 my-1" />
 
-                  {/* Group 3: Thời gian & SLA */}
-                  <div className="px-2.5 pt-0.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                    Thời gian
-                  </div>
+                  {/* Nhóm thời gian, tiến độ & nguồn gốc */}
                   {filterCategories.filter((c) => c.group === "time").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/60 my-1.5" />
-
-                  {/* Group 4: Nguồn gốc */}
-                  <div className="px-2.5 pt-0.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                    Nguồn gốc
-                  </div>
-                  {filterCategories.filter((c) => c.group === "origin").map(renderCategorySubmenu)}
                 </div>
               )}
 
