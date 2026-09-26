@@ -96,12 +96,24 @@ export function getQuarterFromMonth(month: number): number {
 
 /**
  * Trả về chuỗi ngày hệ thống chuẩn (YYYY-MM-DD) theo múi giờ Việt Nam (Asia/Ho_Chi_Minh).
+ * Ưu tiên NEXT_PUBLIC_REFERENCE_DATE nếu có, ngược lại dùng ngày thực tế.
  */
 export function getSystemReferenceDate(): string {
   if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_REFERENCE_DATE) {
     return process.env.NEXT_PUBLIC_REFERENCE_DATE;
   }
-  return "2026-09-09";
+  // Fallback: ngày thực tế theo ICT thay vì hardcoded
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
 }
 
 /**
