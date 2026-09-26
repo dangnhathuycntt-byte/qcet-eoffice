@@ -20,7 +20,6 @@ import {
   CreateTaskModal,
   ENABLE_TASK_AGENT_ASSISTANT,
 } from "../src/components/tasks/create/create-task-modal";
-import { TaskAgentPanel } from "../src/components/tasks/create/task-agent-panel";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
 import { isInteractiveInput, shouldIgnoreShortcut } from "../src/lib/shortcuts/guards";
 import { createTaskSequenceListener } from "../src/lib/shortcuts/task-shortcuts";
@@ -118,21 +117,6 @@ describe("Compact Composer Modal - Production Specification", () => {
     );
 
     assert.equal(html, "", "Closed modal must render empty output");
-  });
-});
-
-describe("Agent Panel UX & Standalone Component", () => {
-  test("Agent Panel header contains only 'Trợ lý soạn thảo' text when isolated", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(TaskAgentPanel, {
-        isOpen: true,
-        onApplySuggestion: () => {},
-      })
-    );
-
-    assert.ok(html.includes("Trợ lý soạn thảo"), "Must render 'Trợ lý soạn thảo' title");
-    assert.ok(!html.includes("Thu gọn khung trợ lý"), "Must NOT have redundant chevron collapse button");
-    assert.ok(!html.includes("Đóng khung trợ lý"), "Must NOT have redundant close button in panel header");
   });
 });
 

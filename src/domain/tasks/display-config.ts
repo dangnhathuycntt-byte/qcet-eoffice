@@ -213,3 +213,27 @@ export function getPriorityDisplay(priority: TaskPriority | string): PriorityDis
     PRIORITY_DISPLAY_CONFIG[2] // NORMAL
   );
 }
+
+/* ── Category Display ────────────────────────────────────────────── */
+
+export interface CategoryDisplayConfig {
+  /** Canonical category ID */
+  id: string;
+  /** Vietnamese label for UI display */
+  label: string;
+}
+
+export const CATEGORY_DISPLAY_CONFIG: ReadonlyArray<CategoryDisplayConfig> = [
+  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số" },
+  { id: "TRUYEN_THONG", label: "Truyền thông & Tuyển sinh" },
+  { id: "CNTT", label: "Hạ tầng & CNTT" },
+  { id: "ATTT", label: "An toàn thông tin" },
+  { id: "THU_VIEN", label: "Thư viện & Học liệu" },
+  { id: "BAO_CAO", label: "Báo cáo & Tổng hợp" },
+  { id: "KHAC", label: "Khác" },
+];
+
+/** Get category options array for select/dropdown UI controls. */
+export function getCategoryOptions(): ReadonlyArray<CategoryDisplayConfig> {
+  return CATEGORY_DISPLAY_CONFIG;
+}

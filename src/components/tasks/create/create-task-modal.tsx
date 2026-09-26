@@ -30,6 +30,7 @@ import {
   type CreateTaskLevel,
 } from "@/lib/adapters/create-task-mapper";
 import { isExecutiveUser } from "@/domain/tasks/create-task-policy";
+import { getCategoryOptions } from "@/domain/tasks/display-config";
 
 /**
  * Feature Flag: Kích hoạt Trợ lý AI khi hệ thống tích hợp backend AI/LLM.
@@ -107,15 +108,7 @@ const PRIORITY_CONFIG: Record<
 
 const PRIORITY_KEYS: CreateTaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 
-const CATEGORY_OPTIONS = [
-  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số" },
-  { id: "TRUYEN_THONG", label: "Truyền thông & Tuyển sinh" },
-  { id: "CNTT", label: "Hạ tầng & CNTT" },
-  { id: "ATTT", label: "An toàn thông tin" },
-  { id: "THU_VIEN", label: "Thư viện & Học liệu" },
-  { id: "BAO_CAO", label: "Báo cáo & Tổng hợp" },
-  { id: "KHAC", label: "Khác" },
-];
+const CATEGORY_OPTIONS = getCategoryOptions();
 
 export function CreateTaskModal({
   isOpen,
@@ -408,6 +401,8 @@ export function CreateTaskModal({
     const errors: { title?: string; lead?: string; dueDate?: string } = {};
     if (!title.trim()) {
       errors.title = "Vui lòng nhập tên nhiệm vụ.";
+    } else if (title.trim().length < 3) {
+      errors.title = "Tên nhiệm vụ phải có ít nhất 3 ký tự";
     }
     if (!leadAssigneeId) {
       errors.lead = "Vui lòng chỉ định Người chủ trì (DRI).";
@@ -744,6 +739,8 @@ export function CreateTaskModal({
               ref={titleInputRef}
               type="text"
               value={title}
+              maxLength={255}
+              aria-required="true"
               aria-invalid={Boolean(fieldErrors.title)}
               aria-describedby={fieldErrors.title ? "create-task-title-error" : undefined}
               onChange={(e) => {
@@ -861,6 +858,7 @@ export function CreateTaskModal({
             <div ref={driTriggerRef} className="relative">
               <Popover.Trigger
                 type="button"
+                aria-required="true"
                 className={cn(
                   "inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-[11px] font-medium border transition-all duration-150 cursor-pointer select-none",
                   fieldErrors.lead

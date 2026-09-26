@@ -40,7 +40,6 @@ const TaskKanbanBoard = dynamic(
   () => import("@/components/tasks/task-kanban-board").then((m) => ({ default: m.TaskKanbanBoard })),
   { ssr: false }
 );
-import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
 import { isSchoolTask } from "@/types/dashboard";
 const TaskDetailView = dynamic(
@@ -76,7 +75,6 @@ const SubmitDeliverableModal = dynamic(
 );
 import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
 import { updateTaskStatus } from "@/lib/tasks/task-actions";
-import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { cn } from "@/lib/utils";
 import {
   filterTasksByTime,
@@ -2013,28 +2011,6 @@ function UnifiedAdaptiveWorkspaceInner({
 
   // Task-creation reconciliation (T73 / Server-Truth-Wins).
   //
-  // `CreateTaskModal` is the single writer for the create command: it maps the
-  // draft through the canonical adapter, POSTs the strict `CreateTaskInput`, and
-  // invokes `onSubmit` only with a server-confirmed DTO. The workspace must not
-  // re-issue the mutation (the former duplicate raw POST of the UI form draft was
-  // rejected by the strict schema) and must never roll a confirmed create back to
-  // a stale pre-create snapshot. Instead it reconciles local state from server
-  // truth through the canonical refresh.
-  const handleCreateTaskSubmit = React.useCallback(
-    async (_formData: CreateTaskFormData, result?: CreateTaskSubmitResult) => {
-      setIsCreateModalOpen(false);
-
-      // Without a server-confirmed DTO there is nothing proven to reconcile;
-      // leave the list untouched rather than fabricating or rolling back state.
-      if (!result?.ok) {
-        return;
-      }
-
-      await handleRefresh();
-    },
-    [handleRefresh]
-  );
-
   // Status mutation handler with optimistic UI and rollback
   const handleStatusChange = React.useCallback(
     async (taskId: string, newStatus: TaskStatus, note?: string) => {
