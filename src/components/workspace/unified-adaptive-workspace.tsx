@@ -2248,6 +2248,9 @@ function UnifiedAdaptiveWorkspaceInner({
         status={currentStatus}
         search={currentSearch}
         overdue={Boolean(currentOverdue)}
+        timeFilter={timeFilter}
+        deadline={internalDeadline}
+        priority={currentPriority}
         totalFilteredCount={displayedTasks.length}
         totalCount={scopedTasks.length}
         onResetFilters={handleResetFilters}
@@ -2264,6 +2267,19 @@ function UnifiedAdaptiveWorkspaceInner({
           workspaceQuery?.setSearchQuery("", { shallow: true, replace: true });
         }}
         onRemoveOverdue={() => handleDeadlineFilterChange("all")}
+        onRemoveTimeFilter={() => {
+          setTimeFilter(NO_TASK_TIME_FILTER);
+          setCurrentMonth("ALL");
+          workspaceQuery?.updateWorkspaceQuery((prev) => ({
+            ...prev,
+            month: "ALL",
+            time: undefined,
+            dateFrom: undefined,
+            dateTo: undefined,
+          }), { shallow: true, replace: true });
+        }}
+        onRemoveDeadline={() => handleDeadlineFilterChange("all")}
+        onRemovePriority={() => handlePriorityChange("ALL")}
       />
 
       {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}

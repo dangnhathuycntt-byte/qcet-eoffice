@@ -3,6 +3,11 @@
 import * as React from "react";
 import { Filter, X, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getTaskTimeFilterLabel,
+  NO_TASK_TIME_FILTER,
+  type TaskTimeFilter,
+} from "@/lib/task-time-filter";
 
 export interface ActiveFilterSummaryParams {
   dept?: string;
@@ -56,6 +61,34 @@ export function getStatusDisplayLabel(status: string): string {
   }
 }
 
+function getDeadlineDisplayLabel(deadline: string): string {
+  switch (deadline) {
+    case "today":
+      return "Đến hạn hôm nay";
+    case "this_week":
+      return "Trong tuần này";
+    case "overdue":
+      return "Quá hạn";
+    case "no_deadline":
+      return "Chưa có thời hạn";
+    default:
+      return deadline;
+  }
+}
+
+function getPriorityDisplayLabel(priority: string): string {
+  switch (priority) {
+    case "URGENT":
+      return "Khẩn cấp";
+    case "HIGH":
+      return "Ưu tiên cao";
+    case "NORMAL":
+      return "Bình thường";
+    default:
+      return priority;
+  }
+}
+
 
 export function getActiveFilterSummary(params: ActiveFilterSummaryParams): string[] {
   const parts: string[] = [];
@@ -90,12 +123,7 @@ export function getActiveFilterSummary(params: ActiveFilterSummaryParams): strin
 
 // ─── Chip styling per filter type ─────────────────────────���──
 const chipStyles = {
-  base: "inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-xs font-medium transition-colors",
-  department: "bg-blue-50 text-blue-700 border border-blue-200/80",
-  status: "bg-amber-50 text-amber-800 border border-amber-200/80",
-  search: "bg-slate-100 text-slate-700 border border-slate-200",
-  overdue: "bg-rose-50 text-rose-700 border border-rose-200/80",
-  workbox: "bg-violet-50 text-violet-700 border border-violet-200/80",
+  base: "inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-xs font-medium transition-colors bg-muted/60 text-foreground/80 border border-border/60",
   dismiss: "size-4 flex items-center justify-center rounded-sm hover:bg-black/8 cursor-pointer transition-colors ml-0.5",
 } as const;
 
@@ -106,6 +134,9 @@ export interface ActiveFilterBreadcrumbProps {
   status?: string;
   search?: string;
   overdue?: boolean;
+  timeFilter?: TaskTimeFilter;
+  deadline?: string;
+  priority?: string;
   totalFilteredCount?: number;
   totalCount?: number;
   onResetFilters?: () => void;
@@ -116,6 +147,9 @@ export interface ActiveFilterBreadcrumbProps {
   onRemoveStatus?: () => void;
   onRemoveSearch?: () => void;
   onRemoveOverdue?: () => void;
+  onRemoveTimeFilter?: () => void;
+  onRemoveDeadline?: () => void;
+  onRemovePriority?: () => void;
   onRemoveFilter?: (filterType: string) => void;
   className?: string;
 }
@@ -127,6 +161,9 @@ export function ActiveFilterBreadcrumb({
   status,
   search,
   overdue,
+  timeFilter,
+  deadline,
+  priority,
   totalFilteredCount,
   totalCount,
   onResetFilters,
@@ -137,6 +174,9 @@ export function ActiveFilterBreadcrumb({
   onRemoveStatus,
   onRemoveSearch,
   onRemoveOverdue,
+  onRemoveTimeFilter,
+  onRemoveDeadline,
+  onRemovePriority,
   onRemoveFilter,
   className = "",
 }: ActiveFilterBreadcrumbProps) {
@@ -145,9 +185,12 @@ export function ActiveFilterBreadcrumb({
   const hasSearch = Boolean(search && search.trim().length > 0);
   const hasStatus = Boolean(status && status !== "ALL" && status !== "all");
   const hasOverdue = Boolean(overdue);
+  const hasTimeFilter = Boolean(timeFilter && timeFilter.kind !== "none");
+  const hasDeadline = Boolean(deadline && deadline !== "all" && deadline !== "ALL");
+  const hasPriority = Boolean(priority && priority !== "ALL");
 
   const hasAnySecondaryFilter =
-    hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue;
+    hasDept || hasWorkbox || hasSearch || hasStatus || hasOverdue || hasTimeFilter || hasDeadline || hasPriority;
 
   if (!hasAnySecondaryFilter) {
     return <div data-slot="active-filter-breadcrumb" className={cn("h-0", className)} />;
@@ -183,7 +226,7 @@ export function ActiveFilterBreadcrumb({
       {/* Chips */}
       <div className="flex flex-wrap items-center gap-1.5">
         {hasStatus && (
-          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.status)}>
+          <span data-slot="filter-chip" className={chipStyles.base}>
             <span>Trạng thái: <strong className="font-semibold">{getStatusDisplayLabel(status!)}</strong></span>
             {(onRemoveStatus || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveStatus, "status")}
@@ -195,7 +238,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasDept && (
-          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.department)}>
+          <span data-slot="filter-chip" className={chipStyles.base}>
             <span>Đơn vị: <strong className="font-semibold">{department}</strong></span>
             {(onRemoveDepartment || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveDepartment, "department")}
@@ -207,7 +250,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasOverdue && (
-          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.overdue)}>
+          <span data-slot="filter-chip" className={chipStyles.base}>
             <span>Quá hạn</span>
             {(onRemoveOverdue || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveOverdue, "overdue")}
@@ -219,7 +262,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasWorkbox && (
-          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.workbox)}>
+          <span data-slot="filter-chip" className={chipStyles.base}>
             <span>Hộp việc: <strong className="font-semibold">{getWorkboxDisplayLabel(workbox!)}</strong></span>
             {(onRemoveWorkbox || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveWorkbox, "workbox")}
@@ -230,8 +273,44 @@ export function ActiveFilterBreadcrumb({
           </span>
         )}
 
+        {hasTimeFilter && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Thời gian: <strong className="font-semibold">{getTaskTimeFilterLabel(timeFilter!)}</strong></span>
+            {(onRemoveTimeFilter || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveTimeFilter, "time")}
+                aria-label="Xóa lọc thời gian" className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasDeadline && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Thời hạn: <strong className="font-semibold">{getDeadlineDisplayLabel(deadline!)}</strong></span>
+            {(onRemoveDeadline || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemoveDeadline, "deadline")}
+                aria-label={`Xóa lọc thời hạn: ${deadline}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
+              </button>
+            )}
+          </span>
+        )}
+
+        {hasPriority && (
+          <span data-slot="filter-chip" className={chipStyles.base}>
+            <span>Ưu tiên: <strong className="font-semibold">{getPriorityDisplayLabel(priority!)}</strong></span>
+            {(onRemovePriority || onRemoveFilter) && (
+              <button type="button" onClick={() => handleRemove(onRemovePriority, "priority")}
+                aria-label={`Xóa lọc ưu tiên: ${priority}`} className={chipStyles.dismiss}>
+                <X className="size-2.5" strokeWidth={2} />
+              </button>
+            )}
+          </span>
+        )}
+
         {hasSearch && (
-          <span data-slot="filter-chip" className={cn(chipStyles.base, chipStyles.search)}>
+          <span data-slot="filter-chip" className={chipStyles.base}>
             <span>Từ khóa: <strong className="font-semibold">&quot;{search!.trim()}&quot;</strong></span>
             {(onRemoveSearch || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveSearch, "search")}

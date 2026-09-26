@@ -19,6 +19,7 @@ import {
   Check,
   ArrowUpDown,
   ChevronDown,
+  ChevronRight,
   RotateCcw,
   Layers,
   Clock,
@@ -288,48 +289,39 @@ export const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "KHAC", label: "Khác" },
 ];
 
-// ─── Collapsible filter section (accordion row) ───────────────
-function FilterSection({
+// ─── Cascading filter — category row (left panel) ─────────────
+function FilterCategoryRow({
   label,
   value,
   isActive,
-  children,
+  isOpen,
+  onClick,
 }: {
   label: string;
   value?: string;
   isActive: boolean;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onClick: () => void;
 }) {
-  const [open, setOpen] = React.useState(false);
   return (
-    <div className="border-t border-border/30 first:border-t-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "flex items-center justify-between w-full px-1 py-2 text-left cursor-pointer transition-colors rounded hover:bg-accent/50",
-          isActive && "text-primary"
-        )}
-      >
-        <span className="text-[11px] font-semibold text-foreground/80">{label}</span>
-        <span className="flex items-center gap-1.5">
-          {value && (
-            <span className={cn(
-              "text-[10px] font-medium px-1.5 py-0.5 rounded",
-              isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
-            )}>
-              {value}
-            </span>
-          )}
-          <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={1.5} />
-        </span>
-      </button>
-      {open && (
-        <div className="pb-2 px-0.5">
-          {children}
-        </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-[11px] text-left cursor-pointer transition-colors select-none",
+        isOpen
+          ? "bg-accent text-foreground"
+          : "text-foreground/70 hover:bg-accent/40 hover:text-foreground"
       )}
-    </div>
+    >
+      <span className={cn("font-medium", isActive && !isOpen && "text-foreground")}>{label}</span>
+      <span className="flex items-center gap-1 shrink-0">
+        {value && (
+          <span className="text-[10px] text-muted-foreground/70 max-w-[80px] truncate">{value}</span>
+        )}
+        <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" strokeWidth={1.5} />
+      </span>
+    </button>
   );
 }
 
@@ -1202,14 +1194,14 @@ export function UnifiedTaskToolbar({
               className={cn(
                 "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium transition-colors cursor-pointer select-none shrink-0",
                 isCollapsedFilterOpen || (isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive))
-                  ? "bg-primary/10 border-primary/30 text-primary font-semibold hover:bg-primary/15 hover:border-primary/40 shadow-2xs"
+                  ? "bg-accent/60 border-border text-foreground font-semibold hover:bg-accent"
                   : "border-border/80 bg-background text-foreground hover:bg-accent"
               )}
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
               <span>Bộ lọc</span>
               {(isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive)) && (
-                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-primary text-primary-foreground">
+                <span className="inline-flex items-center justify-center size-4 rounded-full text-[10px] font-mono tabular-nums font-semibold bg-foreground/70 text-background">
                   {[isMonthActive, isStatusActive, isDeadlineActive, isPriorityActive, showDepartmentFilter && isDepartmentActive].filter(Boolean).length}
                 </span>
               )}
@@ -1225,224 +1217,182 @@ export function UnifiedTaskToolbar({
           align="start"
           side="bottom"
           sideOffset={6}
-          className="w-72 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-50 text-xs text-popover-foreground"
+          className="rounded-xl border border-border/60 bg-popover shadow-dropdown z-50 text-xs text-popover-foreground overflow-hidden"
         >
-          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/60">
-            <span className="font-semibold text-foreground">Bộ lọc</span>
-            <button
-              type="button"
-              onClick={() => setIsCollapsedFilterOpen(false)}
-              aria-label="Đóng bộ lọc"
-              className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
-            >
-              <X className="size-3.5" strokeWidth={1.5} />
-            </button>
-          </div>
+          {(() => {
+            const [activePanel, setActivePanel] = React.useState<string | null>("time");
+            const togglePanel = (key: string) => setActivePanel(p => p === key ? null : key);
 
-          {/* ─── Collapsible filter sections ─── */}
-          <FilterSection
-            label="Thời gian"
-            value={timeLabel !== "Thời gian" ? timeLabel : undefined}
-            isActive={isMonthActive}
-          >
-            <div className="grid grid-cols-3 gap-0.5">
-              {([
-                ["none", "Tất cả"],
-                ["today", "Hôm nay"],
-                ["this_week", "Tuần này"],
-                ["this_month", "Tháng này"],
-                ["overdue", "Quá hạn"],
-              ] as Array<[string, string]>).map(([val, label]) => {
-                const isNone = val === "none";
-                const selected = isNone
-                  ? effectiveTimeFilter.kind === "none"
-                  : effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === val;
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => {
-                      if (isNone) handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                      else handleTimeFilterChange({ kind: "preset", preset: val as any });
-                    }}
-                    className={cn(
-                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
-                      selected
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-foreground/70 hover:bg-accent"
-                    )}
-                  >
-                    {selected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="grid grid-cols-4 gap-0.5 mt-1 pt-1 border-t border-border/30">
-              {academicMonths.map((period) => {
-                const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                return (
-                  <button
-                    key={period.monthNumber}
-                    type="button"
-                    onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
-                    className={cn(
-                      "px-1.5 py-1 rounded text-[11px] text-center transition-all cursor-pointer select-none",
-                      isSelected
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-foreground/70 hover:bg-accent"
-                    )}
-                  >
-                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
-                    T{period.monthNumber}
-                  </button>
-                );
-              })}
-            </div>
-          </FilterSection>
-
-          <FilterSection
-            label="Trạng thái"
-            value={statusLabel !== "Trạng thái" ? statusLabel : undefined}
-            isActive={isStatusActive}
-          >
-            <div className="grid grid-cols-2 gap-0.5">
-              {statusOptions.map((opt) => {
-                const norm = (effectiveStatus || "all").toLowerCase();
-                const isSelected =
-                  opt.value === "all"
-                    ? !effectiveStatus || norm === "all"
-                    : opt.value === "new"
-                    ? norm === "new" || norm === "not_started" || norm === "assigned"
-                    : opt.value === "in_progress"
-                    ? norm === "in_progress"
-                    : opt.value === "waiting_approval" || opt.value === "review"
-                    ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
-                    : opt.value === "completed"
-                    ? norm === "completed"
-                    : norm === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      if (onStatusChange) onStatusChange(opt.value);
-                      else onTabChange?.(opt.value);
-                    }}
-                    className={cn(
-                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
-                      isSelected
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-foreground/70 hover:bg-accent"
-                    )}
-                  >
-                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </FilterSection>
-
-          <FilterSection
-            label="Thời hạn"
-            value={deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined}
-            isActive={isDeadlineActive}
-          >
-            <div className="grid grid-cols-2 gap-0.5">
-              {deadlineOptions.map((opt) => {
-                const isSelected = effectiveDeadline === opt.value || (opt.value === "all" && (effectiveDeadline === "all" || !effectiveDeadline));
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      if (onDeadlineChange) onDeadlineChange(opt.value);
-                      else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                    }}
-                    className={cn(
-                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
-                      isSelected
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-foreground/70 hover:bg-accent"
-                    )}
-                  >
-                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
-                    {opt.label}
-                    {opt.count !== undefined && opt.count > 0 && (
-                      <span className={cn("ml-0.5 font-mono text-[9px]", isSelected ? "text-primary-foreground/70" : "text-muted-foreground")}>({opt.count})</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </FilterSection>
-
-          <FilterSection
-            label="Ưu tiên"
-            value={priorityLabel !== "Ưu tiên" ? priorityLabel : undefined}
-            isActive={isPriorityActive}
-          >
-            <div className="grid grid-cols-2 gap-0.5">
-              {PRIORITY_FILTER_OPTIONS.map((prio) => {
-                const isSelected = (selectedPriority || "ALL") === prio.id;
-                return (
-                  <button
-                    key={prio.id}
-                    type="button"
-                    onClick={() => onPriorityChange?.(prio.id)}
-                    className={cn(
-                      "px-2 py-1 rounded text-[11px] text-left transition-all cursor-pointer select-none",
-                      isSelected
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-foreground/70 hover:bg-accent"
-                    )}
-                  >
-                    {isSelected && <Check className="size-2.5 inline mr-0.5" strokeWidth={2.5} />}
-                    {prio.label}
-                  </button>
-                );
-              })}
-            </div>
-          </FilterSection>
-
-          {/* Đơn vị */}
-          {showDepartmentFilter && (
-            <FilterSection
-              label="Đơn vị"
-              value={selectedDepartment && selectedDepartment !== "ALL" ? (availableDepartments.find(d => d.code === selectedDepartment)?.name || selectedDepartment) : undefined}
-              isActive={Boolean(selectedDepartment && selectedDepartment !== "ALL")}
-            >
-              <select
-                value={selectedDepartment || "ALL"}
-                onChange={(e) => onDepartmentChange?.(e.target.value)}
-                className="w-full h-7 px-2 rounded border border-border/80 bg-background text-[11px] text-foreground focus:outline-hidden cursor-pointer"
-              >
-                <option value="ALL">Tất cả đơn vị</option>
-                {availableDepartments
-                  .filter((d) => d.code !== "ALL")
-                  .map((dept) => (
-                    <option key={dept.code} value={dept.code}>
-                      {dept.name}
-                    </option>
+            // ── option renderer ──────────────────────────────────
+            const renderOptions = (panelKey: string) => {
+              if (panelKey === "time") return (
+                <div className="flex flex-col gap-px">
+                  {([
+                    ["none", "Tất cả"],
+                    ["today", "Hôm nay"],
+                    ["this_week", "Tuần này"],
+                    ["this_month", "Tháng này"],
+                    ["overdue", "Quá hạn"],
+                  ] as Array<[string, string]>).map(([val, label]) => {
+                    const isNone = val === "none";
+                    const selected = isNone
+                      ? effectiveTimeFilter.kind === "none"
+                      : effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === val;
+                    return (
+                      <button key={val} type="button"
+                        onClick={() => { if (isNone) handleTimeFilterChange(NO_TASK_TIME_FILTER); else handleTimeFilterChange({ kind: "preset", preset: val as any }); }}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-[11px] text-left transition-colors cursor-pointer select-none hover:bg-accent/40 active:scale-[0.98]"
+                      >
+                        <span className={cn("flex items-center justify-center size-3.5 rounded-sm border transition-colors shrink-0", selected ? "bg-foreground/75 border-foreground/75 text-background" : "border-border/50 bg-background")}>
+                          {selected && <Check className="size-2" strokeWidth={3} />}
+                        </span>
+                        <span className={cn("text-foreground/70", selected && "text-foreground")}>{label}</span>
+                      </button>
+                    );
+                  })}
+                  <div className="grid grid-cols-4 gap-px mt-1 pt-1 border-t border-border/20">
+                    {academicMonths.map((period) => {
+                      const isSelected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
+                      return (
+                        <button key={period.monthNumber} type="button"
+                          onClick={() => handleTimeFilterChange({ kind: "month", month: period.monthNumber })}
+                          className={cn("px-1 py-1 rounded text-[11px] text-center transition-colors cursor-pointer select-none active:scale-[0.98]",
+                            isSelected ? "text-foreground font-semibold bg-accent" : "text-foreground/40 hover:text-foreground/70 hover:bg-accent/30"
+                          )}
+                        >T{period.monthNumber}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+              if (panelKey === "status") return (
+                <div className="flex flex-col gap-px">
+                  {statusOptions.map((opt) => {
+                    const norm = (effectiveStatus || "all").toLowerCase();
+                    const isSelected =
+                      opt.value === "all" ? !effectiveStatus || norm === "all"
+                      : opt.value === "new" ? norm === "new" || norm === "not_started" || norm === "assigned"
+                      : opt.value === "in_progress" ? norm === "in_progress"
+                      : opt.value === "waiting_approval" || opt.value === "review" ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
+                      : opt.value === "completed" ? norm === "completed"
+                      : norm === opt.value;
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => { if (onStatusChange) onStatusChange(opt.value); else onTabChange?.(opt.value); }}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-[11px] text-left transition-colors cursor-pointer select-none hover:bg-accent/40 active:scale-[0.98]"
+                      >
+                        <span className={cn("flex items-center justify-center size-3.5 rounded-sm border transition-colors shrink-0", isSelected ? "bg-foreground/75 border-foreground/75 text-background" : "border-border/50 bg-background")}>
+                          {isSelected && <Check className="size-2" strokeWidth={3} />}
+                        </span>
+                        <span className={cn("text-foreground/70", isSelected && "text-foreground")}>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+              if (panelKey === "deadline") return (
+                <div className="flex flex-col gap-px">
+                  {deadlineOptions.map((opt) => {
+                    const isSelected = effectiveDeadline === opt.value || (opt.value === "all" && (effectiveDeadline === "all" || !effectiveDeadline));
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => { if (onDeadlineChange) onDeadlineChange(opt.value); else onTabChange?.(opt.value === "all" ? "all" : opt.value); }}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-[11px] text-left transition-colors cursor-pointer select-none hover:bg-accent/40 active:scale-[0.98]"
+                      >
+                        <span className={cn("flex items-center justify-center size-3.5 rounded-sm border transition-colors shrink-0", isSelected ? "bg-foreground/75 border-foreground/75 text-background" : "border-border/50 bg-background")}>
+                          {isSelected && <Check className="size-2" strokeWidth={3} />}
+                        </span>
+                        <span className={cn("text-foreground/70", isSelected && "text-foreground")}>
+                          {opt.label}
+                          {opt.count !== undefined && opt.count > 0 && (
+                            <span className="ml-1 font-mono text-[9px] text-muted-foreground">({opt.count})</span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+              if (panelKey === "priority") return (
+                <div className="flex flex-col gap-px">
+                  {PRIORITY_FILTER_OPTIONS.map((prio) => {
+                    const isSelected = (selectedPriority || "ALL") === prio.id;
+                    return (
+                      <button key={prio.id} type="button"
+                        onClick={() => onPriorityChange?.(prio.id)}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-[11px] text-left transition-colors cursor-pointer select-none hover:bg-accent/40 active:scale-[0.98]"
+                      >
+                        <span className={cn("flex items-center justify-center size-3.5 rounded-sm border transition-colors shrink-0", isSelected ? "bg-foreground/75 border-foreground/75 text-background" : "border-border/50 bg-background")}>
+                          {isSelected && <Check className="size-2" strokeWidth={3} />}
+                        </span>
+                        <span className={cn("text-foreground/70", isSelected && "text-foreground")}>{prio.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+              if (panelKey === "dept") return (
+                <select
+                  value={selectedDepartment || "ALL"}
+                  onChange={(e) => onDepartmentChange?.(e.target.value)}
+                  className="w-full h-7 px-2 rounded border border-border/60 bg-background text-[11px] text-foreground focus:outline-hidden cursor-pointer"
+                >
+                  <option value="ALL">Tất cả đơn vị</option>
+                  {availableDepartments.filter((d) => d.code !== "ALL").map((dept) => (
+                    <option key={dept.code} value={dept.code}>{dept.name}</option>
                   ))}
-              </select>
-            </FilterSection>
-          )}
+                </select>
+              );
+              return null;
+            };
 
-          {/* Reset */}
-          {(isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive)) && (
-            <div className="pt-1.5 mt-1 border-t border-border/40">
-              <button
-                type="button"
-                onClick={() => { handleResetFilters(); setIsCollapsedFilterOpen(false); }}
-                className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-[11px] font-medium text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
-              >
-                <RotateCcw className="size-3" strokeWidth={1.5} />
-                Xóa tất cả bộ lọc
-              </button>
-            </div>
-          )}
+            const categories = [
+              { key: "time",     label: "Thời gian", value: timeLabel !== "Thời gian" ? timeLabel : undefined,         isActive: isMonthActive },
+              { key: "status",   label: "Trạng thái", value: statusLabel !== "Trạng thái" ? statusLabel : undefined,   isActive: isStatusActive },
+              { key: "deadline", label: "Thời hạn",  value: deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined,  isActive: isDeadlineActive },
+              { key: "priority", label: "Ưu tiên",   value: priorityLabel !== "Ưu tiên" ? priorityLabel : undefined,   isActive: isPriorityActive },
+              ...(showDepartmentFilter ? [{ key: "dept", label: "Đơn vị",
+                value: selectedDepartment && selectedDepartment !== "ALL" ? (availableDepartments.find(d => d.code === selectedDepartment)?.name || selectedDepartment) : undefined,
+                isActive: Boolean(selectedDepartment && selectedDepartment !== "ALL") }] : []),
+            ];
+
+            const hasAnyActive = isMonthActive || isStatusActive || isDeadlineActive || isPriorityActive || (showDepartmentFilter && isDepartmentActive);
+
+            return (
+              <div className="flex" style={{ minWidth: 240 }}>
+                {/* Left — category list */}
+                <div className="flex flex-col py-1.5 px-1.5 gap-px" style={{ width: 148 }}>
+                  {categories.map(cat => (
+                    <FilterCategoryRow
+                      key={cat.key}
+                      label={cat.label}
+                      value={cat.value}
+                      isActive={cat.isActive}
+                      isOpen={activePanel === cat.key}
+                      onClick={() => togglePanel(cat.key)}
+                    />
+                  ))}
+                  {hasAnyActive && (
+                    <button
+                      type="button"
+                      onClick={() => { handleResetFilters(); setIsCollapsedFilterOpen(false); }}
+                      className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-[11px] font-medium text-muted-foreground hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors mt-1"
+                    >
+                      <RotateCcw className="size-3" strokeWidth={1.5} />
+                      Xóa bộ lọc
+                    </button>
+                  )}
+                </div>
+
+                {/* Right — options panel */}
+                {activePanel && (
+                  <div className="border-l border-border/20 py-1.5 px-1.5 flex-1 min-w-0" style={{ minWidth: 152 }}>
+                    {renderOptions(activePanel)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </PopoverContent>
       </PopoverRoot>
 

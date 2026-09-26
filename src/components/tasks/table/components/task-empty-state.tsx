@@ -5,7 +5,7 @@ import * as m from "motion/react-m";
 import { useReducedMotion } from "motion/react";
 import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motionTransition } from "@/lib/motion/tokens";
+import { motionTransition, motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 
 export interface TaskEmptyStateProps {
@@ -26,6 +26,79 @@ export interface TaskEmptyStateProps {
   canAddTask?: boolean;
   className?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Filter Empty Illustration — SVG filter+X, used when filters yield 0 results
+// ---------------------------------------------------------------------------
+
+function FilterEmptyIllustration({
+  reducedMotion,
+}: {
+  reducedMotion: boolean;
+}) {
+  const instant = { duration: 0 };
+
+  return (
+    <div className="flex items-center justify-center pb-5 pt-2">
+      <m.div
+        className="relative"
+        initial={reducedMotion ? false : { opacity: 0, y: 6, scale: 0.92 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={reducedMotion ? instant : motionSpring.gentle}
+      >
+        <svg
+          width="120"
+          height="100"
+          viewBox="0 0 120 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-muted-foreground"
+          aria-hidden="true"
+        >
+          {/* Ground shadow */}
+          <ellipse cx="60" cy="90" rx="40" ry="6" fill="currentColor" opacity="0.06" />
+
+          {/* Paper sheet */}
+          <g transform="translate(28, 12) rotate(-2, 32, 36)">
+            <rect x="3" y="3" width="58" height="72" rx="5" fill="currentColor" opacity="0.06" />
+            <rect x="0" y="0" width="58" height="72" rx="5" fill="white" stroke="currentColor" strokeWidth="1" strokeOpacity="0.15" />
+            <rect x="8" y="10" width="30" height="3" rx="1.5" fill="currentColor" opacity="0.1" />
+            <rect x="8" y="18" width="42" height="3" rx="1.5" fill="currentColor" opacity="0.07" />
+            <rect x="8" y="26" width="36" height="3" rx="1.5" fill="currentColor" opacity="0.07" />
+            <rect x="8" y="34" width="24" height="3" rx="1.5" fill="currentColor" opacity="0.05" />
+            <rect x="8" y="46" width="38" height="2.5" rx="1.25" fill="currentColor" opacity="0.04" />
+            <rect x="8" y="53" width="28" height="2.5" rx="1.25" fill="currentColor" opacity="0.03" />
+            <rect x="8" y="60" width="32" height="2.5" rx="1.25" fill="currentColor" opacity="0.03" />
+          </g>
+
+          {/* Filter funnel */}
+          <g transform="translate(66, 44)">
+            <path d="M6 4 L34 4 L23 18 L23 30 L17 33 L17 18 Z" fill="currentColor" opacity="0.05" />
+            <path d="M4 2 L32 2 L21 16 L21 28 L15 31 L15 16 Z" fill="white" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.25" strokeLinejoin="round" />
+            <path d="M8 4 L28 4" stroke="currentColor" strokeWidth="0.8" strokeOpacity="0.08" strokeLinecap="round" />
+          </g>
+        </svg>
+
+        {/* Animated X badge */}
+        <m.div
+          className="absolute top-1.5 right-0 flex items-center justify-center size-7 rounded-full bg-background border border-border/80 shadow-card"
+          initial={reducedMotion ? false : { opacity: 0, scale: 0, rotate: -120 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={reducedMotion ? instant : { ...motionSpring.snappy, delay: 0.18 }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-muted-foreground/60" aria-hidden="true">
+            <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </m.div>
+      </m.div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ghost Table Preview — skeleton rows with hover-reveal mock data,
+// used when there are genuinely no tasks yet (no filters active)
+// ---------------------------------------------------------------------------
 
 type MockTask = {
   title: string;
@@ -111,16 +184,6 @@ function MockStatusBadge({ status }: { status: MockTask["status"] }) {
   );
 }
 
-interface GhostTaskRowProps {
-  data: MockTask;
-  widths: { title: string; desc: string };
-  isHovered: boolean;
-  anyHovered: boolean;
-  reducedMotion: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}
-
 function GhostTaskRow({
   data,
   widths,
@@ -129,7 +192,15 @@ function GhostTaskRow({
   reducedMotion,
   onMouseEnter,
   onMouseLeave,
-}: GhostTaskRowProps) {
+}: {
+  data: MockTask;
+  widths: { title: string; desc: string };
+  isHovered: boolean;
+  anyHovered: boolean;
+  reducedMotion: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
   const isDimmed = anyHovered && !isHovered;
 
   return (
@@ -145,90 +216,50 @@ function GhostTaskRow({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* Layer 1: Skeleton (Default visible, fades out on hover) */}
+      {/* Layer 1: Skeleton */}
       <m.div
         className="absolute inset-0 flex items-center gap-4 px-3 sm:px-4"
         animate={isHovered ? { opacity: 0 } : { opacity: 1 }}
         transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
       >
-        {/* Task Title + Subtitle */}
         <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-4">
-          <div
-            className="h-2.5 sm:h-3 rounded bg-muted animate-pulse"
-            style={{ width: widths.title }}
-          />
-          <div
-            className="h-2 sm:h-2.5 rounded bg-muted/70 animate-pulse hidden xs:block"
-            style={{ width: widths.desc }}
-          />
+          <div className="h-2.5 sm:h-3 rounded bg-muted animate-pulse" style={{ width: widths.title }} />
+          <div className="h-2 sm:h-2.5 rounded bg-muted/70 animate-pulse hidden xs:block" style={{ width: widths.desc }} />
         </div>
-
-        {/* Lead Assignee */}
         <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
           <div className="size-5 rounded-full bg-muted animate-pulse shrink-0" />
           <div className="h-2.5 rounded bg-muted w-20 sm:w-24 animate-pulse" />
         </div>
-
-        {/* Coordination (Subtasks) */}
         <div className="hidden sm:block w-16 shrink-0 text-center">
           <div className="h-2.5 rounded bg-muted/50 w-3 mx-auto animate-pulse" />
         </div>
-
-        {/* Due Date */}
         <div className="hidden md:block w-28 shrink-0">
           <div className="h-2.5 rounded bg-muted w-18 animate-pulse" />
         </div>
-
-        {/* Status */}
         <div className="flex items-center gap-1.5 w-24 sm:w-28 shrink-0">
           <div className="size-1.5 rounded-full bg-muted animate-pulse shrink-0" />
           <div className="h-2.5 rounded bg-muted w-14 sm:w-16 animate-pulse" />
         </div>
       </m.div>
 
-      {/* Layer 2: Real Mock Data (Reveals on hover with subtle blur fade) */}
+      {/* Layer 2: Mock data (hover reveal) */}
       <m.div
         className="absolute inset-0 flex items-center gap-4 px-3 sm:px-4 pointer-events-none"
-        animate={
-          isHovered
-            ? { opacity: 0.95, filter: "blur(0px)" }
-            : { opacity: 0, filter: "blur(3px)" }
-        }
+        animate={isHovered ? { opacity: 0.95, filter: "blur(0px)" } : { opacity: 0, filter: "blur(3px)" }}
         transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
       >
-        {/* Task Title + Subtitle */}
         <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-4">
-          <span className="text-[13px] font-medium text-foreground truncate">
-            {data.title}
-          </span>
-          <span className="text-[11.5px] text-muted-foreground/75 truncate hidden xs:block">
-            {data.summary}
-          </span>
+          <span className="text-[13px] font-medium text-foreground truncate">{data.title}</span>
+          <span className="text-[11.5px] text-muted-foreground/75 truncate hidden xs:block">{data.summary}</span>
         </div>
-
-        {/* Lead Assignee */}
         <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white shadow-2xs">
-            {data.initial}
-          </span>
-          <span className="text-xs font-medium text-foreground truncate">
-            {data.assignee}
-          </span>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white shadow-2xs">{data.initial}</span>
+          <span className="text-xs font-medium text-foreground truncate">{data.assignee}</span>
         </div>
-
-        {/* Coordination */}
-        <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">
-          —
-        </div>
-
-        {/* Due Date */}
+        <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">—</div>
         <div className="hidden md:block w-28 shrink-0">
-          <span className="font-mono text-xs text-muted-foreground">
-            {data.date}
-          </span>
+          <span className="font-mono text-xs text-muted-foreground">{data.date}</span>
         </div>
-
-        {/* Status */}
         <div className="w-24 sm:w-28 shrink-0">
           <MockStatusBadge status={data.status} />
         </div>
@@ -244,10 +275,8 @@ function GhostTablePreview({ reducedMotion }: { reducedMotion: boolean }) {
     <div
       className="relative w-full overflow-hidden select-none"
       style={{
-        maskImage:
-          "linear-gradient(to bottom, black 40%, transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to bottom, black 40%, transparent 100%)",
+        maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
       }}
       onMouseLeave={() => setHoveredIndex(null)}
     >
@@ -269,6 +298,10 @@ function GhostTablePreview({ reducedMotion }: { reducedMotion: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
 export const TaskEmptyState = React.memo(function TaskEmptyState({
   title,
   description,
@@ -288,7 +321,6 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
 }: TaskEmptyStateProps) {
   const reducedMotion = useReducedMotion() ?? false;
 
-  // Determine contextual heading and description
   let displayTitle = title;
   let displayDescription = description;
   const isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
@@ -354,10 +386,14 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
         className
       )}
     >
-      {/* Ghost Table Skeleton Preview (Seamless, No Outer Box, Bottom Fade Mask) */}
-      <div className="w-full max-w-3xl mb-8">
-        <GhostTablePreview reducedMotion={reducedMotion} />
-      </div>
+      {/* Illustration: filter SVG when filters active, ghost table when no tasks at all */}
+      {hasFilterActive ? (
+        <FilterEmptyIllustration reducedMotion={reducedMotion} />
+      ) : (
+        <div className="w-full max-w-3xl mb-8">
+          <GhostTablePreview reducedMotion={reducedMotion} />
+        </div>
+      )}
 
       {/* Title */}
       <h3 className="text-base font-semibold text-foreground tracking-tight max-w-md">
