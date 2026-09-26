@@ -29,6 +29,7 @@ import {
   submitCreateTask,
   type CreateTaskLevel,
 } from "@/lib/adapters/create-task-mapper";
+import { isExecutiveUser } from "@/domain/tasks/create-task-policy";
 
 /**
  * Feature Flag: Kích hoạt Trợ lý AI khi hệ thống tích hợp backend AI/LLM.
@@ -133,21 +134,21 @@ export function CreateTaskModal({
   const { user } = useAuth();
   const { departments: allDepartments } = useDepartmentList({ includePersonnel: true });
 
-  const role = (user?.role || "").toUpperCase();
-  const isExecutive = role === "ADMIN" || role === "BAN_GIAM_HIEU" || role === "BGH";
+  const isExecutive = isExecutiveUser(user);
 
   const userDeptCode = React.useMemo(() => {
     return toCanonicalUnitCode(user?.departmentCode || user?.department || "") || "";
   }, [user]);
 
   // Non-executive users (chuyên viên, trưởng phòng/khoa) only see & create within their own assigned unit
+  // Fail-closed: when userDeptCode is falsy for non-exec users, return empty list
   const departments = React.useMemo(() => {
     if (isExecutive) return allDepartments;
-    if (!userDeptCode) return allDepartments;
+    if (!userDeptCode) return [];
     const filtered = allDepartments.filter(
       (d) => d.code === userDeptCode || d.name === user?.department
     );
-    return filtered.length > 0 ? filtered : allDepartments;
+    return filtered.length > 0 ? filtered : [];
   }, [isExecutive, allDepartments, userDeptCode, user?.department]);
 
   const defaultDepartmentCode =

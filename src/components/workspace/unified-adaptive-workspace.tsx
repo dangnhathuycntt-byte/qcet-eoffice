@@ -41,6 +41,7 @@ const TaskKanbanBoard = dynamic(
   { ssr: false }
 );
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
 import { isSchoolTask } from "@/types/dashboard";
 const TaskDetailView = dynamic(
   () => import("@/components/tasks/detail/task-detail-view").then((m) => ({ default: m.TaskDetailView })),
@@ -800,6 +801,8 @@ function UnifiedAdaptiveWorkspaceInner({
   }, [forcedRole, user]);
 
   const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
+
+  const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
 
   const currentAcademicMonth = React.useMemo(() => getCurrentAcademicPeriod().month, []);
 
@@ -2194,7 +2197,7 @@ function UnifiedAdaptiveWorkspaceInner({
           }}
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
-          canCreateTask={true}
+          canCreateTask={createPolicy.canCreate}
           createButtonLabel="Giao việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}

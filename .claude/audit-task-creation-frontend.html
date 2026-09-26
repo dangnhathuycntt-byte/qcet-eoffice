@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Task Creation</title>
+<style>
+:root {
+  --bg: #fafafa;
+  --bg-card: #ffffff;
+  --bg-code: #f4f4f5;
+  --text: #18181b;
+  --text-muted: #71717a;
+  --border: #e4e4e7;
+  --accent: #2563eb;
+  --critical: #dc2626;
+  --high: #ea580c;
+  --medium: #ca8a04;
+  --low: #6b7280;
+  --positive: #16a34a;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.03);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09090b;
+    --bg-card: #18181b;
+    --bg-code: #27272a;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --border: #3f3f46;
+    --accent: #60a5fa;
+    --critical: #ef4444;
+    --high: #f97316;
+    --medium: #eab308;
+    --low: #9ca3af;
+    --positive: #22c55e;
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #09090b;
+  --bg-card: #18181b;
+  --bg-code: #27272a;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --border: #3f3f46;
+  --accent: #60a5fa;
+  --critical: #ef4444;
+  --high: #f97316;
+  --medium: #eab308;
+  --low: #9ca3af;
+  --positive: #22c55e;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 4px; }
+.subtitle { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 32px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 32px; }
+.stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+.stat-num { font-size: 2rem; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+h2 { font-size: 1.25rem; font-weight: 700; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1rem; font-weight: 600; margin: 24px 0 8px; }
+.finding {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  border-left: 4px solid var(--low);
+}
+.finding.critical { border-left-color: var(--critical); }
+.finding.high { border-left-color: var(--high); }
+.finding.medium { border-left-color: var(--medium); }
+.finding.low { border-left-color: var(--low); }
+.finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: white;
+}
+.badge.critical { background: var(--critical); }
+.badge.high { background: var(--high); }
+.badge.medium { background: var(--medium); }
+.badge.low { background: var(--low); color: white; }
+.badge.positive { background: var(--positive); }
+.finding-title { font-weight: 600; font-size: 0.9375rem; }
+.finding-meta { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 12px; }
+.finding-meta code { background: var(--bg-code); padding: 1px 5px; border-radius: 4px; font-size: 0.75rem; }
+.finding p, .finding ul { font-size: 0.875rem; margin-bottom: 8px; }
+.finding ul { padding-left: 20px; }
+pre {
+  background: var(--bg-code);
+  border-radius: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+}
+code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+.suggestion {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.8125rem;
+  margin-top: 8px;
+}
+.suggestion strong { color: var(--accent); }
+.roadmap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+.roadmap h3 { margin-top: 0; }
+.roadmap ol, .roadmap ul { padding-left: 20px; font-size: 0.875rem; }
+.roadmap li { margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; margin: 12px 0; }
+th, td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+th { background: var(--bg-code); font-weight: 600; }
+.positive-note {
+  background: color-mix(in srgb, var(--positive) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--positive) 20%, transparent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  margin: 8px 0;
+}
+.toc { margin: 24px 0; padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; }
+.toc a { color: var(--accent); text-decoration: none; font-size: 0.875rem; display: block; padding: 3px 0; }
+.toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔍 Kiểm toán: Luồng Tạo Nhiệm Vụ</h1>
+<p class="subtitle">Task Creation Flow — Frontend Audit Report · 25/09/2026 · 69 agents · 6 dimensions · Adversarial verify</p>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num" style="color:var(--high)">2</div><div class="stat-label">High</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--medium)">18</div><div class="stat-label">Medium</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--low)">14</div><div class="stat-label">Low</div></div>
+  <div class="stat"><div class="stat-num" style="color:var(--positive)">2</div><div class="stat-label">Positive</div></div>
+  <div class="stat"><div class="stat-num">62→43</div><div class="stat-label">Raw → Verified</div></div>
+</div>
+
+<nav class="toc">
+  <strong>Mục lục</strong>
+  <a href="#high">2. Phát hiện nghiêm trọng (High) — 2 findings</a>
+  <a href="#medium">3. Phát hiện cần cải thiện (Medium) — 18 findings</a>
+  <a href="#low">4. Ghi chú nhỏ (Low) — 14 findings</a>
+  <a href="#roadmap">5. Tóm tắt và khuyến nghị</a>
+</nav>
+
+<!-- ========== HIGH ========== -->
+<h2 id="high">2. Phát hiện nghiêm trọng (High)</h2>
+
+<div class="finding high">
+  <div class="finding-header">
+    <span class="badge high">HIGH</span>
+    <span class="finding-title">Hai CreateTaskModal độc lập với logic trùng lặp lớn</span>
+  </div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code> (1097 dòng) &amp; <code>dashboard/create-task-modal.tsx</code> (2034 d��ng) · Kiến trúc</div>
+  <p>Tồn tại hai component <code>CreateTaskModal</code> hoàn toàn độc lập, không chia sẻ bất kỳ logic nào. Cả hai đều tự implement: form state, validation, priority/category dropdowns, tra cứu nhân sự, kiểm tra vai trò executive, render modal bằng <code>createPortal</code>, dirty-state tracking, phím tắt Ctrl+Enter. Ước tính <strong>400-500 dòng logic trùng lặp</strong>.</p>
+  <p><strong>Quan trọng nhất</strong>: Kiểm tra executive role <strong>không nhất quán</strong>:</p>
+<pre><code>// tasks/create (line 136) — chỉ 3 roles:
+const isExecutive = role === "ADMIN" || role === "BAN_GIAM_HIEU" || role === "BGH";
+
+// dashboard (line 79-87) — 7 roles:
+const EXECUTIVE_ROLES = ["BAN_GIAM_HIEU", "HIEU_TRUONG", "PHO_HIEU_TRUONG",
+  "BGH", "BGH_HT", "BGH_PHT_DT", "BGH_PHT_CSVC"];</code></pre>
+  <p>→ HIEU_TRUONG, PHO_HIEU_TRUONG bị bỏ sót ở tasks/create. Tasks/create cũng thiếu idempotency protection → risk duplicate task creation khi network failure.</p>
+  <div class="suggestion"><strong>💡 Đề xuất:</strong> Extract <code>useCreateTaskForm</code> hook chứa form state, validation, submission orchestration. Dùng <code>isExecutiveUser</code> canonical từ một file dùng chung. Consolidate constants (PRIORITY_OPTIONS, CATEGORY_OPTIONS) vào domain layer.</div>
+</div>
+
+<div class="finding high">
+  <div class="finding-header">
+    <span class="badge high">HIGH</span>
+    <span class="finding-title">Cả hai modal dùng createPortal thay vì @base-ui/react/dialog</span>
+  </div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx:1094</code> &amp; <code>dashboard/create-task-modal.tsx:2028</code> · UI/Accessibility</div>
+  <p>Vi phạm trực tiếp quy tắc <code>dependency-first.md</code>: <em>"KHÔNG dùng createPortal + manual scroll lock + manual ESC handler"</em>. Hệ quả:</p>
+  <ul>
+    <li><strong>Thiếu focus trapping</strong> — Tab key thoát ra ngoài modal (vi phạm WCAG 2.4.3)</li>
+    <li><strong>Thiếu scroll lock</strong> (tasks modal) — background cu���n được khi modal mở</li>
+    <li><strong>Thiếu focus return</strong> — focus không quay về trigger button khi đóng modal</li>
+    <li><strong>Thiếu exit animation</strong> — modal biến mất tức thì, không có transition</li>
+  </ul>
+<pre><code>// tasks/create line 4:
+import { createPortal } from "react-dom";
+
+// line 1094:
+return createPortal(modalElement, document.body);
+
+// Manual ESC handler (line 556-591):
+if (e.key === "Escape") { ... handleRequestClose(); }</code></pre>
+  <div class="suggestion"><strong>💡 Đề xuất:</strong> Migrate sang <code>@base-ui/react/dialog</code> + <code>AnimatePresence</code> + <code>dialogVariants</code> từ <code>src/lib/motion/variants.ts</code>. Tự động giải quyết focus trap, scroll lock, ESC dismiss, focus restoration.</div>
+</div>
+
+<!-- ========== MEDIUM ========== -->
+<h2 id="medium">3. Phát hiện cần cải thiện (Medium)</h2>
+
+<h3>3.1 Validation & Data Integrity</h3>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Client chấp nhận title 1-2 ký tự, server reject (min 3)</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx:414</code> vs <code>contracts/tasks.ts:172</code></div>
+  <p>Client validation chỉ check empty (<code>!title.trim()</code>), server enforce <code>min(3)</code>. User nhập "ab" → qua client → bị Zod reject với message tiếng Anh raw.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm <code>title.trim().length &lt; 3</code> check với message "Tên nhiệm vụ phải có ít nhất 3 ký tự".</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks/create thiếu validation lead assignee và due date</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx:413-428</code></div>
+  <p>Chỉ check <code>!title.trim()</code>. Không check: lead assignee (server bắt buộc cho certain levels), dueDate (server bắt buộc), hay startDate &gt; dueDate. Dashboard modal có validation đầy đủ hơn nhiều qua <code>validateTaskForm()</code>.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Reuse hoặc extract validation logic từ dashboard's <code>validateTaskForm</code>.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">DRI name unresolvable → silent field omission</span></div>
+  <div class="finding-meta"><code>lib/adapters/create-task-mapper.ts:85</code></div>
+  <p>Khi <code>personnelIndex.get(dri)</code> trả về <code>undefined</code> (người dùng nhập tên không match), <code>assigneeId</code> bị bỏ qua thay vì báo lỗi. Task được tạo mà không có người phụ trách.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Guard trước submit: nếu DRI name không resolve được → hiện lỗi "Không tìm thấy nhân sự" thay vì silent omission.</div>
+</div>
+
+<h3>3.2 State Management & Race Conditions</h3>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Sự kiện qcet:open-create-task có thể mở hai modal đồng thời</span></div>
+  <div class="finding-meta"><code>hooks/use-modal-state.ts</code>, <code>dashboard/dashboard-context.tsx</code>, <code>navigation.tsx</code></div>
+  <p>Cả <code>useModalState</code> và <code>DashboardProvider</code> đều lắng nghe <code>qcet:open-create-task</code> với state riêng. Nếu user ở route có cả hai listener active → hai modal mở đồng thời, chồng lấn nhau.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Tập trung xử lý event vào <strong>một owner</strong> ở layout level, dispatch dựa trên route hiện tại.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks/create modal thiếu double-submit guard</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx:473</code></div>
+  <p>Không có <code>isSubmitting</code> flag. User click nhanh hai lần → hai API call, không có idempotency key → tạo hai task.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm <code>isSubmitting</code> state, disable button và hiển thị spinner. Thêm idempotency key generation như dashboard modal.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">URL param ?create=true không sync với modal state</span></div>
+  <div class="finding-meta"><code>layout/app-sidebar.tsx</code></div>
+  <p>Sidebar navigate tới <code>/tasks?create=true</code>, nhưng tasks page không đọc param này để auto-open modal. URL param bị bỏ quên, refresh không mở lại modal.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Hoặc đọc param <code>create=true</code> để auto-open modal, hoặc bỏ param và chỉ dùng custom event.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Optimistic update không rollback khi server reject</span></div>
+  <div class="finding-meta"><code>hooks/use-task-mutations.ts</code></div>
+  <p>Khi tạo task, optimistic entry được thêm vào state ngay. Nếu server reject (403, 422...), entry giả vẫn nằm trong list cho đến khi user refresh.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm rollback logic: nếu <code>submitCreateTask</code> throw, remove optimistic entry bằng <code>tempId</code> đã generate.</div>
+</div>
+
+<h3>3.3 UX & Accessibility</h3>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks modal không có focus trap → Tab thoát ra ngoài</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code></div>
+  <p>Dùng <code>role="dialog" aria-modal="true"</code> nhưng không có focus trap implementation. Tab key di chuyển focus ra ngoài modal vào background content. Vi phạm WCAG 2.4.3.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Migrate sang <code>@base-ui/react/dialog</code> (giải quyết cùng finding #2.2).</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks modal thiếu exit animation</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code></div>
+  <p>Modal biến mất tức thì khi đóng (conditional render, không có <code>AnimatePresence</code>). Dashboard modal có <code>AnimatePresence</code> nhưng chỉ animate backdrop, không animate content panel.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Wrap cả hai modal content trong <code>AnimatePresence</code> + <code>m.div</code> dùng <code>dialogVariants</code> từ <code>variants.ts</code>.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks modal: validation errors không auto-focus field lỗi</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx:413-428</code></div>
+  <p>Khi validation fail, errors được set vào state nhưng focus không di chuyển đến field đầu tiên có lỗi. User phải tự scroll tìm lỗi, đặc biệt khó trên mobile.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm <code>focusFirstError()</code> sau setErrors — tìm element có <code>aria-invalid="true"</code> đầu tiên và focus vào.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Required fields thiếu aria-required="true"</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code></div>
+  <p>Các input bắt buộc (title, lead assignee, due date) không có <code>aria-required="true"</code>. Screen reader không announce field là required.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm <code>aria-required="true"</code> cho tất cả required inputs. Tốt hơn: migrate sang <code>@base-ui/react/field</code>.</div>
+</div>
+
+<h3>3.4 Architecture & Code Quality</h3>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Dashboard modal quá lớn — 2034 dòng trong một file</span></div>
+  <div class="finding-meta"><code>dashboard/create-task-modal.tsx</code></div>
+  <p>Vượt xa ngưỡng 500 dòng. Chứa: 10+ helper functions, 15+ type definitions, policy resolution, identity resolution, form validation, submission orchestration, 3 sub-dialogs, lẫn với JSX layout.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Extract ra: <code>create-task-policy.ts</code> (policy + identity), <code>create-task-form.ts</code> (types + validation), <code>useCreateTaskForm</code> hook. File còn ~800 dòng JSX.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">CATEGORY_OPTIONS trùng lặp ở 6 nơi</span></div>
+  <div class="finding-meta">Nhiều file</div>
+  <p>Cùng một danh sách 7 category nhưng define lại ở: tasks/create modal, dashboard modal, task filters, task constants, v.v. Shape khác nhau (có nơi dùng <code>id</code>, có nơi dùng <code>value</code>), label lệch nhẹ.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Consolidate vào <code>src/domain/tasks/display-config.ts</code> (đã có PRIORITY_DISPLAY_CONFIG). Export một array canonical, derive shape cụ thể từ đó.</div>
+</div>
+
+<h3>3.5 UI Polish & Motion</h3>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks modal raw &lt;button&gt; thay vì &lt;Button&gt; component</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code></div>
+  <p>7+ raw <code>&lt;button&gt;</code> elements với inline Tailwind classes. Thiếu nhất quán về hover/focus-visible/pressed states so với Button component có sẵn trong project.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thay bằng <code>&lt;Button variant="..." size="..."&gt;</code> cho tất cả interactive elements.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Confirm dialog dùng raw div thay vì AlertDialog primitive</span></div>
+  <div class="finding-meta"><code>dashboard/create-task-modal.tsx:1977</code></div>
+  <p>Cả hai modal render confirm dialog bằng <code>&lt;div role="alertdialog"&gt;</code> thủ công thay vì <code>@base-ui/react/alert-dialog</code>.</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Migrate sang <code>AlertDialog.Root</code> / <code>AlertDialog.Popup</code> + <code>m.div</code> cho animation.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Tasks modal không import motion system</span></div>
+  <div class="finding-meta"><code>tasks/create/create-task-modal.tsx</code></div>
+  <p>Không import <code>motion/react</code> hay <code>motion/react-m</code>. Tất cả animation dùng Tailwind CSS classes. Không nhất quán với motion architecture project (<code>MotionConfig</code>, tokens, variants).</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thêm entrance/exit animation qua <code>dialogVariants</code> và wrap trong <code>AnimatePresence</code>.</div>
+</div>
+
+<div class="finding medium">
+  <div class="finding-header"><span class="badge medium">MEDIUM</span><span class="finding-title">Shadow dùng shadow-2xl thay vì layered shadow tokens</span></div>
+  <div class="finding-meta">Cả hai modal</div>
+  <p>Dùng Tailwind <code>shadow-2xl</code> — một box-shadow đậm duy nhất. Vi phạm Rule 6 (ui-polish.md): "Không dùng một shadow đậm duy nhất để mô phỏng elevation".</p>
+  <div class="suggestion"><strong>💡 Sửa:</strong> Thay bằng <code>--shadow-card</code> hoặc <code>--shadow-dropdown</code> tokens đã có sẵn.</div>
+</div>
+
+<!-- ========== LOW ========== -->
+<h2 id="low">4. Ghi chú nhỏ (Low)</h2>
+
+<table>
+  <thead><tr><th>ID</th><th>Mô tả</th></tr></thead>
+  <tbody>
+    <tr><td><code>no-title-max-length</code></td><td>Không enforce 255 ký tự title ở client. Thêm <code>maxLength={255}</code>.</td></tr>
+    <tr><td><code>duedate-past-no-warning</code></td><td>Không warning khi chọn due date trong quá khứ.</td></tr>
+    <tr><td><code>summary-no-label</code></td><td>Input mô tả ngắn (dashboard) thiếu <code>&lt;label&gt;</code> / <code>aria-label</code>.</td></tr>
+    <tr><td><code>idempotency-reset</code></td><td>Dashboard reset idempotency key khi reopen — risk duplicate sau "unknown" outcome.</td></tr>
+    <tr><td><code>optimistic-fallback</code></td><td>Optimistic subtask gắn vào <code>updatedTasks[0]</code> khi không có parentTaskId — tùy ý.</td></tr>
+    <tr><td><code>missing-initialTitle</code></td><td><code>useModalState</code> khai báo <code>initialTitle</code> nhưng bỏ sót trong return → pre-fill luôn <code>undefined</code>.</td></tr>
+    <tr><td><code>onsubmit-any-type</code></td><td><code>onSubmit</code> typed <code>(data: any, result?: any)</code> — bypass TypeScript checking.</td></tr>
+    <tr><td><code>as-any-abuse</code></td><td>10 <code>as any</code> casts trong workspace-mutations. 5 cast không cần thiết.</td></tr>
+    <tr><td><code>dead-task-form-constants</code></td><td><code>task-form-constants.ts</code> exported nhưng không file nào import.</td></tr>
+    <tr><td><code>dead-task-agent-panel</code></td><td><code>TaskAgentPanel</code> (342 dòng) — feature flag <code>false</code>, không file nào import.</td></tr>
+    <tr><td><code>duplicated-optimistic</code></td><td>Optimistic create logic trùng giữa <code>use-task-mutations</code> và <code>task-workspace-mutations</code>.</td></tr>
+    <tr><td><code>no-focus-visible-buttons</code></td><td>6/7 raw button thiếu explicit focus-visible styling.</td></tr>
+    <tr><td><code>no-submit-spinner</code></td><td>Dashboard submit chỉ đổi text, không có spinner. <code>Loader2</code> imported nhưng không dùng.</td></tr>
+    <tr><td><code>no-expand-animation</code></td><td>"Tuỳ chọn nâng cao" bật/tắt tức thì, không có height animation (vi phạm Rule 8).</td></tr>
+  </tbody>
+</table>
+
+<div class="positive-note">
+  <strong>✅ Phát hiện tích cực:</strong>
+  <ul>
+    <li><strong>Error response an toàn:</strong> <code>toApiErrorResponse</code> sanitize đúng — không leak stack trace, DB query, internal path.</li>
+    <li><strong>Draft storage an toàn:</strong> <code>sessionStorage</code> chỉ lưu form field values, không lưu token hay sensitive ID.</li>
+  </ul>
+</div>
+
+<!-- ========== ROADMAP ========== -->
+<h2 id="roadmap">5. Tóm tắt và khuyến nghị</h2>
+
+<div class="roadmap">
+  <h3>🔴 Ưu tiên 1 — Hợp nhất &amp; Migrate Dialog (giải quyết ~70% findings)</h3>
+  <ol>
+    <li><strong>Extract <code>useCreateTaskForm</code> hook</strong> — form state, validation (<code>validateTaskForm</code> từ dashboard + min(3) title), dirty-state, draft persistence, submission orchestration + idempotency. Import <code>isExecutiveUser</code> canonical.</li>
+    <li><strong>Extract shared constants</strong> — derive priority options từ <code>PRIORITY_DISPLAY_CONFIG</code>, consolidate CATEGORY_OPTIONS vào domain layer. Xoá <code>task-form-constants.ts</code>.</li>
+    <li><strong>Extract business logic</strong> — <code>resolveCreateTaskPolicy</code>, <code>resolveCreateTaskIdentity</code> → <code>src/domain/tasks/create-task-policy.ts</code>. Types → <code>create-task-form.ts</code>.</li>
+    <li><strong>Migrate cả hai modal sang <code>@base-ui/react/dialog</code></strong> — tự động giải quyết focus trap, scroll lock, ESC dismiss, focus return. Wrap trong <code>AnimatePresence</code> + <code>dialogVariants</code>.</li>
+    <li><strong>Thay raw <code>&lt;button&gt;</code> bằng <code>&lt;Button&gt;</code></strong> cho tất cả interactive elements.</li>
+  </ol>
+</div>
+
+<div class="roadmap">
+  <h3>🟠 Ưu tiên 2 — Fix Event Coordination</h3>
+  <ol>
+    <li>Tập trung <code>qcet:open-create-task</code> vào <strong>một owner</strong> ở layout level.</li>
+    <li>Fix hoặc xoá <code>?create=true</code> URL param logic.</li>
+    <li>Quyết định modal nào mở dựa trên current route.</li>
+  </ol>
+</div>
+
+<div class="roadmap">
+  <h3>🟡 Ưu tiên 3 — Validation Alignment</h3>
+  <ol>
+    <li>Thêm <code>title.trim().length &lt; 3</code> check + message tiếng Việt.</li>
+    <li>Thêm <code>maxLength={255}</code> vào title input.</li>
+    <li>Guard cho unresolvable DRI names (không silent omission).</li>
+    <li>Thêm <code>aria-required="true"</code> cho required fields.</li>
+    <li>Implement <code>focusFirstError</code> ở tasks modal.</li>
+  </ol>
+</div>
+
+<div class="roadmap">
+  <h3>🔵 Ưu tiên 4 — Code Cleanup</h3>
+  <ol>
+    <li>Xoá dead code: <code>task-form-constants.ts</code>, <code>TaskAgentPanel</code>.</li>
+    <li>Fix <code>useModalState</code> return — thêm <code>initialTitle</code>.</li>
+    <li>Fix <code>as any</code> casts — extend type hoặc remove.</li>
+    <li>Replace <code>(data: any)</code> typing bằng proper interface.</li>
+  </ol>
+</div>
+
+</div>
+</body>
+</html>

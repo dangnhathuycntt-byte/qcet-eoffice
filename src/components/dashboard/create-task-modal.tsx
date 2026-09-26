@@ -30,7 +30,7 @@ import {
   Flag,
 } from "lucide-react";
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
-import type { UserRole, AuthUser } from "@/types/auth";
+import type { AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
@@ -44,6 +44,26 @@ import {
   submitCreateTask,
   type CreateTaskSubmitResult,
 } from "@/lib/adapters/create-task-mapper";
+import {
+  type TaskLevel,
+  type CreateTaskMode,
+  type CreateTaskPolicy,
+  getCanonicalDbRole,
+  isExecutiveUser,
+  getAllowedTaskLevelsForRole,
+  getDefaultTaskLevelForRole,
+  resolveCreateTaskPolicy,
+} from "@/domain/tasks/create-task-policy";
+
+export {
+  type TaskLevel,
+  type CreateTaskMode,
+  type CreateTaskPolicy,
+  getAllowedTaskLevelsForRole,
+  getDefaultTaskLevelForRole,
+  resolveCreateTaskPolicy,
+  isExecutiveUser,
+};
 
 export const PRIORITY_OPTIONS: {
   value: TaskPriorityInput;
@@ -55,37 +75,6 @@ export const PRIORITY_OPTIONS: {
   { value: "HIGH", label: "Cao", iconColor: "text-amber-500" },
   { value: "URGENT", label: "Khẩn cấp", iconColor: "text-rose-500" },
 ];
-
-export type TaskLevel = "TRUONG" | "DON_VI" | "STAFF";
-
-export function getAllowedTaskLevelsForRole(role: UserRole): TaskLevel[] {
-  if (role === "ADMIN") return ["TRUONG", "DON_VI"];
-  if (role === "MANAGER") return ["DON_VI"];
-  if (role === "STAFF") return [];
-  return [];
-}
-
-export function getDefaultTaskLevelForRole(role: UserRole): TaskLevel {
-  if (role === "ADMIN") return "TRUONG";
-  return "DON_VI";
-}
-
-function getCanonicalDbRole(user: AuthUser): string {
-  return String(user.dbRole || user.role || "").toUpperCase();
-}
-
-function isExecutiveUser(user?: AuthUser | null): boolean {
-  const role = user ? getCanonicalDbRole(user) : "";
-  return [
-    "BAN_GIAM_HIEU",
-    "HIEU_TRUONG",
-    "PHO_HIEU_TRUONG",
-    "BGH",
-    "BGH_HT",
-    "BGH_PHT_DT",
-    "BGH_PHT_CSVC",
-  ].includes(role);
-}
 
 export interface CreateTaskFormData {
   level: TaskLevel;
@@ -223,66 +212,6 @@ export function canRoleSelectAssignee(
     allowed: result.allowed,
     message: result.reason,
     isBypassWarning: result.isBypassWarning,
-  };
-}
-
-/**
- * Canonical create-task policy (T06 / D5 / §9).
- *
- * One product policy that decides whether the create form may be opened and in
- * which mode:
- * - INSTITUTIONAL: the actor holds institutional levels (ADMIN -> cấp Trường /
- *   Đơn vị, MANAGER -> cấp Đơn vị) and may delegate work to personnel.
- * - PERSONAL: an actor without an institutional level creates an INDIVIDUAL
- *   (cấp cá nhân) task for themselves. This mirrors server truth: the server
- *   `canCreateTask` (server/policies/task-policy.ts) permits any authenticated
- *   user to create a personal task, and `canUserCreateTask`
- *   (server/tasks/task-policy.ts) allows INDIVIDUAL scope for non-privileged
- *   users.
- *
- * It is derived entirely from the existing role/policy helpers and must remain
- * the single gate for the create form (no ad-hoc role branching in the JSX).
- */
-export type CreateTaskMode = "INSTITUTIONAL" | "PERSONAL";
-
-export interface CreateTaskPolicy {
-  canCreate: boolean;
-  mode: CreateTaskMode;
-  /** Institutional levels the actor may author (empty for personal-only actors). */
-  institutionalLevels: TaskLevel[];
-  defaultLevel: TaskLevel;
-}
-
-export function resolveCreateTaskPolicy(user?: AuthUser | null): CreateTaskPolicy {
-  const institutionalLevels = user
-    ? isExecutiveUser(user)
-      ? (["TRUONG", "DON_VI"] as TaskLevel[])
-      : ["TRUONG_PHONG", "MANAGER"].includes(getCanonicalDbRole(user))
-        ? (["DON_VI"] as TaskLevel[])
-        : []
-    : [];
-  if (!user) {
-    return {
-      canCreate: false,
-      mode: "INSTITUTIONAL",
-      institutionalLevels,
-      defaultLevel: "DON_VI",
-    };
-  }
-
-  const hasInstitutionalScope = institutionalLevels.length > 0;
-  const canSelfAssign = Boolean(user.departmentCode && user.departmentCode !== "QCET") &&
-    (!hasInstitutionalScope || isExecutiveUser(user));
-
-  return {
-    canCreate: hasInstitutionalScope || canSelfAssign,
-    mode: hasInstitutionalScope ? "INSTITUTIONAL" : "PERSONAL",
-    institutionalLevels,
-    defaultLevel: hasInstitutionalScope
-      ? isExecutiveUser(user)
-        ? "TRUONG"
-        : "DON_VI"
-      : "STAFF",
   };
 }
 

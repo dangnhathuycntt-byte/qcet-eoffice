@@ -21,7 +21,7 @@ import {
   useDashboardActions,
   useDashboardNav,
 } from "@/components/dashboard/dashboard-context";
-import { resolveCreateTaskPolicy } from "@/components/dashboard/create-task-modal";
+import { resolveCreateTaskPolicy } from "@/domain/tasks/create-task-policy";
 import { isTaskPastDue, getSystemReferenceDate, getSystemReferenceDateStr } from "@/lib/unified-task-hub";
 import { isTaskWaitingApproval } from "@/lib/workspace-metrics-aggregator";
 import { cn } from "@/lib/utils";

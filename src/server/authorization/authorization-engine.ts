@@ -770,7 +770,7 @@ export function authorize(
       code === 'CHUYEN_VIEN' ||
       code === 'GIANG_VIEN';
 
-    if (isSpecialistStaff || (!isClerkPosition(code) && !isArchivistPosition(code))) {
+    if (isSpecialistStaff) {
       if (
         action === 'task.read' ||
         action === 'task.create' ||
