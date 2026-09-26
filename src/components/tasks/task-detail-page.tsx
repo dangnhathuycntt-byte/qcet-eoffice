@@ -836,27 +836,15 @@ export function TaskDetailPage({
         onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
       />
 
-      {/* Tabs: Tổng quan + Hoạt động — pill style, bên phải */}
+      {/* Tabs: Tổng quan + Hoạt động — pill style */}
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as DetailTab)}
         className="shrink-0"
       >
-        <TabsList
-          aria-label="Các phân mục chi tiết nhiệm vụ"
-          className="h-auto w-auto gap-1 rounded-none border-0 bg-card p-2 px-4 sm:px-6 justify-end"
-        >
-          <TabsTrigger
-            value="overview"
-            className="h-auto flex-none rounded-[18px] border border-border bg-card px-3 py-1 text-xs font-medium shadow-none data-active:border-transparent data-active:bg-muted"
-          >
-            Tổng quan
-          </TabsTrigger>
-
-          <TabsTrigger
-            value="activity"
-            className="h-auto flex-none rounded-[18px] border border-border bg-card px-3 py-1 text-xs font-medium shadow-none data-active:border-transparent data-active:bg-muted"
-          >
+        <TabsList aria-label="Các phân mục chi tiết nhiệm vụ">
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="activity">
             Hoạt động
             {feedActivityEvents.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">

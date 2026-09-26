@@ -53,8 +53,38 @@
   }
 }
 
-/* ── Tab bar — pill style via Tabs component ──────────────────── */
-.workspace [data-slot='tabs'] { flex-shrink: 0; }
+/* ── Tab bar — pill style via CSS module (single source of truth) ─ */
+.workspace [data-slot='tabs'] {
+  flex-shrink: 0;
+}
+.workspace [data-slot='tabs-list'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  width: auto;
+  padding: 8px;
+  padding-inline: 18px;
+  border: 0;
+  border-radius: 0;
+  background: var(--card);
+  justify-content: flex-end;
+}
+.workspace [data-slot='tabs-trigger'] {
+  flex: none;
+  height: auto;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--card);
+  box-shadow: none;
+}
+.workspace [data-slot='tabs-trigger'][data-active] {
+  background: var(--muted);
+  border-color: transparent;
+}
 
 /* ── Header nav ───────────────────────────────────────────────── */
 .workspace :is(button, a):focus-visible {
