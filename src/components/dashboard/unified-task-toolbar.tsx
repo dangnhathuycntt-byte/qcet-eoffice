@@ -1382,13 +1382,6 @@ export function UnifiedTaskToolbar({
         </PopoverContent>
       </PopoverRoot>
 
-      {/* 3. Filter count summary — inline (chips moved to ActiveFilterBreadcrumb row below) */}
-      {isAnyFilterActive && (
-        <span className="text-[11px] text-muted-foreground font-mono tabular-nums select-none whitespace-nowrap shrink-0">
-          ({effectiveFilteredTasksCount}/{effectiveTotalTasksCount})
-        </span>
-      )}
-
       {/* 4. Hiển thị */}
       {onViewModeChange && (
         <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
