@@ -110,8 +110,8 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "utf-8"
     );
 
-    // 1. Root menu width w-64 for comfortable Linear-style spacing
-    assert.ok(source.includes('className="w-64 rounded-xl'), "Root menu width must be w-64 for comfortable spacing");
+    // 1. Root menu width w-56 for compact Linear-style spacing
+    assert.ok(source.includes('className="w-56 rounded-xl'), "Root menu width must be w-56 for compact spacing");
 
     // 2. Direct 1-tier sub-dropdowns: Hạn chốt & Kỳ tháng directly in root menu
     assert.ok(source.includes('label: "Hạn chốt"'), "Must contain direct 1-tier item for Target date / Hạn chốt");

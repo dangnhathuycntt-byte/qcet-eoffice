@@ -270,7 +270,7 @@ export function ActiveFilterBreadcrumb({
     hasCategory || hasHealth || hasLead || hasOrigin || hasCollaborator;
 
   if (!hasAnySecondaryFilter) {
-    return <div data-slot="active-filter-breadcrumb" className={cn("h-0", className)} />;
+    return null;
   }
 
   const handleClearAll = () => {
@@ -303,7 +303,7 @@ export function ActiveFilterBreadcrumb({
       {/* Chips */}
       <div className="flex flex-wrap items-center gap-1.5">
         {hasStatus && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-status" className={chipStyles.base}>
             <span>Trạng thái: <strong className="font-semibold">{getStatusDisplayLabel(status!)}</strong></span>
             {(onRemoveStatus || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveStatus, "status")}
@@ -315,7 +315,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasDept && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-department" className={chipStyles.base}>
             <span>Đơn vị: <strong className="font-semibold">{department}</strong></span>
             {(onRemoveDepartment || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveDepartment, "department")}
@@ -327,7 +327,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasOverdue && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-overdue" className={chipStyles.base}>
             <span>Quá hạn</span>
             {(onRemoveOverdue || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveOverdue, "overdue")}
@@ -339,7 +339,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasWorkbox && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-workbox" className={chipStyles.base}>
             <span>Hộp việc: <strong className="font-semibold">{getWorkboxDisplayLabel(workbox!)}</strong></span>
             {(onRemoveWorkbox || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveWorkbox, "workbox")}
@@ -351,7 +351,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasTimeFilter && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-time" className={chipStyles.base}>
             <span>Thời gian: <strong className="font-semibold">{getTaskTimeFilterLabel(timeFilter!)}</strong></span>
             {(onRemoveTimeFilter || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveTimeFilter, "time")}
@@ -363,7 +363,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasDeadline && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-deadline" className={chipStyles.base}>
             <span>Thời hạn: <strong className="font-semibold">{getDeadlineDisplayLabel(deadline!)}</strong></span>
             {(onRemoveDeadline || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveDeadline, "deadline")}
@@ -375,7 +375,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasPriority && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-priority" className={chipStyles.base}>
             <span>Ưu tiên: <strong className="font-semibold">{getPriorityDisplayLabel(priority!)}</strong></span>
             {(onRemovePriority || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemovePriority, "priority")}
@@ -387,7 +387,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasCategory && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-category" className={chipStyles.base}>
             <span>Danh mục: <strong className="font-semibold">{getCategoryDisplayLabel(category!)}</strong></span>
             {(onRemoveCategory || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveCategory, "category")}
@@ -399,7 +399,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasHealth && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-health" className={chipStyles.base}>
             <span>Tiến độ: <strong className="font-semibold">{getHealthDisplayLabel(health!)}</strong></span>
             {(onRemoveHealth || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveHealth, "health")}
@@ -411,7 +411,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasLead && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-lead" className={chipStyles.base}>
             <span>Chủ trì: <strong className="font-semibold">{getLeadDisplayLabel(lead!)}</strong></span>
             {(onRemoveLead || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveLead, "lead")}
@@ -423,7 +423,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasOrigin && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-origin" className={chipStyles.base}>
             <span>Nguồn gốc: <strong className="font-semibold">{getOriginDisplayLabel(origin!)}</strong></span>
             {(onRemoveOrigin || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveOrigin, "origin")}
@@ -435,7 +435,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasCollaborator && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-collaborator" className={chipStyles.base}>
             <span>Phối hợp: <strong className="font-semibold">{getCollaboratorDisplayLabel(collaborator!)}</strong></span>
             {(onRemoveCollaborator || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveCollaborator, "collaborator")}
@@ -447,7 +447,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {hasSearch && (
-          <span data-slot="filter-chip" className={chipStyles.base}>
+          <span data-slot="filter-chip-search" className={chipStyles.base}>
             <span>Từ khóa: <strong className="font-semibold">&quot;{search!.trim()}&quot;</strong></span>
             {(onRemoveSearch || onRemoveFilter) && (
               <button type="button" onClick={() => handleRemove(onRemoveSearch, "search")}

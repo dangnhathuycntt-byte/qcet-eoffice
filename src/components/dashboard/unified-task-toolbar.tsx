@@ -1969,23 +1969,22 @@ export function UnifiedTaskToolbar({
   }, [menuSearch, filterCategories]);
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
-    const activeValue = getActiveValueLabel(category.key);
     return (
       <MenuSubmenuRoot key={category.key}>
         <MenuSubmenuTrigger
           openOnHover
           delay={60}
           closeDelay={180}
-          className="group flex h-9 w-full items-center justify-between rounded-lg px-3 text-sm transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+          className="group flex h-7.5 w-full items-center justify-between rounded-md px-2.5 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <category.icon className="size-[18px] shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <category.icon className="size-4 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
             <span className={cn("truncate", category.isActive ? "font-medium text-foreground" : "font-normal")}>
               {category.label}
             </span>
           </div>
           <ChevronRight
-            className="size-3.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors"
+            className="size-3 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors"
             strokeWidth={1.5}
           />
         </MenuSubmenuTrigger>
@@ -2087,11 +2086,11 @@ export function UnifiedTaskToolbar({
           <MenuPositioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-50 outline-none">
             <MenuPopup
               data-slot="task-filter-menu"
-              className="w-64 rounded-xl border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+              className="w-56 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {/* Header: Add Filter... [F] */}
-              <div className="flex items-center gap-2.5 px-3 py-2 border-b border-border/40 mb-1">
-                <Search className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
+              <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/40 mb-1">
+                <Search className="size-3.5 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
                 <input
                   ref={menuSearchInputRef}
                   type="text"
@@ -2100,7 +2099,7 @@ export function UnifiedTaskToolbar({
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder="Thêm bộ lọc..."
                   aria-label="Tìm hoặc thêm bộ lọc"
-                  className="h-6 w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+                  className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
                 />
                 {menuSearch ? (
                   <button
@@ -2129,7 +2128,7 @@ export function UnifiedTaskToolbar({
                         <MenuItem
                           key={match.id}
                           onClick={match.onSelect}
-                          className="flex h-7.5 w-full items-center justify-between rounded-lg px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
+                          className="flex h-7.5 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <match.icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
@@ -2163,9 +2162,9 @@ export function UnifiedTaskToolbar({
                 /* Grouped Categories — Clean, minimalist Linear/Raycast style */
                 <div className="space-y-0.5">
                   {filterCategories.filter((c) => c.group === "core").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/30 my-1 mx-3" />
+                  <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
                   {filterCategories.filter((c) => c.group === "team").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/30 my-1 mx-3" />
+                  <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
                   {filterCategories.filter((c) => c.group === "time").map(renderCategorySubmenu)}
                 </div>
               )}
