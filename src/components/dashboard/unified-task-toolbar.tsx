@@ -27,6 +27,10 @@ import {
   RotateCcw,
   FileText,
   Clock,
+  Circle,
+  AlertCircle,
+  Layers,
+  Activity,
 } from "lucide-react";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
@@ -1313,7 +1317,7 @@ export function UnifiedTaskToolbar({
       case "status": {
         const norm = (effectiveStatus || "all").toLowerCase();
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {statusOptions.map((opt) => {
               const selected = opt.value === "all"
                 ? !effectiveStatus || norm === "all"
@@ -1335,12 +1339,25 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  {opt.value === "all" ? (
+                    <Layers className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "new" ? (
+                    <Circle className="size-2.5 text-sky-500 fill-sky-500/20 shrink-0 ml-0.5" strokeWidth={1.5} />
+                  ) : opt.value === "in_progress" ? (
+                    <Clock className="size-3.5 text-amber-500 shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "waiting_approval" || opt.value === "review" ? (
+                    <AlertCircle className="size-3.5 text-orange-500 shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "completed" ? (
+                    <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" strokeWidth={1.5} />
+                  ) : (
+                    <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                  )}
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1350,7 +1367,7 @@ export function UnifiedTaskToolbar({
       }
       case "priority": {
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {PRIORITY_FILTER_OPTIONS.map((opt) => {
               const selected = (selectedPriority || "ALL").split(",").includes(opt.id);
               return (
@@ -1361,12 +1378,25 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  <Flag
+                    className={cn(
+                      "size-3.5 shrink-0",
+                      opt.id === "URGENT"
+                        ? "text-rose-500 fill-rose-500/20"
+                        : opt.id === "HIGH"
+                        ? "text-amber-500 fill-amber-500/20"
+                        : opt.id === "NORMAL"
+                        ? "text-blue-500"
+                        : "text-muted-foreground/50"
+                    )}
+                    strokeWidth={1.5}
+                  />
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1376,7 +1406,7 @@ export function UnifiedTaskToolbar({
       }
       case "category": {
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {CATEGORY_FILTER_OPTIONS.map((cat) => {
               const selected = (selectedCategory || "ALL") === cat.id;
               return (
@@ -1387,12 +1417,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  <Tag className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                   <span>{cat.label}</span>
                 </MenuItem>
               );
@@ -1406,7 +1437,7 @@ export function UnifiedTaskToolbar({
           ...availableDepartments.filter((d) => d.code !== "ALL"),
         ];
         return (
-          <div className="max-h-[min(320px,45vh)] overflow-y-auto space-y-0.5 pr-0.5">
+          <div className="max-h-[min(320px,45vh)] overflow-y-auto space-y-px pr-0.5">
             {depts.map((dept) => {
               const selected = (selectedDepartment || "ALL") === dept.code;
               return (
@@ -1417,12 +1448,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                   <span>{dept.code === "ALL" ? "Tất cả đơn vị" : dept.name}</span>
                 </MenuItem>
               );
@@ -1439,7 +1471,7 @@ export function UnifiedTaskToolbar({
           { value: "unassigned", label: "Chưa phân công người chủ trì" },
         ];
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {leadOptions.map((opt) => {
               const selected = selectedLead === opt.value || (opt.value === "all" && !selectedLead && activeTab !== "my") || (opt.value === "my" && activeTab === "my");
               return (
@@ -1458,12 +1490,23 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  {opt.value === "my" ? (
+                    <User className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "bgh" ? (
+                    <School className="size-3.5 text-purple-500 shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "assigned" ? (
+                    <User className="size-3.5 text-muted-foreground/80 shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "unassigned" ? (
+                    <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                  ) : (
+                    <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                  )}
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1478,7 +1521,7 @@ export function UnifiedTaskToolbar({
           { value: "single", label: "Đơn vị tự thực hiện (không phối hợp)" },
         ];
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {collabOptions.map((opt) => {
               const selected = selectedCollaborator === opt.value || (opt.value === "all" && !selectedCollaborator);
               return (
@@ -1489,12 +1532,19 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  {opt.value === "has_collab" ? (
+                    <Users className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+                  ) : opt.value === "single" ? (
+                    <User className="size-3.5 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                  ) : (
+                    <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
+                  )}
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1504,7 +1554,7 @@ export function UnifiedTaskToolbar({
       }
       case "deadline": {
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {deadlineOptions.map((opt) => {
               const selected = effectiveDeadline === opt.value ||
                 (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
@@ -1517,13 +1567,14 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center justify-between rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                     <span>{opt.label}</span>
                     {opt.count !== undefined && opt.count > 0 && (
                       <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
@@ -1545,7 +1596,7 @@ export function UnifiedTaskToolbar({
           { value: "overdue", label: "Quá hạn" },
         ];
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {timePresets.map((opt) => {
               const selected = opt.value === "none"
                 ? effectiveTimeFilter.kind === "none"
@@ -1558,17 +1609,18 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  <Clock className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                   <span>{opt.label}</span>
                 </MenuItem>
               );
             })}
-            <MenuSeparator className="h-px bg-border/60 my-1.5" />
+            <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
             <div className="px-2 py-1">
               <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
                 Năm học {academicYear}
@@ -1586,7 +1638,7 @@ export function UnifiedTaskToolbar({
                         setIsCollapsedFilterOpen(false);
                       }}
                       className={cn(
-                        "flex h-6.5 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
+                        "flex h-6 items-center justify-center rounded-md text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
                         selected
                           ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -1610,7 +1662,7 @@ export function UnifiedTaskToolbar({
           { value: "completed", label: "Đã hoàn thành 100%" },
         ];
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {healthOptions.map((opt) => {
               const selected = selectedHealth === opt.value || (opt.value === "all" && !selectedHealth);
               return (
@@ -1634,12 +1686,23 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  {opt.value === "on_track" ? (
+                    <span className="size-2 rounded-full bg-emerald-500 shrink-0 ml-0.5" />
+                  ) : opt.value === "at_risk" ? (
+                    <span className="size-2 rounded-full bg-amber-500 shrink-0 ml-0.5" />
+                  ) : opt.value === "overdue" ? (
+                    <span className="size-2 rounded-full bg-rose-500 shrink-0 ml-0.5" />
+                  ) : opt.value === "completed" ? (
+                    <span className="size-2 rounded-full bg-blue-500 shrink-0 ml-0.5" />
+                  ) : (
+                    <Activity className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                  )}
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1656,7 +1719,7 @@ export function UnifiedTaskToolbar({
           { value: "DON_VI", label: "Đơn vị đề xuất" },
         ];
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {originOptions.map((opt) => {
               const selected = selectedOrigin === opt.value || (opt.value === "all" && !selectedOrigin);
               return (
@@ -1667,12 +1730,13 @@ export function UnifiedTaskToolbar({
                     setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7.5 w-full items-center rounded-md px-2.5 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
+                  <FileText className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                   <span>{opt.label}</span>
                 </MenuItem>
               );
@@ -1965,10 +2029,10 @@ export function UnifiedTaskToolbar({
           openOnHover
           delay={60}
           closeDelay={180}
-          className="group flex h-7.5 w-full items-center justify-between rounded-md px-2.5 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+          className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <category.icon className="size-4 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+          <div className="flex items-center gap-2 min-w-0">
+            <category.icon className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
             <span className={cn("truncate", category.isActive ? "font-medium text-foreground" : "font-normal")}>
               {category.label}
             </span>
@@ -2148,13 +2212,9 @@ export function UnifiedTaskToolbar({
                   )}
                 </div>
               ) : (
-                /* Grouped Categories — Clean, minimalist Linear/Raycast style */
-                <div className="space-y-0.5">
-                  {filterCategories.filter((c) => c.group === "core").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
-                  {filterCategories.filter((c) => c.group === "team").map(renderCategorySubmenu)}
-                  <MenuSeparator className="h-px bg-border/40 my-1 mx-2" />
-                  {filterCategories.filter((c) => c.group === "time").map(renderCategorySubmenu)}
+                /* Categories — Seamless, compact Linear/Raycast list */
+                <div className="space-y-px">
+                  {filterCategories.map(renderCategorySubmenu)}
                 </div>
               )}
 
