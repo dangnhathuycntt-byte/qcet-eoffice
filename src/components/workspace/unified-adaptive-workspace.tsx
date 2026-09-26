@@ -716,6 +716,9 @@ function UnifiedAdaptiveWorkspaceInner({
   const [internalError, setInternalError] = React.useState<string | null>(null);
   const [isRefreshingInternal, setIsRefreshingInternal] = React.useState(false);
 
+  // Track current task view for handleRefresh closure + view-change refetch
+  const taskViewRef = React.useRef(workspaceQuery?.queryState?.taskView);
+
   // Synchronize internal tasks when controlledTasks changes
   React.useEffect(() => {
     if (controlledTasks !== undefined) {
@@ -730,14 +733,17 @@ function UnifiedAdaptiveWorkspaceInner({
 
     let isMounted = true;
     setIsInternalLoading(true);
-    fetch("/api/dashboard/overview")
+    fetch("/api/tasks?all=true&parentTaskId=root")
       .then((res) => {
         if (!res.ok) throw new Error("Không thể tải danh sách công việc");
         return res.json();
       })
       .then((data) => {
-        if (isMounted && data?.tasks) {
-          setInternalTasks(data.tasks);
+        if (isMounted) {
+          const tasks = data?.tasks ?? data?.data;
+          if (tasks) {
+            setInternalTasks(tasks);
+          }
         }
       })
       .catch((err) => {
@@ -1951,11 +1957,13 @@ function UnifiedAdaptiveWorkspaceInner({
     }
     setIsRefreshingInternal(true);
     try {
-      const res = await fetch("/api/dashboard/overview");
+      const view = taskViewRef.current ?? "related";
+      const res = await fetch(`/api/tasks?all=true&parentTaskId=root&view=${view}`);
       if (res.ok) {
         const data = await res.json();
-        if (data?.tasks) {
-          setInternalTasks(data.tasks);
+        const tasks = data?.tasks ?? data?.data;
+        if (tasks) {
+          setInternalTasks(tasks);
           setInternalError(null);
         }
       }
@@ -1965,6 +1973,16 @@ function UnifiedAdaptiveWorkspaceInner({
       setIsRefreshingInternal(false);
     }
   }, [onRefresh]);
+
+  // Sync taskViewRef + refetch when canonical task view changes (e.g., user switches tabs related→all)
+  React.useEffect(() => {
+    const currentView = workspaceQuery?.queryState?.taskView;
+    const prevView = taskViewRef.current;
+    taskViewRef.current = currentView;
+    if (currentView && prevView !== undefined && currentView !== prevView) {
+      handleRefresh();
+    }
+  }, [workspaceQuery?.queryState?.taskView, handleRefresh]);
 
   // Sync internal task list after archive/delete from context menu
   React.useEffect(() => {
@@ -2667,7 +2685,6 @@ function UnifiedAdaptiveWorkspaceInner({
         onClose={() => setIsCreateModalOpen(false)}
         onSubmitSuccess={async () => {
           setIsCreateModalOpen(false);
-          await new Promise((r) => setTimeout(r, 300));
           await handleRefresh();
         }}
         initialLevel={createInitialLevel}

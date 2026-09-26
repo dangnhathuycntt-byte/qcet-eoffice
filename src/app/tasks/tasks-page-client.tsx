@@ -23,7 +23,7 @@ export interface TasksPageClientProps {
   initialTaskView?: TaskView;
 }
 
-export function TasksPageClient({ initialTasks, initialScope, initialView, initialTaskView }: TasksPageClientProps) {
+export function TasksPageClient({ initialTasks, initialScope, initialView }: TasksPageClientProps) {
   const router = useRouter();
   const { user } = useAuth();
 
