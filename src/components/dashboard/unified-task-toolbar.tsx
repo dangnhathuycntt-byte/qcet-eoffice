@@ -2068,7 +2068,7 @@ export function UnifiedTaskToolbar({
         </div>
       </div>
 
-      {/* 2. Bộ lọc — Cascading fly-out menu */}
+      {/* 2. Filter — icon-only trigger */}
       <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
         <MenuTrigger
           render={
@@ -2076,24 +2076,20 @@ export function UnifiedTaskToolbar({
               type="button"
               aria-label="Bộ lọc"
               aria-expanded={isCollapsedFilterOpen}
+              title="Bộ lọc (F)"
               className={cn(
-                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium transition-colors",
+                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium transition-colors",
                 isCollapsedFilterOpen || activeFilterCount > 0
-                  ? "border-border bg-accent/60 font-semibold text-foreground hover:bg-accent"
+                  ? "border-border bg-accent/60 text-foreground hover:bg-accent"
                   : "border-border/80 bg-background text-foreground hover:bg-accent"
               )}
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
-              <span>Bộ lọc</span>
               {activeFilterCount > 0 && (
                 <span className="inline-flex size-4 items-center justify-center rounded-full bg-foreground/75 font-mono text-[10px] font-semibold tabular-nums text-background">
                   {activeFilterCount}
                 </span>
               )}
-              <ChevronDown
-                className={cn("size-3 shrink-0 text-muted-foreground transition-transform", isCollapsedFilterOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
             </button>
           }
         />
