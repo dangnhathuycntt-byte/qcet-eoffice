@@ -26,6 +26,13 @@ import {
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import {
+  StatusSubNew,
+  StatusSubInProgress,
+  StatusSubReview,
+  StatusSubCompleted,
+  HealthSubOverdue,
+} from "@/components/dashboard/task-filter-icons";
 
 export interface TaskRowProps {
   task: SchoolTask;
@@ -168,42 +175,42 @@ function HealthIndicator({
 }) {
   if (status === "COMPLETED") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90">
-        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-        <span className="font-medium">Hoàn thành</span>
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/80 font-medium">
+        <StatusSubCompleted className="size-3.5 text-foreground/80 shrink-0" />
+        <span>Hoàn thành</span>
       </div>
     );
   }
   if (isOverdue) {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-700">
-        <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
-        <span className="font-medium">Quá hạn</span>
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/90 font-medium">
+        <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
+        <span>Quá hạn</span>
       </div>
     );
   }
   if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
     const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700">
-        <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
-        <span className="font-medium">{label}</span>
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/80 font-medium">
+        <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
+        <span>{label}</span>
       </div>
     );
   }
   if (status === "IN_PROGRESS") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground">
-        <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
-        <span className="font-medium">Đang thực hiện</span>
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium">
+        <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
+        <span>Đang thực hiện</span>
       </div>
     );
   }
   // Mới
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-      <span className="font-medium">Mới</span>
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground font-normal">
+      <StatusSubNew className="size-3.5 text-muted-foreground/60 shrink-0" />
+      <span>Mới</span>
     </div>
   );
 }

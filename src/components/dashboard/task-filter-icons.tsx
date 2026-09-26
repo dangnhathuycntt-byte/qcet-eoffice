@@ -167,6 +167,22 @@ export const PrioritySubBars = ({
   </svg>
 );
 
+export const PrioritySubUrgent = (props: IconProps) => (
+  <PrioritySubBars level={3} {...props} />
+);
+
+export const PrioritySubHigh = (props: IconProps) => (
+  <PrioritySubBars level={2} {...props} />
+);
+
+export const PrioritySubNormal = (props: IconProps) => (
+  <PrioritySubBars level={1} {...props} />
+);
+
+export const PrioritySubLow = (props: IconProps) => (
+  <PrioritySubBars level={0} {...props} />
+);
+
 // ─── Health Submenu Indicators (Neutral Geometric Shapes) ─────────────────────
 
 export const HealthSubOnTrack = (props: IconProps) => (

@@ -32,6 +32,12 @@ import {
   deleteTask,
 } from "@/lib/tasks/task-actions";
 import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
+import {
+  PrioritySubUrgent,
+  PrioritySubHigh,
+  PrioritySubNormal,
+  PrioritySubLow,
+} from "@/components/dashboard/task-filter-icons";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -235,11 +241,11 @@ export function TaskContextMenu({
     }
   };
 
-  const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: typeof Signal; color: string }> = [
-    { priority: "URGENT", label: "Khẩn cấp", icon: AlertTriangle, color: "text-rose-600" },
-    { priority: "HIGH", label: "Ưu tiên cao", icon: SignalHigh, color: "text-amber-600" },
-    { priority: "NORMAL", label: "Bình thường", icon: SignalMedium, color: "text-blue-600" },
-    { priority: "LOW", label: "Thấp", icon: SignalLow, color: "text-slate-400" },
+  const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: React.ComponentType<any>; color: string }> = [
+    { priority: "URGENT", label: "Khẩn cấp", icon: PrioritySubUrgent, color: "text-foreground" },
+    { priority: "HIGH", label: "Ưu tiên cao", icon: PrioritySubHigh, color: "text-foreground/80" },
+    { priority: "NORMAL", label: "Bình thường", icon: PrioritySubNormal, color: "text-muted-foreground" },
+    { priority: "LOW", label: "Thấp", icon: PrioritySubLow, color: "text-muted-foreground/50" },
   ];
 
   return (

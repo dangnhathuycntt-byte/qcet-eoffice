@@ -18,18 +18,22 @@
  */
 
 import type { TaskStatus, TaskPriority } from '@/types/dashboard';
+import type * as React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  CircleDashed,
-  Clock,
-  AlertCircle,
-  CheckCircle2,
   Ban,
-  AlertTriangle,
-  ShieldAlert,
-  FileSearch,
   PauseCircle,
 } from 'lucide-react';
+import {
+  StatusSubNew,
+  StatusSubInProgress,
+  StatusSubReview,
+  StatusSubCompleted,
+  PrioritySubUrgent,
+  PrioritySubHigh,
+  PrioritySubNormal,
+  PrioritySubLow,
+} from '@/components/dashboard/task-filter-icons';
 
 /* ── Status Display ──────────────────────────────────────────────── */
 
@@ -50,8 +54,8 @@ export interface StatusDisplayConfig {
   badgeVariant?: string;
   /** Additional badge className override */
   badgeClassName?: string;
-  /** Lucide icon component for this status */
-  icon: LucideIcon;
+  /** Icon component for this status (Neutral Vector or Lucide) */
+  icon: React.ComponentType<any>;
 }
 
 export const STATUS_DISPLAY_CONFIG: ReadonlyArray<StatusDisplayConfig> = [
@@ -60,71 +64,70 @@ export const STATUS_DISPLAY_CONFIG: ReadonlyArray<StatusDisplayConfig> = [
     label: 'Mới',
     shortLabel: 'Mới',
     dotClass: 'bg-muted-foreground/60',
-    iconClass: 'text-muted-foreground/60',
-    colorClass: 'text-muted-foreground bg-muted/60 border-border/60',
+    iconClass: 'text-muted-foreground/70',
+    colorClass: 'text-muted-foreground bg-muted/50 border-border/50',
     badgeVariant: 'secondary',
-    icon: CircleDashed,
+    icon: StatusSubNew,
   },
   {
     value: 'NEW',
     label: 'Mới',
     shortLabel: 'Mới',
     dotClass: 'bg-muted-foreground/60',
-    iconClass: 'text-muted-foreground/60',
-    colorClass: 'text-muted-foreground bg-muted/60 border-border/60',
+    iconClass: 'text-muted-foreground/70',
+    colorClass: 'text-muted-foreground bg-muted/50 border-border/50',
     badgeVariant: 'secondary',
-    icon: CircleDashed,
+    icon: StatusSubNew,
   },
   {
     value: 'IN_PROGRESS',
     label: 'Đang thực hiện',
     shortLabel: 'Đang làm',
-    dotClass: 'bg-blue-600',
-    iconClass: 'text-blue-600',
-    colorClass: 'text-blue-700 bg-blue-50/80 border-blue-200/80',
-    badgeVariant: 'sapphire',
-    icon: Clock,
+    dotClass: 'bg-foreground/80',
+    iconClass: 'text-foreground/80',
+    colorClass: 'text-foreground bg-muted/80 border-border/80 font-medium',
+    badgeVariant: 'secondary',
+    icon: StatusSubInProgress,
   },
   {
     value: 'WAITING_APPROVAL',
     label: 'Chờ duyệt',
     shortLabel: 'Chờ duyệt',
-    dotClass: 'bg-amber-600',
-    iconClass: 'text-amber-600',
-    colorClass: 'text-amber-700 bg-amber-50/80 border-amber-200/80',
-    badgeVariant: 'amber',
-    icon: AlertCircle,
+    dotClass: 'bg-foreground/70',
+    iconClass: 'text-foreground/70',
+    colorClass: 'text-foreground/90 bg-muted/60 border-border/60',
+    badgeVariant: 'secondary',
+    icon: StatusSubReview,
   },
   {
     value: 'PENDING_EXECUTIVE_APPROVAL',
     label: 'Chờ BGH duyệt',
     shortLabel: 'Chờ BGH',
-    dotClass: 'bg-violet-600',
-    iconClass: 'text-violet-600',
-    colorClass: 'text-violet-700 bg-violet-50/80 border-violet-200/80',
-    badgeVariant: 'violet',
-    icon: ShieldAlert,
+    dotClass: 'bg-foreground/70',
+    iconClass: 'text-foreground/70',
+    colorClass: 'text-foreground/90 bg-muted/60 border-border/60',
+    badgeVariant: 'secondary',
+    icon: StatusSubReview,
   },
   {
     value: 'NEEDS_REVIEW',
     label: 'Cần chỉnh sửa',
     shortLabel: 'Chỉnh sửa',
-    dotClass: 'bg-orange-500',
-    iconClass: 'text-orange-500',
-    colorClass: 'text-orange-700 bg-orange-50/80 border-orange-200/80',
-    badgeVariant: 'amber',
-    badgeClassName: 'border-orange-200 bg-orange-50 text-orange-700',
-    icon: FileSearch,
+    dotClass: 'bg-foreground/70',
+    iconClass: 'text-foreground/70',
+    colorClass: 'text-foreground/90 bg-muted/60 border-border/60',
+    badgeVariant: 'secondary',
+    icon: StatusSubReview,
   },
   {
     value: 'COMPLETED',
     label: 'Hoàn thành',
     shortLabel: 'Xong',
-    dotClass: 'bg-emerald-600',
-    iconClass: 'text-emerald-600',
-    colorClass: 'text-emerald-700 bg-emerald-50/80 border-emerald-200/80',
-    badgeVariant: 'emerald',
-    icon: CheckCircle2,
+    dotClass: 'bg-foreground/90',
+    iconClass: 'text-foreground/90',
+    colorClass: 'text-foreground/90 bg-muted/60 border-border/60',
+    badgeVariant: 'secondary',
+    icon: StatusSubCompleted,
   },
   {
     value: 'CANCELLED',
@@ -172,37 +175,37 @@ export interface PriorityDisplayConfig {
   label: string;
   colorClass: string;
   iconClass: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<any>;
 }
 
 export const PRIORITY_DISPLAY_CONFIG: ReadonlyArray<PriorityDisplayConfig> = [
   {
     value: 'URGENT',
     label: 'Khẩn cấp',
-    colorClass: 'text-rose-700 bg-rose-50/80 border-rose-200/80',
-    iconClass: 'text-rose-600',
-    icon: AlertTriangle,
+    colorClass: 'text-foreground bg-muted/80 border-border/80 font-medium',
+    iconClass: 'text-foreground',
+    icon: PrioritySubUrgent,
   },
   {
     value: 'HIGH',
     label: 'Cao',
-    colorClass: 'text-amber-700 bg-amber-50/80 border-amber-200/80',
-    iconClass: 'text-amber-600',
-    icon: AlertCircle,
+    colorClass: 'text-foreground/90 bg-muted/60 border-border/60 font-medium',
+    iconClass: 'text-foreground/80',
+    icon: PrioritySubHigh,
   },
   {
     value: 'NORMAL',
     label: 'Bình thường',
-    colorClass: 'text-blue-700 bg-blue-50/80 border-blue-200/80',
-    iconClass: 'text-blue-600',
-    icon: CircleDashed,
+    colorClass: 'text-foreground/80 bg-muted/40 border-border/40 font-normal',
+    iconClass: 'text-muted-foreground/70',
+    icon: PrioritySubNormal,
   },
   {
     value: 'LOW',
     label: 'Thấp',
-    colorClass: 'text-muted-foreground bg-muted/60 border-border/60',
-    iconClass: 'text-muted-foreground',
-    icon: CircleDashed,
+    colorClass: 'text-muted-foreground bg-muted/30 border-border/30 font-normal',
+    iconClass: 'text-muted-foreground/50',
+    icon: PrioritySubLow,
   },
 ];
 
