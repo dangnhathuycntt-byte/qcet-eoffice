@@ -184,7 +184,7 @@ export const CreateTaskInputSchema = z
     /** Phase 9: canonical — client mới gửi `leadUnitId`, client cũ gửi `departmentId` */
     leadUnitId: z.string().trim().max(64).optional().nullable(),
     startDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
-    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]).optional().nullable(),
+    dueDate: z.union([IsoDateStringSchema, z.date(), z.string().min(1)]),
     assigneeId: z
       .string()
       .trim()
@@ -216,8 +216,6 @@ export const CreateTaskInputSchema = z
     academicYear: z.string().trim().max(20).optional(),
     year: z.string().trim().max(20).optional(),
     parentTaskId: z.string().trim().max(128).optional().nullable(),
-    code: z.string().trim().max(50).optional(),
-    creatorId: z.string().trim().max(128).optional(),
   })
   .strict();
 

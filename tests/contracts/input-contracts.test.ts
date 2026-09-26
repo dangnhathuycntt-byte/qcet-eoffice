@@ -370,6 +370,38 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
         });
         assert.strictEqual(result.success, false);
       });
+
+      it('rejects "code" field (removed from public schema, .strict() boundary)', () => {
+        const result = CreateTaskSchema.safeParse({
+          title: 'Valid Task Title',
+          dueDate: '2026-09-30T17:00:00Z',
+          code: 'TASK-001',
+        });
+        assert.strictEqual(result.success, false);
+      });
+
+      it('rejects "creatorId" field (removed from public schema, .strict() boundary)', () => {
+        const result = CreateTaskSchema.safeParse({
+          title: 'Valid Task Title',
+          dueDate: '2026-09-30T17:00:00Z',
+          creatorId: 'usr_spoofed',
+        });
+        assert.strictEqual(result.success, false);
+      });
+
+      it('requires dueDate (no longer optional)', () => {
+        const result = CreateTaskSchema.safeParse({
+          title: 'Valid Task Title',
+        });
+        assert.strictEqual(result.success, false);
+
+        // With dueDate provided, should pass
+        const withDueDate = CreateTaskSchema.safeParse({
+          title: 'Valid Task Title',
+          dueDate: '2026-09-30T17:00:00Z',
+        });
+        assert.strictEqual(withDueDate.success, true);
+      });
     });
 
     describe('UpdateTaskMetadataSchema', () => {

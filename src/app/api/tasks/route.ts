@@ -192,16 +192,14 @@ export async function POST(req: Request) {
         description: validatedBody.description,
         leadUnitId: validatedBody.leadUnitId || validatedBody.departmentId,
         startDate: validatedBody.startDate,
-        dueDate: validatedBody.dueDate ?? new Date().toISOString(),
+        dueDate: validatedBody.dueDate,
         priority: validatedBody.priority,
         scope: validatedBody.scope,
         academicMonth: validatedBody.academicMonth ?? validatedBody.month,
         academicYear: validatedBody.academicYear ?? validatedBody.year,
-        creatorId: validatedBody.creatorId,
         assigneeId: validatedBody.assigneeId,
         collaboratorIds: validatedBody.collaboratorIds,
         parentTaskId: validatedBody.parentTaskId,
-        code: validatedBody.code,
       });
 
       return toTaskDetailDTO(newTask);
