@@ -107,20 +107,22 @@ export function countScopeTasks(
 
       const matchParent =
         (taskDept && (
-          taskDept.toUpperCase() === userDept.toUpperCase() ||
-          taskDept.toLowerCase() === userDept.toLowerCase() ||
+          (typeof taskDept === "string" && typeof userDept === "string" && (
+            taskDept.toUpperCase() === userDept.toUpperCase() ||
+            taskDept.toLowerCase() === userDept.toLowerCase()
+          )) ||
           taskDept === canonicalDept ||
           resolveDepartmentId(taskDept) === canonicalDept
         )) ||
         t.coDepartmentCodes?.some(
           (code) =>
-            code.toUpperCase() === userDept.toUpperCase() ||
+            (typeof code === "string" && typeof userDept === "string" && code.toUpperCase() === userDept.toUpperCase()) ||
             code === canonicalDept ||
             resolveDepartmentId(code) === canonicalDept
         ) ||
         t.coDepartments?.some(
           (dept) =>
-            dept.toLowerCase() === userDept.toLowerCase() ||
+            (typeof dept === "string" && typeof userDept === "string" && dept.toLowerCase() === userDept.toLowerCase()) ||
             dept === canonicalDept ||
             resolveDepartmentId(dept) === canonicalDept
         );
@@ -130,8 +132,10 @@ export function countScopeTasks(
           const subDept = st.departmentCode || st.department || st.departmentId;
           return (
             subDept && (
-              subDept.toUpperCase() === userDept.toUpperCase() ||
-              subDept.toLowerCase() === userDept.toLowerCase() ||
+              (typeof subDept === "string" && typeof userDept === "string" && (
+                subDept.toUpperCase() === userDept.toUpperCase() ||
+                subDept.toLowerCase() === userDept.toLowerCase()
+              )) ||
               subDept === canonicalDept ||
               resolveDepartmentId(subDept) === canonicalDept
             )
@@ -199,20 +203,22 @@ export function deriveAdaptiveWorkspaceData({
 
         const matchParent =
           (taskDept && (
-            taskDept.toUpperCase() === userDept.toUpperCase() ||
-            taskDept.toLowerCase() === userDept.toLowerCase() ||
+            (typeof taskDept === "string" && typeof userDept === "string" && (
+              taskDept.toUpperCase() === userDept.toUpperCase() ||
+              taskDept.toLowerCase() === userDept.toLowerCase()
+            )) ||
             taskDept === canonicalDept ||
             resolveDepartmentId(taskDept) === canonicalDept
           )) ||
           t.coDepartmentCodes?.some(
             (code) =>
-              code.toUpperCase() === userDept.toUpperCase() ||
+              (typeof code === "string" && typeof userDept === "string" && code.toUpperCase() === userDept.toUpperCase()) ||
               code === canonicalDept ||
               resolveDepartmentId(code) === canonicalDept
           ) ||
           t.coDepartments?.some(
             (dept) =>
-              dept.toLowerCase() === userDept.toLowerCase() ||
+              (typeof dept === "string" && typeof userDept === "string" && dept.toLowerCase() === userDept.toLowerCase()) ||
               dept === canonicalDept ||
               resolveDepartmentId(dept) === canonicalDept
           );
@@ -222,8 +228,10 @@ export function deriveAdaptiveWorkspaceData({
             const subDept = st.departmentCode || st.department || st.departmentId;
             return (
               subDept && (
-                subDept.toUpperCase() === userDept.toUpperCase() ||
-                subDept.toLowerCase() === userDept.toLowerCase() ||
+                (typeof subDept === "string" && typeof userDept === "string" && (
+                  subDept.toUpperCase() === userDept.toUpperCase() ||
+                  subDept.toLowerCase() === userDept.toLowerCase()
+                )) ||
                 subDept === canonicalDept ||
                 resolveDepartmentId(subDept) === canonicalDept
               )

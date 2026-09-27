@@ -73,3 +73,7 @@ test-results.log
 # Impeccable skill cache/output (regenerates per run)
 /.impeccable/
 uploads/
+
+# Obsidian — giữ plugin config, loại workspace cá nhân
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json

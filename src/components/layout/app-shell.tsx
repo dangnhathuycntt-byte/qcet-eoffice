@@ -139,14 +139,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         style={{ paddingLeft: desktopPaddingLeft }}
       >
         {/* Mobile Header (Only visible below md) */}
-        <React.Suspense fallback={<header className="md:hidden sticky top-0 z-30 w-full h-12 border-b border-border/50 bg-background/80" />}>
-          <AppTopbar />
-        </React.Suspense>
+        <AppTopbar />
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
-        <React.Suspense fallback={<header className="hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950" />}>
-          <DesktopTopbar />
-        </React.Suspense>
+        <DesktopTopbar />
 
         <OfflineBanner />
 

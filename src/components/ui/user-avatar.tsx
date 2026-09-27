@@ -52,6 +52,7 @@ export function UserAvatar({
           alt=""
           className="size-full object-cover"
           loading="lazy"
+          referrerPolicy="no-referrer"
         />
       )}
       <Avatar.Fallback className="flex size-full items-center justify-center bg-muted font-medium tabular-nums text-muted-foreground border border-border/60">

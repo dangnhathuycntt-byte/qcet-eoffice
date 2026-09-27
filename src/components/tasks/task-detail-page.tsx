@@ -813,55 +813,56 @@ export function TaskDetailPage({
   );
 
   const content = (
-    <div
-      className={styles.splitWorkspace}
-      data-peek-open={Boolean(activeSubtask)}
-      style={splitWorkspaceStyle}
-    >
-    {/* Visually-hidden aria-live region for status announcements */}
-    <div className="sr-only" aria-live="polite" aria-atomic="true">
-      {statusAnnouncement}
-    </div>
-    {/* Parent pane */}
-    <div
-      data-slot="task-workspace"
-      className={styles.workspace}
-    >
-      {/* Header Navigation Bar */}
-      <TaskDetailHeaderNav
-        taskId={task.id}
-        showInspector={showInspector}
-        onToggleInspector={handleToggleInspector}
-        isDrawerOpen={Boolean(activeSubtask)}
-        onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
-      />
-
-      {/* Tabs: Tổng quan + Hoạt động — pill style */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => handleTabChange(v as DetailTab)}
-        className="shrink-0"
+    <>
+      {/* Visually-hidden aria-live region for status announcements */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {statusAnnouncement}
+      </div>
+      <div
+        className={styles.splitWorkspace}
+        data-peek-open={Boolean(activeSubtask)}
+        style={splitWorkspaceStyle}
       >
-        <TabsList aria-label="Các phân mục chi tiết nhiệm vụ">
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="activity">
-            Hoạt động
-            {feedActivityEvents.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">
-                {feedActivityEvents.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        {/* Parent pane */}
+        <div
+          data-slot="task-workspace"
+          className={styles.workspace}
+        >
+          {/* Header Navigation Bar */}
+          <TaskDetailHeaderNav
+            taskId={task.id}
+            showInspector={showInspector}
+            onToggleInspector={handleToggleInspector}
+            isDrawerOpen={Boolean(activeSubtask)}
+            onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
+          />
 
-      {/* Main Workspace Canvas */}
-      <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
-        <TaskDetailSplitLayout
-          inspectorOpen={showInspector}
-          onToggleInspector={handleToggleInspector}
-          inspector={
-            <aside aria-label="Cột thuộc tính nhiệm vụ" style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
+          {/* Tabs: Tổng quan + Hoạt động — pill style */}
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => handleTabChange(v as DetailTab)}
+            className="shrink-0"
+          >
+            <TabsList aria-label="Các phân mục chi tiết nhiệm vụ">
+              <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+              <TabsTrigger value="activity">
+                Hoạt động
+                {feedActivityEvents.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">
+                    {feedActivityEvents.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Main Workspace Canvas */}
+          <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
+            <TaskDetailSplitLayout
+              inspectorOpen={showInspector}
+              onToggleInspector={handleToggleInspector}
+              inspector={
+                <aside aria-label="Cột thuộc tính nhiệm vụ" className={styles.inspector} style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
               <TaskPropertiesSidebar
                 task={task}
                 currentUser={currentUser}
@@ -1042,6 +1043,7 @@ export function TaskDetailPage({
       </ProgressDialog.Portal>
     </ProgressDialog.Root>
     </div>
+    </>
   );
 
   return needsDndProvider

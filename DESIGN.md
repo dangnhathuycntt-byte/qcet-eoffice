@@ -166,12 +166,15 @@ QCET E-Office is the institutional operating system of Quy Nhơn College of Engi
 1. **Light-only by construction.** Dark mode is not "unsupported" — it is *disabled at the variant level*. `globals.css` declares `@custom-variant dark (&:not(*));`, a selector that matches nothing, so a `dark:` class anywhere in the tree is inert. The `<html>` element carries a literal `light` class and `colorScheme: "light"` in the viewport. This is deliberate: government offices print, project, and screen-share in light environments, and a half-supported dark theme produces the worst outcome — inconsistent contrast indoors and unreadable reports on paper.
 2. **Two voices, one system.** Desktop speaks in a dense cockpit (KPI strip, filter bars, cascading table, kanban, matrix). Mobile speaks in an attention-first feed. Both are the *same* components re-composed, never a separate mobile app.
 3. **Semantic restraint under status pressure.** A system handling overdue, urgent, and flash documents is tempted to scream in red everywhere. QCET reserves saturation for genuine exception states and holds the institutional blue as the single accent.
+4. **The Tasks Ecosystem as the Universal Benchmark.** The Tasks management suite (`src/components/dashboard/unified-task-toolbar.tsx`, `src/components/workspace/components/active-filter-breadcrumb.tsx`, `src/components/tasks/table/components/task-row.tsx`, `subtask-inline-row.tsx`, và Task Detail) là **Golden Master Benchmark** chuẩn mực duy nhất cho toàn bộ hệ thống. Mọi màn hình danh sách, quản lý (Lịch công tác, Văn bản & Hồ sơ, Bàn làm việc BGH, Quản lý đơn vị) bắt buộc kế thừa kiến trúc toolbar, bộ lọc đa chọn, view switcher dạng ngang, và bảng phân cấp từ module này.
 
 **The Light-Only Rule.** The product renders in light mode exclusively; no component may introduce a `dark:` variant, a theme toggle, or a `prefers-color-scheme` branch.
 
 **The Instrument-Panel Rule.** Every element on a surface must answer a governance question (What is due? Who owns it? Is it late?). If it answers none, it is removed.
 
 **The Server-Truth Rule.** The database and the authenticated session are the only sources of operational fact. The UI may not fabricate a count, a date, a status, or a signature state to fill a gap.
+
+**The Tasks-Benchmark Rule.** Every table, filter bar, detail drawer, or status indicator across all modules must conform to the patterns established in the Tasks ecosystem (codified under `## Components`). No module may invent an ad-hoc toolbar layout or filter paradigm.
 
 ---
 
@@ -231,6 +234,21 @@ Semantics use the Tailwind 500/600/700 ladder because these states are *not* par
 **The Semantic-Contrast Warning.** The audit found `text-amber-600` and `text-emerald-600` on tiny tinted fills, which fall below AA at 12px. The design intent is that status text uses the **600 level only where the label is ≥13px semibold**, and the **700 level (amber-700 `#B45309`, emerald-700 `#047857`, rose-700)** everywhere a chip is 12px. Treat the 600-level small chip as a defect to fix, not a pattern to copy.
 
 **The Chart-Series Rule.** Data-series colour comes only from the five chart tokens (`chart-1..5`: emerald `oklch(0.68 0.17 150)`, sapphire `oklch(0.58 0.19 250)`, amber `oklch(0.74 0.17 75)`, violet `oklch(0.65 0.20 300)`, crimson `oklch(0.63 0.22 25)`). Charts never borrow the action blue or a status hue; mixing a categorical series with a semantic palette destroys both readings.
+
+### Neutral Monochrome for Controls & Secondary Surfaces
+
+While status chips use semantic alerts and primary CTAs use the institutional blue, **all secondary controls, checkboxes, view toggles, and filter popovers MUST use a Neutral Monochrome palette**:
+
+| Token Role | Semantic Class | Visual Tone |
+|---|---|---|
+| Checked checkbox / Active toggle | `bg-foreground/85 text-background border-foreground/85` | Soft charcoal (oklch 0.145 @ 85%), calm, legible |
+| Unchecked border | `border-border/80 bg-background` | Subtle crisp hairline |
+| Filter popover trigger hover | `hover:bg-accent hover:text-foreground` | Very light subtle grey wash |
+| Informational filter chip | `bg-muted/50 text-foreground/90` | Lightweight flat pill, zero boxiness |
+
+**The No-Blue-On-Filters Rule.** Filter popovers, multi-select checkboxes, and view-mode toggles must NEVER be colored in primary blue (`bg-primary`, `text-primary`). Primary blue is reserved for primary CTAs and active primary navigation. Splashing blue across filter checkboxes creates visual noise and confuses users about what is an action vs. what is a filter.
+
+**The Softer-Black Rule.** Never use pitch black (`#000` or raw heavy black). Use soft neutral charcoal (`bg-foreground/85` or `bg-neutral-800 text-white`) with gentle contrast.
 
 ---
 
@@ -359,6 +377,103 @@ Radius is derived from one unit, `--radius: 0.85rem`, so the whole system rounds
 ---
 
 ## Components
+
+### 0. Golden Master Benchmark: The Tasks Ecosystem as Universal Reference
+
+Module Nhiệm vụ (`src/components/dashboard/unified-task-toolbar.tsx`, `src/components/workspace/components/active-filter-breadcrumb.tsx`, `src/components/tasks/table/components/task-row.tsx`, `subtask-inline-row.tsx`, và Task Detail View) đóng vai trò là **chuẩn mực thiết kế cao nhất (Golden Reference)** của QCET E-Office. Bất kỳ màn hình nghi���p vụ nào có chức năng lọc, hiển thị danh sách, phân cấp dữ liệu, hoặc chi tiết đối tượng (Lịch công tác, Văn bản & Hồ sơ, Bàn làm việc BGH, Quản lý đơn vị) đều phải áp dụng các mẫu cấu trúc dưới đây.
+
+#### 0.1 Unified Toolbar Standard (Thanh công cụ chuẩn mực)
+
+Layout thanh công cụ chính (`unified-task-toolbar.tsx`) tuân thủ nghiêm ngặt bố cục hàng đơn với đúng 5 khối chức năng theo thứ tự:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ [🔍 Tìm kiếm...    /] [⚝ Bộ lọc (2)] [☰ Bảng | ⦀ Kanban]  │  [+ Tạo việc]             │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Tìm kiếm (Search Input):**
+   - Chiều cao `h-7`, bo góc `rounded-md`, đường viền `border border-border/80 bg-background`.
+   - Phím tắt `/` hiển thị badge phím tinh tế `<kbd className="hidden sm:inline-flex">/ </kbd>`.
+   - Focus ring nhẹ nhàng: `focus-visible:ring-1 focus-visible:ring-ring`.
+2. **Nút Bộ lọc (Filter Button):**
+   - Chiều cao `h-7`, icon `Filter` (stroke 1.5), nhãn "Bộ lọc", kèm badge đếm số lượng bộ lọc đang hoạt động (ví dụ `[2]`).
+   - Phím tắt `F` ẩn/hiện trên màn hình desktop.
+3. **Chuyển đổi chế độ xem Dạng ngang (Horizontal Segmented Control):**
+   - **BẮT BUỘC DẠNG NGANG**: Tuyệt đối không giấu các chế độ xem chính (Bảng / Kanban / Lịch) vào trong popover dropdown nhiều cấp. Người dùng phải chuyển đổi được ngay trong 1 click.
+   - Container: `inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none`.
+   - Nút Active: `bg-background text-foreground shadow-2xs font-semibold`.
+   - Nút Inactive: `text-muted-foreground hover:text-foreground hover:bg-muted/40`.
+4. **Đường phân cách (Vertical Divider):**
+   - `h-4 w-px bg-border/60 shrink-0` đặt ngay trước nút hành động chính (CTA).
+5. **Nút Hành động Chính (Primary CTA Button):**
+   - `inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-[11px] font-medium text-foreground hover:bg-accent`.
+   - **Quy tắc bỏ phím tắt trên CTA**: Không gắn badge phím tắt rườm rà (bỏ `<kbd>C</kbd>`). Nút phải tối giản và sạch sẽ: `[+ Tạo việc]`, `[+ Đăng ký lịch]`, `[+ Tạo văn bản]`.
+
+#### 0.2 Active Filter Breadcrumb Standard (Dòng thông tin bộ lọc)
+
+Được định nghĩa tại `src/components/workspace/components/active-filter-breadcrumb.tsx`. Xuất hiện ngay phía dưới toolbar khi có ít nhất một tiêu chí lọc được kích hoạt.
+
+**Quy tắc "Bỏ card bớt — thông tin thôi mà":**
+- **Không dùng card lồng card**: Tuyệt đối không đóng khung từng tiêu chí lọc trong các hộp thẻ có viền đậm, bóng đổ (`shadow-2xs`), nền nổi hay vạch ngăn chia cột `divide-x`.
+- **Flat Informational Pills**: Từng tiêu chí lọc hiển thị dạng pill phẳng, nhẹ nhàng và thanh thoát:
+  - Cấu trúc: `[Icon] Tên_thuộc_tính: Giá_trị_chọn [✕]`
+  - Container chip: `inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none`.
+  - Icon: Kích thước `size-3.5 text-muted-foreground/75 shrink-0`, `strokeWidth={1.5}`.
+  - Nhãn thuộc tính: `text-muted-foreground text-[11px] whitespace-nowrap`.
+  - Giá trị chọn: `font-medium text-[11.5px] truncate max-w-[240px]`.
+  - Nút xóa [✕]: `size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer`.
+- **Bộ đếm kết quả (Result Counter):**
+  - Hiển thị dạng chữ số đơn sắc trần, không bọc trong thẻ card: `<span className="text-muted-foreground/70 text-[11px] font-mono tabular-nums shrink-0">12 kết quả / 45</span>`.
+- **Nút Xóa tất cả (Clear All):**
+  - Text button thanh mảnh: `<RotateCcw className="size-3" strokeWidth={1.5} /> Xóa lọc`.
+
+#### 0.3 Filter Popover & Persistent Multi-Select Standard (Bộ lọc đa chọn)
+
+Quy chuẩn tương tác cho mọi popover lọc:
+1. **Persistent Selection (`closeOnClick={false}`)**: Khi người dùng click chọn một tùy chọn, menu **không được tự động đóng lại**. Điều này cho phép chọn/bỏ chọn liên tục nhiều giá trị cùng lúc (Multi-select) mà không gây khó chịu cho người dùng.
+2. **Neutral Monochrome Palette**:
+   - Checkbox khi được chọn sử dụng màu than chì trung tính (`bg-foreground/85 text-background border-foreground/85` hoặc `bg-neutral-800 text-white`).
+   - **Không sử dụng xanh lam (`text-primary`, `bg-primary`)** cho các thành phần lọc hay checkbox thứ cấp.
+   - **Không sử dụng đen tuyền pitch-black (`#000`)** gây nặng nề thị giác.
+3. **Menu cấp 1 tinh gọn**:
+   - Submenu trigger cấp 1 chỉ bao gồm icon + tên danh mục + mũi tên điều hướng (`[Icon] Trạng thái >`).
+   - **Bỏ toàn bộ các badge hiển thị giá trị đang chọn** làm phình to hoặc kéo dài menu cấp 1.
+4. **Đồng bộ hóa Icon Set 100%**:
+   - Sử dụng Canonical Filter Icons (`FilterIconStatus`, `FilterIconPriority`, `FilterIconCategory`, `FilterIconDept`, `FilterIconLead`, `FilterIconCollaborator`, `FilterIconDeadline`, `FilterIconMonth`, `FilterIconHealth`, `FilterIconOrigin`).
+   - Icon trong menu popover và icon trên filter chip breadcrumb phải trùng khớp hoàn toàn về hình học và độ dày nét (`strokeWidth={1.5}`).
+
+#### 0.4 Cascading Table & Subtasks Standard (Bảng phân cấp nhiệm vụ)
+
+Quy chuẩn hiển thị bảng dữ liệu phân cấp (`src/components/tasks/table/components/task-row.tsx` và `subtask-inline-row.tsx`):
+1. **Phân cấp thụt đầu dòng (Tree Indentation):**
+   - Hàng cha (Parent Row): Có chevron expand/collapse (`ChevronRight` xoay 90 độ khi mở).
+   - Hàng con (Subtask Row): Thụt lề rõ ràng (`pl-8 sm:pl-10`), có đường kẻ dọc chỉ dẫn phân cấp mờ (`border-l border-border/60`).
+2. **Tạo việc con nhanh tại chỗ (Inline Quick Create):**
+   - Hàng `+ Thêm việc con` nằm ngay dưới danh sách subtask, cho phép nhập tiêu đề và Enter tạo ngay mà không phải mở modal toàn màn hình.
+3. **Căn thẳng cột dữ liệu (Column Alignment & Tabular Figures):**
+   - Các cột Trạng thái, Tiến độ, Hạn chốt luôn thẳng hàng tuyệt đối giữa hàng cha và hàng con.
+   - Mọi số lượng, tỉ lệ %, mã văn bản, ngày tháng bắt buộc áp dụng `font-mono tabular-nums`.
+
+#### 0.5 Detail View & Side Peek Modal Standard (Chi tiết đối tượng)
+
+Quy chuẩn màn hình chi tiết (`TaskDetailView` và `TaskPeekPreviewModal`):
+1. **Slide-in Drawer (Ngữ cảnh không che khuất):**
+   - Mở dạng Side Sheet từ cạnh phải (`w-[560px] sm:w-[640px] max-w-full`) để người dùng đối chiếu được dữ liệu bảng bên dưới.
+2. **Bố cục 2 cột tiêu chuẩn:**
+   - **Cột nội dung chính (Trái - 65%):** Tiêu đề lớn, Block Editor phong phú (Plate.js Rich Text), danh sách việc con, và lịch sử trao đổi / hoạt động (Audit Activity Stream).
+   - **Cột thông số thuộc tính (Phải - 35%):** Bảng thuộc tính chuẩn mực gồm Người chủ trì, Người phối hợp, Đơn vị, Hạn chốt, Tiến độ, Độ ưu tiên, và Nguồn gốc văn bản.
+
+#### 0.6 Cross-Module Inheritance Map (Bản đồ kế thừa toàn hệ thống)
+
+| Module | Thừa kế từ Tasks Benchmark |
+|---|---|
+| **Lịch công tác (`calendar`)** | View toggle dạng ngang: `[Tháng | Tuần | Ngày | Lịch trình]`; Toolbar Search + Filter Popover + Flat Breadcrumbs; Quick Event Drawer. |
+| **Văn bản & Hồ sơ (`documents`)** | Bảng danh sách kế thừa Cascading Table Row; Hàng đính kèm phụ (Sub-attachments) thụt lề như Subtasks; Thanh công cụ và Filter Breadcrumbs phẳng. |
+| **Bàn làm việc BGH (`executive-cockpit`)** | Phân tầng KPI strip + Attention Queue; Danh sách phân công nhiệm vụ chỉ huy dùng bảng phân cấp chuẩn; Filter đa chọn theo đơn vị và lĩnh vực. |
+| **Quản lý Khoa/Phòng (`departments`)** | Bảng nhân sự và nhiệm vụ đơn vị áp dụng 100% Unified Toolbar và Filter Chips. |
+
+---
 
 ### 1. Stat card (KPI metric card)
 
@@ -529,6 +644,20 @@ Registry list/card rendering (`document-registry-view.tsx`), desktop row / mobil
 ---
 
 ## Do's and Don'ts
+
+### Tasks Benchmark & Toolbar Interactions
+
+- ✓ Render high-frequency view switchers (Bảng / Kanban / Lịch) as **horizontal segmented controls** (`inline-flex h-7 ...`) directly on the toolbar for 1-click switching.
+- ✓ Render active filter breadcrumbs as **flat informational pills** (`bg-muted/50 text-xs text-foreground/90`), borderless or hairline, no card shadows, no `divide-x`.
+- ✓ Render filter counts and results inline in monospace tabular text (`text-muted-foreground/70 text-[11px] font-mono tabular-nums`).
+- ✓ Keep filter popovers open (`closeOnClick={false}`) during multi-select checkbox toggling.
+- ✓ Use neutral monochrome tones for checkboxes (`bg-foreground/85 text-background` or soft neutral charcoal), avoiding blue fills and harsh pitch-black `#000`.
+- ✓ Keep primary CTA buttons clean (`[+ Tạo việc]`), without keyboard shortcut `<kbd>` badges.
+- ✗ Do not bury primary view modes inside a dropdown popover when there are only 2–3 views.
+- ✗ Do not enclose active filter chips in nested card containers with borders, shadows, and divide-x dividers ("bỏ card bớt, thông tin thôi mà").
+- ✗ Do not automatically dismiss the filter menu when a user checks a filter option.
+- ✗ Do not attach shortcut badges (`<kbd>C</kbd>`) to CTA buttons.
+- ✗ Do not clutter main menu trigger rows with truncated active-value badges.
 
 ### Icons
 

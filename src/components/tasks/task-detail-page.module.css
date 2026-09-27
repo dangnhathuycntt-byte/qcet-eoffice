@@ -247,6 +247,14 @@
 .workspace button:active:not(:disabled) {
   transform: translateY(1px);
 }
+.inspector,
+.peekSurface {
+  animation: panel-reveal 180ms ease-out forwards;
+}
+@keyframes panel-reveal {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 @media (prefers-reduced-motion: reduce) {
   .splitWorkspace, .splitWorkspace *, .splitWorkspace *::before, .splitWorkspace *::after {
     animation: none !important;

@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
 import styles from "../task-detail-page.module.css";
@@ -27,7 +25,6 @@ import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "@/domain/tasks/display-config";
 import { computeDueStatus } from "@/domain/tasks/deadlines";
-import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { formatDisplayDate, formatCompactDate } from "@/lib/format/date";
@@ -358,7 +355,7 @@ export function SubtaskDetailDrawer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, onSelectSibling, siblings, subtask]);
 
-  if (!subtask) return <AnimatePresence mode="wait" />;
+  if (!isOpen || !subtask) return null;
 
   // Sibling switcher data
   const currentIndex = siblings.findIndex((st) => st.id === subtask.id);
@@ -372,30 +369,19 @@ export function SubtaskDetailDrawer({
   ) || null;
 
   return (
-    <AnimatePresence mode="wait">
-      {isOpen && (
-        <>
-          <m.div
-            key="subtask-drawer-backdrop"
-            variants={fadeVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            onClick={onClose}
-            aria-hidden="true"
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs motion-reduce:animate-none lg:hidden"
-          />
+    <>
+      <div
+        onClick={onClose}
+        aria-hidden="true"
+        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-2xs motion-reduce:animate-none lg:hidden"
+      />
 
-          <m.aside
-            key="subtask-drawer"
-            variants={sideSheetVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            role="dialog"
-            aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
-            className={styles.peekSurface}
-          >
+      <aside
+        key="subtask-drawer"
+        role="dialog"
+        aria-label={`Chi tiết việc thành phần: ${subtask.title}`}
+        className={styles.peekSurface}
+      >
         {/* Left Resize Handle for Desktop */}
         <div
           role="separator"
@@ -726,9 +712,7 @@ export function SubtaskDetailDrawer({
             />
           </section>
         </div>
-      </m.aside>
+      </aside>
     </>
-    )}
-    </AnimatePresence>
   );
 }

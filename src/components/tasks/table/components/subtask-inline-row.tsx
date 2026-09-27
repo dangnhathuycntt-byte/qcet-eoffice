@@ -8,6 +8,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { TableDensity } from "../types";
@@ -246,21 +247,11 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
 
         {/* Single DRI Assignee */}
         <div className="flex items-center gap-1.5">
-          {subTask.assigneeAvatar ? (
-            <img
-              src={subTask.assigneeAvatar}
-              alt=""
-              aria-hidden="true"
-              width={20}
-              height={20}
-              loading="lazy"
-              className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-            />
-          ) : (
-            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-border/60">
-              {getInitials(subTask.assigneeName)}
-            </span>
-          )}
+          <UserAvatar
+            name={subTask.assigneeName}
+            avatarUrl={subTask.assigneeAvatar}
+            size="sm"
+          />
           <span className="text-xs font-medium text-slate-800 max-w-[130px] truncate">
             {subTask.assigneeName || "Chưa giao"}
           </span>

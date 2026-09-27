@@ -349,31 +349,62 @@ export const QCET_DEPARTMENT_DEFINITIONS: DepartmentDefinition[] = [
 ];
 
 export function resolveDepartmentId(
-  deptCodeOrName?: string,
-  personName?: string,
+  deptCodeOrName?: string | Record<string, unknown> | null,
+  personName?: string | Record<string, unknown> | null,
   category?: TaskCategory
 ): string | null {
   if (deptCodeOrName) {
-    const clean = deptCodeOrName.trim().toUpperCase();
-    for (const def of QCET_DEPARTMENT_DEFINITIONS) {
-      if (def.id === clean) return def.id;
-      if (def.alternateCodes.some((code) => code.toUpperCase() === clean)) {
-        return def.id;
-      }
-      if (
-        def.name.toUpperCase().includes(clean) ||
-        clean.includes(def.name.toUpperCase())
-      ) {
-        return def.id;
+    const candidates: string[] = [];
+    if (typeof deptCodeOrName === "string") {
+      candidates.push(deptCodeOrName);
+    } else if (typeof deptCodeOrName === "object" && deptCodeOrName !== null) {
+      const obj = deptCodeOrName as Record<string, unknown>;
+      if (typeof obj.code === "string" && obj.code.trim()) candidates.push(obj.code);
+      if (typeof obj.departmentCode === "string" && obj.departmentCode.trim()) candidates.push(obj.departmentCode);
+      if (typeof obj.leadDepartmentCode === "string" && obj.leadDepartmentCode.trim()) candidates.push(obj.leadDepartmentCode);
+      if (typeof obj.id === "string" && obj.id.trim()) candidates.push(obj.id);
+      if (typeof obj.departmentId === "string" && obj.departmentId.trim()) candidates.push(obj.departmentId);
+      if (typeof obj.leadDepartmentId === "string" && obj.leadDepartmentId.trim()) candidates.push(obj.leadDepartmentId);
+      if (typeof obj.name === "string" && obj.name.trim()) candidates.push(obj.name);
+      if (typeof obj.departmentName === "string" && obj.departmentName.trim()) candidates.push(obj.departmentName);
+      if (typeof obj.leadDepartment === "string" && obj.leadDepartment.trim()) candidates.push(obj.leadDepartment);
+    }
+
+    for (const cand of candidates) {
+      const clean = cand.trim().toUpperCase();
+      if (!clean) continue;
+      for (const def of QCET_DEPARTMENT_DEFINITIONS) {
+        if (def.id === clean) return def.id;
+        if (def.alternateCodes.some((code) => code.toUpperCase() === clean)) {
+          return def.id;
+        }
+        if (
+          def.name.toUpperCase().includes(clean) ||
+          clean.includes(def.name.toUpperCase())
+        ) {
+          return def.id;
+        }
       }
     }
   }
 
   if (personName) {
-    const p = personName.trim().toLowerCase();
-    for (const def of QCET_DEPARTMENT_DEFINITIONS) {
-      if (def.personnelKeywords.some((kw) => p.includes(kw.toLowerCase()))) {
-        return def.id;
+    let pNameStr: string | null = null;
+    if (typeof personName === "string") {
+      pNameStr = personName;
+    } else if (typeof personName === "object" && personName !== null) {
+      const pObj = personName as Record<string, unknown>;
+      if (typeof pObj.name === "string" && pObj.name.trim()) pNameStr = pObj.name;
+      else if (typeof pObj.userName === "string" && pObj.userName.trim()) pNameStr = pObj.userName;
+      else if (typeof pObj.fullName === "string" && pObj.fullName.trim()) pNameStr = pObj.fullName;
+    }
+
+    if (pNameStr) {
+      const p = pNameStr.trim().toLowerCase();
+      for (const def of QCET_DEPARTMENT_DEFINITIONS) {
+        if (def.personnelKeywords.some((kw) => p.includes(kw.toLowerCase()))) {
+          return def.id;
+        }
       }
     }
   }

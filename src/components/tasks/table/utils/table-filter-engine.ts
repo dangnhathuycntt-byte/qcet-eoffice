@@ -308,7 +308,8 @@ export function filterTasks(
   const rawDept = options.departmentId || options.department;
   if (rawDept && rawDept !== "ALL") {
     const canonicalDept =
-      resolveDepartmentId(rawDept) || rawDept.trim().toUpperCase();
+      resolveDepartmentId(rawDept) ||
+      (typeof rawDept === "string" ? rawDept.trim().toUpperCase() : "");
     result = result.filter((task) => {
       if (task.departmentId === rawDept || task.leadDepartmentId === rawDept) {
         return true;
@@ -437,7 +438,8 @@ export function computeSmartTabCounts(
   const rawDept = options?.departmentId || options?.department;
   if (rawDept && rawDept !== "ALL") {
     const canonicalDept =
-      resolveDepartmentId(rawDept) || rawDept.trim().toUpperCase();
+      resolveDepartmentId(rawDept) ||
+      (typeof rawDept === "string" ? rawDept.trim().toUpperCase() : "");
     base = base.filter((task) => {
       if (task.departmentId === rawDept || task.leadDepartmentId === rawDept) {
         return true;

@@ -11,7 +11,17 @@ export const Menu = BaseMenu;
 export const MenuRoot = BaseMenu.Root;
 export const MenuTrigger = BaseMenu.Trigger;
 export const MenuPortal = BaseMenu.Portal;
-export const MenuPositioner = BaseMenu.Positioner;
+export const MenuPositioner = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof BaseMenu.Positioner>
+>(({ className, ...props }, ref) => (
+  <BaseMenu.Positioner
+    ref={ref}
+    className={cn("z-50 outline-none", className)}
+    {...props}
+  />
+));
+MenuPositioner.displayName = "MenuPositioner";
 export const MenuPopup = BaseMenu.Popup;
 export const MenuItem = BaseMenu.Item;
 export const MenuSeparator = BaseMenu.Separator;
