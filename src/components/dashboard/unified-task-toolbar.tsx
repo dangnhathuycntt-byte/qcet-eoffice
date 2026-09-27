@@ -2432,12 +2432,11 @@ export function UnifiedTaskToolbar({
                 title="Hiển thị"
                 aria-label="Tùy chọn hiển thị"
                 className={cn(
-                  "inline-flex h-7 items-center justify-center gap-1 rounded-md border border-border/80 bg-background px-2 text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0",
-                  isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "text-foreground hover:bg-accent"
+                  "inline-flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0",
+                  isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "border-border/80 bg-background text-foreground hover:bg-accent"
                 )}
               >
                 <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Hiển thị</span>
               </button>
             }
           />
@@ -2492,13 +2491,13 @@ export function UnifiedTaskToolbar({
         <div className="h-4 w-px bg-border/60 shrink-0" />
       )}
 
-      {/* 5. + Giao việc CTA */}
+      {/* 5. + Tạo việc CTA */}
       {canCreateTask && handlePrimaryAction && (
         <button
           type="button"
           onClick={() => handlePrimaryAction()}
-          title="Giao việc mới (C)"
-          aria-label="Giao việc mới (Phím C)"
+          title="Tạo việc mới (C)"
+          aria-label="Tạo việc mới (Phím C)"
           className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />

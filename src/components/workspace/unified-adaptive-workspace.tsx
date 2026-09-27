@@ -2251,7 +2251,7 @@ function UnifiedAdaptiveWorkspaceInner({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={createPolicy.canCreate}
-          createButtonLabel="Giao việc"
+          createButtonLabel="Tạo việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           selectedStatus={currentStatus || "all"}
