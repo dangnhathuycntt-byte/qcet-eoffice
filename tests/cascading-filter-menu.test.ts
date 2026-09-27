@@ -102,7 +102,7 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     assert.ok(source.includes('label: "Nguồn gốc"'), "Must include origin category");
   });
 
-  test("Dates flattened into direct 1-tier sub-dropdowns (Hạn chốt and Kỳ tháng) without 3-level nesting", async () => {
+  test("Linear-style 3-tier cascading dates sub-dropdowns matching Linear 1:1", async () => {
     const fs = await import("node:fs");
     const path = await import("node:path");
     const source = fs.readFileSync(
@@ -113,12 +113,13 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
     // 1. Root menu width w-56 for compact Linear-style spacing
     assert.ok(source.includes('className="w-56 rounded-lg'), "Root menu width must be w-56 for compact spacing");
 
-    // 2. Direct 1-tier sub-dropdowns: Hạn chốt & Kỳ tháng directly in root menu
-    assert.ok(source.includes('label: "Hạn chốt"'), "Must contain direct 1-tier item for Target date / Hạn chốt");
-    assert.ok(source.includes('label: "Kỳ tháng"'), "Must contain direct 1-tier item for Academic period / Kỳ tháng");
+    // 2. Linear-style 3-tier dates category in root menu
+    assert.ok(source.includes('label: "Mốc thời gian"'), "Root menu must contain 'Mốc thời gian' (Dates)");
 
-    // 3. Nested 3-level parent 'Mốc thời gian' eliminated
-    assert.ok(!source.includes('label: "Mốc thời gian"'), "Must NOT contain redundant 3-level wrapper 'Mốc thời gian'");
+    // 3. Sub-dropdown tier 2: Hạn chốt & Kỳ tháng nested under Mốc thời gian
+    assert.ok(source.includes('case "dates":'), "Must contain dedicated 'dates' handler in renderCategorySubmenuItems");
+    assert.ok(source.includes("Hạn chốt"), "Tier 2 must contain Target date / Hạn chốt");
+    assert.ok(source.includes("Kỳ tháng"), "Tier 2 must contain Academic period / Kỳ tháng");
 
     // 4. No-op stubs removed (anti-slop clean architecture)
     assert.ok(!source.includes("Ngày giao việc"), "Must NOT contain stub sub dropdown for Ngày giao việc");

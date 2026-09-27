@@ -1237,6 +1237,11 @@ export function UnifiedTaskToolbar({
       case "collaborator": return collaboratorLabel;
       case "deadline": return isDeadlineActive && deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined;
       case "month": return isMonthActive && timeLabel ? timeLabel : undefined;
+      case "dates": {
+        if (isDeadlineActive && deadlineLabel !== "Thời hạn") return deadlineLabel;
+        if (isMonthActive && timeLabel) return timeLabel;
+        return undefined;
+      }
       case "health": return healthLabel;
       case "origin": return originLabel;
       default: return undefined;
@@ -1292,18 +1297,11 @@ export function UnifiedTaskToolbar({
 
     // 3. Nhóm thời gian, tiến độ & nguồn gốc
     {
-      key: "deadline",
+      key: "dates",
       group: "time",
-      label: "Hạn chốt",
-      isActive: isDeadlineActive,
+      label: "Mốc thời gian",
+      isActive: isDeadlineActive || isMonthActive,
       icon: Calendar,
-    },
-    {
-      key: "month",
-      group: "time",
-      label: "Kỳ tháng",
-      isActive: isMonthActive,
-      icon: Clock,
     },
     {
       key: "health",
@@ -1567,104 +1565,155 @@ export function UnifiedTaskToolbar({
           </div>
         );
       }
-      case "deadline": {
+      case "dates": {
         return (
           <div className="space-y-px">
-            {deadlineOptions.map((opt) => {
-              const selected = effectiveDeadline === opt.value ||
-                (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
-              return (
-                <MenuItem
-                  key={opt.value}
-                  onClick={() => {
-                    if (onDeadlineChange) onDeadlineChange(opt.value);
-                    else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                    setIsCollapsedFilterOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+            {/* Sub-dropdown cấp 2: Hạn chốt */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <span className={cn("truncate", isDeadlineActive ? "font-medium text-foreground" : "font-normal")}>
+                    Hạn chốt
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
+                  {isDeadlineActive && deadlineLabel !== "Thời hạn" && (
+                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
+                      {deadlineLabel}
+                    </span>
                   )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                    <span>{opt.label}</span>
-                    {opt.count !== undefined && opt.count > 0 && (
-                      <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
-                    )}
-                  </div>
-                </MenuItem>
-              );
-            })}
-          </div>
-        );
-      }
-      case "month":
-      case "time": {
-        const timePresets: Array<{ value: TaskTimePreset | "none"; label: string }> = [
-          { value: "none", label: "Tất cả thời gian" },
-          { value: "today", label: "Hôm nay" },
-          { value: "this_week", label: "Tuần này" },
-          { value: "this_month", label: "Tháng này" },
-          { value: "overdue", label: "Quá hạn" },
-        ];
-        return (
-          <div className="space-y-px">
-            {timePresets.map((opt) => {
-              const selected = opt.value === "none"
-                ? effectiveTimeFilter.kind === "none"
-                : effectiveTimeFilter.kind === "preset" && effectiveTimeFilter.preset === opt.value;
-              return (
-                <MenuItem
-                  key={opt.value}
-                  onClick={() => {
-                    handleTimeFilterChange(opt.value === "none" ? NO_TASK_TIME_FILTER : { kind: "preset", preset: opt.value });
-                    setIsCollapsedFilterOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                  <ChevronRight
+                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-px">
+                      {deadlineOptions.map((opt) => {
+                        const selected = effectiveDeadline === opt.value ||
+                          (opt.value === "all" && (!effectiveDeadline || effectiveDeadline === "all"));
+                        return (
+                          <MenuItem
+                            key={opt.value}
+                            onClick={() => {
+                              if (onDeadlineChange) onDeadlineChange(opt.value);
+                              else onTabChange?.(opt.value === "all" ? "all" : opt.value);
+                              setIsCollapsedFilterOpen(false);
+                            }}
+                            className={cn(
+                              "flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              selected
+                                ? "bg-accent font-medium text-foreground"
+                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <span>{opt.label}</span>
+                              {opt.count !== undefined && opt.count > 0 && (
+                                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
+                              )}
+                            </div>
+                          </MenuItem>
+                        );
+                      })}
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
+
+            {/* Sub-dropdown cấp 2: Kỳ tháng */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <span className={cn("truncate", isMonthActive ? "font-medium text-foreground" : "font-normal")}>
+                    Kỳ tháng
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
+                  {isMonthActive && (
+                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
+                      {getTaskTimeFilterLabel(effectiveTimeFilter)}
+                    </span>
                   )}
-                >
-                  <Clock className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                  <span>{opt.label}</span>
-                </MenuItem>
-              );
-            })}
-            <MenuSeparator className="h-px bg-border/40 my-1" />
-            <div className="px-1.5 py-1">
-              <p className="mb-1 text-[10px] font-medium text-muted-foreground">
-                Năm học {academicYear}
-              </p>
-              <div className="grid grid-cols-4 gap-1">
-                {academicMonths.map((period) => {
-                  const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
-                  return (
-                    <button
-                      key={period.monthNumber}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => {
-                        handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                        setIsCollapsedFilterOpen(false);
-                      }}
-                      className={cn(
-                        "flex h-5.5 items-center justify-center rounded text-[10.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
-                        selected
-                          ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                      )}
-                    >
-                      T{period.monthNumber}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                  <ChevronRight
+                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="min-w-[190px] w-auto max-w-[260px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-px">
+                      <MenuItem
+                        onClick={() => {
+                          handleTimeFilterChange(NO_TASK_TIME_FILTER);
+                          setIsCollapsedFilterOpen(false);
+                        }}
+                        className={cn(
+                          "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                          effectiveTimeFilter.kind === "none"
+                            ? "bg-accent font-medium text-foreground"
+                            : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                        )}
+                      >
+                        <Clock className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                        <span>Tất cả các tháng</span>
+                      </MenuItem>
+
+                      <MenuSeparator className="h-px bg-border/40 my-1" />
+
+                      <div className="px-1.5 py-1">
+                        <p className="mb-1.5 text-[10px] font-medium text-muted-foreground select-none">
+                          Năm học {academicYear}
+                        </p>
+                        <div className="grid grid-cols-4 gap-1">
+                          {academicMonths.map((period) => {
+                            const selected = effectiveTimeFilter.kind === "month" && effectiveTimeFilter.month === period.monthNumber;
+                            return (
+                              <button
+                                key={period.monthNumber}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  handleTimeFilterChange({ kind: "month", month: period.monthNumber });
+                                  setIsCollapsedFilterOpen(false);
+                                }}
+                                className={cn(
+                                  "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
+                                  selected
+                                    ? "bg-foreground text-background font-semibold shadow-2xs"
+                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                )}
+                              >
+                                T{period.monthNumber}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
           </div>
         );
       }
@@ -2064,7 +2113,7 @@ export function UnifiedTaskToolbar({
           </div>
           <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
             {category.isActive && activeValue && (
-              <span className="truncate max-w-[85px] text-[10.5px] font-medium text-primary">
+              <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
                 {activeValue}
               </span>
             )}
@@ -2244,41 +2293,9 @@ export function UnifiedTaskToolbar({
                   )}
                 </div>
               ) : (
-                /* Categories — 3 structured sub-dropdown groups */
-                <div className="space-y-1">
-                  {/* Nhóm 1: Thuộc tính */}
-                  <div className="space-y-px">
-                    <div className="px-2 pt-1 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                      Thuộc tính
-                    </div>
-                    {filterCategories
-                      .filter((c) => c.group === "core")
-                      .map(renderCategorySubmenu)}
-                  </div>
-
-                  <MenuSeparator className="h-px bg-border/40 my-1 mx-1.5" />
-
-                  {/* Nhóm 2: Đơn vị & Nhân sự */}
-                  <div className="space-y-px">
-                    <div className="px-2 pt-0.5 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                      Đơn vị & Nhân sự
-                    </div>
-                    {filterCategories
-                      .filter((c) => c.group === "team")
-                      .map(renderCategorySubmenu)}
-                  </div>
-
-                  <MenuSeparator className="h-px bg-border/40 my-1 mx-1.5" />
-
-                  {/* Nhóm 3: Thời gian & Tiến độ */}
-                  <div className="space-y-px">
-                    <div className="px-2 pt-0.5 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
-                      Thời gian & Tiến độ
-                    </div>
-                    {filterCategories
-                      .filter((c) => c.group === "time")
-                      .map(renderCategorySubmenu)}
-                  </div>
+                /* Categories — Seamless, compact Linear list */
+                <div className="space-y-px">
+                  {filterCategories.map(renderCategorySubmenu)}
                 </div>
               )}
 
