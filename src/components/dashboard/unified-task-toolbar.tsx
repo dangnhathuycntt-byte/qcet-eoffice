@@ -2244,9 +2244,41 @@ export function UnifiedTaskToolbar({
                   )}
                 </div>
               ) : (
-                /* Categories — Seamless, compact Linear/Raycast list */
-                <div className="space-y-px">
-                  {filterCategories.map(renderCategorySubmenu)}
+                /* Categories — 3 structured sub-dropdown groups */
+                <div className="space-y-1">
+                  {/* Nhóm 1: Thuộc tính */}
+                  <div className="space-y-px">
+                    <div className="px-2 pt-1 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
+                      Thuộc tính
+                    </div>
+                    {filterCategories
+                      .filter((c) => c.group === "core")
+                      .map(renderCategorySubmenu)}
+                  </div>
+
+                  <MenuSeparator className="h-px bg-border/40 my-1 mx-1.5" />
+
+                  {/* Nhóm 2: Đơn vị & Nhân sự */}
+                  <div className="space-y-px">
+                    <div className="px-2 pt-0.5 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
+                      Đơn vị & Nhân sự
+                    </div>
+                    {filterCategories
+                      .filter((c) => c.group === "team")
+                      .map(renderCategorySubmenu)}
+                  </div>
+
+                  <MenuSeparator className="h-px bg-border/40 my-1 mx-1.5" />
+
+                  {/* Nhóm 3: Thời gian & Tiến độ */}
+                  <div className="space-y-px">
+                    <div className="px-2 pt-0.5 pb-0.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/60 select-none">
+                      Thời gian & Tiến độ
+                    </div>
+                    {filterCategories
+                      .filter((c) => c.group === "time")
+                      .map(renderCategorySubmenu)}
+                  </div>
                 </div>
               )}
 
