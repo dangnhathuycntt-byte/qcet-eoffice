@@ -1251,28 +1251,6 @@ export function UnifiedTaskToolbar({
     return undefined;
   }, [selectedCollaborator]);
 
-  // Active value labels for sub dropdown indicators
-  const getActiveValueLabel = React.useCallback((categoryKey: string): string | undefined => {
-    switch (categoryKey) {
-      case "status": return statusLabel !== "Trạng thái" ? statusLabel : undefined;
-      case "priority": return priorityLabel !== "Ưu tiên" ? priorityLabel : undefined;
-      case "category": return categoryLabel;
-      case "dept": return departmentLabel !== "Đơn vị" ? departmentLabel : undefined;
-      case "lead": return leadLabel;
-      case "collaborator": return collaboratorLabel;
-      case "deadline": return isDeadlineActive && deadlineLabel !== "Thời hạn" ? deadlineLabel : undefined;
-      case "month": return isMonthActive && timeLabel ? timeLabel : undefined;
-      case "dates": {
-        if (isDeadlineActive && deadlineLabel !== "Thời hạn") return deadlineLabel;
-        if (isMonthActive && timeLabel) return timeLabel;
-        return undefined;
-      }
-      case "health": return healthLabel;
-      case "origin": return originLabel;
-      default: return undefined;
-    }
-  }, [statusLabel, priorityLabel, categoryLabel, departmentLabel, leadLabel, collaboratorLabel, isDeadlineActive, deadlineLabel, isMonthActive, timeLabel, healthLabel, originLabel]);
-
   const filterCategories = React.useMemo(() => [
     // 1. Nhóm thuộc tính cốt lõi
     {
@@ -1280,7 +1258,6 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Trạng thái",
       isActive: isStatusActive,
-      activeLabel: getActiveValueLabel("status"),
       icon: FilterIconStatus,
     },
     {
@@ -1288,7 +1265,6 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Mức ưu tiên",
       isActive: isPriorityActive,
-      activeLabel: getActiveValueLabel("priority"),
       icon: FilterIconPriority,
     },
     {
@@ -1296,7 +1272,6 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Danh mục",
       isActive: isCategoryActive,
-      activeLabel: getActiveValueLabel("category"),
       icon: FilterIconCategory,
     },
 
@@ -1306,7 +1281,6 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Đơn vị",
       isActive: isDepartmentActive,
-      activeLabel: getActiveValueLabel("dept"),
       icon: FilterIconDept,
     },
     {
@@ -1314,7 +1288,6 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Người chủ trì",
       isActive: isLeadActive,
-      activeLabel: getActiveValueLabel("lead"),
       icon: FilterIconLead,
     },
     {
@@ -1322,7 +1295,6 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Người phối hợp",
       isActive: isCollaboratorActive,
-      activeLabel: getActiveValueLabel("collaborator"),
       icon: FilterIconCollaborator,
     },
 
@@ -1332,7 +1304,6 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Mốc thời gian",
       isActive: isDeadlineActive || isMonthActive,
-      activeLabel: getActiveValueLabel("dates"),
       icon: FilterIconDeadline,
     },
     {
@@ -1340,7 +1311,6 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Tiến độ",
       isActive: isHealthActive,
-      activeLabel: getActiveValueLabel("health"),
       icon: FilterIconHealth,
     },
     {
@@ -1348,7 +1318,6 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Nguồn gốc",
       isActive: isOriginActive,
-      activeLabel: getActiveValueLabel("origin"),
       icon: FilterIconOrigin,
     },
   ], [
@@ -1362,7 +1331,6 @@ export function UnifiedTaskToolbar({
     isMonthActive,
     isHealthActive,
     isOriginActive,
-    getActiveValueLabel,
   ]);
 
   const renderCategorySubmenuItems = (categoryKey: string) => {
@@ -1410,7 +1378,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1435,8 +1403,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1482,7 +1450,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1501,8 +1469,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1547,7 +1515,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1560,8 +1528,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1628,8 +1596,8 @@ export function UnifiedTaskToolbar({
                 className={cn(
                   "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                   isAll
-                    ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                    : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                    ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                    : "border-border/80 bg-background group-hover/item:border-neutral-400"
                 )}
               >
                 {isAll && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1683,8 +1651,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1743,8 +1711,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1790,7 +1758,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1813,8 +1781,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1845,7 +1813,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1864,8 +1832,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1931,8 +1899,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-neutral-400"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2005,7 +1973,7 @@ export function UnifiedTaskToolbar({
                                 className={cn(
                                   "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
                                   selected
-                                    ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                                    ? "bg-neutral-800 text-white font-semibold shadow-2xs"
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                 )}
                               >
@@ -2063,7 +2031,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -2086,8 +2054,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2138,7 +2106,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-primary/[0.07] font-medium text-primary"
+                      ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -2151,8 +2119,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                        ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-neutral-400"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2518,21 +2486,14 @@ export function UnifiedTaskToolbar({
         >
           <div className="flex items-center gap-2 min-w-0">
             <category.icon className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
-            <span className={cn("truncate", category.isActive ? "font-medium text-foreground" : "font-normal text-foreground/85")}>
+            <span className="truncate text-foreground/85 group-hover:text-foreground">
               {category.label}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-            {category.isActive && category.activeLabel && (
-              <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium truncate max-w-[85px]">
-                {category.activeLabel}
-              </span>
-            )}
-            <ChevronRight
-              className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-              strokeWidth={1.5}
-            />
-          </div>
+          <ChevronRight
+            className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+            strokeWidth={1.5}
+          />
         </MenuSubmenuTrigger>
         <MenuPortal>
           <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -2629,7 +2590,7 @@ export function UnifiedTaskToolbar({
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
               {activeFilterCount > 0 && (
-                <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary/15 text-primary border border-primary/25 font-mono text-[10px] font-semibold tabular-nums">
+                <span className="inline-flex size-4 items-center justify-center rounded-full bg-muted text-foreground/80 border border-border/80 font-mono text-[10px] font-semibold tabular-nums">
                   {activeFilterCount}
                 </span>
               )}
@@ -2694,8 +2655,8 @@ export function UnifiedTaskToolbar({
                             className={cn(
                               "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                               match.selected
-                                ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                                : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
+                                ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                                : "border-border/80 bg-background group-hover/item:border-neutral-400"
                             )}
                           >
                             {match.selected && <Check className="size-2.5 stroke-[2.5]" />}
