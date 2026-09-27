@@ -1410,7 +1410,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1435,8 +1435,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1482,7 +1482,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1501,8 +1501,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1547,7 +1547,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1560,8 +1560,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1628,8 +1628,8 @@ export function UnifiedTaskToolbar({
                 className={cn(
                   "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                   isAll
-                    ? "bg-foreground text-background border-foreground shadow-2xs"
-                    : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                    : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                 )}
               >
                 {isAll && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1683,8 +1683,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-foreground text-background border-foreground shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1743,8 +1743,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-foreground text-background border-foreground shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1790,7 +1790,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1813,8 +1813,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1845,7 +1845,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -1864,8 +1864,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -1931,8 +1931,8 @@ export function UnifiedTaskToolbar({
                               className={cn(
                                 "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                                 selected
-                                  ? "bg-foreground text-background border-foreground shadow-2xs"
-                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                                  : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                               )}
                             >
                               {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2005,7 +2005,7 @@ export function UnifiedTaskToolbar({
                                 className={cn(
                                   "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
                                   selected
-                                    ? "bg-foreground text-background font-semibold shadow-2xs"
+                                    ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                 )}
                               >
@@ -2063,7 +2063,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -2086,8 +2086,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2138,7 +2138,7 @@ export function UnifiedTaskToolbar({
                   className={cn(
                     "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
-                      ? "bg-accent font-medium text-foreground"
+                      ? "bg-primary/[0.07] font-medium text-primary"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
@@ -2151,8 +2151,8 @@ export function UnifiedTaskToolbar({
                     className={cn(
                       "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                       selected
-                        ? "bg-foreground text-background border-foreground shadow-2xs"
-                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                        ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                        : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                     )}
                   >
                     {selected && <Check className="size-2.5 stroke-[2.5]" />}
@@ -2518,14 +2518,21 @@ export function UnifiedTaskToolbar({
         >
           <div className="flex items-center gap-2 min-w-0">
             <category.icon className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
-            <span className={cn("truncate", category.isActive ? "font-medium text-foreground" : "font-normal")}>
+            <span className={cn("truncate", category.isActive ? "font-medium text-foreground" : "font-normal text-foreground/85")}>
               {category.label}
             </span>
           </div>
-          <ChevronRight
-            className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
-            strokeWidth={1.5}
-          />
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            {category.isActive && category.activeLabel && (
+              <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium truncate max-w-[85px]">
+                {category.activeLabel}
+              </span>
+            )}
+            <ChevronRight
+              className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+              strokeWidth={1.5}
+            />
+          </div>
         </MenuSubmenuTrigger>
         <MenuPortal>
           <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -2622,7 +2629,7 @@ export function UnifiedTaskToolbar({
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
               {activeFilterCount > 0 && (
-                <span className="inline-flex size-4 items-center justify-center rounded-full bg-foreground/75 font-mono text-[10px] font-semibold tabular-nums text-background">
+                <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary/15 text-primary border border-primary/25 font-mono text-[10px] font-semibold tabular-nums">
                   {activeFilterCount}
                 </span>
               )}
@@ -2687,8 +2694,8 @@ export function UnifiedTaskToolbar({
                             className={cn(
                               "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
                               match.selected
-                                ? "bg-foreground text-background border-foreground shadow-2xs"
-                                : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                                ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                                : "border-border/80 bg-background/80 group-hover/item:border-primary/50"
                             )}
                           >
                             {match.selected && <Check className="size-2.5 stroke-[2.5]" />}

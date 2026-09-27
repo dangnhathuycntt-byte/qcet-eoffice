@@ -412,7 +412,7 @@ export function ActiveFilterBreadcrumb({
     <div
       data-slot="active-filter-breadcrumb"
       className={cn(
-        "flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border border-border/60 bg-muted/25 text-xs min-h-[38px] my-1",
+        "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
         className
       )}
     >
