@@ -2452,34 +2452,34 @@ export function UnifiedTaskToolbar({
                 type="button"
                 onClick={() => { onViewModeChange("table"); setIsDisplayOpen(false); }}
                 className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer select-none outline-none",
                   viewMode === "table"
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-accent font-medium text-foreground"
+                    : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <List className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <div className="flex items-center gap-2 min-w-0">
+                  <List className={cn("size-3.5 shrink-0", viewMode === "table" ? "text-foreground" : "text-muted-foreground")} strokeWidth={1.5} />
                   <span>Bảng</span>
                 </div>
-                {viewMode === "table" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                {viewMode === "table" && <Check className="size-3.5 text-foreground shrink-0 ml-1.5" strokeWidth={1.5} />}
               </button>
 
               <button
                 type="button"
                 onClick={() => { onViewModeChange("kanban"); setIsDisplayOpen(false); }}
                 className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer select-none",
+                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer select-none outline-none",
                   viewMode === "kanban"
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-accent font-medium text-foreground"
+                    : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <Kanban className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <div className="flex items-center gap-2 min-w-0">
+                  <Kanban className={cn("size-3.5 shrink-0", viewMode === "kanban" ? "text-foreground" : "text-muted-foreground")} strokeWidth={1.5} />
                   <span>Kanban</span>
                 </div>
-                {viewMode === "kanban" && <Check className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />}
+                {viewMode === "kanban" && <Check className="size-3.5 text-foreground shrink-0 ml-1.5" strokeWidth={1.5} />}
               </button>
             </div>
           </PopoverContent>
