@@ -43,6 +43,8 @@ import {
   HealthSubAtRisk,
   HealthSubOverdue,
   HealthSubCompleted,
+  FilterIconStatus,
+  FilterIconPriority,
   FilterIconHealth,
   FilterIconLead,
   FilterIconCollaborator,
@@ -1255,21 +1257,21 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Trạng thái",
       isActive: isStatusActive,
-      icon: CheckCircle2,
+      icon: FilterIconStatus,
     },
     {
       key: "priority",
       group: "core",
       label: "Mức ưu tiên",
       isActive: isPriorityActive,
-      icon: Flag,
+      icon: FilterIconPriority,
     },
     {
       key: "category",
       group: "core",
       label: "Danh mục",
       isActive: isCategoryActive,
-      icon: Tag,
+      icon: FilterIconCategory,
     },
 
     // 2. Nhóm đơn vị & nhân sự
@@ -1278,21 +1280,21 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Đơn vị",
       isActive: isDepartmentActive,
-      icon: Building,
+      icon: FilterIconDept,
     },
     {
       key: "lead",
       group: "team",
       label: "Người chủ trì",
       isActive: isLeadActive,
-      icon: User,
+      icon: FilterIconLead,
     },
     {
       key: "collaborator",
       group: "team",
       label: "Người phối hợp",
       isActive: isCollaboratorActive,
-      icon: Users,
+      icon: FilterIconCollaborator,
     },
 
     // 3. Nhóm thời gian, tiến độ & nguồn gốc
@@ -1301,7 +1303,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Mốc thời gian",
       isActive: isDeadlineActive || isMonthActive,
-      icon: Calendar,
+      icon: FilterIconDeadline,
     },
     {
       key: "health",
@@ -1315,7 +1317,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Nguồn gốc",
       isActive: isOriginActive,
-      icon: FileText,
+      icon: FilterIconOrigin,
     },
   ], [
     isStatusActive,

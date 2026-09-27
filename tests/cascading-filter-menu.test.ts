@@ -61,10 +61,10 @@ describe("Cascading Fly-out Filter Menu (Anti-AI Slop & Clean Design)", () => {
       "Submenu MenuPositioner must have side=left and z-50 outline-none to avoid overlapping root menu"
     );
 
-    // 3. Status category icon must be CheckCircle2 (clean check circle)
+    // 3. Status category icon must be FilterIconStatus
     assert.ok(
-      source.includes('key: "status",\n      group: "core",\n      label: "Trạng thái",\n      isActive: isStatusActive,\n      icon: CheckCircle2,'),
-      "Status category must use CheckCircle2 icon for clean professional UI"
+      source.includes('key: "status",\n      group: "core",\n      label: "Trạng thái",\n      isActive: isStatusActive,\n      icon: FilterIconStatus,'),
+      "Status category must use FilterIconStatus icon for clean professional UI"
     );
   });
 
