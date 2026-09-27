@@ -208,6 +208,10 @@ export interface UnifiedTaskToolbarProps {
   onStatusChange?: (status: string) => void;
   selectedDeadline?: string;
   onDeadlineChange?: (deadline: string) => void;
+
+  // Custom Left Content (e.g. view title or summary strip)
+  leftContent?: React.ReactNode;
+
   tabCounts?: {
     all?: number;
     my?: number;
@@ -539,6 +543,7 @@ export function UnifiedTaskToolbar({
   onStatusChange,
   selectedDeadline,
   onDeadlineChange,
+  leftContent,
   tabCounts,
   selectedDepartment = "ALL",
   onDepartmentChange,
@@ -976,6 +981,10 @@ export function UnifiedTaskToolbar({
 
   const departmentLabel = React.useMemo(() => {
     if (!selectedDepartment || selectedDepartment === "ALL") return "Đơn vị";
+    if (selectedDepartment.includes(",")) {
+      const parts = selectedDepartment.split(",").filter(Boolean);
+      return `Đơn vị · ${parts.length}`;
+    }
     const found = availableDepartments.find((d) => d.code === selectedDepartment);
     return found ? found.name : selectedDepartment;
   }, [selectedDepartment, availableDepartments]);
@@ -1201,6 +1210,11 @@ export function UnifiedTaskToolbar({
   }, [selectedLead, activeTab]);
 
   const healthLabel = React.useMemo(() => {
+    if (!selectedHealth || selectedHealth === "all") return undefined;
+    if (selectedHealth.includes(",")) {
+      const parts = selectedHealth.split(",").filter(Boolean);
+      return `Tiến độ · ${parts.length}`;
+    }
     if (selectedHealth === "on_track") return "Đúng tiến độ";
     if (selectedHealth === "at_risk") return "Nguy cơ trễ";
     if (selectedHealth === "overdue") return "Trễ hạn";
@@ -1209,6 +1223,11 @@ export function UnifiedTaskToolbar({
   }, [selectedHealth]);
 
   const originLabel = React.useMemo(() => {
+    if (!selectedOrigin || selectedOrigin === "all") return undefined;
+    if (selectedOrigin.includes(",")) {
+      const parts = selectedOrigin.split(",").filter(Boolean);
+      return `Nguồn gốc · ${parts.length}`;
+    }
     if (selectedOrigin === "KE_HOACH_NAM") return "Kế hoạch năm";
     if (selectedOrigin === "NGHI_QUYET") return "Nghị quyết BGH";
     if (selectedOrigin === "GIAO_BAN") return "Giao ban";
@@ -1218,6 +1237,10 @@ export function UnifiedTaskToolbar({
 
   const categoryLabel = React.useMemo(() => {
     if (!selectedCategory || selectedCategory === "ALL") return undefined;
+    if (selectedCategory.includes(",")) {
+      const parts = selectedCategory.split(",").filter(Boolean);
+      return `Danh mục · ${parts.length}`;
+    }
     const found = CATEGORY_FILTER_OPTIONS.find((c) => c.id === selectedCategory);
     return found ? found.label : selectedCategory;
   }, [selectedCategory]);
@@ -1257,6 +1280,7 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Trạng thái",
       isActive: isStatusActive,
+      activeLabel: getActiveValueLabel("status"),
       icon: FilterIconStatus,
     },
     {
@@ -1264,6 +1288,7 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Mức ưu tiên",
       isActive: isPriorityActive,
+      activeLabel: getActiveValueLabel("priority"),
       icon: FilterIconPriority,
     },
     {
@@ -1271,6 +1296,7 @@ export function UnifiedTaskToolbar({
       group: "core",
       label: "Danh mục",
       isActive: isCategoryActive,
+      activeLabel: getActiveValueLabel("category"),
       icon: FilterIconCategory,
     },
 
@@ -1280,6 +1306,7 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Đơn vị",
       isActive: isDepartmentActive,
+      activeLabel: getActiveValueLabel("dept"),
       icon: FilterIconDept,
     },
     {
@@ -1287,6 +1314,7 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Người chủ trì",
       isActive: isLeadActive,
+      activeLabel: getActiveValueLabel("lead"),
       icon: FilterIconLead,
     },
     {
@@ -1294,6 +1322,7 @@ export function UnifiedTaskToolbar({
       group: "team",
       label: "Người phối hợp",
       isActive: isCollaboratorActive,
+      activeLabel: getActiveValueLabel("collaborator"),
       icon: FilterIconCollaborator,
     },
 
@@ -1303,6 +1332,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Mốc thời gian",
       isActive: isDeadlineActive || isMonthActive,
+      activeLabel: getActiveValueLabel("dates"),
       icon: FilterIconDeadline,
     },
     {
@@ -1310,6 +1340,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Tiến độ",
       isActive: isHealthActive,
+      activeLabel: getActiveValueLabel("health"),
       icon: FilterIconHealth,
     },
     {
@@ -1317,6 +1348,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Nguồn gốc",
       isActive: isOriginActive,
+      activeLabel: getActiveValueLabel("origin"),
       icon: FilterIconOrigin,
     },
   ], [
@@ -1330,55 +1362,85 @@ export function UnifiedTaskToolbar({
     isMonthActive,
     isHealthActive,
     isOriginActive,
+    getActiveValueLabel,
   ]);
 
   const renderCategorySubmenuItems = (categoryKey: string) => {
     switch (categoryKey) {
       case "status": {
-        const norm = (effectiveStatus || "all").toLowerCase();
+        const selectedList = (effectiveStatus || "all").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("all");
+
         return (
           <div className="space-y-px">
             {statusOptions.map((opt) => {
               const selected = opt.value === "all"
-                ? !effectiveStatus || norm === "all"
+                ? isAll
                 : opt.value === "new"
-                  ? norm === "new" || norm === "not_started" || norm === "assigned"
-                  : opt.value === "in_progress"
-                    ? norm === "in_progress"
-                    : opt.value === "waiting_approval" || opt.value === "review"
-                      ? norm === "waiting_approval" || norm === "review" || norm === "pending_executive_approval" || norm === "needs_review"
-                      : opt.value === "completed"
-                        ? norm === "completed"
-                        : norm === opt.value;
+                  ? selectedList.includes("new") || selectedList.includes("not_started") || selectedList.includes("assigned")
+                  : opt.value === "waiting_approval" || opt.value === "review"
+                    ? selectedList.includes("waiting_approval") || selectedList.includes("review") || selectedList.includes("pending_executive_approval") || selectedList.includes("needs_review")
+                    : selectedList.includes(opt.value);
+
+              const handleToggle = () => {
+                if (opt.value === "all") {
+                  if (onStatusChange) onStatusChange("all");
+                  else onTabChange?.("all");
+                  return;
+                }
+                let nextList: string[];
+                if (isAll) {
+                  nextList = [opt.value];
+                } else if (selected) {
+                  nextList = selectedList.filter((v) => v !== opt.value && v !== "all");
+                  if (nextList.length === 0) nextList = ["all"];
+                } else {
+                  nextList = [...selectedList.filter((v) => v !== "all"), opt.value];
+                }
+                const nextStr = nextList.join(",");
+                if (onStatusChange) onStatusChange(nextStr);
+                else onTabChange?.(nextStr);
+              };
+
               return (
                 <MenuItem
                   key={opt.value}
-                  onClick={() => {
-                    if (onStatusChange) onStatusChange(opt.value);
-                    else onTabChange?.(opt.value);
-                    setIsCollapsedFilterOpen(false);
-                  }}
+                  closeOnClick={false}
+                  onClick={handleToggle}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  {opt.value === "all" ? (
-                    <StatusSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
-                  ) : opt.value === "new" ? (
-                    <StatusSubNew className="size-3.5 text-muted-foreground/70 shrink-0" />
-                  ) : opt.value === "in_progress" ? (
-                    <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "waiting_approval" || opt.value === "review" ? (
-                    <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "completed" ? (
-                    <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
-                  ) : (
-                    <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
-                  )}
-                  <span>{opt.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {opt.value === "all" ? (
+                      <StatusSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    ) : opt.value === "new" ? (
+                      <StatusSubNew className="size-3.5 text-muted-foreground/70 shrink-0" />
+                    ) : opt.value === "in_progress" ? (
+                      <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "waiting_approval" || opt.value === "review" ? (
+                      <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "completed" ? (
+                      <StatusSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
+                    ) : (
+                      <Circle className="size-2.5 text-muted-foreground/40 shrink-0 ml-0.5" strokeWidth={1.5} />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1386,33 +1448,65 @@ export function UnifiedTaskToolbar({
         );
       }
       case "priority": {
+        const selectedList = (selectedPriority || "ALL").split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+
         return (
           <div className="space-y-px">
             {PRIORITY_FILTER_OPTIONS.map((opt) => {
-              const selected = (selectedPriority || "ALL").split(",").includes(opt.id);
+              const selected = opt.id === "ALL" ? isAll : selectedList.includes(opt.id);
               const level = opt.id === "URGENT" ? 3 : opt.id === "HIGH" ? 2 : opt.id === "NORMAL" ? 1 : 0;
+
+              const handleToggle = () => {
+                if (opt.id === "ALL") {
+                  onPriorityChange?.("ALL");
+                  return;
+                }
+                let nextList: string[];
+                if (isAll) {
+                  nextList = [opt.id];
+                } else if (selected) {
+                  nextList = selectedList.filter((p) => p !== opt.id && p !== "ALL");
+                  if (nextList.length === 0) nextList = ["ALL"];
+                } else {
+                  nextList = [...selectedList.filter((p) => p !== "ALL"), opt.id];
+                }
+                onPriorityChange?.(nextList.join(","));
+              };
+
               return (
                 <MenuItem
                   key={opt.id}
-                  onClick={() => {
-                    onPriorityChange?.(opt.id);
-                    setIsCollapsedFilterOpen(false);
-                  }}
+                  closeOnClick={false}
+                  onClick={handleToggle}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <PrioritySubBars
-                    level={level as 0 | 1 | 2 | 3}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <PrioritySubBars
+                      level={level as 0 | 1 | 2 | 3}
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        selected ? "text-foreground" : "text-muted-foreground/70"
+                      )}
+                    />
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
                     className={cn(
-                      "size-3.5 shrink-0",
-                      selected ? "text-foreground" : "text-muted-foreground/70"
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
                     )}
-                  />
-                  <span>{opt.label}</span>
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1420,26 +1514,58 @@ export function UnifiedTaskToolbar({
         );
       }
       case "category": {
+        const selectedList = (selectedCategory || "ALL").split(",").map((c) => c.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+
         return (
-          <div className="space-y-px">
+          <div className="space-y-px max-h-56 overflow-y-auto">
             {CATEGORY_FILTER_OPTIONS.map((cat) => {
-              const selected = (selectedCategory || "ALL") === cat.id;
+              const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
+
+              const handleToggle = () => {
+                if (cat.id === "ALL") {
+                  onCategoryChange?.("ALL");
+                  return;
+                }
+                let nextList: string[];
+                if (isAll) {
+                  nextList = [cat.id];
+                } else if (selected) {
+                  nextList = selectedList.filter((c) => c !== cat.id && c !== "ALL");
+                  if (nextList.length === 0) nextList = ["ALL"];
+                } else {
+                  nextList = [...selectedList.filter((c) => c !== "ALL"), cat.id];
+                }
+                onCategoryChange?.(nextList.join(","));
+              };
+
               return (
                 <MenuItem
                   key={cat.id}
-                  onClick={() => {
-                    onCategoryChange?.(cat.id);
-                    setIsCollapsedFilterOpen(false);
-                  }}
+                  closeOnClick={false}
+                  onClick={handleToggle}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <FilterIconCategory className="size-3.5 text-muted-foreground/60 shrink-0" />
-                  <span>{cat.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FilterIconCategory className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="truncate">{cat.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1447,6 +1573,9 @@ export function UnifiedTaskToolbar({
         );
       }
       case "dept": {
+        const selectedList = (selectedDepartment || "ALL").split(",").map((d) => d.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+
         const facultyDepts = availableDepartments.filter(
           (d) => d.code !== "ALL" && (d.name.startsWith("Khoa") || ["CNTT", "KINH_TE", "KY_THUAT"].includes(d.code))
         );
@@ -1455,36 +1584,56 @@ export function UnifiedTaskToolbar({
         );
 
         const isFacultyActive = Boolean(
-          selectedDepartment &&
-          selectedDepartment !== "ALL" &&
-          facultyDepts.some((d) => d.code === selectedDepartment)
+          !isAll && facultyDepts.some((d) => selectedList.includes(d.code))
         );
         const isAdminActive = Boolean(
-          selectedDepartment &&
-          selectedDepartment !== "ALL" &&
-          adminDepts.some((d) => d.code === selectedDepartment)
+          !isAll && adminDepts.some((d) => selectedList.includes(d.code))
         );
 
-        const activeFacultyName = facultyDepts.find((d) => d.code === selectedDepartment)?.name;
-        const activeAdminName = adminDepts.find((d) => d.code === selectedDepartment)?.name;
+        const handleDeptToggle = (deptCode: string) => {
+          if (deptCode === "ALL") {
+            onDepartmentChange?.("ALL");
+            return;
+          }
+          let nextList: string[];
+          if (isAll) {
+            nextList = [deptCode];
+          } else if (selectedList.includes(deptCode)) {
+            nextList = selectedList.filter((d) => d !== deptCode && d !== "ALL");
+            if (nextList.length === 0) nextList = ["ALL"];
+          } else {
+            nextList = [...selectedList.filter((d) => d !== "ALL"), deptCode];
+          }
+          onDepartmentChange?.(nextList.join(","));
+        };
 
         return (
           <div className="space-y-px">
             {/* Tất cả đơn vị */}
             <MenuItem
-              onClick={() => {
-                onDepartmentChange?.("ALL");
-                setIsCollapsedFilterOpen(false);
-              }}
+              closeOnClick={false}
+              onClick={() => handleDeptToggle("ALL")}
               className={cn(
-                "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                !selectedDepartment || selectedDepartment === "ALL"
+                "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                isAll
                   ? "bg-accent font-medium text-foreground"
                   : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
               )}
             >
-              <FilterIconDept className="size-3.5 text-muted-foreground/60 shrink-0" />
-              <span>Tất cả đơn vị</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <FilterIconDept className="size-3.5 text-muted-foreground/60 shrink-0" />
+                <span>Tất cả đơn vị</span>
+              </div>
+              <div
+                className={cn(
+                  "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                  isAll
+                    ? "bg-foreground text-background border-foreground shadow-2xs"
+                    : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                )}
+              >
+                {isAll && <Check className="size-2.5 stroke-[2.5]" />}
+              </div>
             </MenuItem>
 
             <MenuSeparator className="h-px bg-border/40 my-1" />
@@ -1513,23 +1662,33 @@ export function UnifiedTaskToolbar({
                   <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
                     <div className="space-y-px">
                       {facultyDepts.map((dept) => {
-                        const selected = selectedDepartment === dept.code;
+                        const selected = !isAll && selectedList.includes(dept.code);
                         return (
                           <MenuItem
                             key={dept.code}
-                            onClick={() => {
-                              onDepartmentChange?.(dept.code);
-                              setIsCollapsedFilterOpen(false);
-                            }}
+                            closeOnClick={false}
+                            onClick={() => handleDeptToggle(dept.code)}
                             className={cn(
-                              "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                             )}
                           >
-                            <School className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                            <span>{dept.name}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <School className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <span className="truncate">{dept.name}</span>
+                            </div>
+                            <div
+                              className={cn(
+                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                                selected
+                                  ? "bg-foreground text-background border-foreground shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                              )}
+                            >
+                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                            </div>
                           </MenuItem>
                         );
                       })}
@@ -1563,23 +1722,33 @@ export function UnifiedTaskToolbar({
                   <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
                     <div className="space-y-px">
                       {adminDepts.map((dept) => {
-                        const selected = selectedDepartment === dept.code;
+                        const selected = !isAll && selectedList.includes(dept.code);
                         return (
                           <MenuItem
                             key={dept.code}
-                            onClick={() => {
-                              onDepartmentChange?.(dept.code);
-                              setIsCollapsedFilterOpen(false);
-                            }}
+                            closeOnClick={false}
+                            onClick={() => handleDeptToggle(dept.code)}
                             className={cn(
-                              "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                             )}
                           >
-                            <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                            <span>{dept.name}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                              <span className="truncate">{dept.name}</span>
+                            </div>
+                            <div
+                              className={cn(
+                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                                selected
+                                  ? "bg-foreground text-background border-foreground shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                              )}
+                            >
+                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                            </div>
                           </MenuItem>
                         );
                       })}
@@ -1606,6 +1775,7 @@ export function UnifiedTaskToolbar({
               return (
                 <MenuItem
                   key={opt.value}
+                  closeOnClick={false}
                   onClick={() => {
                     if (opt.value === "my") {
                       onTabChange?.("my");
@@ -1616,27 +1786,39 @@ export function UnifiedTaskToolbar({
                     } else {
                       setSelectedLead(opt.value);
                     }
-                    setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  {opt.value === "my" ? (
-                    <FilterIconLead className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "bgh" ? (
-                    <FilterIconDept className="size-3.5 text-muted-foreground/70 shrink-0" />
-                  ) : opt.value === "assigned" ? (
-                    <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
-                  ) : opt.value === "unassigned" ? (
-                    <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
-                  ) : (
-                    <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                  )}
-                  <span>{opt.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {opt.value === "my" ? (
+                      <FilterIconLead className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "bgh" ? (
+                      <FilterIconDept className="size-3.5 text-muted-foreground/70 shrink-0" />
+                    ) : opt.value === "assigned" ? (
+                      <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
+                    ) : opt.value === "unassigned" ? (
+                      <Circle className="size-3 text-muted-foreground/40 shrink-0 ml-0.5" strokeDasharray="2 2" />
+                    ) : (
+                      <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1656,25 +1838,38 @@ export function UnifiedTaskToolbar({
               return (
                 <MenuItem
                   key={opt.value}
+                  closeOnClick={false}
                   onClick={() => {
                     handleCollaboratorChange(opt.value === "all" ? null : opt.value);
-                    setIsCollapsedFilterOpen(false);
                   }}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  {opt.value === "has_collab" ? (
-                    <FilterIconCollaborator className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "single" ? (
-                    <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
-                  ) : (
-                    <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
-                  )}
-                  <span>{opt.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {opt.value === "has_collab" ? (
+                      <FilterIconCollaborator className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "single" ? (
+                      <FilterIconLead className="size-3.5 text-muted-foreground/70 shrink-0" />
+                    ) : (
+                      <Users className="size-3.5 text-muted-foreground/50 shrink-0" strokeWidth={1.5} />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1713,13 +1908,13 @@ export function UnifiedTaskToolbar({
                         return (
                           <MenuItem
                             key={opt.value}
+                            closeOnClick={false}
                             onClick={() => {
                               if (onDeadlineChange) onDeadlineChange(opt.value);
                               else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-                              setIsCollapsedFilterOpen(false);
                             }}
                             className={cn(
-                              "flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1731,6 +1926,16 @@ export function UnifiedTaskToolbar({
                               {opt.count !== undefined && opt.count > 0 && (
                                 <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
                               )}
+                            </div>
+                            <div
+                              className={cn(
+                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                                selected
+                                  ? "bg-foreground text-background border-foreground shadow-2xs"
+                                  : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                              )}
+                            >
+                              {selected && <Check className="size-2.5 stroke-[2.5]" />}
                             </div>
                           </MenuItem>
                         );
@@ -1765,9 +1970,9 @@ export function UnifiedTaskToolbar({
                   <MenuPopup className="min-w-[190px] w-auto max-w-[260px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
                     <div className="space-y-px">
                       <MenuItem
+                        closeOnClick={false}
                         onClick={() => {
                           handleTimeFilterChange(NO_TASK_TIME_FILTER);
-                          setIsCollapsedFilterOpen(false);
                         }}
                         className={cn(
                           "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
@@ -1796,7 +2001,6 @@ export function UnifiedTaskToolbar({
                                 aria-pressed={selected}
                                 onClick={() => {
                                   handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-                                  setIsCollapsedFilterOpen(false);
                                 }}
                                 className={cn(
                                   "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
@@ -1827,49 +2031,67 @@ export function UnifiedTaskToolbar({
           { value: "overdue", label: "Trễ hạn / Quá hạn" },
           { value: "completed", label: "Đã hoàn thành 100%" },
         ];
+        const selectedList = (selectedHealth || "all").toLowerCase().split(",").map((h) => h.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("all");
+
+        const handleHealthToggle = (val: string) => {
+          if (val === "all") {
+            handleHealthChange("all");
+            return;
+          }
+          let nextList: string[];
+          if (isAll) {
+            nextList = [val];
+          } else if (selectedList.includes(val)) {
+            nextList = selectedList.filter((h) => h !== val && h !== "all");
+            if (nextList.length === 0) nextList = ["all"];
+          } else {
+            nextList = [...selectedList.filter((h) => h !== "all"), val];
+          }
+          handleHealthChange(nextList.join(","));
+        };
+
         return (
           <div className="space-y-px">
             {healthOptions.map((opt) => {
-              const selected = selectedHealth === opt.value || (opt.value === "all" && !selectedHealth);
+              const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
               return (
                 <MenuItem
                   key={opt.value}
-                  onClick={() => {
-                    handleHealthChange(opt.value === "all" ? null : opt.value);
-                    if (opt.value === "overdue") {
-                      if (onDeadlineChange) onDeadlineChange("overdue");
-                      else onTabChange?.("overdue");
-                    } else if (opt.value === "at_risk") {
-                      if (onDeadlineChange) onDeadlineChange("this_week");
-                      else onTabChange?.("this_week");
-                    } else if (opt.value === "completed") {
-                      if (onStatusChange) onStatusChange("completed");
-                      else onTabChange?.("completed");
-                    } else if (opt.value === "on_track") {
-                      if (onStatusChange) onStatusChange("in_progress");
-                      else onTabChange?.("in_progress");
-                    }
-                    setIsCollapsedFilterOpen(false);
-                  }}
+                  closeOnClick={false}
+                  onClick={() => handleHealthToggle(opt.value)}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  {opt.value === "on_track" ? (
-                    <HealthSubOnTrack className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "at_risk" ? (
-                    <HealthSubAtRisk className="size-3.5 text-foreground/80 shrink-0" />
-                  ) : opt.value === "overdue" ? (
-                    <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
-                  ) : opt.value === "completed" ? (
-                    <HealthSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
-                  ) : (
-                    <HealthSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
-                  )}
-                  <span>{opt.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {opt.value === "on_track" ? (
+                      <HealthSubOnTrack className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "at_risk" ? (
+                      <HealthSubAtRisk className="size-3.5 text-foreground/80 shrink-0" />
+                    ) : opt.value === "overdue" ? (
+                      <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
+                    ) : opt.value === "completed" ? (
+                      <HealthSubCompleted className="size-3.5 text-foreground/90 shrink-0" />
+                    ) : (
+                      <HealthSubAll className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1884,26 +2106,57 @@ export function UnifiedTaskToolbar({
           { value: "GIAO_BAN", label: "Kết luận họp giao ban" },
           { value: "DON_VI", label: "Đơn vị đề xuất" },
         ];
+        const selectedList = (selectedOrigin || "all").split(",").map((o) => o.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("all");
+
+        const handleOriginToggle = (val: string) => {
+          if (val === "all") {
+            handleOriginChange(null);
+            return;
+          }
+          let nextList: string[];
+          if (isAll) {
+            nextList = [val];
+          } else if (selectedList.includes(val)) {
+            nextList = selectedList.filter((o) => o !== val && o !== "all");
+            if (nextList.length === 0) nextList = ["all"];
+          } else {
+            nextList = [...selectedList.filter((o) => o !== "all"), val];
+          }
+          handleOriginChange(nextList.join(","));
+        };
+
         return (
           <div className="space-y-px">
             {originOptions.map((opt) => {
-              const selected = selectedOrigin === opt.value || (opt.value === "all" && !selectedOrigin);
+              const selected = opt.value === "all" ? isAll : selectedList.includes(opt.value);
               return (
                 <MenuItem
                   key={opt.value}
-                  onClick={() => {
-                    handleOriginChange(opt.value === "all" ? null : opt.value);
-                    setIsCollapsedFilterOpen(false);
-                  }}
+                  closeOnClick={false}
+                  onClick={() => handleOriginToggle(opt.value)}
                   className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-accent font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
                   )}
                 >
-                  <FilterIconOrigin className="size-3.5 text-muted-foreground/60 shrink-0" />
-                  <span>{opt.label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FilterIconOrigin className="size-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                      selected
+                        ? "bg-foreground text-background border-foreground shadow-2xs"
+                        : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                    )}
+                  >
+                    {selected && <Check className="size-2.5 stroke-[2.5]" />}
+                  </div>
                 </MenuItem>
               );
             })}
@@ -1930,8 +2183,15 @@ export function UnifiedTaskToolbar({
     // Match Status
     statusOptions.forEach((opt) => {
       if (normalizeFilterSearchText(opt.label).includes(query)) {
-        const norm = (effectiveStatus || "all").toLowerCase();
-        const selected = opt.value === "all" ? !effectiveStatus || norm === "all" : norm === opt.value;
+        const selectedList = (effectiveStatus || "all").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("all");
+        const selected = opt.value === "all"
+          ? isAll
+          : opt.value === "new"
+            ? selectedList.includes("new") || selectedList.includes("not_started") || selectedList.includes("assigned")
+            : opt.value === "waiting_approval" || opt.value === "review"
+              ? selectedList.includes("waiting_approval") || selectedList.includes("review") || selectedList.includes("pending_executive_approval") || selectedList.includes("needs_review")
+              : selectedList.includes(opt.value);
         results.push({
           id: `status-${opt.value}`,
           categoryLabel: "Trạng thái",
@@ -1939,9 +2199,23 @@ export function UnifiedTaskToolbar({
           icon: CheckCircle2,
           selected,
           onSelect: () => {
-            if (onStatusChange) onStatusChange(opt.value);
-            else onTabChange?.(opt.value);
-            setIsCollapsedFilterOpen(false);
+            if (opt.value === "all") {
+              if (onStatusChange) onStatusChange("all");
+              else onTabChange?.("all");
+              return;
+            }
+            let nextList: string[];
+            if (isAll) {
+              nextList = [opt.value];
+            } else if (selected) {
+              nextList = selectedList.filter((v) => v !== opt.value && v !== "all");
+              if (nextList.length === 0) nextList = ["all"];
+            } else {
+              nextList = [...selectedList.filter((v) => v !== "all"), opt.value];
+            }
+            const nextStr = nextList.join(",");
+            if (onStatusChange) onStatusChange(nextStr);
+            else onTabChange?.(nextStr);
           },
         });
       }
@@ -1950,7 +2224,9 @@ export function UnifiedTaskToolbar({
     // Match Priority
     PRIORITY_FILTER_OPTIONS.forEach((opt) => {
       if (normalizeFilterSearchText(opt.label).includes(query)) {
-        const selected = (selectedPriority || "ALL").split(",").includes(opt.id);
+        const selectedList = (selectedPriority || "ALL").split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+        const selected = opt.id === "ALL" ? isAll : selectedList.includes(opt.id);
         results.push({
           id: `prio-${opt.id}`,
           categoryLabel: "Mức ưu tiên",
@@ -1958,8 +2234,20 @@ export function UnifiedTaskToolbar({
           icon: Flag,
           selected,
           onSelect: () => {
-            onPriorityChange?.(opt.id);
-            setIsCollapsedFilterOpen(false);
+            if (opt.id === "ALL") {
+              onPriorityChange?.("ALL");
+              return;
+            }
+            let nextList: string[];
+            if (isAll) {
+              nextList = [opt.id];
+            } else if (selected) {
+              nextList = selectedList.filter((p) => p !== opt.id && p !== "ALL");
+              if (nextList.length === 0) nextList = ["ALL"];
+            } else {
+              nextList = [...selectedList.filter((p) => p !== "ALL"), opt.id];
+            }
+            onPriorityChange?.(nextList.join(","));
           },
         });
       }
@@ -1968,7 +2256,9 @@ export function UnifiedTaskToolbar({
     // Match Category
     CATEGORY_FILTER_OPTIONS.forEach((cat) => {
       if (normalizeFilterSearchText(cat.label).includes(query)) {
-        const selected = (selectedCategory || "ALL") === cat.id;
+        const selectedList = (selectedCategory || "ALL").split(",").map((c) => c.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+        const selected = cat.id === "ALL" ? isAll : selectedList.includes(cat.id);
         results.push({
           id: `cat-${cat.id}`,
           categoryLabel: "Danh mục",
@@ -1976,8 +2266,20 @@ export function UnifiedTaskToolbar({
           icon: Tag,
           selected,
           onSelect: () => {
-            onCategoryChange?.(cat.id);
-            setIsCollapsedFilterOpen(false);
+            if (cat.id === "ALL") {
+              onCategoryChange?.("ALL");
+              return;
+            }
+            let nextList: string[];
+            if (isAll) {
+              nextList = [cat.id];
+            } else if (selected) {
+              nextList = selectedList.filter((c) => c !== cat.id && c !== "ALL");
+              if (nextList.length === 0) nextList = ["ALL"];
+            } else {
+              nextList = [...selectedList.filter((c) => c !== "ALL"), cat.id];
+            }
+            onCategoryChange?.(nextList.join(","));
           },
         });
       }
@@ -1986,7 +2288,9 @@ export function UnifiedTaskToolbar({
     // Match Department
     availableDepartments.forEach((dept) => {
       if (normalizeFilterSearchText(dept.name).includes(query) || normalizeFilterSearchText(dept.code).includes(query)) {
-        const selected = (selectedDepartment || "ALL") === dept.code;
+        const selectedList = (selectedDepartment || "ALL").split(",").map((d) => d.trim()).filter(Boolean);
+        const isAll = selectedList.length === 0 || selectedList.includes("ALL");
+        const selected = dept.code === "ALL" ? isAll : selectedList.includes(dept.code);
         results.push({
           id: `dept-${dept.code}`,
           categoryLabel: "Đơn vị",
@@ -1994,8 +2298,20 @@ export function UnifiedTaskToolbar({
           icon: Building,
           selected,
           onSelect: () => {
-            onDepartmentChange?.(dept.code);
-            setIsCollapsedFilterOpen(false);
+            if (dept.code === "ALL") {
+              onDepartmentChange?.("ALL");
+              return;
+            }
+            let nextList: string[];
+            if (isAll) {
+              nextList = [dept.code];
+            } else if (selectedList.includes(dept.code)) {
+              nextList = selectedList.filter((d) => d !== dept.code && d !== "ALL");
+              if (nextList.length === 0) nextList = ["ALL"];
+            } else {
+              nextList = [...selectedList.filter((d) => d !== "ALL"), dept.code];
+            }
+            onDepartmentChange?.(nextList.join(","));
           },
         });
       }
@@ -2014,7 +2330,6 @@ export function UnifiedTaskToolbar({
           onSelect: () => {
             if (onDeadlineChange) onDeadlineChange(opt.value);
             else onTabChange?.(opt.value === "all" ? "all" : opt.value);
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2043,7 +2358,6 @@ export function UnifiedTaskToolbar({
             } else {
               setSelectedLead(opt.value);
             }
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2051,7 +2365,7 @@ export function UnifiedTaskToolbar({
 
     // Match Health / Tiến độ
     const healthOptions = [
-      { value: "on_track", label: "Đ��ng tiến độ (Bình thường)" },
+      { value: "on_track", label: "Đúng tiến độ (Bình thường)" },
       { value: "at_risk", label: "Có nguy cơ trễ hạn (≤ 7 ngày)" },
       { value: "overdue", label: "Trễ hạn / Quá hạn" },
       { value: "completed", label: "Đã hoàn thành 100%" },
@@ -2089,7 +2403,6 @@ export function UnifiedTaskToolbar({
               if (onStatusChange) onStatusChange("in_progress");
               else onTabChange?.("in_progress");
             }
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2097,7 +2410,7 @@ export function UnifiedTaskToolbar({
 
     // Match Origin / Nguồn gốc
     const originOptions = [
-      { value: "KE_HOACH_NAM", label: "Kế hoạch năm học" },
+      { value: "KE_HOACH_NAM", label: "Kế ho���ch năm học" },
       { value: "NGHI_QUYET", label: "Nghị quyết Đảng ủy / BGH" },
       { value: "GIAO_BAN", label: "Kết luận họp giao ban" },
       { value: "DON_VI", label: "Đơn vị đề xuất" },
@@ -2113,7 +2426,6 @@ export function UnifiedTaskToolbar({
           selected,
           onSelect: () => {
             handleOriginChange(opt.value);
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2135,7 +2447,6 @@ export function UnifiedTaskToolbar({
           selected,
           onSelect: () => {
             handleCollaboratorChange(opt.value);
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2155,7 +2466,6 @@ export function UnifiedTaskToolbar({
           selected,
           onSelect: () => {
             handleTimeFilterChange({ kind: "month", month: period.monthNumber });
-            setIsCollapsedFilterOpen(false);
           },
         });
       }
@@ -2237,13 +2547,21 @@ export function UnifiedTaskToolbar({
       )}
     >
       {/* ================================================================ */}
-      {/* SINGLE ROW: Search | Bộ lọc | [chips] | Hiển thị | + Giao việc  */}
+      {/* SINGLE ROW: Left Content | Search | Bộ lọc | Hiển thị | + Giao việc  */}
       {/* ================================================================ */}
 
-      {/* 1. Search (pushed right via ml-auto) */}
+      {/* Left Content (View Title / Summary Strip) */}
+      {leftContent && (
+        <div className="flex-1 min-w-0 flex items-center pr-4">
+          {leftContent}
+        </div>
+      )}
+
+      {/* 1. Search (pushed right via ml-auto if no leftContent, else just natural right align) */}
       <div
         className={cn(
-          "relative shrink-0 transition-all duration-200 ml-auto",
+          "relative shrink-0 transition-all duration-200",
+          !leftContent && "ml-auto",
           searchFocused ? "w-[240px]" : "w-[140px] sm:w-[180px]"
         )}
       >
@@ -2356,13 +2674,24 @@ export function UnifiedTaskToolbar({
                       {matchingSearchOptions.map((match) => (
                         <MenuItem
                           key={match.id}
+                          closeOnClick={false}
                           onClick={match.onSelect}
-                          className="flex h-7.5 w-full items-center rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
+                          className="group/item flex h-7.5 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none hover:bg-accent text-foreground/90 hover:text-foreground"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <match.icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                             <span className="text-muted-foreground text-[11px]">{match.categoryLabel}:</span>
                             <span className="truncate font-medium text-foreground">{match.label}</span>
+                          </div>
+                          <div
+                            className={cn(
+                              "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                              match.selected
+                                ? "bg-foreground text-background border-foreground shadow-2xs"
+                                : "border-border/80 bg-background group-hover/item:border-foreground/40"
+                            )}
+                          >
+                            {match.selected && <Check className="size-2.5 stroke-[2.5]" />}
                           </div>
                         </MenuItem>
                       ))}
@@ -2415,13 +2744,6 @@ export function UnifiedTaskToolbar({
         </MenuPortal>
       </MenuRoot>
 
-      {/* 3. Result count (Fix #3) */}
-      {activeFilterCount > 0 && effectiveTotalTasksCount > 0 && (
-        <span className="text-muted-foreground text-[11px] font-mono tabular-nums shrink-0 hidden sm:inline">
-          {effectiveFilteredTasksCount} / {effectiveTotalTasksCount}
-        </span>
-      )}
-
       {/* 4. Hiển thị */}
       {onViewModeChange && (
         <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
@@ -2432,8 +2754,8 @@ export function UnifiedTaskToolbar({
                 title="Hiển thị"
                 aria-label="Tùy chọn hiển thị"
                 className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0",
-                  isDisplayOpen ? "bg-muted text-foreground font-semibold border-border" : "border-border/80 bg-background text-foreground hover:bg-accent"
+                  "inline-flex h-7 px-1.5 items-center justify-center rounded-md border text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0 shadow-none",
+                  isDisplayOpen ? "border-border bg-accent/60 text-foreground" : "border-border/80 bg-background text-foreground hover:bg-accent"
                 )}
               >
                 <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
@@ -2498,7 +2820,7 @@ export function UnifiedTaskToolbar({
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới (C)"
           aria-label="Tạo việc mới (Phím C)"
-          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
+          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>

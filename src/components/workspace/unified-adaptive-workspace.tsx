@@ -122,6 +122,93 @@ export interface FilterDisplayedTasksOptions {
   collaborator?: "has_collab" | "single" | "all" | string | null;
 }
 
+function matchesSingleStatus(t: SchoolTask, st: string, user: AuthUser | null | undefined, refDate: string): boolean {
+  st = st.toLowerCase().trim();
+  if (st === "all") return true;
+  if (st === "my" || st === "my_tasks") {
+    return user ? isTaskAssignedToUser(t, user) : true;
+  }
+  if (st === "waiting_approval" || st === "review" || st === "needs_review") {
+    return isTaskWaitingApproval(t.status) || Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)));
+  }
+  if (st === "new" || st === "not_started" || st === "assigned") {
+    return (
+      (t.status as string) === "NEW" ||
+      (t.status as string) === "new" ||
+      t.status === "NOT_STARTED" ||
+      (t.status as string) === "ASSIGNED"
+    );
+  }
+  if (st === "in_progress") {
+    return t.status === "IN_PROGRESS" || (t.status as string) === "in_progress";
+  }
+  if (st === "completed") {
+    return t.status === "COMPLETED" || (t.status as string) === "completed";
+  }
+  if (st === "overdue") {
+    return isTaskOverdueOrHasOverdueSubtask(t, refDate);
+  }
+  if (st === "today") {
+    return Boolean(t.dueDate && t.dueDate.startsWith(refDate));
+  }
+  if (st === "this_week") {
+    const refDateObj = new Date(refDate);
+    const endOfWeekObj = new Date(refDateObj);
+    endOfWeekObj.setDate(endOfWeekObj.getDate() + 7);
+    const endOfWeekStr = endOfWeekObj.toISOString().split("T")[0];
+    if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
+    const taskDue = t.dueDate;
+    if (taskDue && taskDue >= refDate && taskDue <= endOfWeekStr) return true;
+    return Boolean(
+      t.subTasks?.some(
+        (s) => s.status !== "COMPLETED" && s.dueDate && s.dueDate >= refDate && s.dueDate <= endOfWeekStr
+      )
+    );
+  }
+  if (st === "pending_submission" || st === "waiting_submission") {
+    if (t.status === "COMPLETED") return false;
+    const isTaskActive =
+      isActiveTaskStatus(t.status) ||
+      Boolean(t.subTasks?.some((s) => isActiveTaskStatus(s.status)));
+    if (!isTaskActive) return false;
+    return isTaskAssignedToUserOrUnit(t, user);
+  }
+  return (
+    (t.status as string) === st ||
+    (t.status as string)?.toLowerCase() === st
+  );
+}
+
+function matchesSingleHealth(t: SchoolTask, h: string, refDate: string): boolean {
+  h = h.toLowerCase().trim();
+  if (h === "all") return true;
+  if (h === "overdue") {
+    return isTaskOverdueOrHasOverdueSubtask(t, refDate);
+  }
+  if (h === "at_risk") {
+    const soon = new Date(refDate);
+    soon.setDate(soon.getDate() + 7);
+    const soonStr = soon.toISOString().split("T")[0];
+    if (t.status === "COMPLETED") return false;
+    const due = t.dueDate;
+    return Boolean(due && due >= refDate && due <= soonStr);
+  }
+  if (h === "completed") {
+    return t.status === "COMPLETED" || t.progressPercent === 100;
+  }
+  if (h === "on_track") {
+    const soon = new Date(refDate);
+    soon.setDate(soon.getDate() + 7);
+    const soonStr = soon.toISOString().split("T")[0];
+    if (t.status === "COMPLETED") return false;
+    if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) return false;
+    const due = t.dueDate;
+    if (due && due >= refDate && due <= soonStr) return false;
+    return true;
+  }
+  return true;
+}
+
 /**
  * Pure canonical filtering engine for tasks displayed in the unified workspace.
  */
@@ -165,68 +252,13 @@ export function filterDisplayedTasks({
     );
   }
 
-  // 2. Status Filter
+  // 2. Status Filter (Single or Multi-select)
   if (status && status !== "ALL" && status !== "all") {
     const refDate = getSystemReferenceDate();
-    if (status === "my" || status === "my_tasks") {
-      if (user) {
-        result = result.filter((t) => isTaskAssignedToUser(t, user));
-      }
-    } else if (status === "waiting_approval" || status === "review") {
-      result = result.filter(
-        (t) =>
-          isTaskWaitingApproval(t.status) ||
-          Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)))
-      );
-    } else if (status === "new") {
-      result = result.filter(
-        (t) =>
-          (t.status as string) === "NEW" ||
-          (t.status as string) === "new" ||
-          t.status === "NOT_STARTED" ||
-          (t.status as string) === "ASSIGNED"
-      );
-    } else if (status === "in_progress") {
-      result = result.filter(
-        (t) => t.status === "IN_PROGRESS" || (t.status as string) === "in_progress"
-      );
-    } else if (status === "completed") {
-      result = result.filter(
-        (t) => t.status === "COMPLETED" || (t.status as string) === "completed"
-      );
-    } else if (status === "overdue") {
-      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
-    } else if (status === "today") {
-      result = result.filter((t) => Boolean(t.dueDate && t.dueDate.startsWith(refDate)));
-    } else if (status === "this_week") {
-      const refDateObj = new Date(refDate);
-      const endOfWeekObj = new Date(refDateObj);
-      endOfWeekObj.setDate(endOfWeekObj.getDate() + 7);
-      const endOfWeekStr = endOfWeekObj.toISOString().split("T")[0];
-      result = result.filter((t) => {
-        if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
-        const taskDue = t.dueDate;
-        if (taskDue && taskDue >= refDate && taskDue <= endOfWeekStr) return true;
-        return Boolean(
-          t.subTasks?.some(
-            (s) => s.status !== "COMPLETED" && s.dueDate && s.dueDate >= refDate && s.dueDate <= endOfWeekStr
-          )
-        );
-      });
-    } else if (status === "pending_submission" || status === "waiting_submission") {
-      result = result.filter((t) => {
-        if (t.status === "COMPLETED") return false;
-        const isTaskActive =
-          isActiveTaskStatus(t.status) ||
-          Boolean(t.subTasks?.some((st) => isActiveTaskStatus(st.status)));
-        if (!isTaskActive) return false;
-        return isTaskAssignedToUserOrUnit(t, user);
-      });
-    } else {
-      result = result.filter(
-        (t) =>
-          (t.status as string) === status ||
-          (t.status as string)?.toLowerCase() === status.toLowerCase()
+    const statuses = status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (statuses.length > 0 && !statuses.includes("all")) {
+      result = result.filter((t) =>
+        statuses.some((st) => matchesSingleStatus(t, st, user, refDate))
       );
     }
   }
@@ -300,14 +332,20 @@ export function filterDisplayedTasks({
     }
   }
 
-  // 4. Category Filter
-  if (category && category !== "ALL") {
-    result = result.filter((t) => t.category === category);
+  // 4. Category Filter (Single or Multi-select)
+  if (category && category !== "ALL" && category !== "all") {
+    const categories = category.split(",").map((c) => c.trim()).filter(Boolean);
+    if (categories.length > 0 && !categories.includes("ALL")) {
+      result = result.filter((t) => t.category && categories.includes(t.category));
+    }
   }
 
-  // 5. Priority Filter
-  if (priority && priority !== "ALL") {
-    result = result.filter((t) => t.priority === priority);
+  // 5. Priority Filter (Single or Multi-select)
+  if (priority && priority !== "ALL" && priority !== "all") {
+    const priorities = priority.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+    if (priorities.length > 0 && !priorities.includes("ALL")) {
+      result = result.filter((t) => t.priority && priorities.includes(t.priority.toUpperCase()));
+    }
   }
 
   // 6. Academic Month Filter
@@ -322,42 +360,24 @@ export function filterDisplayedTasks({
     result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, activeRefDate));
   }
 
-  // 8. Health / Tiến độ
+  // 8. Health / Tiến độ (Single or Multi-select)
   if (health && health !== "all") {
     const refDate = activeRefDate;
-    if (health === "overdue") {
-      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
-    } else if (health === "at_risk") {
-      const soon = new Date(refDate);
-      soon.setDate(soon.getDate() + 7);
-      const soonStr = soon.toISOString().split("T")[0];
-      result = result.filter((t) => {
-        if (t.status === "COMPLETED") return false;
-        const due = t.dueDate;
-        return Boolean(due && due >= refDate && due <= soonStr);
-      });
-    } else if (health === "completed") {
-      result = result.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
-    } else if (health === "on_track") {
-      const soon = new Date(refDate);
-      soon.setDate(soon.getDate() + 7);
-      const soonStr = soon.toISOString().split("T")[0];
-      result = result.filter((t) => {
-        if (t.status === "COMPLETED") return false;
-        if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) return false;
-        const due = t.dueDate;
-        if (due && due >= refDate && due <= soonStr) return false;
-        return true;
-      });
+    const healths = health.split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+    if (healths.length > 0 && !healths.includes("all")) {
+      result = result.filter((t) => healths.some((h) => matchesSingleHealth(t, h, refDate)));
     }
   }
 
-  // 9. Origin / Nguồn gốc
+  // 9. Origin / Nguồn gốc (Single or Multi-select)
   if (origin && origin !== "all") {
-    result = result.filter((t) => {
-      const taskOrigin = (t as any).originLevel || (t as any).origin;
-      return taskOrigin === origin;
-    });
+    const origins = origin.split(",").map((o) => o.trim()).filter(Boolean);
+    if (origins.length > 0 && !origins.includes("all")) {
+      result = result.filter((t) => {
+        const taskOrigin = (t as any).originLevel || (t as any).origin;
+        return origins.includes(taskOrigin);
+      });
+    }
   }
 
   // 10. Collaborator / Phối hợp
@@ -705,6 +725,61 @@ function ExecutiveDashboardSections({
   );
 }
 
+export function normalizeTasksFromApi(rawTasks: any[]): SchoolTask[] {
+  if (!Array.isArray(rawTasks)) return [];
+  return rawTasks.map((t) => {
+    if (!t || typeof t !== "object") return t;
+    const deptObj = t.department && typeof t.department === "object" ? t.department : null;
+    const deptName =
+      (deptObj && typeof deptObj.name === "string" && deptObj.name) ||
+      (typeof t.department === "string" ? t.department : "") ||
+      (typeof t.leadDepartment === "string" ? t.leadDepartment : "") ||
+      "Chưa phân bổ";
+    const deptCode =
+      (deptObj && typeof deptObj.code === "string" && deptObj.code) ||
+      (typeof t.departmentCode === "string" ? t.departmentCode : "") ||
+      (typeof t.leadDepartmentCode === "string" ? t.leadDepartmentCode : "") ||
+      (deptObj && typeof deptObj.id === "string" ? deptObj.id : "") ||
+      (typeof t.departmentId === "string" ? t.departmentId : "") ||
+      undefined;
+    const deptId =
+      (deptObj && typeof deptObj.id === "string" && deptObj.id) ||
+      (typeof t.departmentId === "string" ? t.departmentId : "") ||
+      (typeof t.leadDepartmentId === "string" ? t.leadDepartmentId : "") ||
+      undefined;
+
+    const leadObj = t.leadAssignee && typeof t.leadAssignee === "object" ? t.leadAssignee : null;
+    const leadName =
+      (leadObj && typeof leadObj.name === "string" && leadObj.name) ||
+      (typeof t.leadAssigneeName === "string" ? t.leadAssigneeName : "") ||
+      (typeof t.assignedTo === "string" ? t.assignedTo : "") ||
+      "Chưa phân công";
+    const leadId =
+      (leadObj && typeof leadObj.id === "string" && leadObj.id) ||
+      (typeof t.leadAssigneeId === "string" ? t.leadAssigneeId : "") ||
+      undefined;
+    const leadAvatar =
+      (leadObj && typeof leadObj.avatarUrl === "string" && leadObj.avatarUrl) ||
+      (typeof t.leadAssigneeAvatar === "string" ? t.leadAssigneeAvatar : "") ||
+      undefined;
+
+    return {
+      ...t,
+      department: deptName,
+      departmentCode: deptCode,
+      departmentId: deptId,
+      leadDepartment: t.leadDepartment || deptName,
+      leadDepartmentCode: t.leadDepartmentCode || deptCode,
+      leadDepartmentId: t.leadDepartmentId || deptId,
+      leadAssigneeName: leadName,
+      leadAssigneeId: leadId,
+      leadAssigneeAvatar: leadAvatar,
+      assignedTo: leadName,
+      subTasks: Array.isArray(t.subTasks) ? t.subTasks : [],
+    };
+  });
+}
+
 function UnifiedAdaptiveWorkspaceInner({
   user: initialUser,
   tasks: controlledTasks,
@@ -770,8 +845,8 @@ function UnifiedAdaptiveWorkspaceInner({
   const setIsProfileModalOpen = auth.setIsProfileModalOpen;
 
   // Internal task collection for standalone/uncontrolled mode
-  const [internalTasks, setInternalTasks] = React.useState<SchoolTask[]>(
-    initialTasks || controlledTasks || []
+  const [internalTasks, setInternalTasks] = React.useState<SchoolTask[]>(() =>
+    normalizeTasksFromApi(initialTasks || controlledTasks || [])
   );
   const [isInternalLoading, setIsInternalLoading] = React.useState(false);
   const [internalError, setInternalError] = React.useState<string | null>(null);
@@ -783,7 +858,7 @@ function UnifiedAdaptiveWorkspaceInner({
   // Synchronize internal tasks when controlledTasks changes
   React.useEffect(() => {
     if (controlledTasks !== undefined) {
-      setInternalTasks(controlledTasks);
+      setInternalTasks(normalizeTasksFromApi(controlledTasks));
     }
   }, [controlledTasks]);
 
@@ -803,7 +878,7 @@ function UnifiedAdaptiveWorkspaceInner({
         if (isMounted) {
           const tasks = data?.tasks ?? data?.data;
           if (tasks) {
-            setInternalTasks(tasks);
+            setInternalTasks(normalizeTasksFromApi(tasks));
           }
         }
       })
@@ -2041,7 +2116,7 @@ function UnifiedAdaptiveWorkspaceInner({
         const data = await res.json();
         const tasks = data?.tasks ?? data?.data;
         if (tasks) {
-          setInternalTasks(tasks);
+          setInternalTasks(normalizeTasksFromApi(tasks));
           setInternalError(null);
         }
       }
@@ -2235,6 +2310,21 @@ function UnifiedAdaptiveWorkspaceInner({
           {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
           {!hideScopeSwitcher && (
             <UnifiedTaskToolbar
+          leftContent={
+            <div
+              data-slot="task-summary-strip"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none"
+            >
+              <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
+              <span>nhiệm vụ</span>
+              <span className="text-border">·</span>
+              <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : ""}>{metrics.waitingApprovalCount}</span>
+              <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600" : ""}>chờ duyệt</span>
+              <span className="text-border">·</span>
+              <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : ""}>{metrics.urgentOverdueCount}</span>
+              <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600" : ""}>quá hạn</span>
+            </div>
+          }
           scope={activeScope}
           onScopeChange={handleScopeChange}
           user={user}
@@ -2520,21 +2610,6 @@ function UnifiedAdaptiveWorkspaceInner({
           data-slot="task-workspace-canvas"
           className="w-full space-y-2.5 min-w-0"
         >
-          {/* Inline summary strip — replaces KPI dashboard cards */}
-          <div
-            data-slot="task-summary-strip"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none pb-0.5"
-          >
-            <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
-            <span>nhiệm vụ</span>
-            <span className="text-border">·</span>
-            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : ""}>{metrics.waitingApprovalCount}</span>
-            <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600" : ""}>chờ duyệt</span>
-            <span className="text-border">·</span>
-            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : ""}>{metrics.urgentOverdueCount}</span>
-            <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600" : ""}>quá hạn</span>
-          </div>
-
           <div
             data-slot="full-width-task-canvas"
             className="w-full space-y-1 min-w-0"
