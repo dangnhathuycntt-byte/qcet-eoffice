@@ -131,12 +131,12 @@ export function getSecurityBadge(security: DocumentSecurityLevel): {
     case "TUYET_MAT":
       return {
         label: "Tuyệt mật",
-        className: "bg-red-950/40 text-red-400 border-red-800 font-bold",
+        className: "bg-red-500/15 text-red-700 border-red-500/30 font-bold",
       };
     case "TOI_MAT":
       return {
         label: "Tối mật",
-        className: "bg-rose-900/30 text-rose-400 border-rose-700 font-semibold",
+        className: "bg-rose-500/15 text-rose-700 border-rose-500/30 font-semibold",
       };
     case "MAT":
       return {
@@ -186,7 +186,7 @@ export function getStatusBadge(status: DocumentStatus): {
     default:
       return {
         label: "Lưu theo dõi",
-        className: "bg-zinc-500/10 text-zinc-700 border-zinc-500/20",
+        className: "bg-muted text-muted-foreground border-border/60",
       };
   }
 }
@@ -283,20 +283,22 @@ export function DocumentSplitView({
                   key={att.id}
                   type="button"
                   onClick={() => setSelectedAttachmentId(att.id)}
-                  className={`px-2.5 py-1 text-xs rounded-lg border transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                  className={cn(
+                    "min-h-[44px] sm:min-h-[32px] px-3 py-1.5 text-xs rounded-lg border transition-all shrink-0 flex items-center gap-1.5 active:scale-[0.98] cursor-pointer",
                     isSelected
                       ? "bg-primary text-primary-foreground border-primary font-medium shadow-xs"
-                      : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/80 hover:text-foreground"
-                  }`}
+                      : "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted/80 hover:text-foreground"
+                  )}
                 >
                   <span className="truncate max-w-[140px]">{att.fileName}</span>
                   {att.isOriginal && (
                     <span
-                      className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                      className={cn(
+                        "text-xs px-1.5 py-0.5 rounded font-mono tabular-nums",
                         isSelected
                           ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-red-500/10 text-red-600"
-                      }`}
+                          : "bg-red-500/10 text-red-700"
+                      )}
                     >
                       Gốc
                     </span>
@@ -395,78 +397,78 @@ export function DocumentSplitView({
             </div>
           </div>
 
-          {/* Dates & Department Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
-            <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1">
-              <span className="text-muted-foreground font-medium flex items-center gap-1">
+          {/* Dates & Department Info - Layout phẳng không lồng card-in-card theo Tasks Benchmark */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs pt-1">
+            <div className="flex items-center justify-between py-2 border-b border-border/40">
+              <span className="text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="size-3.5" strokeWidth={1.5} />
-                Ngày văn bản ký:
+                <span>Ngày văn bản ký:</span>
               </span>
-              <p className="font-mono font-semibold text-foreground pl-4.5 tabular-nums">
+              <span className="font-mono font-semibold text-foreground tabular-nums">
                 {formatDate(doc.issuedDate)}
-              </p>
+              </span>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1">
-              <span className="text-muted-foreground font-medium flex items-center gap-1">
+            <div className="flex items-center justify-between py-2 border-b border-border/40">
+              <span className="text-muted-foreground flex items-center gap-1.5">
                 <Clock className="size-3.5" strokeWidth={1.5} />
-                Ngày vào sổ hệ thống:
+                <span>Ngày vào sổ hệ thống:</span>
               </span>
-              <p className="font-mono font-semibold text-foreground pl-4.5 tabular-nums">
+              <span className="font-mono font-semibold text-foreground tabular-nums">
                 {formatDate(doc.registeredDate)}
-              </p>
+              </span>
             </div>
 
             {/* Department Handling info */}
             {isIncoming && (
-              <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1 sm:col-span-2">
-                <span className="text-muted-foreground font-medium flex items-center gap-1">
+              <div className="flex items-center justify-between py-2 border-b border-border/40 sm:col-span-2">
+                <span className="text-muted-foreground flex items-center gap-1.5">
                   <Building2 className="size-3.5" strokeWidth={1.5} />
-                  Đơn vị chủ trì giải quyết:
+                  <span>Đơn vị chủ trì giải quyết:</span>
                 </span>
-                <p className="font-semibold text-foreground pl-4.5">
+                <span className="font-semibold text-foreground">
                   {doc.leadUnitName || "Chưa phân công"}
-                </p>
+                </span>
               </div>
             )}
 
             {/* Outgoing specific info */}
             {isOutgoing && (
               <>
-                <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1">
-                  <span className="text-muted-foreground font-medium flex items-center gap-1">
+                <div className="flex items-center justify-between py-2 border-b border-border/40">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
                     <User className="size-3.5" strokeWidth={1.5} />
-                    Người ký ban hành:
+                    <span>Người ký ban hành:</span>
                   </span>
-                  <p className="font-semibold text-foreground pl-4.5">
+                  <span className="font-semibold text-foreground">
                     {doc.signerName || "---"}{" "}
                     {doc.signerTitle && (
                       <span className="text-muted-foreground font-normal">
                         ({doc.signerTitle})
                       </span>
                     )}
-                  </p>
+                  </span>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1">
-                  <span className="text-muted-foreground font-medium flex items-center gap-1">
+                <div className="flex items-center justify-between py-2 border-b border-border/40">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
                     <Building2 className="size-3.5" strokeWidth={1.5} />
-                    Đơn vị soạn thảo:
+                    <span>Đơn vị soạn thảo:</span>
                   </span>
-                  <p className="font-semibold text-foreground pl-4.5">
+                  <span className="font-semibold text-foreground">
                     {doc.leadUnitName || "---"}
-                  </p>
+                  </span>
                 </div>
 
                 {doc.recipientList && (
-                  <div className="p-2.5 rounded-xl bg-muted/20 border border-border/40 space-y-1 sm:col-span-2">
-                    <span className="text-muted-foreground font-medium flex items-center gap-1">
+                  <div className="flex items-center justify-between py-2 border-b border-border/40 sm:col-span-2">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
                       <Share2 className="size-3.5" strokeWidth={1.5} />
-                      Nơi nhận văn bản:
+                      <span>Nơi nhận văn bản:</span>
                     </span>
-                    <p className="font-medium text-foreground pl-4.5">
+                    <span className="font-medium text-foreground">
                       {doc.recipientList}
-                    </p>
+                    </span>
                   </div>
                 )}
               </>
@@ -474,16 +476,14 @@ export function DocumentSplitView({
 
             {/* Due date countdown */}
             {doc.dueDate && (
-              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1 sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-amber-700 font-bold flex items-center gap-1">
-                    <AlertTriangle className="size-3.5" strokeWidth={1.5} />
-                    Hạn xử lý theo quy định:
-                  </span>
-                  <span className="font-mono text-amber-700 font-semibold tabular-nums">
-                    {formatDate(doc.dueDate)}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between py-2 border-b border-border/40 sm:col-span-2 text-amber-700 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <AlertTriangle className="size-3.5" strokeWidth={1.5} />
+                  <span>Hạn xử lý theo quy định:</span>
+                </span>
+                <span className="font-mono font-bold tabular-nums">
+                  {formatDate(doc.dueDate)}
+                </span>
               </div>
             )}
           </div>
@@ -554,7 +554,7 @@ export function DocumentSplitView({
                   variant="outline"
                   size="sm"
                   onClick={onDirectiveClick}
-                  className="h-7 text-xs rounded-lg gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+                  className="min-h-[44px] sm:min-h-[34px] h-auto sm:h-8.5 px-3 text-xs font-medium rounded-lg gap-1.5 text-primary border-primary/30 hover:bg-primary/5 active:scale-[0.98] cursor-pointer"
                 >
                   <PenTool className="size-3.5" strokeWidth={1.5} />
                   <span>Ghi bút phê chỉ đạo ngay</span>

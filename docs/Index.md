@@ -6,6 +6,7 @@
 ---
 
 ## 📖 Tài liệu gốc (Root)
+- [[MASTER_ARCHITECTURE_BLUEPRINT|🧭 MASTER_ARCHITECTURE_BLUEPRINT.md — Bản thiết kế toàn cảnh & La bàn chiến lược (Bắt đầu tại đây!)]]
 - [[../ARCHITECTURE|ARCHITECTURE.md — Kiến trúc hệ thống]]
 - [[../DESIGN|DESIGN.md — Design system tokens]]
 - [[../PRODUCT|PRODUCT.md — Product definition]]
@@ -71,6 +72,7 @@
 - [[product/metrics|Metrics]]
 
 ### Specs
+- [[product/specs/SPEC_MODULE_VAN_BAN_VA_DIEU_HANH|SPEC: Module Văn bản & Bút phê (Nghị định 30)]]
 - [[product/specs/SPEC_BAN_LAM_VIEC_UIUX_STANDARD|SPEC: Bàn làm việc UI/UX]]
 - [[product/specs/SPEC_DASHBOARD_DATA_CONSISTENCY_AND_AGGREGATION|SPEC: Dashboard Data]]
 - [[product/specs/SPEC-QCET-PERF-2025-01|SPEC: Performance]]

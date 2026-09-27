@@ -270,10 +270,10 @@ export function DocumentRegistryView() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-600 border border-sky-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-700 border border-sky-500/20">
                 <FileText className="size-3" strokeWidth={1.5} /> Nghị định 30/2020/NĐ-CP
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                 <CheckCircle2 className="size-3" strokeWidth={1.5} /> Liên thông Task Hub
               </span>
             </div>
@@ -283,15 +283,30 @@ export function DocumentRegistryView() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <Button variant="outline" size="sm" onClick={() => { fetchDocuments(); fetchStats(); }} disabled={isLoading} className="min-h-[40px] px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 cursor-pointer">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { fetchDocuments(); fetchStats(); }}
+              disabled={isLoading}
+              className="min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 active:scale-[0.98] cursor-pointer"
+            >
               <RefreshCw className={cn("size-3.5 mr-1.5", isLoading && "animate-spin")} strokeWidth={1.5} />
               <span>Làm mới</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsQuickEntryOpen(true)} className="min-h-[40px] px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 cursor-pointer">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsQuickEntryOpen(true)}
+              className="min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 active:scale-[0.98] cursor-pointer"
+            >
               <FilePlus className="size-3.5 mr-1.5 text-primary" strokeWidth={1.5} />
               <span>Vào sổ nhanh</span>
             </Button>
-            <Button size="sm" onClick={() => setIsCreateOpen(true)} className="min-h-[40px] px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 cursor-pointer">
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="min-h-[44px] sm:min-h-9 px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] cursor-pointer"
+            >
               <Plus className="size-3.5 mr-1.5" strokeWidth={1.5} />
               <span>Soạn văn bản / Tờ trình</span>
             </Button>
@@ -302,17 +317,36 @@ export function DocumentRegistryView() {
       {/* 2. KPIs Summary */}
       <DocumentStatsSummary stats={stats} onSelectKpi={handleSelectKpi} currentTab={filters.type} currentStatus={filters.status} currentUrgency={filters.urgency} isLoading={isLoading} />
 
-      {/* 3. Navigation Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-border/60 overflow-x-auto pb-1 scrollbar-none">
+      {/* 3. Navigation Tabs - Horizontal Segmented Control theo Tasks Benchmark */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/60 border border-border/60 overflow-x-auto scrollbar-none">
         {TAB_CONFIGS.map((tab) => {
           const Icon = tab.icon;
           const isActive = filters.type === tab.id;
           const count = tab.id === "inbox" ? stats.totalInbox : tab.id === "outbox" ? stats.totalOutbox : tab.id === "submission" ? stats.totalSubmissions : stats.total;
           return (
-            <button key={tab.id} type="button" onClick={() => setFilter("type", tab.id)} className={cn("min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5", isActive ? "bg-primary text-primary-foreground font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilter("type", tab.id)}
+              className={cn(
+                "min-h-[44px] sm:min-h-[32px] px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]",
+                isActive
+                  ? "bg-card text-foreground font-semibold shadow-2xs border border-border/70"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+              )}
+            >
               <Icon className="size-3.5" strokeWidth={1.5} />
               <span>{tab.label}</span>
-              {typeof count === "number" && count > 0 && <span className={cn("text-xs font-mono px-1.5 py-0.2 rounded-md", isActive ? "bg-background/20" : "bg-muted text-muted-foreground")}>{count}</span>}
+              {typeof count === "number" && count > 0 && (
+                <span
+                  className={cn(
+                    "text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md",
+                    isActive ? "bg-muted text-foreground" : "bg-muted/60 text-muted-foreground"
+                  )}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}

@@ -457,39 +457,45 @@ export function OrganizationTree({
         {/* 1. Main Navigation Tabs & Action Strip                                */}
         {/* ===================================================================== */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/70 pb-3">
-        {/* Modern Segmented Tab Pills — primary (directory) first, secondary last */}
-        <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border/70 shadow-2xs self-start">
+        {/* Horizontal Segmented Control chuẩn mực: Danh bạ & Cây tổ chức vs Sơ đồ đơn vị */}
+        <div
+          role="group"
+          aria-label="Chế độ xem tổ chức"
+          className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none self-start"
+        >
           <button
             type="button"
             onClick={() => setActiveTab("directory")}
+            aria-pressed={activeTab === "directory"}
             className={cn(
-              "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
               activeTab === "directory"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <Users className="size-3.5 text-indigo-500" strokeWidth={1.5} />
+            <Users className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <span>Danh bạ & Cây tổ chức</span>
-            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
-              {departments.reduce((sum, d) => sum + d.members.length, 0)}
-            </Badge>
+            <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+              ({departments.reduce((sum, d) => sum + d.members.length, 0)})
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("bento")}
+            aria-pressed={activeTab === "bento"}
             className={cn(
-              "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+              "flex items-center gap-1.5 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
               activeTab === "bento"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <LayoutGrid className="size-3.5 text-primary" strokeWidth={1.5} />
+            <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <span>Sơ đồ đơn vị</span>
-            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
-              {departments.length}
-            </Badge>
+            <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+              ({departments.length})
+            </span>
           </button>
         </div>
 
@@ -521,22 +527,23 @@ export function OrganizationTree({
       {/* ===================================================================== */}
       {activeTab === "bento" && (
         <div className="space-y-6">
-          {/* Quick Category Filter Strip */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground mr-1">
+          {/* Flat Informational Chips theo chuẩn Neutral Monochrome */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-muted-foreground mr-1">
               Nhóm đơn vị:
             </span>
             <button
               type="button"
               onClick={() => setSelectedDeptCode("ALL")}
               className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11.5px] font-medium border transition-colors cursor-pointer select-none",
                 selectedDeptCode === "ALL"
-                  ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                  ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                   : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
-              Toàn trường ({departments.length})
+              <span>Toàn trường</span>
+              <span className="font-mono tabular-nums text-[10.5px] opacity-80">({departments.length})</span>
             </button>
             {categoriesList.map((cat) => {
               const count = cat.departments.length;
@@ -549,13 +556,14 @@ export function OrganizationTree({
                   type="button"
                   onClick={() => setSelectedDeptCode(cat.departments[0]?.code || "ALL")}
                   className={cn(
-                    "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
+                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11.5px] font-medium border transition-colors cursor-pointer select-none",
                     isSelected
-                      ? "bg-primary/10 text-primary border-primary/40 font-semibold shadow-2xs"
+                      ? "bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs"
                       : "bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  {cat.label} ({count})
+                  <span>{cat.label}</span>
+                  <span className="font-mono tabular-nums text-[10.5px] opacity-80">({count})</span>
                 </button>
               );
             })}
@@ -674,116 +682,103 @@ export function OrganizationTree({
       {/* ===================================================================== */}
       {activeTab === "directory" && (
         <div className="space-y-6">
-          {/* Global Search & Filter Bar */}
-          <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-3.5 shadow-card">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Search Input with quick clear */}
-              <div className="relative flex-1">
-                <Search
-                  className="size-4 text-muted-foreground pointer-events-none absolute left-3 top-2.5"
-                  strokeWidth={1.5}
-                />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm cán bộ, giảng viên theo họ tên, chức vụ, email, phòng ban... (⌘K)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8.5 pl-9 pr-8 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-                {searchQuery && (
+          {/* Unified 1-Row Toolbar chuẩn Tasks Golden Master */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-b border-border/60 pb-2">
+            {/* Search Input h-7 với badge kbd '/' */}
+            <div className="relative flex-1 max-w-md">
+              <Search
+                className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+                strokeWidth={1.5}
+              />
+              <input
+                type="text"
+                placeholder="Tìm kiếm cán bộ, giảng viên, đơn vị… /"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-7 pl-8 pr-8 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                {searchQuery ? (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-2.5 top-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                    title="Xóa tìm kiếm"
+                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
                   >
-                    <X className="size-3.5" strokeWidth={1.5} />
+                    <X className="size-3" strokeWidth={1.5} />
                   </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
+                    /
+                  </kbd>
                 )}
               </div>
+            </div>
 
-              {/* Role Filter Chips & View Mode Switcher */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                <div className="inline-flex items-center rounded-xl border border-border/70 bg-muted/40 p-1 shadow-2xs">
+            {/* Role Filter & View Mode Switcher dạng ngang h-7 */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div
+                role="group"
+                aria-label="Lọc theo vai trò"
+                className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none"
+              >
+                {[
+                  { id: "ALL", label: "Tất cả" },
+                  { id: "LEADER", label: "Lãnh đạo" },
+                  { id: "FACULTY", label: "Giảng viên" },
+                  { id: "SPECIALIST", label: "Chuyên viên" },
+                ].map((r) => (
                   <button
+                    key={r.id}
                     type="button"
-                    onClick={() => setRoleFilter("ALL")}
+                    onClick={() => setRoleFilter(r.id as any)}
+                    aria-pressed={roleFilter === r.id}
                     className={cn(
-                      "px-2.5 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer",
-                      roleFilter === "ALL"
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
+                      "px-2 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                      roleFilter === r.id
+                        ? "bg-background text-foreground shadow-2xs font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                     )}
                   >
-                    Tất cả vai trò
+                    {r.label}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setRoleFilter("LEADER")}
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer",
-                      roleFilter === "LEADER"
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Lãnh đạo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRoleFilter("FACULTY")}
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer",
-                      roleFilter === "FACULTY"
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Giảng viên
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRoleFilter("SPECIALIST")}
-                    className={cn(
-                      "px-2.5 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer",
-                      roleFilter === "SPECIALIST"
-                        ? "bg-card text-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Chuyên viên
-                  </button>
-                </div>
+                ))}
+              </div>
 
-                {/* View Mode Switcher (Grid vs Table) */}
-                <div className="inline-flex items-center rounded-xl border border-border/70 bg-muted/40 p-1 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("grid")}
-                    className={cn(
-                      "p-1.5 rounded-lg transition-all cursor-pointer",
-                      viewMode === "grid"
-                        ? "bg-card text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Dạng thẻ lưới (Grid)"
-                  >
-                    <LayoutGrid className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className={cn(
-                      "p-1.5 rounded-lg transition-all cursor-pointer",
-                      viewMode === "list"
-                        ? "bg-card text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Dạng danh sách (List)"
-                  >
-                    <List className="size-3.5" strokeWidth={1.5} />
-                  </button>
-                </div>
+              <div className="h-4 w-px bg-border/60 shrink-0" />
+
+              <div
+                role="group"
+                aria-label="Chế độ hiển thị danh sách"
+                className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none"
+              >
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  aria-pressed={viewMode === "grid"}
+                  className={cn(
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    viewMode === "grid"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  )}
+                  title="Dạng thẻ lưới (Grid)"
+                >
+                  <LayoutGrid className="size-3.5" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  aria-pressed={viewMode === "list"}
+                  className={cn(
+                    "inline-flex items-center justify-center size-6 rounded-[4px] transition-colors cursor-pointer",
+                    viewMode === "list"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  )}
+                  title="Dạng danh sách (List)"
+                >
+                  <List className="size-3.5" strokeWidth={1.5} />
+                </button>
               </div>
             </div>
           </div>
@@ -819,10 +814,10 @@ export function OrganizationTree({
                       setSearchQuery("");
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer",
+                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
                       selectedDeptCode === "ALL"
-                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                        ? "bg-accent text-foreground font-medium"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -830,12 +825,8 @@ export function OrganizationTree({
                       <span>Toàn trường (Tất cả đơn vị)</span>
                     </div>
                     <Badge
-                      variant={selectedDeptCode === "ALL" ? "default" : "outline"}
-                      className={cn(
-                        "text-xs h-4.5 px-1.5 rounded-md font-mono tabular-nums",
-                        selectedDeptCode === "ALL" &&
-                          "bg-white/20 text-white border-transparent"
-                      )}
+                      variant={selectedDeptCode === "ALL" ? "secondary" : "outline"}
+                      className="text-xs h-4.5 px-1.5 rounded-md font-mono tabular-nums"
                     >
                       {totalHeadcount}
                     </Badge>
@@ -894,9 +885,9 @@ export function OrganizationTree({
                                     setSearchQuery("");
                                   }}
                                   className={cn(
-                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all text-left cursor-pointer",
+                                    "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer",
                                     isDeptSelected
-                                      ? "bg-primary/10 text-primary font-semibold shadow-2xs"
+                                      ? "bg-accent text-foreground font-medium"
                                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                   )}
                                 >
@@ -1045,10 +1036,10 @@ export function OrganizationTree({
                                 })
                               );
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                            className="inline-flex h-6 items-center gap-1 px-2 rounded-md border border-border/80 bg-background text-foreground text-[11px] font-medium hover:bg-accent transition-colors cursor-pointer"
                             title={`Giao việc trực tiếp cho ${staff.name}`}
                           >
-                            <UserCheck className="size-3.5" strokeWidth={1.5} />
+                            <UserCheck className="size-3 text-muted-foreground" strokeWidth={1.5} />
                             <span>Giao việc</span>
                           </button>
                           {staff.phone && (

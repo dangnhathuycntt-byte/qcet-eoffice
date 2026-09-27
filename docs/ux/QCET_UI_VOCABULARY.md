@@ -111,17 +111,17 @@ column states the exact source of every key so a runtime key is never mistaken f
 `TaskLifecycleStatus` member. Two rows below are **not** `TaskLifecycleStatus`
 values and are marked as such.
 
-| Approved label | Dimension / key | Notes |
-| --- | --- | --- |
-| Chưa bắt đầu | `TaskLifecycleStatus` `NOT_STARTED` | Created, assigned, no activity yet. Runtime badge key `NEW` currently renders `Mới`; it must converge to this label (see §J). |
-| Đang thực hiện | `TaskLifecycleStatus` `IN_PROGRESS` | Under execution. |
-| Chờ phê duyệt | `TaskLifecycleStatus` `WAITING_APPROVAL` | Submitted, awaiting unit/approval authority. |
-| Chờ BGH duyệt | `TaskLifecycleStatus` `PENDING_EXECUTIVE_APPROVAL` | Awaiting Ban Giám hiệu (executive) approval. |
-| Hoàn thành | `TaskLifecycleStatus` `COMPLETED` | Fully completed. |
-| Quá hạn | `TaskLifecycleStatus` `OVERDUE` | Past due and not completed. |
-| Đã hủy | `TaskLifecycleStatus` `CANCELLED` | Cancelled. |
-| Cần chỉnh sửa | Runtime status key / `KanbanColumnId` `NEEDS_REVIEW` — **not** a `TaskLifecycleStatus` member | Returned for revision; folds into the frozen lifecycle (`IN_PROGRESS` bucket), never a separate lifecycle status. |
-| Tạm dừng | Display-only pause badge — **not** a `TaskLifecycleStatus` member | A paused/blocked presentation state. The runtime key `BLOCKED` is the **attention** dimension, whose approved label is `Bị chặn` (§C); `Tạm dừng` is not that attention label and does not add a lifecycle status. |
+| Approved label | Dimension / key                                                                               | Notes                                                                                                                                                                                                              |
+| -------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chưa bắt đầu   | `TaskLifecycleStatus` `NOT_STARTED`                                                           | Created, assigned, no activity yet. Runtime badge key `NEW` currently renders `Mới`; it must converge to this label (see §J).                                                                                      |
+| Đang thực hiện | `TaskLifecycleStatus` `IN_PROGRESS`                                                           | Under execution.                                                                                                                                                                                                   |
+| Chờ phê duyệt  | `TaskLifecycleStatus` `WAITING_APPROVAL`                                                      | Submitted, awaiting unit/approval authority.                                                                                                                                                                       |
+| Chờ BGH duyệt  | `TaskLifecycleStatus` `PENDING_EXECUTIVE_APPROVAL`                                            | Awaiting Ban Giám hiệu (executive) approval.                                                                                                                                                                       |
+| Hoàn thành     | `TaskLifecycleStatus` `COMPLETED`                                                             | Fully completed.                                                                                                                                                                                                   |
+| Quá hạn        | `TaskLifecycleStatus` `OVERDUE`                                                               | Past due and not completed.                                                                                                                                                                                        |
+| Đã hủy         | `TaskLifecycleStatus` `CANCELLED`                                                             | Cancelled.                                                                                                                                                                                                         |
+| Cần chỉnh sửa  | Runtime status key / `KanbanColumnId` `NEEDS_REVIEW` — **not** a `TaskLifecycleStatus` member | Returned for revision; folds into the frozen lifecycle (`IN_PROGRESS` bucket), never a separate lifecycle status.                                                                                                  |
+| Tạm dừng       | Display-only pause badge — **not** a `TaskLifecycleStatus` member                             | A paused/blocked presentation state. The runtime key `BLOCKED` is the **attention** dimension, whose approved label is `Bị chặn` (§C); `Tạm dừng` is not that attention label and does not add a lifecycle status. |
 
 Rules:
 

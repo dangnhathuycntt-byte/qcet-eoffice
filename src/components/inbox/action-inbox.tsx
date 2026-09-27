@@ -13,7 +13,9 @@ import {
   Filter,
   Inbox,
   ArrowUpRight,
+  Search,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type ResourceType = "TASK" | "DOCUMENT" | "REPORT";
 export type PriorityLevel = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
@@ -95,51 +97,70 @@ export function ActionInbox({
           )}
         </div>
 
-        {/* Filter Controls */}
+        {/* Filter Controls theo chuẩn 1-row Toolbar */}
         <div className="mt-4 flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
-          <div className="inline-flex items-center gap-1 rounded-xl bg-muted/60 p-1 text-xs">
+          <div
+            role="group"
+            aria-label="Lọc theo loại tài nguyên"
+            className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
+          >
             <button
               type="button"
               onClick={() => setFilterType("ALL")}
-              className={`min-h-[44px] px-3 py-2 rounded-lg font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary ${
+              aria-pressed={filterType === "ALL"}
+              className={cn(
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                 filterType === "ALL"
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              )}
             >
-              Tất cả ({items.length})
+              <span>Tất cả</span>
+              <span className="font-mono tabular-nums text-[10.5px] opacity-75">({items.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setFilterType("TASK")}
-              className={`min-h-[44px] px-3 py-2 rounded-lg font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary ${
+              aria-pressed={filterType === "TASK"}
+              className={cn(
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                 filterType === "TASK"
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              )}
             >
-              Nhiệm vụ ({items.filter((i) => i.resourceType === "TASK").length})
+              <span>Nhiệm vụ</span>
+              <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+                ({items.filter((i) => i.resourceType === "TASK").length})
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setFilterType("DOCUMENT")}
-              className={`min-h-[44px] px-3 py-2 rounded-lg font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary ${
+              aria-pressed={filterType === "DOCUMENT"}
+              className={cn(
+                "inline-flex items-center gap-1 h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                 filterType === "DOCUMENT"
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              )}
             >
-              Văn bản ({items.filter((i) => i.resourceType === "DOCUMENT").length})
+              <span>Văn bản</span>
+              <span className="font-mono tabular-nums text-[10.5px] opacity-75">
+                ({items.filter((i) => i.resourceType === "DOCUMENT").length})
+              </span>
             </button>
           </div>
 
-          <div className="ml-auto w-full sm:w-auto">
+          <div className="ml-auto relative w-full sm:w-60">
+            <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
             <input
               type="text"
-              placeholder="Tìm theo tiêu đề hoặc thẩm quyền..." aria-label="Tìm theo tiêu đề hoặc thẩm quyền"
+              placeholder="Tìm theo tiêu đề hoặc thẩm quyền..."
+              aria-label="Tìm theo tiêu đề hoặc thẩm quyền"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 min-h-[44px] px-3 py-2 text-xs sm:text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
+              className="w-full h-7 pl-8 pr-2.5 text-[11px] rounded-md border border-border/80 bg-background placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
             />
           </div>
         </div>
@@ -189,11 +210,11 @@ function ActionInboxRow({
   const renderIcon = () => {
     switch (item.resourceType) {
       case "TASK":
-        return <CheckSquare size={16} strokeWidth={1.5} className="text-blue-600" />;
+        return <CheckSquare size={15} strokeWidth={1.5} className="text-muted-foreground" />;
       case "DOCUMENT":
-        return <FileText size={16} strokeWidth={1.5} className="text-emerald-600" />;
+        return <FileText size={15} strokeWidth={1.5} className="text-muted-foreground" />;
       case "REPORT":
-        return <FileCheck size={16} strokeWidth={1.5} className="text-purple-600" />;
+        return <FileCheck size={15} strokeWidth={1.5} className="text-muted-foreground" />;
     }
   };
 
@@ -229,7 +250,7 @@ function ActionInboxRow({
             </span>
 
             {formattedDeadline && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground ml-auto sm:ml-0">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground ml-auto sm:ml-0 font-mono tabular-nums">
                 <Clock size={12} strokeWidth={1.5} />
                 <span>Hạn: {formattedDeadline}</span>
               </span>
@@ -250,10 +271,10 @@ function ActionInboxRow({
         <Link
           href={item.href}
           onClick={() => onSelect?.(item)}
-          className="min-h-[44px] min-w-[44px] px-4 py-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors active:scale-[0.98] touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="h-7 px-3 inline-flex items-center justify-center gap-1.5 rounded-md text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
         >
           <span>Xử lý ngay</span>
-          <ArrowUpRight size={14} strokeWidth={1.5} />
+          <ArrowUpRight size={13} strokeWidth={1.5} />
         </Link>
       </div>
     </div>

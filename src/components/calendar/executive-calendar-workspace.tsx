@@ -301,23 +301,23 @@ export function WorkCalendarCard({
 
   // Type badge definition
   let badgeLabel = "Mốc trường";
-  let badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+  let badgeStyle = "bg-blue-500/10 text-blue-700 border-blue-500/20";
 
   if (type === "deliverable") {
     badgeLabel = "Sản phẩm minh chứng";
-    badgeStyle = "bg-violet-50 text-violet-700 border-violet-200";
+    badgeStyle = "bg-violet-500/10 text-violet-700 border-violet-500/20";
   } else if (type === "subtask") {
     badgeLabel = "Việc đơn vị";
-    badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
+    badgeStyle = "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
   } else if (type === "urgent_overdue" || isOverdue) {
     badgeLabel = "Quá hạn";
-    badgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+    badgeStyle = "bg-rose-500/10 text-rose-700 border-rose-500/20";
   } else if (type === "meeting") {
     badgeLabel = "Lịch họp BGH";
-    badgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+    badgeStyle = "bg-blue-500/10 text-blue-700 border-blue-500/20";
   } else if (type === "academic") {
     badgeLabel = "Học thuật";
-    badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
+    badgeStyle = "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
   }
 
   if (compact) {
@@ -344,7 +344,7 @@ export function WorkCalendarCard({
               {badgeLabel}
             </span>
             {code && (
-              <span className="font-mono text-xs font-bold text-muted-foreground px-1 py-0.5 bg-muted/60 rounded">
+              <span className="font-mono tabular-nums text-xs font-bold text-muted-foreground px-1 py-0.5 bg-muted/60 rounded">
                 {code}
               </span>
             )}
@@ -364,7 +364,7 @@ export function WorkCalendarCard({
 
         {typeof progressPercent === "number" && (
           <div className="mt-1.5 space-y-0.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
               <span>Tiến độ</span>
               <span>{progressPercent}%</span>
             </div>
@@ -410,13 +410,13 @@ export function WorkCalendarCard({
             {badgeLabel}
           </span>
           {code && (
-            <span className="font-mono text-xs font-bold text-foreground/80 px-1.5 py-0.5 bg-muted rounded border border-border/50">
+            <span className="font-mono tabular-nums text-xs font-bold text-foreground/80 px-1.5 py-0.5 bg-muted rounded border border-border/50">
               {code}
             </span>
           )}
         </div>
         {isOverdue && daysOverdue && daysOverdue > 0 && (
-          <span className="font-mono text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+          <span className="font-mono tabular-nums text-xs font-bold text-rose-700 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md">
             Trễ {daysOverdue} ngày
           </span>
         )}
@@ -441,7 +441,7 @@ export function WorkCalendarCard({
 
       {typeof progressPercent === "number" && (
         <div className="space-y-1 pt-1 border-t border-border/40">
-          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
             <span>Tiến độ thực hiện</span>
             <span className="font-bold text-foreground">{progressPercent}%</span>
           </div>
@@ -829,33 +829,31 @@ export function ExecutiveCalendarWorkspace({
 
         <div className="flex flex-wrap items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center rounded-xl border border-border/70 bg-card p-0.5 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setViewMode("week_grid")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
-                viewMode === "week_grid"
-                  ? "bg-primary text-primary-foreground shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <LayoutGrid className="size-3.5" strokeWidth={1.5} />
-              <span>Lưới tuần</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("agenda_list")}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
-                viewMode === "agenda_list"
-                  ? "bg-primary text-primary-foreground shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <List className="size-3.5" strokeWidth={1.5} />
-              <span>Nghị sự điều hành</span>
-            </button>
+          <div
+            role="group"
+            aria-label="Chế độ hiển thị"
+            className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
+          >
+            {[
+              { id: "week_grid", label: "Tuần", icon: LayoutGrid },
+              { id: "agenda_list", label: "Lịch trình", icon: List },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setViewMode(id as any)}
+                aria-pressed={viewMode === id}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-6 px-2 sm:px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  viewMode === id
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                <span>{label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Quick Add Action */}
@@ -863,7 +861,7 @@ export function ExecutiveCalendarWorkspace({
             <Button
               size="sm"
               onClick={() => handleAddSlotClick()}
-              className="gap-1.5 text-xs font-semibold rounded-xl h-8.5"
+              className="gap-1.5 text-xs font-semibold rounded-lg h-7 px-2.5 cursor-pointer shrink-0"
             >
               <Plus className="size-3.5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
@@ -873,22 +871,22 @@ export function ExecutiveCalendarWorkspace({
       </div>
 
       {/* 3. Work-Oriented Filters Toolbar */}
-      <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-2.5 text-xs">
+      <div className="flex flex-wrap items-center gap-2 py-1 text-xs">
         {/* Search Query Input */}
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" strokeWidth={1.5} />
           <input
             type="text"
-            placeholder="Tìm kiếm công việc, đơn vị, DRI..."
+            placeholder="Tìm kiếm công việc, đơn vị, DRI... /"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 w-full rounded-xl border border-border/70 bg-card pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] sm:p-0.5 sm:min-h-0 sm:min-w-0 flex items-center justify-center"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
               aria-label="Xóa tìm kiếm"
             >
               <X className="size-3" strokeWidth={1.5} />
@@ -898,11 +896,11 @@ export function ExecutiveCalendarWorkspace({
 
         {/* Department Selector */}
         <div className="flex items-center gap-1.5">
-          <Building2 className="size-3.5 text-muted-foreground shrink-0" />
+          <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="h-8 rounded-xl border border-border/70 bg-card px-2.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs cursor-pointer"
+            className="h-7 rounded-md border border-border/80 bg-background px-2 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
           >
             {departmentOptions.map((dept) => (
               <option key={dept.id} value={dept.id}>
@@ -913,7 +911,7 @@ export function ExecutiveCalendarWorkspace({
         </div>
 
         {/* Work Item Type Selector */}
-        <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-card p-0.5 shadow-2xs overflow-x-auto">
+        <div className="flex items-center gap-0.5 rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs overflow-x-auto">
           {[
             { id: "ALL", label: "Tất cả mốc" },
             { id: "school_milestone", label: "Mốc trường" },
@@ -925,10 +923,10 @@ export function ExecutiveCalendarWorkspace({
               type="button"
               onClick={() => setSelectedItemType(typeOpt.id)}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
                 selectedItemType === typeOpt.id
-                  ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-foreground/85 text-background font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               {typeOpt.label}
@@ -937,7 +935,7 @@ export function ExecutiveCalendarWorkspace({
         </div>
 
         {/* Status Selector */}
-        <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-card p-0.5 shadow-2xs overflow-x-auto">
+        <div className="flex items-center gap-0.5 rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs overflow-x-auto">
           {[
             { id: "ALL", label: "Tất cả" },
             { id: "ACTIVE", label: "Đang làm" },
@@ -949,10 +947,10 @@ export function ExecutiveCalendarWorkspace({
               type="button"
               onClick={() => setSelectedStatus(st.id)}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
+                "px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
                 selectedStatus === st.id
-                  ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-foreground/85 text-background font-semibold shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               {st.label}
@@ -1088,7 +1086,7 @@ export function ExecutiveCalendarWorkspace({
         <div className="space-y-4">
           {filteredWorkItems.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/80 p-8 text-center bg-muted/10 space-y-2">
-              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" />
+              <CalendarDays className="size-8 mx-auto text-muted-foreground/50" strokeWidth={1.5} />
               <h3 className="text-sm font-semibold text-foreground">
                 Không có công việc hoặc sự kiện
               </h3>
@@ -1133,7 +1131,7 @@ export function ExecutiveCalendarWorkspace({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-muted-foreground font-mono">
+                      <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                         {dayItems.length} việc
                       </span>
                       {isExecutive && (
@@ -1179,7 +1177,7 @@ export function ExecutiveCalendarWorkspace({
           role="dialog"
           aria-modal="true"
           aria-labelledby="preview-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-surface-overlay backdrop-blur-xs p-4"
         >
           <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-lg space-y-4">
             <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">

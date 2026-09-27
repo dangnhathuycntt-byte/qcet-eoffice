@@ -196,7 +196,7 @@ export function CalendarToolbar({
             </button>
           </div>
 
-          <h2 className="text-sm sm:text-base font-bold text-foreground font-heading tabular-nums px-1">
+          <h2 className="text-sm sm:text-base font-bold text-foreground font-heading font-mono tabular-nums px-1">
             {currentPeriodLabel}
           </h2>
 
@@ -218,7 +218,7 @@ export function CalendarToolbar({
           <div
             role="tablist"
             aria-label="Chế độ hiển thị lịch"
-            className="inline-flex items-center rounded-xl border border-border/70 bg-muted/40 p-1 shadow-2xs"
+            className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
           >
             {VIEW_OPTIONS.map((option) => {
               const isActive = viewMode === option.id;
@@ -230,10 +230,10 @@ export function CalendarToolbar({
                   aria-selected={isActive}
                   onClick={() => onViewChange(option.id)}
                   className={cn(
-                    "min-h-[44px] sm:min-h-8 px-3 py-1 text-xs font-semibold rounded-lg transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer",
+                    "inline-flex items-center justify-center h-6 px-2.5 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                 >
                   {option.label}
@@ -257,7 +257,7 @@ export function CalendarToolbar({
                 >
                   <Plus className="size-3.5" strokeWidth={1.5} />
                   <span className="hidden sm:inline">Tạo mới</span>
-                  <ChevronDown className="size-3 opacity-80" />
+                  <ChevronDown className="size-3 opacity-80" strokeWidth={1.5} />
                 </Button>
               }
               items={[
@@ -361,15 +361,15 @@ export function CalendarToolbar({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "min-h-[44px] sm:min-h-8 h-8 px-2.5 text-xs font-semibold rounded-xl border-border/70 gap-1.5 cursor-pointer",
-                    hasActiveFilters && "border-primary/50 bg-primary/5 text-primary"
+                    "h-7 px-2.5 text-xs font-medium rounded-md border border-border/80 bg-background hover:bg-accent gap-1.5 cursor-pointer text-foreground",
+                    hasActiveFilters && "border-foreground/40 bg-muted/60 text-foreground font-semibold"
                   )}
                   aria-label="Bộ lọc nhiệm vụ và sự kiện"
                 >
                   <Filter className="size-3.5" strokeWidth={1.5} />
                   <span className="hidden sm:inline">Lọc</span>
                   {hasActiveFilters && (
-                    <span className="size-1.5 rounded-full bg-primary inline-block" />
+                    <span className="size-1.5 rounded-full bg-foreground/80 inline-block" />
                   )}
                 </Button>
               }
@@ -390,7 +390,7 @@ export function CalendarToolbar({
                       onResetFilters();
                       setIsFilterOpen(false);
                     }}
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
+                    className="text-xs text-foreground/85 hover:underline inline-flex items-center gap-1 font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer"
                   >
                     <RotateCcw className="size-3" strokeWidth={1.5} />
                     Đặt lại
@@ -416,7 +416,7 @@ export function CalendarToolbar({
                         )}
                       >
                         <span>{opt.label}</span>
-                        {itemTypeFilter === opt.id && <Check className="size-3 text-primary" strokeWidth={1.5} />}
+                        {itemTypeFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
                       </button>
                     ))}
                   </div>
@@ -440,7 +440,7 @@ export function CalendarToolbar({
                       )}
                     >
                       <span>{opt.label}</span>
-                      {levelFilter === opt.id && <Check className="size-3 text-primary" strokeWidth={1.5} />}
+                      {levelFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
                     </button>
                   ))}
                 </div>
@@ -463,7 +463,7 @@ export function CalendarToolbar({
                       )}
                     >
                       <span>{opt.label}</span>
-                      {statusFilter === opt.id && <Check className="size-3 text-primary" strokeWidth={1.5} />}
+                      {statusFilter === opt.id && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
                     </button>
                   ))}
                 </div>
@@ -512,7 +512,7 @@ export function CalendarToolbar({
                         )}
                       >
                         <span className="font-mono tabular-nums">{yr}</span>
-                        {academicYear === yr && <Check className="size-3 text-primary" strokeWidth={1.5} />}
+                        {academicYear === yr && <Check className="size-3 text-foreground/85" strokeWidth={1.5} />}
                       </button>
                     ))}
                   </div>
@@ -530,7 +530,7 @@ export function CalendarToolbar({
                       type="checkbox"
                       checked={showWeekends}
                       onChange={(e) => onToggleWeekends(e.target.checked)}
-                      className="rounded border-border text-primary focus:ring-primary size-4"
+                      className="rounded border-border/80 text-foreground/85 focus:ring-foreground/20 size-3.5 accent-foreground/85 cursor-pointer"
                     />
                   </label>
                 )}
@@ -543,7 +543,7 @@ export function CalendarToolbar({
                       type="checkbox"
                       checked={showCompleted}
                       onChange={(e) => onToggleShowCompleted(e.target.checked)}
-                      className="rounded border-border text-primary focus:ring-primary size-4"
+                      className="rounded border-border/80 text-foreground/85 focus:ring-foreground/20 size-3.5 accent-foreground/85 cursor-pointer"
                     />
                   </label>
                 )}
@@ -591,6 +591,68 @@ export function CalendarToolbar({
           </PopoverRoot>
         </div>
       </div>
+
+      {/* Active Filter Breadcrumbs: Flat informational pills */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/60">
+          {itemTypeFilter && itemTypeFilter !== "ALL" && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
+              <span className="text-muted-foreground text-[11px]">Loại:</span>
+              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+                {ITEM_TYPE_OPTIONS.find((o) => o.id === itemTypeFilter)?.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => onItemTypeFilterChange?.("ALL")}
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                aria-label="Xóa lọc loại"
+              >
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            </span>
+          )}
+          {levelFilter !== "ALL" && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
+              <span className="text-muted-foreground text-[11px]">Cấp:</span>
+              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+                {LEVEL_OPTIONS.find((o) => o.id === levelFilter)?.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => onLevelFilterChange("ALL")}
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                aria-label="Xóa lọc cấp"
+              >
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            </span>
+          )}
+          {statusFilter !== "ALL" && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 select-none">
+              <span className="text-muted-foreground text-[11px]">Trạng thái:</span>
+              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+                {STATUS_OPTIONS.find((o) => o.id === statusFilter)?.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => onStatusFilterChange("ALL")}
+                className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
+                aria-label="Xóa lọc trạng thái"
+              >
+                <X className="size-2.5" strokeWidth={1.5} />
+              </button>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-1"
+          >
+            <RotateCcw className="size-3" strokeWidth={1.5} />
+            <span>Xóa lọc</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

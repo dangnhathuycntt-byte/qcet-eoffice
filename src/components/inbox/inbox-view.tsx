@@ -381,7 +381,7 @@ export function InboxView() {
                     aria-label="Lọc theo loại"
                     className={cn(
                       "size-7 text-muted-foreground hover:text-foreground",
-                      categoryFilter !== "all" && "text-primary bg-primary/10"
+                      categoryFilter !== "all" && "bg-accent/80 text-foreground border border-border/80"
                     )}
                   >
                     <Filter size={14} strokeWidth={1.5} />
@@ -404,17 +404,26 @@ export function InboxView() {
                               setIsFilterMenuOpen(false);
                             }}
                             className={cn(
-                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer",
+                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer select-none",
                               isSelected
-                                ? "bg-primary/10 text-primary font-semibold"
-                                : "text-foreground hover:bg-muted/60"
+                                ? "bg-muted/80 font-medium text-foreground"
+                                : "text-foreground/80 hover:bg-accent hover:text-foreground"
                             )}
                           >
                             <div className="flex items-center gap-2">
                               <Icon size={14} strokeWidth={1.5} className="shrink-0" />
                               <span>{opt.label}</span>
                             </div>
-                            {isSelected && <Check size={12} strokeWidth={1.5} />}
+                            <div
+                              className={cn(
+                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
+                                isSelected
+                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
+                                  : "border-border/80 bg-background"
+                              )}
+                            >
+                              {isSelected && <Check className="size-2.5" strokeWidth={1.5} />}
+                            </div>
                           </button>
                         );
                       })}
@@ -424,23 +433,28 @@ export function InboxView() {
               </div>
             </div>
 
-            {/* Pill Tabs: Tất cả / Chưa đọc */}
-            <div className="flex items-center gap-1.5">
+            {/* Horizontal Segmented Control: Tất cả / Chưa đọc */}
+            <div
+              role="group"
+              aria-label="Lọc trạng thái đọc"
+              className="inline-flex h-7 w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
+            >
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab("all");
                   updateUrlParams(selectedId, "all");
                 }}
+                aria-pressed={activeTab === "all"}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-7 rounded-md text-xs font-medium transition-colors cursor-pointer select-none",
+                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                   activeTab === "all"
-                    ? "bg-muted text-foreground font-semibold shadow-2xs"
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 <span>Tất cả</span>
-                <span className="text-[11px] font-mono tabular-nums opacity-70">
+                <span className="text-[10px] font-mono tabular-nums text-muted-foreground/80">
                   {notifications.length}
                 </span>
               </button>
@@ -451,16 +465,17 @@ export function InboxView() {
                   setActiveTab("unread");
                   updateUrlParams(selectedId, "unread");
                 }}
+                aria-pressed={activeTab === "unread"}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-7 rounded-md text-xs font-medium transition-colors cursor-pointer select-none",
+                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                   activeTab === "unread"
-                    ? "bg-muted text-foreground font-semibold shadow-2xs"
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 <span>Chưa đọc</span>
                 {unreadCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground tabular-nums leading-none">
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-3.5 px-1 rounded-full text-[10px] font-mono font-semibold bg-muted text-foreground/80 border border-border/80 tabular-nums leading-none">
                     {unreadCount}
                   </span>
                 )}
@@ -470,16 +485,16 @@ export function InboxView() {
             {/* Quick search input */}
             <div className="relative">
               <Search
-                size={13}
+                className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
                 strokeWidth={1.5}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm người gửi, nội dung..."
-                className="w-full h-7.5 pl-8 pr-2.5 rounded-lg border border-border/60 bg-muted/30 focus:bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-colors"
+                aria-label="Tìm kiếm thông báo"
+                className="w-full h-7 pl-8 pr-2.5 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
               />
             </div>
           </div>
@@ -632,7 +647,7 @@ export function InboxView() {
                   title={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
                   className="size-8 text-muted-foreground hover:text-foreground"
                 >
-                  {selectedNotification.isRead ? <Mail size={16} /> : <MailOpen size={16} />}
+                  {selectedNotification.isRead ? <Mail size={16} strokeWidth={1.5} /> : <MailOpen size={16} strokeWidth={1.5} />}
                 </Button>
               </div>
 
@@ -722,7 +737,7 @@ export function InboxView() {
                 {formatNotificationContent(selectedNotification).directiveNote && (
                   <div className="p-3.5 rounded-lg bg-amber-50/80 border border-amber-300 text-amber-950 space-y-1">
                     <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                      <ShieldCheck size={14} />
+                      <ShieldCheck size={14} strokeWidth={1.5} />
                       <span>Ý kiến chỉ đạo / Ghi chú điều hành:</span>
                     </div>
                     <p className="text-xs italic">
@@ -737,7 +752,7 @@ export function InboxView() {
                 <div className="rounded-xl border border-border/80 bg-background p-4 space-y-3 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Layers size={15} className="text-primary" />
+                      <Layers size={15} strokeWidth={1.5} className="text-muted-foreground" />
                       <span className="text-xs font-bold text-muted-foreground">
                         Nhiệm vụ liên quan
                       </span>
@@ -792,7 +807,7 @@ export function InboxView() {
                       className="text-xs h-7 gap-1"
                     >
                       <span>Xem toàn bộ nhiệm vụ</span>
-                      <ChevronRight size={14} />
+                      <ChevronRight size={14} strokeWidth={1.5} />
                     </Button>
                   </div>
                 </div>

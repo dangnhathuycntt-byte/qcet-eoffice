@@ -253,7 +253,7 @@ export function MobileOrgDrillDown({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Tìm cán bộ, giảng viên, số điện thoại, đơn vị..."
-          className="w-full h-11 pl-10 pr-9 rounded-xl border border-border/80 bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs"
+          className="w-full h-11 pl-10 pr-9 rounded-xl border border-border/80 bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-ring transition-colors shadow-2xs"
         />
         {isSearching && (
           <button
@@ -315,7 +315,7 @@ export function MobileOrgDrillDown({
                 className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all touch-manipulation cursor-pointer shadow-2xs"
                 data-testid="mobile-org-back-button"
               >
-                <ArrowLeft size={16} strokeWidth={1.5} className="text-primary" />
+                <ArrowLeft size={16} strokeWidth={1.5} className="text-foreground/80 shrink-0" />
                 <span>
                   Quay lại{" "}
                   <span className="font-semibold">
@@ -398,7 +398,7 @@ export function MobileOrgDrillDown({
                         <span className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                           {dept.name}
                         </span>
-                        <span className="px-1.5 py-0.2 rounded text-xs font-mono tabular-nums font-semibold bg-primary/10 text-primary border border-primary/20">
+                        <span className="px-1.5 py-0.5 rounded-md text-[11px] font-mono tabular-nums font-semibold bg-muted text-muted-foreground border border-border/70">
                           {dept.code}
                         </span>
                       </div>
@@ -615,12 +615,8 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 p-3 min-h-[48px] rounded-xl border bg-card transition-all shadow-2xs touch-manipulation",
-        isLeader
-          ? "border-primary/30 bg-primary/[0.02]"
-          : isDeputy
-          ? "border-indigo-500/20 bg-indigo-500/[0.01]"
-          : "border-border/80"
+        "flex flex-col gap-2 p-3 min-h-[48px] rounded-xl border bg-card transition-colors touch-manipulation",
+        isLeader ? "border-border/90 bg-muted/15" : "border-border/70"
       )}
       data-testid={`staff-card-${staff.id}`}
     >
@@ -638,17 +634,17 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
                 {staff.titlePrefix} {staff.name}
               </span>
               {isLeader && (
-                <span className="px-1.5 py-0.2 rounded text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+                <span className="px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold bg-muted text-foreground/90 border border-border/80">
                   Trưởng đơn vị
                 </span>
               )}
               {isDeputy && (
-                <span className="px-1.5 py-0.2 rounded text-xs font-semibold bg-indigo-500/15 text-indigo-700 border border-indigo-500/25">
+                <span className="px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold bg-muted text-foreground/80 border border-border/80">
                   Phó đơn vị
                 </span>
               )}
             </div>
-            <div className="text-xs text-primary/90 font-medium mt-0.5">
+            <div className="text-xs text-muted-foreground font-medium mt-0.5">
               {staff.role}
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
