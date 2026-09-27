@@ -660,24 +660,24 @@ function CalendarRouteContent({
 
         {/* + Tạo dropdown */}
         <div className="relative shrink-0" ref={createDropdownRef}>
-          <Button
-            size="sm"
+          <button
+            type="button"
             onClick={() => setIsCreateDropdownOpen((previous) => !previous)}
             aria-expanded={isCreateDropdownOpen}
             aria-haspopup="true"
-            className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
           >
-            <Plus className="size-4" strokeWidth={1.5} />
+            <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             <span>Tạo</span>
-          </Button>
+          </button>
           {isCreateDropdownOpen && (
-            <div role="menu" className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1.5 shadow-lg z-30 animate-in fade-in zoom-in-95 duration-150">
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
-                <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+            <div role="menu" className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-30 animate-in fade-in zoom-in-95 duration-150 text-xs text-popover-foreground">
+              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
+                <CheckSquare className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 Tạo công việc
               </button>
-              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
-                <CalendarIcon className="size-4 text-sky-600 shrink-0" strokeWidth={1.5} />
+              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground/85 rounded-md hover:bg-accent hover:text-foreground text-left cursor-pointer transition-colors">
+                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
                 Tạo sự kiện
               </button>
             </div>
@@ -724,7 +724,7 @@ function CalendarRouteContent({
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
         {/* View mode: Tuần | Tháng — primary toolbar */}
-        <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex items-center rounded-lg border border-border/60 bg-secondary/50 p-0.5 gap-0.5">
+        <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex h-8 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5 select-none">
           {(["week", "month"] as const).map((mode) => (
             <button
               key={mode}
@@ -733,8 +733,8 @@ function CalendarRouteContent({
               aria-selected={viewMode === mode}
               onClick={() => handleViewChange(mode)}
               className={cn(
-                "inline-flex items-center justify-center gap-1 min-h-8 px-2.5 rounded text-xs font-semibold transition-all cursor-pointer",
-                viewMode === mode ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                "inline-flex items-center justify-center gap-1 h-7 px-2.5 rounded-[4px] text-xs font-medium transition-all cursor-pointer select-none",
+                viewMode === mode ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               )}
             >
               <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
@@ -754,25 +754,25 @@ function CalendarRouteContent({
             aria-expanded={isFilterOpen}
             aria-haspopup="listbox"
             className={cn(
-              "inline-flex min-h-[44px] sm:min-h-9 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold transition-colors",
+              "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer border border-border/80 bg-background",
               (hasActiveFilters || activeScope !== "school")
-                ? "text-primary bg-primary/5"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                ? "border-border bg-muted/60 text-foreground font-semibold"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
             {activeScope === "school" ? "Toàn trường" : activeScope === "unit" ? "Đơn vị" : "Của tôi"}
             {hasActiveFilters && (
-              <span className="inline-flex items-center justify-center size-4 rounded-full bg-primary text-xs text-primary-foreground font-mono font-bold">{activeFilterCount}</span>
+              <span className="inline-flex items-center justify-center size-4 rounded-full bg-foreground/85 text-[10px] text-background font-mono font-bold">{activeFilterCount}</span>
             )}
-            <ChevronDown className={cn("size-3 transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
+            <ChevronDown className={cn("size-3 text-muted-foreground transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
           </button>
 
           {isFilterOpen && (
-            <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+            <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/80 bg-popover p-3 shadow-dropdown z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150 text-popover-foreground">
               {/* Scope */}
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
-                <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-lg border border-border/70 bg-secondary/50 p-0.5 gap-0.5">
+                <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 gap-0.5">
                   {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
                     <button
                       key={value}
@@ -781,8 +781,8 @@ function CalendarRouteContent({
                       aria-selected={activeScope === value}
                       onClick={() => handleScopeChange(value)}
                       className={cn(
-                        "flex-1 min-h-8 px-2 rounded text-xs font-semibold transition-all text-center",
-                        activeScope === value ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        "flex-1 h-7 px-2 rounded-[4px] text-xs font-medium transition-all text-center cursor-pointer select-none",
+                        activeScope === value ? "bg-background text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                       )}
                     >
                       {label}
@@ -798,7 +798,7 @@ function CalendarRouteContent({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
                   {hasActiveFilters && (
-                    <button type="button" onClick={handleResetFilters} className="text-xs text-primary hover:underline">Đặt lại</button>
+                    <button type="button" onClick={handleResetFilters} className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">Đặt lại</button>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
@@ -808,7 +808,7 @@ function CalendarRouteContent({
                       type="button"
                       onClick={() => setLevelFilter(value)}
                       aria-pressed={levelFilter === value}
-                      className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", levelFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", levelFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
                     </button>
@@ -826,7 +826,7 @@ function CalendarRouteContent({
                       type="button"
                       onClick={() => setStatusFilter(value)}
                       aria-pressed={statusFilter === value}
-                      className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", statusFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                      className={cn("h-7 px-2 rounded-[4px] text-xs font-medium border text-center transition-colors cursor-pointer select-none", statusFilter === value ? "bg-foreground/85 border-foreground/85 text-background font-semibold" : "border-border/80 text-muted-foreground hover:bg-accent hover:text-foreground")}
                     >
                       {label}
                     </button>

@@ -400,7 +400,7 @@ export function AppSidebar() {
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="size-5 rounded-full flex items-center justify-center bg-blue-600 text-white font-medium text-[10px] shrink-0 shadow-2xs">
+                <div className="size-5 rounded-full flex items-center justify-center bg-muted text-foreground border border-border/80 font-medium text-[10px] shrink-0 shadow-2xs">
                   {getInitials(user?.name)}
                 </div>
               )}
@@ -605,14 +605,7 @@ export function AppSidebar() {
                           >{item.label}</span>
                           {badge && !isCollapsed ? (
                             <span
-                              className={cn(
-                                "inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0",
-                                badge.variant === "rose" && "bg-rose-500/15 text-rose-600 border border-rose-500/20",
-                                badge.variant === "primary" && "bg-primary/10 text-primary border border-primary/20",
-                                badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border border-sky-500/20",
-                                badge.variant === "amber" && "bg-amber-500/10 text-amber-800 border border-amber-500/20",
-                                (!badge.variant || badge.variant === "muted") && "bg-muted/70 text-muted-foreground border border-border/40"
-                              )}
+                              className="inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0 bg-muted/80 text-muted-foreground border border-border/60"
                             >
                               {badge.text}
                             </span>

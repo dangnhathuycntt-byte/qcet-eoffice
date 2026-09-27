@@ -809,7 +809,7 @@ export function CalendarMonthView({
               </button>
             </div>
 
-            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-semibold font-mono tabular-nums">
+            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-muted/60 text-foreground border border-border/80 px-2.5 py-0.5 text-xs font-medium font-mono tabular-nums">
               {currentMonthTaskCount} hạn chót trong tháng
             </span>
           </div>
@@ -817,15 +817,15 @@ export function CalendarMonthView({
           {/* Desktop Right: View Mode Switcher, Quick Search & + Giao việc */}
           <div className="flex items-center gap-2">
             {/* Desktop View Mode Toggle */}
-            <div className="hidden sm:inline-flex items-center rounded-xl border border-border/70 bg-card p-0.5 shadow-2xs">
+            <div className="hidden sm:inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs select-none">
               <button
                 type="button"
                 onClick={() => setDesktopViewMode("grid")}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "px-2.5 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                   desktopViewMode === "grid"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 Lưới tháng
@@ -834,10 +834,10 @@ export function CalendarMonthView({
                 type="button"
                 onClick={() => setDesktopViewMode("agenda")}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "px-2.5 h-6 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
                   desktopViewMode === "agenda"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 )}
               >
                 Nghị sự
@@ -854,18 +854,18 @@ export function CalendarMonthView({
                 placeholder="Lọc lịch công tác..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-8.5 pl-9 pr-3 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="w-full h-8 pl-9 pr-3 rounded-md border border-border/80 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:border-border transition-all"
               />
             </div>
 
-            <Button
+            <button
               type="button"
               onClick={() => onAddTask?.(selectedDate)}
-              className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-3 text-xs font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 shadow-none"
             >
-              <Plus strokeWidth={1.5} className="size-3.5" />
+              <Plus strokeWidth={1.5} className="size-3.5 text-muted-foreground" />
               <span>Giao việc</span>
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -1143,9 +1143,9 @@ export function CalendarMonthView({
                     !cell.isCurrentMonth && "bg-muted/15 text-muted-foreground/40",
                     cell.isCurrentMonth && "bg-card hover:bg-muted/30",
                     cell.isWeekend && cell.isCurrentMonth && "bg-muted/[0.04]",
-                    cell.isToday && "bg-primary/[0.04] font-medium border-primary/30",
+                    cell.isToday && "bg-muted/30 font-medium border-border",
                     isSelected &&
-                      "ring-1.5 ring-primary ring-inset bg-primary/[0.06] z-10 shadow-xs"
+                      "ring-1.5 ring-foreground/30 ring-inset bg-muted/40 z-10 shadow-xs"
                   )}
                   data-date={cell.dateString}
                   aria-label={`${cell.dateString}: ${dayTasks.length} nhiệm vụ`}
@@ -1164,11 +1164,11 @@ export function CalendarMonthView({
                       className={cn(
                         "inline-flex size-6 items-center justify-center rounded-full font-mono text-xs font-medium tabular-nums transition-colors",
                         cell.isToday
-                          ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                          ? "bg-foreground/85 text-background font-bold shadow-xs"
                           : cell.isCurrentMonth
                           ? "text-foreground"
                           : "text-muted-foreground/40",
-                        isSelected && !cell.isToday && "font-bold text-primary"
+                        isSelected && !cell.isToday && "font-bold text-foreground"
                       )}
                     >
                       {cell.dayNumber}

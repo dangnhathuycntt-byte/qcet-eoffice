@@ -302,9 +302,9 @@ export function CalendarWeekView({
                   onOpenDaySheet(day.date);
                 }}
                 className={cn(
-                  "py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center gap-0.5 transition-colors text-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]",
-                  day.isToday && "bg-primary/5 font-bold",
-                  isSelected && "bg-primary/10",
+                  "py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center gap-0.5 transition-colors text-center focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]",
+                  day.isToday && "bg-muted/40 font-semibold",
+                  isSelected && "bg-muted/60",
                   !day.isToday && !isSelected && "hover:bg-muted/40"
                 )}
                 aria-label={`${day.dayLabelVi} ${day.displayDate}`}
@@ -315,8 +315,8 @@ export function CalendarWeekView({
                 <div
                   className={cn(
                     "inline-flex items-center justify-center size-7 rounded-full text-xs font-mono font-bold tabular-nums",
-                    day.isToday && "bg-primary text-primary-foreground shadow-xs",
-                    !day.isToday && isSelected && "ring-1.5 ring-primary text-primary",
+                    day.isToday && "bg-foreground/85 text-background shadow-xs",
+                    !day.isToday && isSelected && "ring-1.5 ring-foreground/40 text-foreground font-semibold",
                     !day.isToday && !isSelected && "text-foreground"
                   )}
                 >
@@ -329,9 +329,9 @@ export function CalendarWeekView({
       </div>
 
       {/* 2. Top section: "NHIỆM VỤ ĐẾN HẠN TRONG NGÀY" (Deadlines lane) */}
-      <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/70 bg-amber-500/[0.03]">
+      <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/70 bg-muted/20">
         <div className="py-2.5 px-2 border-r border-border/50 flex flex-col items-center justify-center text-center">
-          <CheckSquare className="size-3.5 text-primary mb-1" strokeWidth={1.5} />
+          <CheckSquare className="size-3.5 text-muted-foreground mb-1" strokeWidth={1.5} />
           <span className="text-xs font-bold text-muted-foreground leading-tight">
             Hạn chót
           </span>
@@ -349,7 +349,7 @@ export function CalendarWeekView({
                 key={`deadlines-${day.date}`}
                 className={cn(
                   "p-1.5 flex flex-col gap-1.5 overflow-y-auto max-h-36 transition-colors",
-                  day.isToday && "bg-primary/[0.02]"
+                  day.isToday && "bg-muted/20"
                 )}
               >
                 {/* Per-day attention count summary — click opens Day Sheet */}
@@ -439,7 +439,7 @@ export function CalendarWeekView({
       <div className="flex-1 overflow-y-auto max-h-[640px]">
         {/* Outside-window events row: events with no time or time outside 07-18 */}
         {weekDays.some((day) => (eventsByDate.get(day.date) || []).some((ev) => !isEventInWindow(ev))) && (
-          <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/60 bg-sky-500/[0.03]">
+          <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/60 bg-muted/20">
             <div className="py-2 px-1 sm:px-2 border-r border-border/50 text-right pr-2 sm:pr-3 text-xs font-mono font-medium text-muted-foreground tabular-nums select-none flex items-center justify-end">
               <Clock className="size-3 mr-0.5" strokeWidth={1.5} aria-hidden="true" />
             </div>
@@ -458,7 +458,7 @@ export function CalendarWeekView({
                     key={`overflow-${day.date}`}
                     className={cn(
                       "p-1 flex flex-col gap-1",
-                      day.isToday && "bg-primary/[0.015]"
+                      day.isToday && "bg-muted/20"
                     )}
                   >
                     {overflowEvents.map((ev) => (
@@ -473,11 +473,11 @@ export function CalendarWeekView({
                             onOpenDaySheet(day.date);
                           }
                         }}
-                        className="w-full text-left rounded-md px-1.5 py-1 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500"
+                        className="w-full text-left rounded-md px-1.5 py-1 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                         aria-label={`Sự kiện: ${ev.title}${ev.time ? ` lúc ${ev.time}` : ""}`}
                       >
-                        <CalendarIcon className="size-2.5 text-sky-700 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                        <span className="text-xs font-semibold text-sky-950 truncate">
+                        <CalendarIcon className="size-2.5 text-muted-foreground shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                        <span className="text-xs font-medium text-foreground truncate">
                           {ev.time ? `${ev.time} ` : ""}{ev.title}
                         </span>
                       </button>
@@ -520,7 +520,7 @@ export function CalendarWeekView({
                       key={`${day.date}-${hour}`}
                       className={cn(
                         "relative p-1 transition-colors flex flex-col gap-1 group/slot",
-                        day.isToday && "bg-primary/[0.015]"
+                        day.isToday && "bg-muted/20"
                       )}
                     >
                       {/* Sự kiện diễn ra trong giờ này */}
@@ -536,12 +536,12 @@ export function CalendarWeekView({
                               onOpenDaySheet(day.date);
                             }
                           }}
-                          className="w-full text-left rounded-lg p-2 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all text-foreground shadow-2xs space-y-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500 z-10"
+                          className="w-full text-left rounded-lg p-2 border border-border/80 bg-background hover:bg-muted/50 hover:border-border transition-all text-foreground shadow-2xs space-y-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring z-10"
                           aria-label={`Sự kiện: ${ev.title} lúc ${ev.time || hourLabel}`}
                         >
-                          <div className="flex items-center justify-between gap-1 text-xs font-mono tabular-nums text-sky-800">
-                            <span className="font-bold inline-flex items-center gap-1">
-                              <CalendarIcon className="size-2.5 text-sky-700" strokeWidth={1.5} />
+                          <div className="flex items-center justify-between gap-1 text-xs font-mono tabular-nums text-muted-foreground">
+                            <span className="font-semibold inline-flex items-center gap-1 text-foreground">
+                              <CalendarIcon className="size-2.5 text-muted-foreground" strokeWidth={1.5} />
                               {ev.time || hourLabel}
                             </span>
                             {ev.location && (
@@ -550,11 +550,11 @@ export function CalendarWeekView({
                               </span>
                             )}
                           </div>
-                          <h4 className={cn("text-xs font-bold text-sky-950 leading-tight", compactMode ? "line-clamp-1" : "line-clamp-2")}>
+                          <h4 className={cn("text-xs font-semibold text-foreground leading-tight", compactMode ? "line-clamp-1" : "line-clamp-2")}>
                             {ev.title}
                           </h4>
                           {!compactMode && (ev.host || ev.assigneeName) && (
-                            <p className="text-xs text-sky-800/80 truncate">
+                            <p className="text-xs text-muted-foreground truncate">
                               Chủ trì: {ev.host || ev.assigneeName}
                             </p>
                           )}

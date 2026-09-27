@@ -351,8 +351,8 @@ export function CalendarMonthGrid({
                   !cell.isCurrentMonth && "bg-muted/15 text-muted-foreground/40",
                   cell.isCurrentMonth && "bg-card hover:bg-muted/[0.06]",
                   cell.isWeekend && cell.isCurrentMonth && "bg-muted/[0.04]",
-                  cell.isToday && "bg-primary/[0.04] border-primary/30",
-                  isSelected && "ring-2 ring-primary/40 ring-inset z-10 shadow-xs"
+                  cell.isToday && "bg-muted/30 border-border",
+                  isSelected && "ring-2 ring-foreground/20 ring-inset z-10 shadow-xs"
                 )}
                 data-date={cell.dateString}
                 aria-label={`${cell.dateString}: ${total} mục lịch`}
@@ -371,9 +371,9 @@ export function CalendarMonthGrid({
                     className={cn(
                       "inline-flex min-h-6 min-w-6 items-center justify-center rounded-full px-1 font-mono text-xs font-medium tabular-nums",
                       cell.isToday
-                        ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                        ? "bg-foreground/85 text-background font-bold shadow-xs"
                         : isSelected
-                          ? "ring-1.5 ring-primary text-primary font-bold"
+                          ? "ring-1.5 ring-foreground/40 text-foreground font-bold"
                           : cell.isCurrentMonth
                             ? "text-foreground"
                             : "text-muted-foreground/40"
