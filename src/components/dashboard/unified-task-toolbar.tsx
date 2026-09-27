@@ -1445,33 +1445,161 @@ export function UnifiedTaskToolbar({
         );
       }
       case "dept": {
-        const depts = [
-          { code: "ALL", name: "Tất cả đơn vị" },
-          ...availableDepartments.filter((d) => d.code !== "ALL"),
-        ];
+        const facultyDepts = availableDepartments.filter(
+          (d) => d.code !== "ALL" && (d.name.startsWith("Khoa") || ["CNTT", "KINH_TE", "KY_THUAT"].includes(d.code))
+        );
+        const adminDepts = availableDepartments.filter(
+          (d) => d.code !== "ALL" && !d.name.startsWith("Khoa") && !["CNTT", "KINH_TE", "KY_THUAT"].includes(d.code)
+        );
+
+        const isFacultyActive = Boolean(
+          selectedDepartment &&
+          selectedDepartment !== "ALL" &&
+          facultyDepts.some((d) => d.code === selectedDepartment)
+        );
+        const isAdminActive = Boolean(
+          selectedDepartment &&
+          selectedDepartment !== "ALL" &&
+          adminDepts.some((d) => d.code === selectedDepartment)
+        );
+
+        const activeFacultyName = facultyDepts.find((d) => d.code === selectedDepartment)?.name;
+        const activeAdminName = adminDepts.find((d) => d.code === selectedDepartment)?.name;
+
         return (
-          <div className="max-h-[min(320px,45vh)] overflow-y-auto space-y-px pr-0.5">
-            {depts.map((dept) => {
-              const selected = (selectedDepartment || "ALL") === dept.code;
-              return (
-                <MenuItem
-                  key={dept.code}
-                  onClick={() => {
-                    onDepartmentChange?.(dept.code);
-                    setIsCollapsedFilterOpen(false);
-                  }}
-                  className={cn(
-                    "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
-                    selected
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+          <div className="space-y-px">
+            {/* Tất cả đơn vị */}
+            <MenuItem
+              onClick={() => {
+                onDepartmentChange?.("ALL");
+                setIsCollapsedFilterOpen(false);
+              }}
+              className={cn(
+                "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                !selectedDepartment || selectedDepartment === "ALL"
+                  ? "bg-accent font-medium text-foreground"
+                  : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+              )}
+            >
+              <FilterIconDept className="size-3.5 text-muted-foreground/60 shrink-0" />
+              <span>Tất cả đơn vị</span>
+            </MenuItem>
+
+            <MenuSeparator className="h-px bg-border/40 my-1" />
+
+            {/* Sub-dropdown cấp 2: Khoa chuyên môn */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <span className={cn("truncate", isFacultyActive ? "font-medium text-foreground" : "font-normal")}>
+                    Khoa đào tạo
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
+                  {isFacultyActive && activeFacultyName && (
+                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
+                      {activeFacultyName}
+                    </span>
                   )}
-                >
-                  <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
-                  <span>{dept.code === "ALL" ? "Tất cả đơn vị" : dept.name}</span>
-                </MenuItem>
-              );
-            })}
+                  <ChevronRight
+                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-px">
+                      {facultyDepts.map((dept) => {
+                        const selected = selectedDepartment === dept.code;
+                        return (
+                          <MenuItem
+                            key={dept.code}
+                            onClick={() => {
+                              onDepartmentChange?.(dept.code);
+                              setIsCollapsedFilterOpen(false);
+                            }}
+                            className={cn(
+                              "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              selected
+                                ? "bg-accent font-medium text-foreground"
+                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                            )}
+                          >
+                            <School className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                            <span>{dept.name}</span>
+                          </MenuItem>
+                        );
+                      })}
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
+
+            {/* Sub-dropdown cấp 2: Khối Hành chính & Phòng ban */}
+            <MenuSubmenuRoot>
+              <MenuSubmenuTrigger
+                openOnHover
+                delay={60}
+                closeDelay={180}
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
+                  <span className={cn("truncate", isAdminActive ? "font-medium text-foreground" : "font-normal")}>
+                    Phòng ban hành chính
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
+                  {isAdminActive && activeAdminName && (
+                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
+                      {activeAdminName}
+                    </span>
+                  )}
+                  <ChevronRight
+                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </MenuSubmenuTrigger>
+              <MenuPortal>
+                <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
+                  <MenuPopup className="min-w-[210px] w-auto max-w-[320px] rounded-lg border border-border/70 bg-popover/98 backdrop-blur-xs p-1 text-popover-foreground shadow-dropdown outline-none z-50 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <div className="space-y-px">
+                      {adminDepts.map((dept) => {
+                        const selected = selectedDepartment === dept.code;
+                        return (
+                          <MenuItem
+                            key={dept.code}
+                            onClick={() => {
+                              onDepartmentChange?.(dept.code);
+                              setIsCollapsedFilterOpen(false);
+                            }}
+                            className={cn(
+                              "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              selected
+                                ? "bg-accent font-medium text-foreground"
+                                : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
+                            )}
+                          >
+                            <Building className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
+                            <span>{dept.name}</span>
+                          </MenuItem>
+                        );
+                      })}
+                    </div>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuSubmenuRoot>
           </div>
         );
       }
