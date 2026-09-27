@@ -12,168 +12,166 @@ const baseProps: IconProps = {
   strokeLinejoin: "round",
 };
 
-// ─── Filter Category Icons (Neutral / Monochrome) ─────────────────────────────
+// ─── Filter Category Icons (Neutral / Monochrome / Bold & Weighted) ─────────────
 
 export const FilterIconStatus = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
     <circle cx="8" cy="8" r="6" />
-    <path d="M8 4.5A3.5 3.5 0 1 1 4.5 8" strokeWidth="1.5" />
-    <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+    <path d="M8 8 L8 2 A6 6 0 0 1 14 8 Z" fill="currentColor" fillOpacity={0.2} stroke="none" />
+    <circle cx="8" cy="8" r="1.75" fill="currentColor" stroke="none" />
+    <line x1="8" y1="2" x2="8" y2="4" strokeWidth="1.5" />
   </svg>
 );
 
 export const FilterIconPriority = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <rect x="1.5" y="10" width="3" height="4.5" rx="0.75" />
-    <rect x="6.5" y="6.5" width="3" height="8" rx="0.75" />
-    <rect x="11.5" y="3" width="3" height="11.5" rx="0.75" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <rect x="2" y="9" width="3" height="5" rx="0.75" fill="currentColor" fillOpacity={0.4} stroke="none" />
+    <rect x="6.5" y="5.5" width="3" height="8.5" rx="0.75" fill="currentColor" fillOpacity={0.7} stroke="none" />
+    <rect x="11" y="2" width="3" height="12" rx="0.75" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const FilterIconCategory = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H9.5L14 8L9.5 13H3.5A1.5 1.5 0 0 1 2 11.5V4.5Z" />
-    <circle cx="5.25" cy="8" r="1.25" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor" fillOpacity={0.2} />
+    <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" fillOpacity={0.2} />
+    <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" fillOpacity={0.2} />
+    <rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor" />
   </svg>
 );
 
 export const FilterIconDept = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M1.5 6.5L8 2L14.5 6.5" />
-    <path d="M3 6.5V14H13V6.5" />
-    <rect x="4.5" y="8" width="2.5" height="2.5" rx="0.5" />
-    <rect x="9" y="8" width="2.5" height="2.5" rx="0.5" />
-    <path d="M6.5 14V11.25A1.5 1.5 0 0 1 9.5 11.25V14" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <path d="M1.5 6L8 1.5L14.5 6" strokeLinejoin="round" />
+    <path d="M3 6V14H13V6" />
+    <rect x="4.5" y="8" width="2.5" height="2.5" rx="0.5" fill="currentColor" fillOpacity={0.3} stroke="none" />
+    <rect x="9" y="8" width="2.5" height="2.5" rx="0.5" fill="currentColor" fillOpacity={0.3} stroke="none" />
+    <path d="M6.5 14V11H9.5V14" fill="currentColor" fillOpacity={0.25} />
   </svg>
 );
 
 export const FilterIconLead = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="5.5" r="2.75" />
-    <path d="M2 14C2 11.239 4.686 9 8 9C11.314 9 14 11.239 14 14" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="5" r="3" fill="currentColor" fillOpacity={0.2} />
+    <path d="M2.5 14C2.5 10.7 4.9 8.5 8 8.5C11.1 8.5 13.5 10.7 13.5 14" />
+    <circle cx="12" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const FilterIconCollaborator = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="6" cy="5.25" r="2.25" />
-    <path d="M1 14C1 11.515 3.239 9.5 6 9.5C7.06 9.5 8.048 9.82 8.85 10.37" strokeOpacity="0.4" />
-    <circle cx="10.5" cy="5.25" r="2.25" />
-    <path d="M6 14C6 11.515 8.014 9.5 10.5 9.5C12.986 9.5 15 11.515 15 14" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="11" cy="5" r="2.25" fill="currentColor" fillOpacity={0.2} />
+    <path d="M6.5 14C6.5 11.2 8.5 9.5 11 9.5C12.8 9.5 14.5 10.7 15 14" strokeOpacity="0.5" />
+    <circle cx="5.5" cy="5.5" r="2.75" fill="currentColor" fillOpacity={0.25} />
+    <path d="M1 14.5C1 11.2 3 9 5.5 9C8 9 10 11.2 10 14.5" />
   </svg>
 );
 
 export const FilterIconDeadline = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <rect x="2" y="3.5" width="12" height="11" rx="1.5" />
-    <line x1="2" y1="7" x2="14" y2="7" />
-    <line x1="5.5" y1="2" x2="5.5" y2="5" />
-    <line x1="10.5" y1="2" x2="10.5" y2="5" />
-    <circle cx="9.5" cy="10.5" r="1.75" />
-    <circle cx="9.5" cy="10.5" r="0.5" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <rect x="2" y="3" width="12" height="11" rx="1.5" fill="currentColor" fillOpacity={0.1} />
+    <line x1="2" y1="6.5" x2="14" y2="6.5" />
+    <line x1="5.5" y1="1.5" x2="5.5" y2="4" />
+    <line x1="10.5" y1="1.5" x2="10.5" y2="4" />
+    <circle cx="9.5" cy="10.5" r="1.75" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const FilterIconMonth = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="6" />
-    <line x1="8" y1="8" x2="8" y2="3.5" strokeWidth="1.5" />
-    <line x1="8" y1="8" x2="11.2" y2="10" />
-    <circle cx="8" cy="8" r="0.875" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="6" fill="currentColor" fillOpacity={0.1} />
+    <line x1="8" y1="8" x2="8" y2="3.5" />
+    <line x1="8" y1="8" x2="11.5" y2="10" />
+    <circle cx="8" cy="8" r="1.25" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const FilterIconHealth = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path
-      d="M3.75 12.25A6 6 0 1 1 12.25 12.25"
-      strokeOpacity="0.3"
-    />
-    <path
-      d="M3.75 12.25A6 6 0 1 1 12.8 6.5"
-      strokeWidth="1.5"
-    />
-    <line x1="8" y1="8" x2="10.8" y2="5.2" strokeWidth="1.25" />
-    <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <path d="M3.75 12.25A6 6 0 1 1 12.25 12.25" strokeOpacity="0.35" />
+    <path d="M3.75 12.25A6 6 0 1 1 13 6.5" strokeWidth="1.75" />
+    <line x1="8" y1="8" x2="11.2" y2="4.8" strokeWidth="1.5" />
+    <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const FilterIconProgress = FilterIconHealth;
 
 export const FilterIconOrigin = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M4.5 1.5H12A1 1 0 0 1 13 2.5V13.5A1 1 0 0 1 12 14.5H4.5A1.5 1.5 0 0 1 3 13V3A1.5 1.5 0 0 1 4.5 1.5Z" />
-    <path d="M4.5 1.5A1.5 1.5 0 0 0 3 3V13A1.5 1.5 0 0 0 4.5 14.5" strokeOpacity="0.4" />
-    <line x1="5.75" y1="5" x2="11" y2="5" />
-    <line x1="5.75" y1="7.25" x2="11" y2="7.25" />
-    <line x1="5.75" y1="9.5" x2="9" y2="9.5" />
-    <circle cx="9.5" cy="12" r="1.5" />
-    <circle cx="9.5" cy="12" r="0.5" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <path d="M3 2H10L13.5 5.5V14H3V2Z" fill="currentColor" fillOpacity={0.1} />
+    <path d="M10 2V6H13.5" fill="currentColor" fillOpacity={0.25} />
+    <line x1="5.5" y1="8.5" x2="10.5" y2="8.5" />
+    <line x1="5.5" y1="11" x2="9" y2="11" />
   </svg>
 );
 
-// ─── Status Submenu Indicators (Neutral Minimalist) ──────────────────────────���
+// ─── Status Submenu Indicators (Neutral & Substantial) ─────────────────────────
 
 export const StatusSubAll = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <path d="M2 11L8 13.5L14 11L8 8.5L2 11Z" />
-    <path d="M2 8L8 10.5L14 8L8 5.5L2 8Z" />
-    <path d="M2 5L8 7.5L14 5L8 2.5L2 5Z" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" />
+    <path d="M8 8L8 2.25A5.75 5.75 0 0 1 13.75 8Z" fill="currentColor" fillOpacity={0.6} stroke="none" />
+    <path d="M8 8L13.75 8A5.75 5.75 0 0 1 8 13.75Z" fill="currentColor" fillOpacity={0.35} stroke="none" />
+    <path d="M8 8L8 13.75A5.75 5.75 0 0 1 2.25 8Z" fill="currentColor" fillOpacity={0.15} stroke="none" />
+    <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const StatusSubNew = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeDasharray="3 2" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" strokeDasharray="3.5 2.5" />
+    <circle cx="8" cy="8" r="1.75" fill="currentColor" fillOpacity={0.25} stroke="none" />
   </svg>
 );
 
 export const StatusSubInProgress = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.3" />
-    <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8L8 8Z" fill="currentColor" fillOpacity="0.2" />
-    <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" strokeWidth="1.5" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" strokeOpacity="0.4" />
+    <path d="M8 2.25A5.75 5.75 0 0 1 13.75 8L8 8Z" fill="currentColor" fillOpacity={0.4} stroke="none" />
+    <path d="M8 2.25A5.75 5.75 0 0 1 13.75 8" strokeWidth="1.75" />
+    <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const StatusSubReview = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" />
-    <circle cx="8" cy="8" r="1.75" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" />
+    <circle cx="8" cy="8" r="2.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const StatusSubCompleted = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" />
-    <path d="M5.5 8.25L7.25 10L10.75 6.5" strokeWidth="1.5" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" fill="currentColor" fillOpacity={0.15} />
+    <path d="M5 8.25L7.25 10.5L11 6" strokeWidth="1.75" />
   </svg>
 );
 
-// ─── Priority Submenu Indicators (Neutral 3-Level Steps) ──────────────────────
+// ─── Priority Submenu Indicators (Solid Bars & Bold Steps) ─────────────────────
 
 export const PrioritySubBars = ({
   level,
   ...props
 }: IconProps & { level: 0 | 1 | 2 | 3 }) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
     <rect
-      x="1.5" y="10" width="3" height="4.5" rx="0.5"
-      fill={level >= 1 ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeOpacity={level >= 1 ? 1 : 0.35}
+      x="1.5" y="9.5" width="3.25" height="5" rx="0.75"
+      fill="currentColor"
+      fillOpacity={level >= 1 ? 1 : 0.2}
+      stroke="none"
     />
     <rect
-      x="6.5" y="6.5" width="3" height="8" rx="0.5"
-      fill={level >= 2 ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeOpacity={level >= 2 ? 1 : 0.35}
+      x="6.25" y="6" width="3.25" height="8.5" rx="0.75"
+      fill="currentColor"
+      fillOpacity={level >= 2 ? 1 : 0.2}
+      stroke="none"
     />
     <rect
-      x="11.5" y="3" width="3" height="11.5" rx="0.5"
-      fill={level >= 3 ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeOpacity={level >= 3 ? 1 : 0.35}
+      x="11" y="2" width="3.25" height="12.5" rx="0.75"
+      fill="currentColor"
+      fillOpacity={level >= 3 ? 1 : 0.2}
+      stroke="none"
     />
   </svg>
 );
@@ -194,45 +192,43 @@ export const PrioritySubLow = (props: IconProps) => (
   <PrioritySubBars level={0} {...props} />
 );
 
-// ─── Health Submenu Indicators (Neutral Geometric Shapes) ─────────────────────
+// ─── Health / Progress Submenu Indicators (Neutral Progress Rings) ──────────────
 
 export const HealthSubAll = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeDasharray="6.5 2.2" transform="rotate(-90 8 8)" />
-    <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" strokeDasharray="6 2.5" transform="rotate(-90 8 8)" />
+    <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const HealthSubOnTrack = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" />
-    <path d="M8 2.5A5.5 5.5 0 1 1 2.5 8" strokeWidth="1.5" />
-    <polyline points="6.5 9.5 8.5 7.5 10.5 9.5" strokeWidth="1.25" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" fill="currentColor" fillOpacity={0.12} />
+    <path d="M5.5 8L7.25 9.75L10.75 6.25" strokeWidth="1.75" />
   </svg>
 );
 
 export const HealthSubAtRisk = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" strokeDasharray="2 2" />
-    <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" strokeWidth="1.5" />
-    <line x1="8" y1="5.5" x2="8" y2="8" strokeWidth="1.25" />
-    <circle cx="8" cy="10" r="0.75" fill="currentColor" stroke="none" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <path d="M8 2.25L14 13.25H2L8 2.25Z" fill="currentColor" fillOpacity={0.15} strokeLinejoin="round" />
+    <line x1="8" y1="6" x2="8" y2="9" strokeWidth="1.5" />
+    <circle cx="8" cy="11.25" r="0.9" fill="currentColor" stroke="none" />
   </svg>
 );
 
 export const HealthSubOverdue = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeOpacity="0.25" strokeDasharray="2 2" />
-    <path d="M8 2.5A5.5 5.5 0 0 1 12.2 4.2" strokeWidth="1.5" />
-    <line x1="6.5" y1="6.5" x2="9.5" y2="9.5" strokeWidth="1.25" />
-    <line x1="9.5" y1="6.5" x2="6.5" y2="9.5" strokeWidth="1.25" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <path d="M8 2L14 8L8 14L2 8L8 2Z" fill="currentColor" fillOpacity={0.15} strokeLinejoin="round" />
+    <line x1="6" y1="6" x2="10" y2="10" strokeWidth="1.5" />
+    <line x1="10" y1="6" x2="6" y2="10" strokeWidth="1.5" />
   </svg>
 );
 
 export const HealthSubCompleted = (props: IconProps) => (
-  <svg {...baseProps} strokeWidth="1.25" {...props}>
-    <circle cx="8" cy="8" r="5.5" strokeWidth="1.25" />
-    <path d="M5.5 8.25L7.25 10L10.75 6.5" strokeWidth="1.5" />
+  <svg {...baseProps} strokeWidth="1.5" {...props}>
+    <circle cx="8" cy="8" r="5.75" fill="currentColor" fillOpacity={0.2} />
+    <circle cx="8" cy="8" r="5.75" />
+    <path d="M5 8.25L7.25 10.5L11 6" strokeWidth="1.75" />
   </svg>
 );
 
