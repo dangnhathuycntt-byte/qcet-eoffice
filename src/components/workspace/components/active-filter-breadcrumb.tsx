@@ -275,26 +275,17 @@ function FilterSegmentChip({
   return (
     <span
       data-slot={dataSlot}
-      className="inline-flex items-center h-[26px] rounded-[6px] border border-border/75 bg-background text-xs shadow-2xs overflow-hidden divide-x divide-border/60 transition-colors select-none"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none group"
     >
-      {/* Property Tag with Icon */}
-      <span className="flex items-center gap-1.5 px-2 py-0.5 text-muted-foreground/80 font-normal bg-muted/30">
-        {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
-        <span className="text-[11px] whitespace-nowrap">{label}</span>
-      </span>
-
-      {/* Filter Value */}
-      <span className="px-2 py-0.5 font-medium text-foreground text-[11.5px] truncate max-w-[200px]">
-        {value}
-      </span>
-
-      {/* Remove Button */}
+      {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
+      <span className="text-muted-foreground text-[11px] whitespace-nowrap">{label}:</span>
+      <span className="font-medium text-[11.5px] truncate max-w-[240px]">{value}</span>
       {onRemove && (
         <button
           type="button"
           onClick={onRemove}
           aria-label={removeAriaLabel || `Xóa lọc ${label}`}
-          className="px-1.5 h-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+          className="size-3.5 -mr-0.5 flex items-center justify-center rounded-sm text-muted-foreground/50 hover:text-foreground hover:bg-black/6 transition-colors cursor-pointer"
         >
           <X className="size-2.5" strokeWidth={1.5} />
         </button>
@@ -566,14 +557,14 @@ export function ActiveFilterBreadcrumb({
       </div>
 
       {/* Right Controls: Xóa lọc + Kết quả đ��m */}
-      <div className="flex items-center gap-2 shrink-0 ml-auto">
+      <div className="flex items-center gap-2.5 shrink-0 ml-auto">
         {(onResetFilters || onClearAll) && (
           <button
             type="button"
             data-slot="clear-all-filters"
             onClick={handleClearAll}
             aria-label="Xóa tất cả bộ lọc"
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-2 py-1 hover:bg-background/80 hover:shadow-2xs border border-transparent hover:border-border/50"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/60"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
@@ -581,7 +572,7 @@ export function ActiveFilterBreadcrumb({
         )}
 
         {totalFilteredCount !== undefined && (
-          <span className="text-muted-foreground text-[11px] font-mono tabular-nums px-2 py-0.5 bg-background rounded border border-border/50 shrink-0 shadow-2xs">
+          <span className="text-muted-foreground/70 text-[11px] font-mono tabular-nums shrink-0">
             {totalFilteredCount} kết quả{totalCount !== undefined ? ` / ${totalCount}` : ""}
           </span>
         )}

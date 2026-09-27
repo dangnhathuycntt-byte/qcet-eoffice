@@ -16,7 +16,6 @@ import {
   Users,
   Tag,
   Flag,
-  SlidersHorizontal,
   Loader2,
   Check,
   CheckCircle2,
@@ -80,11 +79,6 @@ import {
   SavedViewsSelector,
   type SavedViewsSelectorProps,
 } from "@/components/tasks/saved-views-selector";
-import {
-  PopoverRoot,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
 import {
   MenuRoot,
   MenuTrigger,
@@ -625,7 +619,6 @@ export function UnifiedTaskToolbar({
   }, [onSearchChange]);
 
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
-  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
   const [searchFocused, setSearchFocused] = React.useState(false);
   const [menuSearch, setMenuSearch] = React.useState("");
   const menuSearchInputRef = React.useRef<HTMLInputElement>(null);
@@ -2712,68 +2705,44 @@ export function UnifiedTaskToolbar({
         </MenuPortal>
       </MenuRoot>
 
-      {/* 4. Hiển thị */}
+      {/* 4. Chế độ hiển thị (Dạng ngang: Bảng / Kanban) */}
       {onViewModeChange && (
-        <PopoverRoot open={isDisplayOpen} onOpenChange={setIsDisplayOpen}>
-          <PopoverTrigger
-            render={
-              <button
-                type="button"
-                title="Hiển thị"
-                aria-label="Tùy chọn hiển thị"
-                className={cn(
-                  "inline-flex h-7 px-1.5 items-center justify-center rounded-md border text-[11px] font-medium transition-colors cursor-pointer touch-manipulation shrink-0 shadow-none",
-                  isDisplayOpen ? "border-border bg-accent/60 text-foreground" : "border-border/80 bg-background text-foreground hover:bg-accent"
-                )}
-              >
-                <SlidersHorizontal className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-              </button>
-            }
-          />
-
-          <PopoverContent
-            align="end"
-            side="bottom"
-            sideOffset={6}
-            className="w-36 rounded-xl border border-border/80 bg-popover p-1 shadow-dropdown z-50 text-xs text-popover-foreground"
+        <div
+          role="group"
+          aria-label="Chế độ hiển thị"
+          className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
+        >
+          <button
+            type="button"
+            onClick={() => onViewModeChange("table")}
+            aria-pressed={viewMode === "table"}
+            aria-label="Chế độ xem bảng"
+            className={cn(
+              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              viewMode === "table"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            )}
           >
-            <div className="space-y-0.5">
-              <button
-                type="button"
-                onClick={() => { onViewModeChange("table"); setIsDisplayOpen(false); }}
-                className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer select-none outline-none",
-                  viewMode === "table"
-                    ? "bg-accent font-medium text-foreground"
-                    : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                )}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <List className={cn("size-3.5 shrink-0", viewMode === "table" ? "text-foreground" : "text-muted-foreground")} strokeWidth={1.5} />
-                  <span>Bảng</span>
-                </div>
-                {viewMode === "table" && <Check className="size-3.5 text-foreground shrink-0 ml-1.5" strokeWidth={1.5} />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { onViewModeChange("kanban"); setIsDisplayOpen(false); }}
-                className={cn(
-                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors text-left cursor-pointer select-none outline-none",
-                  viewMode === "kanban"
-                    ? "bg-accent font-medium text-foreground"
-                    : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                )}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Kanban className={cn("size-3.5 shrink-0", viewMode === "kanban" ? "text-foreground" : "text-muted-foreground")} strokeWidth={1.5} />
-                  <span>Kanban</span>
-                </div>
-                {viewMode === "kanban" && <Check className="size-3.5 text-foreground shrink-0 ml-1.5" strokeWidth={1.5} />}
-              </button>
-            </div>
-          </PopoverContent>
-        </PopoverRoot>
+            <List className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Bảng</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewModeChange("kanban")}
+            aria-pressed={viewMode === "kanban"}
+            aria-label="Chế độ xem Kanban"
+            className={cn(
+              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              viewMode === "kanban"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            )}
+          >
+            <Kanban className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Kanban</span>
+          </button>
+        </div>
       )}
 
       {/* Divider trước CTA */}

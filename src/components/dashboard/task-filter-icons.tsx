@@ -88,7 +88,7 @@ export const FilterIconMonth = (props: IconProps) => (
 export const FilterIconHealth = (props: IconProps) => (
   <svg {...baseProps} strokeWidth="1.5" {...props}>
     <path d="M3.75 12.25A6 6 0 1 1 12.25 12.25" strokeOpacity="0.35" />
-    <path d="M3.75 12.25A6 6 0 1 1 13 6.5" strokeWidth="1.75" />
+    <path d="M3.75 12.25A6 6 0 1 1 13 6.5" strokeWidth="1.5" />
     <line x1="8" y1="8" x2="11.2" y2="4.8" strokeWidth="1.5" />
     <circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
   </svg>
