@@ -30,6 +30,14 @@ export function getWorkboxDisplayLabel(workbox: string): string {
       return "Chờ duyệt";
     case "pending_submission":
       return "Chờ nộp BC";
+    case "review":
+      return "Cần duyệt/nộp";
+    case "overdue":
+      return "Quá hạn";
+    case "today":
+      return "Hôm nay";
+    case "this_week":
+      return "Tuần này";
     default:
       return workbox;
   }
@@ -84,6 +92,8 @@ function getPriorityDisplayLabel(priority: string): string {
       return "Ưu tiên cao";
     case "NORMAL":
       return "Bình thường";
+    case "LOW":
+      return "Thấp";
     default:
       return priority;
   }
@@ -255,7 +265,7 @@ export function ActiveFilterBreadcrumb({
   const hasWorkbox = Boolean(workbox && workbox !== "ALL");
   const hasSearch = Boolean(search && search.trim().length > 0);
   const hasStatus = Boolean(status && status !== "ALL" && status !== "all");
-  const hasOverdue = Boolean(overdue);
+  const hasOverdue = Boolean(overdue && workbox !== "overdue");
   const hasTimeFilter = Boolean(timeFilter && timeFilter.kind !== "none");
   const hasDeadline = Boolean(deadline && deadline !== "all" && deadline !== "ALL");
   const hasPriority = Boolean(priority && priority !== "ALL");
