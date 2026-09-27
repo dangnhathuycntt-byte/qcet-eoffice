@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
@@ -326,21 +327,12 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
         <span className="text-slate-500 shrink-0">Phụ trách:</span>
         <div className="flex items-center gap-1.5 min-w-0 truncate">
-          {assigneeAvatar ? (
-            <img
-              src={assigneeAvatar}
-              alt=""
-              aria-hidden="true"
-              width={18}
-              height={18}
-              loading="lazy"
-              className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-            />
-          ) : (
-            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-700 border border-border/60">
-              {getInitials(assigneeName)}
-            </span>
-          )}
+          <UserAvatar
+            name={assigneeName}
+            avatarUrl={assigneeAvatar}
+            size="xs"
+            className="size-4.5"
+          />
           <span className="font-medium text-slate-800 truncate" title={assigneeName}>
             {assigneeName}
           </span>

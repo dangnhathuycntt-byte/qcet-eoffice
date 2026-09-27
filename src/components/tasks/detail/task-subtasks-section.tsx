@@ -18,8 +18,6 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
-import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
 import { cn, getInitials } from "@/lib/utils";
 import type { StaffTask } from "@/types/dashboard";
 import { formatDisplayDate } from "@/lib/format/date";
@@ -33,7 +31,6 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { useFeedback } from "@/components/ui/feedback-layer";
-import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
 export interface TaskSubtasksSectionProps {
   parentId: string;
@@ -383,7 +380,7 @@ export function TaskSubtasksSection({
 
       {/* 4. Danh sách việc con với layout chuẩn: [Checkbox] Title [Avatar] [Actions] / [Date] - Status */}
       {totalCount > 0 && (
-        <m.div className="flex flex-col gap-1" variants={staggerContainerVariants} initial="initial" animate="animate">
+        <div className="flex flex-col gap-1">
           {subTasks.map((st, idx) => {
             const isCompleted = st.status === "COMPLETED";
             const dueStatus = computeDueStatus(st.dueDate);
@@ -391,11 +388,8 @@ export function TaskSubtasksSection({
             const assigneeTitle = formatAssigneeNameWithTitle(st.assigneeName, hookPersonnel) || "Chưa giao";
 
             return (
-              <m.div
-                key={st.id || `subtask-row-${idx}-${st.title}`}
-                variants={listItemVariants}
-              >
               <div
+                key={st.id || `subtask-row-${idx}-${st.title}`}
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelectSubtask && onSelectSubtask(st)}
@@ -530,10 +524,9 @@ export function TaskSubtasksSection({
                   </div>
                 </div>
               </div>
-              </m.div>
             );
           })}
-        </m.div>
+        </div>
       )}
 
       {/* 5. Inline Quick Add: Input ở cuối list "Thêm việc con... (Enter để tạo)" */}

@@ -18,6 +18,7 @@ import {
   Paperclip,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
@@ -577,21 +578,11 @@ export const TaskRow = React.memo(function TaskRow({
         >
           {driInfo.primaryName ? (
             <>
-              {task.leadAssigneeAvatar ? (
-                <img
-                  src={task.leadAssigneeAvatar}
-                  alt=""
-                  aria-hidden="true"
-                  width={20}
-                  height={20}
-                  loading="lazy"
-                  className="size-5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
-                />
-              ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium tabular-nums text-muted-foreground border border-border/60">
-                  {getInitials(driInfo.primaryName)}
-                </span>
-              )}
+              <UserAvatar
+                name={driInfo.primaryName}
+                avatarUrl={task.leadAssigneeAvatar}
+                size="sm"
+              />
               <span className="text-xs font-medium text-foreground truncate">
                 {driInfo.primaryName}
               </span>

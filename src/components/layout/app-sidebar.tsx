@@ -22,10 +22,10 @@ import {
   LogOut,
   Smartphone,
 
-  CheckCircle2,
+  Focus,
+  CircleDot,
   MoreHorizontal,
   SquarePen,
-  Focus,
   type LucideIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -50,20 +50,30 @@ import { Menu } from "@base-ui/react/menu";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 
+import {
+  SidebarIconTasks,
+  SidebarIconCalendar,
+  SidebarIconInbox,
+  SidebarIconDocuments,
+  SidebarIconOrg,
+  SidebarIconDesk,
+  SidebarIconSettings,
+} from "./sidebar-nav-icons";
+
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
 );
 
-const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
-  LayoutDashboard,
-  Calendar,
-  CheckSquare: Focus,
-  FileText,
-  Building2,
+const ICON_MAP: Record<CanonicalRouteConfig["iconName"], React.ComponentType<any>> = {
+  LayoutDashboard: SidebarIconDesk,
+  Calendar: SidebarIconCalendar,
+  CheckSquare: SidebarIconTasks,
+  FileText: SidebarIconDocuments,
+  Building2: SidebarIconOrg,
   Bell,
-  Settings,
-  Inbox,
+  Settings: SidebarIconSettings,
+  Inbox: SidebarIconInbox,
 };
 
 export function formatDisplayName(name?: string | null): string {
@@ -89,7 +99,7 @@ export function getInitials(name?: string | null): string {
 }
 
 export interface DesktopSidebarItem extends CanonicalRouteConfig {
-  icon: LucideIcon;
+  icon: React.ComponentType<any>;
   isComingSoon?: boolean;
   isMaintenance?: boolean;
 }
@@ -98,7 +108,7 @@ export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
   .filter((item) => item.id !== "settings" && item.id !== "desk")
   .map((item) => ({
     ...item,
-    icon: ICON_MAP[item.iconName] || LayoutDashboard,
+    icon: ICON_MAP[item.iconName] || SidebarIconDesk,
   }));
 
 export function isEditableTarget(target: any): boolean {
@@ -368,17 +378,16 @@ export function AppSidebar() {
         <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
         <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
           {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
-          <div className="px-2 pt-2.5 pb-1 flex items-center justify-between gap-1 w-full">
+          <div className="px-2.5 pt-3 pb-1 flex items-center justify-between gap-1.5 w-full">
             {/* Left: User Identity / Account Menu Trigger */}
             <Menu.Trigger
               ref={accountTriggerRef}
               type="button"
               className={cn(
-                "h-7 min-w-0 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 group/user",
-                isCollapsed ? "w-full justify-center px-0" : "flex-1",
+                "h-[30px] flex items-center gap-1 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 group/user shrink-0",
                 isProfileDropdownOpen
-                  ? "bg-black/[0.06]"
-                  : "hover:bg-black/[0.04]"
+                  ? "bg-black/[0.06] dark:bg-white/[0.08]"
+                  : "hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
               )}
               aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
               aria-expanded={isProfileDropdownOpen}
@@ -391,36 +400,31 @@ export function AppSidebar() {
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="size-5 rounded-full flex items-center justify-center bg-blue-500 text-white font-medium text-[10px] shrink-0 shadow-2xs">
+                <div className="size-5 rounded-full flex items-center justify-center bg-blue-600 text-white font-medium text-[10px] shrink-0 shadow-2xs">
                   {getInitials(user?.name)}
                 </div>
               )}
               {!isCollapsed && (
-                <>
-                  <span className="text-[13px] font-medium text-foreground/90 truncate leading-none group-hover/user:text-foreground transition-colors">
-                    {formatDisplayName(user?.name)}
-                  </span>
-                  <ChevronDown
-                    size={10}
-                    strokeWidth={1.5}
-                    className={cn(
-                      "text-muted-foreground/45 shrink-0 ml-0.5 transition-transform duration-200",
-                      isProfileDropdownOpen && "rotate-180 text-foreground"
-                    )}
-                  />
-                </>
+                <ChevronDown
+                  size={11}
+                  strokeWidth={1.5}
+                  className={cn(
+                    "text-muted-foreground/50 shrink-0 ml-0.5 transition-transform duration-200",
+                    isProfileDropdownOpen && "rotate-180 text-foreground"
+                  )}
+                />
               )}
             </Menu.Trigger>
 
             {/* Right: Quick Action Buttons — hidden when collapsed (shown below as rail items) */}
             {!isCollapsed && (
-              <div className="flex items-center gap-1 shrink-0 ml-0.5">
+              <div className="flex items-center gap-0.5 shrink-0 ml-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={handleOpenSearch}
-                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     aria-label="Tìm kiếm (⌘K)"
                   >
                     <Search size={14} strokeWidth={1.5} />
@@ -436,10 +440,10 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={handleQuickCreate}
-                    className="size-7 rounded-full flex items-center justify-center bg-background border border-border text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-muted hover:shadow-xs active:scale-[0.98] transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     aria-label="Giao việc mới (C)"
                   >
-                    <SquarePen size={13.5} strokeWidth={1.75} />
+                    <SquarePen size={14} strokeWidth={1.5} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={4}>
@@ -455,38 +459,20 @@ export function AppSidebar() {
           <Menu.Portal>
           <Menu.Positioner className="z-50" align="start" sideOffset={6} collisionPadding={12}>
           <Menu.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-            className="w-60 p-2 shadow-2xl border border-border/80 bg-popover rounded-xl"
+            className="w-56 p-1 shadow-dropdown border border-border/80 bg-popover rounded-xl text-popover-foreground"
             role="menu"
             aria-label="Menu tài khoản"
           >
             {user && (
               <div>
                 {isOfflineReadOnly && (
-                  <div className="mb-2 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
+                  <div className="mb-1.5 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
                     Chế độ chỉ xem từ bộ nhớ tạm.
                   </div>
                 )}
 
-                {/* User Identity Card */}
-                <div className="flex items-center gap-2.5 p-2 rounded-lg bg-black/[0.03] border border-black/[0.04]">
-                  <div className="size-8 rounded-[7px] flex items-center justify-center bg-pink-500/90 text-white text-xs font-semibold shrink-0 shadow-2xs">
-                    {getInitials(user.name)}
-                  </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <p className="text-[13px] font-medium text-foreground truncate" title={formatDisplayName(user.name)}>
-                      {formatDisplayName(user.name)}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate" title={user.email}>
-                      {roleDepartmentSubtitle}
-                    </p>
-                    <p className="text-[10px] text-primary/80 font-medium truncate mt-0.5">
-                      QCET E-Office
-                    </p>
-                  </div>
-                </div>
-
                 {/* Menu Items */}
-                <div className="mt-1.5 space-y-0.5">
+                <div className="space-y-0.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -549,7 +535,7 @@ export function AppSidebar() {
         {/* ========================================================= */}
         {/* 2. NAVIGATION ITEMS BODY                                  */}
         {/* ========================================================= */}
-        <div className="overflow-y-auto flex-1 px-2 pt-2 pb-2 space-y-1 thin-scrollbar mt-2.5">
+        <div className="overflow-y-auto flex-1 px-2.5 pt-5 pb-3 space-y-3.5 thin-scrollbar">
           {SECTIONS.map((sec) => {
             const items = SINGLE_TIER_NAV_ITEMS.filter(
               (item) => item.section === sec.key
@@ -564,8 +550,9 @@ export function AppSidebar() {
                 )}
               >
                 {sec.label && !isCollapsed ? (
-                  <div className="text-[10.5px] font-semibold text-muted-foreground/60 px-2 pt-2 pb-0.5 select-none tracking-wider uppercase">
-                    {sec.label}
+                  <div className="text-[11.5px] font-medium text-muted-foreground/60 px-2 pt-2 pb-1 select-none flex items-center gap-1">
+                    <span>{sec.label}</span>
+                    <ChevronDown size={10} strokeWidth={1.5} className="text-muted-foreground/40 opacity-70" />
                   </div>
                 ) : null}
                 <div className="space-y-0.5">
@@ -592,19 +579,17 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-label={item.label}
                           className={cn(
-                            "group relative flex items-center rounded-[6px] h-[34px] text-[13px] transition-[colors,padding,gap] duration-[200ms] ease-[var(--motion-ease-enter)] select-none tracking-tight overflow-hidden whitespace-nowrap",
+                            "group relative flex items-center rounded-[6px] h-[30px] text-[13px] transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
                             isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-2",
                             active
-                              ? "bg-black/[0.06] text-foreground font-medium"
-                              : "text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] font-normal"
+                              ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-medium"
+                              : "text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
                           )}
                         >
                           <span className="shrink-0 flex items-center justify-center size-4">
                             <Icon
-                              size={16}
-                              strokeWidth={active ? 1.75 : 1.5}
                               className={cn(
-                                "shrink-0 transition-colors",
+                                "size-4 shrink-0 transition-colors",
                                 active
                                   ? "text-foreground"
                                   : "text-muted-foreground/75 group-hover:text-foreground"
@@ -614,7 +599,7 @@ export function AppSidebar() {
                           <span
                             aria-hidden={isCollapsed}
                             className={cn(
-                              "truncate flex-1 text-[13px] transition-[opacity,max-width] duration-[200ms] ease-[var(--motion-ease-enter)]",
+                              "truncate flex-1 text-[13px] tracking-tight transition-[opacity,max-width] duration-[200ms] ease-[var(--motion-ease-enter)]",
                               isCollapsed ? "opacity-0 max-w-0 pointer-events-none" : "opacity-100 max-w-full"
                             )}
                           >{item.label}</span>
