@@ -2755,15 +2755,12 @@ export function UnifiedTaskToolbar({
         <button
           type="button"
           onClick={() => handlePrimaryAction()}
-          title="Tạo việc mới (C)"
-          aria-label="Tạo việc mới (Phím C)"
+          title="Tạo việc mới"
+          aria-label="Tạo việc mới"
           className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/80 bg-muted/60 border border-border/50 rounded select-none pointer-events-none ml-0.5">
-            C
-          </kbd>
         </button>
       )}
     </div>
