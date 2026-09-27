@@ -4,19 +4,22 @@ import * as React from "react";
 import {
   X,
   RotateCcw,
-  Clock,
   AlertTriangle,
   Inbox,
-  Calendar,
-  Tag,
-  Building2,
-  User,
-  Users,
-  FileText,
   Search,
-  Activity,
-  Flag,
 } from "lucide-react";
+import {
+  FilterIconStatus,
+  FilterIconPriority,
+  FilterIconCategory,
+  FilterIconDept,
+  FilterIconLead,
+  FilterIconCollaborator,
+  FilterIconDeadline,
+  FilterIconMonth,
+  FilterIconHealth,
+  FilterIconOrigin,
+} from "@/components/dashboard/task-filter-icons";
 import { cn } from "@/lib/utils";
 import {
   getTaskTimeFilterLabel,
@@ -276,7 +279,7 @@ function FilterSegmentChip({
     >
       {/* Property Tag with Icon */}
       <span className="flex items-center gap-1.5 px-2 py-0.5 text-muted-foreground/80 font-normal bg-muted/30">
-        {Icon && <Icon className="size-3 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
+        {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
         <span className="text-[11px] whitespace-nowrap">{label}</span>
       </span>
 
@@ -421,7 +424,7 @@ export function ActiveFilterBreadcrumb({
         {hasStatus && (
           <FilterSegmentChip
             dataSlot="filter-chip-status"
-            icon={Activity}
+            icon={FilterIconStatus}
             label="Trạng thái"
             value={getStatusDisplayLabel(status!)}
             onRemove={(onRemoveStatus || onRemoveFilter) ? () => handleRemove(onRemoveStatus, "status") : undefined}
@@ -432,7 +435,7 @@ export function ActiveFilterBreadcrumb({
         {hasDept && (
           <FilterSegmentChip
             dataSlot="filter-chip-department"
-            icon={Building2}
+            icon={FilterIconDept}
             label="Đơn vị"
             value={department}
             onRemove={(onRemoveDepartment || onRemoveFilter) ? () => handleRemove(onRemoveDepartment, "department") : undefined}
@@ -465,7 +468,7 @@ export function ActiveFilterBreadcrumb({
         {hasTimeFilter && (
           <FilterSegmentChip
             dataSlot="filter-chip-time"
-            icon={Calendar}
+            icon={FilterIconMonth}
             label="Thời gian"
             value={getTaskTimeFilterLabel(timeFilter!)}
             onRemove={(onRemoveTimeFilter || onRemoveFilter) ? () => handleRemove(onRemoveTimeFilter, "time") : undefined}
@@ -476,7 +479,7 @@ export function ActiveFilterBreadcrumb({
         {hasDeadline && (
           <FilterSegmentChip
             dataSlot="filter-chip-deadline"
-            icon={Clock}
+            icon={FilterIconDeadline}
             label="Thời hạn"
             value={getDeadlineDisplayLabel(deadline!)}
             onRemove={(onRemoveDeadline || onRemoveFilter) ? () => handleRemove(onRemoveDeadline, "deadline") : undefined}
@@ -487,7 +490,7 @@ export function ActiveFilterBreadcrumb({
         {hasPriority && (
           <FilterSegmentChip
             dataSlot="filter-chip-priority"
-            icon={Flag}
+            icon={FilterIconPriority}
             label="Ưu tiên"
             value={getPriorityDisplayLabel(priority!)}
             onRemove={(onRemovePriority || onRemoveFilter) ? () => handleRemove(onRemovePriority, "priority") : undefined}
@@ -498,7 +501,7 @@ export function ActiveFilterBreadcrumb({
         {hasCategory && (
           <FilterSegmentChip
             dataSlot="filter-chip-category"
-            icon={Tag}
+            icon={FilterIconCategory}
             label="Danh mục"
             value={getCategoryDisplayLabel(category!)}
             onRemove={(onRemoveCategory || onRemoveFilter) ? () => handleRemove(onRemoveCategory, "category") : undefined}
@@ -509,7 +512,7 @@ export function ActiveFilterBreadcrumb({
         {hasHealth && (
           <FilterSegmentChip
             dataSlot="filter-chip-health"
-            icon={Activity}
+            icon={FilterIconHealth}
             label="Tiến độ"
             value={getHealthDisplayLabel(health!)}
             onRemove={(onRemoveHealth || onRemoveFilter) ? () => handleRemove(onRemoveHealth, "health") : undefined}
@@ -520,7 +523,7 @@ export function ActiveFilterBreadcrumb({
         {hasLead && (
           <FilterSegmentChip
             dataSlot="filter-chip-lead"
-            icon={User}
+            icon={FilterIconLead}
             label="Chủ trì"
             value={getLeadDisplayLabel(lead!)}
             onRemove={(onRemoveLead || onRemoveFilter) ? () => handleRemove(onRemoveLead, "lead") : undefined}
@@ -531,7 +534,7 @@ export function ActiveFilterBreadcrumb({
         {hasOrigin && (
           <FilterSegmentChip
             dataSlot="filter-chip-origin"
-            icon={FileText}
+            icon={FilterIconOrigin}
             label="Nguồn gốc"
             value={getOriginDisplayLabel(origin!)}
             onRemove={(onRemoveOrigin || onRemoveFilter) ? () => handleRemove(onRemoveOrigin, "origin") : undefined}
@@ -542,7 +545,7 @@ export function ActiveFilterBreadcrumb({
         {hasCollaborator && (
           <FilterSegmentChip
             dataSlot="filter-chip-collaborator"
-            icon={Users}
+            icon={FilterIconCollaborator}
             label="Phối hợp"
             value={getCollaboratorDisplayLabel(collaborator!)}
             onRemove={(onRemoveCollaborator || onRemoveFilter) ? () => handleRemove(onRemoveCollaborator, "collaborator") : undefined}
