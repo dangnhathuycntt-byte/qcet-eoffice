@@ -1501,17 +1501,10 @@ export function UnifiedTaskToolbar({
                     Khoa đào tạo
                   </span>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
-                  {isFacultyActive && activeFacultyName && (
-                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
-                      {activeFacultyName}
-                    </span>
-                  )}
-                  <ChevronRight
-                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-                    strokeWidth={1.5}
-                  />
-                </div>
+                <ChevronRight
+                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+                  strokeWidth={1.5}
+                />
               </MenuSubmenuTrigger>
               <MenuPortal>
                 <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -1558,17 +1551,10 @@ export function UnifiedTaskToolbar({
                     Phòng ban hành chính
                   </span>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
-                  {isAdminActive && activeAdminName && (
-                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
-                      {activeAdminName}
-                    </span>
-                  )}
-                  <ChevronRight
-                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-                    strokeWidth={1.5}
-                  />
-                </div>
+                <ChevronRight
+                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+                  strokeWidth={1.5}
+                />
               </MenuSubmenuTrigger>
               <MenuPortal>
                 <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -1710,17 +1696,10 @@ export function UnifiedTaskToolbar({
                     Hạn chốt
                   </span>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
-                  {isDeadlineActive && deadlineLabel !== "Thời hạn" && (
-                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
-                      {deadlineLabel}
-                    </span>
-                  )}
-                  <ChevronRight
-                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-                    strokeWidth={1.5}
-                  />
-                </div>
+                <ChevronRight
+                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+                  strokeWidth={1.5}
+                />
               </MenuSubmenuTrigger>
               <MenuPortal>
                 <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -1774,17 +1753,10 @@ export function UnifiedTaskToolbar({
                     Kỳ tháng
                   </span>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
-                  {isMonthActive && (
-                    <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
-                      {getTaskTimeFilterLabel(effectiveTimeFilter)}
-                    </span>
-                  )}
-                  <ChevronRight
-                    className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-                    strokeWidth={1.5}
-                  />
-                </div>
+                <ChevronRight
+                  className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+                  strokeWidth={1.5}
+                />
               </MenuSubmenuTrigger>
               <MenuPortal>
                 <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
@@ -2224,7 +2196,6 @@ export function UnifiedTaskToolbar({
   }, [menuSearch, filterCategories]);
 
   const renderCategorySubmenu = (category: typeof filterCategories[0]) => {
-    const activeValue = getActiveValueLabel(category.key);
     return (
       <MenuSubmenuRoot key={category.key}>
         <MenuSubmenuTrigger
@@ -2239,17 +2210,10 @@ export function UnifiedTaskToolbar({
               {category.label}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0 ml-auto pl-1">
-            {category.isActive && activeValue && (
-              <span className="truncate max-w-[85px] text-[10.5px] font-medium text-foreground/90">
-                {activeValue}
-              </span>
-            )}
-            <ChevronRight
-              className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors"
-              strokeWidth={1.5}
-            />
-          </div>
+          <ChevronRight
+            className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+            strokeWidth={1.5}
+          />
         </MenuSubmenuTrigger>
         <MenuPortal>
           <MenuPositioner side="left" align="start" sideOffset={2} alignOffset={-4} collisionPadding={12} className="z-50 outline-none">
