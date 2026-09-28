@@ -191,8 +191,8 @@ Các findings sau **không thể thu thập** cho đến khi có deployed pilot:
 
 | Metric | Giá trị |
 |--------|---------|
-| **Execution plan items hoàn thành** | 34/41 |
-| **Items còn mở** | 7 (liên quan quyết định, hạ tầng và pilot) |
+| **Execution plan items hoàn thành** | 35/41 (updated 2026-09-28: item 175 downgraded to partial `[ ]`; item 171 [x]; 34 prior [x] items remain) |
+| **Items còn mở** | 6 (item 175 partial + 5 blocked/deferred) |
 | **Contract tests** | 642/642 ✅ |
 | **Security tests** | 199/199 ✅ |
 | **Typecheck** | 0 errors ✅ |
