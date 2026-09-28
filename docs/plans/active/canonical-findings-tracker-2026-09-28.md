@@ -195,6 +195,9 @@ Các findings sau **không thể thu thập** cho đến khi có deployed pilot:
 | **Items còn mở** | 6 (item 175 partial + 5 blocked/deferred) |
 | **Contract tests** | 642/642 ✅ |
 | **Security tests** | 199/199 ✅ |
+| **Outbox pattern tests** | 21/21 ✅ (outbox-pattern.test.ts on qcet_test 2026-09-28 — dispatcher routing + success lifecycle confirmed) |
+| **Audit events tests** | 19/19 ✅ (audit-events.test.ts on qcet_test 2026-09-28 — getRequestAuditEvents() confirmed) |
+| **Audit log API contract** | 28/28 ✅ (audit-log-api-contract.test.ts on qcet_test 2026-09-28) |
 | **Typecheck** | 0 errors ✅ |
 | **Net new failures** | 0 ✅ |
 | **Accuracy audit findings** | 8/8 resolved ✅ |
