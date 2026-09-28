@@ -6,7 +6,7 @@
  * 1. Execution of database backup using pg_dump.
  * 2. Creation of an isolated, uniquely named temporary drill database.
  * 3. Execution of database restore using pg_restore.
- * 4. 100% data integrity verification across critical entity tables.
+ * 4. Row-count parity verification across critical entity tables (not content checksum).
  * 5. Automatic cleanup of drill artifacts and database.
  */
 
@@ -139,7 +139,7 @@ async function runDrill() {
     }
     console.log('[drill] ✓ Restore completed.');
 
-    // 5. Connect to Restored Database & Verify 100% Integrity
+    // 5. Connect to Restored Database & Verify Row-Count Parity
     console.log('[drill] Step 5: Connecting to restored database for data verification...');
     drillPrisma = new PrismaClient({
       datasources: { db: { url: drillDbUrl } },
@@ -166,10 +166,10 @@ async function runDrill() {
       throw new Error('Data integrity mismatch detected between source and restored database!');
     }
 
-    console.log('[drill] ✓ 100% Data Integrity Verified across all critical entities.');
+    console.log('[drill] ✓ Row-count parity verified across all critical entities (content checksum not performed).');
 
     console.log('================================================================');
-    console.log('  BACKUP & RESTORE DRILL COMPLETED SUCCESSFULLY: 100% PASS     ');
+    console.log('  BACKUP & RESTORE DRILL COMPLETED: ROW-COUNT PARITY PASS       ');
     console.log('================================================================');
   } catch (err) {
     console.error('[drill] FATAL DRILL ERROR:', err);

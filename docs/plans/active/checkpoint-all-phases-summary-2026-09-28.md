@@ -16,9 +16,9 @@
 | **3** | Dossier and file foundation | ✅ Complete | Backfill --apply chạy thành công; ClamAV verified nhưng files không tồn tại trong worktree |
 | **4** | Pilot screens and usable workflows | ✅ 7/7 Complete | Responsive, focus, touch validated |
 | **5** | Full system modules and integrations | 🟡 5/6 items [x] | 1 BLOCKED (digital signature provider) |
-| **6** | Release, observation, legacy retirement | 🟡 2/5 items [x] | 3 open: deploy blocked, reconcile pre-pilot only, observe blocked |
+| **6** | Release, observation, legacy retirement | 🟡 1/5 items [x] | 4 open: deploy blocked, item 175 partial (row-count parity only), reconcile pre-pilot only, observe blocked |
 
-**Tổng:** 36/41 items [x]. Năm checkbox còn mở: 1 Phase 0 (provider), 1 Phase 5 (digital sig), 3 Phase 6 (deploy + reconcile-full + observe/legacy).
+**Tổng:** 35/41 items [x]. Sáu checkbox còn mở: 1 Phase 0 (provider), 1 Phase 5 (digital sig), 4 Phase 6 (deploy blocked + item 175 partial + reconcile-full + observe/legacy).
 
 ---
 
