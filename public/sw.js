@@ -29,9 +29,13 @@ self.addEventListener('install', (event) => {
   if (typeof caches === 'undefined') return;
   event.waitUntil(
     caches.open(CACHE_SHELL_NAME).then(async (cache) => {
-      await Promise.allSettled(
-        PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
-      );
+      if (typeof cache.addAll === 'function') {
+        await cache.addAll(PRECACHE_ASSETS).catch(() => {});
+      } else if (typeof cache.add === 'function') {
+        await Promise.allSettled(
+          PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
+        );
+      }
     })
   );
 });
@@ -399,7 +403,15 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) {
           if ('navigate' in client) {
-            return client.navigate(targetUrl).then((navigated) => (navigated || client).focus());
+            return client.navigate(targetUrl).then((navigated) => {
+              if (navigated && typeof navigated.focus === 'function') {
+                return navigated.focus();
+              }
+              if (typeof client.focus === 'function') {
+                return client.focus();
+              }
+              return navigated;
+            });
           }
           return client.focus();
         }

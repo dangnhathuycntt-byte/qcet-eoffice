@@ -27,7 +27,7 @@ describe("Scope Switcher Mobile Adaptation Suite", () => {
       role: "BGH" as const,
     });
     assert.equal(schoolDetails.scope, "school");
-    assert.equal(schoolDetails.shortLabel, "Toàn trư��ng");
+    assert.equal(schoolDetails.shortLabel, "Toàn trường");
 
     const myDetails = resolveScopeDetails("my", null, mockUser);
     assert.equal(myDetails.scope, "my");

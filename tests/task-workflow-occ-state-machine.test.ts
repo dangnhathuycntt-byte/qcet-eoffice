@@ -8,6 +8,10 @@ import {
   TaskStatus,
   TaskPriority,
   UserRole,
+  JobCatalogGroup,
+  UnitType,
+  AssignmentStatus,
+  AssignmentType,
 } from '@prisma/client';
 import { ValidationError, PreconditionFailedError } from '../src/server/api/errors';
 import { POST as createResolutionRoute } from '../src/app/api/executive/resolutions/route';
@@ -22,9 +26,14 @@ import {
 describe('Task State Machine Integration & Executive OCC Tests', () => {
   let adminUser: any;
   let bghUser: any;
+  let bghApprover: any;
+  let bghCreator: any;
   let staffUser: any;
   let bghToken: string;
   let testDepartmentId: string;
+  let execUnitId: string | null = null;
+  let execAssignment1Id: string | null = null;
+  let execAssignment2Id: string | null = null;
   const createdTaskIds: string[] = [];
   const createdResolutionIds: string[] = [];
 
@@ -32,9 +41,60 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     adminUser = await prisma.user.findFirst({
       where: { role: UserRole.ADMIN },
     });
-    bghUser = await prisma.user.findFirst({
+    const bghList = await prisma.user.findMany({
       where: { role: UserRole.BAN_GIAM_HIEU },
+      take: 2,
     });
+    assert.ok(bghList.length >= 1, 'At least one BGH user must exist');
+    bghUser = bghList[0];
+    bghApprover = bghList[0];
+    bghCreator = bghList.length > 1 ? bghList[1] : bghList[0];
+
+    // Canonical statutory mandate: executive authority requires active executive
+    // PositionAssignments (Issue #27, Separation of Powers, SoD).
+    let rectorDef = await prisma.positionDefinition.findUnique({ where: { code: 'HIEU_TRUONG' } });
+    if (!rectorDef) {
+      rectorDef = await prisma.positionDefinition.create({
+        data: { code: 'HIEU_TRUONG', title: 'Hieu truong', group: JobCatalogGroup.LDPU, isLeadership: true },
+      });
+    }
+    let viceDef = await prisma.positionDefinition.findUnique({ where: { code: 'PHO_HIEU_TRUONG' } });
+    if (!viceDef) {
+      viceDef = await prisma.positionDefinition.create({
+        data: { code: 'PHO_HIEU_TRUONG', title: 'Pho Hieu truong', group: JobCatalogGroup.LDPU, isLeadership: true },
+      });
+    }
+    const execUnit = await prisma.organizationalUnit.create({
+      data: { code: `U-EXECOCC-${Date.now()}`, name: 'Unit ExecOCC', type: UnitType.DEPARTMENT },
+    });
+    execUnitId = execUnit.id;
+
+    const execAssignment1 = await prisma.positionAssignment.create({
+      data: {
+        userId: bghApprover.id,
+        unitId: execUnit.id,
+        positionDefinitionId: rectorDef.id,
+        status: AssignmentStatus.ACTIVE,
+        type: AssignmentType.PRIMARY,
+        effectiveFrom: new Date('2020-01-01'),
+      },
+    });
+    execAssignment1Id = execAssignment1.id;
+
+    if (bghCreator.id !== bghApprover.id) {
+      const execAssignment2 = await prisma.positionAssignment.create({
+        data: {
+          userId: bghCreator.id,
+          unitId: execUnit.id,
+          positionDefinitionId: viceDef.id,
+          status: AssignmentStatus.ACTIVE,
+          type: AssignmentType.PRIMARY,
+          effectiveFrom: new Date('2020-01-01'),
+        },
+      });
+      execAssignment2Id = execAssignment2.id;
+    }
+
     staffUser = await prisma.user.findFirst({
       where: { role: UserRole.CHUYEN_VIEN },
     });
@@ -46,11 +106,10 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     assert.ok(staffUser, 'Staff user must exist');
 
     bghToken = signSessionToken({
-      id: bghUser.id,
-      email: bghUser.email,
-      name: bghUser.name,
-      role: bghUser.role,
-
+      id: bghApprover.id,
+      email: bghApprover.email,
+      name: bghApprover.name,
+      role: bghApprover.role,
     });
   });
 
@@ -74,6 +133,15 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         where: { id: { in: createdTaskIds } },
       });
     }
+    if (execAssignment1Id) {
+      await prisma.positionAssignment.deleteMany({ where: { id: execAssignment1Id } });
+    }
+    if (execAssignment2Id) {
+      await prisma.positionAssignment.deleteMany({ where: { id: execAssignment2Id } });
+    }
+    if (execUnitId) {
+      await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
+    }
   });
 
   describe('1. Task State Machine Enforcement in taskCommandService', () => {
@@ -82,7 +150,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       // actor, so the fixture must create the unit task as one. The transitions
       // under test are still exercised by staffUser below.
       const task = await taskCommandService.createTask(
-        { user: adminUser },
+        { user: bghCreator },
         {
           title: 'Task FSM Illegal Transition Test',
           scope: TaskScope.DEPARTMENT,
@@ -100,7 +168,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       await assert.rejects(
         async () => {
           await taskCommandService.updateTask(
-            { user: staffUser },
+            { user: bghApprover },
             task.id,
             { status: TaskStatus.COMPLETED }
           );
@@ -116,7 +184,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
 
     it('rejects illegal status transition: CANCELLED task cannot transition to COMPLETED', async () => {
       const task = await taskCommandService.createTask(
-        { user: adminUser },
+        { user: bghCreator },
         {
           title: 'Task FSM Cancelled Transition Test',
           scope: TaskScope.DEPARTMENT,
@@ -132,7 +200,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
 
       // Cancel task via updateTask
       const cancelledTask = await taskCommandService.updateTask(
-        { user: adminUser },
+        { user: bghCreator },
         task.id,
         { status: TaskStatus.CANCELLED }
       );
@@ -142,7 +210,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
       await assert.rejects(
         async () => {
           await taskCommandService.updateTask(
-            { user: adminUser },
+            { user: bghApprover },
             task.id,
             { status: TaskStatus.COMPLETED }
           );
@@ -158,7 +226,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     it('allows legal status transition: NOT_STARTED -> IN_PROGRESS -> WAITING_APPROVAL', async () => {
       // Same P0-06 fixture requirement as the illegal-transition test above.
       const task = await taskCommandService.createTask(
-        { user: adminUser },
+        { user: bghCreator },
         {
           title: 'Task FSM Legal Transition Test',
           scope: TaskScope.DEPARTMENT,
@@ -193,11 +261,12 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
   describe('2. Executive Resolutions OCC Enforcement', () => {
     it('increments task version when executive resolution updates the task', async () => {
       const task = await taskCommandService.createTask(
-        { user: bghUser },
+        { user: bghCreator },
         {
           title: 'Task OCC Executive Resolution Test',
           scope: TaskScope.SCHOOL,
           leadUnitId: testDepartmentId,
+          startDate: new Date('2026-09-01T00:00:00Z'),
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -238,11 +307,12 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
 
     it('rejects executive resolution when expectedVersion mismatches (HTTP 412)', async () => {
       const task = await taskCommandService.createTask(
-        { user: bghUser },
+        { user: bghCreator },
         {
           title: 'Task OCC Mismatch Test',
           scope: TaskScope.SCHOOL,
           leadUnitId: testDepartmentId,
+          startDate: new Date('2026-09-01T00:00:00Z'),
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -277,11 +347,12 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
 
     it('rejects executive resolution when If-Match header mismatches (HTTP 412)', async () => {
       const task = await taskCommandService.createTask(
-        { user: bghUser },
+        { user: bghCreator },
         {
           title: 'Task OCC If-Match Mismatch Test',
           scope: TaskScope.SCHOOL,
           leadUnitId: testDepartmentId,
+          startDate: new Date('2026-09-01T00:00:00Z'),
           dueDate: new Date('2026-09-20T00:00:00Z'),
           priority: 'high',
           academicMonth: 9,
@@ -340,7 +411,7 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     it('taskQueryService applies reconciled overdue status on tasks with past due dates', async () => {
       // Same P0-06 fixture requirement: unit-scope creation needs unit authority.
       const task = await taskCommandService.createTask(
-        { user: adminUser },
+        { user: bghCreator },
         {
           title: 'Task Overdue Query Reconciliation Test',
           scope: TaskScope.DEPARTMENT,

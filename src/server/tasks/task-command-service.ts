@@ -145,6 +145,9 @@ async function requireTaskAuthorization(
   const authorizationContext = await loadAuthorizationContext(userId);
   const decision = authorize(authorizationContext, action, buildTaskResource(task));
   if (!decision.allowed) {
+    if (decision.rejectionCode === 'INVALID_WORKFLOW_STATE') {
+      throw new ValidationError(decision.reason || 'Trạng thái nghiệp vụ không hợp lệ');
+    }
     throw new AuthorizationError(decision.reason || 'Bạn không có quyền thực hiện thao tác này');
   }
 }

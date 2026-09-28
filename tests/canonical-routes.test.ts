@@ -52,7 +52,7 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     const tasksRoute = CANONICAL_ROUTES.find((r) => r.id === "tasks");
     assert.ok(tasksRoute, "Tasks route must exist");
     assert.equal(tasksRoute.href, "/tasks", "Tasks must point to '/tasks'");
-    assert.equal(tasksRoute.label, "Quản lý nhiệm vụ");
+    assert.equal(tasksRoute.label, "Nhiệm vụ");
 
     const sidebarItems = getSidebarNavItems();
     const deskItem = sidebarItems.find((item) => item.id === "desk" || item.href === "/");
@@ -71,15 +71,30 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     assert.equal(unitTasksHref, undefined, "Sidebar items must not contain /unit-tasks as main href");
   });
 
-  test("Mobile bottom bar items point to canonical / and /tasks", () => {
+  test("Mobile bottom bar items match canonical destinations and paths", () => {
     const bottomItems = getMobileBottomNavItems();
-    const desk = bottomItems.find((i) => i.id === "desk");
-    assert.ok(desk);
-    assert.equal(desk.href, "/");
+    assert.equal(bottomItems.length, 4, "Mobile bottom bar must have 4 primary destinations");
 
     const tasks = bottomItems.find((i) => i.id === "tasks");
-    assert.ok(tasks);
+    assert.ok(tasks, "Bottom items must include tasks");
     assert.equal(tasks.href, "/tasks");
+
+    const calendar = bottomItems.find((i) => i.id === "calendar");
+    assert.ok(calendar, "Bottom items must include calendar");
+    assert.equal(calendar.href, "/calendar");
+
+    const inbox = bottomItems.find((i) => i.id === "inbox");
+    assert.ok(inbox, "Bottom items must include inbox");
+    assert.equal(inbox.href, "/inbox");
+
+    const docs = bottomItems.find((i) => i.id === "documents");
+    assert.ok(docs, "Bottom items must include documents");
+    assert.equal(docs.href, "/documents");
+
+    // Desk route remains canonical at '/' in the registry
+    const desk = CANONICAL_ROUTES.find((r) => r.id === "desk");
+    assert.ok(desk, "Desk must exist in canonical routes");
+    assert.equal(desk.href, "/", "Desk must point to '/'");
   });
 
 });

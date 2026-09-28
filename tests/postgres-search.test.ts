@@ -167,7 +167,7 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       for (const malicious of maliciousInputs) {
         const query = buildTaskSearchQuery({
           query: malicious,
-
+          leadUnitId: "DEPT'; DELETE FROM tasks; --",
           status: "IN_PROGRESS",
         });
 
@@ -186,13 +186,13 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       const query = buildTaskSearchQuery({
         query: "nhiệm vụ",
         status: TaskStatus.IN_PROGRESS,
-
+        leadUnitId: "BGH",
         scope: TaskScope.DEPARTMENT,
       });
 
       assert.ok(query.sql.includes('"status" = ?::"TaskStatus"'));
       assert.ok(query.sql.includes('"scope" = ?::"TaskScope"'));
-      assert.ok(query.sql.includes('"department_id" = ?'));
+      assert.ok(query.sql.includes('"lead_unit_id" = ?'));
       assert.ok(query.values.includes("IN_PROGRESS"));
       assert.ok(query.values.includes("DEPARTMENT"));
       assert.ok(query.values.includes("BGH"));

@@ -335,7 +335,11 @@ describe("Sprint 6: Work Dossier Lifecycle & Archival Domain (Nghị định 30/
       // Mark linked task as COMPLETED
       await prisma.task.update({
         where: { id: sampleTaskId },
-        data: { status: TaskStatus.COMPLETED },
+        data: {
+          status: TaskStatus.COMPLETED,
+          completedAt: new Date(),
+          progressPercent: 100,
+        },
       });
 
       const closedDossier = await DossierService.closeDossier(officerUser, {

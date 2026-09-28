@@ -697,7 +697,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       const zeroDriCheck = await validateSingleDRI(corruptedTask.id);
       assert.equal(zeroDriCheck, false, "Task with 0 DRIs must fail Single DRI validation");
 
-      // Insert 2 primary DRIs directly via DB
+      // Insert 1 primary DRI directly via DB
       await prisma.taskActor.create({
         data: {
           taskId: corruptedTask.id,
@@ -707,18 +707,26 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
         },
       });
 
-      await prisma.taskActor.create({
-        data: {
-          taskId: corruptedTask.id,
-          userId: driUser2.id,
-          role: TaskActorRole.DRI,
-          isPrimaryDRI: true,
-        },
-      });
-
-      // Invariant check must detect violation and return false
-      const multipleDriCheck = await validateSingleDRI(corruptedTask.id);
-      assert.equal(multipleDriCheck, false, "Task with multiple primary DRIs must fail Single DRI validation");
+      // Attempting to insert a second primary DRI directly via DB must be prevented
+      // by the database partial unique index `task_actors_one_primary_dri_idx`
+      // or detected by validateSingleDRI if database constraints are bypassed
+      try {
+        await prisma.taskActor.create({
+          data: {
+            taskId: corruptedTask.id,
+            userId: driUser2.id,
+            role: TaskActorRole.DRI,
+            isPrimaryDRI: true,
+          },
+        });
+        const multipleDriCheck = await validateSingleDRI(corruptedTask.id);
+        assert.equal(multipleDriCheck, false, "Task with multiple primary DRIs must fail Single DRI validation");
+      } catch (err: any) {
+        assert.ok(
+          err.message.includes("Unique constraint") || err.code === "P2002",
+          "Database constraint must reject multiple primary DRIs on the same task"
+        );
+      }
 
       // Clean up corrupted task immediately so it does not pollute subsequent tests
       await prisma.taskActor.deleteMany({ where: { taskId: corruptedTask.id } });
@@ -1012,6 +1020,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
           title: "Nhiệm vụ kiểm tra tương thích ngược",
           description: "Mô tả nhiệm vụ kiểm thử hồi quy",
           createdById: creatorUser.id,
+          leadUnitId: orgUnit.id,
 
           academicMonth: 9,
           academicYear: "2026-2027",
@@ -1065,7 +1074,7 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
       const dri = taskWithIncludes.actors.find((a: any) => a.role === 'DRI');
       assert.ok(dri);
       assert.equal(dri?.userId, driUser1.id);
-      assert.equal((taskWithIncludes as any).leadUnit?.id ?? taskWithIncludes.leadUnitId, "P_QLDT");
+      assert.equal((taskWithIncludes as any).leadUnit?.id ?? taskWithIncludes.leadUnitId, orgUnit.id);
     });
 
     test("4.3 Standard CRUD updates on Task operate without requiring ReBAC relations", async () => {
@@ -1106,12 +1115,13 @@ describe("Domain & Database Integrity: ReBAC Task Models and Migration", () => {
     let taskWithoutAssignee: any;
 
     before(async () => {
-      // 1. Task with legacy assignee, createdById, and departmentId ("P_QLDT")
+      // 1. Task with legacy assignee, createdById, and leadUnitId
       taskWithAssigneeAndDept = await prisma.task.create({
         data: {
           code: `QA-MIG-1-${testRunId}`,
           title: "Nhiệm vụ di chuyển 1: Có assignee và phòng ban",
           createdById: creatorUser.id,
+          leadUnitId: orgUnit.id,
 
           academicMonth: 9,
           academicYear: "2026-2027",
