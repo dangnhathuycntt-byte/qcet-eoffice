@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createDigitalSignatureService,
@@ -8,6 +8,10 @@ import {
   type VerificationResult,
   type SignerInfo,
 } from '../src/lib/crypto/digital-signature-adapter';
+import {
+  setFeatureFlagOverride,
+  resetFeatureFlagOverrides,
+} from '../src/features/flags';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -79,45 +83,54 @@ class InMemoryProvider implements DigitalSignatureProvider {
 // Tests
 // ===========================================================================
 
-describe('Factory — stub khi chưa cấu hình provider', () => {
+describe('Factory — stub khi feature flag tắt (disabled)', () => {
   const stub = createDigitalSignatureService();
 
-  it('providerName = "unconfigured"', () => {
-    assert.equal(stub.providerName, 'unconfigured');
+  it('providerName = "disabled"', () => {
+    assert.equal(stub.providerName, 'disabled');
   });
 
-  it('sign() reject với lỗi chứa "chưa được cấu hình"', async () => {
+  it('sign() reject với lỗi chứa "chưa được bật"', async () => {
     await assert.rejects(() => stub.sign(makeRequest()), (err: Error) => {
-      assert.ok(err.message.includes('chưa được cấu hình'));
+      assert.ok(err.message.includes('chưa được bật'));
       return true;
     });
   });
 
-  it('verify() reject với lỗi chứa "chưa được cấu hình"', async () => {
+  it('verify() reject với lỗi chứa "chưa được bật"', async () => {
     await assert.rejects(() => stub.verify('h', 'v', 'c'), (err: Error) => {
-      assert.ok(err.message.includes('chưa được cấu hình'));
+      assert.ok(err.message.includes('chưa được bật'));
       return true;
     });
   });
 
-  it('getSignerInfo() reject với lỗi chứa "chưa được cấu hình"', async () => {
+  it('getSignerInfo() reject với lỗi chứa "chưa được bật"', async () => {
     await assert.rejects(() => stub.getSignerInfo('c'), (err: Error) => {
-      assert.ok(err.message.includes('chưa được cấu hình'));
+      assert.ok(err.message.includes('chưa được bật'));
       return true;
     });
   });
 });
 
-describe('Factory — trả về provider khi được truyền vào', () => {
+describe('Factory — trả về provider khi feature flag bật và truyền provider', () => {
   const mock = new InMemoryProvider();
-  const svc = createDigitalSignatureService(mock);
+
+  beforeEach(() => {
+    setFeatureFlagOverride('digitalSignature', true);
+  });
+
+  afterEach(() => {
+    resetFeatureFlagOverrides();
+  });
 
   it('trả về đúng instance provider', () => {
+    const svc = createDigitalSignatureService(mock);
     assert.strictEqual(svc, mock);
     assert.equal(svc.providerName, 'in-memory');
   });
 
   it('sign/verify/getSignerInfo hoạt động qua factory', async () => {
+    const svc = createDigitalSignatureService(mock);
     const result = await svc.sign(makeRequest());
     assert.equal(result.success, true);
     const info = await svc.getSignerInfo(result.certificateSerial);
