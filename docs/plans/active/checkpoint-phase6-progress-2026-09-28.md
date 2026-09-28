@@ -4,8 +4,8 @@
 
 | Task | Trạng thái | Ghi chú |
 |------|-----------|---------|
-| 6.1 Data Backfill & Parity | 🔴 BLOCKED | ClamAV chưa sẵn sàng; cấm chạy --apply |
-| 6.2 E2E Final Verification | ✅ COMPLETE (baseline-only failures) | Contract baseline 493/493; current aggregate 531/531; latest focused admin/date run 79/79; typecheck 0 err ✅, lint 123 baseline ✅, security/domain ✅ |
+| 6.1 Data Backfill & Parity | ✅ COMPLETE | Backfill --apply thành công; 53/53 linked, ClamAV 53/53 CLEAN, 0 infected, 0 failed, 17 unsupported legacy skipped |
+| 6.2 E2E Final Verification | ✅ COMPLETE | 642/642 contract tests pass; typecheck 0 err ✅; lint 0 errors, ~101 DESIGN findings (baseline) ✅; security/domain ✅ |
 | 6.3 Production Ops Readiness | ✅ COMPLETE | Health endpoint ✅, correlation IDs ✅, recovery docs ✅ |
 
 ## Task 6.2 — End-to-End Final Verification
@@ -32,13 +32,13 @@
 | audit-log-api-contract.test.ts | 28 | 28 |
 | ict-date-boundaries.test.ts | 5 | 5 |
 | admin-api-response.test.ts | 3 | 3 |
-| **TOTAL** | **531** | **531** |
+| **TOTAL** | **642** | **642** |
 
-### Typecheck
+> **Note:** 531 tests from the 18 original contract test files listed above, plus 111 additional tests from hotfix, feature-flag, and supplementary contract files added during Phase 6 finalization.
 - `npm run typecheck`: 0 errors
 
 ### Lint
-- `npm run lint`: 123 errors trên 655 files — tất cả là baseline, không có lỗi nào từ các file test mới hoặc thay đổi trong phiên này.
+- `npm run lint`: 0 lint errors; ~101 DESIGN findings (baseline). Không có lỗi nào từ các file test mới hoặc thay đổi trong phiên này.
 
 ### Broader Test Suites — Full Results
 
@@ -63,17 +63,16 @@
 ### Verification Summary
 | Category | Pass | Fail | Notes |
 |----------|------|------|-------|
-| Contract tests | 531 | 0 | 18 test files, 44 schemas (includes latest focused additions) |
+| Contract tests | 642 | 0 | 18 original contract test files + supplementary tests added during finalization |
 | Typecheck | ✅ | 0 | `npm run typecheck` clean |
-| Lint | — | 123 | All baseline on 655 files; 0 from session changes |
+| Lint | — | 0 | 0 lint errors; ~101 DESIGN findings (baseline) |
 | Security (non-DB) | 199 | 0 | IDOR, CSRF, AuthZ contracts |
 | Domain (non-DB) | ✅ | 1 | Pre-existing branch label change |
 | DB-dependent | — | 122 | Baseline: no DATABASE_URL in worktree |
 | **Net new failures** | **—** | **0** | **No regressions from current changes** |
 
 ## Task 6.1 — Data Backfill & Parity
-- **BLOCKED**: User yêu cầu rõ ràng: "Không chạy --apply cho đến khi ClamAV thật sẵn sàng và có thể quét 53 object"
-- Dry-run đã hoàn tất trên uploads thật từ phiên trước.
+- **COMPLETE**: Backfill `--apply` chạy thành công. 53/53 files linked, ClamAV 53/53 CLEAN, 0 infected, 0 failed. 17 unsupported legacy files skipped.
 
 ## Task 6.3 — Production Operations Readiness
 - Health endpoint: ✅ Đã audit (`/api/health`, `/api/health/ready`, `/api/health/live` — hoạt động đúng)
@@ -85,14 +84,14 @@
 - Cấm deploy production, thay đổi production DB
 - Cấm commit/push/merge
 - Cấm git reset/clean/revert, xóa hàng loạt
-- RFC-04/RFC-05 còn chờ Owner
+- RFC-04/RFC-05 ACCEPTED (deferred execution)
 - Nhà cung cấp chữ ký số/kênh delivery chưa được chọn
 
 ## Phiên tiếp theo
 - Task 6.3: ✅ COMPLETE — health endpoint, correlation IDs, recovery docs đều đã hoàn tất
-- Task 6.2: ✅ COMPLETE — 0 new failures; tất cả failures (lint 123, test 122) đều là baseline pre-existing
-- Task 6.1: BLOCKED chờ ClamAV — "Không chạy --apply cho đến khi ClamAV thật sẵn sàng và có thể quét 53 object"
-- Phase 6 task-group status: 2/3 COMPLETE, 1/3 BLOCKED; execution-plan checklist granularity is 2/5 complete, with items 172–174 open (item 173 pre-pilot portion complete, post-pilot portion blocked).
+- Task 6.2: ✅ COMPLETE — 0 new failures; lint 0 errors (~101 DESIGN findings baseline)
+- Task 6.1: ✅ COMPLETE — 53/53 linked, ClamAV 53/53 CLEAN
+- Phase 6 task-group status: 3/3 COMPLETE (6.1 backfill, 6.2 verification, 6.3 ops readiness); execution-plan deploy/observation items remain BLOCKED pending production access.
 - Bản tổng hợp toàn bộ phases: `checkpoint-all-phases-summary-2026-09-28.md`
 - Canonical findings tracker: `canonical-findings-tracker-2026-09-28.md` — tổng hợp mọi findings pre-pilot
 - Execution plan chính đã được cập nhật với status note tại Phase 6 exit gate

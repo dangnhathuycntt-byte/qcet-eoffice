@@ -6,7 +6,13 @@
  * DigitalSignatureProvider and are registered via createDigitalSignatureService().
  *
  * This module defines the contract ONLY — no provider-specific logic.
+ *
+ * Feature gated by the `digitalSignature` flag (disabled by default).
+ * When the flag is off, createDigitalSignatureService() returns the
+ * unconfigured stub regardless of whether a provider is passed.
  */
+
+import { isFeatureEnabled } from "@/features/flags";
 
 // ============================================================================
 // Request / Result Types
@@ -130,6 +136,10 @@ const PROVIDER_NOT_CONFIGURED_MSG =
   'Vui lòng thiết lập nhà cung cấp chữ ký số (VNPT SmartCA, Viettel CA, v.v.) ' +
   'trước khi sử dụng tính năng ký số.';
 
+const FEATURE_DISABLED_MSG =
+  'Tính năng chữ ký số chưa được bật. ' +
+  'Thiết lập FEATURE_FLAG_DIGITAL_SIGNATURE=true sau khi cấu hình nhà cung cấp CA.';
+
 /**
  * Factory function for obtaining the configured digital signature provider.
  *
@@ -151,6 +161,22 @@ const PROVIDER_NOT_CONFIGURED_MSG =
 export function createDigitalSignatureService(
   provider?: DigitalSignatureProvider,
 ): DigitalSignatureProvider {
+  // Feature flag gate — when disabled, always return the stub
+  if (!isFeatureEnabled("digitalSignature")) {
+    return {
+      providerName: 'disabled',
+      async sign(): Promise<SignatureResult> {
+        throw new Error(FEATURE_DISABLED_MSG);
+      },
+      async verify(): Promise<VerificationResult> {
+        throw new Error(FEATURE_DISABLED_MSG);
+      },
+      async getSignerInfo(): Promise<SignerInfo> {
+        throw new Error(FEATURE_DISABLED_MSG);
+      },
+    };
+  }
+
   if (provider) {
     return provider;
   }

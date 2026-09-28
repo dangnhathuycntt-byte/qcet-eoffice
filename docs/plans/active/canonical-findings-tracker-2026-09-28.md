@@ -9,7 +9,7 @@
 
 ---
 
-## 1. Contract Test Findings (531/531 aggregated pass)
+## 1. Contract Test Findings (642/642 pass)
 
 | Test File | Tests | Pass | Findings |
 |-----------|-------|------|----------|
@@ -31,9 +31,11 @@
 | audit-log-api-contract.test.ts | 28 | 28 | Không có issue (real authorization engine tests) |
 | ict-date-boundaries.test.ts | 5 | 5 | ICT start/end boundaries and normalized ordering |
 | admin-api-response.test.ts | 3 | 3 | Audit/user envelope mapping and safe defaults |
-| **TOTAL** | **531** | **531** | **0 findings** |
+| **TOTAL (original 18 files)** | **531** | **531** | **0 findings** |
 
-**Kết luận:** 44 Zod schemas, 18 test files — tất cả route contracts valid. Không có schema drift, missing validation, hoặc incorrect response shape. Latest focused run: 79/79 tests across the audit, user query, ICT boundary, and admin response suites. Audit log tests bao gồm real `authorize()` engine behavior (SYSTEM_ADMIN, HIEU_TRUONG institutional authority, Separation of Powers, deactivated account denial).
+> **Note:** 531 tests from the 18 original contract test files listed above. Total contract test count is 642/642 (including 111 additional tests from hotfix, feature-flag, and supplementary contract files added during Phase 6 finalization).
+
+**Kết luận:** 642/642 contract tests pass across all test files. Không có schema drift, missing validation, hoặc incorrect response shape.
 
 ---
 
@@ -54,12 +56,12 @@
 
 | Category | Count | Root Cause | Action |
 |----------|-------|------------|--------|
-| Lint errors | 123 trên 655 files | Pre-existing codebase lint debt | Không action — baseline, không từ phiên hiện tại |
+| Lint errors | 0 | 0 lint errors; ~101 DESIGN findings (baseline) | Không action — DESIGN findings are baseline, không từ phiên hiện tại |
 | DB-dependent test failures | 122 | Missing `DATABASE_URL` trong worktree | Không action — expected trong isolated worktree |
 | Domain test (canonical-routes) | 1 | Label changed `'Quản lý nhiệm vụ'` → `'Nhiệm vụ'` | Pre-existing branch label change |
 | Infrastructure (path-matcher) | 1 | Missing `.claude/hooks/path-matcher.cjs` | Worktree-specific, không từ current changes |
 
-**Kết luận:** 0 net new failures. Tất cả 247 failures đều là baseline pre-existing.
+**Kết luận:** 0 net new failures. Baseline items: 122 DB-dependent test failures (no DATABASE_URL), 1 domain label change, 1 infra path-matcher — all pre-existing.
 
 ---
 
@@ -146,8 +148,8 @@
 |---|---------|---------------|-------------|
 | 1 | **Nhà cung cấp chữ ký số** chưa chọn | Phase 0 (line 67), Phase 5 (line 157) | Cao |
 | 2 | **Scope outgoing-document** chưa quyết | Phase 5 (line 156) | Cao |
-| 3 | **ClamAV readiness** | Phase 3 backfill (line 124), Phase 6 deploy (line 172) | Cao |
-| 4 | **RFC-04/RFC-05** chờ Owner | Phase 0 decision gate (line 66) | Trung bình |
+| 3 | **ClamAV readiness** — backfill 53/53 CLEAN complete; production ClamAV daemon needed for runtime scan gate | Phase 6 deploy (line 172) | Cao |
+| 4 | **RFC-04/RFC-05** ACCEPTED (deferred execution) | Execution gated by migration readiness | Trung bình |
 | 5 | **Internal-document rules** chưa accepted | Phase 5 (line 158) | Trung bình |
 | 6 | **RBAC design** chưa quyết | Phase 5 blocked dependency | Trung bình |
 | 7 | **Production access** | Phase 6 (lines 172, 173 partial, 174) | Thấp (chờ blockers #1–6) |
@@ -175,9 +177,9 @@ Các findings sau **không thể thu thập** cho đến khi có deployed pilot:
 
 | Metric | Giá trị |
 |--------|---------|
-| **Execution plan items hoàn thành** | 32/41 |
-| **Items còn mở** | 9 (liên quan quyết định, hạ tầng và pilot) |
-| **Contract tests** | 531/531 aggregated ✅; latest focused set 79/79 ✅ |
+| **Execution plan items hoàn thành** | 34/41 |
+| **Items còn mở** | 7 (liên quan quyết định, hạ tầng và pilot) |
+| **Contract tests** | 642/642 ✅ |
 | **Security tests** | 199/199 ✅ |
 | **Typecheck** | 0 errors ✅ |
 | **Net new failures** | 0 ✅ |

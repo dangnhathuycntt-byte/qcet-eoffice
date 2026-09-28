@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { getSessionFromRequest } from "@/lib/jwt-session";
+import { isFeatureEnabled } from "@/features/flags";
 import { prisma } from "@/lib/prisma";
 import { ComposeOutgoingDocumentForm } from "@/components/documents/compose-outgoing-document-form";
 
@@ -14,6 +15,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ComposeOutgoingDocumentPage() {
+  // Feature flag gate — redirect when outgoing documents are not yet enabled
+  if (!isFeatureEnabled("outgoingDocuments")) {
+    redirect("/documents");
+  }
+
   // Dual-path auth: NextAuth session or JWT fallback
   const authSession = await auth();
   const cookieStore = await cookies();

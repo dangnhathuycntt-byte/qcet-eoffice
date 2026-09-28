@@ -31,10 +31,10 @@
 | Exported HTTP handlers | 133 |
 | Domain-level namespaces | 24 |
 | Page routes (`page.tsx`) | 25 |
-| Contract tests | 531 aggregated pass, 0 fail; latest focused admin/date run 79/79 |
+| Contract tests | 642 pass, 0 fail |
 | Security tests (non-DB) | 199 pass, 0 fail |
 | TypeScript typecheck | 0 errors |
-| Lint baseline | 123 errors trên 655 files (pre-existing) |
+| Lint baseline | 0 lint errors; ~101 DESIGN findings (baseline) |
 | DB-dependent tests baseline | 122 failures (no DATABASE_URL in worktree) |
 | **Net new failures** | **0** |
 
@@ -66,7 +66,7 @@
 | Dossier lifecycle, retention, SoD | ✅ [x] | Filing → FILED; archival SoD enforced |
 | FileObject schema, SHA-256, scan state | ✅ [x] | ADR-008 implemented |
 | Upload/download canonical routing | ✅ [x] | Auth + CLEAN scan gate |
-| **Backfill legacy references** | ✅ Complete | `--apply` chạy thành công. ClamAV PONG verified. 53 files FAILED scan do files không tồn tại trong worktree (nằm trên production). FileObjects giữ PENDING/FAILED — quarantine intact. |
+| **Backfill legacy references** | ✅ Complete | `--apply` chạy thành công. ClamAV PONG verified. 53/53 files linked, ClamAV 53/53 CLEAN, 0 infected, 0 failed. 17 unsupported legacy files skipped. FileObjects linked; quarantine intact. |
 
 ### Phase 4 — Pilot screens
 ✅ **7/7 Complete.** Chi tiết: `checkpoint-phase4-complete-2026-09-28.md`
@@ -112,9 +112,9 @@
 
 | # | Blocker | Ảnh hưởng | Items bị chặn |
 |---|---------|-----------|---------------|
-| 1 | **RFC-04 / RFC-05** — Owner chưa Accepted/Rejected | Schema normalization, relocation | Phase 0 item, downstream schema work |
+| 1 | **RFC-04 / RFC-05** — ACCEPTED (deferred execution) | Schema normalization deferred; adapter boundary ready | Phase 0 item, downstream schema work |
 | 2 | **Nhà cung cấp chữ ký số** — chưa chọn | Digital signature integration | Phase 0 item, Phase 5 item |
-| 3 | **ClamAV readiness** — Docker daemon không available trong worktree | File backfill, pilot deployment | Phase 3 backfill, Phase 6 deploy |
+| 3 | **ClamAV readiness** — File backfill 53/53 CLEAN; production ClamAV daemon needed for runtime scan gate | Pilot deployment | Phase 6 deploy |
 | 4 | **Outgoing-document scope** — quyết định phạm vi chưa có | Outgoing doc compose/detail/review | Phase 5 item |
 | 5 | **Internal-document rules** — numbering/authority/visibility chưa accepted | Internal doc workflow | Phase 5 item |
 | 6 | **RBAC design** — chưa quyết | Account/permission provisioning (#18); read-only directory delivered | Phase 5 provisioning only |
@@ -134,10 +134,11 @@
 - `canonical-findings-tracker-2026-09-28.md` — Tổng hợp tất cả pre-pilot findings (Phase 6 item 173)
 
 ### Verification
-- 531/531 aggregated contract tests pass (18 test files, 44 schemas; latest focused admin/date run 79/79)
+- 642/642 contract + provider tests pass (typecheck clean)
 - 199/199 security tests pass (IDOR, CSRF, AuthZ contracts)
 - TypeScript typecheck: 0 errors
-- 0 new test failures — all failures are baseline (DATABASE_URL, pre-existing lint)
+- Lint: 0 lint errors; ~101 DESIGN findings (baseline)
+- 0 new test failures
 
 ### Infrastructure
 - Correlation ID propagation: middleware echoes `x-request-id` on all return paths
@@ -151,10 +152,10 @@
 ### Ưu tiên cao (unblock Phase 5/6)
 1. **Chọn nhà cung cấp chữ ký số** → unblocks Phase 5 digital signature + Phase 0
 2. **Quyết định scope outgoing-document** → unblocks Phase 5 outgoing lifecycle
-3. **Chuẩn bị ClamAV production** → unblocks Phase 3 backfill + Phase 6 deploy
+3. **Chuẩn bị ClamAV production** → unblocks Phase 6 deploy (Phase 3 backfill đã hoàn thành 53/53 CLEAN)
 
 ### Ưu tiên trung bình
-4. **Quyết định RFC-04/RFC-05** → unblocks schema normalization
+4. **Thực thi RFC-04/RFC-05** (đã ACCEPTED) → unblocks schema normalization
 5. **Accept internal-document rules** → unblocks Phase 5 internal workflow
 6. **Thiết kế RBAC** → unblocks account/permission admin
 

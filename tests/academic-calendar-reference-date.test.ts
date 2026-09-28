@@ -2,12 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getSystemReferenceDate, isTaskPastDue } from "../src/lib/academic-calendar";
 
-test("getSystemReferenceDate returns standard 2026-09-09 default", () => {
+test("getSystemReferenceDate returns current ICT date when env var is unset", () => {
   const originalEnv = process.env.NEXT_PUBLIC_REFERENCE_DATE;
   delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
   try {
     const ref = getSystemReferenceDate();
-    assert.equal(ref, "2026-09-09");
+    const expectedToday = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    }).format(new Date());
+    assert.equal(ref, expectedToday);
   } finally {
     if (originalEnv !== undefined) {
       process.env.NEXT_PUBLIC_REFERENCE_DATE = originalEnv;
@@ -45,10 +48,10 @@ test("isTaskPastDue handles Date instances and default reference date correctly"
     // Invalid date instance
     assert.equal(isTaskPastDue(new Date("invalid"), "2026-09-09"), false);
 
-    // Default reference date (which defaults to 2026-09-09)
-    assert.equal(isTaskPastDue("2026-09-08"), true);
-    assert.equal(isTaskPastDue("2026-09-09"), false);
-    assert.equal(isTaskPastDue("2026-09-10"), false);
+    // Explicit reference date instead of relying on default
+    assert.equal(isTaskPastDue("2026-09-08", "2026-09-09"), true);
+    assert.equal(isTaskPastDue("2026-09-09", "2026-09-09"), false);
+    assert.equal(isTaskPastDue("2026-09-10", "2026-09-09"), false);
   } finally {
     if (originalEnv !== undefined) {
       process.env.NEXT_PUBLIC_REFERENCE_DATE = originalEnv;

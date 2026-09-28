@@ -28,7 +28,11 @@ export type FeatureFlagKey =
   | "uxCalendarV5"
   | "uxNotificationsV5"
   | "uxDocumentsV5"
-  | "uxOrgV5";
+  | "uxOrgV5"
+  | "digitalSignature"
+  | "outgoingDocuments"
+  | "internalDocuments"
+  | "userProvisioning";
 
 export interface FeatureFlagDefinition {
   readonly key: FeatureFlagKey;
@@ -124,6 +128,46 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   uxOrgV5: {
     key: "uxOrgV5",
     description: "Migration-boundary rollout flag for the Organization V5 reconstructed surface",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  // --- Phase 5 pending-provider rollout flags --------------------------------
+  // Disabled by default — each gates a capability that requires an external
+  // vendor contract, institutional policy decision, or production deployment
+  // before it can be safely enabled.
+  digitalSignature: {
+    key: "digitalSignature",
+    description:
+      "Phased rollout flag for digital signature integration (VNPT SmartCA / Viettel CA). " +
+      "Disabled until a CA provider contract is signed and adapter is configured.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  outgoingDocuments: {
+    key: "outgoingDocuments",
+    description:
+      "Phased rollout flag for outgoing document composition and dispatch. " +
+      "Disabled until document numbering policy and approval workflow are finalized.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  internalDocuments: {
+    key: "internalDocuments",
+    description:
+      "Phased rollout flag for internal document circulation scope. " +
+      "Disabled until internal routing rules and retention policy are defined.",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  userProvisioning: {
+    key: "userProvisioning",
+    description:
+      "Phased rollout flag for user account provisioning (create/edit/disable). " +
+      "Disabled until RBAC provisioning design and HR data source integration are approved.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

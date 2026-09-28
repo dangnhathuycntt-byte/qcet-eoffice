@@ -22,6 +22,10 @@ export interface PublicRuntimeFeatures {
   uxNotificationsV5: boolean;
   uxDocumentsV5: boolean;
   uxOrgV5: boolean;
+  digitalSignature: boolean;
+  outgoingDocuments: boolean;
+  internalDocuments: boolean;
+  userProvisioning: boolean;
   [key: string]: boolean;
 }
 
