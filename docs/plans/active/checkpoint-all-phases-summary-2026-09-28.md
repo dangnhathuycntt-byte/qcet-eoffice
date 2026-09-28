@@ -22,7 +22,7 @@
 
 ---
 
-## 2. Codebase Metrics
+## 2. Codebase Metrics (cập nhật 28/09/2026 — phiên cuối)
 
 | Metric | Giá trị |
 |--------|---------|
@@ -31,12 +31,14 @@
 | Exported HTTP handlers | 133 |
 | Domain-level namespaces | 24 |
 | Page routes (`page.tsx`) | 25 |
-| Contract tests | 642 pass, 0 fail |
-| Security tests (non-DB) | 199 pass, 0 fail |
+| Contract tests (18 files) | 531/531 pass, 0 fail |
+| CSRF security tests (non-DB) | 26/26 pass, 0 fail |
+| IDOR + AuthZ security tests | DB-dependent — 14 cancelled (no DATABASE_URL in worktree) |
+| Full test suite | 5497 total: 5270 pass, 185 fail, 25 cancelled, 17 skipped |
 | TypeScript typecheck | 0 errors |
-| Lint baseline | 0 lint errors; ~101 DESIGN findings (baseline) |
-| DB-dependent tests baseline | 122 failures (no DATABASE_URL in worktree) |
-| **Net new failures** | **0** |
+| Lint baseline | 0 lint errors; 101 DESIGN findings (baseline-suppressed: 509) |
+| Feature flags | 16 defined — 4 kill switches (default: true), 12 phased rollout (default: false) |
+| **Net new failures from this session** | **0** (date-drift test fixed; remaining 185 are pre-existing DB-dependent or component-environment failures) |
 
 ---
 
@@ -119,7 +121,9 @@
 | 5 | **Internal-document rules** — numbering/authority/visibility chưa accepted | Internal doc workflow | Phase 5 item |
 | 6 | **RBAC design** — chưa quyết | Account/permission provisioning (#18); read-only directory delivered | Phase 5 provisioning only |
 | 7 | **Production access** — cần để deploy và observe | Pilot deployment, observation window, legacy removal | Phase 6 items 2–4 |
-| 8 | **Self-hosted runner DB credentials** — `qcet_ci` PostgreSQL auth fails on self-hosted runner; CI Quality Gate pipeline fails 231/3964 tests (all DB-dependent). Not a code regression. | CI green gate | CI Quality Gate pipeline |
+| 8 | **Self-hosted runner DB credentials** — `qcet_ci` PostgreSQL auth fails on self-hosted runner `qcet-runner-01`; CI Quality Gate pipeline fails all DB-dependent tests. Not a code regression. | CI green gate | CI Quality Gate pipeline |
+| 9 | **GitHub Secrets not configured** — `STAGING_DATABASE_URL` and `PRODUCTION_DATABASE_URL` not set; deploy.yml migration steps run with empty DATABASE_URL | CI deploy pipeline migrations | Deploy pipeline staging/production |
+| 10 | **Production GitHub Environment not created** — only `staging` exists; `production` environment protection rules missing | Production release gate | Phase 6 deploy |
 
 ---
 
@@ -135,17 +139,23 @@
 - `canonical-findings-tracker-2026-09-28.md` — Tổng hợp tất cả pre-pilot findings (Phase 6 item 173)
 
 ### Verification (local worktree — no DATABASE_URL)
-- 642/642 contract + provider tests pass (typecheck clean)
-- 199/199 security tests pass (IDOR, CSRF, AuthZ contracts)
+- 531/531 contract tests pass (18 original files; typecheck clean)
+- 26/26 CSRF security tests pass; IDOR + AuthZ tests require DB (14 cancelled)
 - TypeScript typecheck: 0 errors
-- Lint: 0 lint errors; ~101 DESIGN findings (baseline)
-- 0 new test failures
+- Lint: 0 lint errors; 101 DESIGN findings (baseline-suppressed: 509)
+- Full suite: 5497 tests — 5270 pass, 185 fail (all pre-existing DB/env), 25 cancelled, 17 skipped
+- Date-drift test fixed: `system-reference-date-unification.test.ts` no longer hardcodes expected date
+- 0 new test failures from implementation work
+- Feature flags: 16 defined, all deferred modules default `false` (safe)
 
-### CI Pipeline (GitHub Actions on `origin/main` HEAD `dbea32fd`)
+### CI Pipeline (GitHub Actions on `origin/main`)
 - **Deploy pipeline (`Continuous Deployment & Migration Gates`)**: ✅ SUCCESS — build + migration validation pass
-- **CI Quality Gate**: ❌ FAIL — 3717/3964 pass, 231 fail (all DB-dependent on broken self-hosted runner), 16 skip
-- **Production deploy**: ⛔ NOT ATTEMPTED — no SSH/docker-push/platform-API step exists in any workflow; deploy is manual `docker compose`
-- **Signature adapter tests**: ✅ Fixed in commit `54a334bf` (+8 pass vs prior run)
+- **CI Quality Gate**: ❌ FAIL — DB tests fail due to self-hosted runner credentials misconfiguration (`postgres:postgres` rejected by local PostgreSQL; `qcet_ci` rejected by test-guard). Not a code regression.
+- **Production deploy**: ⛔ NOT ATTEMPTED — no SSH/docker-push/platform-API step exists; deploy is manual `docker compose` on host
+- **Production instance**: `https://qcet.dixxie.store` responds HTTP 200 — DB healthy, uptime ~2.9 days (verified 28/09/2026)
+- **GitHub Secrets**: None configured (STAGING_DATABASE_URL, PRODUCTION_DATABASE_URL missing)
+- **GitHub Environments**: Only `staging` exists; `production` environment not created
+- **Self-hosted runner**: `qcet-runner-01` online, Linux X64
 
 ### Infrastructure
 - Correlation ID propagation: middleware echoes `x-request-id` on all return paths

@@ -60,16 +60,18 @@
 #### Infrastructure Tests
 - `path-matcher.test.ts`: 1 failure — missing `.claude/hooks/path-matcher.cjs` in worktree (not from current changes)
 
-### Verification Summary
+### Verification Summary (cập nhật cuối 28/09/2026)
 | Category | Pass | Fail | Notes |
 |----------|------|------|-------|
-| Contract tests | 642 | 0 | 18 original contract test files + supplementary tests added during finalization |
+| Contract tests (18 files) | 531 | 0 | Original contract test files — all pass |
 | Typecheck | ✅ | 0 | `npm run typecheck` clean |
-| Lint | — | 0 | 0 lint errors; ~101 DESIGN findings (baseline) |
-| Security (non-DB) | 199 | 0 | IDOR, CSRF, AuthZ contracts |
-| Domain (non-DB) | ✅ | 1 | Pre-existing branch label change |
-| DB-dependent | — | 122 | Baseline: no DATABASE_URL in worktree |
-| **Net new failures** | **—** | **0** | **No regressions from current changes** |
+| Lint | — | 0 | 0 lint errors; 101 DESIGN findings (baseline-suppressed: 509) |
+| CSRF security (non-DB) | 26 | 0 | CSRF contracts verified |
+| IDOR + AuthZ security | — | — | DB-dependent — 14 cancelled (no DATABASE_URL) |
+| Full test suite | 5270 | 185 | 5497 total; 25 cancelled, 17 skipped. All 185 failures are pre-existing (DB-dependent or component-environment) |
+| Date-drift test | ✅ | 0 | Fixed: `system-reference-date-unification.test.ts` no longer hardcodes date |
+| Feature flags | 16 | — | 4 kill switches (default: true), 12 rollout (default: false) — safe |
+| **Net new failures** | **—** | **0** | **No regressions from implementation work** |
 
 ## Task 6.1 — Data Backfill & Parity
 - **COMPLETE**: Backfill `--apply` chạy thành công. 53/53 files linked, ClamAV 53/53 CLEAN, 0 infected, 0 failed. 17 unsupported legacy files skipped.
