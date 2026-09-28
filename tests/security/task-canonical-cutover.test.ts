@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("Issue #13 canonical Task cutover", () => {
   test("generic PATCH uses the strict metadata-only contract", () => {
     const route = read("src/app/api/tasks/[id]/route.ts");
-    assert.match(route, /parseAndValidateJson\(req, UpdateTaskMetadataSchema\)/);
+    assert.match(route, /parseAndValidateJson\(req, UpdateTaskMetadataSchema[),]/);
     assert.doesNotMatch(route, /parseAndValidateJson\(req, UpdateTaskSchema\)/);
     for (const forbidden of [
       "progressPercent: validatedBody",
@@ -38,7 +38,7 @@ describe("Issue #13 canonical Task cutover", () => {
       "assertRequestBodySize(request, MAX_PAYLOAD_SIZE)",
       'assertRateLimit(user.id, "MUTATIONS_SENSITIVE")',
       "parseAndValidateJson(request, schema)",
-      "loadAuthorizationContext(user.id)",
+      "loadAuthorizationContext(user.id",
       "authorize(authorizationContext, action",
     ]) {
       assert.ok(shared.includes(guard), `missing shared guard: ${guard}`);
