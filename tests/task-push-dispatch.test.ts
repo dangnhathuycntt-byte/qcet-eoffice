@@ -199,10 +199,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     }
 
     // Cleanup scoped executive mandate fixture
-    if (execAssignmentId) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } }).catch(() => {});
-    }
     if (execUnitId) {
+      await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } }).catch(() => {});
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } }).catch(() => {});
     }
   });

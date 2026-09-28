@@ -233,6 +233,9 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
     }
     const testUnitCodes = ['dept-test-doc-1', 'dept-test-doc-2'];
+    await prisma.positionAssignment.deleteMany({
+      where: { unit: { code: { in: testUnitCodes } } },
+    }).catch(() => {});
     await prisma.organizationalUnit.deleteMany({ where: { code: { in: testUnitCodes } } });
   });
 

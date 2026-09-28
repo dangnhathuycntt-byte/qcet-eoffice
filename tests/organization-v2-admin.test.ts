@@ -244,8 +244,14 @@ describe("Sprint 6: Organization Administration & Effective-Dated Authority (Cơ
       await prisma.portfolioAssignment.deleteMany({
         where: { positionAssignment: { userId: { in: [staff1.id, staff2.id, leaderStaff.id] } } },
       });
+      const unitIds = [rootUnitId, facultyUnitId, departmentUnitId].filter(Boolean);
       await prisma.positionAssignment.deleteMany({
-        where: { userId: { in: [staff1.id, staff2.id, inactiveStaff.id, leaderStaff.id] } },
+        where: {
+          OR: [
+            { userId: { in: [staff1.id, staff2.id, inactiveStaff.id, leaderStaff.id] } },
+            { unitId: { in: unitIds } },
+          ],
+        },
       });
       const respIds = [responsibilityAreaDaoTaoId, responsibilityAreaTaiChinhId].filter(Boolean);
       if (respIds.length > 0) {
@@ -259,7 +265,6 @@ describe("Sprint 6: Organization Administration & Effective-Dated Authority (Cơ
           where: { id: { in: posIds } },
         });
       }
-      const unitIds = [rootUnitId, facultyUnitId, departmentUnitId].filter(Boolean);
       if (unitIds.length > 0) {
         await prisma.unitClosurePath.deleteMany({
           where: {

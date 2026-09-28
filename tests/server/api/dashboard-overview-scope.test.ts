@@ -196,6 +196,12 @@ describe('GET /api/dashboard/overview — non-admin scope confinement', () => {
     if (userIds.length > 0) {
       await prisma.session.deleteMany({ where: { userId: { in: userIds } } });
     }
+    const unitIds = [unitId, outsideUnitId].filter((id): id is string => Boolean(id));
+    if (unitIds.length > 0) {
+      await prisma.taskActor.deleteMany({ where: { unitId: { in: unitIds } } });
+      await prisma.task.deleteMany({ where: { leadUnitId: { in: unitIds } } });
+      await prisma.positionAssignment.deleteMany({ where: { unitId: { in: unitIds } } });
+    }
     if (positionAssignmentIds.length > 0) {
       await prisma.positionAssignment.deleteMany({
         where: { id: { in: positionAssignmentIds } },
@@ -204,7 +210,6 @@ describe('GET /api/dashboard/overview — non-admin scope confinement', () => {
     if (userIds.length > 0) {
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     }
-    const unitIds = [unitId, outsideUnitId].filter((id): id is string => Boolean(id));
     if (unitIds.length > 0) {
       await prisma.organizationalUnit.deleteMany({ where: { id: { in: unitIds } } });
     }

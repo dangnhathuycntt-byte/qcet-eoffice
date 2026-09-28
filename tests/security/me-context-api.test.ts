@@ -254,9 +254,11 @@ describe('Sprint 2: Task 9 - AuthorizationContext API (GET /api/me/context)', ()
       if (posAssignmentStaff) {
         await prisma.portfolioAssignment.deleteMany({ where: { positionAssignmentId: posAssignmentStaff.id } });
       }
-      await prisma.positionAssignment.deleteMany({
-        where: { id: { in: [posAssignmentLeader?.id, posAssignmentStaff?.id].filter(Boolean) } },
-      });
+      if (unitId || deptId) {
+        await prisma.positionAssignment.deleteMany({
+          where: { unitId: { in: [unitId, deptId].filter(Boolean) } },
+        });
+      }
       await prisma.positionDefinition.deleteMany({
         where: { id: { in: [posDefLeaderId, posDefStaffId] } },
       });

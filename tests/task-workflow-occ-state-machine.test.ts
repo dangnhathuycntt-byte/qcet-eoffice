@@ -133,13 +133,8 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
         where: { id: { in: createdTaskIds } },
       });
     }
-    if (execAssignment1Id) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignment1Id } });
-    }
-    if (execAssignment2Id) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignment2Id } });
-    }
     if (execUnitId) {
+      await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
   });
