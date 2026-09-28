@@ -49,7 +49,7 @@ describe('RFC-09 Option B: Canonical Dossier Read Policy Security Specification'
     email: 'sameunit@cdktcnqn.edu.vn',
     name: 'Lê Văn Cùng Khoa',
     role: 'GIANG_VIEN',
-
+    activeUnitId: 'unit_it',
   };
 
   const responsibleUser: AuthenticatedUser = {

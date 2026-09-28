@@ -46,6 +46,7 @@ describe('Task 1: Org Bodies BAC Authorization Enforcement', () => {
   const authHeaders = (token: string) => ({
     cookie: `${SESSION_COOKIE_NAME}=${token}`,
     'content-type': 'application/json',
+    origin: 'http://localhost',
   });
 
   before(async () => {

@@ -150,9 +150,13 @@ export function canReadSensitivePersonalData(
 
   if (isUnitLeader || hasSensitiveCapability) {
     const viewerUnit: string | null | undefined =
-      v.departmentId || v.activeUnitId || v.user?.departmentId;
+      v.departmentId || v.activeUnitId || v.unitId || v.user?.departmentId || v.department?.id;
     const targetUnit: string | null | undefined =
-      targetUser.departmentId || targetUser.unitId;
+      targetUser.departmentId ||
+      targetUser.unitId ||
+      targetUser.leadUnitId ||
+      targetUser.department?.id ||
+      targetUser.unit?.id;
 
     if (viewerUnit && targetUnit && viewerUnit === targetUnit) {
       return true;

@@ -132,9 +132,9 @@ export function buildDocumentResource(doc: any): AuthorizationResource {
 
   const creatorId = doc.creatorId || doc.createdById || undefined;
   // Phase 9: `Document.leadDepartmentId` / `draftingDeptId` đã bị drop — chỉ còn
-  // các field canonical (`leadUnitId`, `draftingUnitId`, `unitId`).
-  const leadUnitId = doc.leadUnitId || undefined;
-  const draftingUnitId = doc.draftingUnitId || undefined;
+  // các field canonical (`leadUnitId`, `draftingUnitId`, `unitId`), fallback sang legacy nếu có.
+  const leadUnitId = doc.leadUnitId || doc.leadDepartmentId || undefined;
+  const draftingUnitId = doc.draftingUnitId || doc.draftingDeptId || undefined;
   const unitId = doc.unitId || doc.departmentId || leadUnitId || draftingUnitId || undefined;
 
   return {
@@ -206,6 +206,20 @@ export function buildTaskResource(task: any): AuthorizationResource {
 
   if (Array.isArray(task.collaboratorIds)) {
     collaboratorIds.push(...task.collaboratorIds);
+  }
+
+  if (Array.isArray(task.collaborators)) {
+    for (const c of task.collaborators) {
+      const uid = typeof c === 'string' ? c : c?.id || c?.userId;
+      if (uid) collaboratorIds.push(uid);
+    }
+  }
+
+  if (Array.isArray(task.assignees)) {
+    for (const a of task.assignees) {
+      const uid = typeof a === 'string' ? a : a?.id || a?.userId;
+      if (uid) assigneeIds.push(uid);
+    }
   }
 
   if (primaryOwnerId) assigneeIds.push(primaryOwnerId);

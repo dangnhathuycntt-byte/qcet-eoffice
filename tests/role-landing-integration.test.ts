@@ -22,7 +22,7 @@ import type { AuthUser } from "../src/types/auth";
 describe("Role-Adaptive Landing & Integration (Task 3)", () => {
   const adminUser = DEFAULT_DEMO_USERS[0]; // role: ADMIN
   const managerUser = DEFAULT_DEMO_USERS[1]; // role: MANAGER
-  const staffUser = DEFAULT_DEMO_USERS[2]; // role: STAFF
+  const staffUser = DEFAULT_DEMO_USERS.find(u => u.name.includes("Nguyễn Ngọc Vinh")) || DEFAULT_DEMO_USERS[2]; // role: STAFF
   const payload = getMockDashboardPayload();
 
   // --------------------------------------------------------------------------

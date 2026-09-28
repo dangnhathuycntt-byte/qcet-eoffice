@@ -2692,7 +2692,7 @@ async function main() {
       dueDate: new Date('2026-09-30T17:00:00Z'),
       leadDepartmentId: 'BGH',
       leadUserId: bghOwnerId,
-      signerName: 'ThS. Đặng Nhật Huy',
+      signerName: 'ThS. Phạm Văn Tường',
       signerTitle: 'Hiệu trưởng',
       draftingDeptId: 'P_TCDBCL',
       recipientList: 'Đảng ủy (để báo cáo); Ban Giám hiệu; Các phòng, khoa, trung tâm; Lưu: VT, TC-ĐBCL',
