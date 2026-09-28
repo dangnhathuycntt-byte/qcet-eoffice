@@ -184,8 +184,8 @@
 > **Lưu ý:** Block này ghi nhận các ràng buộc của phiên phát triển chính (trước 2026-09-28). Các mục đã hoàn thành hoặc được unblock kể từ đó được đánh dấu rõ.
 
 - ❌ `npm run build` / `next build` — vẫn áp dụng (crash dev server)
-- ❌ Deploy production, thay đổi production DB — vẫn áp dụng (không có SSH/production access)
-- ✅ ~~Commit/push/merge~~ — đã hoàn thành: branch `feat/phase6-release-ci-verification` pushed; PR #131 merged main; PR #132 pending merge sau CI green
+- ❌ Deploy production, thay đổi production DB — vẫn áp dụng (access-blocked: thiếu SSH credentials đến qcet.dixxie.store; owner đã ủy quyền deploy nhưng không có key/remote context trên máy này)
+- ✅ ~~Commit/push/merge~~ — đã hoàn thành: branch `feat/phase6-release-ci-verification` pushed; PR #131 merged main; PR #132 CI green (4/4 checks passed), sẵn sàng merge
 - ❌ `git reset/clean/revert`, xóa hàng loạt — vẫn áp dụng
 - ✅ ~~`--apply` backfill cho đến khi ClamAV sẵn sàng~~ — đã hoàn thành: backfill 53/53 applied, ClamAV PONG verified (worktree)
 - ❌ Tự ý Accept/Reject RFC-04/RFC-05 — vẫn áp dụng

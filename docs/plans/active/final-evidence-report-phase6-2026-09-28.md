@@ -159,6 +159,7 @@ uptime: 278785s (~3 days)
 | Item | Status | Evidence |
 |------|--------|----------|
 | CI test suites | ✅ | Run 36428833453: 5497 pass, 0 fail; run 36428833487: build + migration gate pass |
+| **Backup/restore drill** | ✅ | `scripts/backup-restore-drill.mjs` executed 2026-09-28 against local dev DB (`qcet_eoffice`): pg_dump 1990.84 KB (custom binary), restored into isolated `qcet_drill_test_61940_1790606693267`, 46/46 tables verified (row counts match ✓), drill DB auto-cleaned. Outbox replay: 238 `outbox_events` confirmed in source + restored DB; `recovery-paths.md §Outbox Replay` documents procedure. Signature/delivery evidence retrieval: correlation IDs wired in middleware (`x-request-id` echoed on every response); `recovery-paths.md §Signature and Delivery Failure Recovery` documents grep against `audit_events` and `file_objects`. Note: local dev drill — production drill requires SSH access. |
 | Recovery docs / runbooks | ✅ | `recovery-paths.md`, `rollback.md`; 11 failure scenarios documented |
 | Correlation IDs operational | ✅ | `x-request-id` echoed middleware-wide |
 | **Reconcile audit findings** | 🟡 PARTIAL | `canonical-findings-tracker-2026-09-28.md` ghi nhận các findings; pre-pilot findings documented in canonical tracker; production observation/reconciliation pending (không thể verify production behavior trước deploy). |
