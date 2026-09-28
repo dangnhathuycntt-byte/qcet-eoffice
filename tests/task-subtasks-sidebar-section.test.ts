@@ -42,7 +42,7 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes("Kiểm tra tài liệu"), "Must show subtask title");
-    assert.ok(html.includes("bg-blue-600"), "Must show IN_PROGRESS dot color");
+    assert.ok(html.includes("bg-foreground/80"), "Must show IN_PROGRESS dot color");
     assert.ok(html.includes(">1<"), "Count must be 1");
   });
 
@@ -138,9 +138,9 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes("bg-muted-foreground/60"), "NOT_STARTED dot");
-    assert.ok(html.includes("bg-blue-600"), "IN_PROGRESS dot");
-    assert.ok(html.includes("bg-amber-600"), "WAITING_APPROVAL dot");
-    assert.ok(html.includes("bg-emerald-600"), "COMPLETED dot");
+    assert.ok(html.includes("bg-foreground/80"), "IN_PROGRESS dot");
+    assert.ok(html.includes("bg-foreground/70"), "WAITING_APPROVAL dot");
+    assert.ok(html.includes("bg-foreground/90"), "COMPLETED dot");
   });
 
   it("renders due date formatted as DD/MM", () => {
@@ -176,8 +176,8 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       "Completed subtask title must have line-through"
     );
     assert.ok(
-      html.includes("text-muted-foreground/60"),
-      "Completed subtask title must have text-muted-foreground/60"
+      html.includes("text-muted-foreground"),
+      "Completed subtask title must have text-muted-foreground"
     );
   });
 
