@@ -309,14 +309,14 @@ describe('6. Checker Attention: requires_my_approval Authority Tiers', () => {
     userId: 'head-cntt',
     role: 'TRUONG_PHONG',
     positionCode: 'TRUONG_PHONG',
-
+    departmentId: 'dept-cntt',
   };
 
   const unitHeadKinhTe = {
     userId: 'head-kt',
     role: 'TRUONG_PHONG',
     positionCode: 'TRUONG_PHONG',
-
+    departmentId: 'dept-kt',
   };
 
   const staff = {
@@ -332,7 +332,7 @@ describe('6. Checker Attention: requires_my_approval Authority Tiers', () => {
       status: 'WAITING_APPROVAL',
       createdById: 'creator-99',
       leadAssigneeId: 'assignee-99',
-
+      departmentId: 'dept-cntt',
     };
 
     // Executive can approve

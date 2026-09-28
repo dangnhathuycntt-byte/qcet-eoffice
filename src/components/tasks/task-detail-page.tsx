@@ -341,7 +341,7 @@ export function TaskDetailPage({
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
+        body: JSON.stringify({ title: newTitle, expectedVersion: (task as any).version }),
       });
 
       if (!res.ok) throw new Error("Không thể lưu tiêu đề");

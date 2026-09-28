@@ -180,6 +180,14 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
   });
 
   it("formatAssigneeNameWithTitle strips parenthesized roles and resolves academic titles from personnel directory", () => {
+    // Mock personnel directory for title lookup when raw name has no academic prefix
+    const personnelDirectory = [
+      { name: "ThS. Phạm Văn Tường", title: "ThS. Phạm Văn Tường" },
+      { name: "ThS. Đặng Nhật Huy", title: "ThS. Đặng Nhật Huy" },
+      { name: "ThS. Lê Văn Thí", title: "ThS. Lê Văn Thí" },
+      { name: "TS. Trần Minh Quang", title: "TS. Trần Minh Quang" },
+    ];
+
     // 1. Chuỗi có chức vụ trong ngoặc và đã có học vị -> giữ học vị + họ tên, bỏ chức vụ
     const res1 = formatAssigneeNameWithTitle("ThS. Phạm Văn Tường (Phó Hiệu trưởng)");
     assert.equal(res1, "ThS. Phạm Văn Tường");
@@ -189,17 +197,17 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
     assert.equal(res2, "ThS. Phạm Văn Tường");
 
     // 3. Chuỗi chưa có học vị nhưng có trong danh bạ QCET -> tra cứu lấy title "ThS. Phạm Văn Tường"
-    const res3 = formatAssigneeNameWithTitle("Phạm Văn Tường (Phó Hiệu trưởng)");
+    const res3 = formatAssigneeNameWithTitle("Phạm Văn Tường (Phó Hiệu trưởng)", personnelDirectory);
     assert.equal(res3, "ThS. Phạm Văn Tường");
 
-    const res4 = formatAssigneeNameWithTitle("Phạm Văn Tường");
+    const res4 = formatAssigneeNameWithTitle("Phạm Văn Tường", personnelDirectory);
     assert.equal(res4, "ThS. Phạm Văn Tường");
 
     // 4. Các nhân sự lãnh đạo khác trong trường
-    const res5 = formatAssigneeNameWithTitle("Đặng Nhật Huy (Hiệu trưởng)");
+    const res5 = formatAssigneeNameWithTitle("Đặng Nhật Huy (Hiệu trưởng)", personnelDirectory);
     assert.equal(res5, "ThS. Đặng Nhật Huy");
 
-    const res6 = formatAssigneeNameWithTitle("Lê Văn Thí (Trưởng phòng QLĐT)");
+    const res6 = formatAssigneeNameWithTitle("Lê Văn Thí (Trưởng phòng QLĐT)", personnelDirectory);
     assert.equal(res6, "ThS. Lê Văn Thí");
 
     // 5. Nhân sự có học vị TS.
@@ -244,10 +252,10 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Canonical properties sidebar must expose the start-date picker"
     );
 
-    // Must have due date picker support with 'Chọn hạn chót' placeholder
+    // Must have due date picker support with 'Hạn chót' placeholder
     assert.ok(
-      content.includes('placeholder="Chọn hạn chót"'),
-      "Properties line must allow picking due date with 'Chọn hạn chót'"
+      content.includes('placeholder="Hạn chót"'),
+      "Properties line must allow picking due date with 'Hạn chót'"
     );
 
     // Must support onStartDateChange

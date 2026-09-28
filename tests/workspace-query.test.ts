@@ -221,13 +221,13 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
 
   describe("5. Status resolution and legacy 'tab' migration", () => {
     test("parses canonical TaskLifecycleStatus values", () => {
+      // OVERDUE is NOT a lifecycle status — it is a computed property (isOverdue boolean flag)
       const statuses = [
         "NOT_STARTED",
         "IN_PROGRESS",
         "WAITING_APPROVAL",
         "PENDING_EXECUTIVE_APPROVAL",
         "COMPLETED",
-        "OVERDUE",
         "CANCELLED",
       ] as const;
 
@@ -235,6 +235,10 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         const state = parseWorkspaceQuery(new URLSearchParams(`status=${st}`));
         assert.equal(state.status, st);
       }
+
+      // OVERDUE falls through to default 'ALL' since it is not a TaskLifecycleStatus
+      const overdueState = parseWorkspaceQuery(new URLSearchParams("status=OVERDUE"));
+      assert.equal(overdueState.status, "ALL");
     });
 
     test("normalizes lowercase status values", () => {
@@ -1009,20 +1013,19 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "staff.cntt@qcet.edu.vn",
         name: "Nguyen Van Staff",
         role: "CHUYEN_VIEN",
-
+        departmentId: "DEPT_CNTT",
         isActive: true,
       };
 
       // 3. Server authorization rule (server truth wins)
       const authWhere = buildTaskReadWhere(staffUser);
 
-      // Verify the auth where strictly limits to staff's assignments, actors, or departmentId
+      // Verify the auth where strictly limits to staff's actors, createdById, or departmentId
       assert.ok(authWhere.OR);
-      assert.deepEqual(authWhere.OR, [
-        { assignees: { some: { userId: staffUser.id } } },
-        { actors: { some: { userId: staffUser.id } } },
-        {},
-      ]);
+      assert.equal(authWhere.OR!.length, 3);
+      assert.deepEqual(authWhere.OR![0], { actors: { some: { userId: staffUser.id } } });
+      assert.deepEqual(authWhere.OR![1], { createdById: staffUser.id });
+      assert.deepEqual(authWhere.OR![2], { leadUnitId: "DEPT_CNTT" });
 
       // Combining with client view scope=school still enforces server auth restriction
       const combinedWhere = {
@@ -1046,26 +1049,34 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "chuyenvien.cntt@qcet.edu.vn",
         name: "Tran Van Staff",
         role: "CHUYEN_VIEN",
-
+        departmentId: "DEPT_CNTT",
         isActive: true,
       };
 
       const authWhere = buildTaskReadWhere(staffUser);
 
-      // If combined in query:
-      // AND: [ authWhere, {} ]
-      // Since staffUser is in DEPT_CNTT, unless assigned to the task directly,
-      // DEPT_TAICHINH tasks will NOT match {}
+      // Server auth remains strictly bound to DEPT_CNTT (the user's real department),
+      // regardless of the client-requested DEPT_TAICHINH
+      assert.ok(authWhere.OR);
+      assert.equal(authWhere.OR!.length, 3);
+      assert.deepEqual(authWhere.OR![0], { actors: { some: { userId: staffUser.id } } });
+      assert.deepEqual(authWhere.OR![1], { createdById: staffUser.id });
+      assert.deepEqual(authWhere.OR![2], { leadUnitId: "DEPT_CNTT" });
+
+      // Client-specified dept=DEPT_TAICHINH is a VIEW filter, NOT an auth override.
+      // When combined, the AND intersection of authWhere (DEPT_CNTT) and view filter
+      // (DEPT_TAICHINH) yields no results — correct security behavior.
       const combinedWhere = {
         AND: [
           authWhere,
-          {},
+          { leadUnitId: clientState.dept },
         ],
       };
 
-      assert.equal((combinedWhere.AND[1] as any).leadUnitId ?? (combinedWhere.AND[1] as any).departmentId, "DEPT_TAICHINH");
-      // authWhere remains strictly bound to DEPT_CNTT
-      assert.equal((authWhere.OR![2] as any).leadUnitId ?? (authWhere.OR![2] as any).departmentId, "DEPT_CNTT");
+      // The view filter requests DEPT_TAICHINH...
+      assert.equal((combinedWhere.AND[1] as any).leadUnitId, "DEPT_TAICHINH");
+      // ...but authWhere remains strictly bound to DEPT_CNTT
+      assert.equal((authWhere.OR![2] as any).leadUnitId, "DEPT_CNTT");
     });
 
     test("Anonymous / unauthenticated requests cannot access any records regardless of URL parameters (returns deny-all condition)", () => {
@@ -1103,7 +1114,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
 
       // Canonical authorization: technical ADMIN (System Admin) is denied operational tasks
       assert.deepEqual(adminAuth, { id: "__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__" });
-      // Statutory institutional leadership has school-wide read access
+      // Statutory institutional leadership has school-wide read access (empty where = no restriction)
       assert.deepEqual(leaderAuth, {});
 
       // Client view filter (e.g. ?scope=unit&dept=CNTT) acts purely as an aggregation/view filter for leadership
@@ -1111,11 +1122,14 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       const combinedLeaderWhere = {
         AND: [
           leaderAuth,
-          {},
+          { leadUnitId: clientState.dept },
         ],
       };
 
-      assert.equal((combinedLeaderWhere.AND[1] as any).leadUnitId ?? (combinedLeaderWhere.AND[1] as any).departmentId, "CNTT");
+      // The view filter specifies dept=CNTT
+      assert.equal((combinedLeaderWhere.AND[1] as any).leadUnitId, "CNTT");
+      // leaderAuth is empty {} — no auth restriction, just view filtering
+      assert.deepEqual(leaderAuth, {});
     });
 
     test("Role is Not Scope invariant: TaskScope visual filter selection never alters or elevates user authority", () => {
@@ -1126,7 +1140,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
         email: "giangvien@qcet.edu.vn",
         name: "Giang Vien A",
         role: "GIANG_VIEN",
-
+        departmentId: "KHOA_CNTT",
         isActive: true,
       };
 
@@ -1142,7 +1156,13 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       // Server read authorization remains identical regardless of requested scope
       assert.deepEqual(auth1, auth2);
       assert.deepEqual(auth2, auth3);
-      assert.deepEqual((auth1.OR![2] as any).leadUnitId ?? (auth1.OR![2] as any).departmentId, "KHOA_CNTT");
+
+      // Auth is bound to user's own department (KHOA_CNTT) via leadUnitId
+      assert.ok(auth1.OR);
+      assert.equal(auth1.OR!.length, 3);
+      assert.deepEqual(auth1.OR![0], { actors: { some: { userId: lecturerUser.id } } });
+      assert.deepEqual(auth1.OR![1], { createdById: lecturerUser.id });
+      assert.deepEqual(auth1.OR![2], { leadUnitId: "KHOA_CNTT" });
     });
   });
 

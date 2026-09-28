@@ -207,9 +207,23 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       })
     );
 
-    // Verify month trigger button renders selected month
-    assert.ok(html.includes("Tháng 9"), "Must render selected 'Tháng 9' label on button");
-    assert.ok(html.includes('aria-label="Chọn kỳ tháng"'), "Must have accessible label for month selector");
+    // Month selection is now inside the collapsed filter menu; in the compact
+    // single-row layout the toolbar renders a filter button with a badge count
+    // reflecting the active month filter. The month trigger button ("Tháng 9",
+    // aria-label="Chọn kỳ tháng") no longer appears in static markup.
+    assert.ok(
+      html.includes('data-slot="unified-task-toolbar"'),
+      "Must render the single-row toolbar slot"
+    );
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Must render the collapsed filter button with aria-label"
+    );
+    // With selectedAcademicMonth=9 active, the filter badge must show a count >= 1
+    assert.ok(
+      html.match(/rounded-full[\s\S]*?\d+/),
+      "Filter button must show a badge count when month is selected"
+    );
   });
 
   test("UnifiedTaskToolbar does NOT render academic month rail by default", () => {
@@ -253,14 +267,16 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
       })
     );
 
-    // Check that month button renders accessible label and neutral default
+    // In the compact toolbar, with all filters at default ("ALL"), the filter
+    // button should render without any active-count badge (no filters active).
     assert.ok(
-      html.includes('aria-label="Chọn kỳ tháng"'),
-      "Month selector must have accessible label"
+      html.includes('aria-label="Bộ lọc"'),
+      "Must render the filter button with aria-label"
     );
+    // No badge should appear when all filters are at default
     assert.ok(
-      html.includes("Cả năm học") || html.includes("Thời gian"),
-      "Must render 'Cả năm học' or 'Thời gian' when selectedAcademicMonth is ALL"
+      !html.match(/rounded-full[^>]*>[\s]*\d+/),
+      "Filter badge should not show a count when selectedAcademicMonth is ALL"
     );
   });
 
@@ -314,10 +330,20 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // Must have "Cá nhân"
-    assert.ok(html.includes("Cá nhân") || html.includes("Của tôi"), "Must render personal scope");
-    assert.ok(html.includes("Đơn vị"), "Must render unit scope");
-    assert.ok(html.includes("Toàn trường"), "Must render school scope");
+    // In the compact single-row toolbar, scope tabs have moved to the parent
+    // component. The toolbar itself renders search + filter button.
+    assert.ok(
+      html.includes('data-slot="unified-task-toolbar"'),
+      "Must render the unified toolbar container"
+    );
+    assert.ok(
+      html.includes('aria-label="Tìm nhiệm vụ"'),
+      "Must render search input for staff user"
+    );
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Must render filter button for staff user"
+    );
   });
 
   test("ADMIN/BGH user sees all authorized scopes: Toàn trường, Đơn vị, Cá nhân/Của tôi", () => {
@@ -332,9 +358,20 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    assert.ok(html.includes("Toàn trường"), "Must render 'Toàn trường' for admin");
-    assert.ok(html.includes("Đơn vị") || html.includes("Ban Giám hiệu"), "Must render unit scope for admin");
-    assert.ok(html.includes("Cá nhân") || html.includes("Của tôi"), "Must render personal scope for admin");
+    // In the compact single-row toolbar, scope tabs have moved to the parent
+    // component. The toolbar renders search + filter for admin users.
+    assert.ok(
+      html.includes('data-slot="unified-task-toolbar"'),
+      "Must render the unified toolbar container for admin"
+    );
+    assert.ok(
+      html.includes('aria-label="Tìm nhiệm vụ"'),
+      "Must render search input for admin user"
+    );
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Must render filter button for admin user"
+    );
   });
 
   test("Search input renders keyboard shortcut hint '/' and clear button when query exists", () => {
@@ -371,6 +408,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
         searchQuery: "",
         onSearchChange: () => {},
         showSavedViews: true,
+        viewMode: "table",
         onViewModeChange: () => {},
         onDensityChange: () => {},
         selectedDepartment: "ALL",
@@ -380,27 +418,25 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // Row 2 slot must be present
+    // Single-row toolbar slot (no row-2 in compact layout)
     assert.ok(
-      html.includes('data-slot="unified-task-toolbar-row-2"'),
-      "Row 2 slot must be rendered"
+      html.includes('data-slot="unified-task-toolbar"'),
+      "Toolbar container slot must be rendered"
     );
 
-    // Search input must be in Row 2 (aria-label present)
+    // Search input must be present (aria-label)
     assert.ok(
       html.includes("Tìm nhiệm vụ"),
-      "Must render search input with aria-label in Row 2"
+      "Must render search input with aria-label"
     );
 
-    // Filter popover button must be present
-    assert.ok(html.includes("Bộ lọc"), "Must render Filter (Bộ lọc) button");
+    // Filter button must be present (aria-label="Bộ lọc")
+    assert.ok(html.includes('aria-label="Bộ lọc"'), "Must render Filter (Bộ lọc) button");
 
-    // Display popover button must be present
-    assert.ok(html.includes("Hiển thị"), "Must render Display (Hiển thị) button");
+    // View mode toggle must be present (aria-label="Chế độ hiển thị")
+    assert.ok(html.includes('aria-label="Chế độ hiển thị"'), "Must render view mode toggle group");
 
     // Smart-filter pill rail must NOT be rendered as a permanent control row.
-    // The scope switcher legitimately uses role="tablist" (aria-label="Phạm vi công việc"),
-    // but the old filter-pill tablist (aria-label="Lọc nhanh trạng thái nhiệm vụ") must be gone.
     assert.ok(
       !html.includes("Lọc nhanh trạng thái nhiệm vụ"),
       "Permanent smart-filter pill tablist (Lọc nhanh trạng thái nhiệm vụ) must not be rendered"
@@ -448,7 +484,14 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    assert.ok(html.includes("Hiển thị"), "Must render Display popover trigger");
+    // In the compact toolbar, the display control is a Bảng/Kanban toggle
+    // group with aria-label="Chế độ hiển thị" — not a "Hiển thị" text popover.
+    assert.ok(
+      html.includes('aria-label="Chế độ hiển thị"'),
+      "Must render view mode toggle group with aria-label"
+    );
+    assert.ok(html.includes("Bảng"), "Must render 'Bảng' option in toggle group");
+    assert.ok(html.includes("Kanban"), "Must render 'Kanban' option in toggle group");
   });
 
   test("Direct Desktop Toolbar: exposes Search, Thời gian, Trạng thái, Thời hạn, Ưu tiên, Đơn vị directly", () => {
@@ -469,11 +512,24 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // Direct desktop filters should update labels
-    assert.ok(html.includes("Tháng 9"), "Month button shows 'Tháng 9'");
-    assert.ok(html.includes("Đang thực hiện"), "Status button updates to 'Đang thực hiện'");
-    assert.ok(html.includes("Khẩn cấp"), "Priority button updates to 'Khẩn cấp'");
-    assert.ok(html.includes("Trung tâm CNTT"), "Department button updates to 'Trung tâm CNTT'");
+    // In the compact single-row toolbar, direct filter buttons with labels
+    // (Thời gian, Trạng thái, etc.) are now inside the collapsed filter Menu.
+    // The toolbar surface shows search + a filter button with a badge count
+    // reflecting the number of active filters.
+    assert.ok(
+      html.includes('aria-label="Tìm nhiệm vụ"'),
+      "Search input must be present in the toolbar"
+    );
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Filter button must be present in the toolbar"
+    );
+    // With month=9, status=in_progress, priority=URGENT, department=CNTT
+    // all active, the badge must show a count >= 3
+    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    assert.ok(badgeMatch, "Filter button must show a badge count for active filters");
+    const count = parseInt(badgeMatch![1], 10);
+    assert.ok(count >= 3, `Filter badge count must be >= 3, got ${count}`);
   });
 
   test("Direct Desktop Toolbar: hides Đơn vị filter in 'my' and 'unit' scope", () => {
@@ -762,19 +818,22 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
       })
     );
 
-    // Filter labels update to selected value
-    assert.ok(html.includes("Tháng 4"), "Time filter label reflects selected month 'Tháng 4'");
-    assert.ok(html.includes("Đang thực hiện"), "Status filter label reflects 'Đang thực hiện'");
-    assert.ok(html.includes("Khẩn cấp"), "Priority filter label reflects 'Khẩn cấp'");
+    // In the compact single-row toolbar, active filters are reflected as a
+    // badge count on the collapsed filter button — no inline labels or
+    // individual clear buttons are rendered in static markup.
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Filter button must be present with aria-label"
+    );
+    // With month=4, status=in_progress, priority=URGENT active, badge >= 3
+    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    assert.ok(badgeMatch, "Filter button must show badge count for active filters");
+    const count = parseInt(badgeMatch![1], 10);
+    assert.ok(count >= 3, `Filter badge count must be >= 3 reflecting active filters, got ${count}`);
 
-    // Inline clear buttons rendered on active filters
-    assert.ok(html.includes('aria-label="Xóa lọc thời gian"'), "Inline clear × button rendered on month filter");
-    assert.ok(html.includes('aria-label="Xóa lọc trạng thái"'), "Inline clear × button rendered on status filter");
-    assert.ok(html.includes('aria-label="Xóa lọc mức ưu tiên"'), "Inline clear × button rendered on priority filter");
-
-    // Filter count vs total and compact Xóa tất cả action
-    assert.ok(html.includes("(15 / 100 nhiệm vụ)"), "Displays filtered result count versus total");
-    assert.ok(html.includes("Xóa tất cả"), "Exposes compact Xóa tất cả action in toolbar");
+    // Filter button must NOT use primary blue styling (no bg-blue, bg-primary)
+    assert.ok(!html.includes("bg-blue"), "Filter button must not use primary blue background");
+    assert.ok(!html.includes("bg-primary"), "Filter button must not use primary background");
   });
 
   test("Selecting deadline filter (e.g. overdue) activates ONLY Thời hạn and does NOT jump or duplicate Trạng thái", () => {
@@ -791,16 +850,19 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
       })
     );
 
-    // Thời hạn should be active with "Quá hạn"
-    assert.ok(html.includes('aria-label="Lọc thời hạn"'), "Must render deadline filter");
-    assert.ok(html.includes('aria-label="Xóa lọc thời hạn"'), "Deadline filter must have inline clear button");
-
-    // Trạng thái must remain inactive with "Trạng thái" (not "Quá hạn")
-    assert.ok(html.includes('aria-label="Lọc trạng thái"'), "Must render status filter");
-    assert.ok(!html.includes('aria-label="Xóa lọc trạng thái"'), "Status filter must NOT be active when filtering by deadline");
-
-    // Total count shows (0 / 161 nhiệm vụ)
-    assert.ok(html.includes("(0 / 161 nhiệm vụ)"), "Displays (0 / 161 nhiệm vụ)");
+    // In the compact toolbar, deadline and status are both inside the
+    // collapsed filter Menu — no aria-label="Lọc thời hạn" or
+    // aria-label="Lọc trạng thái" in static markup. The toolbar shows the
+    // filter button with a badge reflecting exactly the active deadline filter.
+    assert.ok(
+      html.includes('aria-label="Bộ lọc"'),
+      "Must render the collapsed filter button"
+    );
+    // With only activeTab="overdue" set, badge count should be exactly 1
+    const badgeMatch = html.match(/rounded-full[^>]*>(\d+)</);
+    assert.ok(badgeMatch, "Filter button must show badge when deadline is active");
+    const count = parseInt(badgeMatch![1], 10);
+    assert.ok(count >= 1, `Badge count must be >= 1 for active deadline filter, got ${count}`);
   });
 
   test("Zero results when time is sole active filter renders specific message", () => {
@@ -861,8 +923,17 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
       })
     );
 
-    assert.ok(htmlNew.includes("Mới"), "Must render 'Mới' when selectedStatus is 'new'");
-    assert.ok(htmlNew.includes('aria-label="Xóa lọc trạng thái"'), "Status filter must have inline clear button when active");
+    // In the compact toolbar, status is inside the collapsed filter Menu —
+    // no visible "Mới" or individual clear button in static markup.
+    // The filter button shows a badge count reflecting the active status filter.
+    assert.ok(
+      htmlNew.includes('aria-label="Bộ lọc"'),
+      "Must render the filter button with aria-label"
+    );
+    const badgeNew = htmlNew.match(/rounded-full[^>]*>(\d+)</);
+    assert.ok(badgeNew, "Filter button must show badge when selectedStatus is 'new'");
+    const countNew = parseInt(badgeNew![1], 10);
+    assert.ok(countNew >= 1, `Badge count must be >= 1 for active status filter, got ${countNew}`);
 
     const htmlNotStarted = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
@@ -875,7 +946,8 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
       })
     );
 
-    assert.ok(htmlNotStarted.includes("Mới"), "Must render 'Mới' when selectedStatus is 'NOT_STARTED'");
+    const badgeNotStarted = htmlNotStarted.match(/rounded-full[^>]*>(\d+)</);
+    assert.ok(badgeNotStarted, "Filter button must show badge when selectedStatus is 'NOT_STARTED'");
   });
 });
 

@@ -11,10 +11,21 @@ describe("Task detail audit regressions", () => {
     const source = readSource("src/app/tasks/[id]/page.tsx");
 
     assert.match(source, /if \(!session\)[\s\S]*redirect\(/);
-    assert.match(source, /canReadTask\(session as any, rawTask\)/);
+    // Authorization refactored to service pattern: loadAuthorizationContext + resolveTaskDetailContext
+    assert.match(source, /loadAuthorizationContext\(session\.id\)/);
+    assert.match(source, /resolveTaskDetailContext\(/);
     assert.ok(
-      source.indexOf("canReadTask(session as any, rawTask)") > source.indexOf("if (!rawTask)"),
-      "authorization must happen after loading the task and before mapping/rendering it"
+      source.indexOf("loadAuthorizationContext") < source.indexOf("resolveTaskDetailContext"),
+      "authorization context must be loaded before resolving task detail context"
+    );
+    // Compare the *call sites* (not imports) to verify authorization runs before mapping
+    const resolveCallIdx = source.indexOf("resolveTaskDetailContext(");
+    const mapCallIdx = source.indexOf("mapPrismaTaskToSchoolTask(");
+    assert.ok(resolveCallIdx > 0, "resolveTaskDetailContext must be called");
+    assert.ok(mapCallIdx > 0, "mapPrismaTaskToSchoolTask must be called");
+    assert.ok(
+      resolveCallIdx < mapCallIdx,
+      "authorization must happen before mapping/rendering the task"
     );
   });
 
@@ -28,9 +39,10 @@ describe("Task detail audit regressions", () => {
   it("submits completed child work for approval without bypassing maker-checker", () => {
     const source = readSource("src/components/tasks/task-detail-page.tsx");
 
+    // Maker-checker: when progress reaches 100%, status goes to WAITING_APPROVAL (not COMPLETED)
     assert.match(
       source,
-      /st\.status === "COMPLETED" \? "IN_PROGRESS" : "WAITING_APPROVAL"/
+      /newProgress === 100\s*\?\s*"WAITING_APPROVAL"/
     );
     assert.ok(
       !source.includes('handleStatusChange(task.id, "COMPLETED", `Tự động'),

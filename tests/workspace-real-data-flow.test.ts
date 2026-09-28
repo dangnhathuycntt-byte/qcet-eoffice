@@ -212,9 +212,10 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
       );
 
       assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
-      assert.ok(htmlStaff.includes("role=\"tablist\""));
-      assert.ok(htmlStaff.includes("data-scope=\"unit\""));
-      assert.ok(htmlStaff.includes("data-scope=\"my\""));
+      // Scope switching moved from AdaptiveScopeHeader (tablist + data-scope)
+      // to UnifiedTaskToolbar — verify toolbar is rendered and default scope is set
+      assert.ok(htmlStaff.includes("data-slot=\"unified-task-toolbar\""));
+      assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
     });
   });
 
@@ -292,7 +293,6 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
       })
     );
     assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
-    assert.ok(htmlStaff.includes("role=\"tablist\""));
     assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
   });
 

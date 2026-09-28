@@ -67,7 +67,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
     );
 
     assert.ok(html.includes("data-slot=\"unified-adaptive-workspace\""));
-    assert.ok(html.includes("data-slot=\"adaptive-scope-header\""));
+    assert.ok(html.includes("data-slot=\"unified-task-toolbar\""));
     assert.ok(html.includes("data-slot=\"task-summary-strip\""));
   });
 

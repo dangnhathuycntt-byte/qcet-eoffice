@@ -1964,7 +1964,7 @@ export function UnifiedTaskToolbar({
                                   handleTimeFilterChange({ kind: "month", month: period.monthNumber });
                                 }}
                                 className={cn(
-                                  "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none",
+                                  "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none touch-manipulation",
                                   selected
                                     ? "bg-neutral-800 text-white font-semibold shadow-2xs"
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -2553,7 +2553,7 @@ export function UnifiedTaskToolbar({
               type="button"
               onClick={handleSearchClear}
               aria-label="Xóa từ khóa tìm kiếm"
-              className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+              className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer touch-manipulation"
             >
               <X className="size-3" strokeWidth={1.5} />
             </button>
@@ -2575,7 +2575,7 @@ export function UnifiedTaskToolbar({
               aria-expanded={isCollapsedFilterOpen}
               title="Bộ lọc (F)"
               className={cn(
-                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium transition-colors",
+                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium transition-colors touch-manipulation",
                 isCollapsedFilterOpen || activeFilterCount > 0
                   ? "border-border bg-accent/60 text-foreground hover:bg-accent"
                   : "border-border/80 bg-background text-foreground hover:bg-accent"
@@ -2613,7 +2613,7 @@ export function UnifiedTaskToolbar({
                   <button
                     type="button"
                     onClick={() => setMenuSearch("")}
-                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer touch-manipulation"
                   >
                     <X className="size-3" strokeWidth={1.5} />
                   </button>
@@ -2718,7 +2718,7 @@ export function UnifiedTaskToolbar({
             aria-pressed={viewMode === "table"}
             aria-label="Chế độ xem bảng"
             className={cn(
-              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none touch-manipulation",
               viewMode === "table"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -2733,7 +2733,7 @@ export function UnifiedTaskToolbar({
             aria-pressed={viewMode === "kanban"}
             aria-label="Chế độ xem Kanban"
             className={cn(
-              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none touch-manipulation",
               viewMode === "kanban"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -2757,7 +2757,7 @@ export function UnifiedTaskToolbar({
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
           aria-label="Tạo việc mới"
-          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none"
+          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none touch-manipulation"
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>

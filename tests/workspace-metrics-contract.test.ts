@@ -310,6 +310,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
       tasks: [parent],
       user: mockUser,
       scope: "school",
+      referenceDate: "2026-09-10",
     });
 
     const metrics = result.metrics as WorkspaceMetrics;

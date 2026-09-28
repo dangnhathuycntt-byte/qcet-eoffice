@@ -287,9 +287,9 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.deepEqual(filter, { id: '__DENY_ANONYMOUS__' });
     });
 
-    test('AuthenticatedUser System Admin returns unconstrained filter {}', () => {
+    test('AuthenticatedUser System Admin returns deny filter (security restriction)', () => {
       const filter = buildTaskReadWhere(adminUser);
-      assert.deepEqual(filter, {});
+      assert.deepEqual(filter, { id: '__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__' });
     });
 
     test('AuthenticatedUser Leadership returns unconstrained filter {}', () => {
@@ -298,16 +298,17 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
     });
 
     test('AuthenticatedUser Staff returns unit and direct-participation filter', () => {
-      const filter = buildTaskReadWhere(staffAUser);
+      const staffWithDept = { ...staffAUser, departmentId: deptAId };
+      const filter = buildTaskReadWhere(staffWithDept);
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
       assert.equal(conditions.length, 3);
-      assert.deepEqual(conditions[0], { assignees: { some: { userId: staffAUser.id } } });
-      assert.deepEqual(conditions[1], { actors: { some: { userId: staffAUser.id } } });
-      assert.deepEqual(conditions[2], { departmentId: deptAId });
+      assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
+      assert.deepEqual(conditions[1], { createdById: staffAUser.id });
+      assert.deepEqual(conditions[2], { leadUnitId: deptAId });
     });
 
-    test('AuthorizationContext System Admin returns unconstrained filter {}', () => {
+    test('AuthorizationContext System Admin returns deny filter (security restriction)', () => {
       const ctx = new AuthorizationContextModel({
         userId: adminUser.id,
         user: { id: adminUser.id, email: adminUser.email, name: adminUser.name, isActive: true },
@@ -320,7 +321,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         primaryUnitIds: [],
       });
       const filter = buildTaskReadWhere(ctx);
-      assert.deepEqual(filter, {});
+      assert.deepEqual(filter, { id: '__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__' });
     });
 
     test('AuthorizationContext Active Institutional Leadership returns unconstrained filter {}', () => {
@@ -421,9 +422,9 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.notDeepEqual(filter, {});
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
-      assert.deepEqual(conditions[0], { assignees: { some: { userId: staffAUser.id } } });
-      assert.deepEqual(conditions[1], { actors: { some: { userId: staffAUser.id } } });
-      assert.deepEqual(conditions[2], { departmentId: deptAId });
+      assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
+      assert.deepEqual(conditions[1], { createdById: staffAUser.id });
+      assert.deepEqual(conditions[2], { leadUnitId: deptAId });
     });
 
     test('AuthorizationContext multi-unit manager builds in filter across assigned units', () => {
@@ -442,7 +443,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       const filter = buildTaskReadWhere(ctx);
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
-      assert.deepEqual(conditions[2], { departmentId: { in: [deptAId, deptBId] } });
+      assert.deepEqual(conditions[2], { leadUnitId: { in: [deptAId, deptBId] } });
     });
   });
 
@@ -553,7 +554,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.ok(returnedIds.includes(assignedTaskId), 'Institutional Leadership must see assigned task');
     });
 
-    test('System Admin context: sees all tasks', async () => {
+    test('System Admin context: denied from operational task views (security restriction)', async () => {
       const adminContext = new AuthorizationContextModel({
         userId: adminUser.id,
         user: { id: adminUser.id, email: adminUser.email, name: adminUser.name, isActive: true },
@@ -572,10 +573,11 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
 
       const returnedIds = result.tasks.map((t) => t.id);
 
-      assert.ok(returnedIds.includes(taskAId), 'System Admin must see unit A task');
-      assert.ok(returnedIds.includes(taskBId), 'System Admin must see unit B task');
-      assert.ok(returnedIds.includes(schoolTaskId), 'System Admin must see school task');
-      assert.ok(returnedIds.includes(assignedTaskId), 'System Admin must see assigned task');
+      // System Admin gets deny filter — should NOT see operational tasks
+      assert.equal(returnedIds.includes(taskAId), false, 'System Admin must NOT see unit A task (deny filter)');
+      assert.equal(returnedIds.includes(taskBId), false, 'System Admin must NOT see unit B task (deny filter)');
+      assert.equal(returnedIds.includes(schoolTaskId), false, 'System Admin must NOT see school task (deny filter)');
+      assert.equal(returnedIds.includes(assignedTaskId), false, 'System Admin must NOT see assigned task (deny filter)');
     });
 
     test('Expired leadership assignment: drops back to staff scope in query execution', async () => {
