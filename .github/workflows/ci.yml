@@ -14,7 +14,8 @@ env:
   CI: "true"
   NODE_ENV: test
   # Port 5433 avoids conflict with the runner's local PostgreSQL on 5432
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5433/qcet_ci?schema=public"
+  # Use qcet_test directly — matches the test-guard expected DB name
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5433/qcet_test?schema=public"
 
 jobs:
   security-and-lint:
@@ -26,7 +27,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: qcet_ci
+          POSTGRES_DB: qcet_test
         ports:
           - 5433:5432
         options: >-
@@ -77,7 +78,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: qcet_ci
+          POSTGRES_DB: qcet_test
         ports:
           - 5433:5432
         options: >-
