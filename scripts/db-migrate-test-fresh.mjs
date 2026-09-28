@@ -36,7 +36,7 @@ async function run() {
     });
     console.log(deployOut.trim());
 
-    // 3. Verify created tables count (45 models + _prisma_migrations = 46)
+    // 3. Verify created tables count (46 models + _prisma_migrations = 47)
     // Phase 9 dropped: task_assignees, departments, dacum_delegations (47 → 44 + 1 prisma = 45 → 46 with _prisma_migrations)
     const tables = await prisma.$queryRawUnsafe(`
       SELECT table_name
@@ -45,8 +45,11 @@ async function run() {
       ORDER BY table_name;
     `);
     console.log(`[db:migrate:test-fresh] Created tables count: ${tables.length}`);
-    if (tables.length < 46) {
-      throw new Error(`Expected at least 46 tables in fresh schema, but found ${tables.length}`);
+    if (tables.length < 47) {
+      throw new Error(`Expected at least 47 tables in fresh schema, but found ${tables.length}`);
+    }
+    if (!tables.some((table) => table.table_name === 'file_objects')) {
+      throw new Error('Missing canonical file_objects table in fresh schema');
     }
 
     // 4. Verify check constraints
@@ -128,6 +131,7 @@ async function run() {
       '20260923000003_drop_dacum_delegation',
       '20260923000004_drop_overdue_enum',
       '20260923000005_task_actor_single_primary_dri',
+      '20260928090000_file_object_expand',
     ];
     for (const migrationName of expectedMigrations) {
       if (!migrations.some((m) => m.migration_name === migrationName && m.finished_at)) {

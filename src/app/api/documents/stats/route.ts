@@ -4,6 +4,7 @@ import { getApiContext } from "@/server/api/context";
 import { requireAuthenticated } from "@/server/api/auth";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
+import { buildDocumentReadWhere } from "@/server/policies/document-policy";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     await assertRateLimit(authUser.id, "DEFAULT_API");
 
     const now = new Date();
-    const activeFilter = { archivedAt: null };
+    // ACL: scope document counts to what the authenticated user can read
+    const aclWhere = buildDocumentReadWhere(authUser);
+    const baseFilter = { AND: [{ archivedAt: null }, aclWhere] };
 
     const [
       total,
@@ -31,39 +34,39 @@ export async function GET(request: NextRequest): Promise<Response> {
       overdue,
       linkedTasks,
     ] = await Promise.all([
-      prisma.document.count({ where: activeFilter }),
-      prisma.document.count({ where: { ...activeFilter, type: "VAN_BAN_DEN" } }),
-      prisma.document.count({ where: { ...activeFilter, type: "VAN_BAN_DI" } }),
-      prisma.document.count({ where: { ...activeFilter, type: "TO_TRINH_NOI_BO" } }),
-      prisma.document.count({ where: { ...activeFilter, status: "CHO_PHAN_CONG" } }),
+      prisma.document.count({ where: baseFilter }),
+      prisma.document.count({ where: { ...baseFilter, type: "VAN_BAN_DEN" } }),
+      prisma.document.count({ where: { ...baseFilter, type: "VAN_BAN_DI" } }),
+      prisma.document.count({ where: { ...baseFilter, type: "TO_TRINH_NOI_BO" } }),
+      prisma.document.count({ where: { ...baseFilter, status: "CHO_PHAN_CONG" } }),
       prisma.document.count({
         where: {
-          ...activeFilter,
+          ...baseFilter,
           status: { in: ["DANG_XU_LY", "CHO_PHE_DUYET"] },
         },
       }),
       prisma.document.count({
         where: {
-          ...activeFilter,
+          ...baseFilter,
           status: { in: ["DA_HOAN_THANH", "LUU_THEO_DOI"] },
         },
       }),
       prisma.document.count({
         where: {
-          ...activeFilter,
+          ...baseFilter,
           urgency: { in: ["KHAN", "THUONG_KHAN", "HOA_TOC"] },
         },
       }),
       prisma.document.count({
         where: {
-          ...activeFilter,
+          ...baseFilter,
           dueDate: { lt: now },
           status: { notIn: ["DA_HOAN_THANH", "LUU_THEO_DOI"] },
         },
       }),
       prisma.document.count({
         where: {
-          ...activeFilter,
+          ...baseFilter,
           linkedTaskId: { not: null },
         },
       }),

@@ -28,6 +28,9 @@ export async function POST(request: NextRequest, context: ActionRouteContext) {
       { requestId }
     );
   } catch (error) {
-    return handleActionError(error, requestId);
+    return handleActionError(error, requestId, {
+      rfc9457: true,
+      instance: request.nextUrl.pathname,
+    });
   }
 }

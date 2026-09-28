@@ -28,6 +28,7 @@ export interface DeliverableSubmissionPayload {
 export interface ApprovalActionPayload {
   taskId: string;
   decision: ApprovalDecision;
+  expectedVersion?: number;
   comment?: string;
   reviewedByRole: UserRole;
   reviewedByName: string;
@@ -194,4 +195,3 @@ export interface GroupedParentTaskView {
   userSubTasks: StaffTask[];
   allSubTasks: StaffTask[];
 }
-

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getFileObjectIdFromUrl } from '@/lib/services/file-service';
 import {
   TaskScope,
   TaskStatus,
@@ -10,6 +11,7 @@ import {
   DocumentType,
   IncomingDocumentStatus,
   OutgoingDocumentStatus,
+  ApprovalProcessStatus,
   Prisma,
 } from '@prisma/client';
 // Phase 9: AssigneeRole removed — TaskAssignee table dropped. TaskActor is sole authority.
@@ -26,7 +28,11 @@ import {
   AuditAction,
   AuditEntityType,
 } from '@/lib/db/audit';
-import { publishOutboxEvent, OutboxAggregateType } from '@/lib/db/outbox';
+import {
+  publishOutboxEvent,
+  publishTaskCompletedEvent,
+  OutboxAggregateType,
+} from '@/lib/db/outbox';
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
 import { getAcademicYear, getSystemReferenceDate, getCurrentAcademicPeriod } from '@/lib/academic-calendar';
@@ -114,7 +120,7 @@ export interface ReviewDeliverableInput {
   deliverableId: string;
   reviewStatus: 'APPROVED' | 'REJECTED' | 'REVISION_REQUIRED' | string;
   reviewNote?: string | null;
-  expectedVersion?: number;
+  expectedVersion: number;
 }
 
 export interface ArchiveTaskInput {
@@ -1192,119 +1198,25 @@ export class TaskCommandService {
         });
       }
 
+      if (
+        existing.status !== TaskStatus.COMPLETED &&
+        updatedTask.status === TaskStatus.COMPLETED &&
+        updatedTask.completedAt
+      ) {
+        await publishTaskCompletedEvent(tx, {
+          taskId,
+          actorId: user.id,
+          taskVersion: updatedTask.version,
+          completedAt: updatedTask.completedAt,
+        });
+      }
+
       // 5. Tự động tính toán lại tiến độ tổng hợp cho nhiệm vụ cha (REQ-4)
       if (updatedTask.parentTaskId) {
         await recalculateParentTaskProgress(tx, updatedTask.parentTaskId, user.id, requestId);
       }
       if (existing.parentTaskId && existing.parentTaskId !== updatedTask.parentTaskId) {
         await recalculateParentTaskProgress(tx, existing.parentTaskId, user.id, requestId);
-      }
-
-      // 6. Hook đồng bộ hai chiều: khi Task chuyển sang COMPLETED -> tự động giải quyết Document nếu có linked document
-      if (scalarUpdateData.status === TaskStatus.COMPLETED) {
-        const linkedDoc = await tx.document.findFirst({
-          where: { linkedTaskId: taskId },
-          include: {
-            incomingWorkflow: { select: { id: true, status: true } },
-            outgoingWorkflow: { select: { id: true, status: true } },
-          },
-        });
-        if (linkedDoc?.incomingWorkflow && linkedDoc.type !== DocumentType.VAN_BAN_DI) {
-          const wf = linkedDoc.incomingWorkflow;
-          const resolvable: (string | IncomingDocumentStatus)[] = [
-            IncomingDocumentStatus.UNIT_ASSIGNED_PERSON,
-            IncomingDocumentStatus.IN_PROGRESS,
-            IncomingDocumentStatus.DIRECTED,
-            IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT,
-            IncomingDocumentStatus.RECEIVED,
-            IncomingDocumentStatus.REGISTERED,
-            IncomingDocumentStatus.PRESENTED,
-          ];
-          if (resolvable.includes(wf.status)) {
-            await tx.documentIncomingWorkflow.update({
-              where: { id: wf.id },
-              data: {
-                status: IncomingDocumentStatus.RESOLVED,
-                resolvedAt: new Date(),
-                resolvedById: user.id,
-                resolutionSummary: `Tự động giải quyết khi Nhiệm vụ ${taskId} hoàn thành`,
-              },
-            });
-            await tx.document.update({
-              where: { id: linkedDoc.id },
-              data: { status: DocumentStatus.DA_HOAN_THANH },
-            });
-
-            await logAuditEvent(tx, {
-              actorId: user.id,
-              action: AuditAction.TASK_COMPLETED_DOCUMENT_RESOLVED,
-              entityType: AuditEntityType.DOCUMENT,
-              entityId: linkedDoc.id,
-              requestId,
-              beforeData: {
-                documentStatus: linkedDoc.status,
-                workflowStatus: wf.status,
-              },
-              afterData: {
-                documentStatus: DocumentStatus.DA_HOAN_THANH,
-                workflowStatus: IncomingDocumentStatus.RESOLVED,
-              },
-              metadata: {
-                taskId,
-                triggerReason: `Tự động giải quyết khi Nhiệm vụ ${taskId} hoàn thành`,
-              },
-            });
-          }
-        } else if (linkedDoc?.outgoingWorkflow || (linkedDoc?.type === DocumentType.VAN_BAN_DI && linkedDoc.outgoingWorkflow)) {
-          const outWf = linkedDoc.outgoingWorkflow;
-          if (outWf) {
-            const resolvableOutgoing: (string | OutgoingDocumentStatus)[] = [
-              OutgoingDocumentStatus.DRAFT,
-              OutgoingDocumentStatus.CONTENT_REVIEW,
-              OutgoingDocumentStatus.FORMAT_CHECK,
-              OutgoingDocumentStatus.AUTHORIZED_SIGN,
-              OutgoingDocumentStatus.NUMBERED,
-              OutgoingDocumentStatus.ORGANIZATION_SIGNED,
-              'DEPARTMENT_REVIEW',
-              'LEGAL_REVIEW',
-              'EXECUTIVE_REVIEW',
-            ];
-            if (resolvableOutgoing.includes(outWf.status)) {
-              await tx.documentOutgoingWorkflow.update({
-                where: { id: outWf.id },
-                data: {
-                  status: OutgoingDocumentStatus.ISSUED,
-                  issuedAt: new Date(),
-                  issuerId: user.id,
-                },
-              });
-              await tx.document.update({
-                where: { id: linkedDoc.id },
-                data: { status: DocumentStatus.DA_HOAN_THANH },
-              });
-
-              await logAuditEvent(tx, {
-                actorId: user.id,
-                action: AuditAction.TASK_COMPLETED_DOCUMENT_RESOLVED,
-                entityType: AuditEntityType.DOCUMENT,
-                entityId: linkedDoc.id,
-                requestId,
-                beforeData: {
-                  documentStatus: linkedDoc.status,
-                  workflowStatus: outWf.status,
-                },
-                afterData: {
-                  documentStatus: DocumentStatus.DA_HOAN_THANH,
-                  workflowStatus: OutgoingDocumentStatus.ISSUED,
-                },
-                metadata: {
-                  taskId,
-                  triggerReason: `Tự động giải quyết văn bản đi khi Nhiệm vụ ${taskId} hoàn thành`,
-                },
-              });
-            }
-          }
-        }
       }
 
       return updatedTask;
@@ -1597,6 +1509,7 @@ export class TaskCommandService {
           taskId,
           title,
           fileUrl,
+          fileObjectId: getFileObjectIdFromUrl(fileUrl),
           fileType: fileType || 'LINK',
           fileSize: typeof fileSize === 'number' ? fileSize : null,
           uploadedById,
@@ -1672,7 +1585,7 @@ export class TaskCommandService {
       throw new ValidationError('Dữ liệu duyệt minh chứng không hợp lệ', fieldErrors);
     }
 
-    const { deliverableId, reviewStatus, reviewNote } = input;
+    const { deliverableId, reviewStatus, reviewNote, expectedVersion } = input;
 
     const deliverable = await prisma.taskDeliverable.findUnique({
       where: { id: deliverableId },
@@ -1709,10 +1622,11 @@ export class TaskCommandService {
         ? DeliverableReviewStatus.REVISION_REQUIRED
         : DeliverableReviewStatus.PENDING;
 
-    const expectedVersion =
-      input.expectedVersion !== undefined && input.expectedVersion !== null
-        ? Number(input.expectedVersion)
-        : undefined;
+    if (deliverable.task.status === TaskStatus.COMPLETED || deliverable.task.status === TaskStatus.CANCELLED) {
+      throw new PreconditionFailedError(
+        `Cannot review a deliverable for a ${deliverable.task.status.toLowerCase()} task`
+      );
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Determine task update & atomic OCC check
@@ -1729,7 +1643,19 @@ export class TaskCommandService {
           (d) => d.id === deliverableId || d.reviewStatus === DeliverableReviewStatus.APPROVED
         );
 
-        if (allApproved) {
+        const activeApprovalProcess = allApproved
+          ? await tx.taskApprovalProcess.findFirst({
+              where: {
+                taskId,
+                status: {
+                  in: [ApprovalProcessStatus.NOT_STARTED, ApprovalProcessStatus.IN_REVIEW],
+                },
+              },
+              select: { id: true },
+            })
+          : null;
+
+        if (allApproved && !activeApprovalProcess) {
           taskUpdateData.status = TaskStatus.COMPLETED;
           taskUpdateData.progressPercent = 100;
           taskUpdateData.completedAt = new Date();
@@ -1740,21 +1666,14 @@ export class TaskCommandService {
         taskUpdateData.completedAt = null;
       }
 
-      if (expectedVersion !== undefined) {
-        const updateResult = await tx.task.updateMany({
-          where: { id: taskId, version: expectedVersion },
-          data: taskUpdateData,
-        });
-        if (updateResult.count === 0) {
-          throw new PreconditionFailedError(
-            `Task aggregate version conflict: expected version ${expectedVersion}`
-          );
-        }
-      } else {
-        await tx.task.updateMany({
-          where: { id: taskId },
-          data: taskUpdateData,
-        });
+      const updateResult = await tx.task.updateMany({
+        where: { id: taskId, version: expectedVersion },
+        data: taskUpdateData,
+      });
+      if (updateResult.count === 0) {
+        throw new PreconditionFailedError(
+          `Task aggregate version conflict: expected version ${expectedVersion}`
+        );
       }
 
       const updatedDeliverable = await tx.taskDeliverable.update({
@@ -1810,6 +1729,23 @@ export class TaskCommandService {
           beforeData: { status: deliverable.task.status },
           afterData: { status: TaskStatus.IN_PROGRESS },
           metadata: { deliverableId, reviewNote: reviewNote || null },
+        });
+      }
+
+      if (
+        validStatus === DeliverableReviewStatus.APPROVED &&
+        taskUpdateData.status === TaskStatus.COMPLETED &&
+        deliverable.task.status !== TaskStatus.COMPLETED
+      ) {
+        const completedTask = await tx.task.findUniqueOrThrow({
+          where: { id: taskId },
+          select: { version: true, completedAt: true },
+        });
+        await publishTaskCompletedEvent(tx, {
+          taskId,
+          actorId: user.id,
+          taskVersion: completedTask.version,
+          completedAt: completedTask.completedAt ?? new Date(),
         });
       }
 

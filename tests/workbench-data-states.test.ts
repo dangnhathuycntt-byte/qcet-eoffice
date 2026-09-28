@@ -117,7 +117,7 @@ const ACTIONS_VALUE: DashboardActionsContextValue = {
   setSelectedPriority: noop as DashboardActionsContextValue["setSelectedPriority"],
   setSelectedCategory: noop as DashboardActionsContextValue["setSelectedCategory"],
   handleResetFilters: noop,
-  handleStatusChange: noop,
+  handleStatusChange: async () => false,
   handleSubmitDeliverable: async () => {},
   handleReviewAction: async () => {},
   handleCreateTask: noop,

@@ -9,6 +9,7 @@ import {
   UserRole,
   TaskScope,
 } from "@prisma/client";
+import { OutboxEventType } from "../src/lib/db/outbox";
 import {
   taskStateMachine,
   buildActorContext,
@@ -21,13 +22,11 @@ import { POST as startRoute } from "../src/app/api/tasks/[id]/actions/start/rout
 
 describe("Task Status Transition Flow & Command Separation Test Suite", () => {
   let dept: any;
-  let adminUser: any;
   let bghUser: any;
   let managerUser: any;
   let staffUser: any;
   let makerUser: any;
 
-  let adminToken: string;
   let bghToken: string;
   let managerToken: string;
   let staffToken: string;
@@ -35,6 +34,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
 
   const createdTaskIds: string[] = [];
   const createdUserIds: string[] = [];
+  const createdPositionDefinitionIds: string[] = [];
 
   function makeRequest(
     url: string,
@@ -73,25 +73,6 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     }
 
     // 2. Create users
-    adminUser = await prisma.user.create({
-      data: {
-        id: `u_admin_${timestamp}`,
-        email: `admin_${timestamp}@qcet.edu.vn`,
-        name: "Quản trị viên Hệ thống",
-        role: UserRole.ADMIN,
-        passwordHash: "hashed_password",
-
-      },
-    });
-    createdUserIds.push(adminUser.id);
-    adminToken = await signSessionToken({
-      id: adminUser.id,
-      email: adminUser.email,
-      name: adminUser.name,
-      role: adminUser.role,
-
-    });
-
     bghUser = await prisma.user.create({
       data: {
         id: `u_bgh_${timestamp}`,
@@ -166,6 +147,55 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       role: makerUser.role,
 
     });
+
+    let managerPosition = await prisma.positionDefinition.findUnique({
+      where: { code: "TRUONG_PHONG" },
+    });
+    if (!managerPosition) {
+      managerPosition = await prisma.positionDefinition.create({
+        data: {
+          code: "TRUONG_PHONG",
+          title: "Trưởng phòng kiểm thử luồng Task",
+          group: "LDPU",
+          isLeadership: true,
+        },
+      });
+      createdPositionDefinitionIds.push(managerPosition.id);
+    }
+
+    let executivePosition = await prisma.positionDefinition.findUnique({
+      where: { code: "HIEU_TRUONG" },
+    });
+    if (!executivePosition) {
+      executivePosition = await prisma.positionDefinition.create({
+        data: {
+          code: "HIEU_TRUONG",
+          title: "Hiệu trưởng kiểm thử luồng Task",
+          group: "LDPU",
+          isLeadership: true,
+        },
+      });
+      createdPositionDefinitionIds.push(executivePosition.id);
+    }
+
+    const staffPosition = await prisma.positionDefinition.create({
+      data: {
+        code: `CV_TASK_FLOW_${timestamp}`,
+        title: "Chuyên viên kiểm thử luồng Task",
+        group: "VCDC",
+        isLeadership: false,
+      },
+    });
+    createdPositionDefinitionIds.push(staffPosition.id);
+
+    await prisma.positionAssignment.createMany({
+      data: [
+        { userId: bghUser.id, positionDefinitionId: executivePosition.id, unitId: dept.id, type: "PRIMARY", status: "ACTIVE" },
+        { userId: managerUser.id, positionDefinitionId: managerPosition.id, unitId: dept.id, type: "PRIMARY", status: "ACTIVE" },
+        { userId: staffUser.id, positionDefinitionId: staffPosition.id, unitId: dept.id, type: "PRIMARY", status: "ACTIVE" },
+        { userId: makerUser.id, positionDefinitionId: staffPosition.id, unitId: dept.id, type: "PRIMARY", status: "ACTIVE" },
+      ],
+    });
   });
 
   after(async () => {
@@ -196,6 +226,11 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         where: { id: { in: createdUserIds } },
       });
     }
+    if (createdPositionDefinitionIds.length > 0) {
+      await prisma.positionDefinition.deleteMany({
+        where: { id: { in: createdPositionDefinitionIds } },
+      });
+    }
   });
 
   // ==========================================================================
@@ -205,7 +240,8 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     const sampleTask = {
       id: "task_domain_test",
       scope: "DEPARTMENT",
-      createdById: "u_mgr_1",
+      departmentId: "dept_1",
+      createdById: "u_creator_1",
 
       primaryOwnerId: "u_maker_1",
       assigneeIds: ["u_maker_1"],
@@ -317,7 +353,9 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
           status: TaskStatus.COMPLETED,
           scope: TaskScope.DEPARTMENT,
           progressPercent: 100,
-          createdById: managerUser.id,
+          completedAt: new Date(),
+          leadUnitId: dept.id,
+          createdById: bghUser.id,
 
           academicMonth: 9,
           academicYear: "2026-2027",
@@ -326,6 +364,14 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
         },
       });
       createdTaskIds.push(completedTask.id);
+      await prisma.taskActor.create({
+        data: {
+          taskId: completedTask.id,
+          userId: staffUser.id,
+          role: "DRI" as any,
+          isPrimaryDRI: true,
+        },
+      });
     });
 
     it("submitResult on COMPLETED task rejects with 'Không thể nộp kết quả cho nhiệm vụ đã hoàn thành'", async () => {
@@ -347,7 +393,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       const req = makeRequest(
         `http://localhost:3000/api/tasks/${completedTask.id}/actions/update-status`,
         { status: "WAITING_APPROVAL", note: "Thử đổi sang Chờ duyệt" },
-        adminToken
+        bghToken
       );
       const res = await updateStatusRoute(req, {
         params: Promise.resolve({ id: completedTask.id }),
@@ -356,7 +402,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
 
       assert.strictEqual(res.status, 409);
       assert.strictEqual(data.code, "TERMINAL_STATE_LOCKED");
-      assert.doesNotMatch(data.error, /nộp kết quả/);
+      assert.doesNotMatch(data.detail, /nộp kết quả/);
     });
 
     it("Executive successfully reopens COMPLETED task -> IN_PROGRESS via updateStatus", async () => {
@@ -395,8 +441,9 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
           title: "Nhiệm vụ chu trình vòng đời",
           status: TaskStatus.NOT_STARTED,
           scope: TaskScope.DEPARTMENT,
+          leadUnitId: dept.id,
           progressPercent: 0,
-          createdById: managerUser.id,
+          createdById: bghUser.id,
 
           academicMonth: 9,
           academicYear: "2026-2027",
@@ -420,7 +467,7 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       const req = makeRequest(
         `http://localhost:3000/api/tasks/${lifecycleTask.id}/actions/update-status`,
         { status: "IN_PROGRESS", note: "Bắt đầu thực hiện" },
-        staffToken
+        makerToken
       );
       const res = await updateStatusRoute(req, {
         params: Promise.resolve({ id: lifecycleTask.id }),
@@ -458,9 +505,17 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     });
 
     it("Step 3: Maker (DRI) cannot self-approve WAITING_APPROVAL -> COMPLETED", async () => {
+      const taskBeforeApproval = await prisma.task.findUnique({
+        where: { id: lifecycleTask.id },
+        select: { version: true },
+      });
       const req = makeRequest(
         `http://localhost:3000/api/tasks/${lifecycleTask.id}/actions/update-status`,
-        { status: "COMPLETED", note: "Tự phê duyệt" },
+        {
+          status: "COMPLETED",
+          note: "Tự phê duyệt",
+          expectedVersion: taskBeforeApproval?.version,
+        },
         makerToken
       );
       const res = await updateStatusRoute(req, {
@@ -473,9 +528,17 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
     });
 
     it("Step 4: Unit Head approves WAITING_APPROVAL -> COMPLETED", async () => {
+      const taskBeforeApproval = await prisma.task.findUnique({
+        where: { id: lifecycleTask.id },
+        select: { version: true },
+      });
       const req = makeRequest(
         `http://localhost:3000/api/tasks/${lifecycleTask.id}/actions/update-status`,
-        { status: "COMPLETED", note: "Trưởng phòng nghiệm thu hoàn thành" },
+        {
+          status: "COMPLETED",
+          note: "Trưởng phòng nghiệm thu hoàn thành",
+          expectedVersion: taskBeforeApproval?.version,
+        },
         managerToken
       );
       const res = await updateStatusRoute(req, {
@@ -490,13 +553,26 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
       const dbTask = await prisma.task.findUnique({ where: { id: lifecycleTask.id } });
       assert.strictEqual(dbTask?.status, TaskStatus.COMPLETED);
       assert.notStrictEqual(dbTask?.completedAt, null);
+      const completionSignal = await prisma.outboxEvent.findFirst({
+        where: {
+          aggregateId: lifecycleTask.id,
+          eventType: OutboxEventType.TASK_COMPLETED,
+        },
+      });
+      assert.ok(completionSignal, "update-status must publish the canonical completion signal");
+      assert.deepEqual(completionSignal.payload, {
+        taskId: lifecycleTask.id,
+        actorId: managerUser.id,
+        taskVersion: dbTask!.version,
+        completedAt: dbTask!.completedAt!.toISOString(),
+      });
     });
 
     it("Step 5: OCC Concurrency - Rejects update when expectedVersion does not match", async () => {
       const req = makeRequest(
         `http://localhost:3000/api/tasks/${lifecycleTask.id}/actions/update-status`,
         { status: "IN_PROGRESS", expectedVersion: 999 },
-        bghToken
+        managerToken
       );
       const res = await updateStatusRoute(req, {
         params: Promise.resolve({ id: lifecycleTask.id }),
@@ -505,6 +581,9 @@ describe("Task Status Transition Flow & Command Separation Test Suite", () => {
 
       assert.strictEqual(res.status, 412);
       assert.strictEqual(data.code, "PRECONDITION_FAILED");
+      assert.strictEqual(data.status, 412);
+      assert.match(res.headers.get("content-type") || "", /application\/problem\+json/);
+      assert.strictEqual(data.instance, `/api/tasks/${lifecycleTask.id}/actions/update-status`);
     });
   });
 });

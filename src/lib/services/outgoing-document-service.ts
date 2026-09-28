@@ -20,6 +20,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 import type { Prisma, Document, DocumentOutgoingWorkflow, SignatureRecord } from "@prisma/client";
 import {
   OutgoingDocumentStatus,
@@ -249,6 +250,7 @@ export class OutgoingDocumentService {
             documentId: document.id,
             fileName: input.fileName || "Dự thảo văn bản đi",
             fileUrl: input.fileUrl,
+            fileObjectId: getFileObjectIdFromUrl(input.fileUrl),
             fileSize: input.fileSize || 0,
             mimeType: input.fileType || "application/pdf",
           },
@@ -928,12 +930,59 @@ export class OutgoingDocumentService {
 
     await assertAuthorized(user, "document.outgoing.assign_number", resource);
 
+    // A retry for an already-numbered document returns the original assignment. Do this
+    // after authorization so callers cannot use an idempotent response to inspect a
+    // document they are no longer allowed to access.
+    if (existing.outgoingNumber !== null && existing.outgoingNumberStr) {
+      return existing;
+    }
+
+    if (existing.status !== OutgoingDocumentStatus.AUTHORIZED_SIGN) {
+      throw new InvalidTransitionError(
+        "Chỉ được cấp số cho văn bản đã ký có thẩm quyền và chưa được cấp số."
+      );
+    }
+
     const now = new Date();
     const documentYear = now.getFullYear();
 
     return prisma.$transaction(async (tx) => {
-      // Atomic sequential counter for VAN_BAN_DI in current year (race-free)
-      const allocatedNumber = await getNextRegistrationNumber(DocumentType.VAN_BAN_DI, documentYear, tx);
+      // Claim the transition before allocating a number. The conditional update locks
+      // this workflow row, so concurrent retries for the same document cannot consume
+      // multiple values from the shared sequence.
+      const claim = await tx.documentOutgoingWorkflow.updateMany({
+        where: {
+          documentId: input.documentId,
+          status: OutgoingDocumentStatus.AUTHORIZED_SIGN,
+          authorizedSignedAt: { not: null },
+        },
+        data: {
+          status: OutgoingDocumentStatus.NUMBERED,
+          numberedAt: now,
+          numbererId: user.id,
+        },
+      });
+
+      if (claim.count !== 1) {
+        const current = await tx.documentOutgoingWorkflow.findUnique({
+          where: { documentId: input.documentId },
+          include: { document: true },
+        });
+        if (current?.outgoingNumber !== null && current?.outgoingNumberStr) {
+          return current;
+        }
+        throw new InvalidTransitionError(
+          "Văn bản đã thay đổi trạng thái trước khi cấp số; hãy tải lại dữ liệu."
+        );
+      }
+
+      // Atomic sequential counter for VAN_BAN_DI in current year (race-free).
+      // It runs in the same transaction as the claim and both document updates.
+      const allocatedNumber = await getNextRegistrationNumber(
+        DocumentType.VAN_BAN_DI,
+        documentYear,
+        tx
+      );
 
       const notation = input.codeNotation || "QĐ-CĐKTCNQN";
       const outgoingNumberStr = input.outgoingNumberStr || `${allocatedNumber}/${notation}`;
@@ -1315,6 +1364,7 @@ export class OutgoingDocumentService {
             documentId: input.documentId,
             fileName: input.fileName || `Văn bản đi phiên bản ${newVersion}`,
             fileUrl: input.fileUrl,
+            fileObjectId: getFileObjectIdFromUrl(input.fileUrl),
             fileSize: input.fileSize || 0,
             mimeType: "application/pdf",
           },
@@ -1466,11 +1516,11 @@ export class OutgoingDocumentService {
 
   /**
    * 12. FILE / ARCHIVE OUTGOING DOCUMENT (Lưu trữ hồ sơ văn bản đi)
-   * Transition: ISSUED | DELIVERED -> FILED | ARCHIVED
+   * Transition: ISSUED | DELIVERED -> FILED. Archival is handled by WorkDossier.
    * Synchronizes Document.status -> LUU_THEO_DOI under ADR-004.
    */
   static async fileOutgoingDocument(
-    input: { documentId: string; archiveNow?: boolean; filingNotes?: string },
+    input: { documentId: string; filingNotes?: string },
     actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
     context?: { requestId?: string }
   ) {
@@ -1486,9 +1536,7 @@ export class OutgoingDocumentService {
       throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
     }
 
-    const targetStatus = input.archiveNow
-      ? OutgoingDocumentStatus.ARCHIVED
-      : OutgoingDocumentStatus.FILED;
+    const targetStatus = OutgoingDocumentStatus.FILED;
 
     OutgoingDocumentStateMachine.assertTransition(
       existing.status,
@@ -1514,7 +1562,6 @@ export class OutgoingDocumentService {
           status: targetStatus,
           filedAt: now,
           filedById: user.id,
-          ...(input.archiveNow ? { archivedAt: now, archivedById: user.id } : {}),
         },
       });
 
@@ -1523,7 +1570,6 @@ export class OutgoingDocumentService {
         data: {
           status: mapOutgoingWorkflowStatusToDocumentStatus(targetStatus),
           archiveReason: input.filingNotes,
-          ...(input.archiveNow ? { archivedAt: now, archivedById: user.id } : {}),
         },
       });
 

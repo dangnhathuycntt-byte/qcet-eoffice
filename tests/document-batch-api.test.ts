@@ -362,7 +362,7 @@ describe("Document Batch Operations API (NĐ 30/2020)", () => {
     assert.equal(dossierItems.length, 2, "Dossier must contain 2 items linked to documents");
   });
 
-  test("Batch Action 4: ARCHIVE_DOCUMENTS archives documents", async () => {
+  test("Batch API rejects direct ARCHIVE_DOCUMENTS operations", async () => {
     const doc1 = await createTestDocument();
 
     const req = new NextRequest("http://localhost:3000/api/documents/batch", {
@@ -383,18 +383,16 @@ describe("Document Batch Operations API (NĐ 30/2020)", () => {
     const res = await batchRoute(req);
     const body = await res.json();
 
-    assert.equal(res.status, 200);
-    assert.equal(body.success, true);
-    assert.equal(body.data.action, "ARCHIVE_DOCUMENTS");
-    assert.equal(body.data.successCount, 1);
+    assert.equal(res.status, 400);
+    assert.equal(body.success, false);
 
     const updatedDoc = await prisma.document.findUnique({
       where: { id: doc1.id },
       include: { incomingWorkflow: true },
     });
-    assert.equal(updatedDoc?.status, DocumentStatus.LUU_THEO_DOI);
-    assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.ARCHIVED);
-    assert.ok(updatedDoc?.archivedAt, "archivedAt must be set");
+    assert.equal(updatedDoc?.status, DocumentStatus.CHO_PHAN_CONG);
+    assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.REGISTERED);
+    assert.equal(updatedDoc?.archivedAt, null);
   });
 
   test("Handling non-existent document IDs gracefully with detailed failure reports", async () => {

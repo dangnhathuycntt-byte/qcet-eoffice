@@ -162,6 +162,7 @@ const TASK_INCLUDE = {
       issuingAuthority: true,
       registrationNumber: true,
       documentYear: true,
+      status: true,
     },
   },
   parentTask: {
@@ -1304,6 +1305,7 @@ export class TaskQueryService {
             issuingAuthority: true,
             registrationNumber: true,
             documentYear: true,
+            status: true,
           },
         },
         parentTask: {

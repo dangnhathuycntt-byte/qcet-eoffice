@@ -135,6 +135,10 @@ const defaultInclude = {
     select: {
       id: true,
       code: true,
+      title: true,
+      status: true,
+      progressPercent: true,
+      dueDate: true,
       leadUnit: { select: { id: true, name: true, code: true } },
     },
   },
@@ -227,6 +231,20 @@ export function mapPrismaDocumentToItem(record: any): DocumentItem {
     outgoingWorkflow: record.outgoingWorkflow || null,
     signatures: record.signatures || [],
     linkedTaskId: record.linkedTaskId || null,
+    linkedTask: record.linkedTask
+      ? {
+          id: record.linkedTask.id,
+          code: record.linkedTask.code,
+          title: record.linkedTask.title,
+          status: record.linkedTask.status,
+          progressPercent: record.linkedTask.progressPercent,
+          dueDate: record.linkedTask.dueDate
+            ? record.linkedTask.dueDate instanceof Date
+              ? record.linkedTask.dueDate.toISOString()
+              : String(record.linkedTask.dueDate)
+            : null,
+        }
+      : null,
     createdAt:
       record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt ? String(record.createdAt) : undefined,
     updatedAt:

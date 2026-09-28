@@ -24,8 +24,11 @@ import {
   DELETE as removeItemRoute,
 } from "../src/app/api/dossiers/[id]/items/route";
 import { POST as closeDossierRoute } from "../src/app/api/dossiers/[id]/actions/close/route";
+import { POST as markReadyForArchiveRoute } from "../src/app/api/dossiers/[id]/actions/mark-ready-for-archive/route";
 import { POST as submitArchiveRoute } from "../src/app/api/dossiers/[id]/actions/submit-archive/route";
 import { POST as acceptArchiveRoute } from "../src/app/api/dossiers/[id]/actions/accept-archive/route";
+import { POST as finalizeArchiveRoute } from "../src/app/api/dossiers/[id]/actions/finalize-archive/route";
+import { POST as rejectArchiveRoute } from "../src/app/api/dossiers/[id]/actions/reject-archive/route";
 
 describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công việc & Lưu trữ cơ quan)", () => {
   const testRunId = `dos_${Date.now()}`;
@@ -794,6 +797,27 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       assert.equal(data.status, DossierStatus.CLOSED);
     });
 
+    it("POST /api/dossiers/[id]/actions/mark-ready-for-archive prepares dossier via HTTP", async () => {
+      const req = new NextRequest(
+        `http://localhost:3000/api/dossiers/${apiDossierId}/actions/mark-ready-for-archive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${specialistToken}`,
+          },
+          body: JSON.stringify({ notes: "Đã kiểm tra mục lục trước khi nộp lưu" }),
+        }
+      );
+
+      const res = await markReadyForArchiveRoute(req, {
+        params: Promise.resolve({ id: apiDossierId }),
+      });
+      const data = await res.json();
+      assert.equal(res.status, 200);
+      assert.equal(data.status, DossierStatus.READY_FOR_ARCHIVE);
+    });
+
     it("POST /api/dossiers/[id]/actions/submit-archive submits dossier via HTTP", async () => {
       const req = new NextRequest(
         `http://localhost:3000/api/dossiers/${apiDossierId}/actions/submit-archive`,
@@ -816,6 +840,43 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       assert.equal(data.status, DossierStatus.SUBMITTED_TO_ARCHIVE);
     });
 
+    it("POST /api/dossiers/[id]/actions/reject-archive returns dossier for correction", async () => {
+      const req = new NextRequest(
+        `http://localhost:3000/api/dossiers/${apiDossierId}/actions/reject-archive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${archivistToken}`,
+          },
+          body: JSON.stringify({ returnReason: "Thiếu biên bản bàn giao có chữ ký" }),
+        }
+      );
+
+      const res = await rejectArchiveRoute(req, {
+        params: Promise.resolve({ id: apiDossierId }),
+      });
+      const data = await res.json();
+      assert.equal(res.status, 200);
+      assert.equal(data.status, DossierStatus.READY_FOR_ARCHIVE);
+
+      const resubmission = new NextRequest(
+        `http://localhost:3000/api/dossiers/${apiDossierId}/actions/submit-archive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${specialistToken}`,
+          },
+          body: JSON.stringify({ notes: "Đã bổ sung biên bản bàn giao" }),
+        }
+      );
+      const submittedAgain = await submitArchiveRoute(resubmission, {
+        params: Promise.resolve({ id: apiDossierId }),
+      });
+      assert.equal(submittedAgain.status, 200);
+    });
+
     it("POST /api/dossiers/[id]/actions/accept-archive rejects submitter with 403 (SoD)", async () => {
       const req = new NextRequest(
         `http://localhost:3000/api/dossiers/${apiDossierId}/actions/accept-archive`,
@@ -835,7 +896,8 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       const data = await res.json();
 
       assert.equal(res.status, 403);
-      assert.ok(data.error.includes("SoD") || data.error.includes("Người nộp lưu"));
+      assert.match(res.headers.get("content-type") || "", /application\/problem\+json/);
+      assert.ok(data.detail.includes("SoD") || data.detail.includes("Người nộp lưu"));
     });
 
     it("POST /api/dossiers/[id]/actions/accept-archive accepts dossier by Archivist via HTTP", async () => {
@@ -850,6 +912,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
           body: JSON.stringify({
             storageLocation: "Kho số 2, Kệ A1",
             notes: "Tiếp nhận qua HTTP API",
+            status: DossierStatus.ACCEPTED,
           }),
         }
       );
@@ -857,6 +920,28 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
       const res = await acceptArchiveRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
+      assert.equal(res.status, 200);
+      assert.equal(data.status, DossierStatus.ACCEPTED);
+      assert.equal(data.archivedById, null);
+    });
+
+    it("POST /api/dossiers/[id]/actions/finalize-archive completes the archival handoff", async () => {
+      const req = new NextRequest(
+        `http://localhost:3000/api/dossiers/${apiDossierId}/actions/finalize-archive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${archivistToken}`,
+          },
+          body: JSON.stringify({ storageLocation: "Kho số 2, Kệ A1, Hộp 07" }),
+        }
+      );
+
+      const res = await finalizeArchiveRoute(req, {
+        params: Promise.resolve({ id: apiDossierId }),
+      });
+      const data = await res.json();
       assert.equal(res.status, 200);
       assert.equal(data.status, DossierStatus.ARCHIVED);
       assert.equal(data.archivedById, archivistUser.id);

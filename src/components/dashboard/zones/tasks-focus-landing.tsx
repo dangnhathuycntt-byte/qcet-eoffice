@@ -60,7 +60,9 @@ function TasksFocusLandingComponent() {
           onSelectTask={(task) => openTaskDetail(task)}
           onReview={handleReviewAction}
           onSubmitDeliverable={handleSubmitDeliverable}
-          onStatusChange={handleStatusChange}
+          onStatusChange={async (taskId, status, note) => {
+            await handleStatusChange(taskId, status, note);
+          }}
           onCreateTask={(scope) => openCreateModal(scope === "school" ? "TRUONG" : "DON_VI")}
           onRefresh={handleManualRefresh}
           isRefreshing={isRefreshing}

@@ -6,7 +6,7 @@ import { taskCommandService } from '../src/server/tasks/task-command-service';
 import { PreconditionFailedError } from '../src/server/api/errors';
 import { GET, PATCH } from '../src/app/api/tasks/[id]/route';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, DeliverableReviewStatus } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, DeliverableReviewStatus, JobCatalogGroup } from '@prisma/client';
 
 describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Version Invariant', () => {
   let testDept: any;
@@ -17,6 +17,7 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
 
   const createdTaskIds: string[] = [];
   const createdUserIds: string[] = [];
+  const createdAssignmentIds: string[] = [];
 
   before(async () => {
     // 1. Create dedicated isolated Department
@@ -61,6 +62,27 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
     });
     createdUserIds.push(staffUser.id);
 
+    const leaderPosition = await prisma.positionDefinition.upsert({
+      where: { code: 'TRUONG_PHONG' },
+      update: {},
+      create: {
+        code: 'TRUONG_PHONG',
+        title: 'Trưởng đơn vị',
+        group: JobCatalogGroup.LDPU,
+        isLeadership: true,
+      },
+    });
+    const leaderAssignment = await prisma.positionAssignment.create({
+      data: {
+        userId: leaderUser.id,
+        positionDefinitionId: leaderPosition.id,
+        unitId: testDept.id,
+        type: 'PRIMARY',
+        status: 'ACTIVE',
+      },
+    });
+    createdAssignmentIds.push(leaderAssignment.id);
+
     staffToken = signSessionToken({
       id: staffUser.id,
       email: staffUser.email,
@@ -71,6 +93,12 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
   });
 
   after(async () => {
+    if (createdAssignmentIds.length > 0) {
+      await prisma.positionAssignment.deleteMany({
+        where: { id: { in: createdAssignmentIds } },
+      });
+    }
+
     if (createdTaskIds.length > 0) {
       await prisma.auditEvent.deleteMany({
         where: { entityId: { in: createdTaskIds } },
@@ -111,7 +139,9 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
         priority: TaskPriority.HIGH,
         scope: TaskScope.DEPARTMENT,
 
-        createdById: leaderUser.id,
+        // Keep maker and checker distinct so command authorization reaches OCC.
+        createdById: staffUser.id,
+        leadUnitId: testDept.id,
         dueDate,
         academicMonth: 9,
         academicYear: '2026-2027',
@@ -282,7 +312,10 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
       });
       assert.strictEqual(task.version, 1);
 
-      const ctx = { user: leaderUser, requestId: 'req-approve-1' };
+      const ctx = {
+        user: { ...leaderUser, departmentId: testDept.id },
+        requestId: 'req-approve-1',
+      };
 
       // Wrong expectedVersion throws PreconditionFailedError
       await assert.rejects(

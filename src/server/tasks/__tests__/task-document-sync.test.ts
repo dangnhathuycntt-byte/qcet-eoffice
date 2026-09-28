@@ -9,6 +9,7 @@ import {
   TaskActorRole,
   DocumentStatus,
   IncomingDocumentStatus,
+  OutgoingDocumentStatus,
   DocumentType,
   DocumentSecurityLevel,
   DocumentUrgency,
@@ -167,6 +168,8 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     taskStatus?: TaskStatus;
     docStatus?: DocumentStatus;
     workflowStatus?: IncomingDocumentStatus;
+    outgoingDocument?: boolean;
+    outgoingWorkflowStatus?: OutgoingDocumentStatus;
     withDocument?: boolean;
   }) {
     const timestamp = Date.now() + Math.floor(Math.random() * 100000);
@@ -215,7 +218,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
           issuingAuthority: 'Sở GD&ĐT',
           category: 'QUYET_DINH',
           summary: `Trích yếu văn bản đến kiểm thử Sync ${timestamp}`,
-          type: DocumentType.VAN_BAN_DEN,
+          type: options?.outgoingDocument ? DocumentType.VAN_BAN_DI : DocumentType.VAN_BAN_DEN,
           documentYear: 2026,
           registeredDate: new Date(),
           securityLevel: DocumentSecurityLevel.THUONG,
@@ -223,11 +226,19 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
           status: options?.docStatus ?? DocumentStatus.DANG_XU_LY,
           registeredById: creatorUser.id,
           linkedTaskId: task.id,
-          incomingWorkflow: {
-            create: {
-              status: options?.workflowStatus ?? IncomingDocumentStatus.IN_PROGRESS,
-            },
-          },
+          ...(options?.outgoingDocument
+            ? {
+                outgoingWorkflow: {
+                  create: { status: options.outgoingWorkflowStatus ?? OutgoingDocumentStatus.DRAFT },
+                },
+              }
+            : {
+                incomingWorkflow: {
+                  create: {
+                    status: options?.workflowStatus ?? IncomingDocumentStatus.IN_PROGRESS,
+                  },
+                },
+              }),
         },
         include: {
           incomingWorkflow: true,
@@ -239,7 +250,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     return { task, document };
   }
 
-  test('1. updateTask COMPLETED khi linkedDoc có incomingWorkflow IN_PROGRESS -> doc.status === DA_HOAN_THANH, workflow.status === RESOLVED', async () => {
+  test('1. updateTask COMPLETED không tự resolve văn bản đến được liên kết', async () => {
     const { task, document } = await createFixture({
       taskStatus: TaskStatus.WAITING_APPROVAL,
       docStatus: DocumentStatus.DANG_XU_LY,
@@ -265,13 +276,46 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
       include: { incomingWorkflow: true },
     });
 
-    assert.equal(updatedDoc?.status, DocumentStatus.DA_HOAN_THANH);
-    assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.RESOLVED);
-    assert.ok(updatedDoc?.incomingWorkflow?.resolvedAt);
-    assert.equal(updatedDoc?.incomingWorkflow?.resolvedById, adminUser.id);
+    assert.equal(updatedDoc?.status, DocumentStatus.DANG_XU_LY);
+    assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.IN_PROGRESS);
+    assert.equal(updatedDoc?.incomingWorkflow?.resolvedAt, null);
+    assert.equal(updatedDoc?.incomingWorkflow?.resolvedById, null);
   });
 
-  test('2. updateTask COMPLETED khi linkedDoc đã RESOLVED -> không thay đổi (idempotent)', async () => {
+  test('2. updateTask COMPLETED không tự phát hành văn bản đi được liên kết', async () => {
+    const { task, document } = await createFixture({
+      taskStatus: TaskStatus.WAITING_APPROVAL,
+      docStatus: DocumentStatus.DANG_XU_LY,
+      outgoingDocument: true,
+      outgoingWorkflowStatus: OutgoingDocumentStatus.DRAFT,
+    });
+
+    const context = {
+      user: {
+        id: adminUser.id,
+        role: adminUser.role,
+        email: adminUser.email,
+        name: adminUser.name,
+      },
+    };
+
+    await taskCommandService.updateTask(context as any, task.id, {
+      status: TaskStatus.COMPLETED,
+      progressPercent: 100,
+    });
+
+    const updatedDoc = await prisma.document.findUnique({
+      where: { id: document.id },
+      include: { outgoingWorkflow: true },
+    });
+
+    assert.equal(updatedDoc?.status, DocumentStatus.DANG_XU_LY);
+    assert.equal(updatedDoc?.outgoingWorkflow?.status, OutgoingDocumentStatus.DRAFT);
+    assert.equal(updatedDoc?.outgoingWorkflow?.issuedAt, null);
+    assert.equal(updatedDoc?.outgoingWorkflow?.issuerId, null);
+  });
+
+  test('3. updateTask COMPLETED giữ nguyên văn bản đến đã RESOLVED', async () => {
     const { task, document } = await createFixture({
       taskStatus: TaskStatus.WAITING_APPROVAL,
       docStatus: DocumentStatus.DA_HOAN_THANH,
@@ -301,7 +345,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.RESOLVED);
   });
 
-  test('3. updateTask COMPLETED khi không có linkedDoc -> hoàn thành thành công không lỗi', async () => {
+  test('4. updateTask COMPLETED khi không có linkedDoc -> hoàn thành thành công không lỗi', async () => {
     const { task } = await createFixture({
       taskStatus: TaskStatus.WAITING_APPROVAL,
       withDocument: false,
@@ -325,7 +369,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     assert.equal(updatedTask.progressPercent, 100);
   });
 
-  test('4. deleteTask khi linkedDoc.status === DANG_XU_LY -> reset doc.status = CHO_PHAN_CONG, linkedTaskId = null, workflow.status = DIRECTED', async () => {
+  test('5. deleteTask khi linkedDoc.status === DANG_XU_LY -> reset doc.status = CHO_PHAN_CONG, linkedTaskId = null, workflow.status = DIRECTED', async () => {
     const { task, document } = await createFixture({
       taskStatus: TaskStatus.IN_PROGRESS,
       docStatus: DocumentStatus.DANG_XU_LY,
@@ -354,7 +398,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.DIRECTED);
   });
 
-  test('5. deleteTask khi linkedDoc.status === DA_HOAN_THANH -> chỉ nullify linkedTaskId mà không reset status', async () => {
+  test('6. deleteTask khi linkedDoc.status === DA_HOAN_THANH -> chỉ nullify linkedTaskId mà không reset status', async () => {
     const { task, document } = await createFixture({
       taskStatus: TaskStatus.COMPLETED,
       docStatus: DocumentStatus.DA_HOAN_THANH,
@@ -383,7 +427,7 @@ describe('Task <-> Document Bidirectional Status Synchronization', { concurrency
     assert.equal(updatedDoc?.incomingWorkflow?.status, IncomingDocumentStatus.RESOLVED);
   });
 
-  test('6. deleteTask khi không có linkedDoc -> xóa nhiệm vụ thành công không lỗi', async () => {
+  test('7. deleteTask khi không có linkedDoc -> xóa nhiệm vụ thành công không lỗi', async () => {
     const { task } = await createFixture({
       taskStatus: TaskStatus.IN_PROGRESS,
       withDocument: false,

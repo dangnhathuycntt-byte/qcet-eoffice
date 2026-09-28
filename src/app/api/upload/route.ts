@@ -1,16 +1,12 @@
 import { NextRequest } from "next/server";
-import path from "node:path";
-import fs from "node:fs";
 import crypto from "node:crypto";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { assertCsrf } from "@/server/security/csrf";
-import { isAllowedFileExtension } from "@/lib/storage";
+import { storeUploadedFile } from "@/lib/services/file-service";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const UPLOADS_DIR = path.resolve(process.env.UPLOADS_DIR || "./uploads");
-
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID();
   try {
@@ -29,33 +25,24 @@ export async function POST(req: NextRequest) {
       return apiError(`Tệp quá lớn (tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB)`, requestId);
     }
 
-    if (!isAllowedFileExtension(file.name)) {
-      const ext = path.extname(file.name).toLowerCase();
-      return apiError(`Loại tệp không được phép: ${ext}`, requestId);
-    }
-
-    // Generate unique filename: taskFiles/<date>/<uuid><ext>
-    const ext = path.extname(file.name).toLowerCase();
-    const dateDir = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const uniqueName = `${crypto.randomUUID()}${ext}`;
-    const relPath = path.join("taskFiles", dateDir, uniqueName);
-    const absPath = path.join(UPLOADS_DIR, relPath);
-
-    // Ensure directory exists
-    fs.mkdirSync(path.dirname(absPath), { recursive: true });
-
-    // Write file
     const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(absPath, buffer);
-
-    // Return URL that /api/files/[...path] can serve
-    const fileUrl = `/api/files/${relPath}`;
+    const storedFile = await storeUploadedFile({
+      uploadedById: authUser.id,
+      originalName: file.name,
+      declaredMimeType: file.type,
+      bytes: buffer,
+    });
+    const fileUrl = `/api/file-objects/${storedFile.id}`;
 
     return apiSuccess({
       fileUrl,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type,
+      fileId: storedFile.id,
+      fileName: storedFile.originalName,
+      fileSize: Number(storedFile.byteSize),
+      mimeType: storedFile.mimeType,
+      contentHash: storedFile.contentHash,
+      scanStatus: storedFile.scanStatus,
+      deduplicated: storedFile.deduplicated,
     }, { requestId });
   } catch (err: any) {
     return apiError(err, requestId);

@@ -26,8 +26,12 @@ export interface ActionRouteContext {
   params: Promise<{ id: string }>;
 }
 
-export function handleActionError(error: any, requestId?: string) {
-  return apiError(error, requestId || crypto.randomUUID());
+export function handleActionError(
+  error: any,
+  requestId?: string,
+  options?: { rfc9457?: boolean; instance?: string }
+) {
+  return apiError(error, requestId || crypto.randomUUID(), options);
 }
 
 export async function resolveActionContext(

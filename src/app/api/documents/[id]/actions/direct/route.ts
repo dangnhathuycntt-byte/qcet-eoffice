@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
 import {
   assertJsonContentType,
   assertRequestBodySize,
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const apiCtx = await getApiContext(req);
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     const { id } = await context.params;
     const body = await parseAndValidateJson(req, DirectDocumentSchema, { allowEmpty: false });
@@ -69,6 +71,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     return apiSuccess(result, { requestId });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

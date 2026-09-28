@@ -4,13 +4,18 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { OutgoingDocumentService } from "@/lib/services/outgoing-document-service";
 import { prisma } from "@/lib/prisma";
 import { OutgoingDocumentStatus } from "@prisma/client";
+import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { CreateOutgoingDraftSchema } from "@/contracts/documents";
+import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE } from "@/server/api/validation";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
     const context = await getApiContext(req);
     requestId = context.requestId;
-    requireAuthenticated(context);
+    const authUser = requireAuthenticated(context);
 
     const url = new URL(req.url);
     const statusParam = url.searchParams.get("status") as OutgoingDocumentStatus | null;
@@ -19,16 +24,25 @@ export async function GET(req: NextRequest) {
     const search = url.searchParams.get("search") || undefined;
 
     const where: any = {};
+    // Apply document ACL in the database query so pagination and totals cannot
+    // reveal workflows the caller is not allowed to read.
+    where.document = { is: buildDocumentReadWhere(authUser) };
     if (statusParam && Object.values(OutgoingDocumentStatus).includes(statusParam)) {
       where.status = statusParam;
     }
     if (search) {
-      where.document = {
-        OR: [
-          { summary: { contains: search, mode: "insensitive" } },
-          { originalNumber: { contains: search, mode: "insensitive" } },
-        ],
-      };
+      where.AND = [
+        {
+          document: {
+            is: {
+              OR: [
+                { summary: { contains: search, mode: "insensitive" } },
+                { originalNumber: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ];
     }
 
     const [items, total] = await Promise.all([
@@ -57,7 +71,7 @@ export async function GET(req: NextRequest) {
 
     return apiSuccess({ items, total, limit, offset }, { requestId, status: 200 });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }
 
@@ -68,7 +82,12 @@ export async function POST(req: NextRequest) {
     requestId = context.requestId;
     const authUser = requireAuthenticated(context);
 
-    const body = await req.json();
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+
+    const body = CreateOutgoingDraftSchema.parse(await req.json());
     const result = await OutgoingDocumentService.createOutgoingDraft(
       body,
       authUser as any,
@@ -80,6 +99,6 @@ export async function POST(req: NextRequest) {
       status: 201,
     });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

@@ -5,6 +5,10 @@ import { assertRateLimit } from "@/server/security/rate-limit";
 import { toUserPublicDTOArray } from "@/server/dto";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertQueryStringLength } from "@/server/api/validation";
+import {
+  buildUserDirectoryPagination,
+  buildUserDirectoryQueryOptions,
+} from "@/server/users/user-directory-query";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -22,7 +26,8 @@ export async function GET(req: Request) {
     const validatedQuery = UserQuerySchema.parse(rawParams);
 
     // If search q is provided, apply await assertRateLimit(authUser.id, 'SEARCH')
-    const searchQuery = validatedQuery.q || validatedQuery.search;
+    const queryOptions = buildUserDirectoryQueryOptions(validatedQuery);
+    const searchQuery = queryOptions.searchQuery;
     if (searchQuery && searchQuery.trim().length > 0) {
       await assertRateLimit(authUser.id, "SEARCH", {
         requestId,
@@ -56,32 +61,27 @@ export async function GET(req: Request) {
       };
     }
 
-    if (validatedQuery.role) {
-      where.role = validatedQuery.role;
-    }
-    if (searchQuery && searchQuery.trim().length > 0) {
-      where.OR = [
-        { name: { contains: searchQuery.trim(), mode: "insensitive" } },
-        { email: { contains: searchQuery.trim(), mode: "insensitive" } },
-      ];
-    }
+    Object.assign(where, queryOptions.filters);
 
-    const take = validatedQuery.limit ?? validatedQuery.pageSize;
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { name: "asc" },
-      take,
-      skip: (validatedQuery.page - 1) * take,
-      include: {
-        positionAssignments: {
-          where: activeAssignmentFilter,
-          include: {
-            positionDefinition: true,
-            unit: true,
+    const currentPage = validatedQuery.page;
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { name: "asc" },
+        take: queryOptions.take,
+        skip: queryOptions.skip,
+        include: {
+          positionAssignments: {
+            where: activeAssignmentFilter,
+            include: {
+              positionDefinition: true,
+              unit: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.user.count({ where }),
+    ]);
 
     const enrichedUsers = users.map((u) => {
       const chosenAssignment =
@@ -111,6 +111,9 @@ export async function GET(req: Request) {
       {
         success: true,
         users: toUserPublicDTOArray(enrichedUsers, authUser),
+        pagination: {
+          ...buildUserDirectoryPagination(currentPage, queryOptions.take, total),
+        },
       },
       {
         headers: { "Cache-Control": "private, no-store" },

@@ -142,6 +142,26 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
       assert.strictEqual(res.allowed, true);
     });
 
+    it('denies unit manager approval when actor or task unit context is missing', () => {
+      const missingActorUnit = taskStateMachine.canTransition(
+        { ...managerActor, departmentId: null },
+        baseDepartmentTask,
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(missingActorUnit.allowed, false);
+      assert.strictEqual(missingActorUnit.code, 'DEPARTMENT_CONTEXT_REQUIRED');
+
+      const missingTaskUnit = taskStateMachine.canTransition(
+        managerActor,
+        { ...baseDepartmentTask, departmentId: null },
+        'WAITING_APPROVAL',
+        'COMPLETED'
+      );
+      assert.strictEqual(missingTaskUnit.allowed, false);
+      assert.strictEqual(missingTaskUnit.code, 'DEPARTMENT_CONTEXT_REQUIRED');
+    });
+
     it('allows approving school task: WAITING_APPROVAL -> COMPLETED by Executive (non-maker)', () => {
       const res = taskStateMachine.canTransition(
         executiveActor,
@@ -687,7 +707,7 @@ describe('Task State Machine & Permission Matrix Contract Tests (Phase 19 & Phas
     const nonMakerDeptTask: TaskContext = {
       id: 'task-auth-dec-01',
       scope: 'DEPARTMENT',
-
+      departmentId: 'dept-01',
       createdById: 'user-creator-99',
       primaryOwnerId: 'user-staff-99',
       assigneeIds: ['user-staff-99'],

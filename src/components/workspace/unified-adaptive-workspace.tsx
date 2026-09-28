@@ -2170,12 +2170,25 @@ function UnifiedAdaptiveWorkspaceInner({
         await onStatusChange(taskId, newStatus, note);
         return;
       }
+      const currentTask =
+        internalTasks.find((task) => task.id === taskId) ??
+        internalTasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId);
       const previousData = internalTasks;
       setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
 
-      const res = await updateTaskStatus(taskId, newStatus, note);
+      const res = await updateTaskStatus(taskId, newStatus, note, currentTask?.version);
       if (!res.ok) {
         setInternalTasks(previousData);
+      } else if (res.data?.version !== undefined) {
+        setInternalTasks((prev) => prev.map((task) => {
+          if (task.id === taskId) return { ...task, version: res.data!.version };
+          return {
+            ...task,
+            subTasks: task.subTasks.map((subTask) =>
+              subTask.id === taskId ? { ...subTask, version: res.data!.version } : subTask
+            ),
+          };
+        }));
       }
     },
     [onStatusChange, internalTasks]

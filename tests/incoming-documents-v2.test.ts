@@ -7,6 +7,8 @@ import {
   DocumentUrgency,
   DocumentSecurityLevel,
   IncomingDocumentStatus,
+  DossierStatus,
+  TaskStatus,
   UnitType,
   JobCatalogGroup,
 } from "@prisma/client";
@@ -32,6 +34,68 @@ import { POST as fileRoute } from "../src/app/api/documents/[id]/actions/file/ro
 
 describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/2020/NĐ-CP)", () => {
   const testRunId = `inc_v2_${Date.now()}`;
+
+  async function seedArchiveCheckedDossier(
+    documentId: string,
+    owningUnitId: string,
+    responsiblePersonId: string,
+    taskId?: string
+  ) {
+    const retentionRule = await prisma.retentionRule.upsert({
+      where: { code: `RET-${testRunId}` },
+      update: {},
+      create: {
+        code: `RET-${testRunId}`,
+        name: `Thời hạn bảo quản kiểm thử ${testRunId}`,
+        durationYears: 5,
+      },
+    });
+    const document = await prisma.document.findUniqueOrThrow({
+      where: { id: documentId },
+      select: { summary: true, originalNumber: true, issuedDate: true },
+    });
+    const dossier = await prisma.workDossier.create({
+      data: {
+        code: `HS-${testRunId}-${documentId.slice(-6)}`,
+        title: `Hồ sơ xử lý ${document.summary}`,
+        owningUnitId,
+        responsiblePersonId,
+        retentionRuleId: retentionRule.id,
+        status: DossierStatus.READY_FOR_ARCHIVE,
+        items: {
+          create: [
+            {
+              itemType: "DOCUMENT",
+              itemId: documentId,
+              title: document.summary,
+              documentNumber: document.originalNumber,
+              documentDate: document.issuedDate,
+              addedById: responsiblePersonId,
+            },
+            {
+              itemType: "RESULT",
+              itemId: `result-${documentId}`,
+              title: `Báo cáo kết quả ${document.summary}`,
+              addedById: responsiblePersonId,
+            },
+            ...(taskId
+              ? [{
+                  itemType: "TASK" as const,
+                  itemId: taskId,
+                  title: `Nhiệm vụ xử lý ${document.summary}`,
+                  addedById: responsiblePersonId,
+                }]
+              : []),
+          ],
+        },
+      },
+    });
+    await prisma.documentIncomingWorkflow.update({
+      where: { documentId },
+      data: { dossierId: dossier.id },
+    });
+    return dossier;
+  }
 
   let deptLeadId: string;
   let deptCoordId: string;
@@ -226,6 +290,11 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
           document: { summary: { contains: testRunId } },
         },
       });
+
+      await prisma.workDossier.deleteMany({
+        where: { code: { startsWith: `HS-${testRunId}-` } },
+      });
+      await prisma.retentionRule.deleteMany({ where: { code: `RET-${testRunId}` } });
 
       if (positionAssignmentIds.length > 0) {
         await prisma.positionAssignment.deleteMany({
@@ -494,6 +563,12 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       assert.equal(result.workflow.leadUnitId, deptLeadId);
       assert.deepEqual(result.workflow.coordinatingUnitIds, [deptCoordId]);
       assert.equal(result.directive, null);
+      assert.equal(result.document.status, "CHO_PHAN_CONG");
+      const directedDocument = await prisma.document.findUnique({
+        where: { id: docId },
+        select: { linkedTaskId: true },
+      });
+      assert.equal(directedDocument?.linkedTaskId, null, "Tier-1 direction must not create or link a Task");
 
       const workflowRecord = await prisma.documentIncomingWorkflow.findUnique({
         where: { documentId: docId },
@@ -627,6 +702,12 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       assert.ok(task);
       assert.equal(task.leadUnitId, deptLeadId);
       assert.ok(task.actors.some((a) => a.userId === specialistDri.id));
+      assert.equal(result.assignment.taskId, task.id);
+      const linkedDocument = await prisma.document.findUnique({
+        where: { id: docId },
+        select: { linkedTaskId: true },
+      });
+      assert.equal(linkedDocument?.linkedTaskId, task.id);
 
       // Verify Audit Event
       const audit = await prisma.auditEvent.findFirst({
@@ -636,6 +717,63 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         },
       });
       assert.ok(audit, "AuditEvent for UNIT_WORK_ASSIGNED must exist");
+    });
+
+    it("creates at most one Task and backlink when concurrent unit assignments race", async () => {
+      const reg = await registerIncomingDocument(
+        {
+          title: `Văn bản kiểm thử giao việc đồng thời ${testRunId}`,
+          documentNumber: `RACE-${testRunId.slice(-6)}`,
+          issuingAuthority: "Sở Giáo dục và Đào tạo",
+        },
+        clerkUser,
+        `req-assign-race-register-${testRunId}`
+      );
+      await presentDocument(
+        { documentId: reg.document.id },
+        clerkUser,
+        `req-assign-race-present-${testRunId}`
+      );
+      await directDocument(
+        {
+          documentId: reg.document.id,
+          leadUnitId: deptLeadId,
+          leadershipInstruction: "Phân tuyến để kiểm tra chống giao việc đồng thời.",
+        },
+        rectorUser,
+        `req-assign-race-direct-${testRunId}`
+      );
+
+      const outcomes = await Promise.allSettled(
+        [`a`, `b`].map((suffix) =>
+          assignUnitWork(
+            {
+              documentId: reg.document.id,
+              driUserId: specialistDri.id,
+              createTask: true,
+              taskTitle: `Task race ${testRunId}`,
+            },
+            unitHeadLead,
+            `req-assign-race-${suffix}-${testRunId}`
+          )
+        )
+      );
+      const successes = outcomes.filter((outcome) => outcome.status === "fulfilled");
+      assert.equal(successes.length, 1, "exactly one concurrent command must claim the workflow");
+
+      const workflow = await prisma.documentIncomingWorkflow.findUnique({
+        where: { documentId: reg.document.id },
+      });
+      const document = await prisma.document.findUnique({
+        where: { id: reg.document.id },
+        select: { linkedTaskId: true },
+      });
+      const assignments = await prisma.unitWorkAssignment.findMany({
+        where: { workflowId: workflow!.id },
+      });
+      assert.equal(assignments.length, 1);
+      assert.ok(assignments[0].taskId);
+      assert.equal(document?.linkedTaskId, assignments[0].taskId);
     });
 
     it("rejects unit assignment when attempted by head of an unrelated department", async () => {
@@ -668,6 +806,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
   // =========================================================================
   describe("5. Resolution & Archival Filing (Giải quyết & Lưu trữ hồ sơ)", () => {
     let docId: string;
+    let dossierId: string;
 
     before(async () => {
       const reg = await registerIncomingDocument(
@@ -694,14 +833,69 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         `req-res-dir-${testRunId}`
       );
 
-      await assignUnitWork(
+      const assignment = await assignUnitWork(
         {
           documentId: docId,
           driUserId: specialistDri.id,
           instruction: "Đ/c tham gia và chuẩn bị nội dung.",
+          createTask: true,
         },
         unitHeadLead,
         `req-res-assign-${testRunId}`
+      );
+      const dossier = await seedArchiveCheckedDossier(
+        docId,
+        deptLeadId,
+        specialistDri.id,
+        assignment.assignment.taskId || undefined
+      );
+      dossierId = dossier.id;
+    });
+
+    it("keeps the document in progress until its linked task is complete", async () => {
+      const document = await prisma.document.findUniqueOrThrow({
+        where: { id: docId },
+        select: { linkedTaskId: true, incomingWorkflow: { select: { status: true } } },
+      });
+      assert.ok(document.linkedTaskId);
+
+      await assert.rejects(
+        resolveDocument(
+          {
+            documentId: docId,
+            resolutionSummary: "Báo cáo thử khi nhiệm vụ còn mở.",
+            resolutionDocUrl: "https://eoffice.qcet.edu.vn/files/bao-cao-thu-hoach.pdf",
+          },
+          specialistDri,
+          `req-res-incomplete-${testRunId}`
+        ),
+        (error: any) => error?.code === "INCOMING_DOCUMENT_TASKS_INCOMPLETE"
+      );
+
+      const afterRejectedResolution = await prisma.documentIncomingWorkflow.findUniqueOrThrow({
+        where: { documentId: docId },
+        select: { status: true },
+      });
+      assert.equal(afterRejectedResolution.status, IncomingDocumentStatus.IN_PROGRESS);
+
+      await prisma.task.update({
+        where: { id: document.linkedTaskId },
+        data: {
+          status: TaskStatus.COMPLETED,
+          progressPercent: 100,
+          completedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+
+      const afterTaskCompletion = await prisma.documentIncomingWorkflow.findUniqueOrThrow({
+        where: { documentId: docId },
+        select: { status: true },
+      });
+      assert.equal(
+        afterTaskCompletion.status,
+        IncomingDocumentStatus.IN_PROGRESS,
+        "Task completion must not implicitly resolve the incoming document"
       );
     });
 
@@ -730,22 +924,24 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       assert.ok(audit, "AuditEvent for DOCUMENT_RESOLVED must exist");
     });
 
-    it("allows Clerk to file and archive resolved document into official dossier", async () => {
+    it("allows Clerk to file a resolved document without archiving it directly", async () => {
       const result = await fileDocument(
         {
           documentId: docId,
-          dossierId: `DOSSIER-${testRunId.slice(-4)}`,
+          dossierId,
           filingNotes: "Hồ sơ lưu trữ định kỳ năm 2026",
-          archiveNow: true,
-          storageLocation: "Kho lưu trữ văn thư - Tủ A3 Ngăn 2",
         },
         clerkUser,
         `req-res-file-${testRunId}`
       );
 
-      assert.equal(result.workflow.status, IncomingDocumentStatus.ARCHIVED);
+      assert.equal(result.workflow.status, IncomingDocumentStatus.FILED);
       assert.ok(result.workflow.filedAt);
-      assert.equal(result.workflow.dossierId, `DOSSIER-${testRunId.slice(-4)}`);
+      assert.equal(result.workflow.dossierId, dossierId);
+      assert.equal(result.workflow.archivedAt, null);
+      const filedDocument = await prisma.document.findUniqueOrThrow({ where: { id: docId } });
+      assert.equal(filedDocument.archivedAt, null);
+      assert.equal(filedDocument.archivedById, null);
 
       // Verify Audit Event
       const audit = await prisma.auditEvent.findFirst({
@@ -805,6 +1001,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
     let rectorToken: string;
     let unitHeadToken: string;
     let driToken: string;
+    let apiDossierId: string;
 
     before(() => {
       clerkToken = signSessionToken({
@@ -902,47 +1099,114 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       const json = await res.json();
       assert.equal(json.workflow?.status, IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT);
       assert.equal(json.workflow?.leadUnitId, deptLeadId);
+      const document = await prisma.document.findUnique({
+        where: { id: apiDocId },
+        select: { linkedTaskId: true },
+      });
+      assert.equal(document?.linkedTaskId, null, "bút phê/phân tuyến does not create a Task");
     });
 
-    it("POST /api/documents/[id]/actions/assign-unit allows Unit Head to assign DRI", async () => {
-      const req = new NextRequest(`http://localhost:3000/api/documents/${apiDocId}/actions/assign-unit`, {
+    it("POST /api/documents/[id]/actions/assign-unit creates one idempotent Task for the DRI", async () => {
+      const url = `http://localhost:3000/api/documents/${apiDocId}/actions/assign-unit`;
+      const idempotencyKey = `assign-unit-${testRunId}`;
+      const makeRequest = () => new NextRequest(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${unitHeadToken}`,
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
           driUserId: specialistDri.id,
           instruction: "Đồng chí triển khai theo chỉ đạo Ban Giám hiệu",
+          createTask: true,
         }),
       });
 
-      const res = await assignUnitRoute(req, { params: Promise.resolve({ id: apiDocId }) });
+      const res = await assignUnitRoute(makeRequest(), { params: Promise.resolve({ id: apiDocId }) });
       assert.equal(res.status, 200);
       const json = await res.json();
-      assert.equal(json.workflow?.status, IncomingDocumentStatus.UNIT_ASSIGNED_PERSON);
+      assert.equal(json.workflow?.status, IncomingDocumentStatus.IN_PROGRESS);
       assert.equal(json.workflow?.driUserId, specialistDri.id);
+      assert.ok(json.assignment?.taskId);
+
+      const retry = await assignUnitRoute(makeRequest(), { params: Promise.resolve({ id: apiDocId }) });
+      assert.equal(retry.status, 200);
+      const retryJson = await retry.json();
+      assert.equal(retryJson.assignment.taskId, json.assignment.taskId);
+      const document = await prisma.document.findUnique({
+        where: { id: apiDocId },
+        select: { linkedTaskId: true },
+      });
+      assert.equal(document?.linkedTaskId, json.assignment.taskId);
     });
 
     it("POST /api/documents/[id]/actions/resolve allows DRI to resolve document", async () => {
-      const req = new NextRequest(`http://localhost:3000/api/documents/${apiDocId}/actions/resolve`, {
+      const document = await prisma.document.findUniqueOrThrow({
+        where: { id: apiDocId },
+        select: { linkedTaskId: true },
+      });
+      assert.ok(document.linkedTaskId);
+      await prisma.task.update({
+        where: { id: document.linkedTaskId },
+        data: {
+          status: TaskStatus.COMPLETED,
+          progressPercent: 100,
+          completedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+      const dossier = await seedArchiveCheckedDossier(
+        apiDocId,
+        deptLeadId,
+        specialistDri.id,
+        document.linkedTaskId
+      );
+      apiDossierId = dossier.id;
+
+      const url = `http://localhost:3000/api/documents/${apiDocId}/actions/resolve`;
+      const idempotencyKey = `resolve-${testRunId}`;
+      const makeRequest = () => new NextRequest(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${driToken}`,
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
           resolutionSummary: "Đã hoàn thành xử lý nội dung qua API",
+          resolutionDocUrl: "https://eoffice.qcet.edu.vn/files/bao-cao-api.pdf",
         }),
       });
 
-      const res = await resolveRoute(req, { params: Promise.resolve({ id: apiDocId }) });
+      const res = await resolveRoute(makeRequest(), { params: Promise.resolve({ id: apiDocId }) });
       assert.equal(res.status, 200);
       const json = await res.json();
       assert.equal(json.workflow?.status, IncomingDocumentStatus.RESOLVED);
+
+      const retry = await resolveRoute(makeRequest(), { params: Promise.resolve({ id: apiDocId }) });
+      assert.equal(retry.status, 200);
+      const retryJson = await retry.json();
+      assert.equal(retryJson.workflow?.id, json.workflow?.id);
+      assert.equal(retryJson.workflow?.status, IncomingDocumentStatus.RESOLVED);
     });
 
-    it("POST /api/documents/[id]/actions/file allows Clerk to file and archive document", async () => {
+    it("POST /api/documents/[id]/actions/file rejects archiveNow and files only", async () => {
+      const bypassReq = new NextRequest(`http://localhost:3000/api/documents/${apiDocId}/actions/file`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${clerkToken}`,
+        },
+        body: JSON.stringify({
+          dossierId: apiDossierId,
+          filingNotes: "Lưu trữ định kỳ",
+          archiveNow: true,
+        }),
+      });
+      const bypassRes = await fileRoute(bypassReq, { params: Promise.resolve({ id: apiDocId }) });
+      assert.equal(bypassRes.status, 400);
+
       const req = new NextRequest(`http://localhost:3000/api/documents/${apiDocId}/actions/file`, {
         method: "POST",
         headers: {
@@ -950,16 +1214,15 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
           Authorization: `Bearer ${clerkToken}`,
         },
         body: JSON.stringify({
-          dossierId: `DOSSIER-API-${testRunId.slice(-4)}`,
+          dossierId: apiDossierId,
           filingNotes: "Lưu trữ định kỳ",
-          archiveNow: true,
         }),
       });
 
       const res = await fileRoute(req, { params: Promise.resolve({ id: apiDocId }) });
       assert.equal(res.status, 200);
       const json = await res.json();
-      assert.equal(json.workflow?.status, IncomingDocumentStatus.ARCHIVED);
+      assert.equal(json.workflow?.status, IncomingDocumentStatus.FILED);
     });
   });
 });

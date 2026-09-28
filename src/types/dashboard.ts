@@ -77,6 +77,7 @@ export interface TaskSourceDocument {
   issuingAuthority: string;
   registrationNumber: number;
   documentYear: number;
+  status?: string;
 }
 
 export interface StaffTask {
@@ -322,4 +323,3 @@ export interface DashboardPayload {
   departmentHealth?: any[];
   syncTimestamp?: string;
 }
-

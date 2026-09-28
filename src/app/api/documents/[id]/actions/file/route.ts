@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError, apiSuccess } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
 import {
   assertJsonContentType,
   assertRequestBodySize,
@@ -17,9 +18,8 @@ import { NotFoundError } from "@/server/api/errors";
 const FileDocumentSchema = z.object({
   dossierId: z.string().trim().max(100).optional().nullable(),
   filingNotes: z.string().trim().max(2000).optional().nullable(),
-  archiveNow: z.boolean().optional().nullable(),
   storageLocation: z.string().trim().max(255).optional().nullable(),
-});
+}).strict();
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const apiCtx = await getApiContext(req);
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     const { id } = await context.params;
     const body = await parseAndValidateJson(req, FileDocumentSchema, { allowEmpty: true });
@@ -47,7 +48,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
       const result = await OutgoingDocumentService.fileOutgoingDocument(
         {
           documentId: id,
-          archiveNow: body.archiveNow ?? undefined,
           filingNotes: body.filingNotes ?? undefined,
         },
         authUser,
@@ -62,7 +62,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
         documentId: id,
         dossierId: body.dossierId ?? undefined,
         filingNotes: body.filingNotes ?? undefined,
-        archiveNow: body.archiveNow ?? undefined,
         storageLocation: body.storageLocation ?? undefined,
       },
       authUser,
@@ -70,6 +69,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
     );
     return apiSuccess(result, { requestId });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

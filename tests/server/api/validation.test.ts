@@ -9,6 +9,7 @@ import {
   MAX_JSON_BODY_SIZE,
   MAX_AUTH_BODY_SIZE,
   MAX_QUERY_STRING_LENGTH,
+  readOptionalJsonBody,
 } from '@/server/api/validation';
 import {
   UnsupportedMediaTypeError,
@@ -18,6 +19,46 @@ import {
 } from '@/server/api/errors';
 
 describe('Payload Guards & Content-Type Validation Engine', () => {
+  describe('readOptionalJsonBody', () => {
+    it('returns an empty object when an optional body is absent', async () => {
+      const req = new Request('http://localhost:3000/api/dossiers/1/actions/close', {
+        method: 'POST',
+      });
+      assert.deepStrictEqual(await readOptionalJsonBody(req), {});
+    });
+
+    it('parses optional JSON and enforces actual body bytes without Content-Length', async () => {
+      const req = new Request('http://localhost:3000/api/dossiers/1/actions/close', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ notes: 'ok' }),
+      });
+      assert.deepStrictEqual(await readOptionalJsonBody(req, 64), { notes: 'ok' });
+
+      const oversized = new Request('http://localhost:3000/api/dossiers/1/actions/close', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ notes: 'x'.repeat(80) }),
+      });
+      await assert.rejects(
+        () => readOptionalJsonBody(oversized, 64),
+        (err: unknown) => err instanceof PayloadTooLargeError
+      );
+    });
+
+    it('rejects malformed JSON in an optional body', async () => {
+      const req = new Request('http://localhost:3000/api/dossiers/1/actions/close', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{',
+      });
+      await assert.rejects(
+        () => readOptionalJsonBody(req),
+        (err: unknown) => err instanceof ValidationError && err.message === 'Invalid JSON body'
+      );
+    });
+  });
+
   describe('assertJsonContentType', () => {
     it('allows valid application/json content types on POST/PUT/PATCH', () => {
       const validTypes = [
@@ -293,7 +334,7 @@ describe('Payload Guards & Content-Type Validation Engine', () => {
         (err: unknown) => {
           assert.ok(err instanceof ValidationError);
           assert.strictEqual(err.statusCode, 400);
-          assert.strictEqual(err.message, 'Validation failed');
+          assert.strictEqual(err.message, 'Title is required');
           assert.ok(err.fieldErrors);
           assert.ok(Array.isArray(err.fieldErrors['title']));
           assert.strictEqual(err.fieldErrors['title'][0], 'Title is required');

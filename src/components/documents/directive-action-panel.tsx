@@ -164,7 +164,6 @@ export interface DirectiveActionPanelProps {
 
 export function DirectiveActionPanel({
   document,
-  currentUser,
   departments = [],
   onDirectiveSuccess,
   onSuccess,
@@ -236,14 +235,13 @@ export function DirectiveActionPanel({
 
     try {
       const payload = {
-        instruction: instruction.trim(),
+        leadershipInstruction: instruction.trim(),
         leadUnitId,
-        collaboratorIds: collaboratorIds.length > 0 ? collaboratorIds : null,
+        coordinatingUnitIds: collaboratorIds,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        leaderId: currentUser?.id,
       };
 
-      const res = await fetch(`/api/documents/${document.id}/directives`, {
+      const res = await fetch(`/api/documents/${document.id}/actions/direct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -255,7 +253,9 @@ export function DirectiveActionPanel({
         throw new Error(json.error || "Không thể ban hành bút phê. Vui lòng thử lại.");
       }
 
-      setSuccessMessage("Bút phê đã được ban hành thành công và đồng bộ tạo Nhiệm vụ trường.");
+      setSuccessMessage(
+        "Bút phê và phân tuyến đã được lưu. Đơn vị chủ trì có thể giao việc và tạo nhiệm vụ ở bước tiếp theo."
+      );
 
       if (onDirectiveSuccess) {
         onDirectiveSuccess(json.data || json);
@@ -286,7 +286,7 @@ export function DirectiveActionPanel({
               Hộp Bút phê BGH 1-chạm
             </h3>
             <p className="text-xs text-muted-foreground">
-              Ghi ý kiến chỉ đạo điện tử &amp; liên thông sinh Nhiệm vụ trường (Điều 23 NĐ 30/2020)
+              Ghi ý kiến chỉ đạo và phân tuyến đơn vị; bước này chưa tạo nhiệm vụ.
             </p>
           </div>
         </div>
@@ -497,12 +497,12 @@ export function DirectiveActionPanel({
             {isSubmitting ? (
               <>
                 <Clock className="size-4 animate-spin" strokeWidth={1.5} />
-                <span>Đang xử lý &amp; tạo nhiệm vụ...</span>
+                <span>Đang lưu bút phê...</span>
               </>
             ) : (
               <>
                 <Send className="size-4" strokeWidth={1.5} />
-                <span>Ban hành Bút phê &amp; Tạo Nhiệm vụ</span>
+                <span>Ban hành bút phê &amp; phân tuyến</span>
               </>
             )}
           </button>

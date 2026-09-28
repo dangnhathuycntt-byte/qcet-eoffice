@@ -25,6 +25,8 @@ import {
 describe('Document Routes API & Security Hardening (Task 11)', () => {
   let adminUser: any;
   let managerUser: any;
+  let rectorUser: any;
+  let createdRectorUserId: string | null = null;
   let managerPositionAssignmentId: string;
   let managerUnitId: string;
   let staffUser: any;
@@ -33,12 +35,12 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
 
   let adminToken: string;
   let managerToken: string;
+  let rectorToken: string;
   let staffToken: string;
   let foreignStaffToken: string;
 
   const createdDocIds: string[] = [];
   const createdTaskIds: string[] = [];
-  let testDatabaseHasLegacyDirectiveColumn = false;
 
   before(async () => {
     // 1. Ensure departments
@@ -86,6 +88,20 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       });
     }
 
+    rectorUser = await prisma.user.findFirst({ where: { role: 'BAN_GIAM_HIEU' } });
+    if (!rectorUser) {
+      rectorUser = await prisma.user.create({
+        data: {
+          id: `rector-doc-test-${Date.now()}`,
+          email: `rector-doc-test-${Date.now()}@qncet.edu.vn`,
+          name: 'Rector Document Tester',
+          role: 'BAN_GIAM_HIEU',
+          title: 'Hiệu trưởng',
+        },
+      });
+      createdRectorUserId = rectorUser.id;
+    }
+
     managerUnitId = testDept1.id;
 
     const managerPosition = await prisma.positionDefinition.upsert({
@@ -119,16 +135,6 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       });
       managerPositionAssignmentId = managerAssignment.id;
     }
-
-    const legacyDirectiveColumn = await prisma.$queryRaw<Array<{ exists: boolean }>>`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = current_schema()
-          AND table_name = 'document_directives'
-          AND column_name = 'assigned_dept_id'
-      ) AS exists
-    `;
-    testDatabaseHasLegacyDirectiveColumn = Boolean(legacyDirectiveColumn[0]?.exists);
 
     staffUser = await prisma.user.findFirst({
       where: { email: 'staff-doc-test@qncet.edu.vn' },
@@ -171,6 +177,13 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       name: managerUser.name,
       role: managerUser.role,
     });
+    rectorToken = signSessionToken({
+      id: rectorUser.id,
+      email: rectorUser.email,
+      name: rectorUser.name,
+      role: rectorUser.role,
+      title: rectorUser.title,
+    });
     staffToken = signSessionToken({
       id: staffUser.id,
       email: staffUser.email,
@@ -186,6 +199,9 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
   });
 
   after(async () => {
+    if (createdRectorUserId) {
+      await prisma.user.deleteMany({ where: { id: createdRectorUserId } });
+    }
     // Cleanup in reverse dependency order
     if (managerPositionAssignmentId) {
       await prisma.positionAssignment.delete({ where: { id: managerPositionAssignmentId } });
@@ -563,11 +579,12 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       assert.strictEqual(json.data.summary, 'Văn bản đã được cập nhật tóm tắt');
     });
 
-    it('POST /api/documents/[id]/directives creates directive and school task atomically in $transaction', async (t) => {
-      if (testDatabaseHasLegacyDirectiveColumn) {
-        t.skip('The active test database retains the legacy NOT NULL assigned_dept_id column; canonical writes require the approved schema migration.');
-        return;
-      }
+    it('POST /api/documents/[id]/directives delegates to the canonical direction command without creating a Task', async () => {
+      await prisma.documentIncomingWorkflow.upsert({
+        where: { documentId: testDocId },
+        create: { documentId: testDocId, leadUnitId: testDept1.id },
+        update: { leadUnitId: testDept1.id, status: 'REGISTERED' },
+      });
 
       const req = new NextRequest(
         `http://localhost:3000/api/documents/${testDocId}/directives`,
@@ -575,7 +592,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            authorization: `Bearer ${managerToken}`,
+            authorization: `Bearer ${rectorToken}`,
           },
           body: JSON.stringify({
             instruction: 'Giao phòng thử nghiệm 1 chủ trì thực hiện',
@@ -585,22 +602,21 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }
       );
       const res = await postDirectiveRoute(req, { params: Promise.resolve({ id: testDocId }) });
-      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.status, 200);
       const json = await res.json();
       assert.strictEqual(json.success, true);
-      assert.ok(json.data.task);
-      assert.ok(json.data.directive);
-      assert.strictEqual(json.data.task.leadUnitId, testDept1.id);
-      assert.strictEqual(json.data.document.status, 'DANG_XU_LY');
-      createdTaskIds.push(json.data.task.id);
+      assert.strictEqual(json.data.task, null);
+      assert.strictEqual(json.data.directive, null);
+      assert.strictEqual(json.data.workflow.leadUnitId, testDept1.id);
+      assert.strictEqual(json.data.document.status, 'CHO_PHAN_CONG');
+      const document = await prisma.document.findUnique({
+        where: { id: testDocId },
+        select: { linkedTaskId: true },
+      });
+      assert.strictEqual(document?.linkedTaskId, null);
     });
 
-    it('GET /api/documents/[id]/directives returns list of directives', async (t) => {
-      if (testDatabaseHasLegacyDirectiveColumn) {
-        t.skip('The active test database retains the legacy NOT NULL assigned_dept_id column; canonical writes require the approved schema migration.');
-        return;
-      }
-
+    it('GET /api/documents/[id]/directives returns legacy directive history without inventing rows', async () => {
       const req = new NextRequest(
         `http://localhost:3000/api/documents/${testDocId}/directives`,
         {
@@ -612,8 +628,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       const json = await res.json();
       assert.strictEqual(json.success, true);
       assert.ok(Array.isArray(json.data));
-      assert.strictEqual(json.data.length, 1);
-      assert.strictEqual(json.data[0].instruction, 'Giao phòng thử nghiệm 1 chủ trì thực hiện');
+      assert.strictEqual(json.data.length, 0);
     });
 
     it('GET /api/documents/stats returns aggregated metrics', async () => {

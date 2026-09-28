@@ -398,6 +398,17 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
       assert.strictEqual(result.resolution?.actorId, testApproverId);
       assert.strictEqual(auditRan, true);
 
+      const completionSignal = await prisma.outboxEvent.findFirst({
+        where: { aggregateId: created.task.id, eventType: "TASK_COMPLETED" },
+      });
+      assert.ok(completionSignal, "Atomic approval must publish the canonical completion signal");
+      assert.deepStrictEqual(completionSignal.payload, {
+        taskId: created.task.id,
+        actorId: testApproverId,
+        taskVersion: result.task.version,
+        completedAt: result.task.completedAt!.toISOString(),
+      });
+
       // Check deliverable in DB
       const dbDeliverable = await prisma.taskDeliverable.findUnique({
         where: { id: sub.deliverable.id },

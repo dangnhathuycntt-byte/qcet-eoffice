@@ -128,6 +128,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 1b. Correlation ID propagation: extract from inbound header or generate a
+  // fresh UUID. The ID is forwarded to Route Handlers via a request header and
+  // echoed back to the caller via a response header for end-to-end tracing.
+  const inboundRequestId =
+    request.headers.get('x-request-id') ||
+    request.headers.get('x-correlation-id') ||
+    request.headers.get('x-trace-id');
+  const requestId = inboundRequestId?.trim() || crypto.randomUUID();
+  // Attach to request so downstream getRequestId() picks it up automatically.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-request-id', requestId);
+
+  /** Forward correlation ID on request headers and echo it in the response. */
+  function nextWithCorrelation() {
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    res.headers.set('x-request-id', requestId);
+    return res;
+  }
+
+  /** JSON error response that echoes the correlation ID header. */
+  function jsonErrorWithCorrelation(body: Record<string, unknown>, status: number) {
+    return NextResponse.json(body, {
+      status,
+      headers: { 'x-request-id': requestId },
+    });
+  }
+
+  /** Redirect response that echoes the correlation ID header. */
+  function redirectWithCorrelation(url: URL | string, statusCode?: number) {
+    const res = statusCode
+      ? NextResponse.redirect(url, statusCode)
+      : NextResponse.redirect(url);
+    res.headers.set('x-request-id', requestId);
+    return res;
+  }
+
   // 2. Centralized API route defense-in-depth protection
   if (pathname.startsWith('/api')) {
     // 2a. Whitelisted public API endpoints
@@ -142,13 +178,13 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/runtime-config/');
 
     if (isPublicApi) {
-      return NextResponse.next();
+      return nextWithCorrelation();
     }
 
     // 2b. Extract session token
     const token = extractTokenFromRequest(request);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return jsonErrorWithCorrelation({ error: 'Unauthorized' }, 401);
     }
 
     // 2c. Canonical session verification (Node runtime).
@@ -161,11 +197,11 @@ export async function middleware(request: NextRequest) {
     try {
       session = await verifySessionTokenAsync(token);
     } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return jsonErrorWithCorrelation({ error: 'Unauthorized' }, 401);
     }
 
     if (!session || !session.id || !session.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return jsonErrorWithCorrelation({ error: 'Unauthorized' }, 401);
     }
 
     const role = (session.role || '').trim().toUpperCase();
@@ -176,7 +212,7 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/api/admin' || pathname.startsWith('/api/admin/')) {
       const isAdmin = role === 'ADMIN' || role === 'SYSTEM_ADMIN';
       if (!isAdmin) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        return jsonErrorWithCorrelation({ error: 'Forbidden' }, 403);
       }
     }
 
@@ -191,19 +227,19 @@ export async function middleware(request: NextRequest) {
     //   executive (Hiệu trưởng / BGH) authority at this layer.
 
     // Valid authenticated API request passes to Route Handler
-    return NextResponse.next();
+    return nextWithCorrelation();
   }
 
   // 3. Canonical singular to plural redirects (e.g. /task -> /tasks)
   if (pathname === '/task') {
     const url = request.nextUrl.clone();
     url.pathname = '/tasks';
-    return NextResponse.redirect(url, 308);
+    return redirectWithCorrelation(url, 308);
   }
   if (pathname.startsWith('/task/')) {
     const url = request.nextUrl.clone();
     url.pathname = pathname.replace(/^\/task\//, '/tasks/');
-    return NextResponse.redirect(url, 308);
+    return redirectWithCorrelation(url, 308);
   }
 
   // 4. Extract session token cookie for UI routes
@@ -226,22 +262,22 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     if (isVerifiedJwt) {
       url.pathname = '/tasks';
-      return NextResponse.redirect(url);
+      return redirectWithCorrelation(url);
     } else if (!hasToken) {
       url.pathname = '/login';
       url.search = '';
-      return NextResponse.redirect(url);
+      return redirectWithCorrelation(url);
     }
     // If hasToken is true (opaque DB session), let request pass to app/page.tsx
     // which verifies the DB session on the server.
-    return NextResponse.next();
+    return nextWithCorrelation();
   }
 
   // 7. Handle /login route
   if (pathname === '/login') {
     // Middleware cannot check DB revocation or account status. Always let the login page
     // ask /api/auth/me for server truth; an active session is redirected client-side.
-    return NextResponse.next();
+    return nextWithCorrelation();
   }
 
   // 8. Protected UI routes (e.g. /tasks, /documents, /calendar, /org, etc.)
@@ -254,11 +290,11 @@ export async function middleware(request: NextRequest) {
     if (safeReturnTo && safeReturnTo !== '/tasks' && safeReturnTo !== '/') {
       loginUrl.searchParams.set('returnTo', safeReturnTo);
     }
-    return NextResponse.redirect(loginUrl);
+    return redirectWithCorrelation(loginUrl);
   }
 
   // If hasToken is true, let request through so Server Component / AppShell verifies DB session truth
-  return NextResponse.next();
+  return nextWithCorrelation();
 }
 
 export default middleware;

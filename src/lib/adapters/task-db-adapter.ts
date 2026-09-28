@@ -120,6 +120,7 @@ export interface PrismaTaskWithRelations {
     issuingAuthority?: string | null;
     registrationNumber?: number | null;
     documentYear?: number | null;
+    status?: string | null;
   } | null;
 }
 
@@ -175,6 +176,7 @@ function mapLinkedDocument(raw: any): TaskSourceDocument | null {
     issuingAuthority: String(d.issuingAuthority ?? ''),
     registrationNumber: Number(d.registrationNumber ?? 0),
     documentYear: Number(d.documentYear ?? 0),
+    status: String(d.status ?? ''),
   };
 }
 

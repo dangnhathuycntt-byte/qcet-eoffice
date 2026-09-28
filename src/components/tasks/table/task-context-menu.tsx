@@ -158,7 +158,7 @@ export function TaskContextMenu({
     if (onStatusChange) {
       await onStatusChange(task.id, status);
     } else {
-      await updateTaskStatus(task.id, status);
+      await updateTaskStatus(task.id, status, undefined, (task as any).version);
     }
     onClose();
   };

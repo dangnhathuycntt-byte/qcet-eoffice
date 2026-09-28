@@ -58,6 +58,10 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      if (attachment.fileObjectId) {
+        return NextResponse.redirect(new URL(`/api/file-objects/${attachment.fileObjectId}`, req.url));
+      }
+
       let fileRelPath = attachment.fileUrl;
       if (fileRelPath.startsWith("http://") || fileRelPath.startsWith("https://")) {
         return NextResponse.redirect(fileRelPath);
@@ -88,11 +92,14 @@ export async function GET(req: NextRequest) {
       // Object-level permission check: DocumentAttachment
       const matchingAttachment = await prisma.documentAttachment.findFirst({
         where: {
-          OR: [
-            { fileUrl: { contains: filePathParam! } },
-            { fileUrl: { contains: fileName } },
-            { fileName: fileName },
-          ],
+          fileUrl: { in: [
+            filePathParam!,
+            `/${filePathParam}`,
+            `/uploads/${filePathParam}`,
+            `uploads/${filePathParam}`,
+            `/api/files/${filePathParam}`,
+            `api/files/${filePathParam}`,
+          ] },
         },
         include: { document: true },
       });
@@ -108,10 +115,14 @@ export async function GET(req: NextRequest) {
       // Object-level permission check: TaskDeliverable
       const matchingDeliverable = await prisma.taskDeliverable.findFirst({
         where: {
-          OR: [
-            { fileUrl: { contains: filePathParam! } },
-            { fileUrl: { contains: fileName } },
-          ],
+          fileUrl: { in: [
+            filePathParam!,
+            `/${filePathParam}`,
+            `/uploads/${filePathParam}`,
+            `uploads/${filePathParam}`,
+            `/api/files/${filePathParam}`,
+            `api/files/${filePathParam}`,
+          ] },
         },
         include: {
           task: {
