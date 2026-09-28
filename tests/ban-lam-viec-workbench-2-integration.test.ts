@@ -62,9 +62,42 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
   // Area 1: Reference Date Engine Integration (2026-09-09 baseline)
   // --------------------------------------------------------------------------
   describe("1. Reference Date Engine Integration", () => {
-    test("getSystemReferenceDate in academic-calendar returns 2026-09-09 default", () => {
-      const refDate = getAcademicReferenceDate();
-      assert.equal(refDate, "2026-09-09", "Academic reference date baseline must be 2026-09-09");
+    test("getSystemReferenceDate in academic-calendar respects env override (deterministic)", () => {
+      const original = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+      try {
+        process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-09";
+        const refDate = getAcademicReferenceDate();
+        assert.equal(refDate, "2026-09-09", "Academic reference date must match env override");
+      } finally {
+        if (original !== undefined) {
+          process.env.NEXT_PUBLIC_REFERENCE_DATE = original;
+        } else {
+          delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+        }
+      }
+    });
+
+    test("getSystemReferenceDate returns current ICT date when env is unset", () => {
+      const original = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+      try {
+        delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+        const refDate = getAcademicReferenceDate();
+        // Must be a valid YYYY-MM-DD string matching today's ICT date
+        assert.match(refDate, /^\d{4}-\d{2}-\d{2}$/, "Must return YYYY-MM-DD format");
+        const expected = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date());
+        assert.equal(refDate, expected, "Must match current ICT date when env is unset");
+      } finally {
+        if (original !== undefined) {
+          process.env.NEXT_PUBLIC_REFERENCE_DATE = original;
+        } else {
+          delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+        }
+      }
     });
 
     test("isTaskPastDue reliably determines past due status against reference date 2026-09-09", () => {
