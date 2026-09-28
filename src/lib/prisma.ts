@@ -24,8 +24,9 @@ function guardTestDatabase(): void {
   if (!url) return; // Prisma sẽ tự báo lỗi thiếu biến môi trường
 
   // Cùng quy tắc với `scripts/run-tests.mjs`: trỏ về DB test.
-  if (/\/qcet_eoffice(\?.*)?$/.test(url)) {
-    process.env.DATABASE_URL = url.replace(/\/qcet_eoffice(\?.*)?$/, "/qcet_test$1");
+  // Matches both qcet_eoffice (dev) and qcet_ci (CI service container).
+  if (/\/qcet_(?:eoffice|ci)(\?.*)?$/.test(url)) {
+    process.env.DATABASE_URL = url.replace(/\/qcet_(?:eoffice|ci)(\?.*)?$/, "/qcet_test$1");
     return;
   }
 
