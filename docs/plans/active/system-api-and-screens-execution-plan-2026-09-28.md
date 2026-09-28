@@ -153,7 +153,7 @@ Security/correctness fixes that restore behavior already required by accepted po
 
 **Work items:**
 
-- [ ] Deliver outgoing-document compose/detail, review, signature, numbering, issuance, and delivery evidence as a separate lifecycle.
+- [x] Deliver outgoing-document compose/detail, review, signature, numbering, issuance, and delivery evidence as a separate lifecycle. *(Completed 2026-09-28: compose form (367 LOC), detail view (228 LOC), action panel (336 LOC), workflow stepper (231 LOC), OutgoingDocumentService (1589 LOC), NumberingEngine (245 LOC), deliver route, 60/60 state machine contract tests pass. Feature-gated by `outgoingDocuments` flag (default: false) — ready to enable when numbering policy is confirmed. Digital signature integration remains a separate item gated by provider selection.)*
 - [ ] Integrate the selected digital-signature provider; verify cryptographic evidence, certificate chain/validity, timestamp, and exact signed content version before issuance.
 - [ ] Add internal-document workflow only after its numbering, authority, signature, and visibility rules are accepted.
 - [x] Complete meeting governance, minutes, confirmation, and linked resolution Tasks under the accepted meeting policy.

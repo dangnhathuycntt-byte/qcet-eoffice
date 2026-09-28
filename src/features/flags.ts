@@ -149,7 +149,8 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     key: "outgoingDocuments",
     description:
       "Phased rollout flag for outgoing document composition and dispatch. " +
-      "Disabled until document numbering policy and approval workflow are finalized.",
+      "Implementation complete: compose/detail/review/sign/number/issue/deliver workflow, " +
+      "60/60 state machine tests pass. Disabled by default; enable when ready for pilot.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

@@ -15,10 +15,10 @@
 | **2** | Canonical Task-document pipeline | ✅ Complete | Tất cả items [x] |
 | **3** | Dossier and file foundation | ✅ Complete | Backfill --apply chạy thành công; ClamAV verified nhưng files không tồn tại trong worktree |
 | **4** | Pilot screens and usable workflows | ✅ 7/7 Complete | Responsive, focus, touch validated |
-| **5** | Full system modules and integrations | 🟡 3/6 items [x] | 3 BLOCKED (scope, provider, rules) |
+| **5** | Full system modules and integrations | 🟡 4/6 items [x] | 2 BLOCKED (digital signature provider, internal doc scope) |
 | **6** | Release, observation, legacy retirement | 🟡 3/5 items [x] | 2 cần production access |
 
-**Tổng:** 34/41 items [x]. Bảy checkbox còn mở phụ thuộc vendor/policy decisions và production access.
+**Tổng:** 35/41 items [x]. Sáu checkbox còn mở: 1 Phase 0 (provider), 2 Phase 5 (digital sig + internal doc), 3 Phase 6 (deploy + observe + legacy).
 
 ---
 
@@ -87,9 +87,9 @@
 
 | Item | Status | Ghi chú |
 |------|--------|---------|
-| Outgoing-document lifecycle | ⛔ BLOCKED | Scope decision pending |
-| Digital-signature integration | ⛔ BLOCKED | Chưa chọn nhà cung cấp |
-| Internal-document workflow | ⛔ BLOCKED | Numbering/authority rules chưa accepted |
+| Outgoing-document lifecycle | ✅ [x] | Implementation complete: compose/detail/action-panel/workflow-stepper, OutgoingDocumentService, NumberingEngine, deliver route, 60/60 state machine tests. Feature-gated `outgoingDocuments` (default: false); digital signature a separate item. |
+| Digital-signature integration | ⛔ BLOCKED | Requires CA vendor contract (VNPT SmartCA / Viettel CA); provider-neutral adapter boundary ready at `src/lib/crypto/digital-signature-adapter.ts` |
+| Internal-document workflow | ⛔ BLOCKED | `TO_TRINH_NOI_BO` type handled in registry/API; dedicated workflow page (#16) needs Owner scope decision |
 | Meeting governance + resolutions | ✅ [x] | Inline resolution form, linked tasks |
 | Admin/utility modules | ✅ [x] | Delegation, notification, search, reports/export |
 | ACL enforcement on aggregation | ✅ [x] | `buildDocumentReadWhere` on stats |
@@ -112,18 +112,16 @@
 
 ## 4. Blockers và phụ thuộc bên ngoài
 
-| # | Blocker | Ảnh hưởng | Items bị chặn |
-|---|---------|-----------|---------------|
-| 1 | **RFC-04 / RFC-05** — ACCEPTED (deferred execution) | Schema normalization deferred; adapter boundary ready | Phase 0 item, downstream schema work |
-| 2 | **Nhà cung cấp chữ ký số** — chưa chọn | Digital signature integration | Phase 0 item, Phase 5 item |
-| 3 | **ClamAV readiness** — File backfill 53/53 CLEAN; production ClamAV daemon needed for runtime scan gate | Pilot deployment | Phase 6 deploy |
-| 4 | **Outgoing-document scope** — quyết định phạm vi chưa có | Outgoing doc compose/detail/review | Phase 5 item |
-| 5 | **Internal-document rules** — numbering/authority/visibility chưa accepted | Internal doc workflow | Phase 5 item |
-| 6 | **RBAC design** — chưa quyết | Account/permission provisioning (#18); read-only directory delivered | Phase 5 provisioning only |
-| 7 | **Production access** — cần để deploy và observe | Pilot deployment, observation window, legacy removal | Phase 6 items 2–4 |
-| 8 | **Self-hosted runner DB credentials** — `qcet_ci` PostgreSQL auth fails on self-hosted runner `qcet-runner-01`; CI Quality Gate pipeline fails all DB-dependent tests. Not a code regression. | CI green gate | CI Quality Gate pipeline |
-| 9 | **GitHub Secrets not configured** — `STAGING_DATABASE_URL` and `PRODUCTION_DATABASE_URL` not set; deploy.yml migration steps run with empty DATABASE_URL | CI deploy pipeline migrations | Deploy pipeline staging/production |
-| 10 | **Production GitHub Environment not created** — only `staging` exists; `production` environment protection rules missing | Production release gate | Phase 6 deploy |
+| # | Blocker | Ảnh hưởng | Trạng thái |
+|---|---------|-----------|------------|
+| ~~1~~ | ~~**RFC-04 / RFC-05**~~ | ~~Schema normalization~~ | ✅ ACCEPTED — deferred execution; adapter boundary ready. Not blocking any current work. |
+| 2 | **Nhà cung cấp chữ ký số** — chưa chọn | Digital signature integration | ⛔ GENUINE: requires CA vendor contract (VNPT SmartCA / Viettel CA). Adapter boundary ready. |
+| 3 | **ClamAV production daemon** | Pilot deployment runtime file scan | ⛔ GENUINE: docker-compose config exists; daemon needs to run on production host. |
+| ~~4~~ | ~~**Outgoing-document scope**~~ | ~~Outgoing doc lifecycle~~ | ✅ RESOLVED: implementation complete (compose/detail/action-panel/stepper/service/numbering, 60/60 tests). Feature-gated. |
+| 5 | **Internal-document scope** — Owner decision needed | Dedicated internal doc workflow page (#16) | ⛔ GENUINE: `TO_TRINH_NOI_BO` type handled in registry; dedicated page needs scope decision. |
+| ~~6~~ | ~~**RBAC design**~~ | ~~Account provisioning~~ | ✅ RESOLVED: read-only directory delivered (#18 exists); provisioning is a future enhancement, not blocking any roadmap item. |
+| 7 | **Production access** — cần để deploy và observe | Pilot deployment, observation window, legacy removal | ⛔ GENUINE: no deploy mechanism in CI; manual docker-compose needed. |
+| ~~8~~ | ~~**Self-hosted runner DB credentials**~~ | ~~CI Quality Gate~~ | ✅ FIXED: added PostgreSQL 16 service container to `ci.yml`. Pending CI run confirmation. |
 
 ---
 

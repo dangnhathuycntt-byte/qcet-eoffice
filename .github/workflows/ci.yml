@@ -19,6 +19,20 @@ jobs:
   security-and-lint:
     name: Security, Lint & Quality Audit
     runs-on: [self-hosted, Linux, X64, qcet]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qcet_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,6 +67,20 @@ jobs:
   typecheck-and-test:
     name: TypeScript & Unit Test Suite
     runs-on: [self-hosted, Linux, X64, qcet]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qcet_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
