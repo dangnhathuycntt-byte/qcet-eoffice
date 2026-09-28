@@ -538,7 +538,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Separation of Duties|phân lập trách nhiệm|SoD/i
+        /Separation of Duties|phân lập trách nhiệm|SoD|không có thẩm quyền/i
       );
 
       // 3. Manager reviews deliverable with APPROVED -> task becomes COMPLETED
