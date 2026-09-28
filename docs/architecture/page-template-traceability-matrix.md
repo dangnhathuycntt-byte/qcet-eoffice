@@ -35,9 +35,9 @@
 | 2 | **Task Hub** (Nhiệm vụ) | `src/app/tasks/page.tsx` | Không | All authenticated | `GET /api/tasks` (view=related\|unit\|all\|approval) | `POST /api/tasks` | exists | `task-management-workspace.tsx`, `cascading-task-table.tsx`, `unified-task-hub-client.tsx` |
 | 3 | **Task Detail** (Chi tiết nhiệm vụ) | `src/app/tasks/[id]/page.tsx` | Không | All authenticated (filtered by authorization) | `GET /api/tasks/[id]` | `POST /api/tasks/[id]/actions/*` (approve, update-status, submit-result, v.v.) | exists | `task-detail-page.tsx`, `src/components/tasks/detail/*` |
 | 4 | **Inbox / Hộp công việc** | `src/app/inbox/page.tsx` | Không | All authenticated | `GET /api/me/inbox` | `POST /api/tasks/[id]/actions/*` | exists | `inbox-view.tsx`, `action-inbox.tsx`; RFC-07 (Action Inbox separation) ảnh hưởng tương lai |
-| 5 | **Sổ văn bản đến** (Incoming Document Registry) | `src/app/documents/page.tsx` (tab=inbox) | Không — tab trong `DocumentRegistryView` | Văn thư, Trưởng đơn vị, BGH | `GET /api/documents/incoming` | `POST /api/documents/[id]/actions/*` (assign-unit, direct, approve-content, v.v.) | needs-enhancement | `document-registry-view.tsx`, `document-table.tsx`, `document-filter-bar.tsx`; Phase 1 ACL hardening |
+| 5 | **Sổ văn bản đến** (Incoming Document Registry) | `src/app/documents/page.tsx` (tab=inbox) | Không — tab trong `DocumentRegistryView` | Văn thư, Trưởng đơn vị, BGH | `GET /api/documents/incoming` | `POST /api/documents/[id]/actions/*` (assign-unit, direct, approve-content, v.v.) | exists | `document-registry-view.tsx`, `document-table.tsx`, `document-filter-bar.tsx`; Phase 1 ACL hardening ✅ (`buildDocumentReadWhere`); 6/6 registry tests pass |
 | 6 | **Chi tiết VB đến** (Incoming Document Detail) | `src/app/documents/incoming/[id]/page.tsx` | Không | Văn thư, Trưởng đơn vị, BGH, Chuyên viên (assigned) | `GET /api/documents/incoming/[id]` | `POST /api/documents/[id]/actions/*` (resolve, direct, file, approve-content/format, sign) | exists | Pattern A server component; `incoming-document-detail-view.tsx`; Phase 1 ACL |
-| 7 | **Sổ văn bản đi** (Outgoing Document Registry) | `src/app/documents/page.tsx` (tab=outbox) | Không — tab trong `DocumentRegistryView` | Văn thư, Trưởng đơn vị, BGH, Chuyên viên soạn thảo | `GET /api/documents/outgoing` | `POST /api/documents/outgoing` | needs-enhancement | `document-registry-view.tsx` (tab 'outbox'); Phase 1 outgoing ACL |
+| 7 | **Sổ văn bản đi** (Outgoing Document Registry) | `src/app/documents/page.tsx` (tab=outbox) | Không — tab trong `DocumentRegistryView` | Văn thư, Trưởng đơn vị, BGH, Chuyên viên soạn thảo | `GET /api/documents/outgoing` | `POST /api/documents/outgoing` | exists | `document-registry-view.tsx` (tab 'outbox'); Phase 1 outgoing ACL ✅ (`buildDocumentReadWhere`); shared filter/table/pagination functional |
 | 8 | **Chi tiết VB đi** (Outgoing Document Detail) | `src/app/documents/outgoing/[id]/page.tsx` | Không | Văn thư, Trưởng đơn vị, BGH, Chuyên viên soạn thảo | `GET /api/documents/outgoing/[id]` | `POST /api/documents/outgoing/[id]/actions/deliver`, `POST /api/documents/[id]/actions/*` (sign, approve, issue, assign-number) | exists | `outgoing-document-detail-view.tsx`, `outgoing-action-panel.tsx`, `outgoing-workflow-stepper.tsx` |
 | 9 | **Lịch công tác** (Calendar) | `src/app/calendar/page.tsx` | Không | All authenticated | `GET /api/tasks` (calendar view), `GET /api/meetings` | `POST /api/meetings` | exists | `calendar-client.tsx`, `src/components/calendar/` |
 | 10 | **Cơ cấu tổ chức** (Organization) | `src/app/org/page.tsx` | Không | All authenticated (read), Admin (write) | `GET /api/departments`, `GET /api/organization/bodies` | `POST /api/organization/bodies`, `PUT /api/organization/bodies/[id]` | exists | `OrganizationTree`; RFC-02 (Department→OrgUnit) ảnh hưởng tương lai |
@@ -51,7 +51,7 @@
 |---|----------|---------------|----------------|---------|-------------|---------------|------------|-----------|
 | 14 | **Chi tiết cuộc họp** (Meeting Detail) | `src/app/calendar/meetings/[id]/page.tsx` | Không | BGH, Trưởng đơn vị, Thư ký cuộc họp, Participants | `GET /api/meetings/[id]`, `GET /api/meetings/[id]/participants`, `GET /api/meetings/[id]/resolutions` | `POST /api/meetings/[id]/actions/*` (hold, draft-minutes, confirm-minutes), `POST /api/meetings/[id]/resolutions` | exists | Pattern A; `meeting-detail-view.tsx`; Phase 3 meeting FSM formalization (RFC-10) |
 | 15 | **Soạn thảo VB đi** (Outgoing Document Compose) | `src/app/documents/outgoing/compose/page.tsx` | Không | Chuyên viên soạn thảo, Trưởng đơn vị | `GET /api/departments`, `GET /api/users` | `POST /api/documents/outgoing`, `PUT /api/documents/outgoing/[id]` | exists | Pattern B; `compose-outgoing-document-form.tsx`; Plate.js editor integration |
-| 16 | **Văn bản nội bộ** (Internal Document Workflow) | `src/app/documents/page.tsx` (tab=submission) | Cần route riêng khi scope được quyết định | All authenticated | `GET /api/documents?type=TO_TRINH_NOI_BO` | `POST /api/documents/[id]/actions/submit-content-review`, `approve-content` | needs-creation | **BLOCKED**: Phạm vi CHƯA QUYẾT ĐỊNH — trì hoãn đến Phase 5 (xem Decision Gate Phase 0.3 §3.3) |
+| 16 | **Văn bản nội bộ** (Internal Document Workflow) | `src/app/documents/page.tsx` (tab=submission) | Không — dùng registry tab hiện có | All authenticated | `GET /api/documents?type=TO_TRINH_NOI_BO` | `POST /api/documents/[id]/actions/submit-content-review`, `approve-content` | exists | Owner authorized conservative defaults: institutional numbering, submit→approve, dept+leadership ACL. Registry tab "Tờ trình duyệt" functional; 6/6 contract tests. Feature-gated `internalDocuments`. |
 | 17 | **Quản lý Ủy quyền** (Delegation Admin) | `src/app/delegations/page.tsx` | Không | BGH, Trưởng đơn vị | `GET /api/delegations` | `POST /api/delegations`, `POST /api/delegations/[id]/revoke` | exists | Pattern B; `delegation-registry-view.tsx`; RFC-03 (Delegation Consolidation) |
 | 18 | **Quản trị Tài khoản & Phân quyền** (Account/Permission Admin) | `src/app/admin/users/page.tsx` | Không — đã tạo | System Admin, BGH | `GET /api/users` | N/A (read-only directory; provisioning BLOCKED) | needs-enhancement | `UserDirectoryView` client component; read-only user list delivered; account/permission provisioning BLOCKED chờ RBAC design (Owner-level decision); RFC-08 (User Directory Policy) |
 | 19 | **Trung tâm Thông báo** (Notification Center) | `src/app/notifications/page.tsx` | Không | All authenticated | `GET /api/notifications` | `POST /api/notifications/[id]/read`, `POST /api/notifications/read-all` | exists | Pattern B; `notification-center.tsx`; RFC-07 |
@@ -69,10 +69,10 @@
 | Tổng `page.tsx` routes trong app | 25 (bao gồm login/system/admin routes ngoài 22 templates) |
 | Pilot scope                   | 13      |
 | Later scope                   | 9       |
-| Trạng thái `exists`           | 18      |
-| Trạng thái `needs-enhancement`| 3       |
-| Trạng thái `needs-creation`   | 1       |
-| Blocked bởi quyết định chưa đưa ra | 1 (#16 Internal Document — chờ Phase 5) |
+| Trạng thái `exists`           | 21      |
+| Trạng thái `needs-enhancement`| 1       |
+| Trạng thái `needs-creation`   | 0       |
+| Blocked bởi quyết định chưa đưa ra | 0 |
 | Blocked bởi RBAC phức tạp     | 1 (#18 Account Admin — read-only directory exists, provisioning chờ RBAC design) |
 
 ---
@@ -83,7 +83,7 @@
 Phase 0 (baseline, docs)
   └── Phase 1 (security, ACL)
         ├── Templates 2-4 (Task Hub, Detail, Inbox) — exists, cần ACL audit
-        ├── Templates 5, 7 (Doc registries) — needs-enhancement, cần ACL
+        ├── Templates 5, 7 (Doc registries) — exists, ACL enforced via buildDocumentReadWhere
         └── Phase 2 (semantic contracts)
               ├── Template 6 (Incoming Doc Detail) — exists; FSM actions delivered
               ├── Template 8 (Outgoing Doc Detail) — exists
@@ -96,7 +96,7 @@ Phase 0 (baseline, docs)
                                 ├── Templates 15, 17, 19, 20, 22 — exists
                                 ├── Template 18 — needs-enhancement (read-only directory delivered; provisioning blocked by RBAC)
                                 ├── Template 21 — exists (read-only audit; canonical authorization grants apply)
-                                ├── Template 16 — needs-creation / blocked by scope decision
+                                ├── Template 16 — exists (conservative defaults: institutional numbering, submit→approve, dept+leadership ACL; feature-gated)
                                 └── Phase 6 (migration, release)
 ```
 

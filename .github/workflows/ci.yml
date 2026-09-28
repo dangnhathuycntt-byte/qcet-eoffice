@@ -16,6 +16,9 @@ env:
   # Port 5433 avoids conflict with the runner's local PostgreSQL on 5432
   # Use qcet_test directly — matches the test-guard expected DB name
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5433/qcet_test?schema=public"
+  # Auth secret for JWT/session tests — deterministic test value, not a real secret
+  AUTH_SECRET: "ci-test-auth-secret-minimum-32-characters-long"
+  JWT_SECRET: "ci-test-auth-secret-minimum-32-characters-long"
 
 jobs:
   security-and-lint:
@@ -104,6 +107,9 @@ jobs:
 
       - name: Apply Migrations to Test Database
         run: npx prisma migrate deploy
+
+      - name: Seed Test Database
+        run: npx prisma db seed
 
       - name: Typecheck (tsc --noEmit)
         run: npm run typecheck

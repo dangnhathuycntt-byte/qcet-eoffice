@@ -164,6 +164,14 @@ describe('Task 6: PWA and Push Notification Hooks', () => {
           matchMedia: () => ({ matches: false }),
         };
         try {
+          // Ensure navigator exists on globalThis (absent in Node < 21)
+          if (!globalThis.navigator) {
+            Object.defineProperty(globalThis, "navigator", {
+              value: {},
+              configurable: true,
+              writable: true,
+            });
+          }
           Object.defineProperty(globalThis.navigator, 'standalone', {
             value: true,
             configurable: true,
@@ -182,7 +190,9 @@ describe('Task 6: PWA and Push Notification Hooks', () => {
           (globalThis as unknown as { window: unknown }).window = origWindow;
         }
         try {
-          delete (globalThis.navigator as unknown as { standalone?: boolean }).standalone;
+          if (globalThis.navigator) {
+            delete (globalThis.navigator as unknown as { standalone?: boolean }).standalone;
+          }
         } catch {
           // ignore
         }

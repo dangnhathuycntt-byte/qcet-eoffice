@@ -67,7 +67,7 @@ export function checkIsStandalone(): boolean {
   const isMatchMedia =
     window.matchMedia?.('(display-mode: standalone)')?.matches ?? false;
 
-  const isNavigatorStandalone = Boolean(
+  const isNavigatorStandalone = typeof navigator !== 'undefined' && Boolean(
     (navigator as unknown as { standalone?: boolean }).standalone
   );
 

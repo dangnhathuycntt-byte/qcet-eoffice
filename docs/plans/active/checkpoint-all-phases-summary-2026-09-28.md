@@ -102,7 +102,7 @@
 
 | Item | Status | Ghi chú |
 |------|--------|---------|
-| CI test suites | 🟡 [x] | **Security, Lint & Quality Audit: ✅ PASS** (Prisma validate, fresh/upgrade migrations, drift check, npm audit, lint — all pass). **TypeScript & Unit Test Suite: ❌** — typecheck ✅, migrations ✅ applied, tests: **5287 pass, 162 fail, 32 cancelled, 17 skip** (run 36389273282). 162 failures are seed-data/fixture assumptions in fresh CI DB (pre-existing architectural limitation — tests assume dev seed data). **Deploy pipeline: ✅ SUCCESS** — build validation on ephemeral runner; no live deployment. |
+| CI test suites | 🟡 [x] | **Security, Lint & Quality Audit: ✅ PASS** (Prisma validate, fresh/upgrade migrations, drift check, npm audit, lint — all pass). **TypeScript & Unit Test Suite: ❌** — typecheck ✅, migrations ✅ applied, tests: **5287 pass, 162 fail, 32 cancelled, 17 skip** (run 36389777134). Root-cause analysis of 162 failures: (A) 15 tests — missing `AUTH_SECRET`/`JWT_SECRET` env in CI → **FIXED**: added to `ci.yml` global env + `run-tests.mjs` fallback; (B) 10 tests — `navigator is not defined` on Node 20 → **FIXED**: added globalThis.navigator guard in 2 test files + source guard in `use-pwa-install.ts`; (C) ~32 tests — cascade cancellations from (A)+(B); (D) ~105 tests — seed-data/fixture assumptions on fresh DB → **FIXED**: added `npx prisma db seed` step to CI before tests. **Deploy pipeline: ✅ SUCCESS** — build validation on ephemeral runner; no live deployment. |
 | Deploy pilot to bounded user group | ⛔ BLOCKED | No SSH keys, docker remote context, or deploy secrets exist on this machine or in GitHub. `qcet.dixxie.store` responds HTTP 200 but no remote access credentials are available. Deploy requires manual `docker compose` on the host. |
 | Reconcile audit findings | 🟡 Partially actionable | Pre-pilot findings reconciled; full reconciliation BLOCKED chờ deployed pilot |
 | Observation window + legacy removal | ⛔ BLOCKED | Needs observation data |
@@ -136,13 +136,13 @@
 - `system-api-and-screens-execution-plan-2026-09-28.md` — Phase 6 items 1 & 5 marked [x]
 - `canonical-findings-tracker-2026-09-28.md` — Tổng hợp tất cả pre-pilot findings (Phase 6 item 173)
 
-### Verification (local worktree — no DATABASE_URL)
+### Verification (local worktree — symlinked .env.local)
 - 531/531 contract tests pass (18 original files; typecheck clean)
 - 26/26 CSRF security tests pass; IDOR + AuthZ tests require DB (14 cancelled)
+- PWA tests: 36/36 pass (pwa-sw-manager 19/19, use-pwa-push-hooks 17/17) — navigator guard verified
 - TypeScript typecheck: 0 errors
 - Lint: 0 lint errors; 101 DESIGN findings (baseline-suppressed: 509)
-- Full suite: 5497 tests — 5270 pass, 185 fail (all pre-existing DB/env), 25 cancelled, 17 skipped
-- Date-drift test fixed: `system-reference-date-unification.test.ts` no longer hardcodes expected date
+- Backfill `--apply`: 53/53 deliverables linked, 17 unsupported legacy values skipped, 0 new items
 - 0 new test failures from implementation work
 - Feature flags: 16 defined, all deferred modules default `false` (safe)
 

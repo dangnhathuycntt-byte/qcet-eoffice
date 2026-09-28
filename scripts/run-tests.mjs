@@ -280,6 +280,8 @@ const env = {
   NODE_ENV: "test",
   QCET_ALLOW_DB_TESTS: "1",
   DATABASE_URL: testDbUrl,
+  // Ensure AUTH_SECRET is always available in test env (CI has no .env.local)
+  AUTH_SECRET: process.env.AUTH_SECRET || process.env.JWT_SECRET || "qcet_test_runner_secret_key_2026_at_least_32_chars",
 };
 delete env.NEXT_PUBLIC_REFERENCE_DATE;
 

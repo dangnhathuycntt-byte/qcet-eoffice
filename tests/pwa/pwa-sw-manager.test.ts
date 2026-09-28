@@ -26,6 +26,14 @@ describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
 
   function setMockServiceWorker(sw: unknown) {
     try {
+      // Ensure navigator exists on globalThis (absent in Node < 21)
+      if (!globalThis.navigator) {
+        Object.defineProperty(globalThis, "navigator", {
+          value: {},
+          configurable: true,
+          writable: true,
+        });
+      }
       Object.defineProperty(globalThis.navigator, "serviceWorker", {
         value: sw,
         configurable: true,
@@ -44,7 +52,9 @@ describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
       delete (globalThis as unknown as { document?: unknown }).document;
     } catch {}
     try {
-      delete (globalThis.navigator as unknown as { serviceWorker?: unknown }).serviceWorker;
+      if (globalThis.navigator) {
+        delete (globalThis.navigator as unknown as { serviceWorker?: unknown }).serviceWorker;
+      }
     } catch {}
   }
 
