@@ -8,7 +8,7 @@ export const QCET_CANONICAL_UNITS = [
   "P_TCDBCL",
   "P_HCQT",
   "P_TSHTQT",
-  "TT_STT",
+  "TT_SO_TT",
   "K_CNTT",
   "K_CK",
   "K_DIEN",

@@ -55,7 +55,7 @@ describe("Dashboard Aggregator & Rollup Engine", () => {
 
   test("computeDashboardStats aggregates school and staff level statistics", () => {
     const computedTask = computeSchoolTaskRollup(sampleSchoolTask);
-    const stats = computeDashboardStats([computedTask]);
+    const stats = computeDashboardStats([computedTask], "2026-09-10");
     assert.equal(stats.totalSchoolTasks, 1);
     assert.equal(stats.schoolTasksInProgress, 1);
     assert.equal(stats.totalStaffTasks, 2);

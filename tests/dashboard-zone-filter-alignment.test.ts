@@ -66,6 +66,7 @@ describe("Dashboard Zone Filters & Scope Helpers", () => {
       scope: "SCHOOL_TASKS",
       department: "ALL",
       workbox: "URGENT_OVERDUE",
+      referenceDate: "2026-09-10",
     });
     assert.equal(overdueTasks.length, 1);
     assert.equal(overdueTasks[0].id, "task-2");

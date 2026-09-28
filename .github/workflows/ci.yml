@@ -13,7 +13,8 @@ concurrency:
 env:
   CI: "true"
   NODE_ENV: test
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/qcet_ci?schema=public"
+  # Port 5433 avoids conflict with the runner's local PostgreSQL on 5432
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5433/qcet_ci?schema=public"
 
 jobs:
   security-and-lint:
@@ -27,7 +28,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: qcet_ci
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -75,7 +76,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: qcet_ci
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
