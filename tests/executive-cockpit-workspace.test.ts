@@ -236,7 +236,7 @@ describe("Executive Attention Queue Builder", () => {
   ] as unknown as SchoolTask[];
 
   test("buildExecutiveAttentionQueue prioritizes pending approval > blocked > overdue", () => {
-    const queue = buildExecutiveAttentionQueue(mockTasks);
+    const queue = buildExecutiveAttentionQueue(mockTasks, "2026-09-20");
     assert.equal(queue.length, 3);
 
     assert.equal(queue[0].id, "task-approval-1");
