@@ -232,24 +232,39 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
   });
 
   after(async () => {
-    if (createdTaskIds.length > 0) {
+    // Collect ALL tasks owned by fixture users (createdTaskIds may miss tasks
+    // created by services internally or in sub-describe before() hooks).
+    const allOwnedTasks =
+      createdUserIds.length > 0
+        ? await prisma.task.findMany({
+            where: { createdById: { in: createdUserIds } },
+            select: { id: true, parentTaskId: true },
+          })
+        : [];
+    const allTrackedIds = [
+      ...new Set([...createdTaskIds, ...allOwnedTasks.map((t) => t.id)]),
+    ];
+
+    if (allTrackedIds.length > 0) {
       await prisma.document.updateMany({
-        where: { linkedTaskId: { in: createdTaskIds } },
+        where: { linkedTaskId: { in: allTrackedIds } },
         data: { linkedTaskId: null },
       });
       await prisma.taskActor.deleteMany({
-        where: { taskId: { in: createdTaskIds } },
+        where: { taskId: { in: allTrackedIds } },
       });
       await prisma.taskDeliverable.deleteMany({
-        where: { taskId: { in: createdTaskIds } },
+        where: { taskId: { in: allTrackedIds } },
       });
 
-      const allTasks = await prisma.task.findMany({
-        where: { id: { in: createdTaskIds } },
-        select: { id: true, parentTaskId: true },
-      });
-      const subtaskIds = allTasks.filter((t) => t.parentTaskId).map((t) => t.id);
-      const parentIds = allTasks.filter((t) => !t.parentTaskId).map((t) => t.id);
+      // Delete subtasks before parents (Cascade handles subtasks of subtasks,
+      // but explicit ordering avoids any self-referential FK issues).
+      const subtaskIds = allTrackedIds.filter((id) =>
+        allOwnedTasks.some((t) => t.id === id && t.parentTaskId)
+      );
+      const parentIds = allTrackedIds.filter((id) =>
+        !subtaskIds.includes(id)
+      );
 
       if (subtaskIds.length > 0) {
         await prisma.task.deleteMany({ where: { id: { in: subtaskIds } } });

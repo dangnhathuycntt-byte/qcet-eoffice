@@ -19,7 +19,7 @@
 | 1 | Digital signature provider | Phase 0 | ⛔ BLOCKED — CA vendor contract unavailable |
 | 2 | Digital signature integration | Phase 5 | ⛔ BLOCKED — depends on #1 |
 | 3 | Deploy pilot | Phase 6 | ⛔ BLOCKED — no SSH/production access |
-| 4 | Reconcile audit findings | Phase 6 | 🟡 PARTIAL — 36/41 actionable done; remainder pending deployed pilot |
+| 4 | Reconcile audit findings | Phase 6 | 🟡 PARTIAL — pre-pilot findings documented in canonical tracker; production observation/reconciliation pending |
 | 5 | Observation window + legacy retirement | Phase 6 | ⛔ BLOCKED — depends on deploy (#3) |
 
 ---
@@ -161,7 +161,7 @@ uptime: 278785s (~3 days)
 | CI test suites | ✅ | Run 36428833453: 5497 pass, 0 fail; run 36428833487: build + migration gate pass |
 | Recovery docs / runbooks | ✅ | `recovery-paths.md`, `rollback.md`; 11 failure scenarios documented |
 | Correlation IDs operational | ✅ | `x-request-id` echoed middleware-wide |
-| **Reconcile audit findings** | 🟡 PARTIAL | `canonical-findings-tracker-2026-09-28.md` ghi nhận các findings; 36/41 actionable items implemented. Phần còn lại blocked pending deployed pilot (không thể verify production behavior trước deploy). |
+| **Reconcile audit findings** | 🟡 PARTIAL | `canonical-findings-tracker-2026-09-28.md` ghi nhận các findings; pre-pilot findings documented in canonical tracker; production observation/reconciliation pending (không thể verify production behavior trước deploy). |
 | **Deploy pilot** | ⛔ BLOCKED | No SSH/docker-remote/platform-API credentials. `deploy.yml` là build/migration gate, không có SSH/push step. Manual deploy trên host: `docker compose build && docker compose up -d` (repo dùng local `build:` directive, không có registry image; `docker compose pull` chỉ áp dụng nếu có registry — chưa evidenced). Production container process started 2026-09-25, predates PR #131 merge (2026-09-28), nhưng image SHA thực tế không xác minh được từ ngoài host. |
 | **Observation window** | ⛔ BLOCKED | Dependent on deploy. Cannot collect pilot metrics until new container runs. |
 | **Legacy retirement** | ⛔ BLOCKED | Dependent on observation window. |
