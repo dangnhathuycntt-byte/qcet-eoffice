@@ -102,7 +102,7 @@
 
 | Item | Status | Ghi chú |
 |------|--------|---------|
-| CI test suites | 🟡 [x] | **Local:** 3146 pass, 32 fail (all DB-dependent), typecheck 0 errors. **CI run 36385728517:** PostgreSQL service container ✅ works (port 5433). Containers initialize, migrations pass. 3771 pass, 172 fail — test-guard blocks DB tests (regex now fixed in `run-tests.mjs`). Drift check needs `migrate deploy` before check (added). **Deploy pipeline:** ✅ SUCCESS. **No live deployment** — no SSH/docker-push step exists; deploy is manual `docker compose` on host. |
+| CI test suites | 🟡 [x] | **Security, Lint & Quality Audit: ✅ PASS** (Prisma validate, fresh/upgrade migrations, drift check, npm audit, lint — all pass). **TypeScript & Unit Test Suite: ❌** — typecheck ✅, migrations ✅ applied, tests: **5287 pass, 162 fail, 32 cancelled, 17 skip** (run 36389273282). 162 failures are seed-data/fixture assumptions in fresh CI DB (pre-existing architectural limitation — tests assume dev seed data). **Deploy pipeline: ✅ SUCCESS** — build validation on ephemeral runner; no live deployment. |
 | Deploy pilot to bounded user group | ⛔ BLOCKED | No SSH keys, docker remote context, or deploy secrets exist on this machine or in GitHub. `qcet.dixxie.store` responds HTTP 200 but no remote access credentials are available. Deploy requires manual `docker compose` on the host. |
 | Reconcile audit findings | 🟡 Partially actionable | Pre-pilot findings reconciled; full reconciliation BLOCKED chờ deployed pilot |
 | Observation window + legacy removal | ⛔ BLOCKED | Needs observation data |
