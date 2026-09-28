@@ -15,10 +15,10 @@
 | **2** | Canonical Task-document pipeline | ✅ Complete | Tất cả items [x] |
 | **3** | Dossier and file foundation | ✅ Complete | Backfill --apply chạy thành công; ClamAV verified nhưng files không tồn tại trong worktree |
 | **4** | Pilot screens and usable workflows | ✅ 7/7 Complete | Responsive, focus, touch validated |
-| **5** | Full system modules and integrations | 🟡 4/6 items [x] | 2 BLOCKED (digital signature provider, internal doc scope) |
+| **5** | Full system modules and integrations | 🟡 5/6 items [x] | 1 BLOCKED (digital signature provider) |
 | **6** | Release, observation, legacy retirement | 🟡 3/5 items [x] | 2 cần production access |
 
-**Tổng:** 35/41 items [x]. Sáu checkbox còn mở: 1 Phase 0 (provider), 2 Phase 5 (digital sig + internal doc), 3 Phase 6 (deploy + observe + legacy).
+**Tổng:** 36/41 items [x]. Năm checkbox còn mở: 1 Phase 0 (provider), 1 Phase 5 (digital sig), 3 Phase 6 (deploy + observe + legacy).
 
 ---
 
@@ -89,7 +89,7 @@
 |------|--------|---------|
 | Outgoing-document lifecycle | ✅ [x] | Implementation complete: compose/detail/action-panel/workflow-stepper, OutgoingDocumentService, NumberingEngine, deliver route, 60/60 state machine tests. Feature-gated `outgoingDocuments` (default: false); digital signature a separate item. |
 | Digital-signature integration | ⛔ BLOCKED | Requires CA vendor contract (VNPT SmartCA / Viettel CA); provider-neutral adapter boundary ready at `src/lib/crypto/digital-signature-adapter.ts` |
-| Internal-document workflow | ⛔ BLOCKED | `TO_TRINH_NOI_BO` type handled in registry/API; dedicated workflow page (#16) needs Owner scope decision |
+| Internal-document workflow | ✅ [x] | Conservative defaults authorized: institutional numbering, submit → approve workflow, dept + leadership visibility via ACL. Registry tab "Tờ trình duyệt" functional. 6/6 contract tests. Feature-gated `internalDocuments` (default: false). |
 | Meeting governance + resolutions | ✅ [x] | Inline resolution form, linked tasks |
 | Admin/utility modules | ✅ [x] | Delegation, notification, search, reports/export |
 | ACL enforcement on aggregation | ✅ [x] | `buildDocumentReadWhere` on stats |
@@ -118,7 +118,7 @@
 | 2 | **Nhà cung cấp chữ ký số** — chưa chọn | Digital signature integration | ⛔ GENUINE: requires CA vendor contract (VNPT SmartCA / Viettel CA). Adapter boundary ready. |
 | 3 | **ClamAV production daemon** | Pilot deployment runtime file scan | ⛔ GENUINE: docker-compose config exists; daemon needs to run on production host. |
 | ~~4~~ | ~~**Outgoing-document scope**~~ | ~~Outgoing doc lifecycle~~ | ✅ RESOLVED: implementation complete (compose/detail/action-panel/stepper/service/numbering, 60/60 tests). Feature-gated. |
-| 5 | **Internal-document scope** — Owner decision needed | Dedicated internal doc workflow page (#16) | ⛔ GENUINE: `TO_TRINH_NOI_BO` type handled in registry; dedicated page needs scope decision. |
+| ~~5~~ | ~~**Internal-document scope**~~ | ~~Dedicated internal doc workflow~~ | ✅ RESOLVED: Owner authorized conservative defaults (institutional numbering, submit→approve, dept+leadership ACL). Existing registry tab serves the workflow; 6/6 contract tests. |
 | ~~6~~ | ~~**RBAC design**~~ | ~~Account provisioning~~ | ✅ RESOLVED: read-only directory delivered (#18 exists); provisioning is a future enhancement, not blocking any roadmap item. |
 | 7 | **Production access** — cần để deploy và observe | Pilot deployment, observation window, legacy removal | ⛔ GENUINE: no deploy mechanism in CI; manual docker-compose needed. |
 | ~~8~~ | ~~**Self-hosted runner DB credentials**~~ | ~~CI Quality Gate~~ | ✅ FIXED: added PostgreSQL 16 service container to `ci.yml`. Pending CI run confirmation. |

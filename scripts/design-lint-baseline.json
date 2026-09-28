@@ -4,42 +4,27 @@
     {
       "ruleId": "focus-ring-width",
       "file": "src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "className=\"inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent hover:border-border text-xs font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer shrink-0 shadow-2xs\""
+      "text": "\"flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none touch-manipulation\","
     },
     {
       "ruleId": "focus-ring-width",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "\"h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user\","
+      "file": "src/components/inbox/action-inbox.tsx",
+      "text": "className=\"w-full h-7 pl-8 pr-2.5 text-[11px] rounded-md border border-border/80 bg-background placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors\""
     },
     {
       "ruleId": "focus-ring-width",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15\""
+      "file": "src/components/inbox/inbox-view.tsx",
+      "text": "className=\"w-full h-7 pl-8 pr-2.5 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors\""
     },
     {
       "ruleId": "focus-ring-width",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
+      "file": "src/components/org/mobile-org-drilldown.tsx",
+      "text": "className=\"w-full h-11 pl-10 pr-9 rounded-xl border border-border/80 bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-ring transition-colors shadow-2xs\""
     },
     {
       "ruleId": "focus-ring-width",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/12 dark:border-white/15 shadow-2xs hover:shadow-xs hover:border-black/20 dark:hover:border-white/25 text-muted-foreground/80 hover:text-foreground font-mono font-semibold text-[13.5px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
-    },
-    {
-      "ruleId": "focus-ring-width",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded px-1 py-0.5\""
-    },
-    {
-      "ruleId": "focus-ring-width",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "\"hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary\","
-    },
-    {
-      "ruleId": "focus-ring-width",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "\"focus-visible:ring-1.5 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none\","
+      "file": "src/components/org/organization-tree.tsx",
+      "text": "className=\"w-full h-7 pl-8 pr-8 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors\""
     },
     {
       "ruleId": "focus-ring-width",
@@ -48,8 +33,13 @@
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/dashboard/unified-task-toolbar.tsx",
-      "text": "<X className=\"size-3\" strokeWidth={2} />"
+      "file": "src/components/dashboard/task-filter-icons.tsx",
+      "text": "<path d=\"M5 8.25L7.25 10.5L11 6\" strokeWidth=\"1.75\" />"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/dashboard/task-filter-icons.tsx",
+      "text": "<path d=\"M5.5 8L7.25 9.75L10.75 6.25\" strokeWidth=\"1.75\" />"
     },
     {
       "ruleId": "icon-stroke-width",
@@ -98,23 +88,68 @@
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/inbox/linear-inbox-view.tsx",
-      "text": "<InboxIcon size={32} strokeWidth={1.2} />"
+      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "text": "<circle cx=\"100\" cy=\"100\" r=\"87\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"1.2\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/inbox/linear-inbox-view.tsx",
-      "text": "{isSelected && <Check size={12} strokeWidth={2} />}"
+      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "text": "<circle cx=\"100\" cy=\"100\" r=\"94\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"3.5\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<SquarePen size={13.5} strokeWidth={1.75} />"
+      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "text": "strokeWidth=\"1.8\""
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "<Keyboard size={14} strokeWidth={1.75} />"
+      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "text": "strokeWidth=\"2.2\""
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/digital-signature-dialog.tsx",
+      "text": "strokeWidth=\"2.8\""
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/outgoing-action-panel.tsx",
+      "text": "<Send className=\"size-3\" strokeWidth={2} />"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/outgoing-recipient-list.tsx",
+      "text": "<CheckCircle2 className=\"size-3\" strokeWidth={2} />"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/outgoing-recipient-list.tsx",
+      "text": "strokeWidth={2}"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/outgoing-workflow-stepper.tsx",
+      "text": "<CheckCircle2 className=\"size-3.5 text-emerald-600\" strokeWidth={2} />"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/outgoing-workflow-stepper.tsx",
+      "text": "<Clock className=\"size-3 text-primary animate-pulse\" strokeWidth={2} />"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "strokeWidth={1.75}"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/registry/document-pagination.tsx",
+      "text": "strokeWidth={2}"
+    },
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/documents/registry/document-table.tsx",
+      "text": "<Check className=\"size-3 text-emerald-600\" strokeWidth={2} />"
     },
     {
       "ruleId": "icon-stroke-width",
@@ -123,53 +158,23 @@
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Check className=\"size-3.5 text-slate-700 shrink-0\" strokeWidth={2} />"
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<path d=\"M3 3L9 9M9 3L3 9\" stroke=\"currentColor\" strokeWidth=\"1.8\" strokeLinecap=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "strokeWidth={1.75}"
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<path d=\"M4 2 L32 2 L21 16 L21 28 L15 31 L15 16 Z\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1.2\" strokeOpacity=\"0.25\" strokeLinejoin=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "{m.completed && <Check className=\"size-2.5\" strokeWidth={2} />}"
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<path d=\"M8 4 L28 4\" stroke=\"currentColor\" strokeWidth=\"0.8\" strokeOpacity=\"0.08\" strokeLinecap=\"round\" />"
     },
     {
       "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Check className=\"size-3 text-primary\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<ChevronDown className=\"size-3 text-slate-400\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<ArrowLeft className=\"size-4\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Check className=\"size-3.5 text-emerald-600\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Plus className=\"size-3.5\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "strokeWidth={2}"
-    },
-    {
-      "ruleId": "icon-stroke-width",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "strokeWidth={2}"
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<rect x=\"0\" y=\"0\" width=\"58\" height=\"72\" rx=\"5\" fill=\"white\" stroke=\"currentColor\" strokeWidth=\"1\" strokeOpacity=\"0.15\" />"
     },
     {
       "ruleId": "icon-stroke-width",
@@ -202,14 +207,14 @@
       "text": "{isSelected && <Check className=\"size-3 text-primary\" strokeWidth={2} />}"
     },
     {
-      "ruleId": "no-arbitrary-color-value",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<aside className=\"hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
+      "ruleId": "icon-stroke-width",
+      "file": "src/lib/icons/task-status-icons.tsx",
+      "text": "<path d=\"M5 8.25L7.25 10.5L11 6\" strokeWidth=\"1.75\" />"
     },
     {
-      "ruleId": "no-arbitrary-color-value",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
+      "ruleId": "icon-stroke-width",
+      "file": "src/lib/icons/task-status-icons.tsx",
+      "text": "<path d=\"M8 2.25A5.75 5.75 0 0 1 13.75 8\" strokeWidth=\"1.75\" />"
     },
     {
       "ruleId": "no-arbitrary-color-value",
@@ -218,48 +223,93 @@
     },
     {
       "ruleId": "no-arbitrary-color-value",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<div className=\"relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
-    },
-    {
-      "ruleId": "no-arbitrary-color-value",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 text-foreground select-none group/sidebar w-[228px]\""
-    },
-    {
-      "ruleId": "no-arbitrary-color-value",
-      "file": "src/components/layout/app-topbar.tsx",
-      "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-[#f8f9fa] dark:bg-zinc-950 select-none\""
-    },
-    {
-      "ruleId": "no-card-accent-bar",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "headerAccent: \"border-t-2 border-t-amber-500\","
-    },
-    {
-      "ruleId": "no-card-accent-bar",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "headerAccent: \"border-t-2 border-t-blue-500\","
-    },
-    {
-      "ruleId": "no-card-accent-bar",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "headerAccent: \"border-t-2 border-t-emerald-500\","
-    },
-    {
-      "ruleId": "no-card-accent-bar",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "headerAccent: \"border-t-2 border-t-slate-500\","
+      "text": ": \"text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal\""
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<aside className=\"hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "\"text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 active:scale-[0.98]\","
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "\"text-sky-700 dark:text-sky-400 hover:bg-sky-500/10 active:scale-[0.98]\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "<Archive className=\"size-3.5 text-sky-600 dark:text-sky-400 shrink-0\" />"
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "<CheckCircle2 className=\"size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0\" />"
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "<div className=\"p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-800 dark:text-sky-300 space-y-1\">"
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-bulk-toolbar.tsx",
+      "text": "<span className=\"font-semibold text-emerald-600 dark:text-emerald-400\">"
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconBg: \"bg-amber-500/10 dark:bg-amber-500/20\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconBg: \"bg-blue-500/10 dark:bg-blue-500/20\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconBg: \"bg-emerald-500/10 dark:bg-emerald-500/20\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconBg: \"bg-rose-500/10 dark:bg-rose-500/20\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconBg: \"bg-sky-500/10 dark:bg-sky-500/20\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconColor: \"text-amber-600 dark:text-amber-400\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconColor: \"text-blue-600 dark:text-blue-400\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconColor: \"text-emerald-600 dark:text-emerald-400\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconColor: \"text-rose-600 dark:text-rose-400\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "iconColor: \"text-sky-600 dark:text-sky-400\","
+    },
+    {
+      "ruleId": "no-dark-variant",
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "textColor: \"text-rose-600 dark:text-rose-400\","
     },
     {
       "ruleId": "no-dark-variant",
@@ -269,62 +319,22 @@
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-shell.tsx",
-      "text": "<div className=\"relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "className=\"flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-black/[0.08] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden\""
+      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
     },
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": "\"h-7 flex items-center gap-1.5 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left min-w-0 flex-1 outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15 group/user\","
+      "text": ": \"hover:bg-black/[0.04] dark:hover:bg-white/[0.05]\""
     },
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": "\"rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 w-60\","
+      "text": ": \"text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal\""
     },
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": ": \"hover:bg-black/[0.04] dark:hover:bg-white/[0.04]\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": ": \"text-muted-foreground/80 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"border-t border-black/[0.06] dark:border-white/[0.08] pt-1 mt-1\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"flex items-center gap-2.5 p-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.05]\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"mb-2 p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 font-medium leading-relaxed\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"size-5 rounded-[5px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white font-medium text-[10px] shrink-0 shadow-2xs\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"size-8 rounded-[7px] flex items-center justify-center bg-pink-500/90 dark:bg-pink-500 text-white text-xs font-semibold shrink-0 shadow-2xs\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "? \"bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-semibold\""
+      "text": "? \"bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-medium\""
     },
     {
       "ruleId": "no-dark-variant",
@@ -334,42 +344,12 @@
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": "badge.variant === \"rose\" && \"bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 text-foreground select-none group/sidebar w-[228px]\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer text-left\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/75 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-black/10 dark:focus-visible:ring-white/15\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/12 dark:border-white/15 shadow-2xs hover:shadow-xs hover:border-black/20 dark:hover:border-white/25 text-muted-foreground/80 hover:text-foreground font-mono font-semibold text-[13.5px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
+      "text": "className=\"size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50\""
     },
     {
       "ruleId": "no-dark-variant",
       "file": "src/components/layout/app-topbar.tsx",
-      "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-[#f8f9fa] dark:bg-zinc-950 select-none\""
+      "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
     },
     {
       "ruleId": "no-dark-variant",
@@ -378,168 +358,13 @@
     },
     {
       "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "\"bg-white dark:bg-zinc-800 text-foreground border border-black/15 dark:border-white/20 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "<div className=\"border-b border-black/[0.06] dark:border-white/[0.06] px-4 py-2 flex items-center gap-2 bg-background\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "<div className=\"border-t border-black/[0.08] dark:border-white/[0.08] px-4 py-2 bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "<div className=\"flex items-center justify-between border-b border-black/[0.08] dark:border-white/[0.08] px-4 py-3 bg-muted/20\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "<div className=\"rounded-lg border border-black/[0.06] dark:border-white/[0.08] divide-y divide-black/[0.04] dark:divide-white/[0.04] bg-muted/[0.12] overflow-hidden\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "className=\"fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-xs\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "className=\"flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "className=\"relative z-10 w-full max-w-xl overflow-hidden rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 shadow-2xl flex flex-col max-h-[85vh]\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "className=\"size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "<span className=\"size-4.5 rounded-full bg-slate-200 dark:bg-zinc-800 text-[9px] font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "? \"text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-400\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "? \"text-blue-700 bg-blue-500/10 border-blue-500/25 dark:text-blue-400\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "? \"text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-400\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "? \"text-rose-700 bg-rose-500/10 border-rose-500/25 dark:text-rose-400\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "className=\"fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150\""
-    },
-    {
-      "ruleId": "no-dark-variant",
       "file": "src/components/tasks/table/components/subtask-row-group.tsx",
       "text": "className={cn(\"bg-muted/10 dark:bg-zinc-800/10 transition-colors rounded-lg\", className)}"
     },
     {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "\"group cursor-pointer transition-all select-none bg-transparent text-slate-900 dark:text-zinc-100\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "\"hover:bg-muted/50 dark:hover:bg-zinc-800/50\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": ": \"text-slate-600 dark:text-zinc-400 font-normal\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700 dark:text-zinc-300 font-medium\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-400\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90 dark:text-emerald-400\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-400\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-300\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<span className=\"flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "className=\"text-slate-200 dark:text-zinc-700\""
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "isPreviewing && \"bg-blue-50/70 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "isSelected && \"bg-primary/[0.08] dark:bg-primary/[0.14]\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
-      "text": "\"sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<tr className={cn(rowHeightClass, \"text-xs font-semibold text-slate-700 dark:text-zinc-300\")}>"
-    },
-    {
       "ruleId": "no-icon-box",
-      "file": "src/components/auth/google-login-button.tsx",
-      "text": "className=\"flex h-11 w-full max-w-[360px] items-center justify-center gap-3 rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted/50 hover:border-border active:bg-muted active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "src/components/common/maintenance-dialog.tsx",
-      "text": "className=\"absolute top-4 right-4 size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer\""
+      "file": "src/components/calendar/calendar-day-sheet.tsx",
+      "text": "className=\"inline-flex items-center justify-center h-7.5 px-2 text-xs font-medium gap-1 rounded-md border border-border/70 bg-background hover:bg-muted/50 text-foreground cursor-pointer transition-colors active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary\""
     },
     {
       "ruleId": "no-icon-box",
@@ -563,8 +388,13 @@
     },
     {
       "ruleId": "no-icon-box",
-      "file": "src/components/documents/document-detail-dialog.tsx",
-      "text": "className=\"min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 cursor-pointer\""
+      "file": "src/components/documents/registry/document-pagination.tsx",
+      "text": "className=\"inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/documents/registry/document-table.tsx",
+      "text": "className=\"size-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer active:scale-[0.98]\""
     },
     {
       "ruleId": "no-icon-box",
@@ -614,7 +444,7 @@
     {
       "ruleId": "no-icon-box",
       "file": "src/components/tasks/table/components/task-pagination-bar.tsx",
-      "text": "className=\"inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95\""
+      "text": "className=\"inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]\""
     },
     {
       "ruleId": "no-icon-box",
@@ -624,12 +454,7 @@
     {
       "ruleId": "no-icon-box",
       "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
-      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98\""
-    },
-    {
-      "ruleId": "no-icon-box",
-      "file": "src/components/ui/drawer.tsx",
-      "text": "className=\"flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all duration-200 active:scale-95 shrink-0 cursor-pointer\""
+      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-[0.98]\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -695,6 +520,21 @@
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/dashboard/task-detail-side-sheet.tsx",
       "text": "className=\"flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "text": ": \"border-border/80 bg-background group-hover/item:border-neutral-400\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "text": "? \"bg-neutral-800 text-white font-semibold shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -923,23 +763,8 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/documents/document-quick-entry-modal.tsx",
-      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/documents/document-split-view.tsx",
-      "text": "className: \"bg-zinc-500/10 text-zinc-700 border-zinc-500/20\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<aside className=\"hidden md:flex w-[228px] shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-[#f8f9fa] dark:bg-zinc-950\" />}>"
+      "file": "src/components/inbox/inbox-view.tsx",
+      "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -949,47 +774,22 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/app-shell.tsx",
-      "text": "<div className=\"relative min-h-[100dvh] bg-[#f8f9fa] dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "className=\"flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-black/[0.08] dark:md:border-white/[0.08] md:bg-white dark:md:bg-zinc-900 md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden\""
+      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/app-sidebar.tsx",
-      "text": "\"rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 w-60\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-[#f8f9fa] dark:bg-zinc-950 text-foreground select-none group/sidebar w-[228px]\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/15 text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.35)] hover:bg-zinc-50 dark:hover:bg-zinc-700/80 hover:shadow-xs active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "className=\"size-7 rounded-full flex items-center justify-center bg-white dark:bg-zinc-800 border border-black/12 dark:border-white/15 shadow-2xs hover:shadow-xs hover:border-black/20 dark:hover:border-white/25 text-muted-foreground/80 hover:text-foreground font-mono font-semibold text-[13.5px] leading-none transition-all active:scale-95 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-primary\""
+      "text": ": \"text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/app-topbar.tsx",
-      "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-[#f8f9fa] dark:bg-zinc-950 select-none\""
+      "text": "className=\"hidden md:flex h-11 shrink-0 items-center justify-between px-4 bg-sidebar dark:bg-zinc-950 select-none\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/app-topbar.tsx",
       "text": "className=\"md:hidden sticky top-0 z-30 w-full h-[calc(48px+env(safe-area-inset-top,0px))] border-b border-border/70 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] px-3 flex items-center justify-between gap-2 shadow-2xs select-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/command-search-modal.tsx",
-      "text": "\"fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-xs\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1224,12 +1024,12 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/command-search-modal.tsx",
-      "text": "className=\"hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors\""
+      "text": "className=\"hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors cursor-pointer\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/command-search-modal.tsx",
-      "text": "className=\"p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors\""
+      "text": "className=\"p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1239,27 +1039,7 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/layout/command-search-modal.tsx",
-      "text": "className=\"w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh]\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/command-search-modal.tsx",
       "text": "{isLoading && <Loader2 className=\"w-4 h-4 text-neutral-400 animate-spin shrink-0\" />}"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "\"bg-white dark:bg-zinc-800 text-foreground border border-black/15 dark:border-white/20 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/global-shortcuts-modal.tsx",
-      "text": "className=\"relative z-10 w-full max-w-xl overflow-hidden rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-zinc-900 shadow-2xl flex flex-col max-h-[85vh]\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/onboarding/welcome-modal.tsx",
-      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-150\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1270,6 +1050,11 @@
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/org/organization-tree.tsx",
       "text": ": \"bg-slate-400\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/org/organization-tree.tsx",
+      "text": "? \"bg-neutral-800 text-white border-neutral-800 font-semibold shadow-2xs\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -1718,1071 +1503,6 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "\"relative flex flex-col w-full bg-white rounded-xl shadow-2xl border border-slate-200/90 overflow-hidden transition-all duration-200\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "\"size-3 text-slate-400\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "\"w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "\"w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "\"w-full text-xl sm:text-2xl font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"border-slate-300 hover:border-slate-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"border-slate-300\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-100\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-50\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": ": \"text-slate-800 font-medium\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Building2 className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Check className=\"size-3.5 text-slate-700 shrink-0\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Check className=\"size-3.5 text-slate-800\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<ChevronDown className=\"size-2.5 text-slate-400\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<ChevronDown className=\"size-3 text-slate-400\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<ChevronRight className=\"size-3 text-slate-300\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Tag className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<User className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<Users className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"absolute left-0 mt-1 w-36 rounded-lg bg-white border border-slate-200 shadow-md py-1 z-20\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"absolute left-0 mt-1 w-36 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"absolute left-0 mt-1 w-48 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"absolute left-0 mt-1 w-56 rounded-md bg-white border border-slate-200 shadow-md py-1 z-20 max-h-52 overflow-y-auto\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"absolute left-0 mt-1 w-64 rounded-md bg-white border border-slate-200/90 shadow-lg py-1 z-30 max-h-60 overflow-y-auto\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"flex flex-wrap items-center gap-1 py-1.5 border-y border-slate-100 shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"flex items-center gap-1.5 text-xs text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"flex items-center justify-between px-6 py-2 bg-slate-50 border-b border-slate-100 text-xs text-slate-700 shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"flex items-center justify-between py-0.5 text-xs text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"pt-2 border-t border-slate-100 shrink-0 space-y-2\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<div className=\"text-[10px] text-slate-400\">{person.role}</div>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<footer className=\"flex items-center justify-end gap-2 px-6 py-3 border-t border-slate-100 bg-white shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<header className=\"flex items-center justify-between px-5 sm:px-7 py-3 border-b border-slate-100 bg-white shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<label className=\"text-xs font-semibold text-slate-700 mb-1.5 block select-none\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<p className=\"text-xs text-slate-600 leading-relaxed\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<span className=\"font-medium text-slate-700 select-none\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<span className=\"size-1.5 rounded-full bg-slate-300\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<span className=\"size-3.5 rounded-full border border-dashed border-slate-300 shrink-0\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<span className=\"text-[10px] text-slate-400 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "<span className=\"text-[10px] text-slate-400 select-none\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "? \"bg-slate-100 text-slate-900 font-semibold\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "? \"bg-slate-800 border-slate-800 text-white\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "? \"font-semibold text-slate-900 bg-slate-100\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "? \"font-semibold text-slate-900 bg-slate-50\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "? \"line-through text-slate-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "bg: \"bg-slate-50\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "border: \"border-slate-200\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-2 sm:p-4 md:p-6\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"flex items-center justify-between gap-2 py-1 px-1.5 rounded hover:bg-slate-50 text-xs group\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"flex-1 bg-transparent border-0 p-0 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"h-7.5 px-3 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"h-7.5 px-3.5 text-xs font-medium rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300 rounded px-1 py-0.5\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"inline-flex items-center gap-1.5 py-1 px-1 text-xs text-slate-400 hover:text-slate-700 transition-colors cursor-pointer select-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"size-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"size-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"text-slate-300 hover:text-rose-600 transition-colors p-0.5 cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"text-slate-500\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"text-sm font-semibold text-slate-900\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"text-xs text-slate-500 hover:text-rose-600 transition-colors underline underline-offset-2\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"w-full min-h-[100px] max-h-[220px] resize-y bg-transparent border-0 p-0 text-xs sm:text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-0 leading-relaxed\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-50 text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "className=\"w-full text-xs text-slate-500 placeholder:text-slate-300 bg-transparent border-0 p-0 focus:outline-none focus:ring-0\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "color: \"text-slate-500\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "color: \"text-slate-600\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "fieldErrors.dueDate ? \"text-rose-500\" : \"text-slate-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "icon={<Calendar className=\"size-3 text-slate-400\" strokeWidth={1.5} />}"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "iconColor: \"text-slate-400\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "isAgentOpen && \"text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "status === \"IN_PROGRESS\" ? \"bg-blue-500\" : \"bg-slate-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "{category === opt.id && <Check className=\"size-3 text-slate-800\" />}"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-create-task-modal.tsx",
-      "text": "{priority === p && <Check className=\"size-3 text-slate-800\" />}"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "\"flex flex-col h-full overflow-hidden text-slate-900 transition-all duration-200\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "\"w-full md:w-[320px] lg:w-[340px] border-t md:border-t-0 md:border-l border-slate-100 bg-white shrink-0\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<Loader2 className=\"size-5 animate-spin text-slate-600\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"flex flex-col items-center justify-center py-8 space-y-1.5 text-center text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"flex items-center justify-between border-b border-slate-100 pb-1.5\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"flex items-center justify-between pt-1 border-t border-slate-100\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"pt-1.5 border-t border-slate-100 flex items-center gap-1.5\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"rounded-md border border-slate-200/80 bg-white p-2.5 space-y-1.5 focus-within:border-slate-400 transition-colors\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"rounded-md border border-slate-200/90 bg-white p-3 space-y-2.5 shadow-2xs\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"text-[10px] font-semibold uppercase text-slate-400\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"text-[11px] text-slate-500 flex items-center gap-2\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"text-[11px] text-slate-600\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"text-xs font-semibold text-slate-900 leading-snug\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<div className=\"text-xs text-slate-600 leading-relaxed\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<h3 className=\"text-xs font-semibold text-slate-700\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<header className=\"flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<p className=\"text-xs font-medium text-slate-800\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-[10px] font-medium text-slate-400 select-none\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-[10px] text-slate-400 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-[10px] text-slate-400 shrink-0 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-[10px] text-slate-400\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-[10px] uppercase text-slate-400 font-medium\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "<span className=\"text-xs font-semibold text-slate-800\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"flex-1 h-7 text-xs text-slate-500 hover:text-slate-800 rounded hover:bg-slate-50 cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"inline-flex items-center px-2 py-0.5 rounded text-[11px] text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-left cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"size-3.5 rounded border-slate-300 text-slate-900 focus:ring-primary cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"text-[11px] text-slate-500 cursor-pointer select-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"text-[11px] text-slate-600 flex items-start justify-between gap-2 py-0.5\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/create/linear-task-agent-panel.tsx",
-      "text": "className=\"w-full resize-none bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none leading-relaxed\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "\"w-full bg-slate-50/70 border-l border-border/40 p-4 sm:p-5 flex flex-col space-y-5 text-xs text-slate-800\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "\"w-full text-left px-3 py-1.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors cursor-pointer focus-visible:bg-slate-100 focus-visible:outline-none\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Activity className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<AlertCircle className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Building2 className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Calendar className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<ChevronDown className=\"size-3 text-slate-400\" strokeWidth={2} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Clock className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Tag className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<TrendingUp className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<User className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<Users className=\"size-3.5 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<div className=\"flex items-center justify-between text-slate-800 font-mono text-[11px]\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<div className=\"py-3 px-2 text-center text-[11px] text-slate-400 rounded-md border border-dashed border-border/50 bg-white/50\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<div className=\"relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<div className=\"relative pl-4 space-y-3 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-px before:bg-slate-200\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-medium text-slate-900 truncate max-w-[150px]\" title={leadName}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-medium text-slate-900 truncate max-w-[160px]\" title={departmentName}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-mono font-bold text-slate-900 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-mono text-[10px] text-slate-400 shrink-0 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-semibold text-slate-700\">Chọn hạn mới:</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-semibold text-slate-900 truncate\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"font-semibold text-slate-900\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium truncate max-w-[160px]\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"size-3.5 rounded-full bg-slate-200 text-[9px] flex items-center justify-center font-bold text-slate-700\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[10px] font-mono text-slate-400 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-mono font-medium\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[10px] text-slate-500 font-mono self-center\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-slate-400 italic text-[11px]\">Chưa phân công nhân sự phối hợp</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-slate-400\">→</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-slate-500 font-medium flex items-center gap-1.5 shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-slate-500 font-medium flex items-center gap-1.5\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-slate-500 text-[10px] truncate\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "b <= activePriorityOption.bars ? \"bg-current\" : \"bg-slate-300\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "b <= opt.bars ? \"bg-slate-800\" : \"bg-slate-200\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "className=\"inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-border/60 text-[11px] font-medium text-slate-700 shadow-2xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "className=\"md:hidden inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 font-medium cursor-pointer p-1 rounded hover:bg-slate-200/60 transition-colors\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "className=\"px-2 py-0.5 text-[11px] text-slate-500 hover:text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "className=\"text-slate-400 hover:text-primary transition-colors cursor-pointer p-0.5 rounded hover:bg-slate-100\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "className=\"text-slate-400 hover:text-slate-600\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "colorClass: \"text-slate-600 bg-slate-100 border-slate-200\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "dotClass: \"bg-slate-400\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "opt.value === normalizedPriority ? \"font-bold text-slate-900 bg-slate-50\" : \"text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "opt.value === normalizedStatus ? \"font-bold text-slate-900 bg-slate-50\" : \"text-slate-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "\"font-semibold text-slate-900 hover:text-primary transition-colors truncate\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "\"w-full min-h-[680px] bg-white rounded-xl border border-border/40 shadow-2xs flex flex-col overflow-hidden text-slate-900\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": ": \"bg-white border-border/60 text-slate-500 hover:bg-slate-50\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": ": \"bg-white text-slate-600 border-slate-200 hover:bg-slate-50\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": ": \"border-transparent text-slate-600 hover:text-slate-900\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": ": \"text-slate-600 bg-slate-100 border-slate-200\";"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<AlertCircle className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Building2 className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Calendar className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Copy className=\"size-3.5 text-slate-500\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<FileText className=\"size-4 text-slate-400 shrink-0\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<ListTodo className=\"size-4 text-slate-500\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<Paperclip className=\"size-4 text-slate-500\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<User className=\"size-3 text-slate-400\" strokeWidth={1.5} />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"flex flex-wrap items-center gap-3 pt-1 pb-3 border-b border-border/40 text-xs text-slate-600\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"flex items-center gap-1.5 min-w-0 text-xs text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"flex items-center gap-3 text-[11px] text-slate-500 pt-0.5\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"p-4 rounded-xl border border-dashed border-border/60 bg-slate-50/40 text-center text-xs text-slate-400\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"py-12 text-center text-xs text-slate-400 rounded-xl border border-dashed border-border/60 bg-slate-50/40\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-slate-200\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<div className=\"text-sm leading-relaxed text-slate-800 space-y-2.5 py-1\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h1 className=\"text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight leading-snug\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 className=\"text-sm font-bold text-slate-900\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"desc-heading\" className=\"text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"resources-heading\" className=\"text-xs font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"subtasks-heading\" className=\"text-xs font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<kbd className=\"hidden lg:inline-block px-1 py-0.2 rounded bg-slate-200 text-[10px] font-mono text-slate-600\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<p className=\"font-semibold text-slate-900 truncate\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<p className=\"italic text-slate-400\">Chưa có nội dung mô tả chi tiết cho nhiệm vụ này.</p>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<p className=\"text-xs text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-medium text-slate-900 truncate max-w-[180px] sm:max-w-[360px] md:max-w-[480px]\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-mono font-semibold text-slate-700 shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-mono text-[11px] text-slate-400 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-mono text-xs font-bold text-slate-700 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-mono text-xs font-medium text-slate-500 uppercase\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-mono text-xs text-slate-400 tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"font-semibold text-slate-900\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"px-1.5 py-0.2 rounded-full bg-slate-200 text-[10px] font-mono tabular-nums\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-[11px] font-semibold text-slate-500 uppercase tracking-wider\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-[11px] text-slate-500\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-slate-300\" aria-hidden=\"true\">/</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-slate-300\">·</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-slate-800 font-medium\">{leadName}</span>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-xs text-slate-500 font-normal\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "? \"bg-slate-100 border-border/70 text-slate-800\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "? \"bg-slate-900 text-white border-slate-900 font-bold\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"flex items-center gap-1 px-4 sm:px-6 border-b border-border/40 bg-slate-50/40 text-xs font-medium\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"flex-1 w-full px-2.5 py-1 text-xs rounded border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"inline-flex items-center gap-1 px-2.5 py-1 rounded border border-border/60 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shrink-0\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"p-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors text-xs\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"p-3 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"px-3 py-1 text-xs text-slate-600 hover:text-slate-900 cursor-pointer\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"px-3 py-1.5 rounded-lg border border-border/60 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-primary font-mono text-[11px]\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"px-3 py-1.5 rounded-lg border border-border/60 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-primary\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "className=\"text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer shrink-0\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "st.status === \"COMPLETED\" && \"line-through text-slate-400\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "st.status === \"COMPLETED\" ? \"text-emerald-600 fill-emerald-50\" : \"text-slate-300\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/executive-department-command-center.tsx",
       "text": "\"bg-slate-50 text-slate-700 border-slate-200\","
     },
@@ -2804,12 +1524,12 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/mobile-task-card.tsx",
-      "text": "<span className=\"flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-700 border border-border/60\">"
+      "text": "<span className=\"font-medium text-slate-800 truncate\" title={assigneeName}>"
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/mobile-task-card.tsx",
-      "text": "<span className=\"font-medium text-slate-800 truncate\" title={assigneeName}>"
+      "text": "<span className=\"font-mono text-xs font-bold text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md shrink-0\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -2838,16 +1558,6 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "<span className=\"size-4.5 rounded-full bg-slate-200 dark:bg-zinc-800 text-[9px] font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "className=\"fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
       "text": ": \"border-slate-200/60 bg-white/70 hover:bg-slate-100/70\","
     },
@@ -2855,11 +1565,6 @@
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
       "text": "<div className=\"relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200/80\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
-      "text": "<span className=\"flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-border/60\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -2889,72 +1594,12 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "\"group cursor-pointer transition-all select-none bg-transparent text-slate-900 dark:text-zinc-100\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "\"hover:bg-muted/50 dark:hover:bg-zinc-800/50\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": ": \"text-slate-600 dark:text-zinc-400 font-normal\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700 dark:text-zinc-300 font-medium\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<div className=\"inline-flex items-center gap-1.5 text-[11px] text-slate-700 dark:text-zinc-300\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
       "text": "<div className=\"inline-flex items-center text-slate-400\" title=\"Độ ưu tiên: Thấp\">"
     },
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/table/components/task-row.tsx",
       "text": "<div className=\"inline-flex items-center text-slate-500\" title=\"Độ ưu tiên: Bình thường\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<span className=\"flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-medium tabular-nums text-slate-600 dark:text-zinc-300 border border-border/60\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "<span className=\"size-1.5 rounded-full bg-slate-400 shrink-0\" />"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-row.tsx",
-      "text": "className=\"text-slate-200 dark:text-zinc-700\""
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
-      "text": "\"sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs select-none\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
-      "text": "<tr className={cn(rowHeightClass, \"text-xs font-semibold text-slate-700 dark:text-zinc-300\")}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/components/task-table-header.tsx",
-      "text": "className=\"size-3 text-slate-400 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0\""
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -3073,16 +1718,6 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/task-context-menu.tsx",
-      "text": "{ priority: \"LOW\", label: \"Thấp\", icon: SignalLow, color: \"text-slate-400\" },"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/table/task-context-menu.tsx",
-      "text": "{ status: \"NOT_STARTED\", label: \"Chưa bắt đầu\", icon: Circle, color: \"text-slate-400\" },"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
       "file": "src/components/tasks/table/utils/table-date-helpers.ts",
       "text": "colorClass: \"text-zinc-400 bg-transparent border-transparent\","
     },
@@ -3098,28 +1733,8 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/task-detail-page.tsx",
-      "text": "<div className=\"min-h-screen bg-slate-50/60 p-3 sm:p-5 lg:p-7 flex flex-col items-center\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "badgeClass: \"border-slate-500/20 bg-slate-500/10 text-slate-600\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "dotColor: \"bg-slate-500\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/tasks/task-kanban-board.tsx",
-      "text": "iconColor: \"text-slate-500\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/ui/vietnamese-date-picker.tsx",
-      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent\","
+      "file": "src/components/ui/tooltip.tsx",
+      "text": "\"z-[9999] overflow-hidden rounded-md bg-zinc-600/90 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -3579,7 +2194,7 @@
     {
       "ruleId": "no-raw-neutral-palette",
       "file": "src/components/workspace/workspace-toolbar.tsx",
-      "text": "\"hover:bg-slate-50 hover:text-slate-900 active:scale-95\","
+      "text": "\"hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]\","
     },
     {
       "ruleId": "no-raw-neutral-palette",
@@ -3618,58 +2233,28 @@
     },
     {
       "ruleId": "no-uppercase-heading",
-      "file": "src/components/inbox/linear-inbox-view.tsx",
-      "text": "<div className=\"text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5\">"
+      "file": "src/components/documents/outgoing-action-panel.tsx",
+      "text": "<h3 className=\"text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3\">"
     },
     {
       "ruleId": "no-uppercase-heading",
-      "file": "src/components/inbox/linear-inbox-view.tsx",
-      "text": "<span className=\"text-xs font-bold uppercase tracking-wider text-muted-foreground\">"
+      "file": "src/components/documents/outgoing-recipient-list.tsx",
+      "text": "<h3 className=\"text-xs font-semibold text-muted-foreground uppercase tracking-wide\">"
     },
     {
       "ruleId": "no-uppercase-heading",
-      "file": "src/components/layout/app-sidebar.tsx",
-      "text": "<div className=\"text-[10.5px] font-semibold text-muted-foreground/60 px-2 pt-2 pb-0.5 select-none tracking-wider uppercase\">"
+      "file": "src/components/documents/outgoing-workflow-stepper.tsx",
+      "text": "<h3 className=\"text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4\">"
     },
     {
       "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono flex items-center gap-1.5\">"
+      "file": "src/components/documents/registry/document-pagination.tsx",
+      "text": "<div className=\"px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 mb-1\">"
     },
     {
       "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-properties-sidebar.tsx",
-      "text": "<span className=\"text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"desc-heading\" className=\"text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"resources-heading\" className=\"text-xs font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<h2 id=\"subtasks-heading\" className=\"text-xs font-bold uppercase tracking-wider text-slate-500 font-mono\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/detail/linear-task-detail-view.tsx",
-      "text": "<span className=\"text-[11px] font-semibold text-slate-500 uppercase tracking-wider\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "<span className=\"text-[10px] uppercase font-semibold text-muted-foreground tracking-wider\">"
-    },
-    {
-      "ruleId": "no-uppercase-heading",
-      "file": "src/components/tasks/preview/linear-peek-preview-modal.tsx",
-      "text": "<span className=\"text-[11px] font-semibold text-muted-foreground uppercase tracking-wider\">"
+      "file": "src/components/documents/registry/document-stats-summary.tsx",
+      "text": "<span className=\"text-[11px] sm:text-xs font-semibold tracking-wider text-muted-foreground truncate uppercase\">"
     },
     {
       "ruleId": "no-uppercase-heading",
@@ -3680,31 +2265,6 @@
       "ruleId": "no-uppercase-heading",
       "file": "src/components/tasks/table/task-context-menu.tsx",
       "text": "<div className=\"font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-wider\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/ui/tooltip.tsx",
-      "text": "\"z-[9999] overflow-hidden rounded-md bg-zinc-600/90 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none\","
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<div className=\"relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row\">"
-    },
-    {
-      "ruleId": "no-dark-variant",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950\" />}>"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/layout/app-shell.tsx",
-      "text": "<React.Suspense fallback={<header className=\"hidden md:flex h-11 shrink-0 bg-sidebar dark:bg-zinc-950\" />}>"
     }
   ]
 }

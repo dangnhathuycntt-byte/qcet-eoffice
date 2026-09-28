@@ -159,7 +159,9 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     key: "internalDocuments",
     description:
       "Phased rollout flag for internal document circulation scope. " +
-      "Disabled until internal routing rules and retention policy are defined.",
+      "Implementation uses existing submit-content-review → approve-content workflow, " +
+      "institutional-level sequential numbering, and department + leadership visibility " +
+      "via buildDocumentReadWhere ACL. Disabled by default; enable when ready for pilot.",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,
