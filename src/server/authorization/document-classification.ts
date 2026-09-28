@@ -173,6 +173,7 @@ export function normalizeToAuthorizationContext(
   const isClerk = roleUpper === 'VAN_THU' || roleUpper === 'CLERK' || posCode === 'VAN_THU';
   const isDeptHead = roleUpper === 'MANAGER' || roleUpper === 'TRUONG_PHONG' || posCode === 'TRUONG_PHONG';
 
+  const effectiveUnitId = (user as any)?.activeUnitId || user?.departmentId || (user as any)?.unitId;
   const positions: ActivePositionAssignment[] = [];
   if (user?.id && !isSysAdmin) {
     if (isBgh) {
@@ -184,7 +185,7 @@ export function normalizeToAuthorizationContext(
         positionTitle: user.title || 'Ban Giám hiệu',
         positionLevel: 1,
         isLeadership: true,
-        unitId: user.departmentId || 'BGH_UNIT',
+        unitId: effectiveUnitId || 'BGH_UNIT',
         unitCode: 'BGH',
         unitName: 'Ban Giám hiệu',
         unitType: 'BOARD' as any,
@@ -205,7 +206,7 @@ export function normalizeToAuthorizationContext(
         positionTitle: user.title || 'Văn thư',
         positionLevel: 3,
         isLeadership: false,
-        unitId: user.departmentId || 'HC_UNIT',
+        unitId: effectiveUnitId || 'HC_UNIT',
         unitCode: 'HC',
         unitName: 'Hành chính',
         unitType: 'DEPARTMENT' as any,
@@ -226,7 +227,7 @@ export function normalizeToAuthorizationContext(
         positionTitle: user.title || 'Trưởng phòng',
         positionLevel: 2,
         isLeadership: true,
-        unitId: user.departmentId || 'DEPT_UNIT',
+        unitId: effectiveUnitId || 'DEPT_UNIT',
         unitCode: 'DEPT',
         unitName: 'Đơn vị',
         unitType: 'DEPARTMENT' as any,
@@ -247,7 +248,7 @@ export function normalizeToAuthorizationContext(
         positionTitle: user.title || 'Chuyên viên',
         positionLevel: 4,
         isLeadership: false,
-        unitId: user.departmentId || 'DEFAULT_UNIT',
+        unitId: effectiveUnitId || 'DEFAULT_UNIT',
         unitCode: 'UNIT',
         unitName: 'Đơn vị',
         unitType: 'DEPARTMENT' as any,
@@ -276,7 +277,7 @@ export function normalizeToAuthorizationContext(
     portfolios: [],
     delegations: [],
     bodyMemberships: [],
-    primaryUnitIds: user?.departmentId ? [user.departmentId] : [],
+    primaryUnitIds: effectiveUnitId ? [effectiveUnitId] : [],
     generatedAt: new Date(),
   });
 }
@@ -555,6 +556,12 @@ export function canAccessClassification(
     }
     if ((context.user as any)?.departmentId) {
       userUnitIds.add((context.user as any).departmentId);
+    }
+    if ((context.user as any)?.activeUnitId) {
+      userUnitIds.add((context.user as any).activeUnitId);
+    }
+    if ((context.user as any)?.unitId) {
+      userUnitIds.add((context.user as any).unitId);
     }
 
     const docUnitIds = extractDocumentUnitIds(document);

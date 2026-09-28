@@ -197,7 +197,7 @@ describe('Task 10: Canonical Available Actions Computation', () => {
       );
     });
 
-    test('dual role (chair + secretary) gets both draft_minutes and confirm_minutes', () => {
+    test('dual role (chair + secretary) enforces SoD: gets draft_minutes but confirm_minutes is denied', () => {
       const dualResource: AuthorizationResource = {
         type: 'meeting',
         id: 'meet_dual_1',
@@ -211,7 +211,11 @@ describe('Task 10: Canonical Available Actions Computation', () => {
       const actions = computeAvailableActions(dualContext, dualResource);
 
       assert.ok(actions.includes('meeting.draft_minutes'), 'Dual role has meeting.draft_minutes');
-      assert.ok(actions.includes('meeting.confirm_minutes'), 'Dual role has meeting.confirm_minutes');
+      assert.strictEqual(
+        actions.includes('meeting.confirm_minutes'),
+        false,
+        'SoD Rule 10.7 prevents secretary from confirming minutes even if chair'
+      );
     });
 
     test('regular participant gets meeting.read but no administrative or minutes actions', () => {

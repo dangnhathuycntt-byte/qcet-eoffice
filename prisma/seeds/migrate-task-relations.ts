@@ -35,10 +35,13 @@ export const DEPARTMENT_TO_ORG_UNIT_MAP: Record<string, string> = {
   TT_NN_TH: "TT_NN_TH",
   TT_NNTH: "TT_NN_TH",
 
+  // Trung tâm Số & Truyền thông
+  TT_SO_TT: "TT_SO_TT",
+  TT_STT: "TT_SO_TT",
+
   // Khoa CNTT
   K_CNTT: "K_CNTT",
   "khoa-cntt": "K_CNTT",
-  TT_STT: "K_CNTT",
   CNTT: "K_CNTT",
 
   // Khoa Điện - Điện tử

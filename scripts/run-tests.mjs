@@ -255,7 +255,8 @@ if (explicitFiles && explicitFiles.length > 0) {
   // Use parallel execution for the full suite too — integration tests are
   // safe because they use an isolated test database.  Fall back to serial
   // only when TEST_SERIAL=1 is set (useful for debugging flaky ordering).
-  concurrency = process.env.TEST_SERIAL === "1" ? 1 : Math.max(1, Math.floor(os.cpus().length / 2));
+  const envConcurrency = process.env.TEST_CONCURRENCY ? parseInt(process.env.TEST_CONCURRENCY, 10) : null;
+  concurrency = process.env.TEST_SERIAL === "1" ? 1 : (envConcurrency || Math.max(1, Math.min(8, Math.floor(os.cpus().length / 2))));
   console.log(`[test-runner] Discovered ${testFiles.length} test files (concurrency=${concurrency}).`);
 }
 

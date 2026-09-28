@@ -132,9 +132,9 @@ export function buildDocumentResource(doc: any): AuthorizationResource {
 
   const creatorId = doc.creatorId || doc.createdById || undefined;
   // Phase 9: `Document.leadDepartmentId` / `draftingDeptId` đã bị drop — chỉ còn
-  // các field canonical (`leadUnitId`, `draftingUnitId`, `unitId`).
-  const leadUnitId = doc.leadUnitId || undefined;
-  const draftingUnitId = doc.draftingUnitId || undefined;
+  // các field canonical (`leadUnitId`, `draftingUnitId`, `unitId`), fallback sang legacy nếu có.
+  const leadUnitId = doc.leadUnitId || doc.leadDepartmentId || undefined;
+  const draftingUnitId = doc.draftingUnitId || doc.draftingDeptId || undefined;
   const unitId = doc.unitId || doc.departmentId || leadUnitId || draftingUnitId || undefined;
 
   return {
@@ -208,6 +208,20 @@ export function buildTaskResource(task: any): AuthorizationResource {
     collaboratorIds.push(...task.collaboratorIds);
   }
 
+  if (Array.isArray(task.collaborators)) {
+    for (const c of task.collaborators) {
+      const uid = typeof c === 'string' ? c : c?.id || c?.userId;
+      if (uid) collaboratorIds.push(uid);
+    }
+  }
+
+  if (Array.isArray(task.assignees)) {
+    for (const a of task.assignees) {
+      const uid = typeof a === 'string' ? a : a?.id || a?.userId;
+      if (uid) assigneeIds.push(uid);
+    }
+  }
+
   if (primaryOwnerId) assigneeIds.push(primaryOwnerId);
   assigneeIds.push(...collaboratorIds);
 
@@ -219,13 +233,24 @@ export function buildTaskResource(task: any): AuthorizationResource {
     .map((deliverable: any) => deliverable.uploadedById || deliverable.uploadedBy?.id)
     .filter((id: unknown): id is string => typeof id === 'string');
 
+  const driUnitId =
+    task.driUnitId ||
+    primaryDRI?.unitId ||
+    primaryDRI?.user?.positionAssignments?.[0]?.unitId ||
+    primaryDRI?.user?.departmentId ||
+    task.dri?.unitId ||
+    task.dri?.departmentId ||
+    undefined;
+
   return {
     ...task,
     type: 'task',
     id: task.id,
     scope: (task.scope || 'school').toString().toLowerCase(),
+    originLevel: task.originLevel ? task.originLevel.toString().toUpperCase() : undefined,
     departmentId,
     leadUnitId,
+    driUnitId,
     creatorId,
     createdById: creatorId,
     assignerId: creatorId,

@@ -107,9 +107,11 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
         progressPercent: 40,
         academicMonth: 9,
         academicYear: '2026-2027',
+        startDate: new Date('2026-09-01T00:00:00.000Z'),
         dueDate: new Date('2026-09-20T00:00:00.000Z'),
+        leadUnitId: targetDeptId,
 
-        createdById: bghUser.id,
+        createdById: staffUser.id,
       },
     });
     testTaskId = task.id;
@@ -131,10 +133,8 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
         where: { id: { in: createdTaskIds } },
       });
     }
-    if (execAssignmentId) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } });
-    }
     if (execUnitId) {
+      await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
   });

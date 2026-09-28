@@ -15,13 +15,14 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CalendarAgendaView } from "../src/components/calendar/calendar-agenda-view";
 import { CalendarWeekView } from "../src/components/calendar/calendar-week-view";
+import { getSystemReferenceDate } from "../src/lib/academic-calendar";
 import type { SchoolTask } from "../src/types/dashboard";
 import type { DayTaskItem } from "../src/components/calendar/calendar-day-sheet";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 
-// getSystemReferenceDate() hardcodes "2026-09-09" khi không có env var
-const TODAY = "2026-09-09"; // phải khớp với getSystemReferenceDate()
+// Dynamic system reference date so tests align across dates and CI environments
+const TODAY = getSystemReferenceDate();
 
 const taskToday: SchoolTask = {
   id: "t-today",

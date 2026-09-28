@@ -11,19 +11,20 @@ export interface MasterCutoverParityReport {
 
 export async function runAllDataMigrations(
   client?: PrismaClient,
-  options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean; apply?: boolean } = {}
 ): Promise<MasterCutoverParityReport> {
   const prisma = client || new PrismaClient();
-  const dryRun = !!options.dryRun;
+  const apply = options.apply === true && options.dryRun !== true;
+  const dryRun = !apply;
 
   console.log("================================================================================");
-  console.log(`[SPRINT 7 DATA CUTOVER] Chạy toàn bộ Data Migrations (${dryRun ? "DRY-RUN" : "EXECUTE"})`);
+  console.log(`[SPRINT 7 DATA CUTOVER] Chạy toàn bộ Data Migrations (${dryRun ? "DRY-RUN / AUDIT" : "APPLY / EXECUTE"})`);
   console.log("================================================================================");
 
   // Phase 9: không còn bảng legacy để backfill (task_assignees / departments /
   // dacum_delegations đã bị drop). Bước dưới đây kiểm tra các bất biến canonical
   // thay vì trả về "parity" rỗng.
-  const assigneeReport = await backfillAssigneesToActors(prisma, { dryRun });
+  const assigneeReport = await backfillAssigneesToActors(prisma, { dryRun, apply });
 
   const overallParitySuccess = assigneeReport.paritySuccess;
   const totalLegacyRecordsAudited = assigneeReport.totalLegacyAssignees;

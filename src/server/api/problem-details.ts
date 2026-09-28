@@ -128,6 +128,7 @@ export function toProblemDetails(
       : 'about:blank');
 
   const problem: ProblemDetails = {
+    success: false,
     type,
     title,
     status,

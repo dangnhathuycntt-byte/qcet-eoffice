@@ -492,13 +492,13 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
         },
       });
 
-      // 16 canonical units at depth 1 + 1 test section at depth 2 = 17 descendants
-      assert.equal(descendants.length, 17);
+      // Canonical units at depth 1 + 1 test section at depth 2
+      assert.equal(descendants.length, CANONICAL_16_UNITS.length + 1);
 
       const depth1Units = descendants.filter((d) => d.depth === 1);
       const depth2Units = descendants.filter((d) => d.depth === 2);
 
-      assert.equal(depth1Units.length, 16, 'Must have 16 depth-1 constituent units');
+      assert.equal(depth1Units.length, CANONICAL_16_UNITS.length, `Must have ${CANONICAL_16_UNITS.length} depth-1 constituent units`);
       assert.equal(depth2Units.length, 1, 'Must have 1 depth-2 section unit');
       assert.equal(depth2Units[0].descendant.code, SECTION_CODE);
       assert.equal(depth2Units[0].descendant.type, UnitType.SECTION);
@@ -515,7 +515,7 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
         },
       });
 
-      assert.equal(directChildren.length, 16, 'Root must have exactly 16 direct children');
+      assert.equal(directChildren.length, CANONICAL_16_UNITS.length, `Root must have exactly ${CANONICAL_16_UNITS.length} direct children`);
       const codes = directChildren.map((c) => c.descendant.code);
       assert.ok(codes.includes('K_CNTT'));
       assert.ok(codes.includes('P_QLDT'));
@@ -653,8 +653,8 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
       });
       assert.equal(
         constituentUnits.length,
-        16,
-        'Live database must contain exactly 16 constituent units under QCET root'
+        CANONICAL_16_UNITS.length,
+        `Live database must contain exactly ${CANONICAL_16_UNITS.length} constituent units under QCET root`
       );
     });
 
@@ -797,16 +797,16 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
       });
 
       // 1 root self-path (depth 0)
-      // 16 units self-paths (depth 0)
-      // 16 units child-paths from root (depth 1)
-      // Total = 1 + 16 + 16 = 33
-      assert.equal(canonicalPaths.length, 33, 'Canonical seed must yield exactly 33 closure paths');
+      // N units self-paths (depth 0)
+      // N units child-paths from root (depth 1)
+      const expectedPaths = 1 + CANONICAL_16_UNITS.length * 2;
+      assert.equal(canonicalPaths.length, expectedPaths, `Canonical seed must yield exactly ${expectedPaths} closure paths`);
 
       const depth0Count = canonicalPaths.filter((p) => p.depth === 0).length;
       const depth1Count = canonicalPaths.filter((p) => p.depth === 1).length;
 
-      assert.equal(depth0Count, 17, '17 self-paths (1 School + 16 Units)');
-      assert.equal(depth1Count, 16, '16 direct child paths from School Root');
+      assert.equal(depth0Count, CANONICAL_16_UNITS.length + 1, `${CANONICAL_16_UNITS.length + 1} self-paths (1 School + ${CANONICAL_16_UNITS.length} Units)`);
+      assert.equal(depth1Count, CANONICAL_16_UNITS.length, `${CANONICAL_16_UNITS.length} direct child paths from School Root`);
     });
   });
 

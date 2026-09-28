@@ -186,14 +186,14 @@ export function buildTaskSearchQuery(
   const offset = Math.max(0, params.offset ?? 0);
   const isExact = forceExact ?? (params.exactCode ?? isExactCodeQuery(query));
 
-  const conditions: Prisma.Sql[] = [Prisma.sql`d."archived_at" IS NULL`];
+  const conditions: Prisma.Sql[] = [Prisma.sql`"archived_at" IS NULL`];
 
   if (params.status) {
     const statusVal = params.status.toUpperCase();
     if (VALID_TASK_STATUSES.has(statusVal as TaskStatus)) {
       conditions.push(Prisma.sql`"status" = ${statusVal}::"TaskStatus"`);
     } else {
-      conditions.push(Prisma.sql`d."status"::text = ${params.status}`);
+      conditions.push(Prisma.sql`"status"::text = ${params.status}`);
     }
   }
 
@@ -262,7 +262,7 @@ export function buildTaskFallbackSearchQuery(params: SearchTasksParams): Prisma.
   const offset = Math.max(0, params.offset ?? 0);
 
   const conditions: Prisma.Sql[] = [
-    Prisma.sql`d."archived_at" IS NULL`,
+    Prisma.sql`"archived_at" IS NULL`,
     Prisma.sql`(
       "title" ILIKE ${"%" + query + "%"}
       OR coalesce("description", '') ILIKE ${"%" + query + "%"}
@@ -275,7 +275,7 @@ export function buildTaskFallbackSearchQuery(params: SearchTasksParams): Prisma.
     if (VALID_TASK_STATUSES.has(statusVal as TaskStatus)) {
       conditions.push(Prisma.sql`"status" = ${statusVal}::"TaskStatus"`);
     } else {
-      conditions.push(Prisma.sql`d."status"::text = ${params.status}`);
+      conditions.push(Prisma.sql`"status"::text = ${params.status}`);
     }
   }
 
@@ -384,7 +384,7 @@ export function buildDocumentSearchQuery(
   // Full-Text Search on summary + pg_trgm ILIKE
   conditions.push(
     Prisma.sql`(
-      to_tsvector('simple', coalesce(d."summary", '')) @@ plainto_tsquery('simple', ${query})
+      to_tsvector('simple', coalesce("summary", '')) @@ plainto_tsquery('simple', ${query})
       OR d."summary" ILIKE ${"%" + query + "%"}
     )`
   );
@@ -464,11 +464,11 @@ const VALID_USER_ROLES = new Set(Object.values(UserRole));
  * công vị trí việc làm chính đang hiệu lực (`position_assignments`).
  */
 const USERS_WITH_LEAD_UNIT = Prisma.sql`
-  "users"
+  "users" u
   LEFT JOIN LATERAL (
     SELECT pa."unit_id"
     FROM "position_assignments" pa
-    WHERE pa."user_id" = "users"."id"
+    WHERE pa."user_id" = u."id"
       AND pa."type" = 'PRIMARY'
       AND pa."status" = 'ACTIVE'
     ORDER BY pa."effective_from" DESC
@@ -514,7 +514,7 @@ export function buildUserSearchQuery(
       SELECT
         u.id, u.name, u.email, u.role, u.title, u.phone, u.avatar_url,
         pa."unit_id" AS lead_unit_id, 1.0::float AS rank
-      FROM ${USERS_WITH_LEAD_UNIT} u
+      FROM ${USERS_WITH_LEAD_UNIT}
       ${whereClause}
       ORDER BY
         CASE WHEN u."email" = ${code} THEN 0 WHEN u."email" ILIKE ${code + "%"} THEN 1 ELSE 2 END,
@@ -526,7 +526,7 @@ export function buildUserSearchQuery(
   // Full-Text Search on name + email + title + pg_trgm ILIKE
   conditions.push(
     Prisma.sql`(
-      to_tsvector('simple', coalesce(u."name", '') || ' ' || coalesce(u."email", '') || ' ' || coalesce(u."title", '')) @@ plainto_tsquery('simple', ${query})
+      to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '') || ' ' || coalesce("title", '')) @@ plainto_tsquery('simple', ${query})
       OR u."name" ILIKE ${"%" + query + "%"}
     )`
   );
@@ -540,7 +540,7 @@ export function buildUserSearchQuery(
         ts_rank(to_tsvector('simple', coalesce(u."name", '') || ' ' || coalesce(u."email", '') || ' ' || coalesce(u."title", '')), plainto_tsquery('simple', ${query})) +
         coalesce(similarity(u."name", ${query}), 0)
       )::float AS rank
-    FROM ${USERS_WITH_LEAD_UNIT} u
+    FROM ${USERS_WITH_LEAD_UNIT}
     ${whereClause}
     ORDER BY rank DESC, u."name" ASC
     LIMIT ${limit} OFFSET ${offset}
@@ -580,7 +580,7 @@ export function buildUserFallbackSearchQuery(params: SearchUsersParams): Prisma.
     SELECT
       u.id, u.name, u.email, u.role, u.title, u.phone, u.avatar_url,
       pa."unit_id" AS lead_unit_id, 0.5::float AS rank
-    FROM ${USERS_WITH_LEAD_UNIT} u
+    FROM ${USERS_WITH_LEAD_UNIT}
     ${whereClause}
     ORDER BY u."name" ASC
     LIMIT ${limit} OFFSET ${offset}

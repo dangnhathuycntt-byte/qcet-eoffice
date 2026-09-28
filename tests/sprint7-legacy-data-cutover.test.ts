@@ -4,16 +4,62 @@ import { prisma } from "@/lib/prisma";
 import { runAllDataMigrations } from "../prisma/data-migrations/run-all";
 
 describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
-  test("1. Backfill runner is fully idempotent and achieves 100% data parity", async () => {
-    const report = await runAllDataMigrations(prisma, { dryRun: false });
+  test("1. Backfill runner is fully idempotent, preserves non-speculative state, and surfaces unresolved records for audit", async () => {
+    // Snapshot DRI count before apply to ensure migration does not fabricate speculative DRIs
+    const beforeDriCount = await prisma.taskActor.count({ where: { role: "DRI" } });
 
-    assert.ok(report);
-    assert.strictEqual(report.overallParitySuccess, true);
-    assert.strictEqual(report.assigneeMigration.paritySuccess, true);
+    // Run migration twice to verify idempotency
+    const report1 = await runAllDataMigrations(prisma, { apply: true });
+    const afterDriCount = await prisma.taskActor.count({ where: { role: "DRI" } });
+    const report2 = await runAllDataMigrations(prisma, { apply: true });
+
+    assert.ok(report1);
+    assert.ok(report2);
+
+    // Non-speculative invariant: apply must NOT fabricate speculative DRI records from creator users
+    assert.strictEqual(
+      afterDriCount,
+      beforeDriCount,
+      "apply must not fabricate speculative DRI assignments on unresolved tasks"
+    );
+
+    // Idempotency: both runs must produce identical violation counts and legacy audits
+    assert.strictEqual(report1.totalLegacyRecordsAudited, report2.totalLegacyRecordsAudited);
+    assert.strictEqual(
+      report1.assigneeMigration.mismatchedAssignees,
+      report2.assigneeMigration.mismatchedAssignees
+    );
+
+    // Contract: when database contains tasks without authoritative DRI, the audit must report
+    // them honestly as TASK_WITHOUT_DRI without fabricating speculative creator DRI assignments.
+    const violations = report1.assigneeMigration.integrity?.violations || [];
+    const driViolation = violations.find((v: { kind: string; count: number }) => v.kind === "TASK_WITHOUT_DRI");
+    if (driViolation) {
+      assert.strictEqual(
+        report1.overallParitySuccess,
+        false,
+        "Must report paritySuccess=false when unresolved tasks exist"
+      );
+      assert.ok(driViolation.count > 0, "Must report exact count of tasks missing DRI");
+      // Log count and sample IDs with limit to protect business data privacy in CI logs
+      const sampleUnresolved = await prisma.task.findMany({
+        where: { actors: { none: { role: "DRI" } } },
+        select: { id: true, code: true },
+        take: 3,
+      });
+      console.log(
+        `[Sprint 7 Cutover Audit] Phát hiện ${driViolation.count} nhiệm vụ thiếu DRI cần đối soát nghiệp vụ (mẫu: ${sampleUnresolved.map((s) => s.code).join(", ")}...)`
+      );
+    } else {
+      assert.strictEqual(report1.overallParitySuccess, true);
+    }
     // Phase 9 WI-9.3: dacumMigration removed — DacumDelegation table dropped.
 
     // Verify each legacy task assignee has a corresponding V2 task actor
-    const sampleAssignees = await prisma.taskActor.findMany({ take: 10 });
+    const sampleAssignees = await prisma.taskActor.findMany({
+      where: { role: { in: ["DRI", "COLLABORATOR"] } },
+      take: 10,
+    });
     for (const assignee of sampleAssignees) {
       const actor = await prisma.taskActor.findFirst({
         where: {

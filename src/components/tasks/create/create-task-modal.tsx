@@ -251,7 +251,7 @@ export function CreateTaskModal({
                         </Popover.Trigger>
 
                         <Popover.Portal>
-                          <Popover.Positioner className="z-[70]" align="start" sideOffset={4} collisionPadding={12}>
+                          <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
                             <Popover.Popup
                               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
                               className="w-64 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
@@ -439,7 +439,7 @@ export function CreateTaskModal({
                       </Popover.Trigger>
 
                       <Popover.Portal>
-                        <Popover.Positioner className="z-[70]" align="start" sideOffset={4} collisionPadding={12}>
+                        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
                           <Popover.Popup
                             style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
                             className="w-40 p-1 space-y-0.5 rounded-xl border border-border bg-popover shadow-2xl"
@@ -506,7 +506,7 @@ export function CreateTaskModal({
                       </Popover.Trigger>
 
                       <Popover.Portal>
-                        <Popover.Positioner className="z-[70]" align="start" sideOffset={4} collisionPadding={12}>
+                        <Popover.Positioner className="z-50" align="start" sideOffset={4} collisionPadding={12}>
                           <Popover.Popup
                             style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
                             className="w-60 p-1 space-y-0.5 max-h-56 rounded-xl border border-border bg-popover shadow-2xl overflow-y-auto"

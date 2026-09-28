@@ -46,6 +46,7 @@ describe('Issue #28: organizational body detail visibility', () => {
 
   const authHeaders = (token: string) => ({
     cookie: `${SESSION_COOKIE_NAME}=${token}`,
+    origin: 'http://localhost',
   });
 
   before(async () => {

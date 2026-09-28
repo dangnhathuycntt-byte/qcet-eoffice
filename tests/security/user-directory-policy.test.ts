@@ -130,7 +130,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         const unitLeader = {
           id: 'leader-dept1',
           role,
-
+          activeUnitId: 'dept-cntt',
         };
 
         const canRead = canReadSensitivePersonalData(unitLeader, targetUserInDept1);
@@ -145,7 +145,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
         const unitLeader = {
           id: 'leader-dept1',
           role,
-
+          activeUnitId: 'dept-cntt',
         };
 
         const canRead = canReadSensitivePersonalData(unitLeader, targetUserInDept2);
@@ -319,7 +319,7 @@ describe('RFC-08 User Directory Visibility & Personal Data Protection Policy', (
       const viewer = {
         id: 'leader-dept1',
         role: 'TRUONG_KHOA',
-
+        activeUnitId: 'dept-cntt',
       };
 
       const users = [targetUserInDept1, targetUserInDept2];

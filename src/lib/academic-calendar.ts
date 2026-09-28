@@ -512,8 +512,16 @@ export function isDateInAcademicMonth(
   if (!parts) return false;
   if (parts.month !== monthNumber) return false;
   if (year !== undefined) {
-    const targetYear = typeof year === "number" ? year : parseInt(String(year).split("-")[0], 10);
-    if (!isNaN(targetYear) && parts.year !== targetYear) return false;
+    if (typeof year === "string" && year.includes("-")) {
+      const startYear = parseInt(year.split("-")[0], 10);
+      if (!isNaN(startYear)) {
+        const expectedYear = monthNumber >= 9 ? startYear : startYear + 1;
+        if (parts.year !== expectedYear) return false;
+      }
+    } else {
+      const targetYear = typeof year === "number" ? year : parseInt(String(year), 10);
+      if (!isNaN(targetYear) && parts.year !== targetYear) return false;
+    }
   }
   return true;
 }

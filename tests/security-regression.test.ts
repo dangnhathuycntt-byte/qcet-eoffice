@@ -335,13 +335,51 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         dueDate: new Date("2026-10-01"),
         academicMonth: 9,
         academicYear: "2026-2027",
-        // Phase 9: TaskAssignee dropped — assignees removed
+      },
+    });
+
+    await prisma.taskActor.deleteMany({
+      where: { taskId: "task-cntt-1", userId: "user-assignee" },
+    });
+    await prisma.taskActor.create({
+      data: {
+        taskId: "task-cntt-1",
+        userId: "user-assignee",
+        role: "DRI",
+        isPrimaryDRI: true,
+        appointedAt: new Date(),
+      },
+    });
+
+    // Setup test incoming document for directive authorization test
+    await prisma.document.upsert({
+      where: { id: "doc-1" },
+      update: {},
+      create: {
+        id: "doc-1",
+        summary: "Tóm tắt văn bản kiểm thử chỉ đạo",
+        documentYear: 2026,
+        type: "VAN_BAN_DEN",
+        category: "CONG_VAN",
+        status: "CHO_PHAN_CONG",
+        originalNumber: "123/CV-TEST-DIR",
+        issuedDate: new Date(),
+        issuingAuthority: "Bộ GD&ĐT",
+        registrationNumber: 999901,
+        registeredById: "user-creator-1",
+        incomingWorkflow: {
+          create: {
+            status: "PRESENTED",
+          },
+        },
       },
     });
   });
 
   after(async () => {
     const ephemeralUserIds = ["user-creator-1", "user-assignee", "user-cntt", "user-lead-cntt", "user-bgh"];
+    await prisma.documentIncomingWorkflow.deleteMany({ where: { documentId: "doc-1" } });
+    await prisma.document.deleteMany({ where: { id: "doc-1" } });
     await prisma.positionAssignment.deleteMany({
       where: { id: { in: ["pos-assign-lead-cntt-sec", "pos-assign-bgh-sec"] } },
     });
@@ -545,7 +583,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ assignedDeptId: "dept-cntt", instruction: "Chỉ đạo mẫu" }),
+      body: JSON.stringify({ leadUnitId: "dept-cntt", instruction: "Chỉ đạo mẫu" }),
     });
     const res = await postDirective(req, { params: Promise.resolve({ id: "doc-1" }) });
     assert.equal(res.status, 401);
@@ -559,7 +597,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ assignedDeptId: "dept-cntt", content: "Chỉ đạo mẫu" }),
+      body: JSON.stringify({ leadUnitId: "dept-cntt", content: "Chỉ đạo mẫu" }),
     });
     const res = await postDirective(req, { params: Promise.resolve({ id: "doc-1" }) });
     assert.equal(res.status, 403);

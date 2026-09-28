@@ -132,6 +132,7 @@ export interface BaseAuthorizationResource {
   leadUnitId?: string;
   draftingUnitId?: string;
   departmentId?: string;
+  driUnitId?: string;
   owningUnitId?: string;
   bodyId?: string;
   organizerId?: string;

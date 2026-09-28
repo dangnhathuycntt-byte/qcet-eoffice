@@ -126,7 +126,8 @@ export function setupControllerChangeListener(
 
   const isProduction = clientEnv.NODE_ENV === "production";
   const isDevEnabled = clientEnv.NEXT_PUBLIC_ENABLE_SW === "true";
-  if (!isProduction && !isDevEnabled) {
+  const isTest = clientEnv.NODE_ENV === "test";
+  if (!isProduction && !isDevEnabled && !isTest) {
     return undefined;
   }
 

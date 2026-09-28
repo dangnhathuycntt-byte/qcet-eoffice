@@ -17,7 +17,7 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
     'P_TCDBCL',
     'P_HCQT',
     'P_TSHTQT',
-    'TT_STT',
+    'TT_SO_TT',
     'K_CNTT',
     'K_CK',
     'K_DIEN',
@@ -65,10 +65,12 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
       TAI_CHINH: 'P_TC',
       'phong-tckt': 'P_TC',
       'dept-p-tc': 'P_TC',
-      TT_DCC: 'TT_STT',
-      QTM_CNTT: 'TT_STT',
-      TRUYEN_THONG: 'TT_STT',
-      'dept-tt-stt': 'TT_STT',
+      TT_DCC: 'TT_SO_TT',
+      QTM_CNTT: 'TT_SO_TT',
+      TRUYEN_THONG: 'TT_SO_TT',
+      'dept-tt-stt': 'TT_SO_TT',
+      TT_STT: 'TT_SO_TT',
+      tt_stt: 'TT_SO_TT',
       K_DTTH: 'K_CNTT',
       CNTT: 'K_CNTT',
       'khoa-cntt': 'K_CNTT',
@@ -166,14 +168,22 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
   });
 
   test('4. DEFAULT_DEMO_USERS in role-task-filter.ts uses real QCET identities', () => {
-    assert.strictEqual(DEFAULT_DEMO_USERS.length, 3);
-    const [admin, manager, staff] = DEFAULT_DEMO_USERS;
+    assert.strictEqual(DEFAULT_DEMO_USERS.length, 4);
+    const admin = DEFAULT_DEMO_USERS.find((u) => u.role === 'ADMIN')!;
+    const manager = DEFAULT_DEMO_USERS.find((u) => u.role === 'MANAGER')!;
+    const staffHuy = DEFAULT_DEMO_USERS.find((u) => u.id === 'user-staff-huy')!;
+    const staffVinh = DEFAULT_DEMO_USERS.find((u) => u.id === 'user-staff-vinh')!;
 
-    // ADMIN: ThS. Đặng Nhật Huy (BGH - Hiệu trưởng)
+    assert.ok(admin, 'Admin must exist in DEFAULT_DEMO_USERS');
+    assert.ok(manager, 'Manager must exist in DEFAULT_DEMO_USERS');
+    assert.ok(staffHuy, 'Staff Huy must exist in DEFAULT_DEMO_USERS');
+    assert.ok(staffVinh, 'Staff Vinh must exist in DEFAULT_DEMO_USERS');
+
+    // ADMIN: ThS. Phạm Văn Tường (BGH - Hiệu trưởng)
     assert.strictEqual(admin.role, 'ADMIN');
     assert.ok(
-      admin.name.includes('Đặng Nhật Huy'),
-      `Admin name must be Đặng Nhật Huy, got ${admin.name}`
+      admin.name.includes('Phạm Văn Tường'),
+      `Admin name must be Phạm Văn Tường, got ${admin.name}`
     );
     assert.ok(
       admin.email.endsWith('@cdktcnqn.edu.vn'),
@@ -191,15 +201,26 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
       `Manager email must end with @cdktcnqn.edu.vn, got ${manager.email}`
     );
 
-    // STAFF: KS. Nguyễn Ngọc Vinh
-    assert.strictEqual(staff.role, 'STAFF');
+    // STAFF: ThS. Đặng Nhật Huy
+    assert.strictEqual(staffHuy.role, 'STAFF');
     assert.ok(
-      staff.name.includes('Nguyễn Ngọc Vinh'),
-      `Staff name must be Nguyễn Ngọc Vinh, got ${staff.name}`
+      staffHuy.name.includes('Đặng Nhật Huy'),
+      `Staff Huy name must be Đặng Nhật Huy, got ${staffHuy.name}`
     );
     assert.ok(
-      staff.email.endsWith('@cdktcnqn.edu.vn'),
-      `Staff email must end with @cdktcnqn.edu.vn, got ${staff.email}`
+      staffHuy.email.endsWith('@cdktcnqn.edu.vn'),
+      `Staff Huy email must end with @cdktcnqn.edu.vn, got ${staffHuy.email}`
+    );
+
+    // STAFF: KS. Nguyễn Ngọc Vinh
+    assert.strictEqual(staffVinh.role, 'STAFF');
+    assert.ok(
+      staffVinh.name.includes('Nguyễn Ngọc Vinh'),
+      `Staff Vinh name must be Nguyễn Ngọc Vinh, got ${staffVinh.name}`
+    );
+    assert.ok(
+      staffVinh.email.endsWith('@cdktcnqn.edu.vn'),
+      `Staff Vinh email must end with @cdktcnqn.edu.vn, got ${staffVinh.email}`
     );
   });
 });

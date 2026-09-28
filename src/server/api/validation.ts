@@ -166,13 +166,10 @@ export async function parseAndValidateJson<T>(
 ): Promise<T> {
   const maxBytes = options?.maxBytes ?? MAX_JSON_BODY_SIZE;
 
-  // 1. Content-Type check
-  assertJsonContentType(request);
-
-  // 2. Content-Length header check
+  // 1. Content-Length header check
   assertPayloadSize(request, maxBytes);
 
-  // 3. Read body text
+  // 2. Read body text
   let rawText: string;
   try {
     rawText = await request.text();
@@ -180,7 +177,7 @@ export async function parseAndValidateJson<T>(
     throw new ValidationError('Failed to read request body');
   }
 
-  // Check actual payload byte length
+  // 3. Check actual payload byte length (enforce maxBytes even if Content-Length header was missing or spoofed)
   const byteLength = Buffer.byteLength(rawText, 'utf8');
   if (byteLength > maxBytes) {
     throw new PayloadTooLargeError(
@@ -188,7 +185,7 @@ export async function parseAndValidateJson<T>(
     );
   }
 
-  // Handle empty bodies
+  // Handle empty bodies (allow empty body without requiring Content-Type when allowEmpty is true)
   if (rawText.trim().length === 0) {
     if (options?.allowEmpty) {
       const emptyResult = schema.safeParse({});
@@ -197,10 +194,14 @@ export async function parseAndValidateJson<T>(
       }
       throw new ValidationError('Validation failed', extractFieldErrors(emptyResult.error));
     }
+    assertJsonContentType(request);
     throw new ValidationError('Invalid JSON body');
   }
 
-  // 4. Parse JSON
+  // 4. Content-Type check for non-empty body
+  assertJsonContentType(request);
+
+  // 5. Parse JSON
   let rawJson: unknown;
   try {
     rawJson = JSON.parse(rawText);

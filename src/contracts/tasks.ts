@@ -310,6 +310,7 @@ export const UpdateTaskMetadataSchema = z
       .optional()
       .nullable(),
     priority: TaskPrioritySchema.optional(),
+    progress: z.coerce.number().min(0).max(100).optional(),
     startDate: IsoDateStringSchema.optional().nullable(),
     dueDate: IsoDateStringSchema.optional().nullable(),
     expectedVersion: z.number().int().min(0).optional(),

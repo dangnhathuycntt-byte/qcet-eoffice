@@ -88,6 +88,12 @@ export const SubscribePushSchema = z
       .max(50, 'Device type cannot exceed 50 characters')
       .optional()
       .nullable(),
+    platform: z
+      .string()
+      .trim()
+      .max(50, 'Platform cannot exceed 50 characters')
+      .optional()
+      .nullable(),
     userAgent: z
       .string()
       .trim()
@@ -127,6 +133,12 @@ export const PushSubscriptionSchema = z
       .string()
       .trim()
       .max(50, 'Device type cannot exceed 50 characters')
+      .optional()
+      .nullable(),
+    platform: z
+      .string()
+      .trim()
+      .max(50, 'Platform cannot exceed 50 characters')
       .optional()
       .nullable(),
     userAgent: z

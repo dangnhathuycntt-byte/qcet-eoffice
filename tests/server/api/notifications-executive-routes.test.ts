@@ -146,10 +146,8 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
         where: { id: { in: createdNotificationIds } },
       });
     }
-    if (execAssignmentId) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } });
-    }
     if (execUnitId) {
+      await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
     }
   });

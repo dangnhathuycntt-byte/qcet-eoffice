@@ -2508,8 +2508,97 @@ export function UnifiedTaskToolbar({
       )}
     >
       {/* ================================================================ */}
-      {/* SINGLE ROW: Left Content | Search | Bộ lọc | Hiển thị | + Giao việc  */}
+      {/* SINGLE ROW / TWO-ROW: Scope Tabs (Standalone) | Left Content | Controls */}
       {/* ================================================================ */}
+
+      {/* Scope Switcher / Row 1 (when standalone with onScopeChange and no custom leftContent) */}
+      {!leftContent && onScopeChange && (
+        <div
+          data-slot="unified-task-toolbar-row-1"
+          className="flex items-center justify-between gap-2 w-full pb-1 border-b border-border/40"
+        >
+          <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+            <div
+              data-slot="adaptive-scope-header"
+              data-scope-switcher="true"
+              className="inline-flex items-center gap-0.5 shrink-0"
+              role="tablist"
+              aria-label="Phạm vi công việc"
+            >
+              {[
+                { id: "my", label: "Cá nhân", icon: User, count: (effectiveScopeBadgeCounts as any)?.my ?? (effectiveScopeBadgeCounts as any)?.related },
+                { id: "unit", label: "Đơn vị", icon: Building, count: (effectiveScopeBadgeCounts as any)?.unit },
+                { id: "school", label: "Toàn trường", icon: School, count: (effectiveScopeBadgeCounts as any)?.school ?? (effectiveScopeBadgeCounts as any)?.all },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = normalizedScope === tab.id;
+                const showBadge = typeof tab.count === "number" && !isNaN(tab.count);
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    data-scope={tab.id}
+                    aria-selected={isActive}
+                    onClick={() => {
+                      if (onScopeChange) {
+                        onScopeChange(tab.id as any);
+                      }
+                    }}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer select-none",
+                      isActive
+                        ? "bg-muted text-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <span>{tab.label}</span>
+                    {showBadge && (
+                      <span
+                        data-slot="scope-badge-count"
+                        data-scope={tab.id}
+                        className={cn(
+                          "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold",
+                          isActive
+                            ? "bg-background text-foreground border border-border/60 shadow-2xs"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Unit Scope Clean Secondary Text (No border, no dropdown) */}
+            {normalizedScope === "unit" && !isUnassigned && (
+              <span
+                className="text-xs text-muted-foreground font-normal truncate max-w-[240px] sm:max-w-[320px] select-none"
+                title={resolvedUnitDisplayName}
+              >
+                ({resolvedUnitDisplayName})
+              </span>
+            )}
+          </div>
+
+          {/* Right: Primary Page Action Button (Tạo nhiệm vụ) */}
+          {canCreateTask && handlePrimaryAction && (
+            <button
+              type="button"
+              onClick={() => handlePrimaryAction()}
+              title="Tạo nhiệm vụ"
+              aria-label="Tạo nhiệm vụ"
+              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none touch-manipulation"
+            >
+              <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Left Content (View Title / Summary Strip) */}
       {leftContent && (
@@ -2518,11 +2607,11 @@ export function UnifiedTaskToolbar({
         </div>
       )}
 
-      {/* 1. Search (pushed right via ml-auto if no leftContent, else just natural right align) */}
+      {/* 1. Search */}
       <div
         className={cn(
           "relative shrink-0 transition-all duration-200",
-          !leftContent && "ml-auto",
+          !leftContent && !onScopeChange && "ml-auto",
           searchFocused ? "w-[240px]" : "w-[140px] sm:w-[180px]"
         )}
       >
@@ -2705,11 +2794,26 @@ export function UnifiedTaskToolbar({
         </MenuPortal>
       </MenuRoot>
 
+      {/* Active Filter Clear on Toolbar */}
+      {isAnyFilterActive && (
+        <button
+          type="button"
+          onClick={handleResetFilters}
+          title="Xóa tất cả bộ lọc"
+          aria-label="Xóa tất cả bộ lọc"
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation"
+        >
+          <RotateCcw className="size-3 shrink-0" strokeWidth={1.5} />
+          <span className="hidden sm:inline">Xóa bộ lọc</span>
+        </button>
+      )}
+
       {/* 4. Chế độ hiển thị (Dạng ngang: Bảng / Kanban) */}
       {onViewModeChange && (
         <div
           role="group"
           aria-label="Chế độ hiển thị"
+          title="Hiển thị"
           className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
         >
           <button
@@ -2746,12 +2850,12 @@ export function UnifiedTaskToolbar({
       )}
 
       {/* Divider trước CTA */}
-      {canCreateTask && handlePrimaryAction && (
+      {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
         <div className="h-4 w-px bg-border/60 shrink-0" />
       )}
 
       {/* 5. + Tạo việc CTA */}
-      {canCreateTask && handlePrimaryAction && (
+      {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
         <button
           type="button"
           onClick={() => handlePrimaryAction()}

@@ -12,7 +12,7 @@ import {
 } from '../src/lib/push-dispatch';
 import { POST as createTaskRoute } from '../src/app/api/tasks/route';
 import { POST as createResolutionRoute } from '../src/app/api/executive/resolutions/route';
-import { UserRole, TaskPriority, TaskScope, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
+import { UserRole, TaskPriority, TaskScope, ResolutionType, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus, TaskActorRole } from '@prisma/client';
 
 describe('Task Push Dispatch & Background after() Integration', () => {
   let adminUser: { id: string; name: string; email: string; role: string };
@@ -199,10 +199,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     }
 
     // Cleanup scoped executive mandate fixture
-    if (execAssignmentId) {
-      await prisma.positionAssignment.deleteMany({ where: { id: execAssignmentId } }).catch(() => {});
-    }
     if (execUnitId) {
+      await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } }).catch(() => {});
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } }).catch(() => {});
     }
   });
@@ -284,6 +282,16 @@ describe('Task Push Dispatch & Background after() Integration', () => {
         },
       });
       createdTaskIds.push(task.id);
+
+      await prisma.taskActor.create({
+        data: {
+          taskId: task.id,
+          userId: staffUser.id,
+          role: TaskActorRole.DRI,
+          isPrimaryDRI: true,
+          unitId: testDepartmentId,
+        },
+      });
 
       const result = await dispatchExecutiveDirectivePush({
         taskId: task.id,
@@ -370,7 +378,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
 
   describe('Integration with POST /api/executive/resolutions via safeAfter', () => {
     test('POST /api/executive/resolutions triggers background push for executive directive', async () => {
-      // 1. Create a task first
+      // 1. Create a task first (created by staffUser to satisfy SoD rule on executive approval)
       const task = await prisma.task.create({
         data: {
           code: `NV-RES-${Date.now()}`,
@@ -379,10 +387,20 @@ describe('Task Push Dispatch & Background after() Integration', () => {
           dueDate: new Date('2026-10-10T17:00:00Z'),
           academicMonth: 10,
           academicYear: '2026-2027',
-          createdById: adminUser.id
+          createdById: staffUser.id
         },
       });
       createdTaskIds.push(task.id);
+
+      await prisma.taskActor.create({
+        data: {
+          taskId: task.id,
+          userId: staffUser.id,
+          role: TaskActorRole.DRI,
+          isPrimaryDRI: true,
+          unitId: testDepartmentId,
+        },
+      });
 
       // 2. Issue directive resolution via API
       const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {

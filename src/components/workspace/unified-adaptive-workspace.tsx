@@ -2863,7 +2863,8 @@ export function UnifiedAdaptiveWorkspace(props: Omit<UnifiedAdaptiveWorkspacePro
     return "school";
   }, [props.forcedScope, props.scope, props.initialScope]);
 
-  const ownQuery = useWorkspaceQuery({ defaultScope, defaultMonth: currentAcademicMonth });
+  const defaultMonth = (props as any).selectedAcademicMonth ?? (props as any).selectedMonth;
+  const ownQuery = useWorkspaceQuery({ defaultScope, defaultMonth });
 
   return <UnifiedAdaptiveWorkspaceInner {...props} workspaceQuery={ownQuery} />;
 }

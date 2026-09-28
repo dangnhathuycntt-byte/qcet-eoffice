@@ -15,7 +15,7 @@ import {
   isPrivilegedUser,
   isDepartmentLeader,
 } from '../src/server/tasks';
-import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus, UserRole } from '@prisma/client';
 import type { AuthenticatedUser } from '../src/server/api/request-context';
 import { getSystemReferenceDate } from '../src/lib/academic-calendar';
 
@@ -30,62 +30,204 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
   let testDept1Id: string;
   let testDept2Id: string;
   const createdTaskIds: string[] = [];
+  const createdUserIds: string[] = [];
+  const createdUnitIds: string[] = [];
+  const createdAssignmentIds: string[] = [];
 
   before(async () => {
-    // 1. Setup test departments
-    const departments = await prisma.organizationalUnit.findMany({ take: 2 });
-    assert.ok(departments.length >= 2, 'Need at least 2 departments for boundary testing');
-    testDept1Id = departments[0].id;
-    testDept2Id = departments[1].id;
+    const ts = Date.now();
+    const rand = Math.floor(Math.random() * 10000);
 
-    // 2. Setup mock authenticated users
+    // 1. Setup isolated test departments
+    const dept1 = await prisma.organizationalUnit.create({
+      data: {
+        id: `dept_tds_1_${ts}_${rand}`,
+        code: `D_TDS1_${ts}_${rand}`,
+        name: 'Phòng Thử Nghiệm TDS 1',
+        type: 'DEPARTMENT',
+        status: 'ACTIVE',
+      },
+    });
+    createdUnitIds.push(dept1.id);
+    testDept1Id = dept1.id;
+
+    const dept2 = await prisma.organizationalUnit.create({
+      data: {
+        id: `dept_tds_2_${ts}_${rand}`,
+        code: `D_TDS2_${ts}_${rand}`,
+        name: 'Phòng Thử Nghiệm TDS 2',
+        type: 'DEPARTMENT',
+        status: 'ACTIVE',
+      },
+    });
+    createdUnitIds.push(dept2.id);
+    testDept2Id = dept2.id;
+
+    // Look up position definitions (read-only from seeds)
+    const leaderDef =
+      (await prisma.positionDefinition.findFirst({ where: { code: 'TRUONG_PHONG' } })) ||
+      (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } }));
+    const staffDef =
+      (await prisma.positionDefinition.findFirst({ where: { code: 'CHUYEN_VIEN' } })) ||
+      (await prisma.positionDefinition.findFirst({ where: { isLeadership: false } }));
+    const rectorDef =
+      (await prisma.positionDefinition.findFirst({ where: { code: 'HIEU_TRUONG' } })) ||
+      leaderDef;
+
+    // 2. Setup isolated test users and assignments
+    const dbAdmin = await prisma.user.create({
+      data: {
+        id: `usr_tds_admin_${ts}_${rand}`,
+        email: `tds_admin_${ts}_${rand}@cdktcnqn.edu.vn`,
+        name: 'Ban Giám Hiệu TDS',
+        role: 'BAN_GIAM_HIEU',
+        isActive: true,
+      },
+    });
+    createdUserIds.push(dbAdmin.id);
     adminUser = {
-      id: 'mock-admin-01',
-      email: 'admin@cdktcnqn.edu.vn',
-      name: 'Ban Giám Hiệu 1',
-      role: 'BAN_GIAM_HIEU',
-
+      id: dbAdmin.id,
+      email: dbAdmin.email,
+      name: dbAdmin.name,
+      role: dbAdmin.role,
+      departmentId: testDept1Id,
     };
+    if (rectorDef) {
+      const pa = await prisma.positionAssignment.create({
+        data: {
+          userId: dbAdmin.id,
+          positionDefinitionId: rectorDef.id,
+          unitId: testDept1Id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+      });
+      createdAssignmentIds.push(pa.id);
+    }
 
+    const dbManager = await prisma.user.create({
+      data: {
+        id: `usr_tds_mgr_${ts}_${rand}`,
+        email: `tds_mgr_${ts}_${rand}@cdktcnqn.edu.vn`,
+        name: 'Trưởng phòng TDS 1',
+        role: 'TRUONG_PHONG',
+        isActive: true,
+      },
+    });
+    createdUserIds.push(dbManager.id);
     managerUser = {
-      id: 'mock-manager-01',
-      email: 'truongphong@cdktcnqn.edu.vn',
-      name: 'Trưởng phòng Đào tạo',
-      role: 'TRUONG_PHONG',
-
+      id: dbManager.id,
+      email: dbManager.email,
+      name: dbManager.name,
+      role: dbManager.role,
+      departmentId: testDept1Id,
     };
+    if (leaderDef) {
+      const pa = await prisma.positionAssignment.create({
+        data: {
+          userId: dbManager.id,
+          positionDefinitionId: leaderDef.id,
+          unitId: testDept1Id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+      });
+      createdAssignmentIds.push(pa.id);
+    }
 
-    staffUser1 = {
-      id: 'mock-staff-01',
-      email: 'chuyenvien1@cdktcnqn.edu.vn',
-      name: 'Chuyên viên 1',
-      role: 'CHUYEN_VIEN',
-
-    };
-
-    staffUser2 = {
-      id: 'mock-staff-02',
-      email: 'chuyenvien2@cdktcnqn.edu.vn',
-      name: 'Chuyên viên 2',
-      role: 'CHUYEN_VIEN',
-
-    };
-
+    const dbOtherMgr = await prisma.user.create({
+      data: {
+        id: `usr_tds_othmgr_${ts}_${rand}`,
+        email: `tds_othmgr_${ts}_${rand}@cdktcnqn.edu.vn`,
+        name: 'Trưởng phòng TDS 2',
+        role: 'TRUONG_PHONG',
+        isActive: true,
+      },
+    });
+    createdUserIds.push(dbOtherMgr.id);
     otherDeptManager = {
-      id: 'mock-manager-02',
-      email: 'truongphong2@cdktcnqn.edu.vn',
-      name: 'Trưởng phòng Khác',
-      role: 'TRUONG_PHONG',
-
+      id: dbOtherMgr.id,
+      email: dbOtherMgr.email,
+      name: dbOtherMgr.name,
+      role: dbOtherMgr.role,
+      departmentId: testDept2Id,
     };
+    if (leaderDef) {
+      const pa = await prisma.positionAssignment.create({
+        data: {
+          userId: dbOtherMgr.id,
+          positionDefinitionId: leaderDef.id,
+          unitId: testDept2Id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+      });
+      createdAssignmentIds.push(pa.id);
+    }
 
-    // Ensure users exist or pick real database users for DB relations
-    const realUsers = await prisma.user.findMany({ take: 4 });
-    if (realUsers.length >= 4) {
-      staffUser1.id = realUsers[0].id;
-      staffUser2.id = realUsers[1].id;
-      adminUser.id = realUsers.find(u => u.role === 'BAN_GIAM_HIEU' || u.role === 'ADMIN')?.id || realUsers[2].id;
-      managerUser.id = realUsers[3].id;
+    const dbStaff1 = await prisma.user.create({
+      data: {
+        id: `usr_tds_stf1_${ts}_${rand}`,
+        email: `tds_stf1_${ts}_${rand}@cdktcnqn.edu.vn`,
+        name: 'Chuyên viên TDS 1',
+        role: 'CHUYEN_VIEN',
+        isActive: true,
+      },
+    });
+    createdUserIds.push(dbStaff1.id);
+    staffUser1 = {
+      id: dbStaff1.id,
+      email: dbStaff1.email,
+      name: dbStaff1.name,
+      role: dbStaff1.role,
+      departmentId: testDept1Id,
+    };
+    if (staffDef) {
+      const pa = await prisma.positionAssignment.create({
+        data: {
+          userId: dbStaff1.id,
+          positionDefinitionId: staffDef.id,
+          unitId: testDept1Id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+      });
+      createdAssignmentIds.push(pa.id);
+    }
+
+    const dbStaff2 = await prisma.user.create({
+      data: {
+        id: `usr_tds_stf2_${ts}_${rand}`,
+        email: `tds_stf2_${ts}_${rand}@cdktcnqn.edu.vn`,
+        name: 'Chuyên viên TDS 2',
+        role: 'CHUYEN_VIEN',
+        isActive: true,
+      },
+    });
+    createdUserIds.push(dbStaff2.id);
+    staffUser2 = {
+      id: dbStaff2.id,
+      email: dbStaff2.email,
+      name: dbStaff2.name,
+      role: dbStaff2.role,
+      departmentId: testDept1Id,
+    };
+    if (staffDef) {
+      const pa = await prisma.positionAssignment.create({
+        data: {
+          userId: dbStaff2.id,
+          positionDefinitionId: staffDef.id,
+          unitId: testDept1Id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+      });
+      createdAssignmentIds.push(pa.id);
     }
   });
 
@@ -106,8 +248,8 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
         where: { id: { in: createdTaskIds } },
         select: { id: true, parentTaskId: true },
       });
-      const subtaskIds = allTasks.filter(t => t.parentTaskId).map(t => t.id);
-      const parentIds = allTasks.filter(t => !t.parentTaskId).map(t => t.id);
+      const subtaskIds = allTasks.filter((t) => t.parentTaskId).map((t) => t.id);
+      const parentIds = allTasks.filter((t) => !t.parentTaskId).map((t) => t.id);
 
       if (subtaskIds.length > 0) {
         await prisma.task.deleteMany({ where: { id: { in: subtaskIds } } });
@@ -115,6 +257,24 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       if (parentIds.length > 0) {
         await prisma.task.deleteMany({ where: { id: { in: parentIds } } });
       }
+    }
+
+    if (createdAssignmentIds.length > 0) {
+      await prisma.positionAssignment.deleteMany({
+        where: { id: { in: createdAssignmentIds } },
+      });
+    }
+
+    if (createdUserIds.length > 0) {
+      await prisma.user.deleteMany({
+        where: { id: { in: createdUserIds } },
+      });
+    }
+
+    if (createdUnitIds.length > 0) {
+      await prisma.organizationalUnit.deleteMany({
+        where: { id: { in: createdUnitIds } },
+      });
     }
   });
 
@@ -141,16 +301,16 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // could create a unit task by calling the API directly.
       const staffCanCreateDept = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
       });
       assert.strictEqual(staffCanCreateDept.allowed, false);
       assert.match(staffCanCreateDept.reason || '', /cá nhân/i);
 
       // A leader of a DIFFERENT unit must not create in this one.
-      const foreignLeader = { ...managerUser};
+      const foreignLeader = { ...managerUser, departmentId: 'other-dept' };
       const foreignLeaderDept = canUserCreateTask(foreignLeader, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
       });
       assert.strictEqual(foreignLeaderDept.allowed, false);
 
@@ -158,7 +318,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // member can still add a subtask to a unit task they work on.
       const staffSubtask = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
         scopeExplicit: false,
       });
       assert.strictEqual(staffSubtask.allowed, true);
@@ -167,7 +327,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     test('canUserUpdateTask: verifies update permissions across roles', () => {
       const taskInDept1 = {
         createdById: staffUser1.id,
-
+        departmentId: testDept1Id,
         assignees: [{ userId: staffUser1.id }, { userId: staffUser2.id }],
       };
 
@@ -193,7 +353,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       const taskDept1 = {
         scope: TaskScope.DEPARTMENT,
         createdById: managerUser.id,
-
+        departmentId: testDept1Id,
         assignees: [{ userId: staffUser1.id }],
       };
 
@@ -319,7 +479,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Chỉ Ban Giám hiệu hoặc Quản trị viên/i
+        /Chỉ Ban Giám hiệu/i
       );
     });
 
@@ -423,7 +583,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Bạn không có quyền nộp minh chứng/i
+        /Bạn không có quyền|Chỉ người chịu trách nhiệm|Người dùng không có thẩm quyền/i
       );
 
       // 1. Staff submits deliverable with attempted actor spoofing (uploadedById: adminUser.id)
@@ -463,7 +623,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Separation of Duties/i
+        /Separation of Duties|phân lập trách nhiệm|SoD|không có thẩm quyền/i
       );
 
       // 3. Manager reviews deliverable with APPROVED -> task becomes COMPLETED

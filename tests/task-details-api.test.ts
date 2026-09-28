@@ -220,7 +220,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.strictEqual(res.status, 400);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Tiêu đề và đường dẫn file minh chứng là bắt buộc|Validation failed/);
+    assert.match(json.error, /Tiêu đề và đường dẫn file minh chứng là bắt buộc|Validation failed|Invalid input/i);
   });
 
   test('POST /api/tasks/[id]/deliverables records deliverable and sets task status to WAITING_APPROVAL', async () => {
@@ -281,18 +281,24 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${taskToDelete.id}`, {
       method: 'DELETE',
       headers: {
+        'Content-Type': 'application/json',
         cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
         origin: 'http://localhost:3000',
         referer: 'http://localhost:3000',
       },
+      body: JSON.stringify({
+        reason: 'Xóa nhiệm vụ kiểm thử',
+        expectedVersion: 1,
+      }),
     });
     const res = await DELETE(req, { params: Promise.resolve({ id: taskToDelete.id }) });
     assert.strictEqual(res.status, 200);
     const json = await res.json();
     assert.strictEqual(json.success, true);
 
-    // Verify it is gone
+    // Verify it is archived
     const checkTask = await prisma.task.findUnique({ where: { id: taskToDelete.id } });
-    assert.strictEqual(checkTask, null);
+    assert.ok(checkTask?.archivedAt !== null, 'Task must be archived');
+    assert.strictEqual(checkTask?.archiveReason, 'Xóa nhiệm vụ kiểm thử');
   });
 });

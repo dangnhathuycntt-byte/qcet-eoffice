@@ -215,7 +215,8 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: deanFacultyA.name,
       email: deanFacultyA.email,
       activePositionCode: "TRUONG_DON_VI",
-
+      departmentId: deptA.id,
+      activeUnitId: deptA.id,
       departmentCode: deptA.code,
       isActive: true,
     };
@@ -225,7 +226,8 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: deanFacultyB.name,
       email: deanFacultyB.email,
       activePositionCode: "TRUONG_DON_VI",
-
+      departmentId: deptB.id,
+      activeUnitId: deptB.id,
       departmentCode: deptB.code,
       isActive: true,
     };
@@ -235,7 +237,8 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: staffFacultyA.name,
       email: staffFacultyA.email,
       activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-
+      departmentId: deptA.id,
+      activeUnitId: deptA.id,
       departmentCode: deptA.code,
       isActive: true,
     };
@@ -245,7 +248,8 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
       name: staffFacultyB.name,
       email: staffFacultyB.email,
       activePositionCode: "GIANG_VIEN_CHUYEN_VIEN",
-
+      departmentId: deptB.id,
+      activeUnitId: deptB.id,
       departmentCode: deptB.code,
       isActive: true,
     };
@@ -336,10 +340,8 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
 
       if (deptA) {
         await prisma.organizationalUnit.delete({ where: { id: deptA.id } });
-        await prisma.organizationalUnit.delete({ where: { id: deptA.id } });
       }
       if (deptB) {
-        await prisma.organizationalUnit.delete({ where: { id: deptB.id } });
         await prisma.organizationalUnit.delete({ where: { id: deptB.id } });
       }
     } catch (cleanupError) {

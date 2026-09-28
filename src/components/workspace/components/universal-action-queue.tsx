@@ -328,7 +328,7 @@ export function UniversalActionQueue({
         <div className="space-y-1 pt-1">
           <div className="flex items-center justify-between pb-1 border-b border-slate-100">
             <span className="text-xs font-semibold text-slate-900">
-              Cần nộp minh chứng{" "}
+              Nhiệm vụ cần nộp hồ sơ minh chứng{" "}
               <span className="font-mono font-normal text-slate-400 tabular-nums">
                 ({myPendingSubmissions.length})
               </span>
@@ -339,7 +339,7 @@ export function UniversalActionQueue({
                 onClick={() => onFilterCanvas("submissions")}
                 className="text-[11px] text-slate-400 hover:text-slate-700 cursor-pointer"
               >
-                Lọc trên bảng
+                Xem trên bảng
               </button>
             )}
           </div>

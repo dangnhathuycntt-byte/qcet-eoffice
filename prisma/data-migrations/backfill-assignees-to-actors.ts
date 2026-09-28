@@ -11,6 +11,9 @@ import { PrismaClient } from "@prisma/client";
 export interface AssigneesBackfillReport {
   /** Số quan hệ ReBAC canonical đã rà soát (thay cho số bản ghi legacy đã xoá). */
   totalLegacyAssignees: number;
+  /** Số bản ghi primary DRI hiện có trong hệ thống. */
+  existingPrimaryDriCount: number;
+  /** Số bản ghi DRI được tạo mới hoặc cập nhật trong lần chạy này (0 nếu dryRun). */
   driCreatedOrUpdated: number;
   collaboratorsCreated: number;
   supervisorsCreated: number;
@@ -18,6 +21,7 @@ export interface AssigneesBackfillReport {
   leadUnitsCreated: number;
   paritySuccess: boolean;
   mismatchedAssignees: number;
+  integrity?: CanonicalIntegrityReport;
 }
 
 export interface CanonicalViolation {
@@ -112,12 +116,27 @@ export async function auditCanonicalTaskIntegrity(
 /**
  * Phase 9: giữ tên hàm để `run-all.ts` không phải đổi call site, nhưng báo cáo
  * nay dựa trên kiểm tra bất biến thật.
+ * Mặc định là dryRun (kiểm tra an toàn). Chỉ thực hiện ghi khi options.apply === true.
  */
 export async function backfillAssigneesToActors(
   client?: PrismaClient,
-  _options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean; apply?: boolean } = {}
 ): Promise<AssigneesBackfillReport & { integrity: CanonicalIntegrityReport }> {
-  const integrity = await auditCanonicalTaskIntegrity(client);
+  const prisma = client || new PrismaClient();
+  const shouldApply = options.apply === true && options.dryRun !== true;
+
+  let driCreatedOrUpdated = 0;
+  let leadUnitsAssigned = 0;
+
+  if (shouldApply) {
+    // Ghi chú bảo vệ dữ liệu & toàn vẹn thẩm quyền (Phase 9):
+    // 1. createdById hợp lệ về FK không chứng minh creator là DRI; không suy đoán gán creator làm DRI.
+    // 2. Với DEPARTMENT task thiếu leadUnitId, đơn vị của creator (đặc biệt khi creator thuộc BGH hoặc giao việc liên đơn vị)
+    //    không đồng nhất với đơn vị chủ trì. Không suy đoán gán creator's unit làm leadUnitId.
+    // Mọi bản ghi thiếu thông tin bắt buộc đều được giữ nguyên trạng thái unresolved để audit và xử lý theo thẩm quyền nghiệp vụ.
+  }
+
+  const integrity = await auditCanonicalTaskIntegrity(prisma);
 
   if (!integrity.isClean) {
     console.error(
@@ -130,17 +149,18 @@ export async function backfillAssigneesToActors(
     );
   }
 
-  const primaryDriCount = await (client || new PrismaClient()).taskActor.count({
+  const primaryDriCount = await prisma.taskActor.count({
     where: { role: "DRI", isPrimaryDRI: true },
   });
 
   return {
     totalLegacyAssignees: integrity.totalActors,
-    driCreatedOrUpdated: primaryDriCount,
+    existingPrimaryDriCount: primaryDriCount,
+    driCreatedOrUpdated: shouldApply ? driCreatedOrUpdated : 0,
     collaboratorsCreated: 0,
     supervisorsCreated: 0,
     assignersCreated: 0,
-    leadUnitsCreated: 0,
+    leadUnitsCreated: leadUnitsAssigned,
     paritySuccess: integrity.isClean,
     mismatchedAssignees: integrity.violations.reduce((sum, v) => sum + v.count, 0),
     integrity,

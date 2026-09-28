@@ -353,13 +353,13 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       assert.ok(taskIds.includes(schoolTask.id), 'Leadership should see School Task');
     });
 
-    test('admin user queryTasks is not restricted by department boundaries', async () => {
+    test('admin user queryTasks is restricted from operational tasks by separation of powers', async () => {
       const result = await taskQueryService.queryTasks({ user: adminUser }, { search: testRunId });
       const taskIds = result.tasks.map((t) => t.id);
 
-      assert.ok(taskIds.includes(taskA.id), 'Admin should see Task A');
-      assert.ok(taskIds.includes(taskB.id), 'Admin should see Task B');
-      assert.ok(taskIds.includes(schoolTask.id), 'Admin should see School Task');
+      assert.equal(taskIds.includes(taskA.id), false, 'System Admin must NOT see Task A (Separation of Powers)');
+      assert.equal(taskIds.includes(taskB.id), false, 'System Admin must NOT see Task B (Separation of Powers)');
+      assert.equal(taskIds.includes(schoolTask.id), false, 'System Admin must NOT see School Task (Separation of Powers)');
     });
 
     test('queryTasks enforces pagination limit cap of 100 items', async () => {

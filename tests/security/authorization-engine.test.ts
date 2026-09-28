@@ -696,4 +696,164 @@ describe('Unified Authorization Engine (Task 4)', () => {
       assert.equal(res.rejectionCode, 'INSUFFICIENT_CAPABILITY');
     });
   });
+
+  // RFC-06 §3.1 & §3.2 TaskScope INDIVIDUAL & Actor-Confined Boundary
+  describe('RFC-06 §3.1 & §3.2 TaskScope INDIVIDUAL & Actor-Confined Boundary', () => {
+    const individualTask: TaskResource = {
+      id: 'task_indiv_1',
+      type: 'task',
+      scope: 'INDIVIDUAL',
+      leadUnitId: 'dept_A',
+      driUnitId: 'dept_B',
+      primaryOwnerId: 'dri_user_b',
+    };
+
+    test('Unit leader of task leadUnit (dept_A) is DENIED when DRI is in another unit (dept_B)', () => {
+      const leaderA = createContext({
+        userId: 'leader_dept_a',
+        positions: [
+          createPosition({
+            userId: 'leader_dept_a',
+            positionCode: 'TRUONG_PHONG',
+            unitId: 'dept_A',
+            isLeadership: true,
+          }),
+        ],
+        primaryUnitIds: ['dept_A'],
+      });
+
+      const res = authorize(leaderA, 'task.read', individualTask);
+      assert.equal(res.allowed, false);
+      assert.equal(res.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+    });
+
+    test('Unit leader directly managing the DRI (dept_B) is ALLOWED', () => {
+      const leaderB = createContext({
+        userId: 'leader_dept_b',
+        positions: [
+          createPosition({
+            userId: 'leader_dept_b',
+            positionCode: 'TRUONG_PHONG',
+            unitId: 'dept_B',
+            isLeadership: true,
+          }),
+        ],
+        primaryUnitIds: ['dept_B'],
+      });
+
+      const res = authorize(leaderB, 'task.read', individualTask);
+      assert.equal(res.allowed, true);
+    });
+
+    test('Unrelated unit leader (dept_C) is DENIED', () => {
+      const leaderC = createContext({
+        userId: 'leader_dept_c',
+        positions: [
+          createPosition({
+            userId: 'leader_dept_c',
+            positionCode: 'TRUONG_PHONG',
+            unitId: 'dept_C',
+            isLeadership: true,
+          }),
+        ],
+        primaryUnitIds: ['dept_C'],
+      });
+
+      const res = authorize(leaderC, 'task.read', individualTask);
+      assert.equal(res.allowed, false);
+      assert.equal(res.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+    });
+
+    test('Non-actor staff in DRI unit (dept_B) is DENIED', () => {
+      const staffB = createContext({
+        userId: 'staff_dept_b',
+        positions: [
+          createPosition({
+            userId: 'staff_dept_b',
+            positionCode: 'CHUYEN_VIEN',
+            unitId: 'dept_B',
+            isLeadership: false,
+          }),
+        ],
+        primaryUnitIds: ['dept_B'],
+      });
+
+      const res = authorize(staffB, 'task.read', individualTask);
+      assert.equal(res.allowed, false);
+      assert.equal(res.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+    });
+
+    test('Regression: Leader of dept_C who only holds staff position in dept_B is DENIED reading INDIVIDUAL task of DRI in dept_B', () => {
+      // User is leader in dept_C, but only normal staff in dept_B (DRI's unit)
+      const disjointLeader = createContext({
+        userId: 'leader_c_staff_b',
+        positions: [
+          createPosition({
+            userId: 'leader_c_staff_b',
+            positionCode: 'TRUONG_PHONG',
+            unitId: 'dept_C',
+            isLeadership: true,
+          }),
+          createPosition({
+            id: 'pos_staff_b',
+            userId: 'leader_c_staff_b',
+            positionCode: 'CHUYEN_VIEN',
+            unitId: 'dept_B',
+            isLeadership: false,
+          }),
+        ],
+        primaryUnitIds: ['dept_C', 'dept_B'],
+      });
+
+      const res = authorize(disjointLeader, 'task.read', individualTask);
+      assert.equal(res.allowed, false);
+      assert.equal(res.rejectionCode, 'DEPARTMENT_BOUNDARY_VIOLATION');
+    });
+
+    test('Direct actor (DRI) is ALLOWED regardless of unit', () => {
+      const driUser = createContext({
+        userId: 'dri_user_b',
+        positions: [
+          createPosition({
+            userId: 'dri_user_b',
+            positionCode: 'CHUYEN_VIEN',
+            unitId: 'dept_B',
+            isLeadership: false,
+          }),
+        ],
+        primaryUnitIds: ['dept_B'],
+      });
+
+      const res = authorize(driUser, 'task.read', individualTask);
+      assert.equal(res.allowed, true);
+    });
+
+    test('originLevel=PERSONAL does not make scope=DEPARTMENT actor-confined', () => {
+      const deptTaskWithPersonalOrigin: TaskResource = {
+        id: 'task_dept_pers_1',
+        type: 'task',
+        scope: 'DEPARTMENT',
+        originLevel: 'PERSONAL',
+        leadUnitId: 'dept_A',
+        driUnitId: 'dept_B',
+      };
+
+      const leaderA = createContext({
+        userId: 'leader_dept_a',
+        positions: [
+          createPosition({
+            userId: 'leader_dept_a',
+            positionCode: 'TRUONG_PHONG',
+            unitId: 'dept_A',
+            isLeadership: true,
+          }),
+        ],
+        primaryUnitIds: ['dept_A'],
+      });
+
+      // leader of leadUnitId (dept_A) can view department scope task
+      const res = authorize(leaderA, 'task.read', deptTaskWithPersonalOrigin);
+      assert.equal(res.allowed, true);
+    });
+  });
 });

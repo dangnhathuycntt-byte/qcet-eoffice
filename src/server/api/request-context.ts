@@ -19,6 +19,8 @@ export interface AuthenticatedUser {
   name: string;
   role: string;
   departmentId?: string | null;
+  activeUnitId?: string | null;
+  unitId?: string | null;
   title?: string | null;
   positionCode?: string | null;
 }
