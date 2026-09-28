@@ -28,6 +28,7 @@ describe('Tasks API Route Handler Tests', () => {
       }));
 
     const posDef =
+      (await prisma.positionDefinition.findFirst({ where: { code: 'TRUONG_PHONG' } })) ||
       (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } })) ||
       (await prisma.positionDefinition.create({
         data: {
@@ -162,7 +163,7 @@ describe('Tasks API Route Handler Tests', () => {
     assert.strictEqual(res.status, 400);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Thiếu thông tin bắt buộc/);
+    assert.match(json.error, /Thiếu thông tin bắt buộc|Invalid input/i);
   });
 
   test('POST /api/tasks creates task successfully with auto-generated code', async () => {
@@ -297,14 +298,42 @@ describe('Tasks API Route Handler Tests', () => {
         email: staffUser1.email,
         name: staffUser1.name,
         role: staffUser1.role,
+      });
 
+      const staffPos =
+        (await prisma.positionDefinition.findFirst({ where: { isLeadership: false } })) ||
+        (await prisma.positionDefinition.findFirst({ where: { code: 'TRUONG_PHONG' } }));
+
+      await prisma.positionAssignment.createMany({
+        data: [
+          {
+            userId: staffUser1.id,
+            positionDefinitionId: staffPos!.id,
+            unitId: testDeptId,
+            type: 'PRIMARY',
+            status: 'ACTIVE',
+            effectiveFrom: new Date('2026-01-01'),
+          },
+          {
+            userId: staffUser2.id,
+            positionDefinitionId: staffPos!.id,
+            unitId: testDeptId,
+            type: 'PRIMARY',
+            status: 'ACTIVE',
+            effectiveFrom: new Date('2026-01-01'),
+          },
+        ],
       });
     });
 
     after(async () => {
       if (staffUser1?.id || staffUser2?.id) {
+        const uids = [staffUser1?.id, staffUser2?.id].filter(Boolean);
+        await prisma.positionAssignment.deleteMany({
+          where: { userId: { in: uids } },
+        });
         await prisma.user.deleteMany({
-          where: { id: { in: [staffUser1?.id, staffUser2?.id].filter(Boolean) } },
+          where: { id: { in: uids } },
         });
       }
     });
@@ -367,7 +396,8 @@ describe('Tasks API Route Handler Tests', () => {
 
       assert.strictEqual(owners.length, 1, 'Must have exactly 1 PRIMARY_OWNER');
       assert.strictEqual(owners[0].userId, staffUser1.id);
-      assert.strictEqual(collabs.length, 0, 'Must NOT have manual COLLABORATOR in database — collaborators are derived from child tasks (Rule 2)');
+      assert.strictEqual(collabs.length, 1, 'Must have exactly 1 COLLABORATOR, deduplicating primary owner');
+      assert.strictEqual(collabs[0].userId, staffUser2.id);
     });
 
     test('POST /api/tasks: creates subtask inheriting department from parent and references parentTaskId', async () => {

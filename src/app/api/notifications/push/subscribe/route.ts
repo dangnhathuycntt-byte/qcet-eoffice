@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const p256dh = validated.keys?.p256dh || validated.p256dh;
     const auth = validated.keys?.auth || validated.auth;
-    const deviceType = validated.deviceType || null;
+    const deviceType = validated.deviceType || validated.platform || null;
     const userAgent = validated.userAgent || request.headers.get('user-agent') || null;
 
     const subscription = await prisma.pushSubscription.upsert({

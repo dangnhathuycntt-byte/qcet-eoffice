@@ -224,6 +224,12 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
     }
     const testUserIds = [adminUser?.id, managerUser?.id, staffUser?.id, foreignStaffUser?.id].filter(Boolean);
     if (testUserIds.length > 0) {
+      await prisma.documentDirective.deleteMany({
+        where: { leaderId: { in: testUserIds } },
+      }).catch(() => {});
+      await prisma.document.deleteMany({
+        where: { registeredById: { in: testUserIds } },
+      }).catch(() => {});
       await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
     }
     const testUnitCodes = ['dept-test-doc-1', 'dept-test-doc-2'];
@@ -415,10 +421,10 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       // Create a document assigned specifically to testDept1
       const doc = await prisma.document.create({
         data: {
-          registrationNumber: 77771,
+          registrationNumber: Math.floor(100000 + (Date.now() % 800000)),
           documentYear: new Date().getFullYear(),
           type: 'VAN_BAN_DEN',
-          originalNumber: 'INTERNAL-DEPT-771',
+          originalNumber: `INTERNAL-DEPT-${Date.now()}`,
           issuedDate: new Date(),
           issuingAuthority: 'UBND Tỉnh ',
           category: 'Công văn',

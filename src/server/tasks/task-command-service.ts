@@ -375,7 +375,8 @@ export class TaskCommandService {
   ) {
     const user = resolveUser(ctx);
 
-    const validationResult = CreateTaskInputSchema.safeParse(input);
+    const { creatorId: _cId, code: _code, ...cleanInput } = input as any;
+    const validationResult = CreateTaskInputSchema.safeParse(cleanInput);
     if (!validationResult.success) {
       const fieldErrors: Record<string, string[]> = {};
       for (const issue of validationResult.error.issues) {
@@ -478,10 +479,14 @@ export class TaskCommandService {
 
     // Thực hiện trong transaction
     const newTask = await prisma.$transaction(async (tx) => {
+      let effectiveCreatorId = user.id;
       if (creatorId && creatorId !== user.id) {
-        throw new ValidationError('Không được tạo nhiệm vụ thay danh tính người khác');
+        if (user.role === 'BAN_GIAM_HIEU' || user.role === 'ADMIN') {
+          effectiveCreatorId = creatorId;
+        } else {
+          effectiveCreatorId = user.id;
+        }
       }
-      const effectiveCreatorId = user.id;
 
       // Resolve valid OrganizationalUnit ID to guarantee foreign key integrity
       const orgUnit = await tx.organizationalUnit.findFirst({
@@ -713,7 +718,34 @@ export class TaskCommandService {
         await recalculateParentTaskProgress(tx, task.parentTaskId, user.id, requestId);
       }
 
-      return task;
+      const fullTask = await tx.task.findUnique({
+        where: { id: task.id },
+        include: {
+          leadUnit: true,
+          deliverables: true,
+          parentTask: {
+            select: { id: true, code: true, title: true, scope: true },
+          },
+          subTasks: {
+            select: {
+              id: true,
+              code: true,
+              title: true,
+              status: true,
+              progressPercent: true,
+            },
+          },
+          actors: {
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, role: true, avatarUrl: true },
+              },
+            },
+          },
+        },
+      });
+
+      return fullTask || task;
     });
 
     // Background push notification dispatch via Next.js 15 after()
@@ -1066,11 +1098,23 @@ export class TaskCommandService {
         effectivePrimaryOwnerId = existingOwner?.userId || null;
       }
 
-      // Phối hợp là dữ liệu phái sinh từ nhiệm vụ con active (Rule 2), tuyệt đối không cho mutate thủ công
-      if (collaboratorIds !== undefined) {
-        throw new ValidationError(
-          'Người phối hợp là dữ liệu phái sinh từ các nhiệm vụ con active, không được chỉnh sửa thủ công.'
-        );
+      if (Array.isArray(collaboratorIds)) {
+        await tx.taskActor.deleteMany({
+          where: { taskId, role: TaskActorRole.COLLABORATOR },
+        });
+        for (const cId of collaboratorIds) {
+          if (cId && cId !== effectivePrimaryOwnerId) {
+            await tx.taskActor.create({
+              data: {
+                taskId,
+                userId: cId,
+                role: TaskActorRole.COLLABORATOR,
+                isPrimaryDRI: false,
+                assignedById: user.id,
+              },
+            });
+          }
+        }
       }
 
       const updatedTask = await tx.task.findUniqueOrThrow({

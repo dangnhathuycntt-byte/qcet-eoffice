@@ -238,6 +238,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       startDate: validatedBody.startDate,
       dueDate: validatedBody.dueDate,
       priority: validatedBody.priority,
+      progress: validatedBody.progress,
       expectedVersion,
     });
 

@@ -91,11 +91,12 @@ export function canUserCreateTask(
   // mode); previously DEPARTMENT scope was ungated here, so a staff account
   // could create a unit task by calling the API directly even though the form
   // never offers it.
+  const targetDeptId = input.departmentId ?? user.departmentId;
   if (
     scopeStr === 'DEPARTMENT' &&
     scopeExplicit &&
     !isPrivileged &&
-    !isDepartmentLeader(user, input.departmentId)
+    !isDepartmentLeader(user, targetDeptId)
   ) {
     return {
       allowed: false,

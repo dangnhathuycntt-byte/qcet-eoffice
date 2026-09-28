@@ -100,7 +100,9 @@ export function isUnitLeaderPosition(posCode?: string): boolean {
     code === 'GIAM_DOC_TRUNG_TAM' ||
     code === 'TRUONG_BO_MON' ||
     code === 'TRUONG_XUONG' ||
-    code === 'KE_TOAN_TRUONG'
+    code === 'KE_TOAN_TRUONG' ||
+    code.startsWith('TRUONG_') ||
+    code.startsWith('POS_MGR_')
   );
 }
 

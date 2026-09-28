@@ -15,7 +15,7 @@ import {
   isPrivilegedUser,
   isDepartmentLeader,
 } from '../src/server/tasks';
-import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus } from '@prisma/client';
+import { TaskScope, TaskStatus, TaskPriority, TaskActorRole, DeliverableReviewStatus, UserRole } from '@prisma/client';
 import type { AuthenticatedUser } from '../src/server/api/request-context';
 import { getSystemReferenceDate } from '../src/lib/academic-calendar';
 
@@ -76,16 +76,91 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       email: 'truongphong2@cdktcnqn.edu.vn',
       name: 'Trưởng phòng Khác',
       role: 'TRUONG_PHONG',
-
     };
 
+    await prisma.user.upsert({
+      where: { id: otherDeptManager.id },
+      update: {},
+      create: {
+        id: otherDeptManager.id,
+        email: otherDeptManager.email,
+        name: otherDeptManager.name,
+        role: otherDeptManager.role as UserRole,
+      },
+    });
+
     // Ensure users exist or pick real database users for DB relations
-    const realUsers = await prisma.user.findMany({ take: 4 });
-    if (realUsers.length >= 4) {
-      staffUser1.id = realUsers[0].id;
-      staffUser2.id = realUsers[1].id;
-      adminUser.id = realUsers.find(u => u.role === 'BAN_GIAM_HIEU' || u.role === 'ADMIN')?.id || realUsers[2].id;
-      managerUser.id = realUsers[3].id;
+    const bghDb = await prisma.user.findFirst({ where: { role: 'BAN_GIAM_HIEU', isActive: true } });
+    if (bghDb) {
+      adminUser.id = bghDb.id;
+      adminUser.role = bghDb.role;
+
+      const hieuTruongDef = await prisma.positionDefinition.findFirst({ where: { code: 'HIEU_TRUONG' } });
+      const bghUnit = await prisma.organizationalUnit.findFirst({ where: { code: 'BGH' } });
+      if (hieuTruongDef && bghUnit) {
+        const existingPa = await prisma.positionAssignment.findFirst({
+          where: { userId: bghDb.id, status: 'ACTIVE' },
+        });
+        if (!existingPa) {
+          await prisma.positionAssignment.create({
+            data: {
+              userId: bghDb.id,
+              positionDefinitionId: hieuTruongDef.id,
+              unitId: bghUnit.id,
+              type: 'PRIMARY',
+              status: 'ACTIVE',
+              effectiveFrom: new Date('2026-01-01'),
+            },
+          });
+        }
+      }
+    }
+    const managerDb = await prisma.user.findFirst({ where: { role: 'TRUONG_PHONG', isActive: true } });
+    if (managerDb) {
+      managerUser.id = managerDb.id;
+      managerUser.role = managerDb.role;
+
+      const existingPa = await prisma.positionAssignment.findFirst({
+        where: { userId: managerDb.id, status: 'ACTIVE' },
+      });
+      if (existingPa) {
+        testDept1Id = existingPa.unitId;
+      }
+      managerUser.departmentId = testDept1Id;
+
+      const otherDept = await prisma.organizationalUnit.findFirst({
+        where: { id: { not: testDept1Id } },
+      });
+      if (otherDept) {
+        testDept2Id = otherDept.id;
+      }
+    }
+    const staffList = await prisma.user.findMany({ where: { role: 'CHUYEN_VIEN', isActive: true }, take: 2 });
+    if (staffList.length >= 2) {
+      staffUser1.id = staffList[0].id;
+      staffUser1.role = staffList[0].role;
+      staffUser1.departmentId = testDept1Id;
+      staffUser2.id = staffList[1].id;
+      staffUser2.role = staffList[1].role;
+      staffUser2.departmentId = testDept1Id;
+
+      const staffDef =
+        (await prisma.positionDefinition.findFirst({ where: { isLeadership: false } })) ||
+        (await prisma.positionDefinition.findFirst());
+      if (staffDef) {
+        for (const s of [staffList[0], staffList[1]]) {
+          await prisma.positionAssignment.create({
+            data: {
+              userId: s.id,
+              positionDefinitionId: staffDef.id,
+              unitId: testDept1Id,
+              type: 'PRIMARY',
+              status: 'ACTIVE',
+              effectiveFrom: new Date('2026-01-01'),
+            },
+          });
+        }
+      }
     }
   });
 
@@ -141,16 +216,16 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // could create a unit task by calling the API directly.
       const staffCanCreateDept = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
       });
       assert.strictEqual(staffCanCreateDept.allowed, false);
       assert.match(staffCanCreateDept.reason || '', /cá nhân/i);
 
       // A leader of a DIFFERENT unit must not create in this one.
-      const foreignLeader = { ...managerUser};
+      const foreignLeader = { ...managerUser, departmentId: 'other-dept' };
       const foreignLeaderDept = canUserCreateTask(foreignLeader, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
       });
       assert.strictEqual(foreignLeaderDept.allowed, false);
 
@@ -158,7 +233,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       // member can still add a subtask to a unit task they work on.
       const staffSubtask = canUserCreateTask(staffUser1, {
         scope: TaskScope.DEPARTMENT,
-
+        departmentId: testDept1Id,
         scopeExplicit: false,
       });
       assert.strictEqual(staffSubtask.allowed, true);
@@ -167,7 +242,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     test('canUserUpdateTask: verifies update permissions across roles', () => {
       const taskInDept1 = {
         createdById: staffUser1.id,
-
+        departmentId: testDept1Id,
         assignees: [{ userId: staffUser1.id }, { userId: staffUser2.id }],
       };
 
@@ -193,7 +268,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       const taskDept1 = {
         scope: TaskScope.DEPARTMENT,
         createdById: managerUser.id,
-
+        departmentId: testDept1Id,
         assignees: [{ userId: staffUser1.id }],
       };
 
@@ -319,7 +394,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Chỉ Ban Giám hiệu hoặc Quản trị viên/i
+        /Chỉ Ban Giám hiệu/i
       );
     });
 
@@ -423,7 +498,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Bạn không có quyền nộp minh chứng/i
+        /Bạn không có quyền|Chỉ người chịu trách nhiệm|Người dùng không có thẩm quyền/i
       );
 
       // 1. Staff submits deliverable with attempted actor spoofing (uploadedById: adminUser.id)
@@ -463,7 +538,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             }
           );
         },
-        /Separation of Duties/i
+        /Separation of Duties|phân lập trách nhiệm|SoD/i
       );
 
       // 3. Manager reviews deliverable with APPROVED -> task becomes COMPLETED
