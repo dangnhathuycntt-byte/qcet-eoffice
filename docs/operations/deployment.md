@@ -40,6 +40,8 @@ QCET E-Office is deployed using a self-contained, enterprise-grade architecture 
   - Architectural invariant checks (no forbidden mock fallbacks, light-only UI tokens).
   - Secret scanning across git diff.
 
+> **Note about `deploy.yml`:** The GitHub Actions workflow at `.github/workflows/deploy.yml` is named "Continuous Deployment & Migration Gates" but functions as a **migration gate and build validation pipeline only**. It runs `prisma migrate deploy`, `db:drift:check`, and `npm run build` to verify that migrations apply cleanly and the application compiles — but it does **not** push Docker images, SSH into any host, or perform actual deployment. Production deployment requires manual execution of `docker compose` on the target host, with Cloudflare Tunnel providing external ingress. See Section 4 below for the manual deployment procedure.
+
 ### Stage 3: Staging Verification
 - Automated build of immutable Docker container tagged with git commit SHA (`qcet-eoffice:sha-<commit>`).
 - Deployed to staging host with production parity.
