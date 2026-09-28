@@ -16,6 +16,7 @@ import {
   type ActivePositionAssignment,
   SystemRole,
 } from '@/server/authorization/authorization-context';
+import { isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
 import {
   toTaskDomainModel,
   toTaskDTO,
@@ -660,10 +661,6 @@ export function buildTaskReadWhere(
       roleUpper === 'PHO_HIEU_TRUONG';
   }
 
-  if (isLeadership) {
-    return {};
-  }
-
   // 3. Extract User Identity and Assigned Unit IDs
   const userId = isAuthorizationContext(context)
     ? context.userId || context.user?.id
@@ -703,6 +700,77 @@ export function buildTaskReadWhere(
 
   const unitIds = Array.from(unitIdSet);
 
+  const leaderUnitIdSet = new Set<string>();
+  if (isAuthorizationContext(context)) {
+    if (Array.isArray(context.positions)) {
+      for (const pos of context.positions) {
+        if (
+          isPositionActive(pos, now) &&
+          pos.unitId &&
+          (pos.isLeadership || isUnitLeaderPosition(pos.positionCode))
+        ) {
+          leaderUnitIdSet.add(pos.unitId);
+        }
+      }
+    }
+  } else {
+    const roleUpper = (context.role || '').toUpperCase();
+    if (roleUpper === 'TRUONG_PHONG' || roleUpper === 'TRUONG_KHOA' || roleUpper === 'MANAGER') {
+      if (context.departmentId) leaderUnitIdSet.add(context.departmentId);
+      if (Array.isArray((context as any).primaryUnitIds)) {
+        for (const id of (context as any).primaryUnitIds) {
+          if (id) leaderUnitIdSet.add(id);
+        }
+      }
+    }
+  }
+
+  const leaderUnitIds = Array.from(leaderUnitIdSet);
+
+  if (isLeadership) {
+    // Institutional leaders (BGH, Rector) have school-wide oversight for all non-individual tasks (SCHOOL, DEPARTMENT).
+    // INDIVIDUAL tasks remain strictly actor-confined (RFC-06 §3.1): visible only to direct actors or if the leader
+    // directly manages the DRI's unit.
+    const leadershipConditions: Prisma.TaskWhereInput[] = [
+      { scope: { notIn: [TaskScope.INDIVIDUAL] } },
+    ];
+    if (userId) {
+      leadershipConditions.push(
+        { actors: { some: { userId } } },
+        { createdById: userId }
+      );
+    }
+    if (leaderUnitIds.length > 0) {
+      const leaderFilter =
+        leaderUnitIds.length === 1 ? leaderUnitIds[0] : { in: leaderUnitIds };
+      leadershipConditions.push({
+        scope: TaskScope.INDIVIDUAL,
+        actors: {
+          some: {
+            role: 'DRI',
+            user: {
+              positionAssignments: {
+                some: {
+                  type: 'PRIMARY',
+                  status: 'ACTIVE',
+                  unitId: leaderFilter,
+                  effectiveFrom: { lte: now },
+                  OR: [
+                    { effectiveTo: null },
+                    { effectiveTo: { gte: now } },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+    return {
+      OR: leadershipConditions,
+    };
+  }
+
   // 4. Build Filter Conditions for Manager / Staff
   const authConditions: Prisma.TaskWhereInput[] = [
     { actors: { some: { userId } } },
@@ -710,9 +778,44 @@ export function buildTaskReadWhere(
   ];
 
   if (unitIds.length === 1) {
-    authConditions.push({ leadUnitId: unitIds[0] });
+    authConditions.push({
+      leadUnitId: unitIds[0],
+      scope: { notIn: [TaskScope.INDIVIDUAL] },
+    });
   } else if (unitIds.length > 1) {
-    authConditions.push({ leadUnitId: { in: unitIds } });
+    authConditions.push({
+      leadUnitId: { in: unitIds },
+      scope: { notIn: [TaskScope.INDIVIDUAL] },
+    });
+  }
+
+  // Individual tasks are actor-confined (RFC-06 §3.1): visible only to direct actors (already included above),
+  // OR to the unit leader directly managing the DRI's unit
+  if (leaderUnitIds.length > 0) {
+    const leaderFilter =
+      leaderUnitIds.length === 1 ? leaderUnitIds[0] : { in: leaderUnitIds };
+    authConditions.push({
+      scope: TaskScope.INDIVIDUAL,
+      actors: {
+        some: {
+          role: 'DRI',
+          user: {
+            positionAssignments: {
+              some: {
+                type: 'PRIMARY',
+                status: 'ACTIVE',
+                unitId: leaderFilter,
+                effectiveFrom: { lte: now },
+                OR: [
+                  { effectiveTo: null },
+                  { effectiveTo: { gte: now } },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   return {
@@ -1270,13 +1373,37 @@ export class TaskQueryService {
    * NOT for client exposure.
    */
   async getTaskEntityForInternalUse(taskId: string) {
+    const now = new Date();
     return prisma.task.findUnique({
       where: { id: taskId, archivedAt: null },
       include: {
         leadUnit: true,
         actors: {
           include: {
-            user: { select: { id: true, name: true, avatarUrl: true } },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+                positionAssignments: {
+                  where: {
+                    type: 'PRIMARY',
+                    status: 'ACTIVE',
+                    effectiveFrom: { lte: now },
+                    OR: [
+                      { effectiveTo: null },
+                      { effectiveTo: { gte: now } },
+                    ],
+                  },
+                  orderBy: [
+                    { type: 'asc' },
+                    { effectiveFrom: 'desc' },
+                  ],
+                  select: { unitId: true },
+                  take: 1,
+                },
+              },
+            },
           },
         },
         deliverables: {

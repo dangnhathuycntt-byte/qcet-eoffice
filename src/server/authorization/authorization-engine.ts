@@ -920,8 +920,10 @@ export function authorize(
     }
   }
 
-  // Policy: Nhiệm vụ cá nhân (INDIVIDUAL/PERSONAL) chỉ người được phân công trực tiếp mới được xem (RFC-06).
-  // Non-executive, non-unit leader users cannot view tasks of other units or individual tasks of other people.
+  // Policy: Nhiệm vụ cá nhân (INDIVIDUAL) là actor-confined (RFC-06 §3.1).
+  // Chỉ hiển thị cho các cá nhân được giao việc trực tiếp (DRI, Collaborators, Assigners, Observers),
+  // HOẶC Trưởng đơn vị trực tiếp quản lý DRI.
+  // Ghi chú RFC-06 §3.2: TaskOriginLevel (PERSONAL) là nguồn gốc thẩm quyền, tách biệt với TaskScope (INDIVIDUAL).
   if (action === 'task.read') {
     const isDirectParty =
       isAssigner ||
@@ -930,32 +932,44 @@ export function authorize(
       isCollaborator ||
       isFollower ||
       isObserver;
-    const isIndividualScope =
-      resource?.scope === 'INDIVIDUAL' ||
-      resource?.scope === 'individual' ||
-      resource?.scope === 'PERSONAL' ||
-      resource?.scope === 'personal';
 
-    if (!isExecutive && !isUnitLeader) {
-      if (isIndividualScope && !isDirectParty) {
-        scopeDenied = true;
-        scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
-        scopeDeniedReason = 'Nhiệm vụ cá nhân chỉ hiển thị cho cá nhân được phân công thực hiện.';
-      } else if (
+    const rawScope = (resource?.scope || '').toString().toUpperCase();
+    const isIndividualScope = rawScope === 'INDIVIDUAL' || rawScope === 'MY';
+
+    if (isIndividualScope) {
+      if (!isDirectParty) {
+        // Exception: Trưởng đơn vị trực tiếp quản lý DRI (RFC-06 §3.1)
+        // Ràng buộc trên cùng một PositionAssignment: phải có vai trò lãnh đạo đang hiệu lực tại đúng đơn vị của DRI
+        const driUnit = resource?.driUnitId;
+        const isDriDirectLeader = Boolean(
+          driUnit &&
+            positions.some(
+              (p) =>
+                (p.isLeadership || isUnitLeaderPosition(p.positionCode)) &&
+                (p.unitId === driUnit || p.unitCode === driUnit)
+            )
+        );
+
+        if (!isDriDirectLeader) {
+          scopeDenied = true;
+          scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+          scopeDeniedReason =
+            'Nhiệm vụ cá nhân chỉ hiển thị cho cá nhân được phân công thực hiện hoặc Trưởng đơn vị trực tiếp quản lý người chủ trì (DRI).';
+        }
+      }
+    } else if (!isExecutive && !isUnitLeader) {
+      // For non-individual tasks (DEPARTMENT scope): non-executive, non-unit leader staff
+      // cannot view tasks of other departments unless they are a direct party
+      if (
         resourceUnitId &&
         !userUnitIds.has(resourceUnitId) &&
-        resource?.scope !== 'SCHOOL' &&
-        resource?.scope !== 'school' &&
+        rawScope !== 'SCHOOL' &&
         !isDirectParty
       ) {
         scopeDenied = true;
         scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
         scopeDeniedReason = 'Người dùng không có quyền xem nhiệm vụ của đơn vị khác.';
       }
-    } else if (isUnitLeader && resourceUnitId && !userUnitIds.has(resourceUnitId) && isIndividualScope && !isDirectParty) {
-      scopeDenied = true;
-      scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
-      scopeDeniedReason = 'Trưởng đơn vị không có quyền xem nhiệm vụ cá nhân của đơn vị khác.';
     }
   }
 

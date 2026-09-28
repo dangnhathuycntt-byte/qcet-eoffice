@@ -85,6 +85,9 @@ describe('Task Detail Start Date Regression & Schedule Contract Tests', () => {
     }
 
     if (testDept?.id) {
+      await prisma.positionAssignment.deleteMany({
+        where: { unitId: testDept.id },
+      });
       await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });

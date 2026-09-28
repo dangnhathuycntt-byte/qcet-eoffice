@@ -38,14 +38,13 @@ export async function GET(req: Request, routeContext: RouteContext) {
     const authUser = requireAuthenticated(context);
 
     const { id } = await Promise.resolve(routeContext.params);
-    const result = await taskQueryService.getTaskById(id);
+    const rawTask = await taskQueryService.getTaskEntityForInternalUse(id);
 
-    if (!result) {
+    if (!rawTask) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const taskSubject = result.task;
-    const taskResource = buildTaskResource(taskSubject);
+    const taskResource = buildTaskResource(rawTask);
 
     // Canonical object authorization check (BOLA protection)
     const authContext = await loadAuthorizationContext(authUser.id, new Date(), { useCache: true, ttlMs: 10_000 });
@@ -54,9 +53,14 @@ export async function GET(req: Request, routeContext: RouteContext) {
       throw new ForbiddenError(readDecision.reason || 'Bạn không có quyền xem nhiệm vụ này');
     }
 
+    const taskDto = toTaskDetailDTO(rawTask);
+    if (!taskDto) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
+    }
+
     const availableActions = computeAvailableActions(authContext, taskResource);
     const taskDetail = {
-      ...result.task,
+      ...taskDto,
       availableActions,
     };
 

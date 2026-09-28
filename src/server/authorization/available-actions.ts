@@ -233,13 +233,24 @@ export function buildTaskResource(task: any): AuthorizationResource {
     .map((deliverable: any) => deliverable.uploadedById || deliverable.uploadedBy?.id)
     .filter((id: unknown): id is string => typeof id === 'string');
 
+  const driUnitId =
+    task.driUnitId ||
+    primaryDRI?.unitId ||
+    primaryDRI?.user?.positionAssignments?.[0]?.unitId ||
+    primaryDRI?.user?.departmentId ||
+    task.dri?.unitId ||
+    task.dri?.departmentId ||
+    undefined;
+
   return {
     ...task,
     type: 'task',
     id: task.id,
     scope: (task.scope || 'school').toString().toLowerCase(),
+    originLevel: task.originLevel ? task.originLevel.toString().toUpperCase() : undefined,
     departmentId,
     leadUnitId,
+    driUnitId,
     creatorId,
     createdById: creatorId,
     assignerId: creatorId,

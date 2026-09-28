@@ -11,6 +11,9 @@ import { PrismaClient } from "@prisma/client";
 export interface AssigneesBackfillReport {
   /** Số quan hệ ReBAC canonical đã rà soát (thay cho số bản ghi legacy đã xoá). */
   totalLegacyAssignees: number;
+  /** Số bản ghi primary DRI hiện có trong hệ thống. */
+  existingPrimaryDriCount: number;
+  /** Số bản ghi DRI được tạo mới hoặc cập nhật trong lần chạy này (0 nếu dryRun). */
   driCreatedOrUpdated: number;
   collaboratorsCreated: number;
   supervisorsCreated: number;
@@ -18,6 +21,7 @@ export interface AssigneesBackfillReport {
   leadUnitsCreated: number;
   paritySuccess: boolean;
   mismatchedAssignees: number;
+  integrity?: CanonicalIntegrityReport;
 }
 
 export interface CanonicalViolation {
@@ -55,12 +59,10 @@ export async function auditCanonicalTaskIntegrity(
   const duplicatePrimary = await prisma.$queryRawUnsafe<
     Array<{ task_id: string; primary_count: bigint }>
   >(`
-    SELECT ta."task_id", COUNT(*)::bigint AS primary_count
-    FROM "task_actors" ta
-    JOIN "tasks" t ON t."id" = ta."task_id"
-    WHERE ta."role" = 'DRI' AND ta."is_primary_dri" = TRUE
-      AND t."code" NOT LIKE 'QA-%' AND t."code" NOT LIKE 'TEST_%'
-    GROUP BY ta."task_id"
+    SELECT "task_id", COUNT(*)::bigint AS primary_count
+    FROM "task_actors"
+    WHERE "role" = 'DRI' AND "is_primary_dri" = TRUE
+    GROUP BY "task_id"
     HAVING COUNT(*) > 1
   `);
   if (duplicatePrimary.length > 0) {
@@ -71,27 +73,13 @@ export async function auditCanonicalTaskIntegrity(
     });
   }
 
-  const persistentTaskFilter = {
-    NOT: [
-      { code: { startsWith: "QA-" } },
-      { code: { startsWith: "TEST_" } },
-      { code: { startsWith: "QCET-HD-" } },
-    ],
-  };
-
   const tasksWithoutDri = await prisma.task.findMany({
-    where: {
-      actors: { none: { role: "DRI" } },
-      ...persistentTaskFilter,
-    },
+    where: { actors: { none: { role: "DRI" } } },
     select: { id: true },
     take: 1,
   });
   const tasksWithoutDriCount = await prisma.task.count({
-    where: {
-      actors: { none: { role: "DRI" } },
-      ...persistentTaskFilter,
-    },
+    where: { actors: { none: { role: "DRI" } } },
   });
   if (tasksWithoutDriCount > 0) {
     violations.push({
@@ -102,20 +90,12 @@ export async function auditCanonicalTaskIntegrity(
   }
 
   const departmentTasksWithoutUnit = await prisma.task.findMany({
-    where: {
-      scope: "DEPARTMENT",
-      leadUnitId: null,
-      ...persistentTaskFilter,
-    },
+    where: { scope: "DEPARTMENT", leadUnitId: null },
     select: { id: true },
     take: 1,
   });
   const departmentTasksWithoutUnitCount = await prisma.task.count({
-    where: {
-      scope: "DEPARTMENT",
-      leadUnitId: null,
-      ...persistentTaskFilter,
-    },
+    where: { scope: "DEPARTMENT", leadUnitId: null },
   });
   if (departmentTasksWithoutUnitCount > 0) {
     violations.push({
@@ -136,70 +116,24 @@ export async function auditCanonicalTaskIntegrity(
 /**
  * Phase 9: giữ tên hàm để `run-all.ts` không phải đổi call site, nhưng báo cáo
  * nay dựa trên kiểm tra bất biến thật.
+ * Mặc định là dryRun (kiểm tra an toàn). Chỉ thực hiện ghi khi options.apply === true.
  */
 export async function backfillAssigneesToActors(
   client?: PrismaClient,
-  options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean; apply?: boolean } = {}
 ): Promise<AssigneesBackfillReport & { integrity: CanonicalIntegrityReport }> {
   const prisma = client || new PrismaClient();
+  const shouldApply = options.apply === true && options.dryRun !== true;
 
-  if (!options.dryRun) {
-    // 1. Backfill missing DRI from task.createdById
-    const tasksMissingDri = await prisma.task.findMany({
-      where: {
-        actors: { none: { role: "DRI" } },
-      },
-      select: { id: true, createdById: true },
-    });
+  let driCreatedOrUpdated = 0;
+  let leadUnitsAssigned = 0;
 
-    if (tasksMissingDri.length > 0) {
-      await prisma.taskActor.createMany({
-        data: tasksMissingDri.map((t) => ({
-          taskId: t.id,
-          userId: t.createdById!,
-          role: "DRI",
-          isPrimaryDRI: true,
-          appointedAt: new Date(),
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    // 2. Backfill missing leadUnitId on DEPARTMENT tasks from creator's active unit or default unit
-    const deptTasksMissingUnit = await prisma.task.findMany({
-      where: { scope: "DEPARTMENT", leadUnitId: null },
-      select: {
-        id: true,
-        createdBy: {
-          select: {
-            positionAssignments: {
-              where: { type: "PRIMARY", status: "ACTIVE" },
-              select: { unitId: true },
-              take: 1,
-            },
-          },
-        },
-      },
-    });
-
-    if (deptTasksMissingUnit.length > 0) {
-      const defaultUnit =
-        (await prisma.organizationalUnit.findFirst({
-          where: { code: "P_QLDT" },
-          select: { id: true },
-        })) ||
-        (await prisma.organizationalUnit.findFirst({ select: { id: true } }));
-
-      for (const t of deptTasksMissingUnit) {
-        const unitId = t.createdBy?.positionAssignments[0]?.unitId || defaultUnit?.id;
-        if (unitId) {
-          await prisma.task.update({
-            where: { id: t.id },
-            data: { leadUnitId: unitId },
-          });
-        }
-      }
-    }
+  if (shouldApply) {
+    // Ghi chú bảo vệ dữ liệu & toàn vẹn thẩm quyền (Phase 9):
+    // 1. createdById hợp lệ về FK không chứng minh creator là DRI; không suy đoán gán creator làm DRI.
+    // 2. Với DEPARTMENT task thiếu leadUnitId, đơn vị của creator (đặc biệt khi creator thuộc BGH hoặc giao việc liên đơn vị)
+    //    không đồng nhất với đơn vị chủ trì. Không suy đoán gán creator's unit làm leadUnitId.
+    // Mọi bản ghi thiếu thông tin bắt buộc đều được giữ nguyên trạng thái unresolved để audit và xử lý theo thẩm quyền nghiệp vụ.
   }
 
   const integrity = await auditCanonicalTaskIntegrity(prisma);
@@ -221,11 +155,12 @@ export async function backfillAssigneesToActors(
 
   return {
     totalLegacyAssignees: integrity.totalActors,
-    driCreatedOrUpdated: primaryDriCount,
+    existingPrimaryDriCount: primaryDriCount,
+    driCreatedOrUpdated: shouldApply ? driCreatedOrUpdated : 0,
     collaboratorsCreated: 0,
     supervisorsCreated: 0,
     assignersCreated: 0,
-    leadUnitsCreated: 0,
+    leadUnitsCreated: leadUnitsAssigned,
     paritySuccess: integrity.isClean,
     mismatchedAssignees: integrity.violations.reduce((sum, v) => sum + v.count, 0),
     integrity,

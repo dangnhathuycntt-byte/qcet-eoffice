@@ -292,9 +292,13 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.deepEqual(filter, { id: '__DENY_SYSTEM_ADMIN_OPERATIONAL_TASKS__' });
     });
 
-    test('AuthenticatedUser Leadership returns unconstrained filter {}', () => {
+    test('AuthenticatedUser Leadership returns school-wide non-individual and actor filter', () => {
       const filter = buildTaskReadWhere(leadershipUser);
-      assert.deepEqual(filter, {});
+      assert.ok(Array.isArray((filter as any).OR));
+      const conditions = (filter as any).OR;
+      assert.deepEqual(conditions[0], { scope: { notIn: [TaskScope.INDIVIDUAL] } });
+      assert.deepEqual(conditions[1], { actors: { some: { userId: leadershipUser.id } } });
+      assert.deepEqual(conditions[2], { createdById: leadershipUser.id });
     });
 
     test('AuthenticatedUser Staff returns unit and direct-participation filter', () => {
@@ -305,7 +309,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       assert.equal(conditions.length, 3);
       assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
       assert.deepEqual(conditions[1], { createdById: staffAUser.id });
-      assert.deepEqual(conditions[2], { leadUnitId: deptAId });
+      assert.deepEqual(conditions[2], { leadUnitId: deptAId, scope: { notIn: [TaskScope.INDIVIDUAL] } });
     });
 
     test('AuthorizationContext System Admin returns deny filter (security restriction)', () => {
@@ -358,7 +362,9 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
         primaryUnitIds: [deptAId],
       });
       const filter = buildTaskReadWhere(ctx);
-      assert.deepEqual(filter, {});
+      assert.ok(Array.isArray((filter as any).OR));
+      const conditions = (filter as any).OR;
+      assert.deepEqual(conditions[0], { scope: { notIn: [TaskScope.INDIVIDUAL] } });
     });
 
     test('AuthorizationContext Expired Leadership Assignment drops back to staff scope', () => {
@@ -424,7 +430,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       const conditions = (filter as any).OR;
       assert.deepEqual(conditions[0], { actors: { some: { userId: staffAUser.id } } });
       assert.deepEqual(conditions[1], { createdById: staffAUser.id });
-      assert.deepEqual(conditions[2], { leadUnitId: deptAId });
+      assert.deepEqual(conditions[2], { leadUnitId: deptAId, scope: { notIn: [TaskScope.INDIVIDUAL] } });
     });
 
     test('AuthorizationContext multi-unit manager builds in filter across assigned units', () => {
@@ -443,7 +449,7 @@ describe('Task Read V2 Parity & Canonical Authorization Filter Suite (Task 7 / F
       const filter = buildTaskReadWhere(ctx);
       assert.ok(Array.isArray((filter as any).OR));
       const conditions = (filter as any).OR;
-      assert.deepEqual(conditions[2], { leadUnitId: { in: [deptAId, deptBId] } });
+      assert.deepEqual(conditions[2], { leadUnitId: { in: [deptAId, deptBId] }, scope: { notIn: [TaskScope.INDIVIDUAL] } });
     });
   });
 

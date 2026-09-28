@@ -93,9 +93,11 @@ describe("API Files Streaming & Security", () => {
     });
 
     // Create WorkDossier and DossierItem
-    const unit = await prisma.organizationalUnit.findFirst({
-      where: { code: "BGH" },
-    });
+    const unit =
+      (await prisma.organizationalUnit.findFirst({
+        where: { code: { in: ["QCET", "P_QLDT", "K_CNTT"] } },
+      })) || (await prisma.organizationalUnit.findFirst());
+    assert.ok(unit, "OrganizationalUnit must exist in test database");
     const dossier = await prisma.workDossier.create({
       data: {
         title: "Dossier Streaming Test",

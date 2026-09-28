@@ -17,11 +17,13 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
   let staffAUser: any;
   let leaderAUser: any;
   let staffBUser: any;
+  let leaderBUser: any;
   let bghUser: any;
 
   let staffAToken: string;
   let leaderAToken: string;
   let staffBToken: string;
+  let leaderBToken: string;
   let bghToken: string;
 
   let taskAId: string;
@@ -63,6 +65,16 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         email: `staff.b.${testRunId}@qcet.edu.vn`,
         name: 'Nhân viên Phòng B',
         role: UserRole.CHUYEN_VIEN,
+        isActive: true,
+      },
+    });
+
+    leaderBUser = await prisma.user.create({
+      data: {
+        id: `leader-b-${testRunId}`,
+        email: `leader.b.${testRunId}@qcet.edu.vn`,
+        name: 'Trưởng phòng B',
+        role: UserRole.TRUONG_PHONG,
         isActive: true,
       },
     });
@@ -126,6 +138,14 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
           effectiveFrom: new Date('2026-01-01'),
         },
         {
+          userId: leaderBUser.id,
+          unitId: deptBId,
+          positionDefinitionId: posDefLeader.id,
+          type: 'PRIMARY',
+          status: 'ACTIVE',
+          effectiveFrom: new Date('2026-01-01'),
+        },
+        {
           userId: bghUser.id,
           unitId: deptAId,
           positionDefinitionId: posDefLeader.id,
@@ -156,6 +176,13 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       email: staffBUser.email,
       name: staffBUser.name,
       role: staffBUser.role,
+    });
+
+    leaderBToken = signSessionToken({
+      id: leaderBUser.id,
+      email: leaderBUser.email,
+      name: leaderBUser.name,
+      role: leaderBUser.role,
     });
 
     bghToken = signSessionToken({
@@ -223,7 +250,7 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
 
   after(async () => {
     // Cleanup
-    const userIds = [staffAUser?.id, leaderAUser?.id, staffBUser?.id, bghUser?.id].filter(Boolean);
+    const userIds = [staffAUser?.id, leaderAUser?.id, staffBUser?.id, leaderBUser?.id, bghUser?.id].filter(Boolean);
     await prisma.taskDeliverable.deleteMany({
       where: { OR: [{ task: { leadUnitId: { in: [deptAId, deptBId] } } }, { uploadedById: { in: userIds } }] },
     }).catch(() => {});
@@ -292,6 +319,20 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
         }
       }
       assert.ok(hitRateLimit, 'Should trigger rate limit on excessive search requests');
+    });
+
+    test('RFC-06 §3.1: BGH queryTasks does not leak unrelated INDIVIDUAL tasks in rows or total', async () => {
+      const req = new NextRequest('http://localhost:3000/api/tasks?all=true', {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+        },
+      });
+      const res = await getTasks(req);
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      const hasPersonalB = json.tasks.some((t: any) => t.id === personalTaskBId);
+      assert.strictEqual(hasPersonalB, false, 'BGH must not see personal task of staff B in list query');
     });
   });
 
@@ -409,6 +450,79 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       assert.strictEqual(res.status, 403);
       const json = await res.json();
       assert.strictEqual(json.code, 'FORBIDDEN');
+    });
+
+    test('RFC-06 §3.1 BOLA: Direct unit leader of DRI (leaderB) CAN view INDIVIDUAL task', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${personalTaskBId}`, {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${leaderBToken}`,
+        },
+      });
+      const res = await getTaskById(req, { params: Promise.resolve({ id: personalTaskBId }) });
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      assert.strictEqual(json.task.id, personalTaskBId);
+    });
+
+    test('RFC-06 §3.1 BOLA: Leader of another department (leaderA) is DENIED viewing INDIVIDUAL task', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${personalTaskBId}`, {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${leaderAToken}`,
+        },
+      });
+      const res = await getTaskById(req, { params: Promise.resolve({ id: personalTaskBId }) });
+      assert.strictEqual(res.status, 403);
+      const json = await res.json();
+      assert.strictEqual(json.code, 'FORBIDDEN');
+    });
+
+    test('RFC-06 §3.1 BOLA: Institutional leader (BGH) is DENIED viewing unrelated INDIVIDUAL task', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${personalTaskBId}`, {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+        },
+      });
+      const res = await getTaskById(req, { params: Promise.resolve({ id: personalTaskBId }) });
+      assert.strictEqual(res.status, 403);
+      const json = await res.json();
+      assert.strictEqual(json.code, 'FORBIDDEN');
+    });
+
+    test('RFC-06 §3.1 BOLA: Direct DRI (staffB) CAN view their own INDIVIDUAL task', async () => {
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${personalTaskBId}`, {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${staffBToken}`,
+        },
+      });
+      const res = await getTaskById(req, { params: Promise.resolve({ id: personalTaskBId }) });
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      assert.strictEqual(json.task.id, personalTaskBId);
+    });
+
+    test('RFC-06 §3.1 BOLA: Leader is DENIED viewing INDIVIDUAL task if DRI assignment is expired', async () => {
+      // Temporarily set staffB assignment effectiveTo to past
+      await prisma.positionAssignment.updateMany({
+        where: { userId: staffBUser.id },
+        data: { effectiveTo: new Date('2025-01-01') },
+      });
+      try {
+        const req = new NextRequest(`http://localhost:3000/api/tasks/${personalTaskBId}`, {
+          headers: {
+            cookie: `${SESSION_COOKIE_NAME}=${leaderBToken}`,
+          },
+        });
+        const res = await getTaskById(req, { params: Promise.resolve({ id: personalTaskBId }) });
+        assert.strictEqual(res.status, 403, 'Leader must be denied when DRI assignment is expired');
+      } finally {
+        // Restore assignment
+        await prisma.positionAssignment.updateMany({
+          where: { userId: staffBUser.id },
+          data: { effectiveTo: null },
+        });
+      }
     });
 
     test('returns 200 with sanitized TaskDetailDTO for authorized user', async () => {
