@@ -21,7 +21,6 @@ import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
 import { authorizationContextCache } from '@/server/authorization/authorization-context-cache';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 
-export { isExecutiveAdministrator, isNonDelegableAction };
 
 const CreateDelegationSchema = z
   .object({
