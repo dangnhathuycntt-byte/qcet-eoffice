@@ -583,7 +583,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ assignedDeptId: "dept-cntt", instruction: "Chỉ đạo mẫu" }),
+      body: JSON.stringify({ leadUnitId: "dept-cntt", instruction: "Chỉ đạo mẫu" }),
     });
     const res = await postDirective(req, { params: Promise.resolve({ id: "doc-1" }) });
     assert.equal(res.status, 401);
@@ -597,7 +597,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ assignedDeptId: "dept-cntt", content: "Chỉ đạo mẫu" }),
+      body: JSON.stringify({ leadUnitId: "dept-cntt", content: "Chỉ đạo mẫu" }),
     });
     const res = await postDirective(req, { params: Promise.resolve({ id: "doc-1" }) });
     assert.equal(res.status, 403);

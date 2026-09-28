@@ -163,7 +163,9 @@ describe('Tasks API Route Handler Tests', () => {
     assert.strictEqual(res.status, 400);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Thiếu thông tin bắt buộc|Invalid input/i);
+    assert.strictEqual(json.code, 'VALIDATION_ERROR');
+    assert.strictEqual(json.error, 'Invalid input');
+    assert.ok(json.fieldErrors?.dueDate, 'Must return schema field error for missing dueDate');
   });
 
   test('POST /api/tasks creates task successfully with auto-generated code', async () => {

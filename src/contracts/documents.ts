@@ -390,7 +390,6 @@ export const CreateDirectiveSchema = z
      * `Department`; giá trị này được resolve sang `Task.leadUnitId`.
      */
     leadUnitId: z.string().trim().max(64).optional().nullable(),
-    assignedDeptId: z.string().trim().max(64).optional().nullable(),
     deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
     collaboratorIds: z
       .union([
@@ -401,10 +400,6 @@ export const CreateDirectiveSchema = z
       .nullable(),
   })
   .strict()
-  .transform((data) => ({
-    ...data,
-    leadUnitId: data.leadUnitId || data.assignedDeptId || null,
-  }))
   .refine(
     (data) =>
       Boolean(
