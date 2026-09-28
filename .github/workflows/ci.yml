@@ -56,6 +56,9 @@ jobs:
       - name: Verify Upgrade Database Migrations
         run: npm run db:migrate:test-upgrade
 
+      - name: Apply Migrations for Drift Check
+        run: npx prisma migrate deploy
+
       - name: Detect Unexpected Database Drift
         run: npm run db:drift:check
 

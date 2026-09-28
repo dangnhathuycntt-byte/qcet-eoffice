@@ -102,8 +102,8 @@
 
 | Item | Status | Ghi chú |
 |------|--------|---------|
-| CI test suites | 🟡 [x] | **Local verification pass:** 642 contract + provider tests; 199 security tests (non-DB); typecheck 0 errors; lint 101 DESIGN (baseline); 0 new failures. **GitHub CI Quality Gate: FAIL** — 3964 tests: 3717 pass, 231 fail, 16 skip; all 231 failures are DB-dependent tests hitting broken self-hosted runner credentials (not code regressions). Deploy pipeline (`Continuous Deployment & Migration Gates`): ✅ SUCCESS — build validation + migration check pass on ephemeral runners. **No live deployment occurs** — deploy.yml emits a receipt then dies with the runner; actual deploy is manual `docker compose` on host. |
-| Deploy pilot to bounded user group | ⛔ BLOCKED | Production access + ClamAV |
+| CI test suites | 🟡 [x] | **Local:** 3146 pass, 32 fail (all DB-dependent), typecheck 0 errors. **CI run 36385728517:** PostgreSQL service container ✅ works (port 5433). Containers initialize, migrations pass. 3771 pass, 172 fail — test-guard blocks DB tests (regex now fixed in `run-tests.mjs`). Drift check needs `migrate deploy` before check (added). **Deploy pipeline:** ✅ SUCCESS. **No live deployment** — no SSH/docker-push step exists; deploy is manual `docker compose` on host. |
+| Deploy pilot to bounded user group | ⛔ BLOCKED | No SSH keys, docker remote context, or deploy secrets exist on this machine or in GitHub. `qcet.dixxie.store` responds HTTP 200 but no remote access credentials are available. Deploy requires manual `docker compose` on the host. |
 | Reconcile audit findings | 🟡 Partially actionable | Pre-pilot findings reconciled; full reconciliation BLOCKED chờ deployed pilot |
 | Observation window + legacy removal | ⛔ BLOCKED | Needs observation data |
 | Backup/restore/runbooks | ✅ [x] | `recovery-paths.md`, `rollback.md`, correlation IDs |

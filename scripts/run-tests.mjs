@@ -272,7 +272,7 @@ const tsxBin = path.join(
 );
 const bin = fs.existsSync(tsxBin) ? tsxBin : "tsx";
 
-const testDbUrl = (process.env.DATABASE_URL || "").replace(/\/qcet_eoffice(\?.*)?$/, "/qcet_test$1");
+const testDbUrl = (process.env.DATABASE_URL || "").replace(/\/qcet_(?:eoffice|ci)(\?.*)?$/, "/qcet_test$1");
 
 const env = {
   ...process.env,
