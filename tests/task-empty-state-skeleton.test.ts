@@ -57,6 +57,6 @@ describe("TaskEmptyState Ghost Table Preview", () => {
     // Verify mock tasks are rendered for the hover reveal layer
     assert.ok(html.includes("Hoàn thiện kế hoạch kiểm định chất lượng HK1"));
     assert.ok(html.includes("Rà soát đề cương chi tiết học phần CNTT"));
-    assert.ok(html.includes("Đặng Nhật Huy"));
+    assert.ok(html.includes("Người phụ trách A"));
   });
 });
