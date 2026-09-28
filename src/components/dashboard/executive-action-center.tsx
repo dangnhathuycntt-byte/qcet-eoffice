@@ -507,7 +507,7 @@ export function ExecutiveActionCenter({
                           type="button"
                           size="sm"
                           variant="ghost"
-                          className="min-h-[36px] sm:min-h-[32px] h-7 shrink-0 gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground group-hover/item:text-primary group-hover/item:bg-primary/10 transition-all"
+                          className="min-h-[44px] sm:min-h-[36px] h-7 shrink-0 gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground group-hover/item:text-primary group-hover/item:bg-primary/10 transition-all"
                           aria-label={`${item.actionLabel || "Xem chi tiết"}: ${item.title}`}
                           onClick={(e) => {
                             e.stopPropagation();

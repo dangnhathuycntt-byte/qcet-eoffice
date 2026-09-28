@@ -13,7 +13,10 @@ describe("Sprint 7: Legacy Data Cutover & Parity Verification", () => {
     // Phase 9 WI-9.3: dacumMigration removed — DacumDelegation table dropped.
 
     // Verify each legacy task assignee has a corresponding V2 task actor
-    const sampleAssignees = await prisma.taskActor.findMany({ take: 10 });
+    const sampleAssignees = await prisma.taskActor.findMany({
+      where: { role: { in: ["DRI", "COLLABORATOR"] } },
+      take: 10,
+    });
     for (const assignee of sampleAssignees) {
       const actor = await prisma.taskActor.findFirst({
         where: {

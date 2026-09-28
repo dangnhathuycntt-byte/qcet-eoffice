@@ -299,6 +299,12 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     await prisma.user.deleteMany({
       where: { id: { in: ['user-harden-staff', 'user-harden-mgr', 'user-harden-admin'] } },
     });
+    await prisma.dossierItem.deleteMany({
+      where: { dossier: { owningUnitId: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } } },
+    });
+    await prisma.workDossier.deleteMany({
+      where: { owningUnitId: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } },
+    });
     await prisma.organizationalUnit.deleteMany({
       where: { id: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } },
     });

@@ -68,7 +68,7 @@ describe("Role Pages Filtering Integration", () => {
 
   test("STAFF role viewpoint scopes to individual assigned tasks with recalculated rollup", () => {
     const payload = getMockDashboardPayload();
-    const staff = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh
+    const staff = DEFAULT_DEMO_USERS.find((u) => u.id === "user-staff-vinh")!; // Nguyễn Ngọc Vinh
     const staffTasks = filterTasksByRole(payload.tasks, staff);
     const staffStats = computeDashboardStats(staffTasks);
     const staffUpcoming = filterUpcomingByRole(payload.upcoming, staff, staffTasks);

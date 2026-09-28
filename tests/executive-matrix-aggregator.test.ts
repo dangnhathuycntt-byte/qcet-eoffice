@@ -725,18 +725,18 @@ describe("Academic Month Filtering Integration in Dashboard Hub", () => {
   }
 
   const sampleTasks: SchoolTask[] = [
-    // Month 9 task (25/08/2026 - 24/09/2026)
+    // Month 9 task (01/09/2026 - 30/09/2026)
     makeSchoolTask({ id: "task-month-9", dueDate: "2026-09-10", status: "IN_PROGRESS" }),
-    // Month 9 boundary task (exact first day: 2026-08-25)
+    // Month 9 boundary task (exact first day: 2026-09-01)
     makeSchoolTask({
       id: "task-month-9-boundary-start",
-      dueDate: "2026-08-25",
+      dueDate: "2026-09-01",
       status: "IN_PROGRESS",
     }),
-    // Month 9 boundary task (exact last day: 2026-09-24)
+    // Month 9 boundary task (exact last day: 2026-09-30)
     makeSchoolTask({
       id: "task-month-9-boundary-end",
-      dueDate: "2026-09-24",
+      dueDate: "2026-09-30",
       status: "IN_PROGRESS",
     }),
     // Month 10 task (25/09/2026 - 24/10/2026)

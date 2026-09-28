@@ -279,22 +279,22 @@ describe("DepartmentProgressMatrix Navigation & Sorting", () => {
   ];
 
   test("generates direct link to /tasks?scope=school&dept=...", () => {
-    const url = getDepartmentTasksUrl("K-CNTT");
-    assert.equal(url, "/tasks?scope=school&dept=K-CNTT");
+    const url = getDepartmentTasksUrl("CNTT");
+    assert.equal(url, "/tasks?scope=school&dept=CNTT");
   });
 
   test("sorts departments by progress accurately", () => {
     const sorted = sortDepartmentsByProgress(mockDepts, true);
-    assert.equal(sorted[0].departmentId, "K-CNTT"); // 90%
-    assert.equal(sorted[1].departmentId, "P-DT"); // 72%
-    assert.equal(sorted[2].departmentId, "QTCSVC"); // 45%
+    assert.equal(sorted[0].departmentId, "CNTT"); // 90%
+    assert.equal(sorted[1].departmentId, "DAO_TAO"); // 72%
+    assert.equal(sorted[2].departmentId, "QT_CSVC"); // 45%
   });
 
   test("sorts departments by overdue tasks accurately", () => {
     const sorted = sortDepartmentsByOverdue(mockDepts, true);
-    assert.equal(sorted[0].departmentId, "QTCSVC"); // 3 overdue
-    assert.equal(sorted[1].departmentId, "P-DT"); // 1 overdue
-    assert.equal(sorted[2].departmentId, "K-CNTT"); // 0 overdue
+    assert.equal(sorted[0].departmentId, "QT_CSVC"); // 3 overdue
+    assert.equal(sorted[1].departmentId, "DAO_TAO"); // 1 overdue
+    assert.equal(sorted[2].departmentId, "CNTT"); // 0 overdue
   });
 });
 

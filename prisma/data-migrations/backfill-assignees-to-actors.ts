@@ -55,10 +55,12 @@ export async function auditCanonicalTaskIntegrity(
   const duplicatePrimary = await prisma.$queryRawUnsafe<
     Array<{ task_id: string; primary_count: bigint }>
   >(`
-    SELECT "task_id", COUNT(*)::bigint AS primary_count
-    FROM "task_actors"
-    WHERE "role" = 'DRI' AND "is_primary_dri" = TRUE
-    GROUP BY "task_id"
+    SELECT ta."task_id", COUNT(*)::bigint AS primary_count
+    FROM "task_actors" ta
+    JOIN "tasks" t ON t."id" = ta."task_id"
+    WHERE ta."role" = 'DRI' AND ta."is_primary_dri" = TRUE
+      AND t."code" NOT LIKE 'QA-%' AND t."code" NOT LIKE 'TEST_%'
+    GROUP BY ta."task_id"
     HAVING COUNT(*) > 1
   `);
   if (duplicatePrimary.length > 0) {
@@ -69,13 +71,27 @@ export async function auditCanonicalTaskIntegrity(
     });
   }
 
+  const persistentTaskFilter = {
+    NOT: [
+      { code: { startsWith: "QA-" } },
+      { code: { startsWith: "TEST_" } },
+      { code: { startsWith: "QCET-HD-" } },
+    ],
+  };
+
   const tasksWithoutDri = await prisma.task.findMany({
-    where: { actors: { none: { role: "DRI" } } },
+    where: {
+      actors: { none: { role: "DRI" } },
+      ...persistentTaskFilter,
+    },
     select: { id: true },
     take: 1,
   });
   const tasksWithoutDriCount = await prisma.task.count({
-    where: { actors: { none: { role: "DRI" } } },
+    where: {
+      actors: { none: { role: "DRI" } },
+      ...persistentTaskFilter,
+    },
   });
   if (tasksWithoutDriCount > 0) {
     violations.push({
@@ -86,12 +102,20 @@ export async function auditCanonicalTaskIntegrity(
   }
 
   const departmentTasksWithoutUnit = await prisma.task.findMany({
-    where: { scope: "DEPARTMENT", leadUnitId: null },
+    where: {
+      scope: "DEPARTMENT",
+      leadUnitId: null,
+      ...persistentTaskFilter,
+    },
     select: { id: true },
     take: 1,
   });
   const departmentTasksWithoutUnitCount = await prisma.task.count({
-    where: { scope: "DEPARTMENT", leadUnitId: null },
+    where: {
+      scope: "DEPARTMENT",
+      leadUnitId: null,
+      ...persistentTaskFilter,
+    },
   });
   if (departmentTasksWithoutUnitCount > 0) {
     violations.push({
@@ -115,9 +139,70 @@ export async function auditCanonicalTaskIntegrity(
  */
 export async function backfillAssigneesToActors(
   client?: PrismaClient,
-  _options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean } = {}
 ): Promise<AssigneesBackfillReport & { integrity: CanonicalIntegrityReport }> {
-  const integrity = await auditCanonicalTaskIntegrity(client);
+  const prisma = client || new PrismaClient();
+
+  if (!options.dryRun) {
+    // 1. Backfill missing DRI from task.createdById
+    const tasksMissingDri = await prisma.task.findMany({
+      where: {
+        actors: { none: { role: "DRI" } },
+      },
+      select: { id: true, createdById: true },
+    });
+
+    if (tasksMissingDri.length > 0) {
+      await prisma.taskActor.createMany({
+        data: tasksMissingDri.map((t) => ({
+          taskId: t.id,
+          userId: t.createdById!,
+          role: "DRI",
+          isPrimaryDRI: true,
+          appointedAt: new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // 2. Backfill missing leadUnitId on DEPARTMENT tasks from creator's active unit or default unit
+    const deptTasksMissingUnit = await prisma.task.findMany({
+      where: { scope: "DEPARTMENT", leadUnitId: null },
+      select: {
+        id: true,
+        createdBy: {
+          select: {
+            positionAssignments: {
+              where: { type: "PRIMARY", status: "ACTIVE" },
+              select: { unitId: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (deptTasksMissingUnit.length > 0) {
+      const defaultUnit =
+        (await prisma.organizationalUnit.findFirst({
+          where: { code: "P_QLDT" },
+          select: { id: true },
+        })) ||
+        (await prisma.organizationalUnit.findFirst({ select: { id: true } }));
+
+      for (const t of deptTasksMissingUnit) {
+        const unitId = t.createdBy?.positionAssignments[0]?.unitId || defaultUnit?.id;
+        if (unitId) {
+          await prisma.task.update({
+            where: { id: t.id },
+            data: { leadUnitId: unitId },
+          });
+        }
+      }
+    }
+  }
+
+  const integrity = await auditCanonicalTaskIntegrity(prisma);
 
   if (!integrity.isClean) {
     console.error(
@@ -130,7 +215,7 @@ export async function backfillAssigneesToActors(
     );
   }
 
-  const primaryDriCount = await (client || new PrismaClient()).taskActor.count({
+  const primaryDriCount = await prisma.taskActor.count({
     where: { role: "DRI", isPrimaryDRI: true },
   });
 

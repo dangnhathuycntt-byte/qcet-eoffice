@@ -93,7 +93,9 @@ describe("API Files Streaming & Security", () => {
     });
 
     // Create WorkDossier and DossierItem
-    const unit = await prisma.organizationalUnit.findFirst();
+    const unit = await prisma.organizationalUnit.findFirst({
+      where: { code: "BGH" },
+    });
     const dossier = await prisma.workDossier.create({
       data: {
         title: "Dossier Streaming Test",

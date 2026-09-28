@@ -920,6 +920,45 @@ export function authorize(
     }
   }
 
+  // Policy: Nhiệm vụ cá nhân (INDIVIDUAL/PERSONAL) chỉ người được phân công trực tiếp mới được xem (RFC-06).
+  // Non-executive, non-unit leader users cannot view tasks of other units or individual tasks of other people.
+  if (action === 'task.read') {
+    const isDirectParty =
+      isAssigner ||
+      isDRI ||
+      isAssignee ||
+      isCollaborator ||
+      isFollower ||
+      isObserver;
+    const isIndividualScope =
+      resource?.scope === 'INDIVIDUAL' ||
+      resource?.scope === 'individual' ||
+      resource?.scope === 'PERSONAL' ||
+      resource?.scope === 'personal';
+
+    if (!isExecutive && !isUnitLeader) {
+      if (isIndividualScope && !isDirectParty) {
+        scopeDenied = true;
+        scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+        scopeDeniedReason = 'Nhiệm vụ cá nhân chỉ hiển thị cho cá nhân được phân công thực hiện.';
+      } else if (
+        resourceUnitId &&
+        !userUnitIds.has(resourceUnitId) &&
+        resource?.scope !== 'SCHOOL' &&
+        resource?.scope !== 'school' &&
+        !isDirectParty
+      ) {
+        scopeDenied = true;
+        scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+        scopeDeniedReason = 'Người dùng không có quyền xem nhiệm vụ của đơn vị khác.';
+      }
+    } else if (isUnitLeader && resourceUnitId && !userUnitIds.has(resourceUnitId) && isIndividualScope && !isDirectParty) {
+      scopeDenied = true;
+      scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
+      scopeDeniedReason = 'Trưởng đơn vị không có quyền xem nhiệm vụ cá nhân của đơn vị khác.';
+    }
+  }
+
   if (isUnitLeader && resourceUnitId) {
     const isOwnUnit = userUnitIds.has(resourceUnitId);
     const isSchoolWide =
