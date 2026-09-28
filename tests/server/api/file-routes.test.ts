@@ -2,11 +2,15 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { tmpdir } from "node:os";
+import crypto from "node:crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { GET as getFileRoute } from "@/app/api/files/[...path]/route";
+import { GET as getFileObjectRoute } from "@/app/api/file-objects/[id]/route";
 import { GET as downloadDocumentRoute } from "@/app/api/documents/download/route";
+import { POST as uploadFileRoute } from "@/app/api/upload/route";
 import {
   isAllowedFileExtension,
   sanitizeDownloadFilename,
@@ -31,6 +35,11 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
   let testDocId: string;
   let testAttachmentId: string;
+  let testCanonicalFileId: string;
+  let testPendingFileId: string;
+  let testOrphanFileId: string;
+  let uploadedFileObjectId = "";
+  let uploadedStorageKey = "";
   let testTaskId: string;
   let testDeliverableId: string;
 
@@ -218,6 +227,71 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     testAttachmentId = attachment.id;
     fs.writeFileSync(path.join(testSandboxAbs, "dept-b-private.pdf"), samplePdfContent);
 
+    const canonicalStorageKey = `${testSandboxRel}/canonical.pdf`;
+    fs.writeFileSync(path.join(testSandboxAbs, "canonical.pdf"), samplePdfContent);
+    const canonicalFile = await prisma.fileObject.create({
+      data: {
+        storageKey: canonicalStorageKey,
+        originalName: "canonical.pdf",
+        mimeType: "application/pdf",
+        extension: ".pdf",
+        byteSize: BigInt(samplePdfContent.length),
+        contentHash: "1".repeat(64),
+        scanStatus: "CLEAN",
+        uploadedById: deptBUser.id,
+      },
+    });
+    testCanonicalFileId = canonicalFile.id;
+    await prisma.documentAttachment.create({
+      data: {
+        documentId: doc.id,
+        fileName: "canonical.pdf",
+        fileUrl: `/api/file-objects/${canonicalFile.id}`,
+        fileObjectId: canonicalFile.id,
+        fileSize: samplePdfContent.length,
+        mimeType: "application/pdf",
+      },
+    });
+
+    const pendingFile = await prisma.fileObject.create({
+      data: {
+        storageKey: `${testSandboxRel}/pending.pdf`,
+        originalName: "pending.pdf",
+        mimeType: "application/pdf",
+        extension: ".pdf",
+        byteSize: BigInt(samplePdfContent.length),
+        contentHash: "2".repeat(64),
+        scanStatus: "PENDING",
+        uploadedById: deptBUser.id,
+        attachments: {
+          create: {
+            documentId: doc.id,
+            fileName: "pending.pdf",
+            fileUrl: "/api/file-objects/pending",
+            fileSize: samplePdfContent.length,
+            mimeType: "application/pdf",
+          },
+        },
+      },
+    });
+    testPendingFileId = pendingFile.id;
+    fs.writeFileSync(path.join(testSandboxAbs, "pending.pdf"), samplePdfContent);
+
+    const orphanFile = await prisma.fileObject.create({
+      data: {
+        storageKey: `${testSandboxRel}/orphan.pdf`,
+        originalName: "orphan.pdf",
+        mimeType: "application/pdf",
+        extension: ".pdf",
+        byteSize: BigInt(samplePdfContent.length),
+        contentHash: "3".repeat(64),
+        scanStatus: "CLEAN",
+        uploadedById: deptBUser.id,
+      },
+    });
+    testOrphanFileId = orphanFile.id;
+    fs.writeFileSync(path.join(testSandboxAbs, "orphan.pdf"), samplePdfContent);
+
     // Register sample attachments for download tests (under Default Deny)
     await prisma.documentAttachment.create({
       data: {
@@ -281,6 +355,9 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
         await prisma.documentAttachment.deleteMany({ where: { documentId: testDocId } }).catch(() => {});
         await prisma.document.delete({ where: { id: testDocId } }).catch(() => {});
       }
+      await prisma.fileObject.deleteMany({
+        where: { id: { in: [testCanonicalFileId, testPendingFileId, testOrphanFileId, uploadedFileObjectId].filter(Boolean) } },
+      }).catch(() => {});
       const userIdsToClean = [deptAUser?.id, deptBUser?.id, adminUser?.id].filter(Boolean) as string[];
       if (userIdsToClean.length > 0) {
         await prisma.positionAssignment.deleteMany({ where: { userId: { in: userIdsToClean } } }).catch(() => {});
@@ -295,6 +372,9 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
 
     // Clean up sandbox files
     try {
+      if (uploadedStorageKey) {
+        fs.rmSync(resolveSafeFilePath(uploadedStorageKey), { force: true });
+      }
       if (fs.existsSync(testSandboxAbs)) {
         fs.rmSync(testSandboxAbs, { recursive: true, force: true });
       }
@@ -439,7 +519,133 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     });
   });
 
+  describe("4b. Canonical upload metadata and quarantine", () => {
+    test("POST /api/upload stores a checksum-bound FileObject and returns its ID URL", async () => {
+      const bytes = Buffer.from("canonical uploaded test content", "utf8");
+      const form = new FormData();
+      form.append("file", new File([bytes], `canonical-${Date.now()}.txt`, { type: "text/plain" }));
+      const req = new NextRequest("http://localhost:3000/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${deptBToken}` },
+        body: form,
+      });
+      const res = await uploadFileRoute(req);
+      assert.equal(res.status, 200);
+
+      const body = await res.json();
+      assert.match(body.fileId, /^[0-9a-f-]{36}$/i);
+      assert.equal(body.fileUrl, `/api/file-objects/${body.fileId}`);
+      assert.equal(body.scanStatus, "PENDING");
+      assert.equal(body.contentHash, crypto.createHash("sha256").update(bytes).digest("hex"));
+
+      const fileObject = await prisma.fileObject.findUnique({ where: { id: body.fileId } });
+      assert.ok(fileObject);
+      assert.equal(fileObject.byteSize, BigInt(bytes.length));
+      assert.equal(fileObject.contentHash, body.contentHash);
+      assert.equal(fileObject.mimeType, "text/plain; charset=utf-8");
+      assert.equal(fileObject.scanStatus, "PENDING");
+      uploadedFileObjectId = fileObject.id;
+      uploadedStorageKey = fileObject.storageKey;
+
+      const denied = await getFileObjectRoute(
+        createRequest(`http://localhost:3000/api/file-objects/${fileObject.id}`, { token: deptBToken }),
+        { params: Promise.resolve({ id: fileObject.id }) }
+      );
+      assert.equal(denied.status, 403, "unattached upload must remain inaccessible");
+    });
+
+    test("POST /api/upload rejects content that does not match its extension", async () => {
+      const form = new FormData();
+      form.append("file", new File(["<html>spoofed</html>"], "spoofed.pdf", { type: "application/pdf" }));
+      const req = new NextRequest("http://localhost:3000/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${deptBToken}` },
+        body: form,
+      });
+      const res = await uploadFileRoute(req);
+      assert.equal(res.status, 403);
+    });
+  });
+
   describe("5. Object-Level Authorization (BOLA / IDOR Prevention)", () => {
+    test("canonical FileObject download authorizes by exact linked document and supports byte ranges", async () => {
+      const denied = await getFileObjectRoute(
+        createRequest(`http://localhost:3000/api/file-objects/${testCanonicalFileId}`, { token: deptAToken }),
+        { params: Promise.resolve({ id: testCanonicalFileId }) }
+      );
+      assert.equal(denied.status, 403);
+
+      const allowed = await getFileObjectRoute(
+        createRequest(`http://localhost:3000/api/file-objects/${testCanonicalFileId}`, {
+          token: deptBToken,
+          headers: { range: "bytes=0-7" },
+        }),
+        { params: Promise.resolve({ id: testCanonicalFileId }) }
+      );
+      assert.equal(allowed.status, 206);
+      assert.equal(allowed.headers.get("content-range"), `bytes 0-7/${samplePdfContent.length}`);
+      assert.equal(allowed.headers.get("content-disposition"), 'inline; filename="canonical.pdf"');
+    });
+
+    test("canonical FileObject route blocks pending scans and unlinked objects", async () => {
+      const pending = await getFileObjectRoute(
+        createRequest(`http://localhost:3000/api/file-objects/${testPendingFileId}`, { token: deptBToken }),
+        { params: Promise.resolve({ id: testPendingFileId }) }
+      );
+      assert.equal(pending.status, 409);
+      assert.equal((await pending.json()).code, "FILE_SCAN_PENDING");
+
+      const orphan = await getFileObjectRoute(
+        createRequest(`http://localhost:3000/api/file-objects/${testOrphanFileId}`, { token: adminToken }),
+        { params: Promise.resolve({ id: testOrphanFileId }) }
+      );
+      assert.equal(orphan.status, 403);
+    });
+
+    test("canonical FileObject route rejects storage symlinks that escape UPLOADS_DIR", async () => {
+      const outsideDirectory = fs.mkdtempSync(path.join(tmpdir(), "qcet-file-object-outside-"));
+      const outsideFile = path.join(outsideDirectory, "outside.pdf");
+      const symlinkPath = path.join(testSandboxAbs, "symlink-escape.pdf");
+      const bytes = Buffer.from("outside uploads root");
+      fs.writeFileSync(outsideFile, bytes);
+      fs.symlinkSync(outsideFile, symlinkPath);
+
+      const escapedFile = await prisma.fileObject.create({
+        data: {
+          storageKey: `${testSandboxRel}/symlink-escape.pdf`,
+          originalName: "symlink-escape.pdf",
+          mimeType: "application/pdf",
+          extension: ".pdf",
+          byteSize: BigInt(bytes.length),
+          contentHash: crypto.createHash("sha256").update(bytes).digest("hex"),
+          scanStatus: "CLEAN",
+          uploadedById: deptBUser.id,
+          attachments: {
+            create: {
+              documentId: testDocId,
+              fileName: "symlink-escape.pdf",
+              fileUrl: `/api/file-objects/symlink-escape`,
+              fileSize: bytes.length,
+              mimeType: "application/pdf",
+            },
+          },
+        },
+      });
+
+      try {
+        const response = await getFileObjectRoute(
+          createRequest(`http://localhost:3000/api/file-objects/${escapedFile.id}`, { token: deptBToken }),
+          { params: Promise.resolve({ id: escapedFile.id }) }
+        );
+        assert.equal(response.status, 403);
+      } finally {
+        await prisma.documentAttachment.deleteMany({ where: { fileObjectId: escapedFile.id } });
+        await prisma.fileObject.delete({ where: { id: escapedFile.id } });
+        fs.rmSync(symlinkPath, { force: true });
+        fs.rmSync(outsideDirectory, { recursive: true, force: true });
+      }
+    });
+
     test("GET /api/files/[...path] rejects unauthorized cross-department user with 403 for private document attachment", async () => {
       // Dept A user trying to access Dept B private document attachment
       const req = createRequest(`http://localhost:3000/api/files/${testSandboxRel}/dept-b-private.pdf`, { token: deptAToken });

@@ -459,6 +459,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
             {
               deliverableId: deliverable.id,
               reviewStatus: 'APPROVED',
+              expectedVersion: taskAfterSubmit!.version,
             }
           );
         },
@@ -473,6 +474,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
           deliverableId: deliverable.id,
           reviewStatus: 'APPROVED',
           reviewNote: 'Đã nghiệm thu đạt chuẩn',
+          expectedVersion: taskAfterSubmit!.version,
         }
       );
 

@@ -11,6 +11,7 @@ import {
  */
 
 import { prisma } from '@/lib/prisma';
+import { getFileObjectIdFromUrl } from '@/lib/services/file-service';
 import {
   MeetingStatus,
   MeetingParticipantRole,
@@ -177,6 +178,7 @@ export class MeetingService {
           location: input.location,
           agenda: input.agenda,
           materialsUrl: input.materialsUrl,
+          materialsFileObjectId: getFileObjectIdFromUrl(input.materialsUrl),
         },
       });
 

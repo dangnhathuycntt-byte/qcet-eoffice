@@ -6,6 +6,10 @@ import {
   listIncomingWorkflows,
 } from "@/lib/services/incoming-document-service";
 import { IncomingDocumentStatus } from "@prisma/client";
+import { RegisterIncomingDocumentSchema } from "@/contracts/documents";
+import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE } from "@/server/api/validation";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
 
 export async function GET(req: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -38,7 +42,7 @@ export async function GET(req: NextRequest) {
       status: 200,
     });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }
 
@@ -49,7 +53,12 @@ export async function POST(req: NextRequest) {
     requestId = context.requestId;
     const authUser = requireAuthenticated(context);
 
-    const body = await req.json();
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+
+    const body = RegisterIncomingDocumentSchema.parse(await req.json());
 
     const result = await registerIncomingDocument(
       body,
@@ -62,6 +71,6 @@ export async function POST(req: NextRequest) {
       status: 201,
     });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

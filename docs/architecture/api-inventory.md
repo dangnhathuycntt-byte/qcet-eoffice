@@ -1,15 +1,18 @@
 # QCET E-Office — Comprehensive API Endpoint Inventory & Security Baseline (Phase 0)
 
-**Document Status**: Canonical Reference  
+**Document Status**: Historical Snapshot — 2026-09-09
 **Scope**: Full API Surface Audit, Security Posture, BOLA & Threat Analysis, Hardening Matrix  
 **Date**: 2026-09-09  
 **Branch**: `feat/dacum-role-delegation-workflow`  
+
+> [!WARNING]
+> Các route count và security findings bên dưới phản ánh snapshot ngày 2026-09-09, không phải kiểm kê hiện tại. Xem [API Route and Method Inventory — 2026-09-28](./api-inventory-current-2026-09.md) để biết current route/method surface. Hãy kiểm chứng lại từng finding cũ trước khi coi là còn tồn tại.
 
 ---
 
 ## 1. Executive Summary
 
-As part of **Phase 0** of the QCET E-Office API Hardening & Architecture Improvement Plan, this document establishes the exhaustive inventory of all HTTP route handlers implemented under `src/app/api`. Every route handler and HTTP method is cataloged across critical security dimensions: authentication mechanism, role-based authorization (RBAC), object-level authorization (BOLA/IDOR protection), input validation schema, rate limiting, and state side effects.
+This historical **2026-09-09 snapshot** was produced for Phase 0 of the QCET E-Office API Hardening & Architecture Improvement Plan. Its route counts and security findings do not describe the current application. Use [`api-inventory-current-2026-09.md`](./api-inventory-current-2026-09.md) for the current 2026-09-28 route/method surface; its security/helper classifications are preliminary triage and still require route-by-route behavior verification.
 
 ### Key Inventory Metrics
 - **Total Route Files**: 31 files under `src/app/api/**/route.ts`
@@ -41,7 +44,7 @@ As part of **Phase 0** of the QCET E-Office API Hardening & Architecture Improve
 
 ## 2. Master API Endpoint Inventory
 
-The following canonical matrix accounts for all 43 HTTP method handlers currently implemented in `src/app/api`:
+The following historical matrix accounts for the 43 HTTP method handlers recorded in the 2026-09-09 snapshot. Do not treat its findings as current without re-verifying route and shared-helper behavior:
 
 | Endpoint | Method | Auth | Role | Object Auth | Input Schema | Rate Limit | Side Effect |
 |---|---|---|---|---|---|---|---|
@@ -241,14 +244,14 @@ Target Hardened Architecture (Wave 1 - Wave 4 Implementation)
 
 ## 6. Verification and Audit Confirmation
 
-All 31 route files under `src/app/api` were exhaustively parsed and inventoried:
+As of 2026-09-09, the then-current 31 route files under `src/app/api` were parsed and inventoried:
 ```text
 31 route files audited.
 43 HTTP method handlers cataloged.
 Zero omitted routes.
 ```
 
-This inventory serves as the architectural baseline for subsequent implementation waves:
+This snapshot is retained as historical audit context. Use the linked 2026-09-28 document for the current route surface:
 - **Wave 1**: Foundational security infrastructure (Tasks 2, 3, 4, 5, 6, 7, 8)
 - **Wave 2**: Endpoint refactoring with security boundaries (Tasks 9, 10, 11, 12, 13)
 - **Wave 3**: Verification and comprehensive test suite (Task 14)

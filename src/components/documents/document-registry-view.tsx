@@ -28,7 +28,9 @@ interface ApiDoc {
   issuedDate?: string | Date | null; registeredDate?: string | Date | null; receivedDate?: string | null;
   issuingAuthority?: string | null; signatory?: string | null; signerName?: string | null; signerTitle?: string | null;
   summary?: string | null; leadDepartment?: string | null; leadDepartmentName?: string | null; draftingDeptName?: string | null;
-  linkedTaskId?: string | null; linkedTask?: { id: string; title: string } | null; signatures?: Array<unknown> | null;
+  linkedTaskId?: string | null;
+  linkedTask?: { id: string; code?: string; title: string; status: string; progressPercent: number; dueDate?: string | null } | null;
+  signatures?: Array<unknown> | null;
   attachments?: Array<{ fileName: string; fileSize?: number; fileUrl?: string }> | null;
   fileAttachment?: { name: string; size: string; url?: string } | null;
 }
@@ -63,6 +65,9 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
     signatory: item.signerName ? `${item.signerName}${item.signerTitle ? ` (${item.signerTitle})` : ""}` : item.signatory || "Lãnh đạo đơn vị",
     linkedTaskId: item.linkedTaskId || undefined,
     linkedTaskTitle: item.linkedTask?.title || (item.linkedTaskId ? `Nhiệm vụ #${item.linkedTaskId}` : undefined),
+    linkedTaskStatus: item.linkedTask?.status,
+    linkedTaskProgressPercent: item.linkedTask?.progressPercent,
+    linkedTaskDueDate: item.linkedTask?.dueDate,
     fileAttachment,
     signatures: item.signatures || undefined,
   };

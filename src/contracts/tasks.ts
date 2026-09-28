@@ -504,8 +504,7 @@ export const ReviewDeliverableInputSchema = z
     expectedVersion: z
       .number()
       .int()
-      .min(0, 'Expected version must be non-negative')
-      .optional(),
+      .min(0, 'Expected version must be non-negative'),
   })
   .strict();
 

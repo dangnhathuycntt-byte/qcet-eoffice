@@ -274,6 +274,74 @@ export const CreateDocumentSchema = z
 export type CreateDocumentInput = z.infer<typeof CreateDocumentSchema>;
 
 /**
+ * HTTP contract for registering an incoming document. Legacy field aliases are
+ * accepted explicitly; arbitrary mass-assignment fields are rejected.
+ */
+export const RegisterIncomingDocumentSchema = z
+  .object({
+    registrationNumber: z.number().int().positive().optional(),
+    documentNumber: z.union([z.string().trim().max(100), z.number().int().positive()]).optional(),
+    originalNumber: z.string().trim().max(100).optional(),
+    originalDocNumber: z.string().trim().max(100).optional(),
+    title: z.string().trim().min(3).max(255),
+    // Legacy caller field; the endpoint itself determines the document type.
+    documentType: z.string().trim().max(100).optional(),
+    summary: z.string().trim().max(2000).optional(),
+    category: z.string().trim().max(100).optional(),
+    issuingAuthority: z.string().trim().max(255).optional(),
+    sender: z.string().trim().max(255).optional(),
+    issuedDate: z.union([IsoDateStringSchema, z.string().trim().max(100)]).optional(),
+    receivedDate: z.union([IsoDateStringSchema, z.string().trim().max(100)]).optional(),
+    securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional(),
+    urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional(),
+    fileUrl: z.string().trim().max(1024).optional(),
+    fileName: z.string().trim().max(255).optional(),
+    fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
+    fileType: z.string().trim().max(128).optional(),
+    storageLocation: z.string().trim().max(255).optional(),
+    notes: z.string().trim().max(2000).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict()
+  .refine((input) => Boolean(input.summary || input.title.trim()), {
+    message: "Trích yếu nội dung là bắt buộc",
+  })
+  .refine((input) => Boolean(input.issuingAuthority || input.sender), {
+    message: "Cơ quan ban hành là bắt buộc",
+    path: ["issuingAuthority"],
+  });
+
+export type RegisterIncomingDocumentInput = z.infer<typeof RegisterIncomingDocumentSchema>;
+
+/** HTTP contract for creating an outgoing-document draft. */
+export const CreateOutgoingDraftSchema = z
+  .object({
+    title: z.string().trim().min(3).max(255),
+    summary: z.string().trim().max(2000).optional(),
+    category: z.string().trim().max(100).optional(),
+    securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional(),
+    urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional(),
+    // Kept as a recognized compatibility field for existing clients; the route
+    // is specifically an outgoing-draft endpoint and does not use this value.
+    documentType: DocumentTypeSchema.optional(),
+    draftingDeptId: z.string().trim().max(64).optional(),
+    authorizedSignerId: z.string().trim().max(64).optional(),
+    recipientList: z.string().trim().max(1000).optional(),
+    fileUrl: z.string().trim().max(1024).optional(),
+    fileName: z.string().trim().max(255).optional(),
+    fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
+    fileType: z.string().trim().max(128).optional(),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+export type CreateOutgoingDraftContract = z.infer<typeof CreateOutgoingDraftSchema>;
+
+export const DeliverOutgoingDocumentSchema = z
+  .object({ deliveryNotes: z.string().trim().max(2000).optional().nullable() })
+  .strict();
+
+/**
  * Update document contract.
  * Bounded to updateable metadata fields only.
  */
@@ -357,7 +425,6 @@ export const BatchDocumentActionSchema = z.enum([
   'MARK_RESOLVED',
   'ASSIGN_LEAD_UNIT',
   'FILE_DOCUMENTS',
-  'ARCHIVE_DOCUMENTS',
 ]);
 export type BatchDocumentAction = z.infer<typeof BatchDocumentActionSchema>;
 
@@ -377,12 +444,11 @@ export const BatchDocumentRequestSchema = z
     leadershipInstruction: z.string().trim().max(5000).optional().nullable(),
     instruction: z.string().trim().max(5000).optional().nullable(),
     deadline: z.union([IsoDateStringSchema, z.date(), z.string().trim()]).optional().nullable(),
-    // For FILE_DOCUMENTS / ARCHIVE_DOCUMENTS
+    // For FILE_DOCUMENTS
     dossierId: z.string().trim().max(100).optional().nullable(),
     storageLocation: z.string().trim().max(255).optional().nullable(),
     filingNotes: z.string().trim().max(2000).optional().nullable(),
     archiveReason: z.string().trim().max(2000).optional().nullable(),
-    archiveNow: z.boolean().optional(),
     // For MARK_RESOLVED
     resolutionSummary: z.string().trim().max(5000).optional().nullable(),
     notes: z.string().trim().max(2000).optional().nullable(),
@@ -504,4 +570,3 @@ export const SubmitFormatCheckSchema = z
   })
   .strict();
 export type SubmitFormatCheckInput = z.infer<typeof SubmitFormatCheckSchema>;
-

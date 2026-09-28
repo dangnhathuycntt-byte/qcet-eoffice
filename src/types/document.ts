@@ -107,6 +107,14 @@ export interface DocumentItem {
   outgoingWorkflow?: any;
   signatures?: any[];
   linkedTaskId?: string | null;
+  linkedTask?: {
+    id: string;
+    code: string;
+    title: string;
+    status: string;
+    progressPercent: number;
+    dueDate?: string | null;
+  } | null;
 
   createdAt?: string;
   updatedAt?: string;
@@ -127,6 +135,9 @@ export interface OfficialDocument {
   signatory: string;            // Người ký ban hành
   linkedTaskId?: string;        // Mã nhiệm vụ liên kết trong hệ thống QCET
   linkedTaskTitle?: string;     // Tên nhiệm vụ liên kết
+  linkedTaskStatus?: string;
+  linkedTaskProgressPercent?: number;
+  linkedTaskDueDate?: string | null;
   fileAttachment?: {
     name: string;
     size: string;

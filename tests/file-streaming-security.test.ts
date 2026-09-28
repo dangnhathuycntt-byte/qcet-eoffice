@@ -17,6 +17,7 @@ const TEST_UPLOADS_DIR = path.resolve("./test_storage_sandbox");
 describe("File Storage & Streaming Security Unit Tests", () => {
   let testUserId = "";
   let sessionToken = "";
+  let testDocumentId = "";
 
   before(async () => {
     process.env.UPLOADS_DIR = TEST_UPLOADS_DIR;
@@ -41,6 +42,30 @@ describe("File Storage & Streaming Security Unit Tests", () => {
     });
     testUserId = user.id;
 
+    const document = await prisma.document.create({
+      data: {
+        type: "VAN_BAN_DEN",
+        documentYear: new Date().getFullYear(),
+        registrationNumber: Math.floor(Math.random() * 800000) + 100000,
+        originalNumber: `FILE-STREAM-${Date.now()}`,
+        summary: "File streaming authorization fixture",
+        category: "Test",
+        issuingAuthority: "Test fixture",
+        issuedDate: new Date(),
+        registeredById: user.id,
+      },
+    });
+    testDocumentId = document.id;
+    await prisma.documentAttachment.createMany({
+      data: ["docs/report.pdf", "docs/sample.txt"].map((fileUrl) => ({
+        documentId: document.id,
+        fileName: fileUrl.endsWith(".pdf") ? "Report_Final.pdf" : "sample.txt",
+        fileUrl,
+        fileSize: fs.statSync(path.join(TEST_UPLOADS_DIR, fileUrl)).size,
+        mimeType: fileUrl.endsWith(".pdf") ? "application/pdf" : "text/plain",
+      })),
+    });
+
     sessionToken = signSessionToken({
       id: user.id,
       email: user.email,
@@ -52,6 +77,10 @@ describe("File Storage & Streaming Security Unit Tests", () => {
   after(async () => {
     fs.rmSync(TEST_UPLOADS_DIR, { recursive: true, force: true });
     if (testUserId) {
+      if (testDocumentId) {
+        await prisma.documentAttachment.deleteMany({ where: { documentId: testDocumentId } });
+        await prisma.document.delete({ where: { id: testDocumentId } });
+      }
       await prisma.user.deleteMany({
         where: { id: testUserId },
       });

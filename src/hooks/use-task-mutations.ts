@@ -55,7 +55,7 @@ export interface TaskMutationsReturn {
   isRefreshing: boolean;
   delegations: DelegationRule[];
   delegationDeptCode: string;
-  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void>;
+  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<boolean>;
   handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
   handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
   handleCreateTask: (data: CreateTaskFormData) => void;
@@ -189,6 +189,15 @@ export function useTaskMutations(
       const previousData = dashboardData;
       setErrorMessage(null);
 
+      const currentTask =
+        dashboardData.tasks.find((task) => task.id === taskId) ??
+        dashboardData.tasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId);
+      const expectedVersion = currentTask?.version;
+      if (newStatus === "COMPLETED" && expectedVersion === undefined) {
+        setErrorMessage("Không thể phê duyệt do thiếu phiên bản mới nhất của nhiệm vụ. Hãy tải lại dữ liệu.");
+        return false;
+      }
+
       // Optimistic state update
       setDashboardData((prev) => {
         const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
@@ -212,7 +221,11 @@ export function useTaskMutations(
 
       // Dedicated domain action endpoint and payload for status update
       const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
-      const actionBody: any = { status: newStatus, note };
+      const actionBody: any = {
+        status: newStatus,
+        note,
+        ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+      };
       const actionDesc = `Cập nhật trạng thái nhiệm vụ ${taskId} (${newStatus})`;
 
       // API call or offline enqueue
@@ -224,7 +237,7 @@ export function useTaskMutations(
           description: actionDesc,
         });
         setErrorMessage("Đang ngoại tuyến. Thay đổi đã được lưu tạm và sẽ tự động gửi khi có mạng.");
-        return;
+        return false;
       }
 
       try {
@@ -237,7 +250,26 @@ export function useTaskMutations(
           const errData = await res.json().catch(() => null);
           setDashboardData(previousData);
           setErrorMessage(errData?.error || "Cập nhật trạng thái nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
+          return false;
         }
+        const responseBody = await res.json().catch(() => null);
+        const nextVersion = responseBody?.data?.version ??
+          (expectedVersion !== undefined ? expectedVersion + 1 : undefined);
+        if (nextVersion !== undefined) {
+          setDashboardData((previous) => ({
+            ...previous,
+            tasks: previous.tasks.map((task) => {
+              if (task.id === taskId) return { ...task, version: nextVersion };
+              return {
+                ...task,
+                subTasks: task.subTasks.map((subTask) =>
+                  subTask.id === taskId ? { ...subTask, version: nextVersion } : subTask
+                ),
+              };
+            }),
+          }));
+        }
+        return true;
       } catch (err: any) {
         // Network drop during request: enqueue mutation and preserve optimistic state
         enqueueOfflineMutation({
@@ -247,6 +279,7 @@ export function useTaskMutations(
           description: actionDesc,
         });
         setErrorMessage("Mất kết nối mạng. Thao tác đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
+        return false;
       }
     },
     [dashboardData]
@@ -363,6 +396,14 @@ export function useTaskMutations(
     async (payload: ApprovalActionPayload) => {
       const previousData = dashboardData;
       setErrorMessage(null);
+      const currentTask =
+        dashboardData.tasks.find((task) => task.id === payload.taskId) ??
+        dashboardData.tasks.flatMap((task) => task.subTasks || []).find((task) => task.id === payload.taskId);
+      const expectedVersion = payload.expectedVersion ?? currentTask?.version;
+      if (expectedVersion === undefined) {
+        setErrorMessage("Không có phiên bản nhiệm vụ hiện tại để gửi quyết định. Hãy tải lại dữ liệu rồi thử lại.");
+        return;
+      }
       const todayStr = getSystemReferenceDateStr();
       let statusToSet: TaskStatus = "IN_PROGRESS";
       if (payload.decision === "approved") {
@@ -413,19 +454,19 @@ export function useTaskMutations(
 
       if (payload.decision === "approved") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment };
+        actionBody = { note: payload.comment, expectedVersion };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "revision_requested") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/request-revision`;
-        actionBody = { feedback: payload.comment || "Yêu cầu chỉnh sửa", revisionRequired: true };
+        actionBody = { reason: payload.comment || "Yêu cầu chỉnh sửa", expectedVersion };
         actionDesc = `Yêu cầu chỉnh sửa nhiệm vụ ${payload.taskId}`;
       } else if (payload.decision === "rejected") {
         actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
-        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment };
+        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment, expectedVersion };
         actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
       } else {
         actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
-        actionBody = { note: payload.comment };
+        actionBody = { note: payload.comment, expectedVersion };
         actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
       }
 

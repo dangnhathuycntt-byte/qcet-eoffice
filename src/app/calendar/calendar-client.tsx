@@ -488,6 +488,15 @@ function CalendarRouteContent({
   }, [loadCalendarData]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    const currentTask =
+      tasks.find((task) => task.id === taskId) ??
+      tasks.flatMap((task) => task.subTasks || []).find((task) => task.id === taskId);
+    const expectedVersion = currentTask?.version;
+    if (newStatus === "COMPLETED" && expectedVersion === undefined) {
+      await loadCalendarData();
+      return;
+    }
+
     setTasks((previousTasks) => previousTasks.map((schoolTask) => {
       if (schoolTask.id === taskId) return { ...schoolTask, status: newStatus };
       if (schoolTask.subTasks?.some((subTask) => subTask.id === taskId)) {
@@ -505,16 +514,38 @@ function CalendarRouteContent({
 
     try {
       const actionUrl = `/api/tasks/${taskId}/actions/update-status`;
-      const actionBody = { status: newStatus };
-      await fetch(actionUrl, {
+      const actionBody = {
+        status: newStatus,
+        ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+      };
+      const response = await fetch(actionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(actionBody),
       });
+      if (!response.ok) {
+        await loadCalendarData();
+        return;
+      }
+
+      const result = await response.json().catch(() => null);
+      const nextVersion = result?.data?.version ??
+        (expectedVersion !== undefined ? expectedVersion + 1 : undefined);
+      if (nextVersion !== undefined) {
+        setTasks((previousTasks) => previousTasks.map((schoolTask) => {
+          if (schoolTask.id === taskId) return { ...schoolTask, version: nextVersion };
+          return {
+            ...schoolTask,
+            subTasks: schoolTask.subTasks?.map((subTask) =>
+              subTask.id === taskId ? { ...subTask, version: nextVersion } : subTask
+            ) ?? [],
+          };
+        }));
+      }
     } catch (statusError) {
       console.warn("Lỗi khi kết nối đến máy chủ để cập nhật trạng thái nhiệm vụ:", statusError);
     }
-  }, [selectedTask]);
+  }, [selectedTask, tasks, loadCalendarData]);
 
   const meetingDayItems = useMemo<DayTaskItem[]>(() => meetings.map((meeting) => {
     const dateKey = getMeetingDateKey(meeting.startTime);

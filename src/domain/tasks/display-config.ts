@@ -33,7 +33,7 @@ import {
   PrioritySubHigh,
   PrioritySubNormal,
   PrioritySubLow,
-} from '@/components/dashboard/task-filter-icons';
+} from '@/lib/icons/task-status-icons';
 
 /* ── Status Display ──────────────────────────────────────────────── */
 

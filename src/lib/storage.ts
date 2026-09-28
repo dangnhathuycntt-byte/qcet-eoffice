@@ -38,6 +38,61 @@ export function isAllowedFileExtension(filenameOrPath: string): boolean {
 }
 
 /**
+ * Validate untrusted upload bytes against the filename extension and return
+ * the server-derived MIME type. The browser-provided MIME type is never used
+ * as the source of truth.
+ */
+export function detectUploadMimeType(filename: string, bytes: Buffer): string {
+  const extension = path.extname(filename).toLowerCase();
+  if (!isAllowedFileExtension(filename) || bytes.length === 0) {
+    throw new ForbiddenError("Tệp rỗng hoặc loại tệp không được phép");
+  }
+
+  const startsWith = (...signature: number[]) =>
+    signature.every((byte, index) => bytes[index] === byte);
+  const ascii = (start: number, end: number) => bytes.toString("ascii", start, end);
+
+  switch (extension) {
+    case ".pdf":
+      if (ascii(0, 5) !== "%PDF-") break;
+      return "application/pdf";
+    case ".png":
+      if (startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+      break;
+    case ".jpg":
+    case ".jpeg":
+      if (startsWith(0xff, 0xd8, 0xff)) return "image/jpeg";
+      break;
+    case ".webp":
+      if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+      break;
+    case ".docx":
+    case ".xlsx":
+      if (
+        (startsWith(0x50, 0x4b, 0x03, 0x04) || startsWith(0x50, 0x4b, 0x05, 0x06)) &&
+        bytes.includes(Buffer.from(extension === ".docx" ? "word/document.xml" : "xl/workbook.xml"))
+      ) {
+        return extension === ".docx"
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      }
+      break;
+    case ".txt":
+    case ".csv": {
+      if (bytes.includes(0)) break;
+      try {
+        new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        break;
+      }
+      return extension === ".csv" ? "text/csv; charset=utf-8" : "text/plain; charset=utf-8";
+    }
+  }
+
+  throw new ForbiddenError("Nội dung tệp không khớp với phần mở rộng");
+}
+
+/**
  * Sanitizes a filename for safe download headers.
  * Strips control characters, quotes, newlines, path separators, and restricts to safe ASCII/UTF-8 syntax.
  */

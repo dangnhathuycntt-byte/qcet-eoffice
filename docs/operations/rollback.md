@@ -107,3 +107,9 @@ Since the Expand -> Migrate -> Contract rule was followed, the database schema r
 3. **Conduct Post-Mortem**:
    - Determine why automated CI/Staging checks did not catch the defect.
    - Author regression tests in `tests/` reproducing the failure before re-attempting deployment.
+
+---
+
+## 6. Related Documents
+
+- [Recovery Paths: Signature & Delivery Failures](recovery-paths.md) — Operator recovery procedures for digital signature and delivery gateway failures

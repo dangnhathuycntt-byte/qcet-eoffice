@@ -27,6 +27,8 @@
     "db:drift:check": "node scripts/db-drift-check.mjs",
     "db:migrate:test-fresh": "node scripts/db-migrate-test-fresh.mjs",
     "db:migrate:test-upgrade": "node scripts/db-migrate-test-upgrade.mjs",
+    "files:backfill": "tsx scripts/backfill-file-objects.ts",
+    "files:scan-pending": "tsx scripts/scan-pending-file-objects.ts",
     "db:backup:drill": "node scripts/backup-restore-drill.mjs"
   },
   "dependencies": {

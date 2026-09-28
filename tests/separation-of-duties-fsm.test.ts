@@ -5,7 +5,7 @@ import { PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { POST as postDeliverable, PATCH as patchDeliverable } from '../src/app/api/tasks/[id]/deliverables/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole, UnitType, JobCatalogGroup } from '@prisma/client';
+import { ApprovalProcessStatus, TaskStatus, TaskPriority, TaskScope, TaskActorRole, UserRole, UnitType, JobCatalogGroup } from '@prisma/client';
 import { buildTaskContext, taskStateMachine } from '../src/domain/tasks/state-machine';
 
 describe('Task FSM & Separation of Duties (SoD) Tests', () => {
@@ -224,6 +224,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
   });
 
   test('submitter cannot approve their own deliverable (403 SoD violation)', async () => {
+    const task = await prisma.task.findUniqueOrThrow({ where: { id: testTaskId } });
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}/deliverables`, {
       method: 'PATCH',
       headers: {
@@ -235,6 +236,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         deliverableId: testDeliverableId,
         reviewStatus: 'APPROVED',
         reviewNote: 'Tự duyệt',
+        expectedVersion: task.version,
       }),
     });
 
@@ -245,7 +247,37 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
     assert.match(json.error, /không thể tự duyệt|quyền/i);
   });
 
+  test('deliverable review rejects a stale task version with 412', async () => {
+    const task = await prisma.task.findUniqueOrThrow({ where: { id: testTaskId } });
+    const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}/deliverables`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${leaderToken}`,
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        deliverableId: testDeliverableId,
+        reviewStatus: 'APPROVED',
+        expectedVersion: task.version - 1,
+      }),
+    });
+
+    const res = await patchDeliverable(req, { params: Promise.resolve({ id: testTaskId }) });
+    assert.strictEqual(res.status, 412);
+    const json = await res.json();
+    assert.strictEqual(json.code, 'PRECONDITION_FAILED');
+  });
+
   test('authorized leader approves deliverable and transitions task to COMPLETED', async () => {
+    const activeProcess = await prisma.taskApprovalProcess.create({
+      data: {
+        taskId: testTaskId,
+        status: ApprovalProcessStatus.IN_REVIEW,
+        totalSteps: 1,
+      },
+    });
+    const task = await prisma.task.findUniqueOrThrow({ where: { id: testTaskId } });
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}/deliverables`, {
       method: 'PATCH',
       headers: {
@@ -257,6 +289,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
         deliverableId: testDeliverableId,
         reviewStatus: 'APPROVED',
         reviewNote: 'Đạt yêu cầu nghiệm thu',
+        expectedVersion: task.version,
       }),
     });
 
@@ -266,8 +299,36 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
     assert.strictEqual(json.success, true);
     assert.strictEqual(json.deliverable.reviewStatus, 'APPROVED');
 
-    // Verify task status is now COMPLETED and 100% progress
-    const updatedTask = await prisma.task.findUnique({ where: { id: testTaskId } });
+    // Legacy deliverable approval cannot complete a task while an approval flow is active.
+    let updatedTask = await prisma.task.findUniqueOrThrow({ where: { id: testTaskId } });
+    assert.strictEqual(updatedTask.status, TaskStatus.WAITING_APPROVAL);
+
+    await prisma.taskApprovalProcess.update({
+      where: { id: activeProcess.id },
+      data: { status: ApprovalProcessStatus.CANCELLED },
+    });
+
+    const retryReq = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}/deliverables`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${leaderToken}`,
+        origin: 'http://localhost:3000',
+      },
+      body: JSON.stringify({
+        deliverableId: testDeliverableId,
+        reviewStatus: 'APPROVED',
+        reviewNote: 'Đạt yêu cầu nghiệm thu',
+        expectedVersion: updatedTask.version,
+      }),
+    });
+    const retryRes = await patchDeliverable(retryReq, {
+      params: Promise.resolve({ id: testTaskId }),
+    });
+    assert.strictEqual(retryRes.status, 200);
+
+    // With no active approval process, the compatibility path can complete this legacy task.
+    updatedTask = await prisma.task.findUniqueOrThrow({ where: { id: testTaskId } });
     assert.strictEqual(updatedTask?.status, TaskStatus.COMPLETED);
     assert.strictEqual(updatedTask?.progressPercent, 100);
   });

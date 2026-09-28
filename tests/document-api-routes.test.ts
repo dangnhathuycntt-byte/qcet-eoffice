@@ -29,7 +29,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
   let bghSessionToken: string;
   let bghPositionAssignmentId: string;
   let createdBghUserId: string | null = null;
-  let testDatabaseHasLegacyDirectiveColumn = false;
   const createdDocumentIds: string[] = [];
   const createdTaskIds: string[] = [];
 
@@ -66,15 +65,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     }
     seededBghUserId = bghUser.id;
 
-    const legacyDirectiveColumn = await prisma.$queryRaw<Array<{ exists: boolean }>>`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = current_schema()
-          AND table_name = 'document_directives'
-          AND column_name = 'assigned_dept_id'
-      ) AS exists
-    `;
-    testDatabaseHasLegacyDirectiveColumn = Boolean(legacyDirectiveColumn[0]?.exists);
     bghSessionToken = signSessionToken({
       id: bghUser.id,
       email: bghUser.email,
@@ -408,7 +398,7 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     });
   });
 
-  describe("POST /api/documents/[id]/directives (Bút phê BGH & School Task Generation)", () => {
+  describe("POST /api/documents/[id]/directives (legacy adapter to canonical direction command)", () => {
     let directiveDocId: string;
 
     before(async () => {
@@ -427,6 +417,7 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
           securityLevel: "THUONG",
           status: "CHO_PHAN_CONG",
           registeredById: seededUserId,
+          incomingWorkflow: { create: {} },
         },
       });
       directiveDocId = doc.id;
@@ -467,16 +458,12 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       assert.equal(res.status, 400);
 
       const body = await res.json();
-      assert.equal(body.success, false);
-      assert.ok(body.errors.length > 0);
+      assert.equal(body.status, 400);
+      assert.ok(typeof body.title === "string");
+      assert.ok(typeof body.detail === "string");
     });
 
-    test("records directive, generates School Task, links them and sets status to DANG_XU_LY", async (t) => {
-      if (testDatabaseHasLegacyDirectiveColumn) {
-        t.skip("The active test database retains the legacy NOT NULL assigned_dept_id column; canonical writes require the approved schema migration.");
-        return;
-      }
-
+    test("routes through the canonical workflow without creating a Task or legacy directive", async () => {
       const req = new NextRequest(`http://localhost:3000/api/documents/${directiveDocId}/directives`, {
         method: "POST",
         headers: {
@@ -493,46 +480,21 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       });
 
       const res = await postDirectiveRoute(req, { params: Promise.resolve({ id: directiveDocId }) });
-      assert.equal(res.status, 201);
+      assert.equal(res.status, 200);
 
       const body = await res.json();
       assert.equal(body.success, true);
-      assert.ok(body.data);
+      assert.equal(body.data.workflow.status, "ASSIGNED_TO_LEAD_UNIT");
+      assert.equal(body.data.directive, null);
+      assert.equal(body.data.task, null);
+      assert.equal(body.data.document.status, "CHO_PHAN_CONG");
 
-      const { task, directive, document } = body.data;
-      assert.ok(task && task.id, "School Task must be created");
-      assert.ok(directive && directive.id, "DocumentDirective must be recorded");
-      assert.ok(document, "Document must be updated");
-
-      // Track created task ID for cleanup
-      createdTaskIds.push(task.id);
-
-      // Verify task details
-      assert.equal(task.scope, "SCHOOL");
-      assert.equal(task.leadUnitId, seededDeptId);
-      assert.ok(task.title.includes("888/UBND-KHTN"), "Task title must include original document number");
-      assert.equal(task.priority, "URGENT", "HOA_TOC document urgency must map to URGENT task priority");
-
-      // Verify directive details
-      assert.equal(directive.isTaskGenerated, true);
-      assert.equal(directive.documentId, directiveDocId);
-
-      // Verify document status & link
-      assert.equal(document.status, "DANG_XU_LY");
-      assert.equal(document.linkedTaskId, task.id);
-
-      // Verify database state matches
       const dbDoc = await prisma.document.findUnique({
         where: { id: directiveDocId },
       });
-      assert.equal(dbDoc?.status, "DANG_XU_LY");
-      assert.equal(dbDoc?.linkedTaskId, task.id);
-
-      const dbTask = await prisma.task.findUnique({
-        where: { id: task.id },
-      });
-      assert.ok(dbTask, "Task must exist in database");
-      assert.equal(dbTask?.scope, "SCHOOL");
+      assert.equal(dbDoc?.status, "CHO_PHAN_CONG");
+      assert.equal(dbDoc?.linkedTaskId, null);
+      assert.equal(await prisma.documentDirective.count({ where: { documentId: directiveDocId } }), 0);
     });
   });
 });

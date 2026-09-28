@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
 
       // Pre-fetch work dossier if dossierId is provided
       let workDossier: { id: string; code: string; items: { sequence: number }[] } | null = null;
-      if ((action === "FILE_DOCUMENTS" || action === "ARCHIVE_DOCUMENTS") && payload.dossierId) {
+      if (action === "FILE_DOCUMENTS" && payload.dossierId) {
         workDossier = await tx.workDossier.findFirst({
           where: {
             OR: [{ id: payload.dossierId }, { code: payload.dossierId }],
@@ -357,10 +357,7 @@ export async function POST(request: NextRequest) {
             // 3. FILE_DOCUMENTS
             // -------------------------------------------------------------
             case "FILE_DOCUMENTS": {
-              const archiveNow = Boolean(payload.archiveNow);
-              const targetWorkflowStatus = archiveNow
-                ? IncomingDocumentStatus.ARCHIVED
-                : IncomingDocumentStatus.FILED;
+              const targetWorkflowStatus = IncomingDocumentStatus.FILED;
               const dossierCode =
                 payload.dossierId ||
                 (workDossier
@@ -382,7 +379,6 @@ export async function POST(request: NextRequest) {
                     filedById: authUser.id,
                     dossierId: dossierCode,
                     filingNotes,
-                    ...(archiveNow ? { archivedAt: now, archivedById: authUser.id } : {}),
                   },
                   update: {
                     status: targetWorkflowStatus,
@@ -390,7 +386,6 @@ export async function POST(request: NextRequest) {
                     filedById: authUser.id,
                     dossierId: dossierCode,
                     filingNotes: filingNotes || doc.incomingWorkflow?.filingNotes,
-                    ...(archiveNow ? { archivedAt: now, archivedById: authUser.id } : {}),
                   },
                 });
               }
@@ -401,13 +396,10 @@ export async function POST(request: NextRequest) {
                   await tx.documentOutgoingWorkflow.update({
                     where: { documentId: doc.id },
                     data: {
-                      status: archiveNow
-                        ? OutgoingDocumentStatus.ARCHIVED
-                        : OutgoingDocumentStatus.FILED,
+                      status: OutgoingDocumentStatus.FILED,
                       filedAt: now,
                       filedById: authUser.id,
                       dossierId: dossierCode,
-                      ...(archiveNow ? { archivedAt: now, archivedById: authUser.id } : {}),
                     },
                   });
                 }
@@ -419,7 +411,6 @@ export async function POST(request: NextRequest) {
                 data: {
                   status: DocumentStatus.LUU_THEO_DOI,
                   archiveReason: filingNotes,
-                  ...(archiveNow ? { archivedAt: now, archivedById: authUser.id } : {}),
                 },
               });
 
@@ -464,7 +455,7 @@ export async function POST(request: NextRequest) {
                 requestId,
                 beforeData: { status: doc.status },
                 afterData: {
-                  status: archiveNow ? "ARCHIVED" : "FILED",
+                  status: "FILED",
                   dossierId: dossierCode,
                   storageLocation: payload.storageLocation,
                   filedById: authUser.id,
@@ -472,7 +463,6 @@ export async function POST(request: NextRequest) {
                 },
                 metadata: {
                   batchAction: "FILE_DOCUMENTS",
-                  archiveNow,
                   requestId,
                 },
               });
@@ -486,111 +476,15 @@ export async function POST(request: NextRequest) {
                   documentId: doc.id,
                   dossierId: dossierCode,
                   filedById: authUser.id,
-                  status: archiveNow ? "ARCHIVED" : "FILED",
+                  status: "FILED",
                 },
               });
 
               successful.push({
                 documentId: doc.id,
                 success: true,
-                status: archiveNow ? "ARCHIVED" : "FILED",
+                status: "FILED",
                 dossierId: dossierCode,
-              });
-              break;
-            }
-
-            // -------------------------------------------------------------
-            // 4. ARCHIVE_DOCUMENTS
-            // -------------------------------------------------------------
-            case "ARCHIVE_DOCUMENTS": {
-              const archiveReason =
-                payload.archiveReason ||
-                payload.notes ||
-                payload.storageLocation ||
-                "Chuyển lưu trữ văn bản theo lô";
-
-              // Update incoming workflow if applicable
-              if (doc.incomingWorkflow || (doc.type as string) === DocumentType.VAN_BAN_DEN) {
-                await tx.documentIncomingWorkflow.upsert({
-                  where: { documentId: doc.id },
-                  create: {
-                    documentId: doc.id,
-                    status: IncomingDocumentStatus.ARCHIVED,
-                    archivedAt: now,
-                    archivedById: authUser.id,
-                    filingNotes: archiveReason,
-                  },
-                  update: {
-                    status: IncomingDocumentStatus.ARCHIVED,
-                    archivedAt: now,
-                    archivedById: authUser.id,
-                    filingNotes: archiveReason || doc.incomingWorkflow?.filingNotes,
-                  },
-                });
-              }
-
-              // Update outgoing workflow if applicable
-              if (doc.outgoingWorkflow || (doc.type as string) === DocumentType.VAN_BAN_DI) {
-                if (doc.outgoingWorkflow) {
-                  await tx.documentOutgoingWorkflow.update({
-                    where: { documentId: doc.id },
-                    data: {
-                      status: OutgoingDocumentStatus.ARCHIVED,
-                      archivedAt: now,
-                      archivedById: authUser.id,
-                    },
-                  });
-                }
-              }
-
-              // Update canonical Document
-              await tx.document.update({
-                where: { id: doc.id },
-                data: {
-                  status: DocumentStatus.LUU_THEO_DOI,
-                  archivedAt: now,
-                  archivedById: authUser.id,
-                  archiveReason,
-                },
-              });
-
-              // Audit Log
-              await auditService.logEvent(tx, {
-                actorId: authUser.id,
-                action: AuditAction.DOCUMENT_FILED,
-                entityType: AuditEntityType.DOCUMENT,
-                entityId: doc.id,
-                requestId,
-                beforeData: { status: doc.status },
-                afterData: {
-                  status: "ARCHIVED",
-                  archivedAt: now,
-                  archivedById: authUser.id,
-                  archiveReason,
-                },
-                metadata: {
-                  batchAction: "ARCHIVE_DOCUMENTS",
-                  requestId,
-                },
-              });
-
-              // Outbox Event
-              await publishOutboxEvent(tx, {
-                eventType: OutboxEventType.DOCUMENT_FILED_NOTIFICATION,
-                aggregateType: OutboxAggregateType.DOCUMENT,
-                aggregateId: doc.id,
-                payload: {
-                  documentId: doc.id,
-                  archivedById: authUser.id,
-                  status: "ARCHIVED",
-                  archiveReason,
-                },
-              });
-
-              successful.push({
-                documentId: doc.id,
-                success: true,
-                status: "ARCHIVED",
               });
               break;
             }

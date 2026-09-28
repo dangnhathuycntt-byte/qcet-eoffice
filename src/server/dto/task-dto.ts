@@ -24,6 +24,7 @@ export interface TaskSourceDocumentDTO {
   issuingAuthority: string;   // Cơ quan ban hành
   registrationNumber: number; // Số vào sổ
   documentYear: number;
+  status: string;
 }
 
 export interface TaskSummaryDTO {
@@ -586,6 +587,7 @@ export function toTaskDetailDTO(rawTask: unknown): TaskDetailDTO | null {
           issuingAuthority: String(task.linkedDocument.issuingAuthority ?? ''),
           registrationNumber: Number(task.linkedDocument.registrationNumber ?? 0),
           documentYear: Number(task.linkedDocument.documentYear ?? 0),
+          status: String(task.linkedDocument.status ?? ''),
         }
       : null,
   };

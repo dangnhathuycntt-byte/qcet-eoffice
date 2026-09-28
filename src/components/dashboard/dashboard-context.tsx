@@ -111,7 +111,7 @@ export interface DashboardActionsContextValue {
   setSelectedPriority: React.Dispatch<React.SetStateAction<string>>;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
   handleResetFilters: () => void;
-  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => void;
+  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<boolean>;
   handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
   handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
   handleCreateTask: (data: CreateTaskFormData) => void;
@@ -190,17 +190,19 @@ export function DashboardStateProvider({
 
   // Synchronize status change with modal selected task
   const handleStatusChangeWithSync = React.useCallback(
-    (taskId: string, newStatus: TaskStatus, note?: string) => {
-      dashboardState.handleStatusChange(taskId, newStatus, note);
+    async (taskId: string, newStatus: TaskStatus, note?: string) => {
+      const updated = await dashboardState.handleStatusChange(taskId, newStatus, note);
+      if (!updated) return false;
       modalState.setSelectedTask((prev) => {
         if (!prev || prev.id !== taskId) return prev;
         if ("subTasks" in prev) {
           const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
             newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
-          return { ...prev, status: schoolStatus };
+          return { ...prev, status: schoolStatus, version: (prev.version ?? 0) + 1 };
         }
-        return { ...prev, status: newStatus };
+        return { ...prev, status: newStatus, version: (prev.version ?? 0) + 1 };
       });
+      return true;
     },
     [dashboardState.handleStatusChange, modalState.setSelectedTask]
   );

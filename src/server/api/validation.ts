@@ -85,6 +85,52 @@ export function assertQueryStringLength(
 }
 
 /**
+ * Reads an optional JSON body for command endpoints that allow an empty body.
+ * If a body is sent, its media type and declared size are validated before parsing.
+ */
+export async function readOptionalJsonBody(
+  request: Request,
+  maxBytes: number = MAX_JSON_BODY_SIZE
+): Promise<unknown> {
+  if (!request.body) {
+    return {};
+  }
+
+  assertJsonContentType(request);
+  assertRequestBodySize(request, maxBytes);
+  if (
+    request.method.toUpperCase() === 'DELETE' &&
+    !request.headers.get('content-type')?.toLowerCase().includes('application/json')
+  ) {
+    throw new UnsupportedMediaTypeError('Content-Type must be application/json for a DELETE body');
+  }
+
+  let rawText: string;
+  try {
+    rawText = await request.text();
+  } catch {
+    throw new ValidationError('Failed to read request body');
+  }
+
+  const byteLength = Buffer.byteLength(rawText, 'utf8');
+  if (byteLength > maxBytes) {
+    throw new PayloadTooLargeError(
+      `Payload size (${byteLength} bytes) exceeds limit of ${maxBytes} bytes`
+    );
+  }
+
+  if (rawText.trim().length === 0) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    throw new ValidationError('Invalid JSON body');
+  }
+}
+
+/**
  * Extracts structured field errors from a ZodError.
  */
 export function extractFieldErrors(zodError: ZodError): Record<string, string[]> {

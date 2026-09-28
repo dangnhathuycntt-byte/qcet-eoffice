@@ -4,11 +4,15 @@ import { NextRequest } from "next/server";
 import { prisma } from "../src/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import {
+  ApprovalProcessStatus,
+  ApprovalStepStatus,
+  TaskScope,
   TaskStatus,
   TaskActorRole,
   UserRole,
   DeliverableReviewStatus,
 } from "@prisma/client";
+import { OutboxEventType } from "../src/lib/db/outbox";
 
 // Import route handlers
 import { PATCH as taskPatchRoute } from "../src/app/api/tasks/[id]/route";
@@ -18,6 +22,7 @@ import { POST as submitResultRoute } from "../src/app/api/tasks/[id]/actions/sub
 import { POST as reviewRoute } from "../src/app/api/tasks/[id]/actions/review/route";
 import { POST as requestRevisionRoute } from "../src/app/api/tasks/[id]/actions/request-revision/route";
 import { POST as approveRoute } from "../src/app/api/tasks/[id]/actions/approve/route";
+import { POST as updateStatusRoute } from "../src/app/api/tasks/[id]/actions/update-status/route";
 import { POST as reassignRoute } from "../src/app/api/tasks/[id]/actions/reassign/route";
 import { POST as remindRoute } from "../src/app/api/tasks/[id]/actions/remind/route";
 import { POST as cancelRoute } from "../src/app/api/tasks/[id]/actions/cancel/route";
@@ -617,8 +622,10 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       const res = await approveRoute(req, { params: Promise.resolve({ id: sodTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
-      assert.equal(data.success, false);
+      assert.equal(data.status, 403);
+      assert.match(res.headers.get("content-type") || "", /application\/problem\+json/);
       assert.ok(data.code === "SOD_VIOLATION" || data.code === "FORBIDDEN");
+      assert.ok(data.detail);
     });
 
     test("DRI cannot approve own task (Rule 4.1 DRI != Approver) -> 403", async () => {
@@ -654,8 +661,10 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       const res = await approveRoute(req, { params: Promise.resolve({ id: sodTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
-      assert.equal(data.success, false);
+      assert.equal(data.status, 403);
+      assert.match(res.headers.get("content-type") || "", /application\/problem\+json/);
       assert.ok(data.code === "SOD_VIOLATION" || data.code === "FORBIDDEN");
+      assert.ok(data.detail);
     });
 
     test("Unit Head approves task -> status COMPLETED, progress 100%", async () => {
@@ -711,6 +720,143 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         orderBy: { createdAt: "desc" },
       });
       assert.ok(outbox);
+      const completionSignal = await prisma.outboxEvent.findFirst({
+        where: {
+          aggregateId: approveTask.id,
+          eventType: OutboxEventType.TASK_COMPLETED,
+        },
+      });
+      assert.ok(completionSignal, "Task approval must publish the canonical completion event");
+      assert.deepEqual(completionSignal.payload, {
+        taskId: approveTask.id,
+        actorId: unitHeadUser.id,
+        taskVersion: taskInDb!.version,
+        completedAt: taskInDb!.completedAt!.toISOString(),
+      });
+    });
+
+    test("cannot bypass pending approval steps; completion waits for the final reviewer", async () => {
+      const approvalTask = await prisma.task.create({
+        data: {
+          code: `NV-APP-STEPS-${Date.now()}`,
+          title: "Nhiệm vụ kiểm thử phê duyệt theo bước",
+          status: TaskStatus.WAITING_APPROVAL,
+          scope: TaskScope.DEPARTMENT,
+          academicMonth: 9,
+          academicYear: "2026-2027",
+          dueDate: new Date(Date.now() + 86400000 * 5),
+          leadUnitId: orgUnit.id,
+          createdById: creatorUser.id,
+          actors: {
+            create: [
+              {
+                userId: driUser.id,
+                role: TaskActorRole.DRI,
+                isPrimaryDRI: true,
+                assignedById: creatorUser.id,
+              },
+            ],
+          },
+        },
+      });
+      createdTaskIds.push(approvalTask.id);
+
+      const process = await prisma.taskApprovalProcess.create({
+        data: {
+          taskId: approvalTask.id,
+          status: ApprovalProcessStatus.IN_REVIEW,
+          totalSteps: 2,
+          currentStepIndex: 0,
+        },
+      });
+      const firstStep = await prisma.taskApprovalStep.create({
+        data: {
+          processId: process.id,
+          stepOrder: 1,
+          title: "Trưởng đơn vị thẩm định",
+          reviewerUserId: unitHeadUser.id,
+          status: ApprovalStepStatus.PENDING,
+        },
+      });
+      const finalStep = await prisma.taskApprovalStep.create({
+        data: {
+          processId: process.id,
+          stepOrder: 2,
+          title: "Ban Giám hiệu phê duyệt",
+          reviewerUserId: executiveUser.id,
+          status: ApprovalStepStatus.PENDING,
+        },
+      });
+
+      const bypassStatusRequest = makeRequest(
+        `http://localhost:3000/api/tasks/${approvalTask.id}/actions/update-status`,
+        { status: "COMPLETED", expectedVersion: approvalTask.version },
+        unitHeadToken
+      );
+      const bypassStatusResponse = await updateStatusRoute(bypassStatusRequest, {
+        params: Promise.resolve({ id: approvalTask.id }),
+      });
+      assert.equal(bypassStatusResponse.status, 409);
+      assert.equal((await bypassStatusResponse.json()).code, "APPROVAL_STEPS_PENDING");
+      assert.match(bypassStatusResponse.headers.get("content-type") || "", /application\/problem\+json/);
+
+      const bypassApprovalRequest = makeRequest(
+        `http://localhost:3000/api/tasks/${approvalTask.id}/actions/approve`,
+        { expectedVersion: approvalTask.version },
+        unitHeadToken
+      );
+      const bypassApprovalResponse = await approveRoute(bypassApprovalRequest, {
+        params: Promise.resolve({ id: approvalTask.id }),
+      });
+      assert.equal(bypassApprovalResponse.status, 409);
+      assert.equal((await bypassApprovalResponse.json()).code, "APPROVAL_STEPS_PENDING");
+      assert.match(bypassApprovalResponse.headers.get("content-type") || "", /application\/problem\+json/);
+
+      const firstStepRequest = makeRequest(
+        `http://localhost:3000/api/tasks/${approvalTask.id}/actions/approve`,
+        { stepId: firstStep.id, expectedVersion: approvalTask.version },
+        unitHeadToken
+      );
+      const firstStepResponse = await approveRoute(firstStepRequest, {
+        params: Promise.resolve({ id: approvalTask.id }),
+      });
+      assert.equal(firstStepResponse.status, 200);
+      const firstStepBody = await firstStepResponse.json();
+      assert.equal(firstStepBody.data.status, TaskStatus.WAITING_APPROVAL);
+      assert.equal(firstStepBody.data.completed, false);
+      assert.equal(firstStepBody.data.version, approvalTask.version + 1);
+
+      const taskAfterFirstStep = await prisma.task.findUnique({ where: { id: approvalTask.id } });
+      const pendingFinalStep = await prisma.taskApprovalStep.findUnique({ where: { id: finalStep.id } });
+      assert.equal(taskAfterFirstStep?.status, TaskStatus.WAITING_APPROVAL);
+      assert.equal(taskAfterFirstStep?.version, approvalTask.version + 1);
+      assert.equal(pendingFinalStep?.status, ApprovalStepStatus.PENDING);
+
+      const finalStepRequest = makeRequest(
+        `http://localhost:3000/api/tasks/${approvalTask.id}/actions/approve`,
+        { stepId: finalStep.id, expectedVersion: approvalTask.version + 1 },
+        executiveToken
+      );
+      const finalStepResponse = await approveRoute(finalStepRequest, {
+        params: Promise.resolve({ id: approvalTask.id }),
+      });
+      assert.equal(finalStepResponse.status, 200);
+      const finalStepBody = await finalStepResponse.json();
+      assert.equal(finalStepBody.data.status, TaskStatus.COMPLETED);
+      assert.equal(finalStepBody.data.completed, true);
+      assert.equal(finalStepBody.data.version, approvalTask.version + 2);
+
+      const completedTask = await prisma.task.findUnique({ where: { id: approvalTask.id } });
+      const completedProcess = await prisma.taskApprovalProcess.findUnique({ where: { id: process.id } });
+      assert.equal(completedTask?.status, TaskStatus.COMPLETED);
+      assert.equal(completedProcess?.status, ApprovalProcessStatus.APPROVED);
+      assert.equal(
+        await prisma.outboxEvent.count({
+          where: { aggregateId: approvalTask.id, eventType: OutboxEventType.TASK_COMPLETED },
+        }),
+        1,
+        "Completing the final approval step must emit one canonical completion signal"
+      );
     });
   });
 
@@ -979,6 +1125,46 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
 
       const dbTask = await prisma.task.findUnique({ where: { id: progressTask.id } });
       assert.strictEqual(dbTask?.progressPercent, 55);
+
+      const submitForApprovalReq = makeRequest(
+        `http://localhost:3000/api/tasks/${progressTask.id}/actions/update-progress`,
+        {
+          progressPercent: 100,
+          expectedVersion: dbTask!.version,
+        },
+        driToken
+      );
+      const submitForApprovalRes = await updateProgressRoute(submitForApprovalReq, {
+        params: Promise.resolve({ id: progressTask.id }),
+      });
+      assert.strictEqual(submitForApprovalRes.status, 200);
+
+      const waitingTask = await prisma.task.findUniqueOrThrow({ where: { id: progressTask.id } });
+      assert.strictEqual(waitingTask.status, TaskStatus.WAITING_APPROVAL);
+      assert.strictEqual(waitingTask.progressPercent, 100);
+      assert.strictEqual(waitingTask.completedAt, null);
+
+      const bypassReq = makeRequest(
+        `http://localhost:3000/api/tasks/${progressTask.id}/actions/update-progress`,
+        {
+          progressPercent: 100,
+          targetStatus: TaskStatus.COMPLETED,
+          expectedVersion: waitingTask.version,
+        },
+        driToken
+      );
+      const bypassRes = await updateProgressRoute(bypassReq, {
+        params: Promise.resolve({ id: progressTask.id }),
+      });
+      assert.strictEqual(bypassRes.status, 400);
+
+      const completedEvents = await prisma.outboxEvent.count({
+        where: {
+          aggregateId: progressTask.id,
+          eventType: OutboxEventType.TASK_COMPLETED,
+        },
+      });
+      assert.strictEqual(completedEvents, 0);
     });
 
     test("POST /api/tasks/[id]/actions/cancel cancels the task", async () => {

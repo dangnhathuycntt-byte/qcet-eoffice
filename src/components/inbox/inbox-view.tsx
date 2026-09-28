@@ -108,7 +108,11 @@ export function InboxView() {
     setError(null);
 
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch("/api/notifications", { credentials: "include" });
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
       if (!res.ok) {
         throw new Error(`Không thể tải thông báo (${res.status})`);
       }
@@ -202,6 +206,7 @@ export function InboxView() {
         await fetch(`/api/notifications/${id}/read`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ isRead: isReadTarget }),
         });
       } catch (err) {
@@ -223,7 +228,7 @@ export function InboxView() {
     setBadgeCounts((prev) => ({ ...prev, notifications: 0 }));
 
     try {
-      await fetch("/api/notifications/read-all", { method: "PATCH" });
+      await fetch("/api/notifications/read-all", { method: "PATCH", credentials: "include" });
     } catch {
       fetchNotifications(false);
     }
@@ -262,7 +267,7 @@ export function InboxView() {
     let isMounted = true;
     setIsLoadingTaskContext(true);
 
-    fetch(`/api/tasks?id=${encodeURIComponent(targetTaskId)}`)
+    fetch(`/api/tasks?id=${encodeURIComponent(targetTaskId)}`, { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!isMounted) return;
@@ -404,7 +409,7 @@ export function InboxView() {
                               setIsFilterMenuOpen(false);
                             }}
                             className={cn(
-                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer select-none",
+                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                               isSelected
                                 ? "bg-muted/80 font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground"
@@ -447,7 +452,7 @@ export function InboxView() {
                 }}
                 aria-pressed={activeTab === "all"}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                   activeTab === "all"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -467,7 +472,7 @@ export function InboxView() {
                 }}
                 aria-pressed={activeTab === "unread"}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none",
+                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                   activeTab === "unread"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -543,9 +548,17 @@ export function InboxView() {
                 return (
                   <div
                     key={notif.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleSelectItem(notif)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectItem(notif);
+                      }
+                    }}
                     className={cn(
-                      "p-3 flex items-start gap-2.5 cursor-pointer transition-colors text-left relative group select-none",
+                      "p-3 flex items-start gap-2.5 cursor-pointer transition-colors text-left relative group select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                       isSelected
                         ? "bg-primary/[0.08] border-l-[3px] border-primary font-medium"
                         : notif.isRead

@@ -146,8 +146,6 @@ export async function GET(
         OR: [
           { itemId: { in: candidateUrls } },
           { notes: { in: candidateUrls } },
-          { itemId: { contains: normalizedRelative } },
-          { notes: { contains: normalizedRelative } },
         ],
       },
       include: {
@@ -181,7 +179,6 @@ export async function GET(
       where: {
         OR: [
           { materialsUrl: { in: candidateUrls } },
-          { materialsUrl: { contains: normalizedRelative } },
         ],
       },
       include: {
@@ -227,6 +224,28 @@ export async function GET(
       throw new NotFoundError(
         "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
       );
+    }
+
+    const canonicalFile = await prisma.fileObject.findUnique({
+      where: { storageKey: normalizedRelative },
+      select: {
+        id: true,
+        scanStatus: true,
+        attachments: { select: { id: true } },
+        deliverables: { select: { id: true } },
+        dossierItems: { select: { id: true } },
+        meetingMaterials: { select: { id: true } },
+      },
+    });
+    if (
+      canonicalFile &&
+      (canonicalFile.attachments.length > 0 || canonicalFile.deliverables.length > 0 ||
+        canonicalFile.dossierItems.length > 0 || canonicalFile.meetingMaterials.length > 0)
+    ) {
+      if (canonicalFile.scanStatus !== "CLEAN") {
+        throw new ForbiddenError("Tệp đang bị cách ly hoặc chờ kiểm tra an toàn");
+      }
+      return NextResponse.redirect(new URL(`/api/file-objects/${canonicalFile.id}`, req.url));
     }
 
     if (!fs.existsSync(safeResolvedPath)) {

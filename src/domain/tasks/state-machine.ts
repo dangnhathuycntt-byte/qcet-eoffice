@@ -47,6 +47,7 @@ export interface ActorContext {
   id: string;
   role: string;
   departmentId?: string | null;
+  departmentIds?: string[];
   delegatedTaskIds?: string[];
   isDelegated?: boolean;
 }
@@ -131,6 +132,29 @@ export function normalizeScope(scope?: string): 'SCHOOL' | 'DEPARTMENT' | 'INDIV
   return 'SCHOOL'; // Default scope in QCET schema
 }
 
+function getUnitAuthorityFailure(
+  actorDepartmentIds: Set<string>,
+  taskDepartmentId?: string | null
+): TransitionResult | null {
+  if (!taskDepartmentId || actorDepartmentIds.size === 0) {
+    return {
+      allowed: false,
+      reason: 'Không thể xác minh đơn vị của người duyệt hoặc nhiệm vụ.',
+      code: 'DEPARTMENT_CONTEXT_REQUIRED',
+    };
+  }
+
+  if (!actorDepartmentIds.has(taskDepartmentId)) {
+    return {
+      allowed: false,
+      reason: 'Trưởng phòng chỉ được thực hiện thao tác trên nhiệm vụ thuộc đơn vị quản lý của mình.',
+      code: 'DEPARTMENT_MISMATCH',
+    };
+  }
+
+  return null;
+}
+
 export class TaskStateMachine {
   /**
    * Determine if an actor is a Maker (creator, DRI, assignee, submitter, deliverable uploader) for the task.
@@ -178,6 +202,11 @@ export class TaskStateMachine {
     const isManager = roleCategory === 'MANAGER';
     const isStaff = roleCategory === 'STAFF';
     const taskScope = normalizeScope(task.scope);
+    const actorDepartmentIds = new Set(
+      [actor.departmentId, ...(actor.departmentIds ?? [])].filter(
+        (departmentId): departmentId is string => Boolean(departmentId)
+      )
+    );
 
     const hasDelegation = Boolean(
       actor.isDelegated || (task.id && actor.delegatedTaskIds?.includes(task.id))
@@ -358,17 +387,16 @@ export class TaskStateMachine {
               code: 'SCHOOL_SCOPE_REQUIRES_EXECUTIVE',
             };
           }
-          if (
-            task.departmentId &&
-            actor.departmentId &&
-            task.departmentId !== actor.departmentId &&
-            !hasDelegation
-          ) {
-            return {
-              allowed: false,
-              reason: 'Trưởng phòng chỉ có thẩm quyền trên nhiệm vụ của đơn vị mình.',
-              code: 'DEPARTMENT_MISMATCH',
-            };
+          if (!hasDelegation) {
+            const unitAuthorityFailure = getUnitAuthorityFailure(actorDepartmentIds, task.departmentId);
+            if (unitAuthorityFailure) {
+              return {
+                ...unitAuthorityFailure,
+                reason: unitAuthorityFailure.code === 'DEPARTMENT_MISMATCH'
+                  ? 'Trưởng phòng chỉ có thẩm quyền trên nhiệm vụ của đơn vị mình.'
+                  : unitAuthorityFailure.reason,
+              };
+            }
           }
           return { allowed: true };
         }
@@ -434,17 +462,18 @@ export class TaskStateMachine {
 
         // 4. Department / Unit Scope Tasks
         if (isManager) {
-          if (
-            task.departmentId &&
-            actor.departmentId &&
-            task.departmentId !== actor.departmentId &&
-            !hasDelegation
-          ) {
-            return {
-              allowed: false,
-              reason: 'Trưởng phòng chỉ được phê duyệt nhiệm vụ thuộc đơn vị quản lý của mình.',
-              code: 'DEPARTMENT_MISMATCH',
-            };
+          // Role alone cannot establish unit authority. Require both sides of
+          // the relationship unless a task-specific delegation was supplied.
+          if (!hasDelegation) {
+            const unitAuthorityFailure = getUnitAuthorityFailure(actorDepartmentIds, task.departmentId);
+            if (unitAuthorityFailure) {
+              return {
+                ...unitAuthorityFailure,
+                reason: unitAuthorityFailure.code === 'DEPARTMENT_MISMATCH'
+                  ? 'Trưởng phòng chỉ được phê duyệt nhiệm vụ thuộc đơn vị quản lý của mình.'
+                  : unitAuthorityFailure.reason,
+              };
+            }
           }
           return { allowed: true };
         }
@@ -534,6 +563,7 @@ export function buildActorContext(user?: {
   role?: string;
   departmentId?: string | null;
   department?: string | null;
+  departmentIds?: string[];
   isDelegated?: boolean;
   delegatedTaskIds?: string[];
 } | null): ActorContext {
@@ -542,6 +572,7 @@ export function buildActorContext(user?: {
       id: '',
       role: 'STAFF',
       departmentId: null,
+      departmentIds: [],
       isDelegated: false,
       delegatedTaskIds: [],
     };
@@ -550,6 +581,7 @@ export function buildActorContext(user?: {
     id: user.id,
     role: user.role || 'STAFF',
     departmentId: user.departmentId || user.department || null,
+    departmentIds: user.departmentIds || [],
     isDelegated: Boolean(user.isDelegated),
     delegatedTaskIds: user.delegatedTaskIds || [],
   };

@@ -77,7 +77,6 @@ export function DocumentBulkToolbar({
   const [deadline, setDeadline] = React.useState("");
   const [resolutionSummary, setResolutionSummary] = React.useState("");
   const [filingNotes, setFilingNotes] = React.useState("");
-  const [archiveNow, setArchiveNow] = React.useState(false);
 
   const { departments, isLoading: isLoadingDepts } = useDepartmentList();
 
@@ -114,7 +113,6 @@ export function DocumentBulkToolbar({
     setDeadline("");
     setResolutionSummary("");
     setFilingNotes("");
-    setArchiveNow(false);
     setModalState({ type, isOpen: true });
   };
 
@@ -162,13 +160,12 @@ export function DocumentBulkToolbar({
           resolutionSummary: resolutionSummary.trim() || "Hoàn tất xử lý hàng loạt",
         };
       } else if (modalState.type === "file") {
-        apiAction = archiveNow ? "ARCHIVE_DOCUMENTS" : "FILE_DOCUMENTS";
+        apiAction = "FILE_DOCUMENTS";
         payload = {
           action: apiAction,
           documentIds: resolvedIds,
           filingNotes: filingNotes.trim() || undefined,
           archiveReason: filingNotes.trim() || undefined,
-          archiveNow: archiveNow || undefined,
         };
       }
 
@@ -550,22 +547,6 @@ export function DocumentBulkToolbar({
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="checkbox"
-                      id="bulk-archive-now"
-                      checked={archiveNow}
-                      onChange={(e) => setArchiveNow(e.target.checked)}
-                      disabled={isSubmitting}
-                      className="size-4 rounded border-border text-primary focus:ring-primary/20 accent-primary cursor-pointer"
-                    />
-                    <label
-                      htmlFor="bulk-archive-now"
-                      className="text-xs text-foreground cursor-pointer select-none"
-                    >
-                      Đưa thẳng vào kho lưu trữ lịch sử (Lưu trữ vĩnh viễn)
-                    </label>
-                  </div>
                 </div>
               )}
 

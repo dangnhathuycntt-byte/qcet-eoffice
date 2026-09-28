@@ -145,13 +145,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: leaderA.id,
         role: leaderA.role,
-
+        departmentId: deptAId,
       };
 
       const task: TaskContext = {
         id: `task-wf-3-${testRunId}`,
         scope: 'DON_VI',
-
+        departmentId: deptAId,
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };
@@ -164,13 +164,13 @@ describe('Workflow Contract & Business State Machine (Task 14, Phase 30)', () =>
       const actor: ActorContext = {
         id: leaderB.id,
         role: leaderB.role,
-
+        departmentId: deptBId,
       };
 
       const task: TaskContext = {
         id: `task-wf-4-${testRunId}`,
         scope: 'DON_VI',
-
+        departmentId: deptAId,
         primaryOwnerId: staffA.id,
         assigneeIds: [staffA.id],
       };

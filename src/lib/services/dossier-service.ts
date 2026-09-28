@@ -33,6 +33,7 @@ import { resolveUserContext } from "@/lib/services/incoming-document-service";
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
+  ConflictError,
   InvalidTransitionError,
   NotFoundError,
   ValidationError,
@@ -44,6 +45,7 @@ import {
   assertTransition,
   assertDossierNotImmutable,
 } from "@/domain/dossiers/state-machine";
+import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 
 // ============================================================================
 // Types & Interfaces
@@ -391,8 +393,35 @@ export class DossierService {
           addedById: user.id,
           addedAt: new Date(),
           notes: input.notes,
+          fileObjectId: getFileObjectIdFromUrl(input.fileUrl),
         },
       });
+
+      // Keep the canonical incoming-workflow backlink in step with dossier
+      // membership. This lets the resolution command validate the exact
+      // archive-checked dossier without relying on a client-supplied string.
+      if (input.itemType === DossierItemType.DOCUMENT && targetItemId) {
+        const incomingWorkflow = await tx.documentIncomingWorkflow.findUnique({
+          where: { documentId: targetItemId },
+          select: { id: true, dossierId: true },
+        });
+        if (incomingWorkflow) {
+          if (
+            incomingWorkflow.dossierId &&
+            incomingWorkflow.dossierId !== dossier.id &&
+            incomingWorkflow.dossierId !== dossier.code
+          ) {
+            throw new ConflictError(
+              "Văn bản đã thuộc một hồ sơ công việc khác.",
+              "INCOMING_DOCUMENT_DOSSIER_ALREADY_LINKED"
+            );
+          }
+          await tx.documentIncomingWorkflow.update({
+            where: { id: incomingWorkflow.id },
+            data: { dossierId: dossier.id },
+          });
+        }
+      }
 
       // Update dossier status from OPEN to ACTIVE if adding first item
       if (currentDossier.status === DossierStatus.OPEN) {

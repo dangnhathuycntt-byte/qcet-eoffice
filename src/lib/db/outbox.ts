@@ -45,6 +45,7 @@ export const OutboxEventType = {
   TASK_CREATED_NOTIFICATION: "TASK_CREATED_NOTIFICATION",
   TASK_ASSIGNED_NOTIFICATION: "TASK_ASSIGNED_NOTIFICATION",
   TASK_STATUS_NOTIFICATION: "TASK_STATUS_NOTIFICATION",
+  TASK_COMPLETED: "TASK_COMPLETED",
   TASK_APPROVED_NOTIFICATION: "TASK_APPROVED_NOTIFICATION",
   TASK_REJECTED_NOTIFICATION: "TASK_REJECTED_NOTIFICATION",
   TASK_OVERDUE_NOTIFICATION: "TASK_OVERDUE_NOTIFICATION",
@@ -170,6 +171,32 @@ export async function publishOutboxEvent(
       status: OutboxStatus.PENDING,
       attempts: 0,
       availableAt: event.availableAt ?? new Date(),
+    },
+  });
+}
+
+/**
+ * Publishes the canonical task-completion signal inside the task transaction.
+ * Consumers can rely on the same payload regardless of which command completed the task.
+ */
+export async function publishTaskCompletedEvent(
+  client: DbClient,
+  input: {
+    taskId: string;
+    actorId: string;
+    taskVersion: number;
+    completedAt: Date;
+  }
+): Promise<OutboxEvent> {
+  return publishOutboxEvent(client, {
+    eventType: OutboxEventType.TASK_COMPLETED,
+    aggregateType: OutboxAggregateType.TASK,
+    aggregateId: input.taskId,
+    payload: {
+      taskId: input.taskId,
+      actorId: input.actorId,
+      taskVersion: input.taskVersion,
+      completedAt: input.completedAt.toISOString(),
     },
   });
 }

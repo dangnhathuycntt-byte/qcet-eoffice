@@ -289,7 +289,9 @@ function TasksExpandedViewsComponent() {
             defaultExpanded={scope === "MY_TASKS"}
             onSelectTask={(task) => openTaskDetail(task)}
             onAddTask={() => openCreateModal("TRUONG")}
-            onStatusChange={handleStatusChange}
+            onStatusChange={async (taskId, status, ...rest) => {
+              await handleStatusChange(taskId, status, ...rest);
+            }}
             hideWorkbox
             hideToolbar
           />
@@ -299,7 +301,9 @@ function TasksExpandedViewsComponent() {
           <TaskKanbanBoard
             tasks={filteredTasks}
             onSelectTask={(task) => openTaskDetail(task)}
-            onStatusChange={handleStatusChange}
+            onStatusChange={async (taskId, status) => {
+              await handleStatusChange(taskId, status);
+            }}
             onAddTask={() => openCreateModal("TRUONG")}
           />
         )}

@@ -5,6 +5,10 @@ import { NotFoundError, ForbiddenError, ValidationError } from "@/server/api/err
 import { DossierService } from "@/lib/services/dossier-service";
 import { canReadDossier } from "@/server/policies/dossier-policy";
 import { prisma } from "@/lib/prisma";
+import { AddDossierItemSchema, DossierItemIdSchema } from "@/contracts/dossiers";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { assertJsonContentType, assertRequestBodySize, MAX_JSON_BODY_SIZE, readOptionalJsonBody } from "@/server/api/validation";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -47,7 +51,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     return apiSuccess({ items }, { requestId, status: 200 });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }
 
@@ -58,8 +62,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
 
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+
     const { id } = await Promise.resolve(context.params);
-    const body = await req.json();
+    const body = AddDossierItemSchema.parse(await req.json());
 
     const result = await DossierService.addItemToDossier(authUser, {
       ...body,
@@ -68,7 +77,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     return apiSuccess(result, { requestId, status: 201 });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }
 
@@ -79,22 +88,25 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     requestId = apiCtx.requestId;
     const authUser = requireAuthenticated(apiCtx);
 
+    assertCsrf(req);
+    assertRequestBodySize(req, MAX_JSON_BODY_SIZE);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+
     const { id } = await Promise.resolve(context.params);
     const url = new URL(req.url);
     let itemId = url.searchParams.get("itemId");
 
     if (!itemId) {
-      try {
-        const body = await req.json();
-        itemId = body.itemId;
-      } catch {
-        // no body provided
+      const body = await readOptionalJsonBody(req, MAX_JSON_BODY_SIZE);
+      if (typeof body === "object" && body !== null && "itemId" in body) {
+        itemId = DossierItemIdSchema.parse((body as { itemId?: unknown }).itemId);
       }
     }
 
     if (!itemId) {
       return apiError(new ValidationError("itemId parameter is required"), requestId);
     }
+    itemId = DossierItemIdSchema.parse(itemId);
 
     const result = await DossierService.removeItemFromDossier(authUser, {
       dossierId: id,
@@ -103,6 +115,6 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
     return apiSuccess(result, { requestId, status: 200 });
   } catch (error) {
-    return apiError(error, requestId);
+    return apiError(error, requestId, { rfc9457: true, instance: req.nextUrl.pathname });
   }
 }

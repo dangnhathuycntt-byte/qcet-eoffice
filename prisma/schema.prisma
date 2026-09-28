@@ -70,6 +70,26 @@ enum DeliverableReviewStatus {
   REVISION_REQUIRED
 }
 
+enum FileScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+enum StorageProvider {
+  LOCAL_DISK
+  S3_COMPATIBLE
+  MINIO
+}
+
+enum FileClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  CONFIDENTIAL
+}
+
 enum ResolutionType {
   EXTEND_DEADLINE
   REASSIGN_OWNER
@@ -102,6 +122,7 @@ model User {
   archivedTasks         Task[]                @relation("TaskArchiver")
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
+  uploadedFiles         FileObject[]          @relation("FileObjectUploadedBy")
   resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
   leadDocs              Document[]            @relation("LeadUserDocs")
   docsRegistered        Document[]            @relation("DocRegisteredBy")
@@ -247,6 +268,8 @@ model TaskDeliverable {
   taskId       String                  @map("task_id")
   title        String                  @db.VarChar(255)
   fileUrl      String                  @map("file_url") @db.Text
+  fileObjectId String?                 @map("file_object_id")
+  fileObject   FileObject?             @relation(fields: [fileObjectId], references: [id], onDelete: Restrict)
   fileType     String?                 @map("file_type") @db.VarChar(50)
   fileSize     Int?                    @map("file_size")
   uploadedById String                  @map("uploaded_by_id")
@@ -261,6 +284,7 @@ model TaskDeliverable {
   updatedAt    DateTime                @updatedAt @map("updated_at")
 
   @@index([taskId, reviewStatus])
+  @@index([fileObjectId])
   @@map("task_deliverables")
 }
 
@@ -378,6 +402,8 @@ model DocumentAttachment {
   documentId String   @map("document_id")
   fileName   String   @map("file_name") @db.VarChar(255)
   fileUrl    String   @map("file_url") @db.Text
+  fileObjectId String? @map("file_object_id")
+  fileObject   FileObject? @relation(fields: [fileObjectId], references: [id], onDelete: Restrict)
   fileSize   Int      @map("file_size")
   mimeType   String   @map("mime_type") @db.VarChar(100)
   sha256Hash String?  @map("sha256_hash") @db.VarChar(64)
@@ -387,6 +413,7 @@ model DocumentAttachment {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([documentId])
+  @@index([fileObjectId])
   @@map("document_attachments")
 }
 
@@ -1318,9 +1345,12 @@ model DossierItem {
   addedBy        User            @relation("DossierItemAddedBy", fields: [addedById], references: [id], onDelete: Restrict)
   addedAt        DateTime        @default(now()) @map("added_at")
   notes          String?         @db.Text
+  fileObjectId   String?         @map("file_object_id")
+  fileObject     FileObject?     @relation(fields: [fileObjectId], references: [id], onDelete: Restrict)
 
   @@index([dossierId])
   @@index([itemType, itemId])
+  @@index([fileObjectId])
   @@map("dossier_items")
 }
 
@@ -1365,6 +1395,8 @@ model Meeting {
   location             String?                @db.VarChar(255)
   agenda               String?                @db.Text
   materialsUrl         String?                @map("materials_url") @db.Text
+  materialsFileObjectId String?               @map("materials_file_object_id")
+  materialsFileObject   FileObject?            @relation("MeetingMaterialsFile", fields: [materialsFileObjectId], references: [id], onDelete: Restrict)
   minutes              String?                @db.Text
   minutesConfirmedAt   DateTime?              @map("minutes_confirmed_at")
   minutesConfirmedById String?                @map("minutes_confirmed_by_id")
@@ -1380,6 +1412,7 @@ model Meeting {
   @@index([bodyId])
   @@index([unitId])
   @@index([organizerId])
+  @@index([materialsFileObjectId])
   @@map("meetings")
 }
 
@@ -1423,4 +1456,36 @@ model MeetingResolution {
   @@map("meeting_resolutions")
 }
 
+model FileObject {
+  id              String             @id @default(uuid())
+  storageKey      String             @unique @map("storage_key") @db.Text
+  storageProvider StorageProvider    @default(LOCAL_DISK) @map("storage_provider")
+  originalName    String             @map("original_name") @db.VarChar(255)
+  mimeType        String             @map("mime_type") @db.VarChar(100)
+  extension       String             @db.VarChar(20)
+  byteSize        BigInt             @map("byte_size")
+  contentHash     String             @map("content_hash") @db.VarChar(64)
+  classification  FileClassification @default(INTERNAL)
+  scanStatus      FileScanStatus     @default(PENDING) @map("scan_status")
+  scanResult      String?            @map("scan_result") @db.Text
+  referenceCount  Int                @default(1) @map("reference_count")
+  uploadedById    String             @map("uploaded_by_id")
+  uploadedBy      User               @relation("FileObjectUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  isArchived      Boolean            @default(false) @map("is_archived")
+  metadata        Json?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  deliverables     TaskDeliverable[]
+  attachments      DocumentAttachment[]
+  dossierItems     DossierItem[]
+  meetingMaterials Meeting[]          @relation("MeetingMaterialsFile")
+
+  @@index([contentHash])
+  @@index([uploadedById])
+  @@index([mimeType])
+  @@index([classification])
+  @@index([scanStatus])
+  @@map("file_objects")
+}
 

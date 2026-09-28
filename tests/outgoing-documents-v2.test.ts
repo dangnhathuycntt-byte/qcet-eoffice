@@ -14,7 +14,9 @@ import {
 import { prisma } from "../src/lib/prisma";
 import { OutgoingDocumentService } from "../src/lib/services/outgoing-document-service";
 import { signSessionToken } from "../src/lib/jwt-session";
-import { POST as createDraftRoute } from "../src/app/api/documents/outgoing/route";
+import { GET as listOutgoingRoute, POST as createDraftRoute } from "../src/app/api/documents/outgoing/route";
+import { POST as deliverOutgoingRoute } from "../src/app/api/documents/outgoing/[id]/actions/deliver/route";
+import { buildDocumentReadWhere } from "../src/server/policies/document-policy";
 import { POST as submitContentReviewRoute } from "../src/app/api/documents/[id]/actions/submit-content-review/route";
 import { POST as approveContentRoute } from "../src/app/api/documents/[id]/actions/approve-content/route";
 import { POST as submitFormatCheckRoute } from "../src/app/api/documents/[id]/actions/submit-format-check/route";
@@ -402,6 +404,101 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
     });
   });
 
+  describe("Outgoing numbering retry safety", () => {
+    it("concurrent retries for one signed document return one number and record one numbering event", async () => {
+      const draft = await OutgoingDocumentService.createOutgoingDraft(
+        {
+          title: `Văn bản kiểm thử retry cấp số ${testRunId}`,
+          summary: `Numbering retry test ${testRunId}`,
+          documentType: DocumentType.VAN_BAN_DI,
+          urgency: DocumentUrgency.THUONG,
+          securityLevel: DocumentSecurityLevel.THUONG,
+          draftingDeptId: deptAcademicId,
+          authorizedSignerId: rectorUser.id,
+          signingCapacity: "HIỆU TRƯỞNG",
+          signerPosition: "Hiệu trưởng",
+        },
+        drafterSpecialist,
+        { requestId: `retry-draft-${testRunId}` }
+      );
+
+      await OutgoingDocumentService.submitContentReview(
+        { documentId: draft.document.id, contentReviewerId: unitHeadAcademic.id },
+        drafterSpecialist,
+        { requestId: `retry-submit-content-${testRunId}` }
+      );
+      await OutgoingDocumentService.approveContent(
+        { documentId: draft.document.id },
+        unitHeadAcademic,
+        { requestId: `retry-approve-content-${testRunId}` }
+      );
+      await OutgoingDocumentService.submitFormatCheck(
+        { documentId: draft.document.id, formatReviewerId: clerkUser.id },
+        unitHeadAcademic,
+        { requestId: `retry-submit-format-${testRunId}` }
+      );
+      await OutgoingDocumentService.approveFormat(
+        { documentId: draft.document.id },
+        clerkUser,
+        { requestId: `retry-approve-format-${testRunId}` }
+      );
+      await OutgoingDocumentService.signDocument(
+        {
+          documentId: draft.document.id,
+          signatureType: SignatureType.PERSONAL_DIGITAL,
+          certificateMetadata: {
+            issuer: "Ban Cơ yếu Chính phủ",
+            serialNumber: `RETRY-CA-${testRunId}`,
+            subject: "Hiệu trưởng Test",
+          },
+        },
+        rectorUser,
+        { requestId: `retry-sign-${testRunId}` }
+      );
+
+      const [first, second] = await Promise.all([
+        OutgoingDocumentService.assignOutgoingNumber(
+          { documentId: draft.document.id },
+          clerkUser,
+          { requestId: `retry-number-a-${testRunId}` }
+        ),
+        OutgoingDocumentService.assignOutgoingNumber(
+          { documentId: draft.document.id },
+          clerkUser,
+          { requestId: `retry-number-b-${testRunId}` }
+        ),
+      ]);
+
+      assert.equal(first.status, OutgoingDocumentStatus.NUMBERED);
+      assert.equal(second.status, OutgoingDocumentStatus.NUMBERED);
+      assert.equal(first.outgoingNumber, second.outgoingNumber);
+      assert.equal(first.outgoingNumberStr, second.outgoingNumberStr);
+
+      const [persistedDocument, numberingEvents, numberingRecords] = await Promise.all([
+        prisma.document.findUnique({
+          where: { id: draft.document.id },
+          select: { registrationNumber: true },
+        }),
+        prisma.outboxEvent.count({
+          where: {
+            aggregateId: draft.document.id,
+            eventType: "DOCUMENT_NUMBERED",
+          },
+        }),
+        prisma.auditEvent.count({
+          where: {
+            entityId: draft.document.id,
+            action: "DOCUMENT_NUMBERED",
+          },
+        }),
+      ]);
+
+      assert.equal(persistedDocument?.registrationNumber, first.outgoingNumber);
+      assert.equal(numberingEvents, 1);
+      assert.equal(numberingRecords, 1);
+    });
+  });
+
   // =========================================================================
   // 2. SEPARATION OF DUTIES (SoD) ENFORCEMENT
   // =========================================================================
@@ -767,6 +864,50 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
       apiDocId = data.document.id;
     });
 
+    it("GET /api/documents/outgoing scopes rows and totals to readable documents", async () => {
+      const secretDocument = await prisma.document.create({
+        data: {
+          type: DocumentType.VAN_BAN_DI,
+          registrationNumber: -(Math.floor(Math.random() * 2_000_000_000) + 1),
+          documentYear: new Date().getFullYear(),
+          originalNumber: `SECRET-${testRunId}`,
+          issuedDate: new Date(),
+          issuingAuthority: "QCET",
+          category: "Quyết định",
+          summary: `Restricted outgoing draft ${testRunId}`,
+          securityLevel: DocumentSecurityLevel.TUYET_MAT,
+          registeredById: drafterSpecialist.id,
+          outgoingWorkflow: { create: { status: OutgoingDocumentStatus.DRAFT } },
+        },
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/documents/outgoing?limit=1000", {
+        headers: { Authorization: `Bearer ${drafterToken}` },
+      });
+      const res = await listOutgoingRoute(req);
+      const body = await res.json();
+
+      assert.equal(res.status, 200);
+      assert.ok(body.items.some((item: any) => item.documentId === apiDocId));
+      assert.ok(body.items.every((item: any) => item.documentId !== secretDocument.id));
+
+      const expectedReadableTotal = await prisma.documentOutgoingWorkflow.count({
+        where: { document: { is: buildDocumentReadWhere(drafterSpecialist) } },
+      });
+      assert.equal(body.total, expectedReadableTotal);
+
+      const searchForRestrictedDocument = new NextRequest(
+        `http://localhost:3000/api/documents/outgoing?search=${encodeURIComponent(`Restricted outgoing draft ${testRunId}`)}`,
+        { headers: { Authorization: `Bearer ${drafterToken}` } }
+      );
+      const restrictedSearchResponse = await listOutgoingRoute(searchForRestrictedDocument);
+      const restrictedSearchBody = await restrictedSearchResponse.json();
+
+      assert.equal(restrictedSearchResponse.status, 200);
+      assert.equal(restrictedSearchBody.items.length, 0);
+      assert.equal(restrictedSearchBody.total, 0);
+    });
+
     it("POST /api/documents/[id]/actions/submit-content-review submits content review", async () => {
       const req = new NextRequest(
         `http://localhost:3000/api/documents/${apiDocId}/actions/submit-content-review`,
@@ -951,6 +1092,26 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
       assert.equal(res.status, 200);
       assert.equal(data.status, OutgoingDocumentStatus.ISSUED);
       assert.ok(data.issuedAt);
+    });
+
+    it("POST /api/documents/outgoing/[id]/actions/deliver marks an issued document delivered", async () => {
+      const req = new NextRequest(
+        `http://localhost:3000/api/documents/outgoing/${apiDocId}/actions/deliver`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${clerkToken}`,
+          },
+          body: JSON.stringify({ deliveryNotes: "Đã gửi qua trục liên thông" }),
+        }
+      );
+
+      const res = await deliverOutgoingRoute(req, { params: Promise.resolve({ id: apiDocId }) });
+      const data = await res.json();
+
+      assert.equal(res.status, 200);
+      assert.equal(data.status, OutgoingDocumentStatus.DELIVERED);
     });
   });
 });

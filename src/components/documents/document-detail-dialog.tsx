@@ -107,6 +107,18 @@ export function getStatusBadgeConfig(status: DocumentStatus): {
   }
 }
 
+function getTaskStatusLabel(status?: string): string | null {
+  if (!status) return null;
+  const labels: Record<string, string> = {
+    NOT_STARTED: "Chưa bắt đầu",
+    IN_PROGRESS: "Đang thực hiện",
+    WAITING_APPROVAL: "Chờ nghiệm thu",
+    COMPLETED: "Hoàn thành",
+    CANCELLED: "Đã hủy",
+  };
+  return labels[status] || status;
+}
+
 export function DocumentDetailDialog({
   document: doc,
   isOpen,
@@ -118,6 +130,9 @@ export function DocumentDetailDialog({
   const urgencyConfig = getUrgencyBadgeConfig(doc.urgency);
   const statusConfig = getStatusBadgeConfig(doc.status);
   const StatusIcon = statusConfig.icon;
+  const linkedTaskProgress = typeof doc.linkedTaskProgressPercent === "number"
+    ? Math.min(100, Math.max(0, doc.linkedTaskProgressPercent))
+    : null;
 
   const typeLabels: Record<string, { label: string; icon: any; color: string }> = {
     inbox: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 bg-sky-500/10" },
@@ -252,6 +267,39 @@ export function DocumentDetailDialog({
               <p className="text-xs font-medium text-foreground">
                 {doc.linkedTaskTitle || "Nhiệm vụ trực tiếp giao từ văn bản"}
               </p>
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                {doc.linkedTaskStatus && (
+                  <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800">
+                    {getTaskStatusLabel(doc.linkedTaskStatus)}
+                  </span>
+                )}
+                {doc.linkedTaskDueDate && (
+                  <span className="text-muted-foreground">
+                    Hạn: {new Date(doc.linkedTaskDueDate).toLocaleDateString("vi-VN")}
+                  </span>
+                )}
+              </div>
+              {linkedTaskProgress !== null && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Tiến độ nhiệm vụ</span>
+                    <span className="font-semibold tabular-nums text-foreground">{linkedTaskProgress}%</span>
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Tiến độ nhiệm vụ liên kết"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={linkedTaskProgress}
+                    className="h-1.5 overflow-hidden rounded-full bg-emerald-500/15"
+                  >
+                    <div
+                      className="h-full rounded-full bg-emerald-600 transition-[width]"
+                      style={{ width: `${linkedTaskProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="pt-1 flex items-center justify-end">
                 <Link
                   href={`/tasks?taskId=${doc.linkedTaskId}`}

@@ -1,44 +1,22 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getApiContext } from "@/server/api/context";
-import { requireAuthenticated } from "@/server/api/auth";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { assertCsrf } from "@/server/security/csrf";
 import {
   assertJsonContentType,
   assertRequestBodySize,
   MAX_JSON_BODY_SIZE,
+  parseAndValidateJson,
 } from "@/server/api/validation";
 import { assertRateLimit } from "@/server/security/rate-limit";
-import {
-  canReadDocument,
-  canDirectDocument,
-  isAdmin,
-  isManager,
-} from "@/server/policies/document-policy";
-import {
-  toDocumentDirectiveDTO,
-  toDocumentDirectiveDTOArray,
-  toDocumentDetailDTO,
-} from "@/server/dto/document-dto";
+import { canReadDocument } from "@/server/policies/document-policy";
+import { toDocumentDirectiveDTOArray } from "@/server/dto/document-dto";
 import { CreateDirectiveSchema } from "@/contracts/documents";
-import {
-  getDocumentById,
-  mapPrismaDocumentToItem,
-} from "@/lib/documents/document-service";
-import {
-  mapDirectiveToSchoolTask,
-  mapUrgencyToTaskPriority,
-} from "@/lib/documents/directive-pipeline";
-import { validateDirectivePayload } from "@/lib/documents/document-validator";
+import { getDocumentById } from "@/lib/documents/document-service";
+import { directDocument } from "@/lib/services/incoming-document-service";
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
-import { getAcademicMonthInfo, getAcademicYear } from "@/lib/academic-calendar";
-import { TaskScope, TaskPriority, TaskStatus } from "@prisma/client";
-import {
-  NotFoundError,
-  AuthorizationError,
-  ValidationError,
-} from "@/server/api/errors";
+import { AuthorizationError, NotFoundError, ValidationError } from "@/server/api/errors";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -69,8 +47,8 @@ export async function GET(
       );
     }
 
-    // Phase 9: a directive carries no unit of its own — the receiving unit is the
-    // lead unit of the task the directive generated, reached through the document.
+    // Preserve read access to historical directives. New bút phê commands are
+    // stored on DocumentIncomingWorkflow and do not create these legacy rows.
     const directiveRows = await prisma.documentDirective.findMany({
       where: { documentId: id },
       include: {
@@ -126,68 +104,24 @@ export async function POST(
 ) {
   let requestId = crypto.randomUUID();
   try {
-    const apiContext = await getApiContext(request);
-    requestId = apiContext.requestId;
-    const authUser = requireAuthenticated(apiContext);
-
-    // 1. Role boundary check: only Leadership/Admin or Department Manager can issue directives
-    const canIssueDirectives = isAdmin(authUser) || isManager(authUser);
-
-    if (!canIssueDirectives) {
-      throw new AuthorizationError(
-        "Bạn không có quyền ban hành chỉ đạo (Forbidden)",
-        "FORBIDDEN"
-      );
-    }
-
-    // 2. CSRF assertion on mutations
     assertCsrf(request);
-
-    // 3. Content-Type and Body size limits
     assertJsonContentType(request);
     assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
-    // 4. Rate limiting on mutations
-    await assertRateLimit(authUser.id, "MUTATION");
+    const apiContext = await getApiContext(request);
+    requestId = apiContext.requestId;
+    const authUser = requireAuthenticated(apiContext);
+    await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
-    const { id } = await Promise.resolve(context.params);
+    const { id } = await context.params;
+    const validated = await parseAndValidateJson(request, CreateDirectiveSchema, {
+      allowEmpty: false,
+    });
 
-    const document = await getDocumentById(id);
-    if (!document) {
-      throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
-    }
-
-    // 5. Object-level authorization check (BOLA prevention)
-    if (!canDirectDocument(authUser, document)) {
-      throw new AuthorizationError(
-        "Bạn không có quyền ban hành chỉ đạo bút phê cho văn bản này (Forbidden)",
-        "FORBIDDEN"
-      );
-    }
-
-    const rawBody = await request.json();
-
-    // Strict leaderId anti-spoofing binding from server session
-    rawBody.leaderId = authUser.id;
-
-    // 6. Input validation
-    const validated = CreateDirectiveSchema.parse(rawBody);
-
-    const validation = validateDirectivePayload(rawBody);
-    if (!validation.isValid) {
-      throw new ValidationError(
-        validation.errors[0] || "Dữ liệu chỉ đạo không hợp lệ",
-        {
-          general: validation.errors,
-        }
-      );
-    }
-
-    const instruction = (validated.instruction || validated.content)!;
-    // Fail-fast: `Task.leadUnitId` is a foreign key to `OrganizationalUnit`, so the
-    // client's reference must resolve to a real unit (id or canonical code) before
-    // it is written. Writing an unresolved value would surface as an FK violation.
-    const leadUnit = await OrganizationalUnitService.resolveUnitRef(validated.leadUnitId);
+    // This compatibility endpoint accepts the legacy directive payload but
+    // delegates to the canonical Tier-1 command. A directive only routes the
+    // document; it never creates a Task or writes a second workflow.
+    const leadUnit = await OrganizationalUnitService.resolveUnitRef(validated.leadUnitId!);
     if (!leadUnit) {
       throw new ValidationError(
         `Đơn vị chủ trì "${validated.leadUnitId}" không tồn tại trong hệ thống đơn vị.`,
@@ -195,143 +129,55 @@ export async function POST(
         "ORG_UNIT_NOT_FOUND"
       );
     }
-    const leadUnitId = leadUnit.id;
-    const deadline = validated.deadline ? new Date(validated.deadline) : null;
-    const serializedCollaborators = Array.isArray(validated.collaboratorIds)
-      ? JSON.stringify(validated.collaboratorIds)
-      : typeof validated.collaboratorIds === "string"
-      ? validated.collaboratorIds
-      : null;
 
-    // Build standardized task payload
-    const taskPayload = mapDirectiveToSchoolTask(document, {
-      id: "",
-      documentId: id,
-      leaderId: authUser.id,
-      leaderName: authUser.name || "Ban Giám hiệu",
-      instruction,
-      deadline: deadline ? deadline.toISOString() : null,
-      leadUnitId,
-      collaboratorIds: serializedCollaborators,
-      isTaskGenerated: false,
-    });
-
-    const priorityEnum = (mapUrgencyToTaskPriority(document.urgency) as TaskPriority) || TaskPriority.NORMAL;
-
-    // 7. Coordinated single atomic transaction
-    const { createdTask, savedDirective, updatedDocumentRecord } = await prisma.$transaction(
-      async (tx) => {
-        const dueDateObj = taskPayload.dueDate
-          ? new Date(taskPayload.dueDate)
-          : deadline || new Date(Date.now() + 7 * 86400000);
-        const monthInfo = getAcademicMonthInfo(dueDateObj);
-        const academicYearStr = monthInfo.academicYear || getAcademicYear(dueDateObj);
-        const monthNum = monthInfo.monthNumber;
-
-        // Generate unique continuous task code NV-YYYY-MM-XXX
-        const count = await tx.task.count({
-          where: {
-            academicMonth: monthNum,
-            academicYear: academicYearStr,
-          },
-        });
-
-        let seq = count + 1;
-        const curYear = dueDateObj.getFullYear();
-        let code = `NV-${curYear}-${String(monthNum).padStart(2, "0")}-${String(seq).padStart(3, "0")}`;
-
-        while (await tx.task.findUnique({ where: { code }, select: { id: true } })) {
-          seq++;
-          code = `NV-${curYear}-${String(monthNum).padStart(2, "0")}-${String(seq).padStart(3, "0")}`;
+    let coordinatingUnitIds: string[] = [];
+    if (Array.isArray(validated.collaboratorIds)) {
+      coordinatingUnitIds = validated.collaboratorIds;
+    } else if (typeof validated.collaboratorIds === "string" && validated.collaboratorIds.trim()) {
+      try {
+        const parsed: unknown = JSON.parse(validated.collaboratorIds);
+        if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+          coordinatingUnitIds = parsed;
+        } else {
+          coordinatingUnitIds = [validated.collaboratorIds.trim()];
         }
-
-        // Phase 9: Department model dropped — the resolved canonical unit id is
-        // written straight into the `OrganizationalUnit` FK.
-        const task = await tx.task.create({
-          data: {
-            code,
-            title: taskPayload.title,
-            description: taskPayload.description,
-            scope: TaskScope.SCHOOL,
-            status: TaskStatus.NOT_STARTED,
-            priority: priorityEnum,
-            dueDate: dueDateObj,
-            startDate: dueDateObj,
-            leadUnitId,
-            createdById: authUser.id,
-            academicMonth: monthNum,
-            academicYear: academicYearStr,
-          },
-          include: {
-            leadUnit: true,
-          },
-        });
-
-        const dir = await tx.documentDirective.create({
-          data: {
-            documentId: id,
-            leaderId: authUser.id,
-            instruction,
-            deadline,
-            collaboratorIds: serializedCollaborators,
-            isTaskGenerated: true,
-          },
-          include: {
-            leader: true,
-          },
-        });
-
-        const docRecord = await tx.document.update({
-          where: { id },
-          data: {
-            status: "DANG_XU_LY",
-            linkedTaskId: task.id,
-          },
-          include: {
-            leadUser: true,
-            registeredBy: true,
-            attachments: true,
-            directives: {
-              include: {
-                leader: true,
-              },
-            },
-            linkedTask: true,
-          },
-        });
-
-        return {
-          createdTask: task,
-          savedDirective: dir,
-          updatedDocumentRecord: docRecord,
-        };
+      } catch {
+        coordinatingUnitIds = [validated.collaboratorIds.trim()];
       }
+    }
+
+    const instruction = (validated.instruction || validated.content)!;
+    const result = await directDocument(
+      {
+        documentId: id,
+        leadUnitId: leadUnit.id,
+        coordinatingUnitIds,
+        leadershipInstruction: instruction,
+        deadline: validated.deadline ? new Date(validated.deadline) : undefined,
+      },
+      authUser,
+      requestId
     );
 
-    const mappedDoc = mapPrismaDocumentToItem(updatedDocumentRecord);
-
+    const legacyData = {
+      workflow: result.workflow,
+      directive: null,
+      task: null,
+      document: result.document,
+    };
     return apiSuccess(
+      { data: legacyData, ...legacyData },
       {
-        success: true,
-        data: {
-          task: createdTask,
-          directive: savedDirective,
-          document: mappedDoc,
-        },
-        task: createdTask,
-        directive: toDocumentDirectiveDTO(savedDirective),
-        document: toDocumentDetailDTO(mappedDoc),
-      },
-      {
-        status: 201,
         headers: { "Cache-Control": "private, no-store" },
-        requestId: apiContext.requestId,
+        legacyCompat: true,
+        requestId,
       }
     );
   } catch (error) {
     return apiError(error, requestId, {
       headers: { "Cache-Control": "private, no-store" },
-      legacyCompat: true,
+      rfc9457: true,
+      instance: request.nextUrl.pathname,
     });
   }
 }

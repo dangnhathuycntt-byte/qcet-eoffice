@@ -551,6 +551,12 @@ export async function executeApprovalStep(
     throw new Error(`TaskApprovalStep with id '${stepId}' not found.`);
   }
 
+  if (step.status !== ApprovalStepStatus.PENDING) {
+    throw new StepProgressionError(
+      `Approval step '${stepId}' is no longer pending and cannot be executed again.`
+    );
+  }
+
   const task = step.process.task;
 
   // 1. Segregation of Duties (SoD) Invariant

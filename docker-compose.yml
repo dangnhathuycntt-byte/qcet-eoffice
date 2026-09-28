@@ -52,6 +52,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      clamav:
+        condition: service_started
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--dns-result-order=ipv4first"
@@ -70,6 +72,9 @@ services:
       FEATURE_FLAG_PUSH_NOTIFICATIONS: ${FEATURE_FLAG_PUSH_NOTIFICATIONS:-true}
       NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA: ${NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA:-true}
       UPLOADS_DIR: /app/uploads
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      FILE_SCAN_WORKER_ENABLED: "true"
       TZ: Asia/Ho_Chi_Minh
     ports:
       - "127.0.0.1:${PORT:-3001}:3000"
@@ -80,6 +85,15 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
+  clamav:
+    # TCP is reachable only on the private Docker network; do not publish 3310.
+    image: clamav/clamav:1.5.4-debian13-slim
+    restart: unless-stopped
+    volumes:
+      - clamav-signatures:/var/lib/clamav
+    networks:
+      - qcet-internal
 
   qcet-tunnel:
     container_name: qcet-eoffice-tunnel
@@ -105,4 +119,7 @@ volumes:
     driver: local
   redis-data:
     name: qcet_redis_data
+    driver: local
+  clamav-signatures:
+    name: qcet_clamav_signatures
     driver: local

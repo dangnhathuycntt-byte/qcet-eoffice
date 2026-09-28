@@ -28,6 +28,14 @@ export async function updateTaskStatus(
   note?: string,
   expectedVersion?: number
 ): Promise<TaskActionResult<{ taskId: string; status: TaskStatus; version: number; progressPercent?: number }>> {
+  if (newStatus === "COMPLETED" && expectedVersion === undefined) {
+    return {
+      ok: false,
+      code: "PRECONDITION_REQUIRED",
+      error: "Cần phiên bản mới nhất của nhiệm vụ để phê duyệt hoàn thành.",
+    };
+  }
+
   try {
     const res = await fetch(`/api/tasks/${taskId}/actions/update-status`, {
       method: "POST",
@@ -123,6 +131,14 @@ export async function approveTask(
     expectedVersion?: number;
   }
 ): Promise<TaskActionResult> {
+  if (options?.expectedVersion === undefined) {
+    return {
+      ok: false,
+      code: "PRECONDITION_REQUIRED",
+      error: "Cần phiên bản mới nhất của nhiệm vụ để phê duyệt.",
+    };
+  }
+
   try {
     const res = await fetch(`/api/tasks/${taskId}/actions/approve`, {
       method: "POST",

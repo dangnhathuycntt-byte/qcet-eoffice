@@ -28,6 +28,11 @@ export async function register(): Promise<void> {
           nodeVersion: typeof process !== 'undefined' ? process.version : undefined,
         },
       });
+
+      if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.FILE_SCAN_WORKER_ENABLED === 'true') {
+        const { startFileScanWorker } = await import('@/server/files/file-scan-worker');
+        startFileScanWorker();
+      }
     } catch (error) {
       // Fail-safe: runtime boot must proceed even if telemetry environment encounters issues
       try {

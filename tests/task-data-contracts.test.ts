@@ -170,10 +170,16 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
         deliverableId: 'deliv_123',
         reviewStatus: 'APPROVED',
         reviewNote: 'Minh chứng hợp lệ',
+        expectedVersion: 7,
       });
 
       assert.strictEqual(parsed.reviewStatus, 'APPROVED');
       assert.strictEqual(parsed.deliverableId, 'deliv_123');
+      assert.strictEqual(parsed.expectedVersion, 7);
+      assert.throws(() => ReviewDeliverableInputSchema.parse({
+        deliverableId: 'deliv_123',
+        reviewStatus: 'APPROVED',
+      }));
     });
 
     test('TaskQueryParamsSchema: coerces types and provides default pagination', () => {
@@ -209,6 +215,7 @@ describe('Task Data Contracts, Domain Mappers & Data Correctness (Phase 6 & 7)',
       department: {
         id: 'dept_cntt',
         name: 'Khoa Công nghệ Thông tin',
+        shortName: 'CNTT',
       },
       createdById: 'usr_admin',
       parentTaskId: null,

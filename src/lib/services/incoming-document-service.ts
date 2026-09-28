@@ -29,6 +29,8 @@ import {
   TaskStatus,
   TaskPriority,
   TaskActorRole,
+  DossierItemType,
+  DossierStatus,
 } from "@prisma/client";
 import {
   assertAuthorized,
@@ -39,6 +41,7 @@ import {
 import { auditService, AuditAction, AuditEntityType } from "@/lib/db/audit";
 import { publishOutboxEvent, OutboxEventType, OutboxAggregateType } from "@/lib/db/outbox";
 import {
+  ConflictError,
   InvalidTransitionError,
   NotFoundError,
   ValidationError,
@@ -46,6 +49,7 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 import {
   IncomingDocumentStateMachine,
   mapIncomingWorkflowStatusToDocumentStatus,
@@ -98,6 +102,12 @@ export interface DirectDocumentInput {
   notes?: string;
 }
 
+export type DirectDocumentResult = DocumentIncomingWorkflow & {
+  workflow: DocumentIncomingWorkflow;
+  directive: null;
+  document: Pick<Document, "id" | "summary" | "status">;
+};
+
 export interface AssignUnitWorkInput {
   documentId: string;
   driUserId: string;
@@ -115,11 +125,101 @@ export interface ResolveDocumentInput {
   notes?: string;
 }
 
+async function assertIncomingDocumentResolutionReady(
+  tx: Prisma.TransactionClient,
+  doc: Document,
+  workflow: DocumentIncomingWorkflow,
+  input: ResolveDocumentInput
+): Promise<void> {
+  if (doc.linkedTaskId) {
+    const rootTask = await tx.task.findUnique({
+      where: { id: doc.linkedTaskId },
+      select: { id: true, title: true, status: true },
+    });
+    if (!rootTask) {
+      throw new ConflictError(
+        "Nhiệm vụ liên kết với văn bản không còn tồn tại.",
+        "INCOMING_DOCUMENT_TASK_MISSING"
+      );
+    }
+
+    const taskTree = [rootTask];
+    let parentIds = [rootTask.id];
+    while (parentIds.length > 0) {
+      const children = await tx.task.findMany({
+        where: { parentTaskId: { in: parentIds } },
+        select: { id: true, title: true, status: true },
+      });
+      taskTree.push(...children);
+      parentIds = children.map((child) => child.id);
+    }
+
+    const incompleteTasks = taskTree.filter((task) => task.status !== TaskStatus.COMPLETED);
+    if (incompleteTasks.length > 0) {
+      throw new ConflictError(
+        `Chưa thể giải quyết văn bản khi còn ${incompleteTasks.length} nhiệm vụ hoặc nhiệm vụ con chưa hoàn thành.`,
+        "INCOMING_DOCUMENT_TASKS_INCOMPLETE"
+      );
+    }
+  }
+
+  if (!input.resolutionDocUrl?.trim()) {
+    throw new ValidationError(
+      "Cần đính kèm đường dẫn báo cáo kết quả giải quyết trước khi xác nhận văn bản."
+    );
+  }
+
+  if (!workflow.dossierId) {
+    throw new ConflictError(
+      "Văn bản chưa được liên kết với hồ sơ công việc đã kiểm tra lưu trữ.",
+      "INCOMING_DOCUMENT_DOSSIER_REQUIRED"
+    );
+  }
+
+  const dossier = await tx.workDossier.findFirst({
+    where: {
+      OR: [{ id: workflow.dossierId }, { code: workflow.dossierId }],
+    },
+    include: { items: true },
+  });
+  if (!dossier) {
+    throw new ConflictError(
+      "Không tìm thấy hồ sơ công việc được liên kết với văn bản.",
+      "INCOMING_DOCUMENT_DOSSIER_MISSING"
+    );
+  }
+
+  const archiveCheckedStatuses: DossierStatus[] = [
+    DossierStatus.READY_FOR_ARCHIVE,
+    DossierStatus.SUBMITTED_TO_ARCHIVE,
+    DossierStatus.ACCEPTED,
+    DossierStatus.ARCHIVED,
+  ];
+  if (!archiveCheckedStatuses.includes(dossier.status)) {
+    throw new ConflictError(
+      "Hồ sơ công việc chưa hoàn tất kiểm tra và chuẩn bị lưu trữ.",
+      "INCOMING_DOCUMENT_DOSSIER_NOT_READY"
+    );
+  }
+
+  const hasIncomingDocument = dossier.items.some(
+    (item) => item.itemType === DossierItemType.DOCUMENT && item.itemId === doc.id
+  );
+  const hasResolutionReport = dossier.items.some(
+    (item) => item.itemType === DossierItemType.RESULT && Boolean(item.itemId?.trim())
+  );
+  if (!hasIncomingDocument || !hasResolutionReport) {
+    throw new ConflictError(
+      "Hồ sơ lưu trữ phải chứa văn bản đến và báo cáo kết quả giải quyết.",
+      "INCOMING_DOCUMENT_DOSSIER_EVIDENCE_MISSING"
+    );
+  }
+}
+
 export interface FileDocumentInput {
   documentId: string;
   dossierId?: string;
   filingNotes?: string;
-  archiveNow?: boolean;
   storageLocation?: string;
 }
 
@@ -341,6 +441,7 @@ export async function registerIncomingDocument(
           documentId: document.id,
           fileName: input.fileName || "Tệp đính kèm",
           fileUrl: input.fileUrl,
+          fileObjectId: getFileObjectIdFromUrl(input.fileUrl),
           fileSize: input.fileSize || 0,
           mimeType: input.fileType || "application/pdf",
         },
@@ -500,7 +601,7 @@ export async function directDocument(
   input: DirectDocumentInput,
   actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
   requestId?: string
-): Promise<DocumentIncomingWorkflow> {
+): Promise<DirectDocumentResult> {
   const user = await resolveUserContext(actor);
 
   const doc = await prisma.document.findUnique({
@@ -558,9 +659,10 @@ export async function directDocument(
       ? IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT
       : IncomingDocumentStatus.DIRECTED;
 
-    // 1. Update workflow
-    const updatedWorkflow = await tx.documentIncomingWorkflow.update({
-      where: { documentId: input.documentId },
+    // Claim the current workflow state before writing the command. This makes
+    // concurrent/retried directions deterministic and keeps audit/outbox at once.
+    const claim = await tx.documentIncomingWorkflow.updateMany({
+      where: { documentId: input.documentId, status: currentStatus },
       data: {
         status: targetWorkflowStatus,
         directedAt: new Date(),
@@ -571,6 +673,16 @@ export async function directDocument(
         deadline,
         responsibilityAreaId: input.responsibilityAreaId,
       },
+    });
+    if (claim.count !== 1) {
+      throw new ConflictError(
+        "Quy trình văn bản đã được thay đổi bởi yêu cầu khác. Hãy tải lại trước khi bút phê.",
+        "DOCUMENT_WORKFLOW_CONFLICT"
+      );
+    }
+
+    const updatedWorkflow = await tx.documentIncomingWorkflow.findUniqueOrThrow({
+      where: { documentId: input.documentId },
     });
 
     const targetDocStatus = mapIncomingWorkflowStatusToDocumentStatus(targetWorkflowStatus);
@@ -632,7 +744,7 @@ export async function directDocument(
         summary: doc.summary,
         status: targetDocStatus,
       },
-    } as any;
+    } as DirectDocumentResult;
   });
 }
 
@@ -710,6 +822,28 @@ export async function assignUnitWork(
   return prisma.$transaction(async (tx) => {
     let createdTaskId: string | null = null;
 
+    if (input.createTask && doc.linkedTaskId) {
+      throw new ConflictError(
+        "Văn bản này đã được liên kết với một nhiệm vụ.",
+        "DOCUMENT_TASK_ALREADY_LINKED"
+      );
+    }
+
+    // Compare-and-swap the workflow before creating any related records. The
+    // transaction rolls back the claim together with Task/assignment/audit if a
+    // later write fails, while a concurrent request can no longer claim the same
+    // transition and create a second Task.
+    const claim = await tx.documentIncomingWorkflow.updateMany({
+      where: { id: doc.incomingWorkflow!.id, status: currentStatus },
+      data: { status: targetStatus },
+    });
+    if (claim.count !== 1) {
+      throw new ConflictError(
+        "Quy trình văn bản đã được giao việc bởi yêu cầu khác. Hãy tải lại để xem trạng thái mới.",
+        "DOCUMENT_WORKFLOW_CONFLICT"
+      );
+    }
+
     // Optional Task creation for execution tracking
     if (input.createTask) {
       const now = new Date();
@@ -778,16 +912,9 @@ export async function assignUnitWork(
       },
     });
 
-    // 2. Update workflow status to UNIT_ASSIGNED_PERSON (or IN_PROGRESS if task created)
-    const targetStatus = input.createTask
-      ? IncomingDocumentStatus.IN_PROGRESS
-      : IncomingDocumentStatus.UNIT_ASSIGNED_PERSON;
-
-    const updatedWorkflow = await tx.documentIncomingWorkflow.update({
+    // 2. Read the workflow state already claimed at the start of this transaction.
+    const updatedWorkflow = await tx.documentIncomingWorkflow.findUniqueOrThrow({
       where: { id: doc.incomingWorkflow!.id },
-      data: {
-        status: targetStatus,
-      },
     });
 
     // 3. Update document lead user and synchronize status
@@ -797,6 +924,7 @@ export async function assignUnitWork(
       data: {
         leadUserId: input.driUserId,
         status: targetDocStatus,
+        linkedTaskId: createdTaskId ?? undefined,
       },
     });
 
@@ -908,9 +1036,10 @@ export async function resolveDocument(
   }
 
   return prisma.$transaction(async (tx) => {
-    // 1. Update workflow to RESOLVED
-    const updatedWorkflow = await tx.documentIncomingWorkflow.update({
-      where: { id: doc.incomingWorkflow!.id },
+    await assertIncomingDocumentResolutionReady(tx, doc, doc.incomingWorkflow!, input);
+
+    const claim = await tx.documentIncomingWorkflow.updateMany({
+      where: { id: doc.incomingWorkflow!.id, status: currentStatus },
       data: {
         status: IncomingDocumentStatus.RESOLVED,
         resolvedAt: new Date(),
@@ -918,6 +1047,17 @@ export async function resolveDocument(
         resolutionSummary: input.resolutionSummary,
         resolutionDocUrl: input.resolutionDocUrl,
       },
+    });
+    if (claim.count !== 1) {
+      throw new ConflictError(
+        "Văn bản đã được giải quyết bởi yêu cầu khác.",
+        "DOCUMENT_WORKFLOW_CONFLICT"
+      );
+    }
+
+    // 1. Update workflow to RESOLVED
+    const updatedWorkflow = await tx.documentIncomingWorkflow.findUniqueOrThrow({
+      where: { id: doc.incomingWorkflow!.id },
     });
 
     // 2. Update assignments status
@@ -1019,10 +1159,7 @@ export async function fileDocument(
   await assertAuthorized(user, "document.incoming.file", resource);
 
   const currentStatus = doc.incomingWorkflow.status;
-  const archiveNow = Boolean(input.archiveNow);
-  const targetStatus = archiveNow
-    ? IncomingDocumentStatus.ARCHIVED
-    : IncomingDocumentStatus.FILED;
+  const targetStatus = IncomingDocumentStatus.FILED;
 
   IncomingDocumentStateMachine.assertTransition(
     currentStatus,
@@ -1043,12 +1180,6 @@ export async function fileDocument(
         filedById: user.id,
         dossierId,
         filingNotes: input.filingNotes,
-        ...(archiveNow
-          ? {
-              archivedAt: now,
-              archivedById: user.id,
-            }
-          : {}),
       },
     });
 
@@ -1058,8 +1189,6 @@ export async function fileDocument(
       where: { id: input.documentId },
       data: {
         status: targetDocStatus,
-        archivedAt: now,
-        archivedById: user.id,
         archiveReason: input.filingNotes || `Lưu trữ hồ sơ ${dossierId}`,
       },
     });
@@ -1080,7 +1209,6 @@ export async function fileDocument(
       },
       metadata: {
         documentId: doc.id,
-        archiveNow,
       },
     });
 

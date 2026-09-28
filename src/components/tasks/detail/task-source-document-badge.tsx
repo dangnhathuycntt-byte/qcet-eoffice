@@ -26,6 +26,16 @@ export function TaskSourceDocumentBadge({
       : sourceDocument.type === "VAN_BAN_DI"
       ? "Văn bản đi"
       : "Văn bản";
+  const documentStatusLabel: Record<string, string> = {
+    CHO_PHAN_CONG: "Chờ phân công",
+    DANG_XU_LY: "Đang xử lý",
+    CHO_PHE_DUYET: "Chờ phê duyệt",
+    DA_HOAN_THANH: "Đã hoàn thành",
+    LUU_THEO_DOI: "Lưu theo dõi",
+  };
+  const statusLabel = sourceDocument.status
+    ? documentStatusLabel[sourceDocument.status] || sourceDocument.status
+    : null;
 
   if (compact) {
     return (
@@ -68,6 +78,11 @@ export function TaskSourceDocumentBadge({
                 <p className="text-muted-foreground mt-0.5">
                   {sourceDocument.issuingAuthority}
                 </p>
+                {statusLabel && (
+                  <p className="text-muted-foreground mt-0.5">
+                    Trạng thái văn bản: {statusLabel}
+                  </p>
+                )}
                 {sourceDocument.issuedDate && (
                   <p className="text-muted-foreground">
                     Ban hành: {formatDisplayDate(sourceDocument.issuedDate)}
@@ -110,6 +125,11 @@ export function TaskSourceDocumentBadge({
         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
           {sourceDocument.summary}
         </p>
+        {statusLabel && (
+          <span className="inline-flex mt-1 rounded border border-border/60 bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {statusLabel}
+          </span>
+        )}
       </div>
       <ExternalLink
         className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground mt-0.5"

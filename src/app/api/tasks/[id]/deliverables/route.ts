@@ -123,6 +123,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
       deliverableId: validatedInput.deliverableId || '',
       reviewStatus: validatedInput.reviewStatus,
       reviewNote: validatedInput.reviewNote,
+      expectedVersion: validatedInput.expectedVersion,
     });
 
     const deliverableDto = toTaskDeliverableDTO(deliverable);

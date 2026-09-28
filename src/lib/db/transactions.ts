@@ -39,6 +39,8 @@ import { generateTaskCodeAtomic, type TaskCodeOptions } from "../task-code-gener
 import { getAcademicYear, getAcademicMonthInfo } from "../academic-calendar";
 import { updateTaskWithOCC, updateDocumentWithOCC, type DbClient } from "./occ";
 import { logAuditEvent } from "./audit";
+import { publishTaskCompletedEvent } from "./outbox";
+import { getFileObjectIdFromUrl } from "@/lib/services/file-service";
 
 /**
  * Options for configuring interactive transactions.
@@ -386,6 +388,7 @@ export async function submitDeliverableAtomic(
           taskId: payload.taskId,
           title: payload.title,
           fileUrl: payload.fileUrl,
+          fileObjectId: getFileObjectIdFromUrl(payload.fileUrl),
           fileType: payload.fileType ?? "LINK",
           fileSize: typeof payload.fileSize === "number" ? payload.fileSize : null,
           uploadedById: payload.uploadedById,
@@ -528,6 +531,11 @@ export async function approveTaskAtomic(
         throw new Error("[approveTaskAtomic] Simulated failure before task update");
       }
 
+      const taskBeforeApproval = await tx.task.findUniqueOrThrow({
+        where: { id: payload.taskId },
+        select: { status: true },
+      });
+
       // 1. Update task to COMPLETED
       const completedAtDate = payload.completedAt
         ? new Date(payload.completedAt)
@@ -651,6 +659,15 @@ export async function approveTaskAtomic(
 
       if (payload.failAtStep === "audit") {
         throw new Error("[approveTaskAtomic] Simulated failure at audit step");
+      }
+
+      if (taskBeforeApproval.status !== TaskStatus.COMPLETED) {
+        await publishTaskCompletedEvent(tx, {
+          taskId: payload.taskId,
+          actorId: payload.approverId,
+          taskVersion: updatedTask.version,
+          completedAt: completedAtDate,
+        });
       }
 
       return {
