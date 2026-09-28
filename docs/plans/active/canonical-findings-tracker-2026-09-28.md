@@ -154,6 +154,18 @@
 | 6 | **RBAC design** chưa quyết | Phase 5 blocked dependency | Trung bình |
 | 7 | **Production access** | Phase 6 (lines 172, 173 partial, 174) | Thấp (chờ blockers #1–6) |
 
+### 9.1 CI/Deploy Infrastructure Reality (clarified 28/09/2026)
+
+`deploy.yml` SUCCESS nghĩa là **build validation pass trên ephemeral GitHub runners**, KHÔNG phải app đã được deploy:
+
+| Thực tế | Chi tiết |
+|---------|---------|
+| **deploy.yml staging job** | checkout → npm ci → prisma migrate deploy → npm run build → emit receipt.json (dies with ephemeral runner). Không có SSH, docker push, container restart, platform API call, hoặc artifact upload. |
+| **Self-hosted runner CI** | DB credentials broken → integration tests fail trên self-hosted runner. Đây là vấn đề hạ tầng, không phải code. |
+| **Production environment** | Chưa configured trong GitHub (404 khi truy cập environment settings). `eoffice.qcet.edu.vn` unreachable. |
+| **qcet.dixxie.store** | Returns 200 nhưng đây là **existing running app**, không phải evidence của deploy mới từ CI. |
+| **Actual deploy mechanism** | Manual `docker compose` trên host server — nằm ngoài CI pipeline. |
+
 ---
 
 ## 10. Post-Pilot Findings (BLOCKED — chờ deployed pilot)
