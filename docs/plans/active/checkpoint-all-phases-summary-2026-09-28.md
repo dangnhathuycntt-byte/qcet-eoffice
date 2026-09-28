@@ -100,7 +100,7 @@
 
 | Item | Status | Ghi chú |
 |------|--------|---------|
-| CI test suites | ✅ [x] | 642 contract + provider tests; 199 security tests (non-DB); typecheck clean; lint 101 (baseline reduced from 123 via design fixes); 0 new failures |
+| CI test suites | 🟡 [x] | **Local verification pass:** 642 contract + provider tests; 199 security tests (non-DB); typecheck 0 errors; lint 101 DESIGN (baseline); 0 new failures. **GitHub CI Quality Gate: FAIL** — 3964 tests: 3717 pass, 231 fail, 16 skip; all 231 failures are DB-dependent tests hitting broken self-hosted runner credentials (not code regressions). Deploy pipeline (`Continuous Deployment & Migration Gates`): ✅ SUCCESS — build validation + migration check pass on ephemeral runners. **No live deployment occurs** — deploy.yml emits a receipt then dies with the runner; actual deploy is manual `docker compose` on host. |
 | Deploy pilot to bounded user group | ⛔ BLOCKED | Production access + ClamAV |
 | Reconcile audit findings | 🟡 Partially actionable | Pre-pilot findings reconciled; full reconciliation BLOCKED chờ deployed pilot |
 | Observation window + legacy removal | ⛔ BLOCKED | Needs observation data |
@@ -119,6 +119,7 @@
 | 5 | **Internal-document rules** — numbering/authority/visibility chưa accepted | Internal doc workflow | Phase 5 item |
 | 6 | **RBAC design** — chưa quyết | Account/permission provisioning (#18); read-only directory delivered | Phase 5 provisioning only |
 | 7 | **Production access** — cần để deploy và observe | Pilot deployment, observation window, legacy removal | Phase 6 items 2–4 |
+| 8 | **Self-hosted runner DB credentials** — `qcet_ci` PostgreSQL auth fails on self-hosted runner; CI Quality Gate pipeline fails 231/3964 tests (all DB-dependent). Not a code regression. | CI green gate | CI Quality Gate pipeline |
 
 ---
 
@@ -133,12 +134,18 @@
 - `system-api-and-screens-execution-plan-2026-09-28.md` — Phase 6 items 1 & 5 marked [x]
 - `canonical-findings-tracker-2026-09-28.md` — Tổng hợp tất cả pre-pilot findings (Phase 6 item 173)
 
-### Verification
+### Verification (local worktree — no DATABASE_URL)
 - 642/642 contract + provider tests pass (typecheck clean)
 - 199/199 security tests pass (IDOR, CSRF, AuthZ contracts)
 - TypeScript typecheck: 0 errors
 - Lint: 0 lint errors; ~101 DESIGN findings (baseline)
 - 0 new test failures
+
+### CI Pipeline (GitHub Actions on `origin/main` HEAD `dbea32fd`)
+- **Deploy pipeline (`Continuous Deployment & Migration Gates`)**: ✅ SUCCESS — build + migration validation pass
+- **CI Quality Gate**: ❌ FAIL — 3717/3964 pass, 231 fail (all DB-dependent on broken self-hosted runner), 16 skip
+- **Production deploy**: ⛔ NOT ATTEMPTED — no SSH/docker-push/platform-API step exists in any workflow; deploy is manual `docker compose`
+- **Signature adapter tests**: ✅ Fixed in commit `54a334bf` (+8 pass vs prior run)
 
 ### Infrastructure
 - Correlation ID propagation: middleware echoes `x-request-id` on all return paths

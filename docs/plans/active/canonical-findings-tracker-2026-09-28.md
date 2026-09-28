@@ -153,18 +153,20 @@
 | 5 | **Internal-document rules** chưa accepted | Phase 5 (line 158) | Trung bình |
 | 6 | **RBAC design** chưa quyết | Phase 5 blocked dependency | Trung bình |
 | 7 | **Production access** | Phase 6 (lines 172, 173 partial, 174) | Thấp (chờ blockers #1–6) |
+| 8 | **Self-hosted runner DB credentials** | CI Quality Gate pipeline fails 231/3964 tests (all DB-dependent) | Trung bình |
 
-### 9.1 CI/Deploy Infrastructure Reality (clarified 28/09/2026)
+### 9.1 CI/Deploy Infrastructure Reality (clarified 28/09/2026, updated with latest CI evidence)
 
 `deploy.yml` SUCCESS nghĩa là **build validation pass trên ephemeral GitHub runners**, KHÔNG phải app đã được deploy:
 
 | Thực tế | Chi tiết |
 |---------|---------|
 | **deploy.yml staging job** | checkout → npm ci → prisma migrate deploy → npm run build → emit receipt.json (dies with ephemeral runner). Không có SSH, docker push, container restart, platform API call, hoặc artifact upload. |
-| **Self-hosted runner CI** | DB credentials broken → integration tests fail trên self-hosted runner. Đây là vấn đề hạ tầng, không phải code. |
+| **Self-hosted runner CI** | DB credentials broken (`qcet_ci` auth fail) → 231/3964 tests fail. All failures are DB-dependent tests, not code regressions. Latest run (36380443946): 3717 pass, 231 fail, 16 skip. Prior run (36379833693): 3709 pass, 239 fail → +8 pass from signature adapter fix (`54a334bf`). |
 | **Production environment** | Chưa configured trong GitHub (404 khi truy cập environment settings). `eoffice.qcet.edu.vn` unreachable. |
 | **qcet.dixxie.store** | Returns 200 nhưng đây là **existing running app**, không phải evidence của deploy mới từ CI. |
 | **Actual deploy mechanism** | Manual `docker compose` trên host server — nằm ngoài CI pipeline. |
+| **Missing credentials/target** | (1) Self-hosted runner PostgreSQL password for `qcet_ci`; (2) GitHub production environment not configured; (3) No SSH/deploy target in any workflow; (4) ClamAV daemon not running on production host. |
 
 ---
 
