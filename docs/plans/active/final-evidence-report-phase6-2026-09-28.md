@@ -9,8 +9,18 @@
 |----------|---------|
 | **Tổng items** | 41 |
 | **Hoàn thành (✅)** | 36 |
-| **Bị chặn — ngoại nhân (⛔)** | 5 |
-| **In-progress / partial** | 0 |
+| **Bị chặn — ngoại nhân (⛔)** | 4 |
+| **Partially actionable (🟡)** | 1 |
+
+### 5 open checkboxes (per plan `checkpoint-all-phases-summary-2026-09-28.md`)
+
+| # | Item | Phase | Status |
+|---|------|-------|--------|
+| 1 | Digital signature provider | Phase 0 | ⛔ BLOCKED — CA vendor contract unavailable |
+| 2 | Digital signature integration | Phase 5 | ⛔ BLOCKED — depends on #1 |
+| 3 | Deploy pilot | Phase 6 | ⛔ BLOCKED — no SSH/production access |
+| 4 | Reconcile audit findings | Phase 6 | 🟡 PARTIAL — 36/41 actionable done; remainder pending deployed pilot |
+| 5 | Observation window + legacy retirement | Phase 6 | ⛔ BLOCKED — depends on deploy (#3) |
 
 ---
 
@@ -36,7 +46,7 @@ Date: 2026-09-28
 - **Total**: 5514
 - **Pass**: 5497
 - **Fail**: 0 ← **không có regression**
-- **Skip**: 17 (pre-existing DB-dependent, xác nhận trong codebase)
+- **Skip**: 17 — xác minh từ codebase: `t.skip('Legacy agent config not present')` × 9 (`agent-config.test.ts`, `agent-limits.test.ts`), `t.skip('Legacy ownership guard hook not present')` × 4 (`readonly-shell.test.ts`), `t.skip('settings.json not found / hook not present')` × 4 (`hook-portable.test.ts`). **Không phải DB-dependent.** Đây là tests cho legacy config artifacts không còn tồn tại sau Phase 5 cleanup.
 - **Cancelled**: 0
 
 ---
@@ -65,8 +75,8 @@ Uptime at probe:    3 days, 5h 28m 54s
 Pre-PR#131:         TRUE
 ```
 
-**Kết luận:** Production container bắt đầu chạy **3 ngày trước** khi PR #131 được merge.  
-Production hiện đang chạy code **trước Phase 1–6**. Cần manual deploy trên host.
+**Lưu ý quan trọng về container uptime:**  
+Uptime `278934s` (~3 ngày) cho thấy container process bắt đầu chạy vào khoảng **2026-09-25 08:22:46**, tức là **trước thời điểm PR #131 merge** (2026-09-28 13:28:12). Điều này **chứng minh container process predates merge**, nhưng **không chứng minh** image SHA cụ thể đang chạy hay code nào đang được deploy. Không có SSH access vào host, image SHA thực tế và version cụ thể không thể xác minh từ bên ngoài.
 
 ### Endpoint: `/api/health/ready`
 ```
@@ -122,7 +132,7 @@ uptime: 278785s (~3 days)
 | Dossier lifecycle | ✅ | `checkpoint-phase4-complete-2026-09-28.md` |
 | ClamAV TCP adapter | ✅ | `clamav-scanner.ts` (port 3310 internal Docker network) |
 | **Backfill (local)** | ✅ | 53/53 CLEAN locally; 17 legacy unsupported skipped; 0 infected |
-| **Backfill (production)** | ⛔ BLOCKED | ClamAV daemon on production host not confirmed; prod `APP_DATABASE_URL` not verified |
+| **Backfill (production)** | ⛔ BLOCKED | ClamAV daemon (`clamav:3310`) chỉ accessible từ Docker internal network — không thể verify từ ngoài host. Production DB credential: backfill script dùng `new PrismaClient()` → đọc biến `DATABASE_URL` từ shell env (không phải `APP_DATABASE_URL` trực tiếp; docker-compose map `APP_DATABASE_URL` → `DATABASE_URL` bên trong container, nhưng khi chạy script trực tiếp trên host cần `DATABASE_URL` trong shell). Không có SSH access để verify. |
 
 ### Phase 4 — Pilot screens and E2E workflows
 | Item | Status | Evidence |
@@ -151,7 +161,8 @@ uptime: 278785s (~3 days)
 | CI test suites | ✅ | Run 36428833453: 5497 pass, 0 fail; run 36428833487: build + migration gate pass |
 | Recovery docs / runbooks | ✅ | `recovery-paths.md`, `rollback.md`; 11 failure scenarios documented |
 | Correlation IDs operational | ✅ | `x-request-id` echoed middleware-wide |
-| **Deploy pilot** | ⛔ BLOCKED | No SSH/docker-remote/platform-API credentials. Deploy requires manual `docker compose pull && docker compose up -d` on `qcet.dixxie.store` host. Production container started 2026-09-25, predates PR #131 (2026-09-28). |
+| **Reconcile audit findings** | 🟡 PARTIAL | `canonical-findings-tracker-2026-09-28.md` ghi nhận các findings; 36/41 actionable items implemented. Phần còn lại blocked pending deployed pilot (không thể verify production behavior trước deploy). |
+| **Deploy pilot** | ⛔ BLOCKED | No SSH/docker-remote/platform-API credentials. `deploy.yml` là build/migration gate, không có SSH/push step. Manual deploy trên host: `docker compose build && docker compose up -d` (repo dùng local `build:` directive, không có registry image; `docker compose pull` chỉ áp dụng nếu có registry — chưa evidenced). Production container process started 2026-09-25, predates PR #131 merge (2026-09-28), nhưng image SHA thực tế không xác minh được từ ngoài host. |
 | **Observation window** | ⛔ BLOCKED | Dependent on deploy. Cannot collect pilot metrics until new container runs. |
 | **Legacy retirement** | ⛔ BLOCKED | Dependent on observation window. |
 
@@ -171,14 +182,14 @@ uptime: 278785s (~3 days)
   # Jobs: migrate → build → validate
   # NO: ssh, docker push, docker-compose, sftp
   ```
-- **Manual deploy pattern**: `docker compose pull && docker compose up -d` trên production host.
+- **Manual deploy pattern**: `docker compose build && docker compose up -d` trên production host. **Lý do**: `docker-compose.yml` khai báo `build: context: . dockerfile: Dockerfile` cho service `qcet-app` — đây là local build pattern. `docker compose pull` chỉ hoạt động nếu image đã tồn tại trong remote registry; không có registry push step nào được evidenced trong repo. Image name `qcet-eoffice-app:latest` là local tag.
 - **Unblocked by**: Owner cấp SSH key hoặc docker remote context cho production host `qcet.dixxie.store`.
 
 ### Blocker C — Production file-object backfill
-- **Lý do genuine**: ClamAV daemon trên production host chưa xác nhận; prod `APP_DATABASE_URL` (least-privilege role) chưa verify.
+- **Lý do genuine**: ClamAV daemon trên production host chưa xác nhận (`CLAMAV_HOST: clamav`, port `3310` — chỉ accessible trong Docker internal network). DB variable: backfill script (`scripts/backfill-file-objects.ts`) dùng `new PrismaClient()` → đọc `DATABASE_URL` từ shell env; không tham chiếu `APP_DATABASE_URL` trực tiếp. Trên production host, shell phải export `DATABASE_URL` (docker-compose map `APP_DATABASE_URL` → `DATABASE_URL` chỉ áp dụng bên trong container; script chạy trực tiếp cần `DATABASE_URL` trong shell env). Chưa có SSH access để verify.
 - **Local evidence**: 53/53 CLEAN (local worktree với dev database).
 - **Config**: `CLAMAV_HOST: clamav`, `CLAMAV_PORT: 3310` — chỉ accessible trong Docker internal network.
-- **Unblocked by**: (1) Xác nhận ClamAV container chạy trên host; (2) verify `APP_DATABASE_URL` prod; (3) sau deploy.
+- **Unblocked by**: (1) Xác nhận ClamAV container chạy trên host; (2) export `DATABASE_URL` (= production DB credential) trong shell trước khi chạy script; (3) sau deploy.
 
 ---
 
@@ -218,7 +229,7 @@ uptime: 278785s (~3 days)
 | 🔴 HIGH | Chọn CA vendor (VNPT SmartCA / Viettel CA) | Phase 0 + Phase 5 digital signature |
 | 🔴 HIGH | Cấp production SSH / docker remote context | Phase 6 deploy pilot |
 | 🔴 HIGH | Xác nhận ClamAV running trên production host | Phase 6 file-object backfill |
-| 🟡 MED | Cấp prod `APP_DATABASE_URL` least-privilege role | Phase 6 backfill safety |
+| 🟡 MED | Export `DATABASE_URL` (production DB credential) trong shell trước khi chạy backfill | Phase 6 backfill safety |
 | 🟡 MED | Sau deploy: chạy `backfill-file-objects.ts --apply` | Parity giữa local và prod |
 | 🟢 LOW | Monitor 30-day observation window | Legacy retirement |
 
