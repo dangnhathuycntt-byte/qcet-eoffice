@@ -242,4 +242,4 @@ uptime: 278785s (~3 days)
 **CI run (tests):** 36428833453 — ✅ 5497 pass, 0 fail  
 **CI run (build/migrations):** 36428833487 — ✅ SUCCESS  
 **Production health:** HTTP 200, DB latency 2ms, uptime 278934s  
-**Production container age:** 3 days 5h (pre-dates PR #131 by 23 min after merge)
+**Production container age:** ~3 days (container started 2026-09-25 08:22:46 ICT; predates PR #131 merge on 2026-09-28 13:28:12 by ~3 days — image SHA cannot be verified without production SSH access)

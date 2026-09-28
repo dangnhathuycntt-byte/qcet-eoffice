@@ -16,9 +16,9 @@
 | **3** | Dossier and file foundation | ✅ Complete | Backfill --apply chạy thành công; ClamAV verified nhưng files không tồn tại trong worktree |
 | **4** | Pilot screens and usable workflows | ✅ 7/7 Complete | Responsive, focus, touch validated |
 | **5** | Full system modules and integrations | 🟡 5/6 items [x] | 1 BLOCKED (digital signature provider) |
-| **6** | Release, observation, legacy retirement | 🟡 3/5 items [x] | 2 cần production access |
+| **6** | Release, observation, legacy retirement | 🟡 2/5 items [x] | 3 open: deploy blocked, reconcile pre-pilot only, observe blocked |
 
-**Tổng:** 36/41 items [x]. Năm checkbox còn mở: 1 Phase 0 (provider), 1 Phase 5 (digital sig), 3 Phase 6 (deploy + observe + legacy).
+**Tổng:** 36/41 items [x]. Năm checkbox còn mở: 1 Phase 0 (provider), 1 Phase 5 (digital sig), 3 Phase 6 (deploy + reconcile-full + observe/legacy).
 
 ---
 
@@ -179,15 +179,17 @@
 
 ---
 
-## 7. Ràng buộc hoạt động (vẫn hiệu lực)
+## 7. Ràng buộc hoạt động (historical — phiên phát triển chính)
 
-- ❌ `npm run build` / `next build`
-- ❌ Deploy production, thay đổi production DB
-- ❌ Commit/push/merge
-- ❌ `git reset/clean/revert`, xóa hàng loạt
-- ❌ `--apply` backfill cho đến khi ClamAV sẵn sàng
-- ❌ Tự ý Accept/Reject RFC-04/RFC-05
-- ❌ Giả lập lựa chọn nhà cung cấp
+> **Lưu ý:** Block này ghi nhận các ràng buộc của phiên phát triển chính (trước 2026-09-28). Các mục đã hoàn thành hoặc được unblock kể từ đó được đánh dấu rõ.
+
+- ❌ `npm run build` / `next build` — vẫn áp dụng (crash dev server)
+- ❌ Deploy production, thay đổi production DB — vẫn áp dụng (không có SSH/production access)
+- ✅ ~~Commit/push/merge~~ — đã hoàn thành: branch `feat/phase6-release-ci-verification` pushed; PR #131 merged main; PR #132 pending merge sau CI green
+- ❌ `git reset/clean/revert`, xóa hàng loạt — vẫn áp dụng
+- ✅ ~~`--apply` backfill cho đến khi ClamAV sẵn sàng~~ — đã hoàn thành: backfill 53/53 applied, ClamAV PONG verified (worktree)
+- ❌ Tự ý Accept/Reject RFC-04/RFC-05 — vẫn áp dụng
+- ❌ Giả lập lựa chọn nhà cung cấp — vẫn áp dụng
 
 ---
 
