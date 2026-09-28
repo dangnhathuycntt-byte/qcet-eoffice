@@ -215,18 +215,28 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
 
   // TC-08: Standardized system reference date & UTC midnight skew immunity
   test("TC-08: Standardized system reference date (2026-09-09) and UTC midnight skew immunity", () => {
-    const refDate = getSystemReferenceDate();
-    assert.equal(refDate, "2026-09-09");
+    const origRef = process.env.NEXT_PUBLIC_REFERENCE_DATE;
+    process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-09";
+    try {
+      const refDate = getSystemReferenceDate();
+      assert.equal(refDate, "2026-09-09");
 
-    // Task due on current day at 08:00 AM VN time must not be marked overdue
-    assert.equal(isTaskPastDue("2026-09-09T08:00:00+07:00", refDate), false);
-    assert.equal(isTaskPastDue("2026-09-09", refDate), false);
+      // Task due on current day at 08:00 AM VN time must not be marked overdue
+      assert.equal(isTaskPastDue("2026-09-09T08:00:00+07:00", refDate), false);
+      assert.equal(isTaskPastDue("2026-09-09", refDate), false);
 
-    // Task due yesterday is overdue
-    assert.equal(isTaskPastDue("2026-09-08", refDate), true);
+      // Task due yesterday is overdue
+      assert.equal(isTaskPastDue("2026-09-08", refDate), true);
 
-    // Task due tomorrow is not overdue
-    assert.equal(isTaskPastDue("2026-09-10", refDate), false);
+      // Task due tomorrow is not overdue
+      assert.equal(isTaskPastDue("2026-09-10", refDate), false);
+    } finally {
+      if (origRef === undefined) {
+        delete process.env.NEXT_PUBLIC_REFERENCE_DATE;
+      } else {
+        process.env.NEXT_PUBLIC_REFERENCE_DATE = origRef;
+      }
+    }
   });
 
   // TC-09: TypeScript Typecheck integrity and interface contracts
