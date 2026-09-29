@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
@@ -260,6 +261,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       onKeyDown={handleKeyDown}
       data-slot="mobile-task-card"
       data-task-id={task.id}
+      aria-label={`Nhiệm vụ ${formattedCode}: ${title}. Trạng thái ${statusConfig.label}`}
       className={cn(
         "group relative flex flex-col gap-2.5 rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs",
         "min-h-[48px] touch-manipulation cursor-pointer select-none",
@@ -270,14 +272,14 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       {/* Top Row: Task Code + Department / Context + Priority & Status badge */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md shrink-0">
+          <span className="font-mono text-xs font-bold text-foreground bg-muted/70 border border-border/70 px-2 py-0.5 rounded-md shrink-0">
             {formattedCode}
           </span>
-          <span className="text-xs font-semibold text-slate-700 truncate bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded-md">
+          <span className="text-xs font-semibold text-foreground/80 truncate bg-muted/50 border border-border/50 px-2 py-0.5 rounded-md">
             {departmentName}
           </span>
           {isSubTask && (flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle) && (
-            <span className="text-xs text-slate-500 truncate" title={flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}>
+            <span className="text-xs text-muted-foreground truncate" title={flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}>
               • {flattenedTask?.parentSchoolTaskTitle || flattenedTask?.parentTaskTitle}
             </span>
           )}
@@ -307,7 +309,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       </div>
 
       {/* Title */}
-      <h3 className="text-[14px] font-semibold text-slate-900 leading-snug line-clamp-2">
+      <h3 className="text-[14px] font-semibold text-foreground leading-snug line-clamp-2">
         {title}
       </h3>
 
@@ -324,8 +326,8 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       )}
 
       {/* Lead Assignee: Assignee name with avatar/dot */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
-        <span className="text-slate-500 shrink-0">Phụ trách:</span>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+        <span className="text-muted-foreground/80 shrink-0">Phụ trách:</span>
         <div className="flex items-center gap-1.5 min-w-0 truncate">
           <UserAvatar
             name={assigneeName}
@@ -333,7 +335,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
             size="xs"
             className="size-4.5"
           />
-          <span className="font-medium text-slate-800 truncate" title={assigneeName}>
+          <span className="font-medium text-foreground truncate" title={assigneeName}>
             {assigneeName}
           </span>
         </div>
@@ -362,27 +364,30 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         </div>
       </div>
 
-      {/* Bottom Row: Due date (Hạn 14/09) & days remaining / overdue badge */}
+      {/* Bottom Row: Due date (Hạn 14/09) & days remaining / overdue badge + Chevron */}
       <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formattedDueDate}
           </span>
           {isDueInMonth && (
-            <span className="hidden xs:inline-flex px-1.5 py-0.2 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+            <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20">
               Kỳ T{selectedAcademicMonth}
             </span>
           )}
         </div>
 
-        <span
-          className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono tabular-nums border shrink-0",
-            dueBadge.className
-          )}
-        >
-          {dueBadge.label}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className={cn(
+              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono tabular-nums border",
+              dueBadge.className
+            )}
+          >
+            {dueBadge.label}
+          </span>
+          <ChevronRight className="size-4 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" strokeWidth={1.5} />
+        </div>
       </div>
     </article>
   );

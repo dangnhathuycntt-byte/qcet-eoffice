@@ -68,8 +68,10 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
       data-slot="mobile-bottom-nav"
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 md:hidden",
-        "bg-card/95 backdrop-blur-lg border-t border-border/70 shadow-lg",
+        "bg-card/95 backdrop-blur-lg border-t border-border/70 shadow-xs",
         "pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
+        "pl-[max(0.5rem,env(safe-area-inset-left,0px))]",
+        "pr-[max(0.5rem,env(safe-area-inset-right,0px))]",
         className
       )}
     >
@@ -99,21 +101,26 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
               )}
             >
               <span className="relative flex flex-col items-center justify-center gap-1 w-full h-full">
-                <span className="relative inline-flex items-center justify-center">
+                <span
+                  className={cn(
+                    "relative inline-flex items-center justify-center px-3 py-1 rounded-full transition-colors duration-150",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground group-hover:bg-muted/40 group-hover:text-foreground"
+                  )}
+                >
                   <Icon
                     size={20}
-                    strokeWidth={isActive ? 2 : 1.5}
+                    strokeWidth={isActive ? 2.25 : 1.75}
                     className={cn(
                       "transition-transform duration-150",
-                      isActive
-                        ? "text-primary scale-105"
-                        : "text-muted-foreground group-hover:text-foreground"
+                      isActive ? "scale-105" : ""
                     )}
                   />
                   {numBadge > 0 && (
                     <span
                       aria-label={`${numBadge} mục chưa đọc`}
-                      className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-xs font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
+                      className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
                     >
                       {numBadge > 99 ? "99+" : numBadge}
                     </span>

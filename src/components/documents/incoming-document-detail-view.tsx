@@ -296,7 +296,7 @@ export function IncomingDocumentDetailView({
         animate="animate"
         exit="exit"
         transition={motionTransition}
-        className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 pb-24 md:pb-10 space-y-4"
+        className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 pb-6 md:pb-10 space-y-4"
       >
         {/* Back navigation */}
         <div className="flex items-center gap-2">

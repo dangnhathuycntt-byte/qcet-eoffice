@@ -3,7 +3,7 @@ import * as React from "react";
 export default function DashboardLoading() {
   return (
     <div
-      className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10 animate-pulse"
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-6 md:pb-10 animate-pulse"
       aria-label="Đang tải bảng điều hành..."
     >
       {/* Top Header Skeleton */}
