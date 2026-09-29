@@ -71,7 +71,8 @@ describe("DACUM AI Executive Review Assistant", () => {
         "Hoàn thành toàn bộ đề cương chi tiết, giáo trình 120 trang và biên bản nghiệm thu cấp khoa.",
     };
 
-    const review = screenDeliverablesWithAI(task, mockSchoolTask);
+    // Pin now to early September so schoolTask dueDate (2026-09-30) is not within 24h
+    const review = screenDeliverablesWithAI(task, mockSchoolTask, new Date("2026-09-01T00:00:00Z"));
     assert.equal(review.status, "CLEAN");
     assert.equal(review.suggestedAction, "QUICK_APPROVE");
     assert.ok(review.complianceScore >= 85);
