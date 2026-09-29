@@ -88,19 +88,23 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       });
     }
 
-    rectorUser = await prisma.user.findFirst({ where: { role: 'BAN_GIAM_HIEU' } });
-    if (!rectorUser) {
-      rectorUser = await prisma.user.create({
-        data: {
-          id: `rector-doc-test-${Date.now()}`,
-          email: `rector-doc-test-${Date.now()}@qncet.edu.vn`,
-          name: 'Rector Document Tester',
-          role: 'BAN_GIAM_HIEU',
-          title: 'Hiệu trưởng',
-        },
-      });
-      createdRectorUserId = rectorUser.id;
-    }
+    // Use upsert with a fixed email so we always get a user with the correct
+    // title ('Hiệu trưởng'), regardless of what other test suites may have left
+    // in the database with role BAN_GIAM_HIEU.
+    rectorUser = await prisma.user.upsert({
+      where: { email: 'rector-doc-test@qncet.edu.vn' },
+      create: {
+        email: 'rector-doc-test@qncet.edu.vn',
+        name: 'Rector Document Tester',
+        role: 'BAN_GIAM_HIEU',
+        title: 'Hiệu trưởng',
+      },
+      update: {
+        role: 'BAN_GIAM_HIEU',
+        title: 'Hiệu trưởng',
+      },
+    });
+    createdRectorUserId = rectorUser.id;
 
     managerUnitId = testDept1.id;
 
