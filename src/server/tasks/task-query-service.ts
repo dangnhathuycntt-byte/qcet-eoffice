@@ -142,9 +142,26 @@ const TASK_INCLUDE = {
   actors: {
     select: {
       userId: true,
+      unitId: true,
       role: true,
       isPrimaryDRI: true,
-      user: { select: { id: true, name: true, avatarUrl: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          positionAssignments: {
+            where: {
+              status: 'ACTIVE',
+              effectiveFrom: { lte: new Date() },
+              OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+            },
+            select: { unitId: true, effectiveTo: true, effectiveFrom: true },
+            orderBy: { effectiveFrom: 'desc' as const },
+            take: 1,
+          },
+        },
+      },
     },
   },
   deliverables: true,
