@@ -124,6 +124,11 @@ describe('Task 3.9 - 3.11: Optimistic Concurrency Control (OCC) & Aggregate Vers
     }
 
     if (testDept?.id) {
+      // Catch-all: onDelete: Restrict on PositionAssignment.unit prevents org unit deletion
+      // if any assignment still references it (e.g. not tracked in createdAssignmentIds)
+      await prisma.positionAssignment.deleteMany({
+        where: { unitId: testDept.id },
+      });
       await prisma.organizationalUnit.deleteMany({
         where: { id: testDept.id },
       });
