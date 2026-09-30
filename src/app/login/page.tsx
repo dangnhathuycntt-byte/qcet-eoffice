@@ -50,7 +50,8 @@ function LoginFormContent() {
   React.useEffect(() => {
     if (!isLoading && isAuthenticated && user && !isRedirectingRef.current) {
       isRedirectingRef.current = true;
-      router.replace(targetUrl);
+      const destination = !user.onboardedAt ? "/onboarding" : targetUrl;
+      router.replace(destination);
     }
   }, [isLoading, isAuthenticated, user, targetUrl, router]);
 

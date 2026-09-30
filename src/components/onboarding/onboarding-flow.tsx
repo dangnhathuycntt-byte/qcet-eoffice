@@ -32,12 +32,12 @@ export function OnboardingFlow() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const handleFinish = React.useCallback(() => {
-    // Record onboarding completed in localStorage or server if needed
+  const handleFinish = React.useCallback(async () => {
     try {
       localStorage.setItem("qcet_onboarding_completed", "true");
+      await fetch("/api/auth/onboarding", { method: "POST" });
     } catch {
-      // Ignore storage errors in private modes
+      // Ignore network/storage errors in private modes
     }
     router.replace("/tasks");
   }, [router]);
