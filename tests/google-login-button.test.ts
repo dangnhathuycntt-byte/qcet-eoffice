@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { GoogleIcon, GoogleLoginButton } from "../src/components/auth/google-login-button";
 
 describe("Issue #6: Google Login Button UI & Accessibility Invariants", () => {
-  test("renders button with default label 'Tiếp tục với Google' and correct styles", () => {
+  test("renders button with default label 'Đăng nhập bằng Google' and correct styles", () => {
     const html = renderToStaticMarkup(
       React.createElement(GoogleLoginButton, {
         returnTo: "/tasks",
@@ -13,12 +13,12 @@ describe("Issue #6: Google Login Button UI & Accessibility Invariants", () => {
     );
 
     // Label check
-    assert.ok(html.includes("Tiếp tục với Google"), "Button must contain 'Tiếp tục với Google' text");
+    assert.ok(html.includes("Đăng nhập bằng Google"), "Button must contain 'Đăng nhập bằng Google' text");
     // Accessibility label
-    assert.ok(html.includes('aria-label="Tiếp tục với Google"'), "Button must have aria-label");
+    assert.ok(html.includes('aria-label="Đăng nhập bằng Google"'), "Button must have aria-label");
     // Style classes check
-    assert.ok(html.includes("max-w-[360px]"), "Button must have max-w-[360px] width container");
-    assert.ok(html.includes("h-11"), "Button must have 44px (h-11) height");
+    assert.ok(html.includes("w-full"), "Button must have w-full width container");
+    assert.ok(html.includes("h-12"), "Button must have 48px (h-12) height");
     assert.ok(html.includes("type=\"button\""), "Button must be type='button'");
     assert.ok(!html.includes('disabled=""') && !html.includes('aria-busy="true"'), "Button must be enabled and not busy by default");
   });

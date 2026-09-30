@@ -3,8 +3,6 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import * as m from "motion/react-m";
-import { AlertCircle, X } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
@@ -14,33 +12,19 @@ import {
   shouldShowLoginSkeleton,
 } from "@/lib/login-helpers";
 
+const loginPageClass = "flex min-h-[100dvh] w-full items-center justify-center bg-card sm:bg-background px-6 py-10 outline-none relative overflow-hidden";
+const loginCardClass = "flex w-full max-w-[420px] flex-col items-center rounded-[24px] bg-card px-0 pt-6 pb-8 sm:px-10 sm:pt-11 sm:pb-8 sm:shadow-[0_0_0_1px_#EAEDF1,0_16px_48px_rgba(26,29,35,0.08)] text-center relative z-10";
+
 function LoginSkeleton() {
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      role="main"
-      aria-label="Đang tải trang đăng nhập"
-      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 sm:pb-20 outline-none"
-    >
-      <div className="flex w-full max-w-[360px] flex-col items-center text-center">
-        {/* Logo skeleton */}
-        <div className="size-11 sm:size-12 rounded-full bg-muted animate-pulse select-none" />
-
-        {/* Title skeleton */}
-        <div className="mt-4 h-7 w-48 rounded-md bg-muted animate-pulse" />
-
-        {/* Description skeleton */}
-        <div className="mt-1.5 h-4 w-60 rounded bg-muted/70 animate-pulse" />
-
-        {/* Google button skeleton */}
-        <div className="mt-6 h-11 w-full rounded-lg bg-muted animate-pulse" />
-
-        {/* Eligibility condition skeleton */}
-        <div className="mt-4 h-4 w-52 rounded bg-muted/50 animate-pulse" />
-
-        {/* Support link skeleton */}
-        <div className="mt-6 h-3.5 w-32 rounded bg-muted/40 animate-pulse" />
+    <main id="main-content" tabIndex={-1} aria-label="Đang tải trang đăng nhập" aria-busy="true" className={loginPageClass}>
+      <div className={loginCardClass}>
+        <div className="size-16 rounded-full bg-muted" />
+        <div className="mt-[22px] h-8 w-40 rounded bg-muted" />
+        <div className="mt-2 h-5 w-full rounded bg-muted" />
+        <div className="mt-7 h-12 w-full rounded-[14px] bg-muted" />
+        <div className="mt-3 min-h-11 w-full" />
+        <div className="h-4 w-40 rounded bg-muted" />
       </div>
     </main>
   );
@@ -88,17 +72,10 @@ function LoginFormContent() {
   // OAuth Error handling from URL query parameters
   const errorParam = searchParams.get("error");
   const emailParam = searchParams.get("email");
-  const [dismissedOAuthError, setDismissedOAuthError] = React.useState(false);
 
   const oauthError = React.useMemo(() => {
     return resolveOAuthError(errorParam, emailParam);
   }, [errorParam, emailParam]);
-
-  React.useEffect(() => {
-    if (errorParam) {
-      setDismissedOAuthError(false);
-    }
-  }, [errorParam]);
 
   const handleError = React.useCallback((msg: string) => {
     setErrorMessage(msg);
@@ -113,134 +90,59 @@ function LoginFormContent() {
     return <LoginSkeleton />;
   }
 
+  const visibleOAuthError = oauthError;
+  const designNotices: Record<string, { message: string; action?: string }> = {
+    domain_not_allowed: { message: "Tài khoản này không thuộc @cdktcnqn.edu.vn.", action: "Chọn tài khoản khác" },
+    account_not_found: { message: "Tài khoản chưa được cấp quyền.", action: "Liên hệ hỗ trợ" },
+    session_expired: { message: "Phiên đã hết hạn.", action: "Đăng nhập lại" },
+    oauth_cancelled: { message: "Bạn đã hủy đăng nhập." },
+    server_error: { message: "Không kết nối được Google.", action: "Thử lại" },
+  };
+  const designNotice = visibleOAuthError ? designNotices[visibleOAuthError.code] : undefined;
+  const notice = errorMessage ? "Không kết nối được Google." : designNotice?.message || visibleOAuthError?.message;
+  const actionText = errorMessage ? "Thử lại" : designNotice ? designNotice.action : visibleOAuthError?.actionText || "Liên hệ hỗ trợ";
+
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      role="main"
-      aria-label="Trang đăng nhập QCET Work"
-      className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background px-6 py-12 sm:pb-20 selection:bg-primary/15 selection:text-primary outline-none"
-    >
-      <m.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="flex w-full max-w-[360px] flex-col items-center text-center"
-      >
-        {/* 1. Logo QCET: 44-48px */}
-        <Image
-          src="/logo-qcet.png"
-          alt="Logo QCET"
-          width={48}
-          height={48}
-          priority
-          className="size-11 sm:size-12 object-contain select-none"
-        />
-
-        {/* 2. Tiêu đề ứng dụng */}
-        <h1 className="mt-4 font-heading text-2xl font-semibold tracking-[-0.02em] text-foreground">
-          Đăng nhập QCET Work
-        </h1>
-
-        {/* 3. Mô tả ngắn */}
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Sử dụng tài khoản Google của nhà trường.
-        </p>
-
-        {/* OAuth Error / Warning Notice */}
-        {oauthError && !dismissedOAuthError && (
-          <m.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            role="alert"
-            className={`mt-5 flex w-full items-start gap-2.5 rounded-lg border p-3 text-left text-xs ${
-              oauthError.variant === "amber"
-                ? "border-amber-500/25 bg-amber-500/[0.06] text-amber-900"
-                : oauthError.variant === "neutral"
-                ? "border-border bg-muted/50 text-muted-foreground"
-                : "border-destructive/25 bg-destructive/[0.06] text-destructive"
-            }`}
-          >
-            <AlertCircle
-              className={`mt-0.5 size-4 shrink-0 ${
-                oauthError.variant === "amber"
-                  ? "text-amber-600"
-                  : oauthError.variant === "neutral"
-                  ? "text-muted-foreground"
-                  : "text-destructive"
-              }`}
-              strokeWidth={1.5}
-            />
-            <div className="flex-1 space-y-1">
-              <p className="font-semibold text-xs leading-none">{oauthError.title}</p>
-              <p className="text-[11.5px] leading-relaxed opacity-90">{oauthError.message}</p>
-              {oauthError.actionText && oauthError.actionHref && (
-                <div className="pt-1">
-                  <a
-                    href={oauthError.actionHref}
-                    className="inline-flex items-center text-[11.5px] font-medium underline underline-offset-2 transition-opacity hover:opacity-80"
-                  >
-                    {oauthError.actionText}
-                  </a>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setDismissedOAuthError(true)}
-              className="shrink-0 rounded-xs p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
-              aria-label="Đóng thông báo"
-            >
-              <X className="size-3.5" strokeWidth={1.5} />
-            </button>
-          </m.div>
-        )}
-
-        {/* Runtime Error Notice */}
-        {errorMessage && (
-          <m.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            role="alert"
-            className="mt-5 flex w-full items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive/[0.06] p-3 text-left text-xs text-destructive"
-          >
-            <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" strokeWidth={1.5} />
-            <p className="flex-1 text-[11.5px] leading-relaxed">{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => setErrorMessage(null)}
-              className="shrink-0 rounded-xs p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
-              aria-label="Đóng thông báo lỗi"
-            >
-              <X className="size-3.5" strokeWidth={1.5} />
-            </button>
-          </m.div>
-        )}
-
-        {/* 4. Nút Google Đăng nhập */}
-        <div className="mt-6 w-full">
-          <GoogleLoginButton
-            returnTo={targetUrl}
-            onError={handleError}
-            onSuccess={handleSuccess}
-          />
+    <main id="main-content" tabIndex={-1} aria-label="Trang đăng nhập QCET Work" className={loginPageClass}>
+      <div className={loginCardClass}>
+        <Image src="/design/login-logo.png" alt="Logo QCET" width={64} height={64} priority className="size-16 rounded-full object-contain select-none" />
+        <h1 className="mt-[22px] text-2xl tracking-[-0.012em] font-semibold text-foreground">Đăng nhập</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Dùng tài khoản Google của nhà trường</p>
+        <div className="mt-7 w-full">
+          <GoogleLoginButton returnTo={targetUrl} onError={handleError} onSuccess={handleSuccess} />
         </div>
+        <div className="mt-3 min-h-11 w-full text-sm" aria-live="polite" aria-atomic="true">
+          {notice ? (
+            <p role={visibleOAuthError?.variant === "neutral" && !errorMessage ? "status" : "alert"} className={visibleOAuthError?.variant === "neutral" && !errorMessage ? "leading-[1.55] text-muted-foreground" : "leading-[1.55] text-destructive"}>
+              {notice}
+              {actionText && <> {" "}<a href={visibleOAuthError?.actionHref || (errorMessage || visibleOAuthError?.code === "server_error" ? "/login?startGoogle=1" : "mailto:support@cdktcnqn.edu.vn")} className="rounded-sm underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{actionText}</a></>}
+            </p>
+          ) : <p className="pt-1 text-muted-foreground">@cdktcnqn.edu.vn</p>}
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">QCET Work chỉ nhận tên và email của bạn.</p>
 
-        {/* 5. Điều kiện đăng nhập */}
-        <p className="mt-4 text-center text-xs sm:text-[13px] leading-relaxed text-muted-foreground/80 max-w-[320px]">
-          Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền.
-        </p>
+      </div>
 
-        {/* 6. Hỗ trợ sự cố */}
+      {/* Tranh khuôn viên ở đáy màn hình (desktop/tablet từ 600px) */}
+      <Image
+        src="/design/campus-illustration.webp"
+        alt=""
+        width={1440}
+        height={444}
+        priority
+        className="pointer-events-none absolute left-0 bottom-[30px] w-full hidden sm:block select-none z-0"
+      />
+
+      {/* Góc phải dưới: Liên hệ hỗ trợ */}
+      <div className="absolute right-8 bottom-7 hidden sm:block text-[13px] text-[#5F6671] z-10">
+        Gặp sự cố?{" "}
         <a
-          href="mailto:support@cdktcnqn.edu.vn"
-          className="mt-6 rounded-xs text-xs sm:text-[13px] text-muted-foreground/80 transition-colors hover:text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 py-1 px-2"
+          href="mailto:hotro@cdktcnqn.edu.vn"
+          className="text-[#1A1D23] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Gặp sự cố? Liên hệ hỗ trợ
+          hotro@cdktcnqn.edu.vn
         </a>
-      </m.div>
+      </div>
     </main>
   );
 }

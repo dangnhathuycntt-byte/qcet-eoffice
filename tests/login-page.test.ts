@@ -34,10 +34,10 @@ describe("Issue #6: Single Centered Column Architecture & Institutional Copy Ver
     );
   });
 
-  test("uses centered container with max-w-[360px]", () => {
+  test("uses centered container with max-w-[420px]", () => {
     assert.ok(
-      loginPageSource.includes("max-w-[360px]"),
-      "src/app/login/page.tsx must have max-w-[360px] centered container"
+      loginPageSource.includes("max-w-[420px]"),
+      "src/app/login/page.tsx must have max-w-[420px] centered container"
     );
     assert.ok(
       loginPageSource.includes("flex-col items-center"),
@@ -48,23 +48,24 @@ describe("Issue #6: Single Centered Column Architecture & Institutional Copy Ver
   test("contains standard institutional Vietnamese labels and copy", () => {
     // Heading
     assert.ok(
-      loginPageSource.includes("Đăng nhập QCET Work"),
+      loginPageSource.includes(">Đăng nhập</h1>"),
       "Must contain 'Đăng nhập QCET Work' heading"
     );
     // Subheading
     assert.ok(
-      loginPageSource.includes("Sử dụng tài khoản Google của nhà trường."),
-      "Must contain 'Sử dụng tài khoản Google của nhà trường.' subheading"
+      loginPageSource.includes("Dùng tài khoản Google của nhà trường"),
+      "Must contain 'Dùng tài khoản Google của nhà trường' subheading"
     );
     // Role condition note
     assert.ok(
-      loginPageSource.includes("Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền."),
-      "Must contain 'Dành cho tài khoản @cdktcnqn.edu.vn đã được cấp quyền.' copy"
+      loginPageSource.includes("QCET Work chỉ nhận tên và email của bạn.") ||
+        loginPageSource.includes("QCET Work nhận tên, email và ảnh đại diện của bạn."),
+      "Must contain 'QCET Work chỉ nhận tên và email của bạn.' copy"
     );
     // Support link & email
     assert.ok(
-      loginPageSource.includes("Gặp sự cố? Liên hệ hỗ trợ"),
-      "Must contain 'Gặp sự cố? Liên hệ hỗ trợ' text"
+      loginPageSource.includes("Liên hệ hỗ trợ"),
+      "Must contain 'Liên hệ hỗ trợ' text"
     );
     assert.ok(
       loginPageSource.includes("mailto:support@cdktcnqn.edu.vn"),
@@ -72,15 +73,19 @@ describe("Issue #6: Single Centered Column Architecture & Institutional Copy Ver
     );
   });
 
-  test("includes dismiss buttons for OAuth and runtime error notices", () => {
-    assert.ok(
-      loginPageSource.includes('aria-label="Đóng thông báo"'),
-      "OAuth notice must have dismiss button with accessible label"
-    );
-    assert.ok(
-      loginPageSource.includes('aria-label="Đóng thông báo lỗi"'),
-      "Runtime error notice must have dismiss button with accessible label"
-    );
+  test("uses the original embedded design logo without re-encoding", () => {
+    const crypto = require("node:crypto");
+    const logo = fs.readFileSync(path.resolve(process.cwd(), "public/design/login-logo.png"));
+    assert.equal(crypto.createHash("sha256").update(logo).digest("hex"), "27350e6ef02b6c366dd0b10ea5018b68d2aca356d8eb18de35f8efd98589f537");
+    assert.ok(loginPageSource.includes('/design/login-logo.png'));
+  });
+
+  test("places accessible notices below Google sign-in with a recovery action", () => {
+    assert.ok(loginPageSource.includes('aria-live="polite"'));
+    assert.ok(loginPageSource.includes('min-h-11'));
+    assert.ok(loginPageSource.includes('"alert"'));
+    assert.ok(loginPageSource.includes('Thử lại'));
+    assert.ok(loginPageSource.indexOf('<GoogleLoginButton') < loginPageSource.indexOf('{notice ?'));
   });
 });
 

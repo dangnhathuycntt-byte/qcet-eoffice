@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { signIn } from "next-auth/react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Official Google Multi-Color SVG Icon
@@ -15,19 +14,19 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
       aria-hidden="true"
     >
       <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        d="M22.5 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2.1-1.9 3.3-4.7 3.3-8z"
         fill="#4285F4"
       />
       <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        d="M12 23c3 0 5.4-1 7.2-2.7l-3.5-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6-4.5H2.4v2.800A11 11 0 0 0 12 23z"
         fill="#34A853"
       />
       <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+        d="M6 14.100a6.600 6.600 0 0 1 0-4.200V7.100H2.400a11 11 0 0 0 0 9.800z"
         fill="#FBBC05"
       />
       <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+        d="M12 5.400c1.600 0 3 .6 4.100 1.600l3.100-3.100A11 11 0 0 0 2.400 7.100L6 9.900c.8-2.600 3.200-4.500 6-4.500z"
         fill="#EA4335"
       />
     </svg>
@@ -48,9 +47,11 @@ export function GoogleLoginButton({
   onSuccess,
 }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
+  const isStartingRef = React.useRef(false);
 
   const handleStartOAuth = async () => {
-    if (isLoading) return;
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
     setIsLoading(true);
     try {
       const target = returnTo && returnTo !== "/login" && returnTo !== "/" ? returnTo : "/tasks";
@@ -59,6 +60,7 @@ export function GoogleLoginButton({
         onSuccess(result.url);
       }
     } catch {
+      isStartingRef.current = false;
       setIsLoading(false);
       onError?.("Không thể kết nối đến máy chủ xác thực");
     }
@@ -70,19 +72,19 @@ export function GoogleLoginButton({
         type="button"
         disabled={isLoading}
         onClick={handleStartOAuth}
-        aria-label={isLoading ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
+        aria-label={isLoading ? "Đang chuyển sang Google…" : "Đăng nhập bằng Google"}
         aria-busy={isLoading}
-        className="flex h-11 w-full max-w-[360px] items-center justify-center gap-3 rounded-lg border border-border/80 bg-background px-4 text-sm font-medium text-foreground shadow-2xs hover:bg-muted hover:border-border active:bg-muted active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-border)] bg-[var(--google-background)] px-4 text-sm font-medium text-[var(--google-foreground)] hover:bg-[var(--google-hover)] active:bg-[var(--google-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--google-focus)] focus-visible:ring-offset-[3px] cursor-pointer disabled:cursor-not-allowed transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none"
       >
         {isLoading ? (
           <span role="status" className="inline-flex items-center gap-2.5">
-            <Loader2 className="size-4 animate-spin text-primary" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground tracking-[-0.01em]">Đang chuyển hướng...</span>
+            <svg className="size-5 animate-spin text-current" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" style={{ strokeWidth: 2.2 }} opacity="0.24" /><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" style={{ strokeWidth: 2.2 }} strokeLinecap="round" /></svg>
+            <span className="text-sm font-medium text-current">Đang chuyển sang Google…</span>
           </span>
         ) : (
           <>
-            <GoogleIcon className="size-4.5 shrink-0" />
-            <span className="text-sm font-medium text-foreground tracking-[-0.01em]">Tiếp tục với Google</span>
+            <GoogleIcon className="size-5 shrink-0" />
+            <span className="text-sm font-medium text-current">Đăng nhập bằng Google</span>
           </>
         )}
       </button>
