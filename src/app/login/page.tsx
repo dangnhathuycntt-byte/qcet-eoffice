@@ -12,8 +12,8 @@ import {
   shouldShowLoginSkeleton,
 } from "@/lib/login-helpers";
 
-const loginPageClass = "flex min-h-[100dvh] w-full items-center justify-center bg-card sm:bg-background px-6 py-10 outline-none relative overflow-hidden";
-const loginCardClass = "flex w-full max-w-[420px] flex-col items-center rounded-[24px] bg-card px-0 pt-6 pb-8 sm:px-10 sm:pt-11 sm:pb-8 sm:shadow-[0_0_0_1px_#EAEDF1,0_16px_48px_rgba(26,29,35,0.08)] text-center relative z-10";
+const loginPageClass = "flex min-h-[100dvh] w-full items-center justify-center bg-white px-6 py-10 outline-none relative overflow-hidden";
+const loginCardClass = "flex w-full max-w-[420px] flex-col items-center rounded-[24px] bg-white px-0 pt-6 pb-8 sm:px-10 sm:pt-11 sm:pb-8 sm:shadow-[0_0_0_1px_#EAEDF1,0_16px_48px_rgba(26,29,35,0.08)] text-center relative z-10";
 
 function LoginSkeleton() {
   return (
