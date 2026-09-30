@@ -38,12 +38,12 @@ describe("QCET Design System Smoke Test Suite", () => {
     });
   });
 
-  describe("QCET Design System Tokens (Light & Dark OKLCH)", () => {
-    it("defines clean OKLCH canvas and card background tokens", () => {
-      assert.equal(QCET_TOKENS.colors.light.appBg, "oklch(0.985 0.003 250)");
-      assert.equal(QCET_TOKENS.colors.light.cardBg, "oklch(1 0 0)");
-      assert.equal(QCET_TOKENS.colors.light.border, "oklch(0.915 0.006 250)");
-      assert.equal(QCET_TOKENS.colors.light.textPrimary, "oklch(0.145 0.015 250)");
+  describe("QCET Design System Tokens (Light-only semantic tokens)", () => {
+    it("defines semantic canvas and card background tokens", () => {
+      assert.equal(QCET_TOKENS.colors.light.appBg, "var(--background)");
+      assert.equal(QCET_TOKENS.colors.light.cardBg, "var(--card)");
+      assert.equal(QCET_TOKENS.colors.light.border, "var(--border)");
+      assert.equal(QCET_TOKENS.colors.light.textPrimary, "var(--foreground)");
 
       assert.equal(QCET_TOKENS.colors.dark.appBg, QCET_TOKENS.colors.light.appBg);
       assert.equal(QCET_TOKENS.colors.dark.cardBg, QCET_TOKENS.colors.light.cardBg);
@@ -51,9 +51,9 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(QCET_TOKENS.colors.dark.textPrimary, QCET_TOKENS.colors.light.textPrimary);
     });
 
-    it("defines QCET signature Sapphire Blue primary action color", () => {
-      assert.equal(QCET_TOKENS.colors.light.primary, "oklch(0.42 0.18 250)");
-      assert.equal(QCET_TOKENS.colors.light.accentPrimary, "#2563EB");
+    it("defines neutral primary action token", () => {
+      assert.equal(QCET_TOKENS.colors.light.primary, "var(--primary)");
+      assert.equal(QCET_TOKENS.colors.light.accentPrimary, "var(--primary)");
       assert.equal(QCET_TOKENS.colors.dark.primary, QCET_TOKENS.colors.light.primary);
     });
 
@@ -105,16 +105,16 @@ describe("QCET Design System Smoke Test Suite", () => {
       });
     });
 
-    it("defines 0.75rem (12px) card radius and 0.5rem (8px) control radius", () => {
-      assert.equal(QCET_TOKENS.radius.card, "0.75rem"); // 12px
-      assert.equal(QCET_TOKENS.radius.control, "0.5rem"); // 8px
+    it("defines 16px panel radius and 12px control radius", () => {
+      assert.equal(QCET_TOKENS.radius.card, "1rem"); // 16px
+      assert.equal(QCET_TOKENS.radius.control, "0.75rem"); // 12px
     });
 
     it("defines shadow token utilities for card, hover, premium, and glow", () => {
-      assert.equal(QCET_TOKENS.shadows.card, "shadow-card");
-      assert.equal(QCET_TOKENS.shadows.cardHover, "shadow-card-hover");
-      assert.equal(QCET_TOKENS.shadows.premium, "shadow-premium");
-      assert.equal(QCET_TOKENS.shadows.glowPrimary, "shadow-glow-primary");
+      assert.equal(QCET_TOKENS.shadows.card, "shadow-none");
+      assert.equal(QCET_TOKENS.shadows.cardHover, "shadow-none");
+      assert.equal(QCET_TOKENS.shadows.premium, "shadow-none");
+      assert.equal(QCET_TOKENS.shadows.glowPrimary, "shadow-none");
     });
 
     it("provides backward-compatible aliases for tokens", () => {
@@ -139,56 +139,56 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.ok(defaultButton.includes("text-primary-foreground"));
 
       const outlineButton = buttonVariants({ variant: "outline" });
-      assert.ok(outlineButton.includes("border-border"));
-      assert.ok(outlineButton.includes("bg-card"));
+      assert.ok(outlineButton.includes("border-0"));
+      assert.ok(outlineButton.includes("bg-secondary"));
 
       const premiumButton = buttonVariants({ variant: "premium" });
-      assert.ok(premiumButton.includes("bg-gradient-to-r"));
-      assert.ok(premiumButton.includes("shadow-card"));
+      assert.ok(premiumButton.includes("bg-primary"));
+      assert.ok(!premiumButton.includes("bg-gradient-to-r"));
 
       const iconSmButton = buttonVariants({ size: "icon-sm" });
-      assert.ok(iconSmButton.includes("size-8"));
+      assert.ok(iconSmButton.includes("sm:size-7"));
     });
 
     it("badgeVariants generates proper status variants with no dark classes", () => {
       const defaultBadge = badgeVariants({ variant: "default" });
-      assert.ok(defaultBadge.includes("rounded-md"));
+      assert.ok(defaultBadge.includes("rounded-sm"));
 
       const successBadge = badgeVariants({ variant: "success" });
-      assert.ok(successBadge.includes("bg-emerald-50"));
+      assert.ok(successBadge.includes("bg-secondary"));
       assert.ok(!successBadge.includes("dark:"), "success badge must not contain dark: classes");
 
       const progressBadge = badgeVariants({ variant: "progress" });
-      assert.ok(progressBadge.includes("bg-blue-50"));
+      assert.ok(progressBadge.includes("bg-secondary"));
       assert.ok(!progressBadge.includes("dark:"), "progress badge must not contain dark: classes");
 
       const warningBadge = badgeVariants({ variant: "warning" });
-      assert.ok(warningBadge.includes("bg-amber-50"));
+      assert.ok(warningBadge.includes("bg-secondary"));
       assert.ok(!warningBadge.includes("dark:"), "warning badge must not contain dark: classes");
 
       const sapphireBadge = badgeVariants({ variant: "sapphire" });
-      assert.ok(sapphireBadge.includes("bg-blue-500/10"));
-      assert.ok(sapphireBadge.includes("text-blue-600"));
+      assert.ok(sapphireBadge.includes("bg-secondary"));
+      assert.ok(sapphireBadge.includes("text-foreground"));
       assert.ok(!sapphireBadge.includes("dark:"), "sapphire badge must not contain dark: classes");
 
       const emeraldBadge = badgeVariants({ variant: "emerald" });
-      assert.ok(emeraldBadge.includes("bg-emerald-500/10"));
-      assert.ok(emeraldBadge.includes("text-emerald-600"));
+      assert.ok(emeraldBadge.includes("bg-secondary"));
+      assert.ok(emeraldBadge.includes("text-foreground"));
       assert.ok(!emeraldBadge.includes("dark:"), "emerald badge must not contain dark: classes");
 
       const amberBadge = badgeVariants({ variant: "amber" });
-      assert.ok(amberBadge.includes("bg-amber-500/10"));
-      assert.ok(amberBadge.includes("text-amber-600"));
+      assert.ok(amberBadge.includes("bg-secondary"));
+      assert.ok(amberBadge.includes("text-foreground"));
       assert.ok(!amberBadge.includes("dark:"), "amber badge must not contain dark: classes");
 
       const roseBadge = badgeVariants({ variant: "rose" });
-      assert.ok(roseBadge.includes("bg-rose-500/10"));
-      assert.ok(roseBadge.includes("text-rose-600"));
+      assert.ok(roseBadge.includes("bg-secondary"));
+      assert.ok(roseBadge.includes("text-foreground"));
       assert.ok(!roseBadge.includes("dark:"), "rose badge must not contain dark: classes");
 
       const violetBadge = badgeVariants({ variant: "violet" });
-      assert.ok(violetBadge.includes("bg-violet-500/10"));
-      assert.ok(violetBadge.includes("text-violet-600"));
+      assert.ok(violetBadge.includes("bg-secondary"));
+      assert.ok(violetBadge.includes("text-foreground"));
       assert.ok(!violetBadge.includes("dark:"), "violet badge must not contain dark: classes");
     });
 

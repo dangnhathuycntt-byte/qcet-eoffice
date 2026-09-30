@@ -1,19 +1,31 @@
 import type { UserRole } from "@/types/auth";
 
+// Global CSS owns the palette; JS consumers resolve the same semantic tokens.
 const LIGHT_COLORS = {
-  appBg: "oklch(0.985 0.003 250)",
-  cardBg: "oklch(1 0 0)",
-  sidebarBg: "oklch(0.985 0 0)",
-  hoverBg: "oklch(0.965 0.005 250)",
-  border: "oklch(0.915 0.006 250)",
-  borderHover: "oklch(0.85 0.01 250)",
-  textPrimary: "oklch(0.145 0.015 250)",
-  textSecondary: "oklch(0.48 0.015 250)",
-  textMuted: "oklch(0.65 0.015 250)",
-  accentPrimary: "#2563EB",
-  accentForeground: "oklch(0.985 0 0)",
-  primary: "oklch(0.42 0.18 250)",
-  primaryHex: "#2563EB",
+  appBg: "var(--background)",
+  cardBg: "var(--card)",
+  sidebarBg: "var(--sidebar)",
+  controlBg: "var(--secondary)",
+  hoverBg: "var(--accent)",
+  selectedBg: "var(--selected)",
+  border: "var(--border)",
+  borderHover: "var(--selected)",
+  textPrimary: "var(--foreground)",
+  textSecondary: "var(--muted-foreground)",
+  textMuted: "var(--muted-foreground)",
+  accentPrimary: "var(--primary)",
+  accentForeground: "var(--primary-foreground)",
+  primary: "var(--primary)",
+  primaryHex: "#25282F",
+  action: "var(--primary)",
+  actionHover: "var(--primary-hover)",
+  onAction: "var(--on-action)",
+  danger: "var(--destructive)",
+  dangerBg: "var(--danger-soft)",
+  brand: "var(--brand)",
+  brandAccent: "var(--brand-accent)",
+  iconAccent: "var(--icon-accent)",
+  overlay: "var(--overlay)",
 } as const;
 
 export const QCET_TOKENS = {
@@ -74,16 +86,16 @@ export const QCET_TOKENS = {
     },
   },
   radius: {
-    card: "0.75rem",    // 12px (rounded-xl)
-    control: "0.5rem",  // 8px (rounded-lg)
-    sm: "0.375rem",     // 6px
+    card: "1rem",       // 16px (rounded-xl)
+    control: "0.75rem", // 12px (rounded-lg)
+    sm: "0.5rem",       // 8px
     full: "9999px",
   },
   shadows: {
-    card: "shadow-card",
-    cardHover: "shadow-card-hover",
-    premium: "shadow-premium",
-    glowPrimary: "shadow-glow-primary",
+    card: "shadow-none",
+    cardHover: "shadow-none",
+    premium: "shadow-none",
+    glowPrimary: "shadow-none",
   },
   typography: {
     fontSans: "var(--font-sans), 'Be Vietnam Pro', system-ui, sans-serif",
@@ -100,9 +112,9 @@ const LIGHT_DESIGN_TOKENS = {
   foreground: QCET_TOKENS.colors.light.textPrimary,
   primary: QCET_TOKENS.colors.light.accentPrimary,
   primaryForeground: QCET_TOKENS.colors.light.accentForeground,
-  secondary: QCET_TOKENS.colors.light.hoverBg,
+  secondary: QCET_TOKENS.colors.light.controlBg,
   secondaryForeground: QCET_TOKENS.colors.light.textPrimary,
-  muted: QCET_TOKENS.colors.light.hoverBg,
+  muted: QCET_TOKENS.colors.light.controlBg,
   mutedForeground: QCET_TOKENS.colors.light.textSecondary,
   accent: QCET_TOKENS.colors.light.hoverBg,
   accentForeground: QCET_TOKENS.colors.light.textPrimary,
@@ -110,8 +122,8 @@ const LIGHT_DESIGN_TOKENS = {
   cardForeground: QCET_TOKENS.colors.light.textPrimary,
   border: QCET_TOKENS.colors.light.border,
   input: QCET_TOKENS.colors.light.border,
-  ring: QCET_TOKENS.colors.light.accentPrimary,
-  destructive: "oklch(0.577 0.245 27.325)",
+  ring: "var(--ring)",
+  destructive: "var(--destructive)",
 } as const;
 
 export const DESIGN_TOKENS = {

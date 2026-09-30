@@ -5,6 +5,39 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-gray-1: var(--gray-1);
+  --color-gray-2: var(--gray-2);
+  --color-gray-3: var(--gray-3);
+  --color-gray-4: var(--gray-4);
+  --color-gray-5: var(--gray-5);
+  --color-gray-6: var(--gray-6);
+  --color-gray-7: var(--gray-7);
+  --color-gray-8: var(--gray-8);
+  --color-gray-9: var(--gray-9);
+  --color-gray-10: var(--gray-10);
+  --color-gray-11: var(--gray-11);
+  --color-gray-12: var(--gray-12);
+  --color-selected: var(--selected);
+  --color-primary-hover: var(--primary-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-mark: var(--gray-6);
+  --color-disabled: var(--gray-8);
+  --color-brand: var(--brand);
+  --color-brand-accent: var(--brand-accent);
+  --color-icon-accent: var(--icon-accent);
+  --color-overlay: var(--overlay);
+  --color-bg-app: var(--gray-1);
+  --color-bg-panel: var(--gray-2);
+  --color-bg-control: var(--gray-3);
+  --color-bg-hover: var(--gray-4);
+  --color-bg-selected: var(--gray-5);
+  --color-action: var(--gray-9);
+  --color-action-hover: var(--gray-10);
+  --color-on-action: #FAFAFA;
+  --color-text-primary: var(--gray-12);
+  --color-text-secondary: var(--gray-11);
+  --color-feedback-danger: #B91C1C;
+  --color-feedback-danger-bg: #FBEDED;
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -41,8 +74,8 @@
   --shadow-subtle: var(--shadow-subtle);
   --shadow-card: var(--shadow-card);
   --shadow-dropdown: var(--shadow-dropdown);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
   --radius-lg: var(--radius);
   --radius-xl: 1rem;
   --radius-2xl: 1rem;
@@ -53,24 +86,50 @@
 :root {
   --font-heading: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.145 0.015 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.015 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.015 250);
-  --primary: oklch(0.42 0.18 250);
+  /* Neutral ramp, 12 steps (design canvas "Token"). Primitive tier: name by shade only. */
+  --gray-1: #FAFBFC; /* #FAFBFC · app background */
+  --gray-2: #FFFFFF; /* #FFFFFF · panel, popover */
+  --gray-3: #F2F4F7; /* #F2F4F7 · control (input, secondary button) */
+  --gray-4: #EAEDF1; /* #EAEDF1 · hover */
+  --gray-5: #DEE2E8; /* #DEE2E8 · selected */
+  --gray-6: #DADDE2; /* #DADDE2 · mark (unchecked box, thin bars) */
+  --gray-7: #C9CDD3; /* #C9CDD3 · faint (handles) */
+  --gray-8: #9AA0A9; /* #9AA0A9 · disabled (contrast-exempt) */
+  --gray-9: #25282F; /* #25282F · action (solid) */
+  --gray-10: #3A3D44; /* #3A3D44 · action hover */
+  --gray-11: #5F6671; /* #5F6671 · text secondary (5.8:1) */
+  --gray-12: #1A1D23; /* #1A1D23 · text primary */
+
+  /* Semantic tier: point at the ramp. Keep shadcn names so existing utilities keep working. */
+  --background: var(--gray-1);
+  --foreground: var(--gray-12);
+  --card: var(--gray-2);
+  --card-foreground: var(--gray-12);
+  --popover: var(--gray-2);
+  --popover-foreground: var(--gray-12);
+  --primary: var(--gray-9);
+  --primary-hover: var(--gray-10);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0.005 250);
-  --secondary-foreground: oklch(0.205 0.015 250);
-  --muted: oklch(0.965 0.005 250);
-  --muted-foreground: oklch(0.38 0.015 250);
-  --accent: oklch(0.96 0.008 250);
-  --accent-foreground: oklch(0.205 0.015 250);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.915 0.006 250);
-  --input: oklch(0.915 0.006 250);
-  --ring: oklch(0.45 0.12 250);
+  --secondary: var(--gray-3);
+  --secondary-foreground: var(--gray-12);
+  --muted: var(--gray-3);
+  --muted-foreground: var(--gray-11);
+  --accent: var(--gray-4);
+  --accent-foreground: var(--gray-12);
+  --selected: var(--gray-5);
+  --destructive: #B91C1C;
+  --danger-soft: #FBEDED; /* #FBEDED */
+  --feedback-danger: #B91C1C;
+  --feedback-danger-bg: #FBEDED;
+  --brand: #0058A0; /* xanh logo trường, tương phản 7.6:1 */
+  --brand-accent: #F8F000; /* vàng logo trường */
+  --icon-accent: #C0D0F4; /* nền chip icon nghiệp vụ và mảng nhấn */
+  --overlay: rgba(0, 0, 0, 0.40); /* lớp tối sau hộp thoại */
+  --on-action: #FAFAFA; /* chữ trên nút chính */
+  /* Borders are being phased out; until components stop using them keep them faint. */
+  --border: var(--gray-4);
+  --input: var(--gray-4);
+  --ring: var(--gray-8);
 
   /* Executive diffuse elevation tokens */
   --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 1px rgba(0, 0, 0, 0.02);
@@ -84,15 +143,50 @@
   --chart-4: oklch(0.65 0.20 300); /* Purple Violet */
   --chart-5: oklch(0.63 0.22 25);  /* Crimson Rose */
 
-  --radius: 0.85rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --radius: 0.75rem; /* controls 12px; chips 8px; panels 16px */
+  --radius-menu: 0.875rem;
+  --google-background: #131314;
+  --google-hover: #26262A;
+  --google-active: #313135;
+  --google-border: #8E918F;
+  --google-foreground: #E3E3E3;
+  --google-focus: #2F62C8;
+  --control-height: 2.125rem;
+  --control-height-sm: 1.75rem;
+  --touch-target: 2.75rem;
+  --avatar-table: 1.25rem;
+  --avatar-activity: 1.5rem;
+  --avatar-profile: 2rem;
+  --sidebar-width-expanded: 15.875rem;
+  --sidebar-width-collapsed: 4rem;
+  --content-max-width: 90rem;
+  --z-content: 0;
+  --z-sticky: 10;
+  --z-panel: 20;
+  --z-popup: 30;
+  --z-dialog: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+  --space-01: 0.125rem;
+  --space-02: 0.25rem;
+  --space-03: 0.5rem;
+  --space-04: 0.75rem;
+  --space-05: 1rem;
+  --space-06: 1.5rem;
+  --space-07: 2rem;
+  --space-08: 2.5rem;
+  --space-09: 3rem;
+  --space-10: 4rem;
+  --input-height: 2.25rem;
+  --shadow-dialog: 0 16px 48px rgb(0 0 0 / 0.16);
+  --sidebar: var(--gray-1);
+  --sidebar-foreground: var(--gray-12);
+  --sidebar-primary: var(--gray-9);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: var(--gray-4);
+  --sidebar-accent-foreground: var(--gray-12);
+  --sidebar-border: var(--gray-4);
+  --sidebar-ring: var(--gray-8);
 
   /* Motion Tokens — sync với src/lib/motion/tokens.ts */
   --motion-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
@@ -107,13 +201,15 @@
 :root,
 [data-density="comfortable"] {
   --table-cell-py: 0.8125rem;
+  --table-row-height: 3rem;
   --table-font-size: 0.875rem;
   --table-lh: 1.375rem;
   --table-header-py: 0.75rem;
 }
 
 [data-density="compact"] {
-  --table-cell-py: 0.4375rem;
+  --table-cell-py: 0.6875rem;
+  --table-row-height: 2.5rem;
   --table-font-size: 0.8125rem;
   --table-lh: 1.125rem;
   --table-header-py: 0.5rem;
