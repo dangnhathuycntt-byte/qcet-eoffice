@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nhiệm vụ · đổi hàng loạt, lặp lại, mẫu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#5F6671;margin-bottom:14px}
+.m{font-size:12px;color:#5F6671;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#5F6671}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:13px;font-weight:500}
+</style>
+</helmet>
+<div style="width:2000px;height:1020px;box-sizing:border-box;padding:64px 80px;background:#fff">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Nhiệm vụ · đổi hàng loạt, lặp lại, mẫu</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:48px;margin-top:40px">
+<div><div class="sec">Đổi hạn · nhiều nhiệm vụ</div><div style="background:rgba(26,29,35,.4);border-radius:16px;height:340px;display:flex;align-items:center;justify-content:center"><div style="width:340px;background:#fff;border-radius:16px;box-shadow:0 24px 60px -20px rgba(0,0,0,.35);padding:24px"><div style="font-size:16px;font-weight:600">Đổi hạn cho 3 nhiệm vụ</div><div style="margin-top:12px"><div style="margin-top:8px"><div style="font-size:13px;color:#5F6671;margin-bottom:4px">Hạn mới</div><div style="height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px">10/10/2026</div></div><div style="font-size:13px;color:#5F6671;margin-top:10px">Việc con giữ nguyên hạn riêng.</div></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px"><span style="display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:500;background:#EAEDF1;color:#1A1D23">Hủy</span><span style="display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:500;background:#25282F;color:#FAFAFA">Đổi hạn</span></div></div></div></div>
+<div><div class="sec">Đổi người phụ trách</div><div style="background:rgba(26,29,35,.4);border-radius:16px;height:340px;display:flex;align-items:center;justify-content:center"><div style="width:340px;background:#fff;border-radius:16px;box-shadow:0 24px 60px -20px rgba(0,0,0,.35);padding:24px"><div style="font-size:16px;font-weight:600">Đổi người phụ trách cho 3 nhiệm vụ</div><div style="margin-top:12px"><div style="margin-top:8px"><div style="font-size:13px;color:#5F6671;margin-bottom:4px">Người mới</div><div style="height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px">Ngô Lê Minh Khuê</div></div><div style="font-size:13px;color:#5F6671;margin-top:10px">Người mới và người cũ đều nhận thông báo.</div></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px"><span style="display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:500;background:#EAEDF1;color:#1A1D23">Hủy</span><span style="display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:12px;font-size:14px;font-weight:500;background:#25282F;color:#FAFAFA">Đổi người</span></div></div></div></div>
+<div><div class="sec">Chọn mẫu khi tạo</div><div style="background:#fff;border-radius:14px;box-shadow:0 12px 40px -12px rgba(26,29,35,.35);padding:6px;width:320px"><div style="height:52px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border-radius:10px;background:#EAEDF1;"><span style="font-size:14px">Báo cáo tháng</span><span style="font-size:13px;color:#5F6671">3 việc con · hạn ngày 5</span></div><div style="height:52px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border-radius:10px;"><span style="font-size:14px">Họp giao ban tuần</span><span style="font-size:13px;color:#5F6671">2 việc con · lặp Thứ Hai</span></div><div style="height:52px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border-radius:10px;"><span style="font-size:14px">Kiểm tra cuối kỳ</span><span style="font-size:13px;color:#5F6671">4 việc con</span></div><div style="height:52px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border-radius:10px;"><span style="font-size:14px">Trống</span><span style="font-size:13px;color:#5F6671"></span></div></div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:48px;margin-top:48px">
+<div><div class="sec">Lặp lại · trong hộp thoại Tạo nhiệm vụ</div><div style="width:300px;background:#fff;border-radius:14px;box-shadow:0 12px 40px -12px rgba(26,29,35,.35);padding:12px"><div style="margin-top:8px"><div style="font-size:13px;color:#5F6671;margin-bottom:4px">Lặp lại</div><div style="height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px">Hằng tháng, ngày 5</div></div><div style="display:flex;flex-direction:column;margin-top:10px;background:#fff"><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;"><span>Không lặp</span><span style="font-size:13px;color:#5F6671"></span></div><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;"><span>Hằng ngày</span><span style="font-size:13px;color:#5F6671"></span></div><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;"><span>Hằng tuần</span><span style="font-size:13px;color:#5F6671">Thứ Hai</span></div><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;background:#EAEDF1;"><span>Hằng tháng</span><span style="font-size:13px;color:#5F6671">Ngày 5</span></div><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;"><span>Hằng quý</span><span style="font-size:13px;color:#5F6671"></span></div><div style="height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:10px;font-size:14px;"><span>Tùy chỉnh…</span><span style="font-size:13px;color:#5F6671"></span></div></div></div></div>
+<div><div class="sec">Quy tắc lặp lại</div><div class="t" style="display:flex;flex-direction:column;gap:8px"><span>Nhiệm vụ mới được tạo khi kỳ trước hoàn thành hoặc đến ngày, chọn trong Tùy chỉnh.</span><span>Nhiệm vụ lặp có dấu ↻ cạnh tên.</span><span>Sửa một lần hỏi: chỉ lần này, hay mọi lần sau.</span><span>Dừng lặp: trong menu ⋯ của nhiệm vụ.</span></div></div>
+<div><div class="sec">Mẫu nhiệm vụ</div><div class="t" style="display:flex;flex-direction:column;gap:8px"><span>Mẫu gồm tên, mô tả, việc con, người duyệt, thời hạn tương đối (ngày 5, +7 ngày).</span><span>Tạo từ nhiệm vụ có sẵn: menu ⋯, Lưu làm mẫu.</span><span>Mẫu của đơn vị do trưởng đơn vị quản lý; mẫu cá nhân chỉ mình thấy.</span></div></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1020}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

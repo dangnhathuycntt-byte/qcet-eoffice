@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Ủy quyền</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#5F6671;margin-bottom:14px}
+.m{font-size:12px;color:#5F6671;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#5F6671}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:12.5px;font-weight:500}
+.nv{display:flex;align-items:center;gap:12px;height:33px;padding:0 10px;border-radius:12px;color:#3f3f46;font-size:15px;text-decoration:none}.nv.on{background:#ededee;color:#18181b;font-weight:500}.av{width:22px;height:22px}.g{color:#5F6671}</style>
+</helmet>
+<div style="width:2000px;height:1107px;position:relative;background:#fff;overflow:hidden">
+<aside aria-label="Thanh bên" style="position:absolute;left:0;top:0;width:254px;height:1107px;box-sizing:border-box;padding:12px 11px;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;height:36px;padding:0 4px 0 7px;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#B9C7D6;overflow:hidden;display:inline-flex;flex-shrink:0"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.5"><path d="M6 9l6 6 6-6"></path></svg><span style="flex-grow:1"></span>
+<span title="Tìm kiếm (⌘K)" style="width:28px;height:28px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#52525b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg></span>
+<span title="Giao việc mới" style="width:28px;height:28px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#52525b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"></path><path d="M17.5 3.5l3 3L12 15l-4 1 1-4z"></path></svg></span></div>
+<nav aria-label="Điều hướng chính" style="display:flex;flex-direction:column;gap:3px;margin-top:18px">
+<a class="nv on" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="8" rx="1.5"></rect><rect x="13" y="4" width="7" height="5" rx="1.5"></rect><rect x="13" y="11" width="7" height="9" rx="1.5"></rect><rect x="4" y="14" width="7" height="6" rx="1.5"></rect></svg>Tổng quan</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l2-7h12l2 7v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path><path d="M4 13h5l1 2h4l1-2h5"></path></svg>Hộp thư<span style="margin-left:auto;font-size:13px;color:#71717a;font-variant-numeric:tabular-nums">4</span></a>
+<a class="nv" href="T3List.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"></path><circle cx="12" cy="12" r="2.5"></circle></svg>Nhiệm vụ<span style="margin-left:auto;font-size:13px;color:#71717a;font-variant-numeric:tabular-nums">2</span></a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Lịch công tác</a>
+<div style="padding:0 10px;font-size:13px;color:#71717a;margin:14px 0 3px">Văn bản</div>
+<a class="nv" href="Docs.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 11v6M9.5 14.5L12 17l2.5-2.5"></path></svg>Văn bản đến<span style="margin-left:auto;font-size:13px;color:#3f3f46;font-variant-numeric:tabular-nums">2</span></a>
+<a class="nv" href="Outgoing.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M12 17v-6M9.5 13.5L12 11l2.5 2.5"></path></svg>Văn bản đi</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h6"></path></svg>Tờ trình nội bộ</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6a2 2 0 0 1 2-2h3.5l2 2H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path></svg>Hồ sơ công việc</a>
+<div style="padding:0 10px;font-size:13px;color:#71717a;margin:14px 0 3px">Đơn vị</div>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l1.5 1.5L8 6M4 15l1.5 1.5L8 14M11 7h9M11 15h9"></path></svg>Nhiệm vụ đơn vị</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg>Báo cáo</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"></circle><circle cx="5.5" cy="18" r="2.5"></circle><circle cx="18.5" cy="18" r="2.5"></circle><path d="M12 7.5V12M5.5 15.5V12h13v3.5"></path></svg>Cơ cấu &amp; Danh bạ</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"></circle><path d="M3.5 20a6.5 6.5 0 0 1 13 0M16 11l2 2 3.5-4"></path></svg>Ủy quyền</a>
+</nav>
+<div style="flex-grow:1"></div>
+<nav aria-label="Phụ" style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px">
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path></svg>Quản trị</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path></svg>Cài đặt</a>
+<a class="nv" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.500 2.300c-.7.4-1 .9-1 1.700M12 16.700v.1"></path></svg>Trợ giúp</a>
+</nav>
+<span title="Thu gọn thanh bên (⌘\)" aria-label="Thu gọn thanh bên" style="position:absolute;right:2px;top:50%;width:20px;height:40px;margin-top:-20px;display:flex;align-items:center;justify-content:center;color:#a1a1aa"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></span></aside>
+<div style="position:absolute;left:271px;top:10px;height:30px;display:flex;align-items:center;font-size:14px;color:#71717a">Đơn vị <span style="font-size:11px;margin:0 8px">›</span><b style="color:#18181b;font-weight:600">Ủy quyền</b></div>
+<section style="position:absolute;left:263px;top:48px;width:1160px;height:1049px;box-sizing:border-box;background:#fff;border-radius:16px;box-shadow:0 2px 14px -6px rgba(26,29,35,.10);padding:26px 24px 0">
+<div style="display:flex;align-items:center;height:40px"><span style="font-size:20px;font-weight:600;letter-spacing:-.01em;flex-grow:1">Ủy quyền</span><span style="height:34px;padding:0 14px;border-radius:12px;background:#25282F;color:#FAFAFA;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;height:34px">+ Tạo ủy quyền</span></div>
+<div style="margin-top:22px;display:grid;grid-template-columns:minmax(0,1fr) 190px 150px 170px 120px;column-gap:12px;padding:0 12px;height:36px;align-items:center;font-size:13px;color:#5F6671"><span>Người được ủy quyền</span><span>Phạm vi</span><span>Căn cứ</span><span>Thời gian</span><span>Trạng thái</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 190px 150px 170px 120px;align-items:center;column-gap:12px;height:56px;padding:0 12px;border-radius:12px;font-size:14px"><span style="display:flex;align-items:center;gap:10px"><span class="av ph2" style="width:24px;height:24px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Ngô Lê Minh Khuê</span><span>Duyệt nhiệm vụ đơn vị</span><span class="tn">45/QĐ-CĐ</span><span class="tn">01/10 – 15/10/2026</span><span style="font-size:13px">Đang hiệu lực</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 190px 150px 170px 120px;align-items:center;column-gap:12px;height:56px;padding:0 12px;border-radius:12px;font-size:14px"><span style="display:flex;align-items:center;gap:10px"><span class="av ph1" style="width:24px;height:24px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Đặng Nhật Huy</span><span>Bút phê văn bản đến</span><span class="tn">46/QĐ-CĐ</span><span class="tn">25/09 – 02/10/2026</span><span style="font-size:13px"><span>Hết hạn sau 3 ngày</span></span></div>
+<div style="height:8px"></div>
+<div style="padding:0 12px;height:34px;display:flex;align-items:center;font-size:13.5px;color:#5F6671">Đã hết hạn <span class="m" style="margin-left:8px">4</span></div></section>
+<section aria-label="Tạo ủy quyền" style="position:absolute;left:1440px;top:10px;width:550px;height:1087px;box-sizing:border-box;background:#fff;border-radius:16px;box-shadow:0 8px 28px -12px rgba(26,29,35,.22);padding:26px 26px 0">
+<div style="font-size:16px;font-weight:600">Tạo ủy quyền</div>
+<div style="margin-top:22px;display:flex;flex-direction:column;gap:20px">
+<div><div style="font-size:13.5px;font-weight:500;margin-bottom:6px">Người được ủy quyền</div><div style="height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:14px"><span class="av ph2" style="width:20px;height:20px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Ngô Lê Minh Khuê</div></div>
+<div><div style="font-size:13.5px;font-weight:500;margin-bottom:8px">Phạm vi</div><div style="display:flex;flex-direction:column;gap:10px;font-size:14px"><span style="display:flex;gap:12px;align-items:center"><i style="width:16px;height:16px;border-radius:50%;background:#25282F;display:inline-flex;align-items:center;justify-content:center"><b style="width:6px;height:6px;border-radius:50%;background:#fff;display:block"></b></i>Duyệt nhiệm vụ đơn vị</span><span style="display:flex;gap:12px;align-items:center"><i style="width:16px;height:16px;border-radius:50%;background:#DADDE2;display:inline-block"></i>Bút phê văn bản đến</span><span style="display:flex;gap:12px;align-items:center"><i style="width:16px;height:16px;border-radius:50%;background:#DADDE2;display:inline-block"></i>Cả hai</span></div><div class="m" style="margin-top:8px">Ký văn bản đi cần quyết định riêng, không ủy quyền tại đây.</div></div>
+<div><div style="font-size:13.5px;font-weight:500;margin-bottom:6px">Thời gian</div><div style="display:flex;gap:8px"><span style="flex:1;height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px" class="tn">01/10/2026</span><span style="flex:1;height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px" class="tn">15/10/2026</span></div></div>
+<div><div style="font-size:13.5px;font-weight:500;margin-bottom:6px">Căn cứ (số văn bản)</div><div style="height:36px;border-radius:12px;background:#F2F4F7;display:flex;align-items:center;padding:0 12px;font-size:14px" class="tn">45/QĐ-CĐ</div></div>
+</div>
+<div class="g" style="margin-top:20px;font-size:13px;line-height:1.55">Ủy quyền tự hết hiệu lực vào cuối ngày 15/10/2026. Bạn có thể thu hồi bất cứ lúc nào.</div>
+<div style="display:flex;gap:8px;margin-top:22px"><span style="height:34px;padding:0 14px;border-radius:12px;background:#F2F4F7;color:#1A1D23;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;">Hủy</span><span style="height:34px;padding:0 14px;border-radius:12px;background:#25282F;color:#FAFAFA;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;">Ủy quyền</span></div></section></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1107}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

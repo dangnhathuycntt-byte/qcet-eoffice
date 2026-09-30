@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Trình soạn thảo · bôi đen chữ, kéo chọn vùng, chèn, khối</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#646B76;margin-bottom:14px}
+.m{font-size:12px;color:#646B76;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#646B76}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:12.5px;font-weight:500}
+</style>
+</helmet>
+<div style="width:2000px;height:1500px;box-sizing:border-box;padding:64px 80px;background:#fff">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Trình soạn thảo · bôi đen chữ, kéo chọn vùng, chèn, khối</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:96px;row-gap:56px;margin-top:40px">
+<div><div class="sec">1. Bôi đen chữ · thanh định dạng nổi phía trên vùng chọn</div>
+<div style="height:48px;position:relative"><div style="position:absolute;left:150px;top:0"><div style="display:inline-flex;align-items:center;gap:2px;height:40px;padding:0 6px;background:#fff;border-radius:12px;box-shadow:0 12px 32px -10px rgba(26,29,35,.35)"><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:500">Đoạn ▾</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:700">B</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-style:italic">I</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;text-decoration:line-through">S</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;">Liên kết</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;">Danh sách</span><span style="min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;">Bình luận</span></div></div></div>
+<div style="font-size:15px;line-height:1.7;padding:0 12px">Tổng hợp số liệu tuyển sinh của các khoa, <span style="background:rgba(37,40,47,.16);border-radius:3px">đối chiếu với chỉ tiêu Sở giao</span>, và gửi báo cáo cho Ban Giám hiệu trước hạn.</div>
+<div class="t g" style="margin-top:14px;padding:0 12px">Vùng chọn tô xám đậm, không xanh. Thanh hiện sau khi thả chuột 150 ms, tự ẩn khi bấm ra ngoài hoặc Esc. Chọn nhiều đoạn: thanh gọn còn Đoạn, Đậm, Nghiêng.</div></div>
+<div><div class="sec">2. Kéo chọn vùng · chọn nhiều khối cùng lúc</div>
+<div style="position:relative;background:#fff;border-radius:12px">
+<div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;">Tổng hợp số liệu tuyển sinh của các khoa.</div>
+<div style="position:relative"><div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;background:rgba(37,40,47,.10);font-weight:600">Kết quả</div><div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;background:rgba(37,40,47,.10);">Đã tổng hợp đủ số liệu 6 phòng.</div><div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;background:rgba(37,40,47,.10);">Phụ lục 2 còn chờ Phòng Đào tạo.</div>
+<div style="position:absolute;left:-8px;top:-6px;width:70%;height:calc(100% + 12px);background:rgba(37,40,47,.07);border-radius:6px;pointer-events:none"></div></div>
+<div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;">Bao-cao-thang-9.pdf · 1,2 MB</div></div>
+<div style="display:flex;justify-content:center;margin-top:14px"><div style="display:inline-flex;align-items:center;gap:4px;height:44px;padding:0 10px 0 16px;background:#fff;border-radius:14px;box-shadow:0 12px 32px -10px rgba(26,29,35,.35);font-size:13.5px"><span style="font-weight:500;margin-right:10px">Đã chọn 3 khối</span><span style="padding:0 10px">Chuyển thành ▾</span><span style="padding:0 10px">Sao chép</span><span style="padding:0 10px;color:#B91C1C">Xóa</span></div></div>
+<div class="t g" style="margin-top:14px">Bấm giữ ở khoảng trắng hoặc lề trái rồi kéo: vùng kéo là mảng xám mờ, không viền; khối chạm vào vùng kéo được chọn cả khối. Shift+bấm chọn dải. ⌘A chọn hết. Esc bỏ chọn. Kéo ra mép thì tự cuộn.</div></div>
+<div><div class="sec">3. Gõ <span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin:0 2px;border-radius:6px;background:#EAEDF1;color:#3A3D44;font-size:12px;line-height:1;vertical-align:1px">/</span> · menu chèn, lọc theo chữ đang gõ</div>
+<div style="font-size:15px;padding:0 12px;height:32px;display:flex;align-items:center">/tiêu</div>
+<div style="width:300px;background:#fff;border-radius:14px;box-shadow:0 12px 40px -12px rgba(26,29,35,.35);padding:6px"><div style="font-size:12.5px;color:#5F6671;padding:8px 10px 4px">Văn bản</div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;background:#EAEDF1;"><span>Tiêu đề lớn</span><span style="font-size:12.5px;color:#5F6671">#</span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Tiêu đề vừa</span><span style="font-size:12.5px;color:#5F6671">##</span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Tiêu đề nhỏ</span><span style="font-size:12.5px;color:#5F6671">###</span></div><div style="font-size:12.5px;color:#5F6671;padding:8px 10px 4px">Chèn</div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Tệp đính kèm</span><span style="font-size:12.5px;color:#5F6671"></span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Nhắc người</span><span style="font-size:12.5px;color:#5F6671">@</span></div></div>
+<div class="t g" style="margin-top:14px;max-width:520px">↑ ↓ chọn, Enter chèn, Esc đóng. Gõ thêm chữ để lọc, không có kết quả thì đóng. Nhóm: Văn bản, Danh sách, Chèn.</div></div>
+<div><div class="sec">4. Tay nắm khối · kéo để đổi chỗ, bấm để mở menu</div>
+<div style="position:relative;padding-left:32px"><span style="position:absolute;left:6px;top:14px;font-size:14px;color:#5F6671;letter-spacing:-2px">⠿</span><div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;background:#F2F4F7">Đã tổng hợp đủ số liệu 6 phòng.</div>
+<div style="height:4px;border-radius:2px;background:#25282F;margin:4px 12px"></div><div style="padding:6px 12px;border-radius:8px;font-size:15px;line-height:1.6;">Phụ lục 2 còn chờ Phòng Đào tạo.</div></div>
+<div style="width:230px;background:#fff;border-radius:14px;box-shadow:0 12px 40px -12px rgba(26,29,35,.35);padding:6px;margin:14px 0 0 32px"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Chuyển thành</span><span style="font-size:12.5px;color:#5F6671">▸</span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Nhân đôi</span><span style="font-size:12.5px;color:#5F6671">⌘D</span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Di chuyển lên</span><span style="font-size:12.5px;color:#5F6671">⌥↑</span></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;height:38px;align-items:center;padding:0 10px;border-radius:10px;font-size:14px;"><span>Xóa</span><span style="font-size:12.5px;color:#5F6671">⌫</span></div></div>
+<div class="t g" style="margin-top:14px;max-width:520px">Tay nắm chỉ hiện khi trỏ vào khối. Vạch kéo là thanh đặc 4 px màu than chì.</div></div>
+<div style="grid-column:1/3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:96px"><div><div class="sec">Phím tắt và gõ nhanh</div>
+<div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span>⌘B · ⌘I · ⌘K</span><span class="g">Đậm, nghiêng, chèn liên kết</span></div><div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span>- rồi cách</span><span class="g">Danh sách chấm</span></div><div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span>1. rồi cách</span><span class="g">Danh sách số</span></div><div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span>[] rồi cách</span><span class="g">Danh sách việc cần làm</span></div><div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span># rồi cách</span><span class="g">Tiêu đề lớn</span></div><div class="row" style="grid-template-columns:190px minmax(0,1fr);font-size:13.5px"><span>@ rồi tên</span><span class="g">Nhắc người, gửi thông báo cho họ</span></div></div>
+<div><div class="sec">Quy tắc</div><div class="t" style="display:flex;flex-direction:column;gap:6px"><span>Tự lưu sau 800 ms ngừng gõ; góc trên ghi “Đã lưu”.</span><span>Không chặn phím khi bộ gõ tiếng Việt đang ghép dấu (composition).</span><span>Dán ảnh hoặc kéo tệp vào: thành khối tệp, hiện tiến độ ngay tại chỗ.</span><span>Dán từ Word: giữ đậm, nghiêng, danh sách; bỏ phông và màu.</span><span>Chỉ người có quyền sửa mới thấy tay nắm và thanh nổi; người xem chỉ chọn và sao chép được.</span></div></div></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1500}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

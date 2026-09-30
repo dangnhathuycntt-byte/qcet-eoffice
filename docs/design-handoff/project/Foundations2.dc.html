@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nền tảng 2</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+button{font-family:inherit;border:0}
+.lbl{font-size:13px;font-weight:600}
+.sub{font-size:12px;color:#5F6671;line-height:1.45}
+.tk{font-size:12px;color:#5F6671}
+.tn{font-variant-numeric:tabular-nums}
+.b7{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:12px;font-weight:500;color:#1A1D23}
+.bp{display:inline-flex;align-items:center;height:34px;padding:0 12px;border-radius:12px;background:#25282F;color:#FAFAFA;font-size:12.5px;font-weight:500}
+.cell{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.hd{font-size:12px;font-weight:500;color:#5F6671}
+.grid5{display:grid;grid-template-columns:110px repeat(5,minmax(0,1fr));column-gap:16px;align-items:center;padding:14px 0;}
+</style>
+</helmet>
+<div style="width:2000px;height:940px;box-sizing:border-box;padding:56px 72px;background:#fff;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:96px;align-content:start">
+
+<!-- LEFT: interaction states -->
+<div style="display:flex;flex-direction:column;gap:34px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:24px;font-weight:600;letter-spacing:-.01em">Trạng thái tương tác</div>
+<div class="sub" style="font-size:13px">Không viền, không thẻ. Mọi thành phần có đủ 5 trạng thái. Tiêu điểm bàn phím là nền đậm hơn hai bậc, không dùng vòng viền (WCAG 2.4.7 chỉ cần nhìn thấy được). Hover chỉ đổi nền một bậc. Vô hiệu dùng aria-disabled để vẫn tab tới được.</div>
+</div>
+
+<div>
+<div class="grid5" style="padding-top:0"><span></span><span class="hd">Mặc định</span><span class="hd">Di chuột</span><span class="hd">Tiêu điểm</span><span class="hd">Đang bấm</span><span class="hd">Vô hiệu</span></div>
+
+<div class="grid5"><span class="tk">Nút chính</span>
+<span><button class="bp">Duyệt</button></span>
+<span><button class="bp" style="background:#3A3D44;">Duyệt</button></span>
+<span><button class="bp" style="background:#3A3D44;text-decoration:underline;text-underline-offset:3px">Duyệt</button></span>
+<span><button class="bp" style="background:#181A1F;">Duyệt</button></span>
+<span><button class="bp" style="background:#E1E4E8;color:#9AA0A9">Duyệt</button></span></div>
+
+<div class="grid5"><span class="tk">Nút phụ</span>
+<span><button class="b7">Tạo việc</button></span>
+<span><button class="b7" style="background:#EFF2F7">Tạo việc</button></span>
+<span><button class="b7" style="background:#DEE2E8">Tạo việc</button></span>
+<span><button class="b7" style="background:#E1E4E8">Tạo việc</button></span>
+<span><button class="b7" style="color:#9AA0A9;background:#F2F4F7">Tạo việc</button></span></div>
+
+<div class="grid5"><span class="tk">Dòng bảng</span>
+<span style="font-size:13px;height:32px;display:flex;align-items:center;padding:0 6px">sdkada pad</span>
+<span style="font-size:13px;height:32px;display:flex;align-items:center;padding:0 6px;background:#F2F4F7;border-radius:8px">sdkada pad</span>
+<span style="font-size:13px;height:32px;display:flex;align-items:center;padding:0 6px;border-radius:8px;background:#DEE2E8">sdkada pad</span>
+<span style="font-size:13px;height:32px;display:flex;align-items:center;padding:0 6px;background:#EFF2F7;border-radius:8px">sdkada pad</span>
+<span style="font-size:13px;height:32px;display:flex;align-items:center;padding:0 6px;color:#9AA0A9">sdkada pad</span></div>
+
+<div class="grid5"><span class="tk">Ô chọn</span>
+<span><span style="width:14px;height:14px;box-sizing:border-box;border-radius:4px;background:#F2F4F7;display:block"></span></span>
+<span><span style="width:14px;height:14px;box-sizing:border-box;border-radius:4px;background:#CDD1D7;display:block"></span></span>
+<span><span style="width:14px;height:14px;box-sizing:border-box;border-radius:4px;background:#F2F4F7;display:block;background:#9AA0A9"></span></span>
+<span><span style="width:14px;height:14px;box-sizing:border-box;border-radius:4px;background:#3C3E44;display:flex;align-items:center;justify-content:center"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span></span>
+<span><span style="width:14px;height:14px;box-sizing:border-box;border-radius:4px;background:#F2F4F7;background:#F2F4F7;display:block"></span></span></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div class="lbl">Độ cao lớp nổi</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px">
+<div class="cell"><div style="width:100%;height:56px;border-radius:16px;background:#F2F4F7;"></div><span class="tk">Panel · nền trắng, không viền</span></div>
+<div class="cell"><div style="width:100%;height:56px;border-radius:12px;background:#F2F4F7;box-shadow:0 8px 24px -10px rgba(26,29,35,.18)"></div><span class="tk">Menu, lịch · bóng nhẹ</span></div>
+<div class="cell"><div style="width:100%;height:56px;border-radius:16px;background:#fff;box-shadow:0 24px 60px -20px rgba(0,0,0,.35)"></div><span class="tk">Hộp thoại · bóng sâu</span></div>
+<div class="cell"><div style="width:100%;height:56px;border-radius:12px;background:#1A1D23"></div><span class="tk">Thông báo nhanh · nền tối</span></div>
+</div>
+<div class="sub">Lớp tối phía sau hộp thoại: đen 40%. Panel bên không có lớp tối.</div>
+</div>
+</div>
+
+<!-- RIGHT -->
+<div style="display:flex;flex-direction:column;gap:34px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:24px;font-weight:600;letter-spacing:-.01em">Bố cục, mật độ, chuyển động</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div class="lbl">Chiều cao dòng</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:end">
+<div class="cell"><div style="width:100%;height:28px;background:#F2F4F7;border-radius:6px"></div><span class="tk">28 · nút toolbar</span></div>
+<div class="cell"><div style="width:100%;height:36px;background:#F2F4F7;border-radius:6px"></div><span class="tk">36 · ô nhập, việc con</span></div>
+<div class="cell"><div style="width:100%;height:48px;background:#F2F4F7;border-radius:6px"></div><span class="tk">48 · dòng bảng</span></div>
+<div class="cell"><div style="width:100%;height:64px;background:#F2F4F7;border-radius:6px"></div><span class="tk">64 · dòng 2 dòng chữ</span></div>
+</div>
+<div class="sub">Thang 32/40/48/64 theo Carbon; nút toolbar 28 theo DESIGN.md. Hàng tiêu đề, thanh hành động hàng loạt và phân trang cao bằng hàng dữ liệu. Có lựa chọn Gọn (40). Vùng bấm tối thiểu 24×24 (WCAG 2.2); điện thoại 44.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div class="lbl">Khung trang</div>
+<div style="display:flex;gap:0;height:120px;background:#F2F4F7;border-radius:12px;overflow:hidden">
+<div style="width:64px;background:#FAFAFA;display:flex;align-items:flex-start;justify-content:center;padding-top:10px" class="tk">254</div>
+<div style="flex-grow:1;padding:10px;display:flex;flex-direction:column;gap:6px">
+<div style="height:14px;border-radius:4px;background:#F2F4F7;width:40%"></div>
+<div style="flex-grow:1;background:#F2F4F7;border-radius:12px 0 0 0;padding:8px"><span class="tk">Panel trắng · bo 16 trên trái · nội dung tối đa 1440</span></div>
+</div>
+</div>
+<div class="sub">Sidebar 254 (thu về 64). Chi tiết: 65% nội dung, 35% thuộc tính. Panel bên 560–640.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="lbl">Chuyển động</div>
+<div style="display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:150px 70px minmax(0,1fr);height:34px;align-items:center;font-size:13px"><span>Hover, tô nền</span><span class="tn tk">80 ms</span><span class="tk">ease-out</span></div>
+<div style="display:grid;grid-template-columns:150px 70px minmax(0,1fr);height:34px;align-items:center;font-size:13px"><span>Mở/gập việc con</span><span class="tn tk">140 ms</span><span class="tk">chevron xoay 90°</span></div>
+<div style="display:grid;grid-template-columns:150px 70px minmax(0,1fr);height:34px;align-items:center;font-size:13px"><span>Menu, hộp thoại</span><span class="tn tk">180 ms</span><span class="tk">mờ dần, không trượt</span></div>
+<div style="display:grid;grid-template-columns:150px 70px minmax(0,1fr);height:34px;align-items:center;font-size:13px"><span>Panel bên</span><span class="tn tk">260 ms</span><span class="tk">trượt từ phải</span></div>
+</div>
+<div class="sub">Tôn trọng prefers-reduced-motion: tắt hết trừ đổi màu. Chỉ nhãn Hỏa tốc được nhấp nháy, và chỉ khi không tắt chuyển động.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="lbl">Phím tắt</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:32px;font-size:13px">
+<div style="display:flex;justify-content:space-between;height:32px;align-items:center;"><span>Tìm nhanh</span><span class="tk">⌘K</span></div>
+<div style="display:flex;justify-content:space-between;height:32px;align-items:center;"><span>Việc con kế tiếp</span><span class="tk">↓</span></div>
+<div style="display:flex;justify-content:space-between;height:32px;align-items:center;"><span>Đóng lớp nổi</span><span class="tk">Esc</span></div>
+<div style="display:flex;justify-content:space-between;height:32px;align-items:center;"><span>Gửi bình luận</span><span class="tk">⌘↵</span></div>
+</div>
+<div class="sub">Hiển thị trong menu và tooltip, không đặt trên nút.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":940}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

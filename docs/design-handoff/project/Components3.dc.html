@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thành phần 3</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+button{font-family:inherit;cursor:pointer;border:0}
+.sec{font-size:13px;font-weight:500;color:#5F6671;margin-bottom:14px}
+.m{font-size:12px;color:#5F6671;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.col{display:flex;flex-direction:column;min-width:0}
+.line{display:flex;align-items:center;gap:8px}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{width:20px;height:20px;border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.av svg{display:block}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.pop{background:#fff;border-radius:14px;box-shadow:0 8px 28px -10px rgba(26,29,35,.24);padding:4px;box-sizing:border-box}
+.mi{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:10px;font-size:13px}
+.mi.hl{background:#EAEDF1}
+.kc{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:#F5F6F8}
+</style>
+</helmet>
+<div style="width:2000px;height:780px;box-sizing:border-box;padding:64px 80px;background:#fff;display:flex;flex-direction:column;gap:56px">
+
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Thành phần 3</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);column-gap:96px;align-items:start">
+
+<div class="col">
+<div class="sec">Cột và thẻ Kanban</div>
+<div style="display:flex;align-items:center;gap:8px;height:32px;font-size:13px;font-weight:500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#5F6671" stroke-width="1.5"></circle><circle cx="12" cy="12" r="3" fill="#5F6671"></circle></svg>Chờ duyệt<span class="m">3</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+<div class="kc">
+<span style="font-size:14px;font-weight:500;line-height:1.4">sdkada pad</span>
+<span class="line" style="font-size:12.5px;color:#5F6671;gap:8px"><span class="av ph4"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span style="flex-grow:1">Nguyễn Thị Hồng Trinh</span><span class="tn">30/09</span></span>
+</div>
+<div class="kc" style="background:#EAEDF1">
+<span style="font-size:14px;font-weight:500;line-height:1.4">asdasd ad ád ád</span>
+<span class="m">Việc con 0/1</span>
+<span class="line" style="font-size:12.5px;color:#5F6671;gap:8px"><span class="av ph1"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span style="flex-grow:1">Đặng Nhật Huy</span><span style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3"><span class="tn">28/09</span><span class="late">trễ 1 ngày</span></span></span>
+</div>
+</div>
+<div class="m" style="margin-top:12px">Thẻ chỉ có tên, người, hạn. Đang di chuột: nền đậm một bậc. Không kéo được thì dùng menu Đổi trạng thái.</div>
+</div>
+
+<div class="col">
+<div class="sec">Việc con trong trang chi tiết</div>
+<div style="display:flex;align-items:baseline;gap:8px;font-size:14px;font-weight:600;height:32px">Việc con<span class="m" style="font-weight:400">1/3</span></div>
+<div style="display:grid;grid-template-columns:18px minmax(0,1fr) 130px 104px;align-items:center;column-gap:10px;height:44px;padding:0 10px;border-radius:12px;font-size:13.5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F6671" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-4.8"></path></svg><span style="color:#5F6671">Thu số liệu các phòng</span><span class="line" style="gap:8px"><span class="av ph2"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Khuê</span><span class="tn" style="color:#5F6671">05/10</span></div>
+<div style="display:grid;grid-template-columns:18px minmax(0,1fr) 130px 104px;align-items:center;column-gap:10px;height:44px;padding:0 10px;border-radius:12px;font-size:13.5px;background:#EAEDF1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F6671" stroke-width="1.5" stroke-dasharray="3 3"><circle cx="12" cy="12" r="8.5"></circle></svg><span>aaaa</span><span class="line" style="gap:8px"><span class="av ph2"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Khuê</span><span style="display:flex;flex-direction:column;line-height:1.3"><span class="tn">31/08</span><span class="late">trễ 29 ngày</span></span></div>
+<div style="display:grid;grid-template-columns:18px minmax(0,1fr) 130px 104px;align-items:center;column-gap:10px;height:44px;padding:0 10px;border-radius:12px;font-size:13.5px;background:#DEE2E8"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#5F6671" stroke-width="1.5"></circle><path d="M12 7a5 5 0 0 1 0 10z" fill="#5F6671"></path></svg><span>Soạn báo cáo</span><span class="line" style="gap:8px"><span class="av ph3"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span>Vinh</span><span class="tn">06/10</span></div>
+<div style="height:40px;display:flex;align-items:center;padding-left:38px;font-size:13px;color:#5F6671">+ Thêm việc con</div>
+<div class="m" style="margin-top:12px">Dòng đang mở ở panel bên được tô đậm nhất · việc đã xong mờ đi · bấm dòng để mở panel</div>
+</div>
+
+<div class="col">
+<div class="sec">Hoạt động và bình luận</div>
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px"><span class="av ph1" style="width:24px;height:24px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><div style="display:flex;flex-direction:column;gap:2px;font-size:13.5px;line-height:1.5"><span><b style="font-weight:500">Đặng Nhật Huy</b> <span style="color:#5F6671">nộp kết quả, chuyển sang Chờ duyệt</span></span><span class="m">hôm qua, 16:10</span></div></div>
+<div style="display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px"><span class="av ph3" style="width:24px;height:24px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><div style="display:flex;flex-direction:column;gap:2px;font-size:13.5px;line-height:1.5"><span><b style="font-weight:500">Nguyễn Ngọc Vinh</b> <span class="m">hôm qua, 09:02</span></span><span>Em gửi trước 28/09 giúp anh.</span></div></div>
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 14px;border-radius:12px;background:#F2F4F7;font-size:13px;color:#5F6671"><span style="flex-grow:1">Viết bình luận…</span><span style="height:28px;padding:0 10px;border-radius:8px;background:#DADDE2;display:inline-flex;align-items:center;font-size:12.5px;font-weight:500;color:#5F6671">Gửi</span></div>
+</div>
+<div class="m" style="margin-top:12px">Trong 7 ngày ghi giờ tương đối; hơn thế ghi ngày đủ. Ô gửi chỉ đậm lên khi đã gõ.</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);column-gap:96px;align-items:start">
+
+<div class="col">
+<div class="sec">Chọn trạng thái</div>
+<div class="pop" style="width:280px">
+<div class="mi"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F6671" stroke-width="1.5" stroke-dasharray="3 3"><circle cx="12" cy="12" r="8.5"></circle></svg>Mới</div>
+<div class="mi hl"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#5F6671" stroke-width="1.5"></circle><path d="M12 7a5 5 0 0 1 0 10z" fill="#5F6671"></path></svg><span style="flex-grow:1">Đang thực hiện</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1D23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></div>
+<div class="mi" style="color:#8A909A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#B4B9C1" stroke-width="1.5"></circle><circle cx="12" cy="12" r="3" fill="#B4B9C1"></circle></svg><span style="flex-grow:1">Chờ duyệt</span><span style="font-size:12px">qua Nộp kết quả</span></div>
+<div class="mi" style="color:#8A909A"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B4B9C1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-4.8"></path></svg><span style="flex-grow:1">Hoàn thành</span><span style="font-size:12px">cần người duyệt</span></div>
+</div>
+<div class="m" style="margin-top:12px">Trạng thái không chọn tay được vẫn hiện, mờ, kèm lý do</div>
+</div>
+
+<div class="col">
+<div class="sec">Chọn mức ưu tiên</div>
+<div class="pop" style="width:220px">
+<div class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 18v-4M12 18V10M18 18V6" stroke="#B91C1C"></path></svg><span style="flex-grow:1">Khẩn cấp</span></div>
+<div class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 18v-4M12 18V10M18 18V6" stroke="#1A1D23"></path></svg><span style="flex-grow:1">Cao</span></div>
+<div class="mi hl"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 18v-4M12 18V10" stroke="#1A1D23"></path><path d="M18 18V6" stroke="#C9CDD3"></path></svg><span style="flex-grow:1">Bình thường</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1D23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></div>
+<div class="mi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 18v-4" stroke="#1A1D23"></path><path d="M12 18V10M18 18V6" stroke="#C9CDD3"></path></svg><span style="flex-grow:1">Thấp</span></div>
+</div>
+<div class="m" style="margin-top:12px">Số vạch đậm = mức; chỉ Khẩn cấp có màu</div>
+</div>
+
+<div class="col">
+<div class="sec">Người</div>
+<div style="display:flex;align-items:flex-end;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="av ph1" style="width:20px;height:20px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span class="m">20 bảng</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="av ph1" style="width:24px;height:24px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span class="m">24 hoạt động</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="av ph1" style="width:32px;height:32px"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span class="m">32 hồ sơ</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span style="display:inline-flex"><span class="av ph2"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span class="av ph3" style="margin-left:-6px;box-shadow:0 0 0 2px #fff"><svg viewBox="0 0 24 24" width="100%" height="100%"><circle cx="12" cy="9.5" r="4" fill="#fff" fill-opacity=".75"></circle><path d="M3.5 24c.6-5 4.2-8 8.5-8s7.9 3 8.5 8z" fill="#fff" fill-opacity=".75"></path></svg></span><span class="av" style="margin-left:-6px;box-shadow:0 0 0 2px #fff;background:#DEE2E8;font-size:9px;font-weight:600;color:#5F6671;align-items:center;justify-content:center">+2</span></span><span class="m">nhóm</span></div>
+</div>
+<div class="m" style="margin-top:16px">Ảnh Google; chưa có thì chữ cái đầu. Nhóm chồng tối đa 3, phần còn lại là +N.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":780}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

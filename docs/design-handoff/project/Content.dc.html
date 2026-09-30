@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nội dung và giọng văn</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#5F6671;margin-bottom:14px}
+.m{font-size:12px;color:#5F6671;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#5F6671}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:12.5px;font-weight:500}
+</style>
+</helmet>
+<div style="width:2000px;height:960px;box-sizing:border-box;padding:64px 80px;background:#fff">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Nội dung và giọng văn</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr);column-gap:88px;margin-top:48px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:44px">
+<div><div class="sec">Nguyên tắc</div><div class="t" style="display:flex;flex-direction:column;gap:8px">
+<span>Ngắn. Bỏ từ cho đến khi mất nghĩa thì dừng.</span>
+<span>Việc cần làm đặt lên đầu câu, dùng câu chủ động.</span>
+<span>Một khái niệm, một tên gọi trên toàn hệ thống.</span>
+<span>Viết hoa chữ đầu câu. Chỉ HỎA TỐC và MẬT viết hoa toàn bộ.</span>
+<span>Không dấu chấm than, không biểu tượng cảm xúc. Xưng “bạn” khi cần.</span>
+<span>Không dùng chữ giả (placeholder) thay cho nhãn ô.</span>
+</div></div>
+<div><div class="sec">Nhãn nút · động từ + đối tượng</div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr)"><span class="g" style="text-decoration:line-through;text-decoration-color:#B4B9C1">Gửi</span><span style="font-weight:500">Nộp kết quả</span></div><div class="row" style="grid-template-columns:150px minmax(0,1fr)"><span class="g" style="text-decoration:line-through;text-decoration-color:#B4B9C1">OK</span><span style="font-weight:500">Giữ lại  ·  Hủy nhiệm vụ</span></div><div class="row" style="grid-template-columns:150px minmax(0,1fr)"><span class="g" style="text-decoration:line-through;text-decoration-color:#B4B9C1">Xác nhận</span><span style="font-weight:500">Duyệt  ·  Không duyệt</span></div><div class="row" style="grid-template-columns:150px minmax(0,1fr)"><span class="g" style="text-decoration:line-through;text-decoration-color:#B4B9C1">Tiếp tục</span><span style="font-weight:500">Áp dụng bộ lọc</span></div><div class="row" style="grid-template-columns:150px minmax(0,1fr)"><span class="g" style="text-decoration:line-through;text-decoration-color:#B4B9C1">Lưu</span><span style="font-weight:500">Lưu bản nháp  ·  Tạo nhiệm vụ</span></div>
+</div>
+<div><div class="sec">Trạng thái trống</div>
+<div class="t" style="display:flex;flex-direction:column;gap:14px">
+<span><b style="font-weight:500">Chưa có nhiệm vụ nào.</b><br><span class="g">Bấm Tạo việc để giao việc đầu tiên.</span></span>
+<span><b style="font-weight:500">Không có nhiệm vụ nào khớp bộ lọc.</b><br><span class="g">Bỏ bớt điều kiện hoặc Xóa lọc.</span></span>
+<span><b style="font-weight:500">Hôm nay bạn không có việc cần xử lý.</b></span>
+</div></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:44px">
+<div><div class="sec">Thông báo lỗi · chuyện gì xảy ra, vì sao, làm gì tiếp</div>
+<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:500">Không nộp được kết quả.</div><div class="g" style="font-size:13px;margin-top:2px">Mất kết nối; nội dung của bạn vẫn được giữ. Thử lại.</div></div>
+<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:500">Hạn không được trước ngày bắt đầu (27/09/2026).</div><div class="g" style="font-size:13px;margin-top:2px">Chọn ngày từ 27/09/2026 trở đi.</div></div>
+<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:500">Tệp vượt quá 50 MB.</div><div class="g" style="font-size:13px;margin-top:2px">Chọn tệp nhỏ hơn hoặc dán đường dẫn.</div></div>
+<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:500">Bạn chưa có quyền xem văn bản này.</div><div class="g" style="font-size:13px;margin-top:2px">Liên hệ văn thư để được giao xử lý.</div></div>
+<div class="g" style="font-size:13px">Không dùng: “Đã xảy ra lỗi”, “Lỗi không xác định”, mã lỗi kỹ thuật.</div>
+</div>
+<div><div class="sec">Xác nhận thao tác không hoàn tác</div>
+<div style="font-size:16px;font-weight:600">Hủy nhiệm vụ này?</div>
+<div class="g t" style="margin-top:4px">“asdasd ad ád ád” và 1 việc con sẽ chuyển sang Đã hủy. Người phụ trách được thông báo.</div>
+<div class="m" style="margin-top:10px">Tiêu đề là câu hỏi · nói rõ hậu quả và phạm vi · nút ghi lại hành động, không ghi “Có/Không”</div>
+</div>
+<div><div class="sec">Thời gian và số</div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Ngày</span><span class="tn">28/09/2026  ·  trong bảng cùng năm: 28/09</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Giờ</span><span class="tn">16:10 (24 giờ)</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Hoạt động</span><span class="tn">trong 7 ngày: hôm qua, 16:10; sau đó: 20/09/2026</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Hạn</span><span class="tn">còn 1 ngày  ·  trễ 29 ngày</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Số thập phân</span><span class="tn">1,2 MB (dấu phẩy)</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Hàng nghìn</span><span class="tn">1.234  ·  1.250.000 đ</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Số đến</span><span class="tn">0412 (4 chữ số, theo năm)</span></div>
+<div class="row" style="grid-template-columns:150px minmax(0,1fr);font-size:13.5px"><span class="g">Mã nhiệm vụ</span><span class="tn">NV-2026-09-129</span></div>
+</div>
+</div>
+
+<div><div class="sec">Từ vựng thống nhất · đề xuất</div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:12px;color:#5F6671"><span>Dùng</span><span>Không dùng</span><span>Ghi chú</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Nhiệm vụ</span><span class="g">công việc, task</span><span class="g">Việc giao có hạn và người phụ trách</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Việc con</span><span class="g">nhiệm vụ con</span><span class="g">Chỉ có 2 cấp</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Phụ trách</span><span class="g">chủ trì (với người)</span><span class="g">App đang dùng cả “Phụ trách” và “Chủ trì”; giữ Phụ trách cho người</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Đơn vị chủ trì</span><span class="g">phòng chủ trì</span><span class="g">Dùng cho đơn vị, theo văn bản pháp quy</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Phối hợp</span><span class="g">đồng thực hiện</span><span class="g"></span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Người duyệt</span><span class="g">người thẩm định</span><span class="g">App đang có “Thẩm định &amp; Phê duyệt”; rút gọn</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Nộp kết quả</span><span class="g">nộp minh chứng</span><span class="g">Tệp đính kèm gọi là “tệp kết quả”</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Yêu cầu chỉnh sửa</span><span class="g">Từ chối, trả về</span><span class="g">Không duyệt là kết cục khác</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Vào sổ</span><span class="g">đăng ký</span><span class="g">Số đến, số đi theo Nghị định 30</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Bút phê</span><span class="g">chỉ đạo (khi là ý kiến)</span><span class="g">Giữ nguyên lời lãnh đạo</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Lập hồ sơ</span><span class="g">lưu trữ (bước giữa)</span><span class="g">Lưu trữ là bước sau khi nộp</span></div>
+<div class="row" style="grid-template-columns:140px 190px minmax(0,1fr);font-size:13.5px"><span style="font-weight:500">Trễ / còn</span><span class="g">quá hạn (nhãn)</span><span class="g">Chữ nhỏ cạnh hạn, không thay trạng thái</span></div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":960}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

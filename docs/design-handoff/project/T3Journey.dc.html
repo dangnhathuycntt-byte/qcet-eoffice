@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nhiệm vụ · luồng người dùng theo vai trò</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#5F6671;margin-bottom:14px}
+.m{font-size:12px;color:#5F6671;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#5F6671}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:13px;font-weight:500}
+</style>
+</helmet>
+<div style="width:2000px;height:1120px;box-sizing:border-box;padding:64px 80px;background:#fff">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Nhiệm vụ · luồng người dùng theo vai trò</div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr) 260px 300px;column-gap:40px;margin-top:40px"><span class="sec">Vai trò</span><span class="sec">Các bước, từ trái sang phải</span><span class="sec">Nhận thông báo khi</span><span class="sec">Điều đã làm gọn</span></div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr) 260px 300px;column-gap:40px;padding:28px 0;align-items:start">
+<div><div style="font-size:16px;font-weight:600">Người giao</div><div class="t g" style="margin-top:4px">Giao đúng việc, biết ngay việc nào cần mình can thiệp.</div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:20px"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">1</span><span style="font-size:14px;line-height:1.4">Bấm Tạo việc (hoặc C)</span><span style="font-size:13px;color:#5F6671">Bảng 1</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">2</span><span style="font-size:14px;line-height:1.4">Điền tên, chọn Phụ trách, Hạn</span><span style="font-size:13px;color:#5F6671">Bảng 3</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">3</span><span style="font-size:14px;line-height:1.4">Bấm Tạo nhiệm vụ</span><span style="font-size:13px;color:#5F6671">Enter</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">4</span><span style="font-size:14px;line-height:1.4">Theo dõi trên danh sách</span><span style="font-size:13px;color:#5F6671">Bảng 1, 2</span></div></div>
+<div class="t">Người thực hiện gửi duyệt hoặc trễ hạn. Việc con trễ.</div><div class="t">Chỉ tên là bắt buộc; còn lại có mặc định. Người giao không phải mở từng nhiệm vụ để biết ai đang trễ.</div></div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr) 260px 300px;column-gap:40px;padding:28px 0;align-items:start">
+<div><div style="font-size:16px;font-weight:600">Người thực hiện</div><div class="t g" style="margin-top:4px">Biết hôm nay phải làm gì và báo xong nhanh.</div></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));column-gap:20px"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">1</span><span style="font-size:14px;line-height:1.4">Mở Nhiệm vụ, thấy việc trễ ở đầu</span><span style="font-size:13px;color:#5F6671">Bảng 1</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">2</span><span style="font-size:14px;line-height:1.4">Mở nhiệm vụ, đọc mô tả</span><span style="font-size:13px;color:#5F6671">Bảng 4</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">3</span><span style="font-size:14px;line-height:1.4">Viết kết quả trong trình soạn thảo</span><span style="font-size:13px;color:#5F6671">Bảng 7</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">4</span><span style="font-size:14px;line-height:1.4">Bấm Gửi duyệt</span><span style="font-size:13px;color:#5F6671">Bảng 7</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">5</span><span style="font-size:14px;line-height:1.4">Rút lại nếu nhầm</span><span style="font-size:13px;color:#5F6671">Bảng 4</span></div></div>
+<div class="t">Được giao, được nhắc trước hạn 1 ngày, được duyệt hoặc yêu cầu chỉnh sửa.</div><div class="t">Không có bước “nộp” riêng: kết quả nằm ngay trong nhiệm vụ. Gửi duyệt là một cú bấm.</div></div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr) 260px 300px;column-gap:40px;padding:28px 0;align-items:start">
+<div><div style="font-size:16px;font-weight:600">Người duyệt</div><div class="t g" style="margin-top:4px">Quyết định nhanh, có đủ thông tin ngay trên một trang.</div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:20px"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">1</span><span style="font-size:14px;line-height:1.4">Nhận thông báo Chờ duyệt</span><span style="font-size:13px;color:#5F6671">Hộp thư</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">2</span><span style="font-size:14px;line-height:1.4">Mở nhiệm vụ, đọc Kết quả</span><span style="font-size:13px;color:#5F6671">Bảng 8</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">3</span><span style="font-size:14px;line-height:1.4">Chọn Duyệt, Cần chỉnh sửa, Không duyệt</span><span style="font-size:13px;color:#5F6671">Bảng 8</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">4</span><span style="font-size:14px;line-height:1.4">Ghi chú nếu không duyệt</span><span style="font-size:13px;color:#5F6671">Bảng 10</span></div></div>
+<div class="t">Có nhiệm vụ gửi duyệt. Nhắc lại sau 2 ngày chưa duyệt.</div><div class="t">Không mở hộp thoại; ba nút ở góc trên. Ghi chú chỉ bắt buộc khi từ chối.</div></div>
+<div style="display:grid;grid-template-columns:200px minmax(0,1fr) 260px 300px;column-gap:40px;padding:28px 0;align-items:start">
+<div><div style="font-size:16px;font-weight:600">Người phối hợp</div><div class="t g" style="margin-top:4px">Biết mình được kéo vào việc gì, không bị làm phiền thêm.</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:20px"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">1</span><span style="font-size:14px;line-height:1.4">Nhận thông báo được thêm</span><span style="font-size:13px;color:#5F6671">Hộp thư</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">2</span><span style="font-size:14px;line-height:1.4">Xem mô tả, việc con của mình</span><span style="font-size:13px;color:#5F6671">Bảng 4, 6</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span class="m">3</span><span style="font-size:14px;line-height:1.4">Bình luận, đính tệp</span><span style="font-size:13px;color:#5F6671">Bảng 5</span></div></div>
+<div class="t">Được thêm, được nhắc tên (@), có bình luận mới.</div><div class="t">Chỉ nhận thông báo về việc mình có phần, không nhận mọi thay đổi.</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:80px;margin-top:24px">
+<div><div class="sec">Đường lỗi</div><div class="t" style="display:flex;flex-direction:column;gap:6px"><span>Hết hạn mà chưa gửi duyệt: “trễ N ngày”, không chặn thao tác.</span><span>Bị yêu cầu chỉnh sửa: ghi chú hiện ngay trên phần Kết quả.</span><span>Mất mạng khi đang viết: lưu tạm, tự gửi lại.</span><span>Người duyệt vắng: người được ủy quyền thấy nút Duyệt.</span></div></div>
+<div><div class="sec">Thời gian cần cho mỗi việc</div><div class="t" style="display:flex;flex-direction:column;gap:6px"><span>Tạo nhiệm vụ: 3 lần bấm, dưới 20 giây.</span><span>Gửi duyệt: 1 lần bấm sau khi viết.</span><span>Duyệt: 1 lần bấm; mở thông báo đến khi xong dưới 10 giây.</span><span>Tìm nhiệm vụ trễ: mở trang là thấy, không cần lọc.</span></div></div>
+<div><div class="sec">Nguyên tắc</div><div class="t" style="display:flex;flex-direction:column;gap:6px"><span>Mỗi vai trò chỉ thấy một nút chính trên trang.</span><span>Sửa tại chỗ, không mở form riêng cho từng trường.</span><span>Phím tắt cho việc lặp lại: C tạo, / tìm, ⌘↵ gửi.</span><span>Mọi thay đổi ghi vào Hoạt động, hoàn tác được trong 10 giây.</span></div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1120}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

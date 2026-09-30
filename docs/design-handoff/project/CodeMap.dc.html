@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thành phần ↔ mã, bàn phím</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;subset=vietnamese&amp;display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:#fff;color:#1A1D23}
+.sec{font-size:13px;font-weight:500;color:#646B76;margin-bottom:14px}
+.m{font-size:12px;color:#646B76;font-variant-numeric:tabular-nums}
+.tn{font-variant-numeric:tabular-nums}
+.t{font-size:14px;line-height:1.55}
+.g{color:#646B76}
+.late{font-size:12px;color:#B91C1C;white-space:nowrap}
+.av{border-radius:50%;display:inline-flex;overflow:hidden;flex-shrink:0}
+.ph1{background:#B9C7D6}.ph2{background:#D6C7B9}.ph3{background:#C2D2BE}.ph4{background:#CDBFD6}
+.row{display:grid;align-items:baseline;column-gap:24px;padding:9px 0}
+.pill{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:12px;background:#F2F4F7;font-size:12.5px;font-weight:500}
+</style>
+</helmet>
+<div style="width:2000px;height:640px;box-sizing:border-box;padding:64px 80px;background:#fff">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.015em">Thành phần ↔ mã, bàn phím</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);column-gap:96px;margin-top:40px">
+<div><div class="sec">Thành phần ↔ mã</div>
+<div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Nút</span><span class="g">Button</span><span class="g">primary, secondary, ghost, danger</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Ô nhập</span><span class="g">Input, Textarea</span><span class="g">lỗi, vô hiệu, có tiền tố</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Chọn người</span><span class="g">PersonPicker</span><span class="g">một, nhiều</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Chọn ngày</span><span class="g">DatePicker</span><span class="g">một, khoảng</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Bảng</span><span class="g">DataTable</span><span class="g">chọn dòng, phân cấp, gọn</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Panel bên</span><span class="g">SidePanel</span><span class="g">kéo giãn 520–1727</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Hộp thoại</span><span class="g">Dialog</span><span class="g">thường, hủy bỏ</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Thông báo nhanh</span><span class="g">Toast</span><span class="g">hoàn tác</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Tệp</span><span class="g">FileUpload</span><span class="g">kéo thả, tiến độ</span></div><div class="row" style="grid-template-columns:130px 150px minmax(0,1fr);font-size:13.5px"><span>Thanh bên</span><span class="g">AppSidebar</span><span class="g">thu gọn ⌘\\</span></div>
+<div class="t g" style="margin-top:12px">Thư mục src/components/ui. Mọi biến thể phải có ở bảng thành phần trước khi có trong mã.</div>
+<div class="sec" style="margin-top:28px">Phiên bản</div><div class="t g">Số theo dạng 1.4.0: đổi token hay bỏ biến thể là bản chính; thêm thành phần là bản phụ; sửa lỗi là bản vá. Ghi ngày và lý do ở đầu bảng Token.</div></div>
+<div><div class="sec">Bàn phím và đọc màn hình theo thành phần</div>
+<div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Menu, chọn</span><span>↑ ↓ di chuyển · Enter chọn · Esc đóng</span><span class="g">role=listbox, aria-activedescendant</span></div><div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Hộp thoại</span><span>Tab khóa trong hộp · Esc đóng</span><span class="g">role=dialog, aria-modal, trả tiêu điểm</span></div><div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Bảng</span><span>↑ ↓ dòng · Space chọn · Enter mở</span><span class="g">role=grid, aria-selected, aria-sort</span></div><div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Tab</span><span>← → đổi tab</span><span class="g">role=tablist, tab, tabpanel</span></div><div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Thông báo nhanh</span><span>không cướp tiêu điểm</span><span class="g">role=status, aria-live=polite</span></div><div class="row" style="grid-template-columns:130px minmax(0,1fr) minmax(0,1fr);font-size:13.5px"><span>Ô nhập lỗi</span><span>tiêu điểm nhảy tới lỗi đầu</span><span class="g">aria-invalid, aria-describedby</span></div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":640}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

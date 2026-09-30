@@ -38,6 +38,10 @@ yarn-error.log*
 
 # sqlite database artifacts
 *.db
+
+# design export archives and temp outputs
+Claude outputs/
+*.zip
 *.db-journal
 dev.db
 

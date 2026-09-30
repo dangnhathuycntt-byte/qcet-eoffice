@@ -1,0 +1,669 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "Access.dc.html": {
+   "h": 700,
+   "page": "nen-tang",
+   "title": "Truy cập và kiểm tra",
+   "w": 2000,
+   "x": 2080,
+   "y": 5320
+  },
+  "CodeMap.dc.html": {
+   "h": 640,
+   "page": "nen-tang",
+   "title": "Thành phần ↔ mã, bàn phím",
+   "w": 2000,
+   "x": 0,
+   "y": 11560
+  },
+  "Components.dc.html": {
+   "h": 1020,
+   "page": "nen-tang",
+   "title": "Thành phần",
+   "w": 2000,
+   "x": 0,
+   "y": 1340
+  },
+  "Components2.dc.html": {
+   "h": 1400,
+   "page": "nen-tang",
+   "title": "Thành phần 2 · Ô nhập, chọn người/ngày, phản hồi, nhãn văn bản",
+   "w": 2000,
+   "x": 2080,
+   "y": 1340
+  },
+  "Components3.dc.html": {
+   "h": 780,
+   "page": "nen-tang",
+   "title": "Thành phần 3 · Kanban, việc con, hoạt động, chọn trạng thái/ưu tiên, người",
+   "w": 2000,
+   "x": 0,
+   "y": 2860
+  },
+  "Components4.dc.html": {
+   "h": 1469,
+   "page": "nen-tang",
+   "title": "Thành phần 4 · soạn thảo, chọn nhiều, khoảng thời gian, chế độ xem, hiển thị",
+   "w": 2000,
+   "x": 0,
+   "y": 7360
+  },
+  "Components5.dc.html": {
+   "h": 1400,
+   "page": "nen-tang",
+   "title": "Thành phần 5 · biểu mẫu, chọn giờ, tiêu đề trang, liên kết, hoàn tất",
+   "w": 2000,
+   "x": 2080,
+   "y": 7360
+  },
+  "Components6.dc.html": {
+   "h": 1000,
+   "page": "nen-tang",
+   "title": "Thành phần 8 · Đăng nhập: nút Google, tài khoản, thông báo, thẻ",
+   "w": 2000,
+   "x": 2080,
+   "y": 12540
+  },
+  "Content.dc.html": {
+   "h": 960,
+   "page": "nen-tang",
+   "title": "Nội dung và giọng văn",
+   "w": 2000,
+   "x": 0,
+   "y": 4240
+  },
+  "DataViz.dc.html": {
+   "h": 820,
+   "page": "nen-tang",
+   "title": "Biểu đồ và số liệu",
+   "w": 2000,
+   "x": 2080,
+   "y": 4240
+  },
+  "Delegation.dc.html": {
+   "h": 1107,
+   "page": "uy-quyen",
+   "title": "Ủy quyền · danh sách và tạo mới",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "Docs.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "van-ban",
+   "title": "Văn bản · Sổ văn bản đến",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "Editor.dc.html": {
+   "h": 1500,
+   "page": "nen-tang",
+   "title": "Thành phần 7 · Trình soạn thảo: bôi đen, chọn vùng, chèn, khối",
+   "w": 2000,
+   "x": 0,
+   "y": 12440
+  },
+  "Empty.dc.html": {
+   "h": 760,
+   "page": "nen-tang",
+   "title": "Rỗng, đang tải, tải một phần",
+   "w": 2000,
+   "x": 2080,
+   "y": 9840
+  },
+  "Files.dc.html": {
+   "h": 700,
+   "page": "nen-tang",
+   "title": "Tệp, thao tác hàng loạt, phân trang",
+   "w": 2000,
+   "x": 0,
+   "y": 10760
+  },
+  "Foundations.dc.html": {
+   "h": 960,
+   "page": "nen-tang",
+   "title": "Nền tảng · Màu, chữ, bo góc, icon",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "Foundations2.dc.html": {
+   "h": 940,
+   "page": "nen-tang",
+   "title": "Nền tảng 2 · Trạng thái, độ cao, mật độ, chuyển động",
+   "w": 2000,
+   "x": 2080,
+   "y": 260
+  },
+  "Icons.dc.html": {
+   "h": 700,
+   "page": "nen-tang",
+   "title": "Biểu tượng theo nghiệp vụ, logo",
+   "w": 2000,
+   "x": 0,
+   "y": 8900
+  },
+  "Incoming.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "van-ban",
+   "title": "Văn bản đến · Chi tiết, bút phê",
+   "w": 2000,
+   "x": 2080,
+   "y": 260
+  },
+  "Layout.dc.html": {
+   "h": 1400,
+   "page": "nen-tang",
+   "title": "Thanh bên và bố cục",
+   "w": 2000,
+   "x": 2080,
+   "y": 2860
+  },
+  "Login.dc.html": {
+   "h": 1840,
+   "page": "chung",
+   "title": "Đăng nhập",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "Login2.dc.html": {
+   "h": 1180,
+   "page": "chung",
+   "title": "Đăng nhập 2 · cấp quyền, khóa, máy dùng chung, lỗi mạng, quy tắc sau đăng nhập",
+   "w": 2000,
+   "x": 2080,
+   "y": 1360
+  },
+  "LoginDesktop.dc.html": {
+   "h": 900,
+   "page": "chung",
+   "title": "Đăng nhập · máy tính",
+   "w": 1440,
+   "x": 2080,
+   "y": 260
+  },
+  "LoginMobile.dc.html": {
+   "h": 1200,
+   "page": "chung",
+   "title": "Đăng nhập · máy tính bảng và di động",
+   "w": 2560,
+   "x": 0,
+   "y": 2740
+  },
+  "Map.dc.html": {
+   "h": 1560,
+   "page": "ban-do",
+   "title": "Bản đồ hệ thống · đã có gì, còn thiếu gì",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "Mobile.dc.html": {
+   "h": 1040,
+   "page": "di-dong",
+   "title": "Di động · Danh sách, bộ lọc, chi tiết",
+   "w": 1720,
+   "x": 0,
+   "y": 260
+  },
+  "Mobile2.dc.html": {
+   "h": 1040,
+   "page": "di-dong",
+   "title": "Di động 2 · ngăn kéo, tạo việc, hoạt động, chọn người",
+   "w": 2000,
+   "x": 1800,
+   "y": 260
+  },
+  "Mobile3.dc.html": {
+   "h": 1040,
+   "page": "di-dong",
+   "title": "Di động 3 · thanh tab, vuốt, rỗng, đăng nhập",
+   "w": 2000,
+   "x": 3900,
+   "y": 260
+  },
+  "Modal.dc.html": {
+   "h": 900,
+   "page": "nen-tang",
+   "title": "Thành phần 6 · Hộp thoại (Modal)",
+   "w": 2000,
+   "x": 2080,
+   "y": 11560
+  },
+  "Onboarding.dc.html": {
+   "h": 2200,
+   "page": "chung",
+   "title": "Onboarding · trang toàn màn hình (máy tính)",
+   "w": 3000,
+   "x": 0,
+   "y": 5100
+  },
+  "OnboardingMobile.dc.html": {
+   "h": 1180,
+   "page": "chung",
+   "title": "Onboarding · di động",
+   "w": 1800,
+   "x": 0,
+   "y": 7400
+  },
+  "Outgoing.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "van-ban",
+   "title": "Văn bản đi · Trình ký",
+   "w": 2000,
+   "x": 0,
+   "y": 1587
+  },
+  "Patterns.dc.html": {
+   "h": 800,
+   "page": "nen-tang",
+   "title": "Mẫu tình huống · tìm nhanh, thông báo, lỗi, luồng",
+   "w": 2000,
+   "x": 0,
+   "y": 5320
+  },
+  "PrintDoc.dc.html": {
+   "h": 1120,
+   "page": "van-ban",
+   "title": "In văn bản theo NĐ 30/2020 và xuất sổ",
+   "w": 2000,
+   "x": 2080,
+   "y": 2914
+  },
+  "Scales.dc.html": {
+   "h": 760,
+   "page": "nen-tang",
+   "title": "Khoảng cách, điểm ngắt, chuyển động",
+   "w": 2000,
+   "x": 2080,
+   "y": 6240
+  },
+  "Signing.dc.html": {
+   "h": 1107,
+   "page": "van-ban",
+   "title": "Văn bản đi · Đang chờ ký số từ xa",
+   "w": 2000,
+   "x": 2080,
+   "y": 1587
+  },
+  "States.dc.html": {
+   "h": 820,
+   "page": "nen-tang",
+   "title": "Trang lỗi và trạng thái hệ thống",
+   "w": 2000,
+   "x": 0,
+   "y": 9840
+  },
+  "System.dc.html": {
+   "h": 700,
+   "page": "nen-tang",
+   "title": "Lớp, cây, chế độ tối, thông báo ngoài",
+   "w": 2000,
+   "x": 2080,
+   "y": 10760
+  },
+  "T3Activity.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "5. Chi tiết · Hoạt động",
+   "w": 2000,
+   "x": 0,
+   "y": 2914
+  },
+  "T3Bulk.dc.html": {
+   "h": 1020,
+   "page": "nhiem-vu",
+   "title": "14. Đổi hàng loạt, lặp lại, mẫu",
+   "w": 2000,
+   "x": 0,
+   "y": 9727
+  },
+  "T3Create.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "3. Tạo nhiệm vụ",
+   "w": 2000,
+   "x": 0,
+   "y": 1587
+  },
+  "T3Detail.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "4. Chi tiết",
+   "w": 2000,
+   "x": 2080,
+   "y": 1587
+  },
+  "T3Drop.dc.html": {
+   "h": 1300,
+   "page": "nhiem-vu",
+   "title": "15. Dropdown và menu",
+   "w": 2000,
+   "x": 0,
+   "y": 11467
+  },
+  "T3Empty.dc.html": {
+   "h": 1560,
+   "page": "nhiem-vu",
+   "title": "17. Trang rỗng và phần rỗng",
+   "w": 2000,
+   "x": 0,
+   "y": 12867
+  },
+  "T3Filter.dc.html": {
+   "h": 1107,
+   "page": "nhiem-vu",
+   "title": "12. Bộ lọc và nhóm (giữ danh sách như cũ)",
+   "w": 2000,
+   "x": 0,
+   "y": 8440
+  },
+  "T3Flow.dc.html": {
+   "h": 1000,
+   "page": "nhiem-vu",
+   "title": "10. Duyệt: ba quyết định, hệ quả, trường hợp biên",
+   "w": 2000,
+   "x": 2080,
+   "y": 5568
+  },
+  "T3Journey.dc.html": {
+   "h": 1120,
+   "page": "nhiem-vu",
+   "title": "11. Luồng người dùng theo vai trò",
+   "w": 2000,
+   "x": 0,
+   "y": 7200
+  },
+  "T3Kanban.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "2. Kanban",
+   "w": 2000,
+   "x": 2080,
+   "y": 260
+  },
+  "T3Keys.dc.html": {
+   "h": 520,
+   "page": "nhiem-vu",
+   "title": "Phím tắt",
+   "w": 1000,
+   "x": 0,
+   "y": 10827
+  },
+  "T3List.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "1. Danh sách",
+   "w": 2000,
+   "x": 0,
+   "y": 260
+  },
+  "T3Menu.dc.html": {
+   "h": 1107,
+   "page": "nhiem-vu",
+   "title": "Đổi tình trạng",
+   "w": 2000,
+   "x": 2080,
+   "y": 9727
+  },
+  "T3Notify.dc.html": {
+   "h": 1107,
+   "page": "nhiem-vu",
+   "title": "13. Thông báo và nhắc hạn (cài đặt)",
+   "w": 2000,
+   "x": 2080,
+   "y": 8440
+  },
+  "T3Review.dc.html": {
+   "h": 1107,
+   "page": "nhiem-vu",
+   "title": "8. Người duyệt: Duyệt, Cần chỉnh sửa, Không duyệt",
+   "w": 2000,
+   "x": 2080,
+   "y": 4241
+  },
+  "T3States.dc.html": {
+   "h": 1500,
+   "page": "nhiem-vu",
+   "title": "9. Trạng thái: đang tải, rỗng, chọn nhiều, hủy, tệp, lỗi",
+   "w": 2000,
+   "x": 0,
+   "y": 5568
+  },
+  "T3Submit.dc.html": {
+   "h": 1107,
+   "page": "nhiem-vu",
+   "title": "7. Người thực hiện: viết kết quả trong trình soạn thảo, Gửi duyệt",
+   "w": 2000,
+   "x": 0,
+   "y": 4241
+  },
+  "T3Subtask.dc.html": {
+   "h": 1107,
+   "is_interactive": true,
+   "page": "nhiem-vu",
+   "title": "6. Chi tiết việc con",
+   "w": 2000,
+   "x": 2080,
+   "y": 2914
+  },
+  "T3Toast.dc.html": {
+   "h": 1180,
+   "page": "nhiem-vu",
+   "title": "16. Thông báo nhanh (toast)",
+   "w": 2000,
+   "x": 2080,
+   "y": 11467
+  },
+  "Tokens.dc.html": {
+   "h": 1080,
+   "page": "nen-tang",
+   "title": "Token · thang xám 12 bậc, ngữ nghĩa, thành phần",
+   "w": 2000,
+   "x": 0,
+   "y": 6240
+  },
+  "Viet.dc.html": {
+   "h": 760,
+   "page": "nen-tang",
+   "title": "Quy tắc sắp xếp tiếng Việt",
+   "w": 2000,
+   "x": 2080,
+   "y": 8900
+  },
+  "Wizard.dc.html": {
+   "h": 760,
+   "page": "van-ban",
+   "title": "Soạn văn bản đi · xem lại trước khi trình ký",
+   "w": 2000,
+   "x": 0,
+   "y": 2914
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-09-29T06:55:44.865Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "page": "nhiem-vu",
+  "view": "canvas"
+ },
+ "notes": {
+  "flow": {
+   "page": "nhiem-vu",
+   "text": "Luồng\n\nDanh sách ↔ Kanban → Tạo nhiệm vụ\nDanh sách → Chi tiết (Tổng quan | Hoạt động) → Việc con\nNgười thực hiện: Nộp kết quả → Chờ duyệt\nNgười duyệt: Duyệt kết quả → Hoàn thành / Cần chỉnh sửa / Không duyệt\n\nCần anh chốt\n1. Còn việc con chưa xong có chặn Nộp/Duyệt không? (bản vẽ: chỉ nhắc, không chặn)\n2. Quá hạn khi đang Chờ duyệt tính cho người nộp hay người duyệt?\n3. DESIGN.md còn ghi primary xanh #1D4EA8; bản vẽ dùng than chì.",
+   "w": 440,
+   "x": 4160,
+   "y": 260
+  },
+  "shape-hs46ib": {
+   "d": "M1.2 49.7 C0.4 53.6 0 57.4 0 60.9 C0 81.1 12.3 95.5 24.6 113.8 C46.7 62.3 49.3 24 104.1 0 C125.3 17.8 137.5 25.4 137.5 44.1 C137.5 48.9 136.7 54.5 135 61.2 C123.2 56.2 117.7 53.5 106.9 45.1",
+   "h": 83,
+   "kind": "pen",
+   "page": "nhiem-vu",
+   "w": 492,
+   "x": 1731,
+   "y": -193
+  },
+  "tBD": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "ban-do",
+   "text": "Bản đồ hệ thống: đối chiếu với các hệ thiết kế lớn",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "tCH": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "chung",
+   "text": "Đăng nhập và ủy quyền",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "tCO": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "nen-tang",
+   "text": "Nền tảng, thành phần, thanh bên và bố cục",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "tDD": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "di-dong",
+   "text": "Di động",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "tNV": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "nhiem-vu",
+   "text": "Nhiệm vụ · danh sách, Kanban, tạo, chi tiết, việc con, nộp và duyệt",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  },
+  "tVB": {
+   "kind": "title1",
+   "maxW": 4080,
+   "page": "van-ban",
+   "text": "Văn bản · sổ văn bản đến, chi tiết và bút phê, trình ký, ký số",
+   "w": 240,
+   "x": 0,
+   "y": 0
+  }
+ },
+ "order": [
+  "Docs.dc.html",
+  "Incoming.dc.html",
+  "Outgoing.dc.html",
+  "Signing.dc.html",
+  "Mobile.dc.html",
+  "Map.dc.html",
+  "Foundations.dc.html",
+  "Foundations2.dc.html",
+  "Components.dc.html",
+  "Components2.dc.html",
+  "Components3.dc.html",
+  "Layout.dc.html",
+  "Content.dc.html",
+  "DataViz.dc.html",
+  "Patterns.dc.html",
+  "Delegation.dc.html",
+  "Access.dc.html",
+  "Tokens.dc.html",
+  "Scales.dc.html",
+  "Components4.dc.html",
+  "Components5.dc.html",
+  "Wizard.dc.html",
+  "PrintDoc.dc.html",
+  "Icons.dc.html",
+  "Viet.dc.html",
+  "States.dc.html",
+  "Empty.dc.html",
+  "Files.dc.html",
+  "System.dc.html",
+  "CodeMap.dc.html",
+  "Modal.dc.html",
+  "T3List.dc.html",
+  "T3Kanban.dc.html",
+  "T3Create.dc.html",
+  "T3Detail.dc.html",
+  "T3Activity.dc.html",
+  "T3Subtask.dc.html",
+  "T3Submit.dc.html",
+  "T3Review.dc.html",
+  "T3States.dc.html",
+  "T3Flow.dc.html",
+  "Editor.dc.html",
+  "T3Journey.dc.html",
+  "T3Filter.dc.html",
+  "T3Notify.dc.html",
+  "T3Bulk.dc.html",
+  "T3Menu.dc.html",
+  "T3Keys.dc.html",
+  "T3Drop.dc.html",
+  "T3Toast.dc.html",
+  "T3Empty.dc.html",
+  "Mobile2.dc.html",
+  "Mobile3.dc.html",
+  "Components6.dc.html",
+  "Login.dc.html",
+  "LoginDesktop.dc.html",
+  "Login2.dc.html",
+  "LoginMobile.dc.html",
+  "Onboarding.dc.html",
+  "OnboardingMobile.dc.html"
+ ],
+ "pages": [
+  {
+   "id": "ban-do",
+   "name": "Bản đồ hệ thống"
+  },
+  {
+   "id": "nhiem-vu",
+   "name": "Nhiệm vụ"
+  },
+  {
+   "id": "van-ban",
+   "name": "Văn bản"
+  },
+  {
+   "id": "chung",
+   "name": "Đăng nhập & onboarding"
+  },
+  {
+   "id": "uy-quyen",
+   "name": "Ủy quyền"
+  },
+  {
+   "id": "di-dong",
+   "name": "Di động"
+  },
+  {
+   "id": "nen-tang",
+   "name": "Nền tảng & thành phần"
+  }
+ ],
+ "title": "QCET Nhiệm vụ Redesign"
+}

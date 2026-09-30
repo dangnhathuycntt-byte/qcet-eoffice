@@ -12,7 +12,7 @@ Nguồn sự thật: ảnh trong `shots/` và bảng trong `project/`. Tệp nà
 | color-bg-selected | #DEE2E8 | dòng đang chọn |
 | bậc 6 | #DADDE2 | ô chọn chưa tick, thanh mảnh |
 | bậc 7 | #C9CDD3 | tay nắm, dấu chia, icon rất mờ |
-| bậc 8 | #9AA0A9 | chữ và icon v�� hiệu |
+| bậc 8 | #9AA0A9 | chữ và icon vô hiệu |
 | color-action | #25282F | nút chính, ô tick |
 | color-action-hover | #3A3D44 | nút chính khi di chuột |
 | color-on-action | #FAFAFA | chữ trên nút chính |
