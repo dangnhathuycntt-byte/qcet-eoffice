@@ -80,11 +80,11 @@ export const PopoverContent = React.forwardRef<
           <BasePopover.Popup
             ref={ref}
             className={cn(
-              "z-50 w-72 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-lg outline-none",
-              "origin-[var(--transform-origin)] transition-[opacity,scale] duration-150 ease-out",
-              "data-[starting-style]:opacity-0 data-[starting-style]:scale-95",
-              "data-[ending-style]:opacity-0 data-[ending-style]:scale-95",
-              "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+              "z-50 w-72 rounded-[var(--radius-menu)] border-0 bg-popover p-4 text-popover-foreground shadow-dropdown outline-none",
+              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-normal)] motion-reduce:transition-none ease-out",
+              "data-[starting-style]:opacity-0",
+              "data-[ending-style]:opacity-0",
+              "motion-safe:animate-in motion-safe:fade-in-0",
               className
             )}
             {...props}

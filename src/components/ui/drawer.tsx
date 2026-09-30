@@ -74,10 +74,10 @@ export const DrawerContent = React.forwardRef<
   const { open } = React.useContext(DrawerContext);
 
   const directionClasses = {
-    right: "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-l border-border/60 shadow-2xl focus:outline-none",
-    left: "fixed inset-y-0 left-0 z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-r border-border/60 shadow-2xl focus:outline-none",
-    bottom: "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card shadow-2xl focus:outline-none pb-[max(1rem,env(safe-area-inset-bottom))]",
-    top: "fixed inset-x-0 top-0 z-50 flex max-h-[90dvh] flex-col rounded-b-[28px] border-b border-border/80 bg-card shadow-2xl focus:outline-none pt-[max(1rem,env(safe-area-inset-top))]",
+    right: "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-0 shadow-2xl focus:outline-none",
+    left: "fixed inset-y-0 left-0 z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-0 shadow-2xl focus:outline-none",
+    bottom: "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-0 bg-card shadow-2xl focus:outline-none pb-[max(1rem,env(safe-area-inset-bottom))]",
+    top: "fixed inset-x-0 top-0 z-50 flex max-h-[90dvh] flex-col rounded-b-[28px] border-0 bg-card shadow-2xl focus:outline-none pt-[max(1rem,env(safe-area-inset-top))]",
   }[direction];
 
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -110,7 +110,7 @@ export const DrawerHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col border-b border-border/60 px-4 sm:px-6 py-4 gap-3.5 shrink-0 bg-card/95 backdrop-blur-md",
+      "flex flex-col border-0 px-4 sm:px-6 py-4 gap-3.5 shrink-0 bg-card/95 backdrop-blur-md",
       className
     )}
     {...props}

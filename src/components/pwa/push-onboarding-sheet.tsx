@@ -103,15 +103,15 @@ export function PermissionRecoveryGuide({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Platform Switcher Tabs */}
-      <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+      <div className="flex p-1 bg-secondary rounded-xl border-0">
         <button
           type="button"
           onClick={() => setPlatform("chrome")}
           className={cn(
             "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
             platform === "chrome"
-              ? "bg-white text-foreground shadow-sm border border-slate-200"
-              : "text-slate-600 hover:text-foreground"
+              ? "bg-card text-foreground shadow-none border-0"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           Google Chrome / Máy tính
@@ -122,8 +122,8 @@ export function PermissionRecoveryGuide({
           className={cn(
             "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
             platform === "safari"
-              ? "bg-white text-foreground shadow-sm border border-slate-200"
-              : "text-slate-600 hover:text-foreground"
+              ? "bg-card text-foreground shadow-none border-0"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           Safari / iOS (iPhone & iPad)
@@ -131,8 +131,8 @@ export function PermissionRecoveryGuide({
       </div>
 
       {/* Info notice */}
-      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed">
-        <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-secondary border-0 text-xs sm:text-sm text-foreground leading-relaxed">
+        <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
         <span>
           {platform === "chrome"
             ? "Trình duyệt Chrome trên máy tính đã bị chặn gửi thông báo. Hãy làm theo 3 bước bên dưới để mở khóa:"
@@ -142,30 +142,30 @@ export function PermissionRecoveryGuide({
 
       {/* 3 Steps */}
       {platform === "chrome" ? (
-        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
+        <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
           {/* Step 1 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               1
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-amber-600" />
+                <Lock className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm sm:text-base font-semibold text-foreground">
                   Nhấn vào biểu tượng Ổ khóa trên thanh địa chỉ
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Trên thanh địa chỉ trình duyệt Chrome (bên trái đường dẫn URL https://...), nhấn vào biểu tượng Ổ khóa hoặc Cài đặt trang web.
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-slate-200 ml-11" />
+          <div className="h-px bg-transparent ml-11" />
 
           {/* Step 2 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               2
             </div>
             <div className="space-y-1">
@@ -175,37 +175,37 @@ export function PermissionRecoveryGuide({
                   Chuyển &quot;Thông báo&quot; sang &quot;Cho phép&quot;
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Tìm mục Thông báo (Notifications), chọn gạt công tắc hoặc đổi từ &quot;Chặn&quot; (Block) sang &quot;Cho phép&quot; (Allow).
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-slate-200 ml-11" />
+          <div className="h-px bg-transparent ml-11" />
 
           {/* Step 3 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               3
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-emerald-600" />
+                <RefreshCw className="w-4 h-4 text-foreground" />
                 <p className="text-sm sm:text-base font-semibold text-foreground">
                   Tải lại trang để áp dụng
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Nhấn nút &quot;Tải lại trang ngay&quot; bên dưới hoặc phím F5 (Ctrl+R / Cmd+R) để hoàn tất cập nhật quyền thông báo.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
+        <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
           {/* Step 1 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               1
             </div>
             <div className="space-y-1">
@@ -215,47 +215,47 @@ export function PermissionRecoveryGuide({
                   Mở ứng dụng Cài đặt (Settings) trên iOS
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Từ màn hình chính iPhone / iPad, mở Cài đặt (Settings), cuộn xuống tìm và chọn ứng dụng QCET E-Office (hoặc Safari).
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-slate-200 ml-11" />
+          <div className="h-px bg-transparent ml-11" />
 
           {/* Step 2 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               2
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-amber-600" />
+                <Bell className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm sm:text-base font-semibold text-foreground">
                   Bật mục &quot;Thông báo&quot; (Notifications) sang &quot;Cho phép&quot;
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Chọn mục Thông báo và bật công tắc &quot;Cho phép thông báo&quot; (Allow Notifications), kèm tùy chọn phát âm thanh chuông.
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-slate-200 ml-11" />
+          <div className="h-px bg-transparent ml-11" />
 
           {/* Step 3 */}
           <div className="flex items-start gap-3.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-secondary text-primary font-semibold text-sm flex items-center justify-center shrink-0 border-0">
               3
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-emerald-600" />
+                <RefreshCw className="w-4 h-4 text-foreground" />
                 <p className="text-sm sm:text-base font-semibold text-foreground">
                   Quay lại ứng dụng QCET và tải lại
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Quay lại ứng dụng QCET E-Office từ màn hình chính hoặc bấm nút tải lại bên dưới để hoàn tất xác thực quyền.
               </p>
             </div>
@@ -268,7 +268,7 @@ export function PermissionRecoveryGuide({
         <button
           type="button"
           onClick={handleReload}
-          className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+          className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
         >
           <RefreshCw className="w-5 h-5" />
           <span>Tải lại trang ngay</span>
@@ -277,7 +277,7 @@ export function PermissionRecoveryGuide({
           <button
             type="button"
             onClick={onDismiss}
-            className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium text-base transition-colors cursor-pointer"
+            className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-muted-foreground font-medium text-base transition-colors cursor-pointer"
           >
             Để sau
           </button>
@@ -432,10 +432,10 @@ export function PushOnboardingSheet({
   return (
     <BottomSheet open={isOpen} onOpenChange={handleOpenChange}>
       <BottomSheetContent className="max-h-[92vh] overflow-y-auto px-4 pb-8 sm:px-6">
-        <BottomSheetHeader className="border-b border-slate-200 pb-3 pt-2">
+        <BottomSheetHeader className="border-0 pb-3 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-secondary text-primary border-0 flex items-center justify-center shrink-0">
                 {isModeIOS ? (
                   <Smartphone className="w-6 h-6 text-primary" />
                 ) : isModeAndroidInstall ? (
@@ -445,7 +445,7 @@ export function PushOnboardingSheet({
                 )}
               </div>
               <div>
-                <BottomSheetTitle className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                <BottomSheetTitle className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
                   {isDenied
                     ? "Hướng dẫn mở lại quyền thông báo"
                     : isModeIOS
@@ -456,7 +456,7 @@ export function PushOnboardingSheet({
                     ? "Bật chuông báo chỉ đạo & việc khẩn"
                     : "Thông báo đã sẵn sàng"}
                 </BottomSheetTitle>
-                <BottomSheetDescription className="text-sm sm:text-base text-slate-500 mt-0.5">
+                <BottomSheetDescription className="text-sm sm:text-base text-muted-foreground mt-0.5">
                   {isDenied
                     ? "Quyền thông báo đang bị chặn hoặc bị khóa bởi trình duyệt"
                     : "Hệ thống điều hành tác nghiệp Trường CĐ Kỹ thuật Công nghệ Quy Nhơn (QCET)"}
@@ -466,7 +466,7 @@ export function PushOnboardingSheet({
 
             <BottomSheetClose
               onClick={handleDismiss}
-              className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
               aria-label="Đóng"
             >
               <X className="w-5 h-5" />
@@ -499,63 +499,63 @@ export function PushOnboardingSheet({
           {/* Mode A: iOS Safari Instructions */}
           {!isDenied && isModeIOS && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-medium leading-relaxed">
+              <p className="text-sm text-foreground font-medium leading-relaxed">
                 Để nhận thông báo tức thì và thao tác nhanh chóng như ứng dụng cài đặt trên máy iPhone / iPad, vui lòng làm theo 3 bước sau:
               </p>
 
-              <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
+              <div className="space-y-3 bg-secondary border-0 rounded-2xl p-4 sm:p-5">
                 {/* Step 1 */}
                 <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
                     1
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       Nhấn nút Chia sẻ
                     </p>
-                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       Nhấn nút Chia sẻ (biểu tượng hình vuông có mũi tên trỏ lên) ở thanh điều khiển Safari dưới cùng của màn hình.
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-foreground mt-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border-0 text-xs font-semibold text-foreground mt-1">
                       <Share className="w-4 h-4 text-primary" />
                       <span>Nút Chia sẻ Safari</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-slate-200 ml-13" />
+                <div className="h-px bg-transparent ml-13" />
 
                 {/* Step 2 */}
                 <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
                     2
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       Chọn &quot;Thêm vào Màn hình chính&quot;
                     </p>
-                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       Cuộn xuống trong danh sách tùy chọn và chọn &quot;Thêm vào Màn hình chính&quot; (Add to Home Screen).
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-foreground mt-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border-0 text-xs font-semibold text-foreground mt-1">
                       <PlusSquare className="w-4 h-4 text-primary" />
                       <span>Thêm vào Màn hình chính</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-slate-200 ml-13" />
+                <div className="h-px bg-transparent ml-13" />
 
                 {/* Step 3 */}
                 <div className="flex items-start gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold text-base flex items-center justify-center shrink-0">
                     3
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       Nhấn &quot;Thêm&quot; để hoàn tất
                     </p>
-                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       Nhấn nút &quot;Thêm&quot; (Add) ở góc trên bên phải màn hình để đưa biểu tượng QCET E-Office ra màn hình chính, sau đó mở ứng dụng từ màn hình chính để kích hoạt thông báo.
                     </p>
                   </div>
@@ -566,7 +566,7 @@ export function PushOnboardingSheet({
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -577,11 +577,11 @@ export function PushOnboardingSheet({
           {/* Mode B: Android / Chromium Desktop 1-Click Install */}
           {!isDenied && isModeAndroidInstall && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-normal leading-relaxed">
+              <p className="text-sm text-foreground font-normal leading-relaxed">
                 Truy cập nhanh như ứng dụng di động, không cần mở trình duyệt và không tốn dung lượng máy.
               </p>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-secondary border-0 space-y-3">
                 <div className="flex items-center gap-3">
                   <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
                   <span className="text-sm sm:text-base text-foreground font-medium">
@@ -600,7 +600,7 @@ export function PushOnboardingSheet({
                 <button
                   type="button"
                   onClick={handleInstallClick}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5"
                 >
                   <Download className="w-5 h-5" />
                   <span>CÀI ĐẶT 1-CHẠM</span>
@@ -608,7 +608,7 @@ export function PushOnboardingSheet({
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -619,11 +619,11 @@ export function PushOnboardingSheet({
           {/* Mode C: Push Prompt */}
           {!isDenied && !isModeIOS && !isModeAndroidInstall && isModePushPrompt && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-normal leading-relaxed">
+              <p className="text-sm text-foreground font-normal leading-relaxed">
                 Nhận thông báo tức thì khi có việc khẩn, văn bản hỏa tốc và ý kiến chỉ đạo từ Ban Giám Hiệu ngay cả khi không mở ứng dụng.
               </p>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-secondary border-0 space-y-3">
                 <div className="flex items-center gap-3">
                   <Bell className="w-6 h-6 text-primary shrink-0" />
                   <span className="text-sm sm:text-base text-foreground font-medium">
@@ -639,25 +639,25 @@ export function PushOnboardingSheet({
               </div>
 
               {/* Granular topic selection */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="border-0 rounded-xl overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setShowPreferences((v) => !v)}
-                  className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors min-h-[44px]"
+                  className="w-full px-4 py-3 bg-secondary hover:bg-secondary flex items-center justify-between text-left transition-colors min-h-[44px]"
                 >
                   <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground">
-                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                     <span>Tùy chỉnh các chủ đề nhận thông báo</span>
                   </div>
                   {showPreferences ? (
-                    <ChevronUp className="w-4 h-4 text-slate-500" />
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   )}
                 </button>
 
                 {showPreferences && (
-                  <div className="p-4 bg-white divide-y divide-slate-100 space-y-3">
+                  <div className="p-4 bg-card  space-y-3">
                     {PUSH_TOPICS.map((topic) => {
                       let isChecked = true;
                       switch (topic.id) {
@@ -690,7 +690,7 @@ export function PushOnboardingSheet({
                             <div className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                               {topic.title}
                             </div>
-                            <div className="text-xs text-slate-500 leading-normal mt-0.5">
+                            <div className="text-xs text-muted-foreground leading-normal mt-0.5">
                               {topic.description}
                             </div>
                           </div>
@@ -706,7 +706,7 @@ export function PushOnboardingSheet({
                   type="button"
                   onClick={handleSubscribeClick}
                   disabled={isLoading}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-none hover:bg-primary-hover transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -718,7 +718,7 @@ export function PushOnboardingSheet({
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-12 py-3.5 px-6 rounded-xl border-0 bg-card hover:bg-secondary text-foreground font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -729,21 +729,21 @@ export function PushOnboardingSheet({
           {/* Mode D: Already Subscribed */}
           {!isDenied && !isModeIOS && !isModeAndroidInstall && isModeSubscribed && (
             <div className="space-y-4 text-center py-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-9 h-9 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full bg-transparent border-0 text-foreground flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-9 h-9 text-foreground" />
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-bold text-foreground">
+                <p className="text-lg font-semibold text-foreground">
                   Thông báo đã kích hoạt thành công
                 </p>
-                <p className="text-base text-slate-600">
+                <p className="text-base text-muted-foreground">
                   Bạn sẽ nhận được chuông thông báo mỗi khi có chỉ đạo mới hoặc nhiệm vụ được phân công.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => handleOpenChange(false)}
-                className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-md hover:bg-primary/90 transition-colors cursor-pointer mt-2"
+                className="w-full min-h-12 py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-none hover:bg-primary-hover transition-colors cursor-pointer mt-2"
               >
                 Hoàn tất
               </button>

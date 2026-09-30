@@ -74,7 +74,7 @@ export function PWAInstallPrompt({
       <div
         role="status"
         aria-live="polite"
-        className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-950 shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-200 ${className}`}
+        className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 p-4 rounded-xl border-0 bg-secondary text-foreground shadow-none animate-in fade-in slide-in-from-bottom-3 duration-200 ${className}`}
       >
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
@@ -97,11 +97,11 @@ export function PWAInstallPrompt({
     <aside
       role="region"
       aria-label="Thông báo cài đặt ứng dụng QCET E-Office"
-      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-lg z-50 p-4 sm:p-5 rounded-2xl border border-border bg-card text-foreground shadow-xl ring-1 ring-foreground/5 animate-in fade-in slide-in-from-bottom-4 duration-300 ${className}`}
+      className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-lg z-50 p-4 sm:p-5 rounded-2xl border-0 bg-card text-foreground shadow-dropdown animate-in fade-in slide-in-from-bottom-4 duration-300 ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3.5">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-transparent text-muted-foreground border-0 shrink-0">
             {isIOS ? (
               <Smartphone size={20} strokeWidth={1.5} />
             ) : (
@@ -109,10 +109,10 @@ export function PWAInstallPrompt({
             )}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-secondary text-primary border-0">
               Ứng dụng PWA chính thức
             </div>
-            <h3 className="text-sm sm:text-base font-bold text-foreground leading-snug">
+            <h3 className="text-sm sm:text-base font-semibold text-foreground leading-snug">
               Cài đặt QCET E-Office
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -131,11 +131,11 @@ export function PWAInstallPrompt({
         </button>
       </div>
 
-      <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-t border-border">
+      <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-0">
         <button
           type="button"
           onClick={handleDismiss}
-          className="min-h-[44px] px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="min-h-[44px] px-4 py-2.5 rounded-xl border-0 bg-card hover:bg-muted text-foreground font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           Để sau
         </button>
@@ -143,7 +143,7 @@ export function PWAInstallPrompt({
           type="button"
           onClick={handleInstall}
           disabled={isProcessing}
-          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs sm:text-sm shadow-sm hover:shadow transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           <Download size={16} strokeWidth={1.5} />
           <span>{isProcessing ? "Đang xử lý..." : "Cài đặt ngay"}</span>

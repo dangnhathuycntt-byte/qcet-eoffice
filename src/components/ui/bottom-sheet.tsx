@@ -52,7 +52,7 @@ export const BottomSheetOverlay = React.forwardRef<
   <VaulDrawer.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-200",
+      "fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-200",
       className
     )}
     {...props}
@@ -73,7 +73,7 @@ export const BottomSheetContent = React.forwardRef<
     return (
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-0 bg-card text-card-foreground shadow-2xl focus:outline-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
@@ -92,7 +92,7 @@ export const BottomSheetContent = React.forwardRef<
       <VaulDrawer.Content
         ref={ref}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-0 bg-card text-card-foreground shadow-2xl focus:outline-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
@@ -152,7 +152,7 @@ export const BottomSheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "mt-auto flex flex-col gap-2 p-5 pt-2 shrink-0 border-t border-border/40",
+      "mt-auto flex flex-col gap-2 p-5 pt-2 shrink-0 border-0",
       className
     )}
     {...props}

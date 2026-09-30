@@ -206,19 +206,19 @@ export function MobileAppInstallModal({
       aria-labelledby="install-modal-title"
     >
       <div
-        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border border-border/80 bg-card text-card-foreground shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border-0 bg-card text-card-foreground shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-0 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-secondary text-primary border-0">
               <Smartphone size={18} strokeWidth={1.5} />
             </div>
             <div>
               <h2
                 id="install-modal-title"
-                className="text-sm sm:text-base font-bold text-foreground leading-tight"
+                className="text-sm sm:text-base font-semibold text-foreground leading-tight"
               >
                 Cài đặt Ứng dụng QCET E-Office
               </h2>
@@ -241,12 +241,12 @@ export function MobileAppInstallModal({
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {isMobileDevice ? (
             /* Direct Mobile Install / Quick Action Card */
-            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+            <div className="p-4 rounded-xl border-0 bg-primary/5 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Smartphone size={16} className="text-primary shrink-0" />
-                    <h4 className="text-sm font-bold text-foreground">
+                    <h4 className="text-sm font-semibold text-foreground">
                       {isStandalone
                         ? "Ứng dụng đã được cài đặt"
                         : "Cài đặt ứng dụng trên thiết bị này"}
@@ -266,7 +266,7 @@ export function MobileAppInstallModal({
                       await installApp();
                       handleClose();
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-none hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer shrink-0"
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
@@ -275,12 +275,12 @@ export function MobileAppInstallModal({
               </div>
 
               {/* Copy URL Row for Mobile */}
-              <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+              <div className="flex items-center gap-2 pt-2 border-0">
                 <input
                   type="text"
                   readOnly
                   value={activeUrl}
-                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border border-border bg-background text-foreground select-all truncate"
+                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all truncate"
                 />
                 <button
                   type="button"
@@ -289,7 +289,7 @@ export function MobileAppInstallModal({
                     "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0",
                     copied
                       ? "bg-emerald-600 text-white"
-                      : "bg-card hover:bg-muted border border-border text-foreground"
+                      : "bg-card hover:bg-muted border-0 text-foreground"
                   )}
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -299,10 +299,10 @@ export function MobileAppInstallModal({
             </div>
           ) : (
             /* QR Code & Direct Connect Section */
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-4 rounded-xl border border-primary/20 bg-primary/5">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-4 rounded-xl border-0 bg-primary/5">
             {/* Left: QR Display */}
             <div className="md:col-span-5 flex flex-col items-center justify-center text-center">
-              <div className="relative p-2.5 bg-white rounded-xl shadow-md border border-border/40 inline-flex items-center justify-center">
+              <div className="relative p-2.5 bg-card rounded-xl shadow-none border-0 inline-flex items-center justify-center">
                 {isGeneratingQr || !qrCodeDataUrl ? (
                   <div className="size-[180px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 size={24} className="animate-spin text-primary" />
@@ -326,7 +326,7 @@ export function MobileAppInstallModal({
             {/* Right: Network Address Options & Copy */}
             <div className="md:col-span-7 space-y-3">
               <div>
-                <span className="text-xs font-bold text-muted-foreground">
+                <span className="text-xs font-semibold text-muted-foreground">
                   Chọn kênh kết nối đến điện thoại:
                 </span>
                 <div className="mt-1.5 space-y-1.5">
@@ -349,10 +349,10 @@ export function MobileAppInstallModal({
                             <span className="truncate">Mạng Tailscale VPN</span>
                             <span
                               className={cn(
-                                "px-1.5 py-0.5 rounded text-xs uppercase font-bold",
+                                "px-1.5 py-0.5 rounded text-xs uppercase font-semibold",
                                 selectedUrlType === "tailscale"
-                                  ? "bg-white/20 text-white"
-                                  : "bg-emerald-500/15 text-emerald-600"
+                                  ? "bg-card/20 text-white"
+                                  : "bg-secondary0/15 text-foreground"
                               )}
                             >
                               Khuyên dùng
@@ -452,7 +452,7 @@ export function MobileAppInstallModal({
                   type="text"
                   readOnly
                   value={activeUrl}
-                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border border-border bg-background text-foreground select-all"
+                  className="flex-1 px-2.5 py-1.5 text-xs font-mono rounded-lg border-0 bg-background text-foreground select-all"
                 />
                 <button
                   type="button"
@@ -461,7 +461,7 @@ export function MobileAppInstallModal({
                     "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
                     copied
                       ? "bg-emerald-600 text-white"
-                      : "bg-secondary text-foreground hover:bg-secondary/80 border border-border/60"
+                      : "bg-secondary text-foreground hover:bg-secondary/80 border-0"
                   )}
                 >
                   {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -474,7 +474,7 @@ export function MobileAppInstallModal({
 
           {/* Platform Installation Guide Tabs */}
           <div>
-            <div className="flex items-center gap-1.5 border-b border-border/60 pb-2 overflow-x-auto">
+            <div className="flex items-center gap-1.5 border-0 pb-2 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("ios")}
@@ -516,9 +516,9 @@ export function MobileAppInstallModal({
             {/* iOS Guide */}
             {activeTab === "ios" && (
               <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-2 text-xs">
+                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       1
                     </span>
                     <p className="text-foreground leading-relaxed">
@@ -526,34 +526,34 @@ export function MobileAppInstallModal({
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       2
                     </span>
                     <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
                       <span>Nhấn biểu tượng</span>
-                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border border-border/60">
+                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border-0">
                         <Share size={12} className="text-primary" /> Chia sẻ (Share)
                       </strong>
                       <span>ở thanh công cụ dưới đáy Safari.</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       3
                     </span>
                     <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
                       <span>Chọn</span>
-                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border border-border/60">
+                      <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border-0">
                         <PlusSquare size={12} className="text-primary" /> Thêm vào MH chính (Add to Home Screen)
                       </strong>
                       <span>rồi nhấn <strong>Thêm (Add)</strong>.</span>
                     </div>
                   </div>
-                  <div className="mt-1 pt-1.5 border-t border-border/40 text-xs text-muted-foreground">
+                  <div className="mt-1 pt-1.5 border-0 text-xs text-muted-foreground">
                     Thao tác nhanh: <strong>Nhấn biểu tượng Chia sẻ &rarr; Thêm vào Màn hình chính</strong>.
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-lg bg-secondary0/10 border-0 text-emerald-700 text-xs flex items-center gap-2">
                   <CheckCircle2 size={15} className="shrink-0" />
                   <span>
                     App sẽ xuất hiện trên màn hình chính của iPhone với biểu tượng QCET, chạy toàn màn hình và nhận thông báo đẩy (Push Notifications) như app App Store!
@@ -565,9 +565,9 @@ export function MobileAppInstallModal({
             {/* Android Guide */}
             {activeTab === "android" && (
               <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-2 text-xs">
+                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-2 text-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       1
                     </span>
                     <p className="text-foreground leading-relaxed">
@@ -575,7 +575,7 @@ export function MobileAppInstallModal({
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       2
                     </span>
                     <p className="text-foreground leading-relaxed">
@@ -583,7 +583,7 @@ export function MobileAppInstallModal({
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                       3
                     </span>
                     <p className="text-foreground leading-relaxed">
@@ -591,7 +591,7 @@ export function MobileAppInstallModal({
                     </p>
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-lg bg-secondary0/10 border-0 text-emerald-700 text-xs flex items-center gap-2">
                   <CheckCircle2 size={15} className="shrink-0" />
                   <span>
                     Ứng dụng được cài đặt vào ngăn chứa ứng dụng của Android, hỗ trợ thông báo chuông và rung độc lập.
@@ -603,9 +603,9 @@ export function MobileAppInstallModal({
             {/* Desktop Guide */}
             {activeTab === "desktop" && (
               <div className="pt-3 space-y-2.5">
-                <div className="p-3 rounded-xl border border-border/60 bg-muted/20 space-y-3 text-xs">
+                <div className="p-3 rounded-xl border-0 bg-muted/20 space-y-3 text-xs">
                   {isStandalone ? (
-                    <div className="flex items-center gap-2 text-emerald-600 font-semibold">
+                    <div className="flex items-center gap-2 text-foreground font-semibold">
                       <CheckCircle2 size={16} />
                       <span>QCET E-Office đã được cài đặt và đang chạy ở chế độ Desktop App độc lập.</span>
                     </div>
@@ -620,7 +620,7 @@ export function MobileAppInstallModal({
                           await installApp();
                           handleClose();
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-all cursor-pointer shadow-none active:scale-[0.98]"
                       >
                         <Laptop size={15} />
                         <span>Cài đặt ngay lên máy tính này</span>
@@ -643,7 +643,7 @@ export function MobileAppInstallModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-border/60 bg-muted/10 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="px-5 py-3 border-0 bg-muted/10 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-primary" />
             <span>Đồng bộ thời gian thực qua Tailscale &amp; Web Push</span>
@@ -651,7 +651,7 @@ export function MobileAppInstallModal({
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 min-h-[44px] rounded-lg border border-border/60 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
+            className="px-4 py-2 min-h-[44px] rounded-lg border-0 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
           >
             Đóng
           </button>

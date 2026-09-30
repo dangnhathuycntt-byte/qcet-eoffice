@@ -58,7 +58,7 @@ export function StandardDialog({
         <BaseDialog.Popup
           className={cn(
             "fixed left-1/2 top-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
-            "rounded-xl border border-border bg-card p-6 shadow-xl",
+            "rounded-2xl border-0 bg-card p-6 shadow-[var(--shadow-dialog)]",
             "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
             sizeClasses[size],
             className

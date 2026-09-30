@@ -6,13 +6,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn, getInitials } from "@/lib/utils";
 
 const avatarVariants = cva(
-  "shrink-0 rounded-full ring-1 ring-border/40 overflow-hidden",
+  "shrink-0 rounded-full overflow-hidden",
   {
     variants: {
       size: {
         xs: "size-4 text-[8px]",
-        sm: "size-5 text-[10px]",
-        md: "size-7 text-xs",
+        sm: "size-5 text-[10px]", // 20px (bảng)
+        md: "size-6 text-xs",     // 24px (hoạt động)
+        lg: "size-8 text-xs",     // 32px (hồ sơ)
+        xl: "size-[60px] text-[22px] font-semibold", // 60px (onboarding)
       },
     },
     defaultVariants: { size: "sm" },
@@ -55,7 +57,7 @@ export function UserAvatar({
           referrerPolicy="no-referrer"
         />
       )}
-      <Avatar.Fallback className="flex size-full items-center justify-center bg-muted font-medium tabular-nums text-muted-foreground border border-border/60">
+      <Avatar.Fallback className="flex size-full items-center justify-center bg-muted font-medium tabular-nums text-muted-foreground">
         {getInitials(name ?? "")}
       </Avatar.Fallback>
     </Avatar.Root>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PlusCircle, BookOpen, Sparkles } from "lucide-react";
+import { Plus, BookOpen, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface ActionableEmptyStateProps {
@@ -9,46 +9,16 @@ export interface ActionableEmptyStateProps {
   onOpenDocs?: () => void;
 }
 
-export function ActionableEmptyState({
-  onCreateTask,
-  onOpenDocs,
-}: ActionableEmptyStateProps) {
+export function ActionableEmptyState({ onCreateTask, onOpenDocs }: ActionableEmptyStateProps) {
   return (
-    <div
-      id="tour-empty-state-cta"
-      className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border/80 bg-card/40 my-4"
-    >
-      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3">
-        <Sparkles className="w-6 h-6" />
+    <section id="tour-empty-state-cta" aria-labelledby="onboarding-empty-title" className="my-4 flex flex-col items-center justify-center rounded-2xl bg-card px-6 py-12 text-center sm:px-10">
+      <ClipboardList aria-hidden="true" className="mb-6 size-12 text-muted-foreground" strokeWidth={1.5} />
+      <h3 id="onboarding-empty-title" className="text-base font-semibold text-foreground">Chưa có nhiệm vụ nào</h3>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Nhiệm vụ bạn được giao sẽ hiện ở đây. Bạn có thể tra cứu văn bản của nhà trường để bắt đầu.</p>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        {onCreateTask && <Button type="button" onClick={onCreateTask}><Plus aria-hidden="true" strokeWidth={1.5} />Tạo nhiệm vụ</Button>}
+        {onOpenDocs && <Button type="button" onClick={onOpenDocs} variant={onCreateTask ? "ghost" : "default"}><BookOpen aria-hidden="true" strokeWidth={1.5} />Tra cứu văn bản</Button>}
       </div>
-      <h3 className="text-base font-bold text-foreground mb-1">
-        Chào mừng Thầy/Cô đến với Bàn làm việc!
-      </h3>
-      <p className="text-xs text-muted-foreground max-w-md mb-6 leading-relaxed">
-        Hiện tại đơn vị chưa phân công nhiệm vụ mới. Thầy/Cô có thể tham khảo Sổ tay văn bản hoặc chủ động lập Tờ trình nội bộ để gửi Trưởng đơn vị.
-      </p>
-
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {onCreateTask && (
-          <Button
-            onClick={onCreateTask}
-            size="sm"
-            className="text-xs bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5"
-          >
-            <PlusCircle className="w-3.5 h-3.5" /> Soạn Tờ trình / Nhiệm vụ mới
-          </Button>
-        )}
-        {onOpenDocs && (
-          <Button
-            onClick={onOpenDocs}
-            variant="outline"
-            size="sm"
-            className="text-xs flex items-center gap-1.5"
-          >
-            <BookOpen className="w-3.5 h-3.5" /> Tra cứu văn bản trường (NĐ 30)
-          </Button>
-        )}
-      </div>
-    </div>
+    </section>
   );
 }

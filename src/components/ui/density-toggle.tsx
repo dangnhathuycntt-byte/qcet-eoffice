@@ -16,14 +16,14 @@ export const DENSITY_CONFIG = {
   comfortable: {
     label: "Thoải mái (48px)",
     next: "compact" as const,
-    tooltip: "Đang ở chế độ Thoải mái (48px) - Bấm để chuyển Thu gọn",
-    ariaLabel: "Đang ở chế độ Thoải mái (48px) - Bấm để chuyển Thu gọn",
+    tooltip: "Đang ở chế độ Thoải mái (48px) - Bấm để chuyển Gọn",
+    ariaLabel: "Đang ở chế độ Thoải mái (48px) - Bấm để chuyển Gọn",
   },
   compact: {
-    label: "Thu gọn (38px)",
+    label: "Gọn (40px)",
     next: "comfortable" as const,
-    tooltip: "Đang ở chế độ Thu gọn (38px) - Bấm để chuyển Thoải mái",
-    ariaLabel: "Đang ở chế độ Thu gọn (38px) - Bấm để chuyển Thoải mái",
+    tooltip: "Đang ở chế độ Gọn (40px) - Bấm để chuyển Thoải mái",
+    ariaLabel: "Đang ở chế độ Gọn (40px) - Bấm để chuyển Thoải mái",
   },
 } as const;
 
@@ -52,7 +52,7 @@ export function DensityToggle({
             data-density-toggle="true"
             onClick={toggleDensity}
             className={cn(
-              "h-9.5 px-3 min-w-[38px] gap-2 border-border/80 text-xs font-medium cursor-pointer transition-colors relative",
+              "h-11 sm:h-7 px-3 min-w-7 gap-2 text-xs font-medium cursor-pointer transition-colors relative",
               isCompact && "bg-secondary/80 text-foreground",
               className
             )}
@@ -75,10 +75,10 @@ export function DensityToggle({
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">
           <p className="font-medium">
-            {isCompact ? "Đang ở chế độ Thu gọn (38px)" : "Đang ở chế độ Thoải mái (48px)"}
+            {isCompact ? "Đang ở chế độ Gọn (40px)" : "Đang ở chế độ Thoải mái (48px)"}
           </p>
           <p className="text-muted-foreground text-xs">
-            Bấm để chuyển sang {isCompact ? "Thoải mái (48px)" : "Thu gọn (38px)"}
+            Bấm để chuyển sang {isCompact ? "Thoải mái (48px)" : "Gọn (40px)"}
           </p>
         </TooltipContent>
       </Tooltip>

@@ -28,10 +28,10 @@ describe("Display Density State Management Contract", () => {
 
   test("Density labels and icons mapping", () => {
     assert.strictEqual(DENSITY_CONFIG.comfortable.label, "Thoải mái (48px)");
-    assert.strictEqual(DENSITY_CONFIG.compact.label, "Thu gọn (38px)");
+    assert.strictEqual(DENSITY_CONFIG.compact.label, "Gọn (40px)");
     assert.strictEqual(DENSITY_CONFIG.comfortable.next, "compact");
     assert.strictEqual(DENSITY_CONFIG.compact.next, "comfortable");
     assert.ok(DENSITY_CONFIG.comfortable.tooltip.includes("48px"));
-    assert.ok(DENSITY_CONFIG.compact.tooltip.includes("38px"));
+    assert.ok(DENSITY_CONFIG.compact.tooltip.includes("40px"));
   });
 });
