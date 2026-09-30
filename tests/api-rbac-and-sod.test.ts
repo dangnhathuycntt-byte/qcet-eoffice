@@ -148,7 +148,8 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         status: TaskStatus.WAITING_APPROVAL,
         academicMonth: 9,
         academicYear: "2026-2027",
-        dueDate: new Date("2026-09-30"),
+        startDate: new Date("2026-09-01T00:00:00+07:00"),
+        dueDate: new Date("2026-09-30T23:59:59+07:00"),
         createdById: adminUser.id,
         leadUnitId: schoolUnitId,
         actors: {
@@ -169,7 +170,8 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         status: TaskStatus.WAITING_APPROVAL,
         academicMonth: 9,
         academicYear: "2026-2027",
-        dueDate: new Date("2026-09-30"),
+        startDate: new Date("2026-09-01T00:00:00+07:00"),
+        dueDate: new Date("2026-09-30T23:59:59+07:00"),
         createdById: leaderUser.id,
         leadUnitId: departmentUnitId,
         actors: {
