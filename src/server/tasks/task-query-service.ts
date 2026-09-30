@@ -137,7 +137,7 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   },
 };
 
-const TASK_INCLUDE = {
+const getTaskInclude = () => ({
   leadUnit: true,
   actors: {
     select: {
@@ -204,7 +204,7 @@ const TASK_INCLUDE = {
       },
     },
   },
-} as const;
+} satisfies Prisma.TaskInclude);
 
 export function isAuthorizationContext(target: unknown): target is AuthorizationContext {
   if (!target || typeof target !== 'object') return false;
@@ -1037,7 +1037,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
           cursor: { id: cursor },
           skip: 1,
@@ -1061,7 +1061,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
         }),
       ]);
@@ -1085,7 +1085,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
           skip,
           take: limit,
