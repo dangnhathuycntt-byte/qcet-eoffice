@@ -137,14 +137,31 @@ const TASK_LIST_INCLUDE: Prisma.TaskInclude = {
   },
 };
 
-const TASK_INCLUDE = {
+const getTaskInclude = () => ({
   leadUnit: true,
   actors: {
     select: {
       userId: true,
+      unitId: true,
       role: true,
       isPrimaryDRI: true,
-      user: { select: { id: true, name: true, avatarUrl: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          positionAssignments: {
+            where: {
+              status: 'ACTIVE',
+              effectiveFrom: { lte: new Date() },
+              OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+            },
+            select: { unitId: true, effectiveTo: true, effectiveFrom: true },
+            orderBy: { effectiveFrom: 'desc' as const },
+            take: 1,
+          },
+        },
+      },
     },
   },
   deliverables: true,
@@ -187,7 +204,7 @@ const TASK_INCLUDE = {
       },
     },
   },
-} as const;
+} satisfies Prisma.TaskInclude);
 
 export function isAuthorizationContext(target: unknown): target is AuthorizationContext {
   if (!target || typeof target !== 'object') return false;
@@ -1020,7 +1037,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
           cursor: { id: cursor },
           skip: 1,
@@ -1044,7 +1061,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
         }),
       ]);
@@ -1068,7 +1085,7 @@ export class TaskQueryService {
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
-          include: TASK_INCLUDE,
+          include: getTaskInclude(),
           orderBy: effectiveOrderBy,
           skip,
           take: limit,

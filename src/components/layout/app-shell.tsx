@@ -154,7 +154,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:h-[calc(100dvh-44px)] outline-none overflow-hidden"
             : "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden"}
         >
-          <div className={isTaskDetail ? "flex min-h-0 min-w-0 flex-1 flex-col" : "w-full flex-1 p-3 sm:p-5 md:p-6 flex flex-col"}>
+          <div
+            className={
+              isTaskDetail
+                ? "flex min-h-0 min-w-0 flex-1 flex-col"
+                : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
+            }
+          >
             {children}
           </div>
         </main>

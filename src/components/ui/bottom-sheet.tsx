@@ -43,6 +43,7 @@ export const BottomSheetPortal = ({
   return <VaulDrawer.Portal {...props}>{children}</VaulDrawer.Portal>;
 };
 export const BottomSheetClose = VaulDrawer.Close;
+export const BottomSheetHandle = VaulDrawer.Handle;
 
 export const BottomSheetOverlay = React.forwardRef<
   React.ElementRef<typeof VaulDrawer.Overlay>,
@@ -73,7 +74,7 @@ export const BottomSheetContent = React.forwardRef<
       <div
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
-          "pb-[max(1rem,env(safe-area-inset-bottom))]",
+          "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
       >
@@ -92,7 +93,7 @@ export const BottomSheetContent = React.forwardRef<
         ref={ref}
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
-          "pb-[max(1rem,env(safe-area-inset-bottom))]",
+          "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
         {...props}

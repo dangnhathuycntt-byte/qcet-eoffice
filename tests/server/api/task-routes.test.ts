@@ -101,9 +101,13 @@ describe('Task API Routes Hardening (Phases 2, 3, 11, 13)', () => {
       }));
 
     const posDefLeader =
-      (await prisma.positionDefinition.findFirst({ where: { isLeadership: true } })) ||
-      (await prisma.positionDefinition.create({
-        data: {
+      (await prisma.positionDefinition.findFirst({
+        where: { isLeadership: true, code: { in: ['TRUONG_PHONG', 'TRUONG_DON_VI', 'TRUONG_KHOA', 'TRUONG_DON_VI_CANONICAL'] } },
+      })) ||
+      (await prisma.positionDefinition.upsert({
+        where: { code: `TP_${testRunId}` },
+        update: {},
+        create: {
           code: `TP_${testRunId}`,
           title: 'Trưởng đơn vị',
           group: 'LDPU',

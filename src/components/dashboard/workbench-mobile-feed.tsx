@@ -580,9 +580,9 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
               );
             })
           ) : (
-            <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center space-y-1">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 mb-1">
-                <CheckCircle2 size={18} strokeWidth={1.5} />
+            <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center space-y-1.5">
+              <div className="inline-flex items-center justify-center size-12 rounded-full bg-emerald-500/10 text-emerald-600 mb-1">
+                <CheckCircle2 size={22} strokeWidth={1.5} />
               </div>
               <p className="text-xs font-semibold text-emerald-800">
                 Tiến độ thông suốt, không có việc tồn đọng khẩn cấp

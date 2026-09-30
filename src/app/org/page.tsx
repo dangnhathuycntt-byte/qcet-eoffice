@@ -42,7 +42,7 @@ export default function OrgPage() {
 
   return (
     <div
-      className="max-w-[1440px] w-full mx-auto space-y-5 pb-24 md:pb-10"
+      className="max-w-[1440px] w-full mx-auto space-y-5 pb-6 md:pb-10"
       data-slot="org-page"
     >
       {/* Page header: identity + primary context. No metric cards, no duplicate actions. */}

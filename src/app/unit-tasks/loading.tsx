@@ -1,7 +1,7 @@
 export default function UnitTasksLoading() {
   return (
     <div
-      className="max-w-[1440px] w-full mx-auto space-y-4 pb-24 md:pb-10 animate-pulse"
+      className="max-w-[1440px] w-full mx-auto space-y-4 pb-6 md:pb-10 animate-pulse"
       aria-label="Đang tải danh sách công việc đơn vị..."
     >
       {/* Header Skeleton */}

@@ -43,7 +43,10 @@ export interface MobileMenuDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const DRAWER_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const DRAWER_ICONS: Record<
+  string,
+  React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+> = {
   Calendar,
   FileText,
   Building2,
@@ -64,6 +67,15 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
   const { badgeCounts } = useSidebarContext();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
   const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
+
+  // Automatically dismiss virtual keyboard if input is active when drawer opens
+  React.useEffect(() => {
+    if (open && typeof document !== "undefined") {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+  }, [open]);
 
   // Canonical drawer routes: /documents (Văn bản & Điều hành), /calendar, /org, /settings
   const drawerItems = getMobileDrawerItems();
@@ -87,7 +99,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
-      <BottomSheetContent className="max-h-[85vh] overflow-y-auto">
+      <BottomSheetContent className="max-h-[85dvh] overflow-y-auto">
         <BottomSheetHeader className="border-b border-border/50 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -103,7 +115,10 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 </BottomSheetDescription>
               </div>
             </div>
-            <BottomSheetClose className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer touch-manipulation">
+            <BottomSheetClose
+              onClick={() => triggerHaptic("light")}
+              className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer touch-manipulation"
+            >
               <X size={18} />
             </BottomSheetClose>
           </div>
@@ -160,7 +175,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                             : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                         )}
                       >
-                        <IconComponent size={16} />
+                        <IconComponent size={16} strokeWidth={isActive ? 2.25 : 1.75} />
                       </div>
                       <span className="text-xs font-semibold truncate">{item.label}</span>
                       {isDocuments && (
@@ -246,6 +261,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   type="button"
                   disabled={isLoading}
                   onClick={async () => {
+                    triggerHaptic("selection");
                     if (isSubscribed) {
                       await unsubscribeFromPush();
                     } else {
@@ -253,7 +269,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer touch-manipulation",
+                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer touch-manipulation active:scale-[0.98]",
                     isSubscribed
                       ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
                       : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
@@ -267,7 +283,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     ) : (
                       <BellRing size={17} className="text-primary" />
                     )}
-                    <span>{isSubscribed ? "Tắt thông báo chuông" : "Bật thông báo chuông"}</span>
+                    <span>{isSubscribed ? "T��t thông báo chuông" : "Bật thông báo chuông"}</span>
                   </div>
                   <span className="text-xs text-muted-foreground font-mono">
                     {isSubscribed ? "Đang bật" : "Kích hoạt"}
@@ -281,6 +297,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   type="button"
                   disabled={isTestingPush || isLoading}
                   onClick={async () => {
+                    triggerHaptic("selection");
                     setIsTestingPush(true);
                     setTestPushResult(null);
                     try {
@@ -295,7 +312,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       setIsTestingPush(false);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40 touch-manipulation"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40 touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     {isTestingPush ? (
@@ -305,7 +322,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     )}
                     <span>Thử chuông ngay</span>
                   </div>
-                  <span className="text-xs font-semibold text-primary font-mono">
+                  <span
+                    className={cn(
+                      "text-xs font-semibold font-mono",
+                      testPushResult === "failed" ? "text-destructive" : "text-primary"
+                    )}
+                  >
                     {testPushResult === "success"
                       ? "Đã gửi chuông"
                       : testPushResult === "failed"
@@ -320,18 +342,16 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 <button
                   type="button"
                   onClick={async () => {
+                    triggerHaptic("medium");
                     await installApp();
                     onOpenChange(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm touch-manipulation"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-xs touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     <Download size={17} />
                     <span>Cài đặt lên màn hình chính</span>
                   </div>
-                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-md">
-                    1-Chạm
-                  </span>
                 </button>
               )}
 
@@ -340,12 +360,13 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 <button
                   type="button"
                   onClick={() => {
+                    triggerHaptic("light");
                     onOpenChange(false);
                     if (typeof window !== "undefined") {
                       window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer touch-manipulation"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-3">
                     <Smartphone size={17} />
@@ -362,10 +383,11 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
             <button
               type="button"
               onClick={() => {
+                triggerHaptic("warning");
                 logout();
                 onOpenChange(false);
               }}
-              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
+              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
             >
               <LogOut size={16} />
               <span>Đăng xuất</span>

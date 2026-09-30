@@ -2,7 +2,7 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { TaskStatus, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus } from '@prisma/client';
+import { TaskStatus, UnitType, JobCatalogGroup, AssignmentType, AssignmentStatus, UserRole } from '@prisma/client';
 import { signSessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { GET as getNotificationsRoute } from '@/app/api/notifications/route';
 import { POST as markAllReadRoute } from '@/app/api/notifications/read-all/route';
@@ -33,14 +33,24 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
   let execAssignmentId: string | null = null;
   const createdResolutionIds: string[] = [];
   const createdNotificationIds: string[] = [];
+  const createdUserIds: string[] = [];
 
   const originalEnv = { ...process.env };
 
   before(async () => {
-    // 1. Fetch or identify test users
-    const bgh = await prisma.user.findFirst({ where: { role: 'BAN_GIAM_HIEU' } });
-    assert.ok(bgh, 'BAN_GIAM_HIEU user required');
-    executiveUser = { id: bgh.id, email: bgh.email, name: bgh.name, role: bgh.role};
+    const runId = `t12-${process.pid}-${Date.now()}`;
+
+    // 1. Create isolated test users (not sharing seeded users to avoid concurrent mutation races)
+    const bghCreated = await prisma.user.create({
+      data: {
+        email: `exec.${runId}@qcet.edu.vn`,
+        name: `Exec T12 ${runId}`,
+        role: UserRole.BAN_GIAM_HIEU,
+        isActive: true,
+      },
+    });
+    createdUserIds.push(bghCreated.id);
+    executiveUser = { id: bghCreated.id, email: bghCreated.email, name: bghCreated.name, role: bghCreated.role };
 
     const chuyenvien = await prisma.user.findFirst({ where: { role: 'CHUYEN_VIEN' } });
     assert.ok(chuyenvien, 'CHUYEN_VIEN user required');
@@ -149,6 +159,9 @@ describe('Notifications, Executive, Search & System API Hardening (Task 12)', ()
     if (execUnitId) {
       await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } });
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } });
+    }
+    if (createdUserIds.length > 0) {
+      await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } }).catch(() => {});
     }
   });
 

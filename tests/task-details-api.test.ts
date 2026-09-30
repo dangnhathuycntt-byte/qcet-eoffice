@@ -16,9 +16,9 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
 
   before(async () => {
     const user = await prisma.user.findFirst({
-      where: { email: { contains: '@cdktcnqn.edu.vn' } },
-    }) || await prisma.user.findFirst();
-    assert.ok(user, 'Must have at least one user in database');
+      where: { email: { contains: '@cdktcnqn.edu.vn' }, isActive: true },
+    }) || await prisma.user.findFirst({ where: { isActive: true } });
+    assert.ok(user, 'Must have at least one active user in database');
     testUserId = user.id;
 
     const dept = await prisma.organizationalUnit.findFirst({
