@@ -256,7 +256,7 @@ function GhostTaskRow({
           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white shadow-2xs">{data.initial}</span>
           <span className="text-xs font-medium text-foreground truncate">{data.assignee}</span>
         </div>
-        <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">—</div>
+        <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">-</div>
         <div className="hidden md:block w-28 shrink-0">
           <span className="font-mono text-xs text-muted-foreground">{data.date}</span>
         </div>

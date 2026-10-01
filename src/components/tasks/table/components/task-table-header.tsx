@@ -229,13 +229,11 @@ export function TaskTableHeader({
                       className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
                     >
                       <span>{col.label}</span>
-                      <span className="sr-only">(Tên nhiệm vụ)</span>
                       {renderSortIndicator(col.id as TaskSortField)}
                     </button>
                   ) : (
                     <span>
                       {col.label}
-                      <span className="sr-only">(Tên nhiệm vụ)</span>
                     </span>
                   )}
                 </div>

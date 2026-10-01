@@ -598,32 +598,13 @@ export const TaskRow = React.memo(function TaskRow({
               </span>
             )}
           </div>
-
-          {task.description && (() => {
-            let preview = task.description;
-            try {
-              if (preview.includes('"qcetBlocks":true')) {
-                const parsed = JSON.parse(preview);
-                preview = (parsed.blocks as Array<{content?: string}>)
-                  .map((b) => b.content || "")
-                  .join(" ")
-                  .trim();
-              }
-            } catch { /* keep raw */ }
-            preview = preview.length > 120 ? preview.slice(0, 120) + "…" : preview;
-            return preview ? (
-              <span className="text-[11.5px] text-muted-foreground/60 truncate leading-snug max-w-full">
-                {preview}
-              </span>
-            ) : null;
-          })()}
         </div>
       </td>
 
       {/* 3. Đơn vị Column */}
       <td className={cn("w-36 lg:w-44 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <span className="text-xs text-muted-foreground truncate block" title={departmentName}>
-          {departmentName || "—"}
+          {departmentName || "-"}
         </span>
       </td>
 
@@ -631,7 +612,7 @@ export const TaskRow = React.memo(function TaskRow({
       <td className={cn("w-40 lg:w-48 min-w-[140px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div
           className="flex items-center gap-2 min-w-0"
-          title={`${driInfo.primaryName || "—"}${departmentName ? ` (${departmentName})` : ""}`}
+          title={`${driInfo.primaryName || "-"}${departmentName ? ` (${departmentName})` : ""}`}
         >
           {driInfo.primaryName ? (
             <>
@@ -645,7 +626,7 @@ export const TaskRow = React.memo(function TaskRow({
               </span>
             </>
           ) : (
-            <span className="text-muted-foreground/50 text-xs">—</span>
+            <span className="text-muted-foreground/50 text-xs">-</span>
           )}
         </div>
       </td>
@@ -683,7 +664,7 @@ export const TaskRow = React.memo(function TaskRow({
               )}
             </>
           ) : (
-            <span className="text-muted-foreground/50 text-xs">—</span>
+            <span className="text-muted-foreground/50 text-xs">-</span>
           )}
         </div>
       </td>

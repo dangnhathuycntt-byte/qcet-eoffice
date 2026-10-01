@@ -50,6 +50,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 import { PrioritySignalBars } from "./priority-signal-bars";
+import { TaskStatusCircle } from "./task-status-circle";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
 // ============================================================================
@@ -102,7 +103,7 @@ function saveDisplaySettings(settings: KanbanDisplaySettings): void {
 }
 
 // ============================================================================
-// Column Config (Minimal flat style — no container accents)
+// Column Config (Minimal flat style - no container accents)
 // ============================================================================
 
 export interface KanbanColumnConfig {
@@ -942,7 +943,7 @@ function KanbanCard({
             <span>Hạn {formatDate(item.dueDate)}</span>
             {overdue && (
               <span className="text-[10px] text-rose-600 font-semibold ml-0.5">
-                (Quá hạn{lateDays > 0 ? ` trễ ${lateDays} ngày` : ""})
+                {lateDays > 0 ? `(trễ ${lateDays} ngày)` : "(Quá hạn)"}
               </span>
             )}
           </div>
@@ -1050,16 +1051,16 @@ function DroppableColumn({
       data-slot="kanban-column"
       data-status={col.id}
       className={cn(
-        "w-[280px] xl:w-full flex-1 min-w-[270px] flex flex-col h-full min-h-0 group/col select-none transition-colors duration-150 rounded-lg",
-        isOver && "bg-accent/25 ring-1 ring-primary/20"
+        "w-[280px] xl:w-full flex-1 min-w-[270px] flex flex-col h-full min-h-0 group/col select-none transition-colors duration-150 rounded-2xl bg-muted/30 p-2.5 sm:p-3 border border-border/30",
+        isOver && "bg-accent/40 ring-1 ring-primary/30"
       )}
     >
       {/* Column Header (Title + Count in lighter font, hover: "+") */}
       <div className="flex items-center justify-between h-8 px-1 mb-2 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <IconComponent
-            strokeWidth={1.5}
-            className={cn("size-3.5 shrink-0", col.iconColor)}
+          <TaskStatusCircle
+            status={col.id}
+            className="size-3.5 shrink-0"
           />
           <h3 className="text-sm font-semibold text-foreground tracking-tight truncate">
             {col.title}
