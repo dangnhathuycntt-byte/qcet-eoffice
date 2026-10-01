@@ -175,4 +175,57 @@ describe("Design Components & Foundation Alignment Suite", () => {
       }
     });
   });
+
+  describe("8. PrioritySignalBars Component (qcet-nhiem-vu.html)", () => {
+    it("renders 3 bars with appropriate active count for priority levels", () => {
+      const { PrioritySignalBars } = require("../src/components/tasks/priority-signal-bars");
+
+      const htmlLow = renderToStaticMarkup(React.createElement(PrioritySignalBars, { priority: "LOW" }));
+      assert.ok(htmlLow.includes("Độ ưu tiên: Thấp"));
+
+      const htmlNormal = renderToStaticMarkup(React.createElement(PrioritySignalBars, { priority: "NORMAL" }));
+      assert.ok(htmlNormal.includes("Độ ưu tiên: Bình thường"));
+
+      const htmlHigh = renderToStaticMarkup(React.createElement(PrioritySignalBars, { priority: "HIGH" }));
+      assert.ok(htmlHigh.includes("Độ ưu tiên: Cao"));
+
+      const htmlUrgent = renderToStaticMarkup(React.createElement(PrioritySignalBars, { priority: "URGENT" }));
+      assert.ok(htmlUrgent.includes("Độ ưu tiên: Khẩn cấp"));
+      assert.ok(htmlUrgent.includes("text-rose-600"), "Urgent priority must use rose/red color");
+    });
+  });
+
+  describe("9. TaskStatusCircle Component (qcet-nhiem-vu.html)", () => {
+    it("renders distinct geometric status circles without color reliance", () => {
+      const { TaskStatusCircle } = require("../src/components/tasks/task-status-circle");
+
+      const htmlNew = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "NEW" }));
+      assert.ok(htmlNew.includes("stroke-dasharray"), "New/Not started must have dashed circle");
+
+      const htmlDoing = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "IN_PROGRESS" }));
+      assert.ok(htmlDoing.includes("M12 4a8 8 0 0 1 0 16z"), "Doing/In progress must have right half filled crescent");
+
+      const htmlReview = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "WAITING_APPROVAL" }));
+      assert.ok(htmlReview.includes("M12 7.5V12l3 2"), "Waiting approval must have clock hands");
+
+      const htmlDone = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "COMPLETED" }));
+      assert.ok(htmlDone.includes("M8.5 12.3l2.5 2.5 4.5-5"), "Done must have checkmark");
+    });
+  });
+
+  describe("10. UserAvatar Pastel Color System (qcet-nhiem-vu.html)", () => {
+    it("generates deterministic soft pastel backgrounds based on user name", () => {
+      const { getPastelColor, UserAvatar } = require("../src/components/ui/user-avatar");
+
+      const color1 = getPastelColor("Đặng Nhật Huy");
+      const color2 = getPastelColor("Nguyễn Thị Hồng Trinh");
+
+      assert.ok(color1.startsWith("bg-"), "Pastel color must have bg- prefix");
+      assert.ok(color2.startsWith("bg-"), "Pastel color must have bg- prefix");
+
+      const htmlAvatar = renderToStaticMarkup(React.createElement(UserAvatar, { name: "Đặng Nhật Huy" }));
+      assert.ok(htmlAvatar.includes("ĐH"), "Fallback displays initials");
+      assert.ok(htmlAvatar.includes(color1), "Fallback applies pastel color");
+    });
+  });
 });

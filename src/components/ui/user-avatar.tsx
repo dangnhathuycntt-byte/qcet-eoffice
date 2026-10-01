@@ -5,6 +5,27 @@ import { Avatar } from "@base-ui/react/avatar";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn, getInitials } from "@/lib/utils";
 
+export const PASTEL_PALETTE = [
+  "bg-blue-100 text-blue-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-800",
+  "bg-purple-100 text-purple-700",
+  "bg-rose-100 text-rose-700",
+  "bg-teal-100 text-teal-700",
+  "bg-indigo-100 text-indigo-700",
+];
+
+export function getPastelColor(name?: string | null): string {
+  if (!name || !name.trim()) return "bg-muted text-muted-foreground";
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % PASTEL_PALETTE.length;
+  return PASTEL_PALETTE[index];
+}
+
 const avatarVariants = cva(
   "shrink-0 rounded-full overflow-hidden",
   {
@@ -57,7 +78,12 @@ export function UserAvatar({
           referrerPolicy="no-referrer"
         />
       )}
-      <Avatar.Fallback className="flex size-full items-center justify-center bg-muted font-medium tabular-nums text-muted-foreground">
+      <Avatar.Fallback
+        className={cn(
+          "flex size-full items-center justify-center font-medium tabular-nums",
+          getPastelColor(name)
+        )}
+      >
         {getInitials(name ?? "")}
       </Avatar.Fallback>
     </Avatar.Root>

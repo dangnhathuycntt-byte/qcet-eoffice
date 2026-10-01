@@ -49,6 +49,8 @@ import type {
 import { cn, getInitials } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
+import { PrioritySignalBars } from "./priority-signal-bars";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 // ============================================================================
 // Types & Display Settings
@@ -115,8 +117,8 @@ export interface KanbanColumnConfig {
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "NEW",
-    title: "Mới / Tiếp nhận",
-    label: "Mới / Tiếp nhận",
+    title: "Mới",
+    label: "Mới",
     emoji: "",
     dotColor: "bg-muted-foreground/60",
     iconColor: "text-muted-foreground",
@@ -128,6 +130,49 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     emoji: "",
     dotColor: "bg-blue-500",
     iconColor: "text-blue-500",
+  },
+  {
+    id: "NEEDS_REVIEW",
+    title: "Cần chỉnh sửa",
+    label: "Cần chỉnh sửa",
+    emoji: "",
+    dotColor: "bg-amber-500",
+    iconColor: "text-amber-500",
+  },
+  {
+    id: "COMPLETED",
+    title: "Hoàn thành",
+    label: "Hoàn thành",
+    emoji: "",
+    dotColor: "bg-emerald-500",
+    iconColor: "text-emerald-500",
+  },
+];
+
+export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
+  {
+    id: "NEW",
+    title: "Mới",
+    label: "Mới",
+    emoji: "",
+    dotColor: "bg-muted-foreground/60",
+    iconColor: "text-muted-foreground",
+  },
+  {
+    id: "IN_PROGRESS",
+    title: "Đang thực hiện",
+    label: "Đang thực hiện",
+    emoji: "",
+    dotColor: "bg-blue-500",
+    iconColor: "text-blue-500",
+  },
+  {
+    id: "WAITING_APPROVAL",
+    title: "Chờ duyệt",
+    label: "Chờ duyệt",
+    emoji: "",
+    dotColor: "bg-purple-500",
+    iconColor: "text-purple-500",
   },
   {
     id: "NEEDS_REVIEW",
@@ -524,6 +569,21 @@ function isOverdue(dueDateStr?: string, status?: TaskStatus, referenceDate: stri
   return isTaskPastDue(dueDateStr, referenceDate);
 }
 
+function getOverdueDays(dueDateStr?: string, status?: TaskStatus, referenceDate: string = getSystemReferenceDate()): number {
+  if (!dueDateStr || status === "COMPLETED" || status === "CANCELLED") return 0;
+  if (!isTaskPastDue(dueDateStr, referenceDate)) return 0;
+  try {
+    const cleanDue = dueDateStr.slice(0, 10);
+    const cleanRef = referenceDate.slice(0, 10);
+    const [y1, m1, d1] = cleanDue.split("-").map(Number);
+    const [y2, m2, d2] = cleanRef.split("-").map(Number);
+    const diff = Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+    return Math.max(1, diff);
+  } catch {
+    return 1;
+  }
+}
+
 const STATUS_LABELS: Record<string, string> = {
   NEW: "Tiếp nhận",
   IN_PROGRESS: "Đang làm",
@@ -568,6 +628,8 @@ function KanbanCard({
   }, []);
 
   const overdue = isOverdue(item.dueDate, item.status) || (item.rawTask as SchoolTask).isOverdue === true;
+  const lateDays = getOverdueDays(item.dueDate, item.status);
+  const taskCode = (item.rawTask as SchoolTask).code || (item.rawTask as SchoolTask).taskCode || `NV-${item.id.slice(0, 4)}`;
 
   const updateCoords = React.useCallback(() => {
     if (!triggerRef.current || typeof window === "undefined") return;
@@ -661,25 +723,20 @@ function KanbanCard({
       aria-busy={isPending}
       data-slot="kanban-card"
       className={cn(
-        "group/card relative flex flex-col gap-1.5 rounded-[8px] border border-border/50 bg-card p-2.5 text-card-foreground transition-all duration-100 cursor-pointer select-none",
-        "hover:bg-accent/40 hover:border-border/80 active:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "group/card relative flex flex-col gap-2 rounded-2xl border-0 bg-white p-3.5 text-card-foreground shadow-2xs transition-all duration-150 cursor-pointer select-none",
+        "hover:bg-muted/50 hover:shadow-xs active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isPending && "opacity-70 pointer-events-none",
-        isDragOverlay && "shadow-lg border-border rotate-[1.5deg] scale-[1.02] bg-card opacity-95 cursor-grabbing"
+        isDragOverlay && "shadow-lg rotate-[1.5deg] scale-[1.02] bg-white opacity-95 cursor-grabbing"
       )}
     >
-      {/* Row 1: Optional Parent Breadcrumb */}
-      {displaySettings.showParentTask && item.parentSchoolTaskTitle && (
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 line-clamp-1">
-          <FolderTree strokeWidth={1.5} className="size-2.5 shrink-0 text-muted-foreground/50" />
-          <span className="truncate">{item.parentSchoolTaskTitle}</span>
+      {/* Row 1: Priority Signal Bars + Task Code + Action Menu */}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <PrioritySignalBars priority={(item.rawTask as SchoolTask).priority} />
+          <span className="font-mono text-xs text-muted-foreground/75 tabular-nums truncate" title={taskCode}>
+            {taskCode}
+          </span>
         </div>
-      )}
-
-      {/* Row 2: Title + Action Trigger */}
-      <div className="flex items-start justify-between gap-1.5">
-        <h4 className="text-[13px] font-medium text-foreground leading-snug line-clamp-2 group-hover/card:text-primary transition-colors flex-1 min-w-0">
-          {item.title}
-        </h4>
 
         {/* Action Menu Trigger (Visible on hover or when open) */}
         {!isDragOverlay && (
@@ -825,6 +882,26 @@ function KanbanCard({
         )}
       </div>
 
+      {/* Row 2: Optional Parent Breadcrumb */}
+      {displaySettings.showParentTask && item.parentSchoolTaskTitle && (
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 line-clamp-1">
+          <FolderTree strokeWidth={1.5} className="size-2.5 shrink-0 text-muted-foreground/50" />
+          <span className="truncate">{item.parentSchoolTaskTitle}</span>
+        </div>
+      )}
+
+      {/* Row 3: Title + Subtask Count */}
+      <div className="space-y-1">
+        <h4 className="text-[13.5px] font-medium text-foreground leading-snug line-clamp-2 group-hover/card:text-primary transition-colors">
+          {item.title}
+        </h4>
+        {displaySettings.showSubtaskCount && item.totalSubTasks !== undefined && item.totalSubTasks > 0 && (
+          <div className="text-[11px] font-mono tabular-nums text-muted-foreground/70" title="Nhiệm vụ con hoàn thành">
+            Việc con {item.completedSubTasks ?? 0}/{item.totalSubTasks}
+          </div>
+        )}
+      </div>
+
       {/* Pending / Error State Feedback */}
       {isPending && (
         <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/5 px-1.5 py-0.5 rounded">
@@ -851,51 +928,39 @@ function KanbanCard({
         </div>
       )}
 
-      {/* Row 3: Compact Metadata (Priority: Assignee + Due Date + Category) */}
-      <div className="flex items-center justify-between gap-1.5 pt-0.5 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {/* Assignee Avatar & Name - Full available width, no premature truncation */}
-          {displaySettings.showAssignee && (
-            <div className="flex items-center gap-1.5 min-w-0 flex-1" title={item.assigneeName}>
-              {item.assigneeAvatar ? (
-                <img
-                  src={item.assigneeAvatar}
-                  alt={item.assigneeName}
-                  className="size-[18px] rounded-full object-cover shrink-0 ring-1 ring-border/40"
-                />
-              ) : (
-                <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-medium text-muted-foreground border border-border/60">
-                  {getInitials(item.assigneeName)}
-                </span>
-              )}
-              <span className="truncate text-[11px] font-normal text-muted-foreground">
-                {item.assigneeName || "Chưa giao"}
+      {/* Row 4: Footer (Due Date on Left, Assignee Avatar on Right) */}
+      <div className="flex items-center justify-between gap-1.5 pt-1 mt-auto text-xs text-muted-foreground">
+        {displaySettings.showDueDate && item.dueDate ? (
+          <div
+            className={cn(
+              "flex items-center gap-1 text-[11px] font-mono tabular-nums",
+              overdue ? "text-rose-600 font-semibold" : "text-muted-foreground/75 font-normal"
+            )}
+            title={overdue ? `Quá hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
+          >
+            <Calendar strokeWidth={1.5} className="size-3 shrink-0" />
+            <span>Hạn {formatDate(item.dueDate)}</span>
+            {overdue && (
+              <span className="text-[10px] text-rose-600 font-semibold ml-0.5">
+                (Quá hạn{lateDays > 0 ? ` trễ ${lateDays} ngày` : ""})
               </span>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : <div />}
 
-        {/* Due Date & Subtasks Count */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {displaySettings.showSubtaskCount && item.totalSubTasks !== undefined && item.totalSubTasks > 0 && (
-            <span className="text-[10px] font-mono tabular-nums text-muted-foreground/70" title="Nhiệm vụ con hoàn thành">
-              {item.completedSubTasks ?? 0}/{item.totalSubTasks}
+        {/* Assignee Avatar & Name */}
+        {displaySettings.showAssignee && (
+          <div className="flex items-center gap-1.5 shrink-0" title={item.assigneeName}>
+            <UserAvatar
+              name={item.assigneeName}
+              avatarUrl={item.assigneeAvatar}
+              size="xs"
+            />
+            <span className="truncate text-[11px] font-normal text-muted-foreground hidden sm:inline max-w-[100px]">
+              {item.assigneeName || "Chưa giao"}
             </span>
-          )}
-
-          {displaySettings.showDueDate && item.dueDate && (
-            <div
-              className={cn(
-                "flex items-center gap-1 text-[11px] font-mono tabular-nums",
-                overdue ? "text-destructive font-semibold" : "text-muted-foreground/70"
-              )}
-              title={overdue ? `Quá hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
-            >
-              <Calendar strokeWidth={1.5} className="size-3 shrink-0" />
-              <span>Hạn {formatDate(item.dueDate)}</span>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -989,17 +1054,17 @@ function DroppableColumn({
         isOver && "bg-accent/25 ring-1 ring-primary/20"
       )}
     >
-      {/* Column Header (Compact: icon + name + count, hover: "..." & "+") */}
-      <div className="flex items-center justify-between h-8 px-1 mb-1.5 shrink-0">
+      {/* Column Header (Title + Count in lighter font, hover: "+") */}
+      <div className="flex items-center justify-between h-8 px-1 mb-2 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <IconComponent
             strokeWidth={1.5}
             className={cn("size-3.5 shrink-0", col.iconColor)}
           />
-          <h3 className="text-[13px] font-medium text-foreground tracking-tight truncate">
+          <h3 className="text-sm font-semibold text-foreground tracking-tight truncate">
             {col.title}
           </h3>
-          <span className="text-[11px] font-mono tabular-nums text-muted-foreground/70 ml-0.5">
+          <span className="text-xs font-normal tabular-nums text-muted-foreground/70 ml-1">
             {count}
           </span>
         </div>
@@ -1019,8 +1084,8 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Scrollable Column Cards Container (Independent Smooth Vertical Scroll) */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1.5 thin-scrollbar overscroll-contain pb-6">
+      {/* Scrollable Column Cards Container */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1.5 thin-scrollbar overscroll-contain pb-6">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {displayedTasks.map((item) => (
             <SortableKanbanCard
@@ -1037,15 +1102,11 @@ function DroppableColumn({
           ))}
         </SortableContext>
 
-        {/* Minimal empty state: single lightweight "+" button */}
+        {/* Minimal clean empty state: Trống */}
         {tasks.length === 0 && (
-          <button
-            type="button"
-            onClick={() => onAddTask?.()}
-            className="w-full py-3 flex items-center justify-center rounded-lg border border-dashed border-border/50 text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/30 hover:border-border transition-colors cursor-pointer group/empty"
-          >
-            <Plus strokeWidth={1.5} className="size-3.5 group-hover/empty:scale-110 transition-transform" />
-          </button>
+          <div className="py-8 text-center text-xs text-muted-foreground/50 select-none flex flex-col items-center justify-center gap-1">
+            <span>Trống</span>
+          </div>
         )}
 
         {/* Load More Affordance */}

@@ -11,6 +11,9 @@ import {
 import { filterDisplayedTasks } from "../src/components/workspace/unified-adaptive-workspace";
 import type { SchoolTask } from "../src/types/dashboard";
 
+// Pin reference date to 2026-09-25 for deterministic testing per invariants.md
+process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-25";
+
 describe("Task 2: Workspace Filter Synchronization, Empty States & Drill-Down Invariants", () => {
   const sampleTasks: SchoolTask[] = [
     {

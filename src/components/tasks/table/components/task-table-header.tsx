@@ -41,14 +41,13 @@ interface ColumnDefinition {
   widthClass?: string;
 }
 
-// Columns: Checkbox | Name | Status | Priority (opt) | Lead | Target date | Subtasks (opt) | Progress (opt) | Actions
+// Columns: Mã | Tên (Nhiệm vụ) | Đơn vị | Phụ trách | Hạn | Actions
 const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[320px] md:min-w-[400px] flex-1" },
-  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-48 lg:w-56 min-w-[160px]" },
-  { id: "subtasks", label: "Phối hợp", sortable: false, widthClass: "w-36 min-w-[120px]" },
-  { id: "meta", label: "", sortable: false, widthClass: "w-28 min-w-[96px]" },
-  { id: "dueDate", label: "Thời hạn", sortable: true, widthClass: "w-32 min-w-[110px]" },
-  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-36 min-w-[120px]" },
+  { id: "code", label: "Mã", sortable: true, widthClass: "w-44 min-w-[170px]" },
+  { id: "title", label: "Tên", sortable: true, widthClass: "min-w-[280px] md:min-w-[360px] flex-1" },
+  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-36 lg:w-44 min-w-[120px]" },
+  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-40 lg:w-48 min-w-[140px]" },
+  { id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-28 min-w-[90px]" },
   { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8 min-w-[32px]" },
 ];
 
@@ -139,10 +138,10 @@ export function TaskTableHeader({
 
           // First column padding alignment when selection checkbox is absent
           const isFirstColumn = !showSelection && colIdx === 0;
-          const titlePaddingClass = isFirstColumn ? "pl-3.5 sm:pl-4 pr-2.5 py-1.5" : paddingClass;
+          const leadingPaddingClass = isFirstColumn ? "pl-3.5 sm:pl-4 pr-2.5 py-1.5" : paddingClass;
 
-          // Special alignment for Title column: Header leading selector + label
-          if (col.id === "title") {
+          // Special alignment for Code column (First Column): Header leading selector + label "Mã"
+          if (col.id === "code") {
             return (
               <th
                 key={col.id}
@@ -151,7 +150,7 @@ export function TaskTableHeader({
                 className={cn(
                   "align-middle font-medium transition-colors group/th text-left",
                   col.widthClass,
-                  titlePaddingClass
+                  leadingPaddingClass
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -203,6 +202,42 @@ export function TaskTableHeader({
                       <span>{col.label}</span>
                     )}
                   </div>
+                  {/* Screen-reader accessible metadata for table semantics */}
+                  <span className="sr-only">Nhiệm vụ Phối hợp Tình trạng Thời hạn</span>
+                </div>
+              </th>
+            );
+          }
+
+          if (col.id === "title") {
+            return (
+              <th
+                key={col.id}
+                scope="col"
+                aria-sort={ariaSortValue}
+                className={cn(
+                  "align-middle font-medium transition-colors group/th text-left",
+                  col.widthClass,
+                  paddingClass
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  {isSortable ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort?.(col.id as TaskSortField)}
+                      className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+                    >
+                      <span>{col.label}</span>
+                      <span className="sr-only">(Tên nhiệm vụ)</span>
+                      {renderSortIndicator(col.id as TaskSortField)}
+                    </button>
+                  ) : (
+                    <span>
+                      {col.label}
+                      <span className="sr-only">(Tên nhiệm vụ)</span>
+                    </span>
+                  )}
                 </div>
               </th>
             );

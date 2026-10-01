@@ -27,6 +27,8 @@ import {
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import {
   StatusSubNew,
   StatusSubInProgress,
@@ -34,6 +36,19 @@ import {
   StatusSubCompleted,
   HealthSubOverdue,
 } from "@/components/dashboard/task-filter-icons";
+
+function formatShortTableDate(dateStr?: string | Date | null): string {
+  if (!dateStr) return "-";
+  try {
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+    if (isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${day}/${month}`;
+  } catch {
+    return String(dateStr);
+  }
+}
 
 export interface TaskRowProps {
   task: SchoolTask;
@@ -413,6 +428,18 @@ export const TaskRow = React.memo(function TaskRow({
     onContextMenu?.(task, e);
   };
 
+  const taskCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
+  const statusLabel =
+    task.status === "COMPLETED"
+      ? "Hoàn thành"
+      : slaStatus.isOverdue
+      ? "Quá hạn"
+      : isWaitingApproval
+      ? "Chờ duyệt"
+      : task.status === "IN_PROGRESS"
+      ? "Đang thực hiện"
+      : "Mới";
+
   const paddingClass = "py-2 px-2.5";
   const titlePaddingClass = "pl-3.5 sm:pl-4 pr-2.5 py-2";
   const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
@@ -425,16 +452,16 @@ export const TaskRow = React.memo(function TaskRow({
 
     let radiusClass = "rounded-none";
     if (!isSelected || selectionGroupPosition === "only" || !selectionGroupPosition) {
-      if (isFirst) radiusClass = "rounded-l-md";
-      else if (isLast) radiusClass = "rounded-r-md";
+      if (isFirst) radiusClass = "rounded-l-xl";
+      else if (isLast) radiusClass = "rounded-r-xl";
     } else if (selectionGroupPosition === "first") {
-      if (isFirst) radiusClass = "rounded-tl-md rounded-bl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-tr-md rounded-br-none rounded-l-none";
+      if (isFirst) radiusClass = "rounded-tl-xl rounded-bl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-tr-xl rounded-br-none rounded-l-none";
     } else if (selectionGroupPosition === "middle") {
       radiusClass = "rounded-none";
     } else if (selectionGroupPosition === "last") {
-      if (isFirst) radiusClass = "rounded-bl-md rounded-tl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-br-md rounded-tr-none rounded-l-none";
+      if (isFirst) radiusClass = "rounded-bl-xl rounded-tl-none rounded-r-none";
+      else if (isLast) radiusClass = "rounded-br-xl rounded-tr-none rounded-l-none";
     }
 
     return cn("transition-colors border-b-[1.5px] border-transparent", bgClass, radiusClass);
@@ -467,9 +494,9 @@ export const TaskRow = React.memo(function TaskRow({
         className
       )}
     >
-      {/* 1. Nhiệm vụ Column: Leading integrated selector + title */}
-      <td className={cn("align-middle min-w-[320px] md:min-w-[400px] flex-1", titlePaddingClass, getCellClasses(true, false))}>
-        <div className="flex items-center gap-1.5">
+      {/* 1. Mã Column: Selector + Status Circle + Priority Signal Bars + Task Code */}
+      <td className={cn("w-44 min-w-[170px] align-middle whitespace-nowrap", titlePaddingClass, getCellClasses(true, false))}>
+        <div className="flex items-center gap-2">
           {/* Integrated leading selector: Accessible keyboard + large hit area (~32px) */}
           <div
             role="checkbox"
@@ -502,7 +529,7 @@ export const TaskRow = React.memo(function TaskRow({
                 <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
               </div>
             ) : (
-              /* Minimalist Subtle Checkbox: Quiet and visible when idle for rhythmic scannability, highlighted on hover */
+              /* Minimalist Subtle Checkbox: Quiet and visible when idle, highlighted on hover */
               <div
                 className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
                 aria-hidden="true"
@@ -510,14 +537,29 @@ export const TaskRow = React.memo(function TaskRow({
             )}
           </div>
 
-          {/* Title + Description */}
-          <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-            <div className="flex items-center gap-2 min-w-0">
-            {showTaskCode && (task.code || task.taskCode) && (
-              <span className="font-mono text-[11px] font-semibold text-muted-foreground/80 tabular-nums shrink-0">
-                {task.code || task.taskCode}
-              </span>
-            )}
+          {/* Geometric Status Indicator Circle with accessible label */}
+          <div title={statusLabel} className="shrink-0 flex items-center">
+            <TaskStatusCircle status={task.status} />
+            <span className="sr-only">{statusLabel}</span>
+          </div>
+
+          {/* Priority 3-bar signal indicator */}
+          <PrioritySignalBars priority={task.priority} />
+
+          {/* Task Code */}
+          <span
+            className="font-mono text-xs text-muted-foreground/80 tabular-nums shrink-0"
+            title={taskCode}
+          >
+            {taskCode}
+          </span>
+        </div>
+      </td>
+
+      {/* 2. Tên Column: Title + Inline Subtask Count */}
+      <td className={cn("min-w-[280px] md:min-w-[360px] flex-1 align-middle", paddingClass, getCellClasses(false, false))}>
+        <div className="flex flex-col min-w-0 gap-0.5">
+          <div className="flex items-center gap-2 min-w-0">
             <span
               className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
@@ -525,7 +567,17 @@ export const TaskRow = React.memo(function TaskRow({
               {task.title}
             </span>
 
-            {/* Matched Subtask Badge for SUBTASK_DRI (Issue #21 & Issue #26) */}
+            {/* Inline subtask counter matching Image #1 and qcet-nhiem-vu.html: e.g. 1/4 or 0/3 */}
+            {totalSubTasks > 0 && (
+              <span
+                className="text-xs text-muted-foreground/60 tabular-nums font-normal shrink-0"
+                title={`${completedSubTasks}/${totalSubTasks} việc con hoàn thành`}
+              >
+                {completedSubTasks}/{totalSubTasks}
+              </span>
+            )}
+
+            {/* Matched Subtask Badge for SUBTASK_DRI */}
             {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
               <span
                 data-slot="subtask-dri-badge"
@@ -545,33 +597,38 @@ export const TaskRow = React.memo(function TaskRow({
                 Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
               </span>
             )}
-            </div>
-            {task.description && (() => {
-              // Strip qcetBlocks JSON → plain text preview
-              let preview = task.description;
-              try {
-                if (preview.includes('"qcetBlocks":true')) {
-                  const parsed = JSON.parse(preview);
-                  preview = (parsed.blocks as Array<{content?: string}>)
-                    .map((b) => b.content || "")
-                    .join(" ")
-                    .trim();
-                }
-              } catch { /* keep raw */ }
-              // Clamp to 120 chars
-              preview = preview.length > 120 ? preview.slice(0, 120) + "…" : preview;
-              return preview ? (
-                <span className="text-[11.5px] text-muted-foreground/60 truncate leading-snug max-w-full">
-                  {preview}
-                </span>
-              ) : null;
-            })()}
           </div>
+
+          {task.description && (() => {
+            let preview = task.description;
+            try {
+              if (preview.includes('"qcetBlocks":true')) {
+                const parsed = JSON.parse(preview);
+                preview = (parsed.blocks as Array<{content?: string}>)
+                  .map((b) => b.content || "")
+                  .join(" ")
+                  .trim();
+              }
+            } catch { /* keep raw */ }
+            preview = preview.length > 120 ? preview.slice(0, 120) + "…" : preview;
+            return preview ? (
+              <span className="text-[11.5px] text-muted-foreground/60 truncate leading-snug max-w-full">
+                {preview}
+              </span>
+            ) : null;
+          })()}
         </div>
       </td>
 
-      {/* 2. Phụ trách (Lead Assignee) */}
-      <td className={cn("w-48 lg:w-56 min-w-[160px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+      {/* 3. Đơn vị Column */}
+      <td className={cn("w-36 lg:w-44 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+        <span className="text-xs text-muted-foreground truncate block" title={departmentName}>
+          {departmentName || "—"}
+        </span>
+      </td>
+
+      {/* 4. Phụ trách Column: Pastel Avatar + Name */}
+      <td className={cn("w-40 lg:w-48 min-w-[140px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div
           className="flex items-center gap-2 min-w-0"
           title={`${driInfo.primaryName || "—"}${departmentName ? ` (${departmentName})` : ""}`}
@@ -593,50 +650,8 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 3. Phối hợp (Collaborators / Subtasks Contributors) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
-        {coAssigneesList.length > 0 ? (
-          <div className="flex items-center -space-x-1">
-            {coAssigneesList.slice(0, 3).map((name, i) => (
-              <span
-                key={i}
-                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted border border-background text-[9px] font-semibold text-foreground overflow-hidden"
-                title={name}
-              >
-                {getInitials(name)}
-              </span>
-            ))}
-            {coAssigneesList.length > 3 && (
-              <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
-                +{coAssigneesList.length - 3}
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="text-muted-foreground/50 text-xs">—</span>
-        )}
-      </td>
-
-      {/* 4. Nội dung & Tệp đính kèm */}
-      <td className={cn("w-28 min-w-[96px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
-        <div className="flex items-center gap-2.5 text-muted-foreground/60">
-          {(task.subTasks?.length ?? 0) > 0 && (
-            <span className="inline-flex items-center gap-1" title={`${task.subTasks!.length} nhiệm vụ con`}>
-              <MessageSquare size={12} strokeWidth={1.5} />
-              <span className="text-[11px] font-mono tabular-nums">{task.subTasks!.length}</span>
-            </span>
-          )}
-          {(task.deliverables?.length ?? 0) > 0 && (
-            <span className="inline-flex items-center gap-1" title={`${task.deliverables!.length} tệp đính kèm`}>
-              <Paperclip size={12} strokeWidth={1.5} />
-              <span className="text-[11px] font-mono tabular-nums">+{task.deliverables!.length}</span>
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* 5. Thời hạn (Due Date) */}
-      <td className={cn("w-32 min-w-[110px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+      {/* 5. Hạn Column: DD/MM (bold red if overdue) + title with DD/MM/YYYY */}
+      <td className={cn("w-28 min-w-[90px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
         <div className="flex flex-col gap-0.5">
           {task.dueDate ? (
             <>
@@ -649,9 +664,9 @@ export const TaskRow = React.memo(function TaskRow({
                     ? "text-amber-600 font-semibold"
                     : "text-muted-foreground font-normal"
                 )}
-                title="Thời hạn"
+                title={formatTableDate(task.dueDate)}
               >
-                {formatTableDate(task.dueDate)}
+                {formatShortTableDate(task.dueDate)}
               </span>
               {slaStatus.isOverdue && (
                 <span
@@ -673,18 +688,7 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 5. Tình trạng (Status) */}
-      <td className={cn("w-36 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
-        <div className="flex items-center -translate-y-px">
-          <HealthIndicator
-            status={task.status}
-            isOverdue={Boolean(slaStatus.isOverdue)}
-            isWaitingApproval={isWaitingApproval}
-          />
-        </div>
-      </td>
-
-      {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
+      {/* 6. Thao tác Column (Context button `...` - Mobile/Touch overflow) */}
       <td
         className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, getCellClasses(false, true))}
         onClick={(e) => e.stopPropagation()}

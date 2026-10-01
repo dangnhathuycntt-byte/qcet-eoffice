@@ -12,6 +12,9 @@ import {
 } from "../src/lib/academic-calendar";
 import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";
 
+// Pin reference date to 2026-09-09 for deterministic testing per invariants.md
+process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-09";
+
 describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
   describe("1. getCurrentAcademicPeriod() Invariants", () => {
     it("returns accurate period for default system reference date (2026-09-09)", () => {

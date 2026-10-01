@@ -17,7 +17,7 @@ describe("Task 3: Stanford Authority Delegation UI Integration Tests", () => {
         departmentCode: "K_CNTT",
         scope: "DACUM_REVIEW_STEP1",
         startDate: "2026-09-01",
-        endDate: "2026-09-30",
+        endDate: "2026-10-31",
         status: "ACTIVE",
         reason: "Ủy quyền thẩm định DACUM",
         createdAt: "2026-09-01T08:00:00Z",

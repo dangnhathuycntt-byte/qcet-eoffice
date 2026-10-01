@@ -1,5 +1,8 @@
 import { describe, it, test } from "node:test";
 import assert from "node:assert/strict";
+
+// Pin reference date to 2026-09-25 for deterministic testing per invariants.md
+process.env.NEXT_PUBLIC_REFERENCE_DATE = "2026-09-25";
 import type { SchoolBottleneckItem } from "../src/types/workspace";
 import { applyExecutiveResolution } from "../src/lib/executive-resolution-state";
 import { getRadarDotStatus, formatRadarUnitName } from "../src/components/portal/executive-unit-radar";
@@ -278,7 +281,7 @@ describe("Executive Attention Queue Builder", () => {
         title: "Nhiệm vụ bình thường",
 
         departmentName: "Khoa CNTT",
-        dueDate: "2026-09-30",
+        dueDate: "2026-10-30",
         status: "IN_PROGRESS",
         progressPercent: 50,
         priority: "NORMAL",
