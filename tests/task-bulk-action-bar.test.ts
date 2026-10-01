@@ -4,6 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+// Pin deterministic reference date for test execution
+process.env.NEXT_PUBLIC_REFERENCE_DATE = process.env.NEXT_PUBLIC_REFERENCE_DATE || "2026-09-25";
+
 import {
   TaskBulkActionBar,
   calculateExtendedDeadline,

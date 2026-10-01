@@ -114,7 +114,7 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
 
     assert.ok(html.includes('id="tour-tasks-landing"'));
     assert.ok(html.includes('id="tour-empty-state-cta"'));
-    assert.ok(html.includes("Chào mừng Thầy/Cô đến với Bàn làm việc!"));
+    assert.ok(html.includes("Chưa có nhiệm vụ nào"));
     assert.ok(!html.includes('data-slot="unified-adaptive-workspace"'));
   });
 

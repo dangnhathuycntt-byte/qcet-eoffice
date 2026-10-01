@@ -29,9 +29,9 @@ export interface StandardDialogProps {
 }
 
 const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
-  sm: "max-w-sm",
-  md: "max-w-lg",
-  lg: "max-w-2xl",
+  sm: "max-w-[400px]",
+  md: "max-w-[560px]",
+  lg: "max-w-[720px]",
   xl: "max-w-4xl",
   full: "max-w-[95vw] max-h-[92vh]",
 };
@@ -39,6 +39,7 @@ const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
 /**
  * Standard Dialog wrapper over `@base-ui/react/dialog`.
  * Provides accessible portal, backdrop blur (bg-black/40 + backdrop-blur-xs), focus trap, ESC dismiss, and clean layout.
+ * Aligned with Modal.dc.html: 10% distance from top edge (avoids vertical jump on content resize), max-height 85vh.
  */
 export function StandardDialog({
   open,
@@ -57,7 +58,7 @@ export function StandardDialog({
         <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-safe:transition-opacity motion-safe:duration-150" />
         <BaseDialog.Popup
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
+            "fixed left-1/2 top-[10%] z-50 w-full -translate-x-1/2 outline-none max-h-[85vh] flex flex-col overflow-y-auto",
             "rounded-2xl border-0 bg-card p-6 shadow-[var(--shadow-dialog)]",
             "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
             sizeClasses[size],

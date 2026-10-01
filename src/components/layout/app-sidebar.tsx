@@ -9,13 +9,6 @@ import {
   ChevronUp,
   Settings,
   X,
-  LayoutDashboard,
-  Calendar,
-  CheckSquare,
-  FileText,
-  Building2,
-  Bell,
-  Inbox,
   Search,
   ChevronLeft,
   User,
@@ -49,16 +42,7 @@ import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
-
-import {
-  SidebarIconTasks,
-  SidebarIconCalendar,
-  SidebarIconInbox,
-  SidebarIconDocuments,
-  SidebarIconOrg,
-  SidebarIconDesk,
-  SidebarIconSettings,
-} from "./sidebar-nav-icons";
+import { QcetIcon } from "@/components/icons";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -66,14 +50,14 @@ const UserProfileModal = dynamic(
 );
 
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], React.ComponentType<any>> = {
-  LayoutDashboard: SidebarIconDesk,
-  Calendar: SidebarIconCalendar,
-  CheckSquare: SidebarIconTasks,
-  FileText: SidebarIconDocuments,
-  Building2: SidebarIconOrg,
-  Bell,
-  Settings: SidebarIconSettings,
-  Inbox: SidebarIconInbox,
+  LayoutDashboard: (props: any) => <QcetIcon name="dashboard" size={16} {...props} />,
+  Calendar: (props: any) => <QcetIcon name="calendar" size={16} {...props} />,
+  CheckSquare: (props: any) => <QcetIcon name="tasks" size={16} {...props} />,
+  FileText: (props: any) => <QcetIcon name="documents" size={16} {...props} />,
+  Building2: (props: any) => <QcetIcon name="organization" size={16} {...props} />,
+  Bell: (props: any) => <QcetIcon name="notification" size={16} {...props} />,
+  Settings: (props: any) => <QcetIcon name="settings" size={16} {...props} />,
+  Inbox: (props: any) => <QcetIcon name="inbox" size={16} {...props} />,
 };
 
 export function formatDisplayName(name?: string | null): string {
@@ -108,7 +92,7 @@ export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
   .filter((item) => item.id !== "settings" && item.id !== "desk")
   .map((item) => ({
     ...item,
-    icon: ICON_MAP[item.iconName] || SidebarIconDesk,
+    icon: ICON_MAP[item.iconName] || ICON_MAP.LayoutDashboard,
   }));
 
 export function isEditableTarget(target: any): boolean {

@@ -205,16 +205,16 @@ export function CreateTaskModal({
       >
         <Dialog.Portal keepMounted={isOpen}>
           <Dialog.Backdrop
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
           />
           <Dialog.Popup
-            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 outline-none"
+            className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] p-2 sm:p-4 md:p-6 outline-none"
           >
             {/* Outer Card: Compact task composer */}
             <div
               data-slot="create-task-modal"
               className={cn(
-                "relative flex flex-col bg-card rounded-xl shadow-2xl border border-border/80 overflow-hidden",
+                "relative flex flex-col bg-card rounded-2xl shadow-2xl border-0 overflow-hidden",
                 "w-full max-w-[680px] h-[540px] max-h-[85vh]",
                 "animate-in fade-in zoom-in-95",
               )}
@@ -495,7 +495,7 @@ export function CreateTaskModal({
                       >
                         <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
                         <span>
-                          {leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : "Chủ trì *"}
+                          {leadAssigneeDisplayName ? `Chủ trì: ${leadAssigneeDisplayName}` : "Chủ trì"}
                         </span>
                         <ChevronDown
                           className={cn(
@@ -571,7 +571,7 @@ export function CreateTaskModal({
                         form.setFieldErrors((prev) => ({ ...prev, dueDate: undefined }));
                       }
                     }}
-                    label="Hạn: *"
+                    label="Hạn:"
                     variant="chip"
                     error={Boolean(form.fieldErrors.dueDate)}
                     icon={
@@ -618,15 +618,8 @@ export function CreateTaskModal({
                   <span>{initialParentTaskId ? "để giao việc" : "để tạo"}</span>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons: Primary first, matching Components5.dc.html */}
                 <div className="flex items-center gap-2 ml-auto">
-                  <Dialog.Close
-                    className="h-7.5 px-3 text-xs font-medium text-foreground hover:bg-accent rounded-md transition-colors cursor-pointer"
-                    disabled={form.isSubmitting}
-                  >
-                    Hủy
-                  </Dialog.Close>
-
                   <button
                     type="button"
                     onClick={handleFormSubmit}
@@ -642,6 +635,13 @@ export function CreateTaskModal({
                       <span>{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</span>
                     )}
                   </button>
+
+                  <Dialog.Close
+                    className="h-7.5 px-3 text-xs font-medium text-foreground hover:bg-accent rounded-md transition-colors cursor-pointer"
+                    disabled={form.isSubmitting}
+                  >
+                    Hủy
+                  </Dialog.Close>
                 </div>
               </footer>
             </div>
