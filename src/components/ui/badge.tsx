@@ -17,24 +17,24 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
-        // QCET task status variants (10% tint pastel, accessible text)
+        // QCET task status variants — semantic bg-secondary/text-foreground for dark-mode parity
         sapphire:
-          "bg-blue-500/10 text-blue-600",
+          "bg-secondary text-foreground",
         emerald:
-          "bg-emerald-500/10 text-emerald-700",
+          "bg-secondary text-foreground",
         amber:
-          "bg-amber-500/10 text-amber-700",
+          "bg-secondary text-foreground",
         rose:
-          "bg-rose-500/10 text-rose-600",
+          "bg-secondary text-foreground",
         violet:
-          "bg-violet-500/10 text-violet-600",
+          "bg-secondary text-foreground",
         // Backward-compatible aliases
         success:
-          "bg-emerald-500/10 text-emerald-700",
+          "bg-secondary text-foreground",
         progress:
-          "bg-blue-500/10 text-blue-600",
+          "bg-secondary text-foreground",
         warning:
-          "bg-amber-500/10 text-amber-700",
+          "bg-secondary text-foreground",
       },
     },
     defaultVariants: {

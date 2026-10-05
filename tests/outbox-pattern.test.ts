@@ -215,7 +215,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
 
             academicMonth: 9,
             academicYear: '2026-2027',
-            dueDate: new Date('2026-09-30T17:00:00Z'),
+            dueDate: new Date('2027-06-30T17:00:00Z'),
           },
         });
 
@@ -267,7 +267,7 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
 
               academicMonth: 9,
               academicYear: '2026-2027',
-              dueDate: new Date('2026-09-30T17:00:00Z'),
+              dueDate: new Date('2027-06-30T17:00:00Z'),
             },
           });
 

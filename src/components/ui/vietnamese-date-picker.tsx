@@ -315,7 +315,7 @@ export function VietnameseDatePicker({
           className={cn(
             "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-xs font-medium transition-colors duration-100 cursor-pointer select-none whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1",
             error
-              ? "border-0 bg-danger-soft text-destructive"
+              ? "border-0 bg-rose-50 text-rose-700"
               : isOpen
               ? "border-0 bg-selected text-foreground"
               : "border-0 bg-secondary hover:bg-accent text-foreground",
