@@ -29,20 +29,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return `/login?error=domain_not_allowed&email=${encodeURIComponent(email)}`;
         }
 
-        // 2. Verify user exists in database (pre-provisioned)
-        const dbUser = await prisma.user.findUnique({
-          where: { email },
-          include: { accounts: true },
-        });
+        // 2. Nhận diện người dùng bằng sub của Google (providerAccountId), không dùng email làm khóa
+        let dbUser = null;
+        if (account.providerAccountId) {
+          const linkedAccount = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: "google",
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            include: { user: { include: { accounts: true } } },
+          });
+          if (linkedAccount?.user) {
+            dbUser = linkedAccount.user;
+          }
+        }
+
+        // Fallback khi chưa liên kết: kiểm tra user được cấp sẵn theo email
+        if (!dbUser) {
+          dbUser = await prisma.user.findUnique({
+            where: { email },
+            include: { accounts: true },
+          });
+        }
 
         // 3. Reject non-existing users (do not auto-create accounts or elevate privileges)
         if (!dbUser) {
-          return "/login?error=account_not_found";
+          return `/login?error=account_not_found&email=${encodeURIComponent(email)}`;
         }
 
         // 4. Reject deactivated users
         if (!dbUser.isActive) {
-          return "/login?error=account_disabled";
+          return `/login?error=account_disabled&email=${encodeURIComponent(email)}`;
         }
 
         // 5. Link Google account if not yet linked

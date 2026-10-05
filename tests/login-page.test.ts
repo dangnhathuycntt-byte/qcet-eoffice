@@ -58,9 +58,10 @@ describe("Issue #6: Single Centered Column Architecture & Institutional Copy Ver
     );
     // Role condition note
     assert.ok(
+      loginPageSource.includes("QCET E-Office chỉ nhận tên và email của bạn.") ||
       loginPageSource.includes("QCET Work chỉ nhận tên và email của bạn.") ||
         loginPageSource.includes("QCET Work nhận tên, email và ảnh đại diện của bạn."),
-      "Must contain 'QCET Work chỉ nhận tên và email của bạn.' copy"
+      "Must contain institutional note copy"
     );
     // Support link & email
     assert.ok(
@@ -270,5 +271,70 @@ describe("Issue #6: Form Validation Fallbacks & Mock Zero-Tolerance", () => {
     const validResult = validateLoginForm("teacher@cdktcnqn.edu.vn");
     assert.equal(validResult.valid, true);
     assert.equal(validResult.user, undefined);
+  });
+});
+
+describe("Login Specification & Multi-State Compliance (Boards Login & Login2)", () => {
+  const loginPageSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src/app/login/page.tsx"),
+    "utf-8"
+  );
+
+  test("contains institutional branding 'QCET E-Office' and official support email", () => {
+    assert.ok(
+      loginPageSource.includes("QCET E-Office"),
+      "Must use 'QCET E-Office' as application title"
+    );
+    assert.ok(
+      loginPageSource.includes("hotro@cdktcnqn.edu.vn"),
+      "Must use official support email hotro@cdktcnqn.edu.vn"
+    );
+  });
+
+  test("implements all required login states from Login and Login2 boards", () => {
+    // 1. In-app chat browser (disallowed_useragent)
+    assert.ok(loginPageSource.includes("Mở bằng trình duyệt"));
+    assert.ok(loginPageSource.includes("Google không cho đăng nhập trong ứng dụng này."));
+    assert.ok(loginPageSource.includes("Sao chép liên kết"));
+
+    // 2. Unregistered / Access Denied
+    assert.ok(loginPageSource.includes("Chưa được cấp quyền"));
+    assert.ok(loginPageSource.includes("Gửi yêu cầu cấp quyền"));
+    assert.ok(loginPageSource.includes("Đã gửi yêu cầu"));
+    assert.ok(loginPageSource.includes("Quản trị viên sẽ xem và báo qua email."));
+
+    // 3. Deactivated / Disabled account
+    assert.ok(loginPageSource.includes("Tài khoản đã bị khóa"));
+    assert.ok(loginPageSource.includes("Tài khoản này không còn dùng được QCET E-Office."));
+
+    // 4. Returning user / quick login
+    assert.ok(loginPageSource.includes("Chào mừng quay lại"));
+    assert.ok(loginPageSource.includes("Tiếp tục với tên"));
+    assert.ok(loginPageSource.includes("Dùng tài khoản khác"));
+
+    // 5. Shared machine (select_account)
+    assert.ok(loginPageSource.includes("Chọn tài khoản"));
+    assert.ok(loginPageSource.includes("Luôn hỏi trước khi vào, vì đây là máy dùng chung."));
+
+    // 6. Deep link redirect state
+    assert.ok(loginPageSource.includes("Đăng nhập để mở nhiệm vụ"));
+
+    // 7. Expired session & Logout
+    assert.ok(loginPageSource.includes("Phiên đã hết hạn"));
+    assert.ok(loginPageSource.includes("Đã đăng xuất"));
+    assert.ok(loginPageSource.includes("Đang dùng máy chung? Hãy đóng cả trình duyệt."));
+
+    // 8. Connection failure with in-place retry
+    assert.ok(loginPageSource.includes("Chưa kết nối được Google"));
+    assert.ok(loginPageSource.includes("Kiểm tra mạng rồi thử lại."));
+    assert.ok(loginPageSource.includes("handleRetryAtPlace") || loginPageSource.includes("isRetryingAtPlace"));
+  });
+
+  test("handles accessible error tab titles and keyboard focus ring", () => {
+    // Tab title prefix for errors
+    assert.ok(loginPageSource.includes('document.title = "Lỗi: Đăng nhập · QCET E-Office"'));
+    // Focus ring 2px, offset 3px, institutional color #0058A0
+    assert.ok(loginPageSource.includes("focus-visible:ring-[#0058A0]"));
+    assert.ok(loginPageSource.includes("focus-visible:ring-offset-[3px]"));
   });
 });
