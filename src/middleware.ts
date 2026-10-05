@@ -232,7 +232,13 @@ export async function middleware(request: NextRequest) {
     return nextWithCorrelation();
   }
 
-  // 3. Canonical singular to plural redirects (e.g. /task -> /tasks)
+  // 3. Canonical redirects (e.g. /task -> /tasks, /onboarding -> /tasks)
+  if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/tasks';
+    url.search = '';
+    return redirectWithCorrelation(url, 307);
+  }
   if (pathname === '/task') {
     const url = request.nextUrl.clone();
     url.pathname = '/tasks';

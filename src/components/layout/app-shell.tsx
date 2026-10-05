@@ -90,11 +90,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isPublicRoute =
     pathname === "/login" ||
     pathname === "/portal" ||
-    pathname === "/onboarding" ||
     (typeof window !== "undefined" &&
       (window.location.pathname.startsWith("/login") ||
-        window.location.pathname.startsWith("/portal") ||
-        window.location.pathname.startsWith("/onboarding")));
+        window.location.pathname.startsWith("/portal")));
 
   // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: điều hướng an toàn về /login
   React.useEffect(() => {
