@@ -38,7 +38,6 @@ import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, getStatusDisplay, getPrio
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
-import { UserAvatarGroup } from "@/components/ui/user-avatar";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -427,13 +426,29 @@ export function TaskPropertiesSidebar({
           <PropertyRow label="Phối hợp">
             <div className="relative">
               {collaborators.length > 0 ? (
-                <UserAvatarGroup
-                  users={collaborators}
-                  max={3}
-                  size="sm"
-                  className="px-1.5 py-0.5"
+                <div
+                  className="flex items-center -space-x-1.5 px-1.5 py-0.5"
                   title={collaborators.map((c) => c.name).join(", ")}
-                />
+                >
+                  {collaborators.slice(0, 3).map((c) => (
+                    <span
+                      key={c.id}
+                      className="size-5 rounded-full ring-2 ring-background shrink-0 inline-flex items-center justify-center bg-secondary text-foreground text-[9px] font-semibold select-none overflow-hidden"
+                      title={c.name}
+                    >
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt={c.name} className="size-full object-cover" loading="lazy" />
+                      ) : (
+                        getInitials(c.name)
+                      )}
+                    </span>
+                  ))}
+                  {collaborators.length > 3 && (
+                    <span className="size-5 rounded-full ring-2 ring-background shrink-0 inline-flex items-center justify-center bg-secondary text-muted-foreground text-[9px] font-semibold select-none">
+                      {`+${collaborators.length - 3}`}
+                    </span>
+                  )}
+                </div>
               ) : (
                 <div className="inline-flex items-center px-1.5 py-0.5 text-xs text-muted-foreground/60">
                   <span className="size-4 shrink-0 flex items-center justify-center">-</span>

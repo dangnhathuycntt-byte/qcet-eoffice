@@ -6,10 +6,36 @@ import * as m from "motion/react-m";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { StaffTask } from "@/types/dashboard";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
-import { UserAvatar } from "@/components/ui/user-avatar";
-import { cn } from "@/lib/utils";
+import { getInitials, cn } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
 import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
+
+/** Compact inline avatar for subtask rows — renders img in SSR for avatar, initials circle otherwise */
+function SubtaskAvatar({ name, avatarUrl }: { name?: string | null; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name || "Ảnh đại diện"}
+        title={name || undefined}
+        className="size-4 rounded-full object-cover shrink-0"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  if (name && name.trim() && name.trim().toLowerCase() !== "chưa phân công") {
+    return (
+      <span
+        className="size-4 rounded-full shrink-0 inline-flex items-center justify-center bg-primary/10 text-primary text-[9px] font-semibold select-none"
+        title={name}
+      >
+        {getInitials(name)}
+      </span>
+    );
+  }
+  return null;
+}
 
 export interface TaskSubtasksSidebarSectionProps {
   subTasks: StaffTask[];
@@ -133,10 +159,9 @@ export function TaskSubtasksSidebarSection({
 
                 {/* 4. Avatar người phụ trách */}
                 <div className="shrink-0 mt-0.5">
-                  <UserAvatar
+                  <SubtaskAvatar
                     avatarUrl={st.assigneeAvatar}
                     name={st.assigneeName}
-                    size="xs"
                   />
                 </div>
               </button>
@@ -190,10 +215,9 @@ export function TaskSubtasksSidebarSection({
                         </span>
                       )}
                       <div className="shrink-0 mt-0.5">
-                        <UserAvatar
+                        <SubtaskAvatar
                           avatarUrl={st.assigneeAvatar}
                           name={st.assigneeName}
-                          size="xs"
                         />
                       </div>
                     </button>

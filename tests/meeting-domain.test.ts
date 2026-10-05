@@ -275,7 +275,7 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
     await MeetingService.confirmMinutes(meeting.id, {}, organizerUser.id);
 
     // Ban hành quyết nghị có yêu cầu sinh Task
-    const deadline = new Date('2026-09-30T17:00:00Z');
+    const deadline = new Date('2027-06-30T17:00:00Z');
     const resolution = await MeetingService.createResolution(
       meeting.id,
       {
