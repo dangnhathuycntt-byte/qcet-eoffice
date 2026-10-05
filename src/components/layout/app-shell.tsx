@@ -27,6 +27,11 @@ const GlobalShortcutsModal = dynamic(
   { ssr: false }
 );
 
+const HelpGuideModal = dynamic(
+  () => import("@/components/feature-guide/feature-guide").then((mod) => mod.HelpGuideModal),
+  { ssr: false }
+);
+
 const PWAInstallPrompt = dynamic(
   () => import("@/components/pwa/pwa-install-prompt").then((m) => m.PWAInstallPrompt),
   { ssr: false }
@@ -182,6 +187,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <MobileAppInstallModalContainer />
       <CommandSearchModal />
       <GlobalShortcutsModal />
+      <HelpGuideModal />
     </div>
   );
 }

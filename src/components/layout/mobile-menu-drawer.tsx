@@ -20,6 +20,7 @@ import {
   Smartphone,
   CheckCircle2,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import {
   BottomSheet,
@@ -375,6 +376,25 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   <ChevronRight size={14} />
                 </button>
               )}
+
+              {/* Feature Guide Help Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
+                  }
+                }}
+                className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl hover:bg-muted text-foreground border border-border/60 font-medium text-xs transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <HelpCircle size={17} className="text-muted-foreground" />
+                  <span>Trợ giúp &amp; Hướng dẫn</span>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground" />
+              </button>
             </div>
           </div>
 

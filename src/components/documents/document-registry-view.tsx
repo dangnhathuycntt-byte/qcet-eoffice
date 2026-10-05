@@ -15,6 +15,7 @@ import { DocumentOutgoingDetailView } from "./document-outgoing-detail-view";
 import { CreateDocumentModal } from "./create-document-modal";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
 import { DigitalSignatureDialog } from "./digital-signature-dialog";
+import { InboundDocumentFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 const DocumentPdfViewer = dynamic(() => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer), {
   ssr: false,
@@ -368,27 +369,29 @@ export function DocumentRegistryView() {
       />
 
       {/* 5. Main Content: Desktop Table & Mobile Card List */}
-      <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-xs">
-        <div className="hidden sm:block">
-          <DocumentTable
-            documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
-            onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll} onClearSelection={handleClearSelection}
-            onViewPdf={(doc) => setFullscreenPdfDoc(doc)} onLinkTask={(doc) => router.push(doc.linkedTaskId ? `/tasks?taskId=${doc.linkedTaskId}` : `/tasks`)}
-            isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+      <InboundDocumentFeatureGuide>
+        <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-xs">
+          <div className="hidden sm:block">
+            <DocumentTable
+              documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
+              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll} onClearSelection={handleClearSelection}
+              onViewPdf={(doc) => setFullscreenPdfDoc(doc)} onLinkTask={(doc) => router.push(doc.linkedTaskId ? `/tasks?taskId=${doc.linkedTaskId}` : `/tasks`)}
+              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+            />
+          </div>
+          <div className="block sm:hidden">
+            <DocumentCardList
+              documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
+              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={(doc) => setFullscreenPdfDoc(doc)}
+              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+            />
+          </div>
+          <DocumentPagination
+            currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
+            onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
           />
         </div>
-        <div className="block sm:hidden">
-          <DocumentCardList
-            documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
-            onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={(doc) => setFullscreenPdfDoc(doc)}
-            isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
-          />
-        </div>
-        <DocumentPagination
-          currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
-          onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
-        />
-      </div>
+      </InboundDocumentFeatureGuide>
 
       {/* 6. Floating Bulk Action Toolbar */}
       <DocumentBulkToolbar

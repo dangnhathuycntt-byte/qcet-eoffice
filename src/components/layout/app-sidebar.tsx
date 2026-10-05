@@ -489,15 +489,16 @@ export function AppSidebar() {
 
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       setIsProfileDropdownOpen(false);
-                      const { resetAllFeatureGuides } = await import("@/components/feature-guide/feature-guide");
-                      resetAllFeatureGuides();
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
+                      }
                     }}
                     className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
                   >
                     <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                    <span>Hướng dẫn tính năng</span>
+                    <span>Trợ giúp &amp; Hướng dẫn</span>
                   </button>
                 </div>
 

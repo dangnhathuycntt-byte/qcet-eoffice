@@ -15,6 +15,7 @@ import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
 import { fadeVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
+import { DelegationFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -197,18 +198,20 @@ export function DelegationRegistryView() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-9"
-            >
-              <RefreshCw
-                className={cn("size-3.5", isLoading && "animate-spin")}
-                strokeWidth={1.5}
-              />
-              Làm mới
-            </button>
+            <DelegationFeatureGuide>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium shadow-2xs transition-colors hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-9"
+              >
+                <RefreshCw
+                  className={cn("size-3.5", isLoading && "animate-spin")}
+                  strokeWidth={1.5}
+                />
+                Làm mới
+              </button>
+            </DelegationFeatureGuide>
           </div>
         </div>
       </div>

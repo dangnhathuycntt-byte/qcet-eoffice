@@ -11,6 +11,7 @@ import {
   type ViewMode,
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
+import { TaskSortFeatureGuide } from "@/components/feature-guide/feature-guide";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { TaskView } from "@/domain/tasks";
 
@@ -78,17 +79,19 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
       : (initialView ?? "table");
 
   return (
-    <TaskManagementWorkspace
-      scope={activeScope}
-      onScopeChange={onScopeChange}
-      selectedDepartment={currentDept}
-      onDepartmentChange={handleDepartmentChange}
-      viewMode={activeView}
-      initialViewMode={initialView ?? "table"}
-      onViewModeChange={handleViewChange}
-      onSelectTask={handleSelectTask}
-      initialTasks={initialTasks}
-      workspaceQuery={workspaceQuery}
-    />
+    <TaskSortFeatureGuide>
+      <TaskManagementWorkspace
+        scope={activeScope}
+        onScopeChange={onScopeChange}
+        selectedDepartment={currentDept}
+        onDepartmentChange={handleDepartmentChange}
+        viewMode={activeView}
+        initialViewMode={initialView ?? "table"}
+        onViewModeChange={handleViewChange}
+        onSelectTask={handleSelectTask}
+        initialTasks={initialTasks}
+        workspaceQuery={workspaceQuery}
+      />
+    </TaskSortFeatureGuide>
   );
 }
