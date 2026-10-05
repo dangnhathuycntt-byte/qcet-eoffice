@@ -69,7 +69,7 @@ export function getMobileDueBadge(
   if (!dueDate) {
     return {
       label: "Không hạn",
-      className: "border-slate-200 bg-slate-50 text-slate-600",
+      className: "border-border bg-secondary text-muted-foreground",
     };
   }
 
@@ -77,7 +77,7 @@ export function getMobileDueBadge(
   if (diffDays === null) {
     return {
       label: "Không xác định",
-      className: "border-slate-200 bg-slate-50 text-slate-600",
+      className: "border-border bg-secondary text-muted-foreground",
     };
   }
 
@@ -138,7 +138,7 @@ export function getMobilePriorityBadgeConfig(
     case "THAP":
       return {
         label: "Tiêu chuẩn",
-        className: "border-slate-200 bg-slate-100/80 text-slate-600 font-normal",
+        className: "border-border bg-secondary text-muted-foreground font-normal",
       };
     default:
       return null;
@@ -318,7 +318,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         <div className="flex items-center gap-1">
           <span
             data-slot="subtask-dri-badge"
-            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums"
+            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums"
           >
             Phụ trách {(task as any).viewerContext.matchedSubtaskCount} việc con
           </span>

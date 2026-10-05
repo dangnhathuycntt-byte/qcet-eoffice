@@ -216,7 +216,7 @@ Bộ đặc tả nghiệp vụ miền của QCET E-Office gồm 10 tập tài li
 │ đoạn  │                                        │             │                                   │
 ├───────┼────────────────────────────────────────┼─────────────┼───────────────────────────────────┤
 │ P-0   │ Architectural Freeze                   │ HOÀN THÀNH  │ Đóng băng toàn bộ sửa đổi Role cũ;│
-│       │ (Đóng băng phân quyền cũ)              │             │ ban hành quy tắc .claude/rules/05 │
+│       │ (Đóng băng phân quyền cũ)              │             │ ban hành quy tắc AGENTS.md │
 ├───────┼────────────────────────────────────────┼─────────────┼───────────────────────────────────┤
 │ P-1   │ Legal & Institutional Grounding        │ HOÀN THÀNH  │ Số hóa thể chế pháp lý: NĐ 30,    │
 │       │ (Số hóa căn cứ thể chế)                │             │ NĐ 232, QĐ 282, 283, 420, 203, 93 │

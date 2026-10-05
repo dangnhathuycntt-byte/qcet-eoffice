@@ -537,7 +537,7 @@ export function CreateTaskModal({
                                 >
                                   <div>
                                     <div className="font-medium">{person.name}</div>
-                                    <div className="text-[10px] text-muted-foreground">{person.role}</div>
+                                    <div className="text-[11px] text-muted-foreground">{person.role}</div>
                                   </div>
                                   {form.formData.leadAssigneeId === person.id && (
                                     <Check className="size-3.5 text-foreground shrink-0" strokeWidth={1.5} />

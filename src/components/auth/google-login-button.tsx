@@ -36,6 +36,7 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
 export interface GoogleLoginButtonProps {
   className?: string;
   returnTo?: string;
+  prompt?: string;
   onError?: (errorMsg: string) => void;
   onSuccess?: (returnUrl: string) => void;
 }
@@ -43,6 +44,7 @@ export interface GoogleLoginButtonProps {
 export function GoogleLoginButton({
   className,
   returnTo,
+  prompt,
   onError,
   onSuccess,
 }: GoogleLoginButtonProps) {
@@ -55,7 +57,11 @@ export function GoogleLoginButton({
     setIsLoading(true);
     try {
       const target = returnTo && returnTo !== "/login" && returnTo !== "/" ? returnTo : "/tasks";
-      const result = (await signIn("google", { callbackUrl: target })) as any;
+      const signInOptions: Record<string, string> = { callbackUrl: target };
+      if (prompt) {
+        signInOptions.prompt = prompt;
+      }
+      const result = (await signIn("google", signInOptions)) as any;
       if (result?.url && onSuccess) {
         onSuccess(result.url);
       }
@@ -74,7 +80,7 @@ export function GoogleLoginButton({
         onClick={handleStartOAuth}
         aria-label={isLoading ? "Đang chuyển sang Google…" : "Đăng nhập bằng Google"}
         aria-busy={isLoading}
-        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-border)] bg-[var(--google-background)] px-4 text-sm font-medium text-[var(--google-foreground)] hover:bg-[var(--google-hover)] active:bg-[var(--google-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--google-focus)] focus-visible:ring-offset-[3px] cursor-pointer disabled:cursor-not-allowed transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none"
+        className="flex h-[52px] min-[600px]:h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-border)] bg-[var(--google-background)] px-4 text-sm font-medium text-[var(--google-foreground)] hover:bg-[var(--google-hover)] active:bg-[var(--google-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--google-focus)] focus-visible:ring-offset-[3px] cursor-pointer disabled:cursor-not-allowed transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none"
       >
         {isLoading ? (
           <span role="status" className="inline-flex items-center gap-2.5">
@@ -84,7 +90,7 @@ export function GoogleLoginButton({
         ) : (
           <>
             <GoogleIcon className="size-5 shrink-0" />
-            <span className="text-sm font-medium text-current">Đăng nhập bằng Google</span>
+            <span className="text-base min-[600px]:text-sm font-medium text-current">Đăng nhập bằng Google</span>
           </>
         )}
       </button>

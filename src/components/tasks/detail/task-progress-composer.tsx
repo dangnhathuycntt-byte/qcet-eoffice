@@ -162,7 +162,7 @@ export function TaskProgressComposer({
 
             {/* Author */}
             <div className="flex items-center gap-1 text-foreground font-medium">
-              <span className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">
+              <span className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold">
                 {leadName.charAt(0).toUpperCase()}
               </span>
               <span>{leadName}</span>

@@ -45,16 +45,16 @@ export function WorkbenchRouter({
           {greeting}, {userName}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {roleLabel} — Bàn làm việc
+          {roleLabel} - Bàn làm việc
         </p>
       </div>
 
       {/* Quick stats placeholder — will be wired to /api/dashboard/overview */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Nhiệm vụ đang thực hiện" value="—" />
-        <StatCard label="Văn bản chờ xử lý" value="—" />
-        <StatCard label="Cuộc họp hôm nay" value="—" />
-        <StatCard label="Hồ sơ đang mở" value="—" />
+        <StatCard label="Nhiệm vụ đang thực hiện" value="-" />
+        <StatCard label="Văn bản chờ xử lý" value="-" />
+        <StatCard label="Cuộc họp hôm nay" value="-" />
+        <StatCard label="Hồ sơ đang mở" value="-" />
       </div>
 
       {/* Placeholder sections for zone content */}

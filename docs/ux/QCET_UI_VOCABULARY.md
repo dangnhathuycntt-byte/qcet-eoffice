@@ -462,7 +462,7 @@ Trễ / vướng
 
 This vocabulary is the authority; the surfaces below currently render strings that
 must converge. Code and tests are **not** owned by this shard (anti-owned: `src/**`,
-`tests/**`, `docs/plans/**`), so the convergence is executed by lane copy-cleanup work.
+`tests/**`), so the convergence is executed by lane copy-cleanup work.
 
 | Surface (current consumer) | Current string | Converge to |
 | --- | --- | --- |

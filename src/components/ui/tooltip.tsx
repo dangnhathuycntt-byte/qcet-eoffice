@@ -79,14 +79,13 @@ export const TooltipContent = React.forwardRef<
   if (hidden) return null;
   return (
     <BaseTooltip.Portal>
-      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} className="z-[9999]">
+      <BaseTooltip.Positioner side={SIDE_MAP[side]} sideOffset={sideOffset} className="z-60">
         <BaseTooltip.Popup
           ref={ref}
           className={cn(
-            "z-[9999] overflow-hidden rounded-md bg-zinc-600/90 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg whitespace-nowrap pointer-events-none",
-            "origin-[var(--transform-origin)] transition-[opacity,scale] duration-100 ease-out",
-            "data-[starting-style]:opacity-0 data-[starting-style]:scale-95",
-            "data-[ending-style]:opacity-0 data-[ending-style]:scale-95",
+            "z-60 overflow-hidden rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background shadow-menu whitespace-nowrap pointer-events-none motion-reduce:transition-none",
+            "transition-opacity duration-100 ease-out",
+            "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             className,
           )}
           {...props}

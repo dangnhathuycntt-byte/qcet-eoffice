@@ -838,17 +838,20 @@ export function TaskDetailPage({
           />
 
           {/* Tabs: Tổng quan + Hoạt động — pill style */}
+          {/* Tabs: Tổng quan + Hoạt động */}
           <Tabs
             value={activeTab}
             onValueChange={(v) => handleTabChange(v as DetailTab)}
             className="shrink-0"
           >
-            <TabsList aria-label="Các phân mục chi tiết nhiệm vụ">
-              <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-              <TabsTrigger value="activity">
+            <TabsList className="bg-transparent border border-border/70 p-0.5 rounded-lg h-8 gap-0.5" aria-label="Các phân mục chi tiết nhiệm vụ">
+              <TabsTrigger value="overview" className="rounded-md h-7 px-2.5 text-xs font-medium data-active:bg-selected data-active:text-primary data-active:font-semibold">
+                Tổng quan
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="rounded-md h-7 px-2.5 text-xs font-medium data-active:bg-selected data-active:text-primary data-active:font-semibold">
                 Hoạt động
                 {feedActivityEvents.length > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-muted/50 text-[10px] font-mono font-normal tabular-nums text-muted-foreground leading-none">
+                  <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold tabular-nums leading-none">
                     {feedActivityEvents.length}
                   </span>
                 )}

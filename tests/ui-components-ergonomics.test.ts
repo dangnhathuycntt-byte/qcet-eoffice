@@ -5,6 +5,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { buttonVariants } from "../src/components/ui/button";
 import { badgeVariants } from "../src/components/ui/badge";
 import { Input } from "../src/components/ui/input";
+import { UserAvatar } from "../src/components/ui/user-avatar";
+import { QuickEntry } from "../src/components/ui/quick-entry";
+import { BulkActionBar } from "../src/components/ui/bulk-action-bar";
+import { InlineAlert } from "../src/components/ui/inline-alert";
+import { Spinner } from "../src/components/ui/spinner";
+import { Progress } from "../src/components/ui/progress";
+import { getInitials } from "../src/lib/utils";
 
 describe("UI Components Ergonomics & Touch Targets", () => {
   describe("Button Component Ergonomics", () => {
@@ -15,6 +22,7 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.match(defaultClasses, /\bpy-1\.5\b/, "Button default size should have py-1.5");
       assert.ok(defaultClasses.includes("sm:h-8.5"), "Desktop button height must be 34px");
       assert.match(defaultClasses, /\btext-sm\b/, "Button default size should have text-sm (14px)");
+      assert.ok(defaultClasses.includes("motion-reduce:transition-none"), "Button must respect motion-reduce");
     });
 
     it("should have h-7, rounded-lg, px-3, text-xs, and font-medium for sm size", () => {
@@ -35,6 +43,7 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.match(defaultBadge, /\btabular-nums\b/, "Badge should have tabular-nums for clear tabular numbers");
       assert.match(defaultBadge, /\bpy-0\.5\b/, "Badge should have py-0.5 vertical padding");
       assert.match(defaultBadge, /\bpx-2\b/, "Badge should have px-2 horizontal padding");
+      assert.ok(defaultBadge.includes("motion-reduce:transition-none"), "Badge must respect motion-reduce");
     });
   });
 
@@ -46,6 +55,83 @@ describe("UI Components Ergonomics & Touch Targets", () => {
       assert.match(html, /\bpy-2\b/, "Input should have py-2 padding");
       assert.ok(html.includes("sm:h-9"), "Desktop input height must be 36px");
       assert.match(html, /\btext-sm\b/, "Input should have text-sm (14px font size)");
+    });
+  });
+
+  describe("UserAvatar & Initials Standards", () => {
+    it("should correctly extract Vietnamese and single-word initials", () => {
+      assert.equal(getInitials("Đặng Nhật Huy"), "ĐH");
+      assert.equal(getInitials("Lê Văn Thí"), "LT");
+      assert.equal(getInitials("Nguyễn Văn An"), "NA");
+      assert.equal(getInitials("Huy"), "HU");
+      assert.equal(getInitials(""), "QC");
+      assert.equal(getInitials(null), "QC");
+    });
+
+    it("should render circular, shadowless avatar with accessible metadata", () => {
+      const html = renderToStaticMarkup(React.createElement(UserAvatar, { name: "Đặng Nhật Huy", size: "sm" }));
+      assert.match(html, /\brounded-full\b/, "Avatar must be rounded-full");
+      assert.match(html, /\bsize-5\b/, "Avatar sm must have size-5 (20px)");
+      assert.ok(!html.includes("shadow-"), "Avatar must be shadowless on flat surfaces");
+      assert.ok(html.includes("Đặng Nhật Huy"), "Avatar root should have accessible name attribute");
+    });
+
+    it("should gracefully handle unassigned personnel with neutral fallback", () => {
+      const html = renderToStaticMarkup(React.createElement(UserAvatar, { name: "Chưa phân công", size: "xs" }));
+      assert.match(html, /\bsize-4\b/, "Avatar xs must have size-4 (16px)");
+      assert.match(html, /\brounded-full\b/, "Avatar must be rounded-full");
+      assert.ok(html.includes("<svg"), "Unassigned avatar should render neutral User icon");
+    });
+  });
+
+  describe("Accessible Focus & Touch Target Standards (Lượt 7 Remediation)", () => {
+    it("QuickEntry should have accessible aria-labels, focus-visible states, and touch padding", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(QuickEntry, {
+          defaultValue: "Nhiệm vụ mới",
+          onSave: () => {},
+        })
+      );
+      assert.ok(html.includes('aria-label="Lưu (Enter)"'), "Save button must have aria-label");
+      assert.ok(html.includes('aria-label="Hủy (Esc)"'), "Cancel button must have aria-label");
+      assert.ok(html.includes("focus-visible:outline-2"), "Buttons must have focus-visible ring");
+      assert.ok(html.includes("before:-inset-2"), "Buttons must expand touch targets with pseudo before padding");
+    });
+
+    it("BulkActionBar should have accessible aria-labels and high-contrast focus rings on dark background", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(BulkActionBar, {
+          selectedCount: 3,
+          totalCount: 10,
+          onSelectAllPages: () => {},
+          onClearSelection: () => {},
+          actions: [{ label: "Chuyển giao", onClick: () => {} }],
+        })
+      );
+      assert.ok(html.includes('aria-label="Chọn tất cả 10 mục"'), "Select all button must have aria-label");
+      assert.ok(html.includes('aria-label="Bỏ chọn tất cả"'), "Clear button must have aria-label");
+      assert.ok(html.includes("focus-visible:ring-2"), "Buttons on dark surface must have focus-visible ring");
+    });
+
+    it("InlineAlert should have accessible focus-visible states and expanded touch target on action button", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(InlineAlert, {
+          actionLabel: "Thử lại",
+          onAction: () => {},
+          children: "Đã có lỗi xảy ra",
+        })
+      );
+      assert.ok(html.includes('aria-label="Thử lại"'), "Action button must have aria-label");
+      assert.ok(html.includes("focus-visible:outline-2"), "Action button must have focus-visible");
+      assert.ok(html.includes("before:-inset-2"), "Action button must expand touch area");
+    });
+
+    it("Spinner and Progress should adhere to motion-reduce standards", () => {
+      const spinnerHtml = renderToStaticMarkup(React.createElement(Spinner));
+      assert.ok(spinnerHtml.includes("motion-reduce:animate-none"), "Spinner must disable animation on motion-reduce");
+
+      const progressHtml = renderToStaticMarkup(React.createElement(Progress, { value: 50 }));
+      assert.ok(progressHtml.includes("motion-reduce:transition-none"), "Progress must disable transitions on motion-reduce");
     });
   });
 });

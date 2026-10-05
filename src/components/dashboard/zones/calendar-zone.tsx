@@ -49,7 +49,7 @@ function CalendarZoneComponent() {
               Phân khu Lịch công tác
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
             Lịch Công Tác & Hạn Chót Toàn Trường
           </h1>
           <p className="text-xs text-muted-foreground mt-1 text-balance">
@@ -61,7 +61,7 @@ function CalendarZoneComponent() {
           {isExecutive && (
             <Button
               onClick={() => openCreateModal("TRUONG")}
-              className="gap-1.5 text-xs font-bold rounded-xl"
+              className="gap-1.5 text-xs font-bold rounded-control"
             >
               <Plus size={14} />
               <span>Thêm sự kiện / Việc mới</span>

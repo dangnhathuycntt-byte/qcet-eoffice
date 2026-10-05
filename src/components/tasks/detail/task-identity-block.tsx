@@ -197,7 +197,7 @@ export function TaskIdentityBlock({
               className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
             />
           ) : (
-            <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "—"}</span>
+            <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "-"}</span>
           )}
           <span className="text-muted-foreground/60 px-0.5">→</span>
           {canEdit && onDueDateChange ? (

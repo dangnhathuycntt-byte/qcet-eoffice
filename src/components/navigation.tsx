@@ -30,6 +30,7 @@ import {
 } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { getInitials } from "@/lib/format-helpers";
 export { getInitials };
 
@@ -411,9 +412,12 @@ export function Navigation() {
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs group-hover:ring-1 group-hover:ring-primary/40 transition-all">
-                {getInitials(user.name)}
-              </div>
+              <UserAvatar
+                name={user.name}
+                avatarUrl={user.avatar}
+                size="lg"
+                className="group-hover:ring-1 group-hover:ring-primary/40 transition-all"
+              />
               <div className="hidden text-left xl:block">
                 <p
                   className="text-xs font-semibold leading-tight text-foreground max-w-[130px] truncate"
@@ -442,9 +446,12 @@ export function Navigation() {
               <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3 shadow-dropdown z-50 animate-in fade-in zoom-in-95 duration-150">
                 {/* User Summary Card */}
                 <div className="flex items-start gap-3 border-b border-border/50 pb-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-sm font-semibold shadow-xs shrink-0">
-                    {getInitials(user.name)}
-                  </div>
+                  <UserAvatar
+                    name={user.name}
+                    avatarUrl={user.avatar}
+                    size="lg"
+                    className="shrink-0"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-semibold text-foreground truncate" title={user.name}>

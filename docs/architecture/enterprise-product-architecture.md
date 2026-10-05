@@ -2037,10 +2037,6 @@ Hệ thống QCET E-Office tuân thủ bộ tiêu chuẩn chất lượng và ch
 
 ---
 
-## Phụ lục: Tham chiếu Kế hoạch Triển khai (Implementation Reference)
+## Tham chiếu thực thi
 
-> **Lưu ý kiến trúc**: Lộ trình triển khai chi tiết, phân chia giai đoạn (10 Phases: Phase 0 đến Phase 9), danh mục 41 GitHub issues theo thứ tự phụ thuộc nghiêm ngặt, và chính sách quản lý git worktree được quản lý độc lập tại tài liệu:
->
-> 👉 **`docs/architecture/implementation-plan-v1.md`**
->
-> Tài liệu kiến trúc này (`enterprise-product-architecture.md`) đóng vai trò là Nguồn Sự Thật Duy Nhất (Single Source of Truth) về mặt nghiệp vụ và mô hình hệ thống, không nhúng roadmap tĩnh để tránh bất đồng bộ khi thực thi.
+Kế hoạch implementation v1 đã được xóa khỏi checkout trong đợt dọn tài liệu. Tra lịch sử Git nếu cần đối chiếu các mã công việc cũ. Khi làm việc, dùng yêu cầu hiện tại, `AGENTS.md` ở gốc repo và các quyết định đã được duyệt trong `docs/architecture/decisions/`; không tự khởi động lại lộ trình cũ.

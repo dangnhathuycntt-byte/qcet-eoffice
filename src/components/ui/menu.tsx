@@ -9,7 +9,20 @@ export const Menu = BaseMenu;
 
 // Individual primitives re-export
 export const MenuRoot = BaseMenu.Root;
-export const MenuTrigger = BaseMenu.Trigger;
+export const MenuTrigger = React.forwardRef<
+  HTMLElement,
+  React.ComponentPropsWithoutRef<typeof BaseMenu.Trigger> & { asChild?: boolean }
+>(({ children, asChild, render, ...props }, ref) => {
+  if (asChild && React.isValidElement(children)) {
+    return <BaseMenu.Trigger ref={ref as any} render={children as any} {...props} />;
+  }
+  return (
+    <BaseMenu.Trigger ref={ref as any} render={render} {...props}>
+      {children}
+    </BaseMenu.Trigger>
+  );
+});
+MenuTrigger.displayName = "MenuTrigger";
 export const MenuPortal = BaseMenu.Portal;
 export const MenuPositioner = React.forwardRef<
   HTMLDivElement,
@@ -76,7 +89,7 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
         {showBackdrop && (
           <BaseMenu.Backdrop
             className={cn(
-              "fixed inset-0 z-40 bg-black/15 backdrop-blur-xs transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+              "fixed inset-0 z-30 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none",
               backdropClassName
             )}
           />
@@ -87,23 +100,22 @@ export const MenuContent = React.forwardRef<HTMLDivElement, MenuContentProps>(
           sideOffset={sideOffset}
           alignOffset={alignOffset}
           collisionPadding={collisionPadding}
-          className={cn("z-50 outline-none", positionerClassName)}
+          className={cn("z-30 outline-none", positionerClassName)}
         >
           <BaseMenu.Popup
             ref={ref}
             className={cn(
-              "z-50 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none",
-              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-normal)] motion-reduce:transition-none ease-out",
+              "z-30 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-menu outline-none motion-reduce:transition-none",
+              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out",
               "data-[starting-style]:opacity-0",
               "data-[ending-style]:opacity-0",
-              "motion-safe:animate-in motion-safe:fade-in-0",
               className
             )}
             {...props}
           >
             {children}
             {arrow && (
-              <BaseMenu.Arrow className="fill-popover stroke-border stroke-1" />
+              <BaseMenu.Arrow className="fill-popover" />
             )}
           </BaseMenu.Popup>
         </BaseMenu.Positioner>
@@ -182,7 +194,7 @@ export function StandardMenu({
         {showBackdrop && (
           <BaseMenu.Backdrop
             className={cn(
-              "fixed inset-0 z-40 bg-black/15 backdrop-blur-xs transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+              "fixed inset-0 z-40 bg-black/20 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none",
               backdropClassName
             )}
           />
@@ -197,11 +209,10 @@ export function StandardMenu({
         >
           <BaseMenu.Popup
             className={cn(
-              "z-50 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-dropdown outline-none",
-              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-normal)] motion-reduce:transition-none ease-out",
+              "z-50 min-w-[12rem] rounded-[var(--radius-menu)] border-0 bg-popover p-1 text-popover-foreground shadow-menu outline-none motion-reduce:transition-none",
+              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-micro)] ease-out",
               "data-[starting-style]:opacity-0",
               "data-[ending-style]:opacity-0",
-              "motion-safe:animate-in motion-safe:fade-in-0",
               popupClassName,
               className
             )}
@@ -217,12 +228,12 @@ export function StandardMenu({
                     disabled={item.disabled}
                     onClick={item.onClick}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors",
+                      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none",
                       "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
                       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                       "focus-visible:bg-accent focus-visible:text-accent-foreground",
                       item.destructive &&
-                        "text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive"
+                        "text-destructive data-[highlighted]:bg-danger-soft data-[highlighted]:text-destructive focus-visible:bg-danger-soft focus-visible:text-destructive"
                     )}
                   >
                     {Icon && <Icon className="h-4 w-4 shrink-0" />}
@@ -232,7 +243,7 @@ export function StandardMenu({
               );
             })}
             {arrow && (
-              <BaseMenu.Arrow className="fill-popover stroke-border stroke-1" />
+              <BaseMenu.Arrow className="fill-popover" />
             )}
           </BaseMenu.Popup>
         </BaseMenu.Positioner>

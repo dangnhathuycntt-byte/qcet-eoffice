@@ -366,7 +366,7 @@ function MobileNotificationCard({
       <div className="relative shrink-0 mt-0.5">
         <div
           className={cn(
-            "size-10 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none shadow-2xs ring-1",
+            "size-10 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none ring-1",
             avatarStyle.bg,
             avatarStyle.text,
             avatarStyle.ring
@@ -376,7 +376,7 @@ function MobileNotificationCard({
         </div>
         <div
           className={cn(
-            "absolute -bottom-1 -right-1 size-4.5 rounded-full ring-2 ring-card flex items-center justify-center shadow-2xs",
+            "absolute -bottom-1 -right-1 size-4.5 rounded-full ring-2 ring-card flex items-center justify-center",
             badge.bg
           )}
         >
@@ -401,7 +401,7 @@ function MobileNotificationCard({
 
         {/* Executive Directive Quotation */}
         {formatted.directiveNote && (
-          <div className="text-xs italic text-foreground/90 border-l-2 border-primary/50 pl-2 mt-1 py-0.5 bg-muted/40 rounded-r">
+          <div className="text-xs italic text-foreground/90 px-2.5 py-1 mt-1 rounded-md bg-muted/50 border border-border/60">
             &ldquo;{formatted.directiveNote}&rdquo;
           </div>
         )}

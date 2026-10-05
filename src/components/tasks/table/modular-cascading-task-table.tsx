@@ -1082,7 +1082,7 @@ export function ModularCascadingTaskTable({
                 <span className="font-semibold text-amber-950 tracking-wide">
                   TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
                 </span>
-                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-[11px] font-bold">
                   {priorOverdueBacklog.length}
                 </span>
                 <span className="text-[11px] text-amber-800/80 hidden sm:inline">
@@ -1206,7 +1206,7 @@ export function ModularCascadingTaskTable({
                         <span className="font-mono text-xs font-bold text-amber-900 tabular-nums">
                           {task.taskCode || "NV-QCET"}
                         </span>
-                        <Badge variant="rose" className="text-[10px] font-semibold">
+                        <Badge variant="rose" className="text-[11px] font-semibold">
                           Tồn đọng
                         </Badge>
                       </div>
@@ -1268,10 +1268,17 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
-          {/* Desktop Table View (>= 768px) — Soft rounded rows */}
-          <div className="hidden md:block overflow-hidden bg-transparent">
-            <div className="overflow-x-auto thin-scrollbar px-0.5 sm:px-1">
-              <table className="w-full text-left border-separate border-spacing-y-0">
+          {/* Desktop Table View (>= 768px) — Clean borderless table surface */}
+          <div className="hidden md:block">
+            <div className="overflow-x-auto thin-scrollbar">
+              <table className="w-full text-left border-collapse table-fixed">
+                <colgroup>
+                  <col className="w-[195px] min-w-[180px]" />
+                  <col className="w-[38%] min-w-[240px]" />
+                  <col className="w-[22%] min-w-[160px]" />
+                  <col className="w-[22%] min-w-[160px]" />
+                  <col className="w-[140px] min-w-[120px]" />
+                </colgroup>
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
                   indeterminate={tableState.someVisibleSelected}

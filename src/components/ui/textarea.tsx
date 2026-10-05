@@ -66,7 +66,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         maxLength={limit}
         onChange={handleChange}
         className={cn(
-          "min-h-24 w-full rounded-xl border-0 bg-secondary px-3.5 py-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors duration-[var(--motion-duration-micro)] focus-visible:bg-selected focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:bg-danger-soft aria-invalid:ring-destructive read-only:bg-transparent read-only:focus-visible:bg-transparent read-only:cursor-default read-only:select-text disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+          "min-h-24 w-full rounded-control border-0 bg-secondary px-3.5 py-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors duration-100 hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 focus-visible:bg-selected aria-invalid:bg-danger-soft aria-invalid:text-destructive read-only:bg-transparent read-only:hover:bg-transparent read-only:focus-visible:bg-transparent read-only:cursor-default read-only:select-text disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
           autoResize ? "resize-none overflow-hidden" : "resize-y",
           className,
         )}
@@ -82,7 +82,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <div className="flex flex-col gap-1.5 w-full">
         {textareaElement}
         {limit !== undefined && (
-          <div className="flex items-center justify-between text-xs px-1 select-none">
+          <div className="flex items-center justify-between text-xs px-1 select-none" aria-live="polite">
             <span
               className={cn(
                 "transition-colors",

@@ -4,7 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { PenTool } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 
 // Roles labels mapping
@@ -83,12 +85,11 @@ export function OnboardingFlow() {
   const userEmail = user?.email || "an.nv@cdktcnqn.edu.vn";
   const userUnit = user?.department || "Phòng Đào tạo";
   const userRole = user?.roleLabel || (user?.role ? (ROLE_LABELS[user.role] || user.role) : "Chuyên viên");
-  const userInitial = userName.trim().split(" ").pop()?.charAt(0).toUpperCase() || "A";
   const firstName = userName.trim().split(" ").pop() || "bạn";
 
   return (
     <main
-      className="relative flex min-h-[100dvh] w-full flex-col justify-between overflow-x-hidden bg-[#F2F4F7] font-sans text-[#1A1D23] select-none"
+      className="relative flex min-h-[100dvh] w-full flex-col justify-between overflow-x-hidden bg-background font-sans text-foreground select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -101,24 +102,24 @@ export function OnboardingFlow() {
               <div className="flex gap-1.5" aria-hidden="true">
                 <span
                   className={cn(
-                    "h-[3px] w-[34px] rounded-[2px] transition-colors duration-200",
-                    step >= 1 ? "bg-[#1A1D23]" : "bg-[#C9CDD3]"
+                    "h-1 w-8 rounded-full transition-colors duration-200",
+                    step >= 1 ? "bg-foreground" : "bg-muted"
                   )}
                 />
                 <span
                   className={cn(
-                    "h-[3px] w-[34px] rounded-[2px] transition-colors duration-200",
-                    step >= 2 ? "bg-[#1A1D23]" : "bg-[#C9CDD3]"
+                    "h-1 w-8 rounded-full transition-colors duration-200",
+                    step >= 2 ? "bg-foreground" : "bg-muted"
                   )}
                 />
                 <span
                   className={cn(
-                    "h-[3px] w-[34px] rounded-[2px] transition-colors duration-200",
-                    step >= 3 ? "bg-[#1A1D23]" : "bg-[#C9CDD3]"
+                    "h-1 w-8 rounded-full transition-colors duration-200",
+                    step >= 3 ? "bg-foreground" : "bg-muted"
                   )}
                 />
               </div>
-              <span className="text-[13px] tabular-nums text-[#5F6671]">
+              <span className="text-xs tabular-nums text-muted-foreground">
                 {step}/3
               </span>
             </div>
@@ -127,7 +128,7 @@ export function OnboardingFlow() {
             <button
               type="button"
               onClick={handleFinish}
-              className="absolute right-6 top-7 hidden h-9 items-center rounded-xl bg-white px-4 text-sm font-medium text-[#1A1D23] shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)] hover:bg-[#FAFBFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] sm:inline-flex cursor-pointer transition-colors"
+              className="absolute right-6 top-7 hidden h-9 items-center rounded-xl bg-card px-4 text-sm font-medium text-foreground border border-border shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex cursor-pointer transition-colors"
             >
               Bỏ qua
             </button>
@@ -142,49 +143,52 @@ export function OnboardingFlow() {
         {/* STEP 1: XÁC NHẬN THÔNG TIN */}
         {step === 1 && (
           <div className="flex w-full max-w-[520px] flex-col items-center animate-in fade-in duration-200">
-            <h1 className="text-center text-3xl font-bold tracking-[-0.025em] text-[#1A1D23] sm:text-[40px] sm:leading-[1.15]">
+            <h1 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl sm:leading-tight">
               Xác nhận thông tin của bạn
             </h1>
-            <p className="mt-3 text-center text-base text-[#5F6671] sm:text-[17px]">
+            <p className="mt-3 text-center text-base text-muted-foreground sm:text-lg">
               Quản trị đã thiết lập sẵn. Bạn chỉ cần kiểm tra.
             </p>
 
             {/* User Profile Card */}
-            <div className="mt-8 w-full rounded-2xl bg-white p-6 shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)] sm:p-8">
+            <div className="mt-8 w-full rounded-2xl bg-card p-6 border border-border shadow-md sm:p-8">
               <div className="flex items-center gap-3.5">
-                <span className="flex size-[60px] shrink-0 items-center justify-center rounded-full bg-[#B9C7D6] text-[22px] font-semibold text-[#1A1D23]">
-                  {userInitial}
-                </span>
+                <UserAvatar
+                  name={userName}
+                  avatarUrl={user?.avatar}
+                  size="xl"
+                  className="shrink-0"
+                />
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-lg font-semibold leading-relaxed text-[#1A1D23]">
+                  <span className="block truncate text-lg font-semibold leading-relaxed text-foreground">
                     {userName}
                   </span>
-                  <span className="block truncate text-[15px] text-[#5F6671]">
+                  <span className="block truncate text-sm text-muted-foreground">
                     {userEmail}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-[#EAEDF1]">
-                <div className="flex items-center justify-between border-b border-[#EAEDF1] py-3.5 text-base">
-                  <span className="text-[#5F6671]">Đơn vị</span>
-                  <span className="font-medium text-[#1A1D23]">{userUnit}</span>
+              <div className="mt-4 border-t border-border">
+                <div className="flex items-center justify-between border-b border-border py-3.5 text-base">
+                  <span className="text-muted-foreground">Đơn vị</span>
+                  <span className="font-medium text-foreground">{userUnit}</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-[#EAEDF1] py-3.5 text-base">
-                  <span className="text-[#5F6671]">Vai trò</span>
-                  <span className="font-medium text-[#1A1D23]">{userRole}</span>
+                <div className="flex items-center justify-between border-b border-border py-3.5 text-base">
+                  <span className="text-muted-foreground">Vai trò</span>
+                  <span className="font-medium text-foreground">{userRole}</span>
                 </div>
                 <div className="flex items-center justify-between py-3.5 text-base">
-                  <span className="text-[#5F6671]">Người quản lý</span>
-                  <span className="font-medium text-[#1A1D23]">Trần Văn Bình</span>
+                  <span className="text-muted-foreground">Người quản lý</span>
+                  <span className="font-medium text-foreground">Trần Văn Bình</span>
                 </div>
               </div>
 
-              <div className="mt-2 text-sm text-[#5F6671]">
+              <div className="mt-2 text-sm text-muted-foreground">
                 Chưa đúng?{" "}
                 <a
                   href="mailto:hotro@cdktcnqn.edu.vn"
-                  className="text-[#1A1D23] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]"
+                  className="text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Báo quản trị
                 </a>
@@ -196,16 +200,16 @@ export function OnboardingFlow() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[#25282F] text-base font-medium text-[#FAFAFA] hover:bg-[#3A3D44] active:bg-[#181A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer transition-colors"
+                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-foreground text-base font-medium text-background hover:opacity-90 active:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-opacity"
               >
                 Xác nhận
               </button>
-              <div className="mt-4 text-center text-[15px] text-[#5F6671]">
+              <div className="mt-4 text-center text-sm text-muted-foreground">
                 Không phải bạn?{" "}
                 <button
                   type="button"
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="text-[#1A1D23] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer"
+                  className="text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                 >
                   Đăng xuất
                 </button>
@@ -213,11 +217,11 @@ export function OnboardingFlow() {
             </div>
 
             {/* Mobile swipe hint */}
-            <div className="mt-8 block text-center text-sm text-[#5F6671] sm:hidden">
+            <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center gap-1.5 py-2 text-[#5F6671] hover:text-[#1A1D23]"
+                className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
               </button>
@@ -229,39 +233,36 @@ export function OnboardingFlow() {
         {step === 2 && (
           <div className="flex w-full max-w-[640px] flex-col items-center animate-in fade-in duration-200">
             {/* Visual Document Card Comp */}
-            <div className="w-[300px] rounded-2xl bg-white p-[22px_22px_20px] shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)] flex flex-col">
-              <div className="text-[12.5px] text-[#5F6671]">
+            <div className="w-[300px] rounded-2xl bg-card p-6 border border-border shadow-md flex flex-col">
+              <div className="text-xs text-muted-foreground">
                 Công văn đến · 214/CV-ĐT
               </div>
-              <div className="mt-1.5 text-base font-semibold leading-[22px] text-[#1A1D23]">
+              <div className="mt-1.5 text-base font-semibold leading-snug text-foreground">
                 Về việc rà soát hồ sơ xét tuyển
               </div>
               <div className="mt-3 flex flex-col gap-2.5">
-                <div className="h-2 w-full rounded-[4px] bg-[#EAEDF1]" />
-                <div className="h-2 w-full rounded-[4px] bg-[#EAEDF1]" />
-                <div className="h-2 w-[88%] rounded-[4px] bg-[#EAEDF1]" />
-                <div className="h-2 w-full rounded-[4px] bg-[#EAEDF1]" />
-                <div className="h-2 w-[54%] rounded-[4px] bg-[#EAEDF1]" />
+                <div className="h-2 w-full rounded bg-muted" />
+                <div className="h-2 w-full rounded bg-muted" />
+                <div className="h-2 w-[88%] rounded bg-muted" />
+                <div className="h-2 w-full rounded bg-muted" />
+                <div className="h-2 w-[54%] rounded bg-muted" />
               </div>
               <div className="mt-8 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1D23" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                  </svg>
-                  <span className="inline-flex h-7 items-center rounded-xl bg-[#F2F4F7] px-3 text-[12.5px] font-medium text-[#1A1D23]">
+                  <PenTool className="size-4.5 text-foreground" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="inline-flex h-7 items-center rounded-xl bg-secondary px-3 text-xs font-medium text-secondary-foreground">
                     Ký ngay
                   </span>
                 </div>
-                <span className="text-[12.5px] text-[#5F6671]">Hôm nay</span>
+                <span className="text-xs text-muted-foreground">Hôm nay</span>
               </div>
             </div>
 
             {/* Step Heading & Description */}
-            <h2 className="mt-8 text-center text-3xl font-bold tracking-[-0.025em] text-[#1A1D23] sm:text-[40px] sm:leading-[1.15]">
+            <h2 className="mt-8 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl sm:leading-tight">
               Văn bản đến, ký gọn hơn
             </h2>
-            <p className="mt-3 max-w-[480px] text-center text-base text-[#5F6671] sm:text-[17px]">
+            <p className="mt-3 max-w-[480px] text-center text-base text-muted-foreground sm:text-lg">
               Đọc, bút phê và trình ký ngay trên cùng một màn hình.
             </p>
 
@@ -270,18 +271,18 @@ export function OnboardingFlow() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[#25282F] text-base font-medium text-[#FAFAFA] hover:bg-[#3A3D44] active:bg-[#181A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer transition-colors"
+                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-foreground text-base font-medium text-background hover:opacity-90 active:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-opacity"
               >
                 Tiếp tục
               </button>
             </div>
 
             {/* Mobile swipe hint */}
-            <div className="mt-8 block text-center text-sm text-[#5F6671] sm:hidden">
+            <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center gap-1.5 py-2 text-[#5F6671] hover:text-[#1A1D23]"
+                className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
               </button>
@@ -295,7 +296,7 @@ export function OnboardingFlow() {
             {/* Visual Stacking Notification Cards */}
             <div className="relative h-[130px] w-[340px]">
               {/* Foreground Notification Card */}
-              <div className="relative z-10 w-[340px] rounded-2xl bg-white p-4 shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)]">
+              <div className="relative z-10 w-[340px] rounded-2xl bg-card p-4 border border-border shadow-md">
                 <div className="flex items-center gap-2">
                   <Image
                     src="/design/login-logo.png"
@@ -304,30 +305,30 @@ export function OnboardingFlow() {
                     height={24}
                     className="size-6 rounded-md object-contain"
                   />
-                  <span className="text-[13px] text-[#5F6671]">QCET E-Office</span>
+                  <span className="text-xs text-muted-foreground">QCET E-Office</span>
                   <span className="flex-1" />
-                  <span className="text-[12.5px] text-[#5F6671]">bây giờ</span>
+                  <span className="text-xs text-muted-foreground">bây giờ</span>
                 </div>
-                <div className="mt-2.5 text-[15px] font-semibold leading-[22px] text-[#1A1D23]">
+                <div className="mt-2.5 text-sm font-semibold leading-snug text-foreground">
                   Việc sắp đến hạn
                 </div>
-                <div className="mt-0.5 text-sm text-[#5F6671]">
+                <div className="mt-0.5 text-xs text-muted-foreground">
                   Rà soát hồ sơ, hạn 17:00 hôm nay.
                 </div>
               </div>
 
               {/* Second Layer Card */}
-              <div className="absolute left-1/2 top-[92px] z-[2] h-10 w-[312px] -translate-x-1/2 rounded-2xl bg-white shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)]" />
+              <div className="absolute left-1/2 top-[92px] z-[2] h-10 w-[312px] -translate-x-1/2 rounded-2xl bg-card border border-border shadow-sm" />
 
               {/* Third Layer Card */}
-              <div className="absolute left-1/2 top-[104px] z-[1] h-10 w-[284px] -translate-x-1/2 rounded-2xl bg-white shadow-[0_0_0_1px_#EAEDF1,0_8px_24px_rgba(26,29,35,0.06)]" />
+              <div className="absolute left-1/2 top-[104px] z-[1] h-10 w-[284px] -translate-x-1/2 rounded-2xl bg-card border border-border shadow-xs" />
             </div>
 
             {/* Step Heading & Description */}
-            <h2 className="mt-12 text-center text-3xl font-bold tracking-[-0.025em] text-[#1A1D23] sm:text-[40px] sm:leading-[1.15]">
+            <h2 className="mt-12 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl sm:leading-tight">
               Nhắc việc đúng lúc
             </h2>
-            <p className="mt-3 max-w-[480px] text-center text-base text-[#5F6671] sm:text-[17px]">
+            <p className="mt-3 max-w-[480px] text-center text-base text-muted-foreground sm:text-lg">
               Bạn sẽ được hỏi bật nhắc khi có việc đầu tiên sắp đến hạn, không phải bây giờ.
             </p>
 
@@ -336,18 +337,18 @@ export function OnboardingFlow() {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[#25282F] text-base font-medium text-[#FAFAFA] hover:bg-[#3A3D44] active:bg-[#181A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer transition-colors"
+                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-foreground text-base font-medium text-background hover:opacity-90 active:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-opacity"
               >
                 Tiếp tục
               </button>
             </div>
 
             {/* Mobile swipe hint */}
-            <div className="mt-8 block text-center text-sm text-[#5F6671] sm:hidden">
+            <div className="mt-8 block text-center text-sm text-muted-foreground sm:hidden">
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center gap-1.5 py-2 text-[#5F6671] hover:text-[#1A1D23]"
+                className="inline-flex items-center gap-1.5 py-2 text-muted-foreground hover:text-foreground"
               >
                 Lướt sang để tiếp tục &rsaquo;
               </button>
@@ -371,10 +372,10 @@ export function OnboardingFlow() {
             </div>
 
             {/* Final Welcome Heading */}
-            <h2 className="text-center text-3xl font-bold tracking-[-0.025em] text-[#1A1D23] sm:text-[40px] sm:leading-[1.15]">
+            <h2 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl sm:leading-tight">
               Xin chào, {firstName}
             </h2>
-            <p className="mt-3 text-center text-base text-[#5F6671] sm:text-[17px]">
+            <p className="mt-3 text-center text-base text-muted-foreground sm:text-lg">
               1 việc trễ hạn, 2 sắp đến hạn, 1 văn bản chờ ký.
             </p>
 
@@ -383,15 +384,15 @@ export function OnboardingFlow() {
               <button
                 type="button"
                 onClick={handleFinish}
-                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[#25282F] text-base font-medium text-[#FAFAFA] hover:bg-[#3A3D44] active:bg-[#181A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer transition-colors"
+                className="flex h-[52px] w-full items-center justify-center rounded-xl bg-foreground text-base font-medium text-background hover:opacity-90 active:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-opacity"
               >
                 Mở việc đầu tiên
               </button>
-              <div className="mt-4 text-center text-[15px] text-[#5F6671]">
+              <div className="mt-4 text-center text-sm text-muted-foreground">
                 <button
                   type="button"
                   onClick={() => router.push("/help")}
-                  className="text-[#5F6671] hover:text-[#1A1D23] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0] cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                 >
                   Xem hướng dẫn nhanh
                 </button>

@@ -71,8 +71,8 @@ function ProgressIndicator({
     <div
       data-slot="progress-indicator"
       className={cn(
-        "h-full w-full flex-1 bg-primary transition-transform duration-500 ease-in-out will-change-transform",
-        "data-[indeterminate]:animate-[progress-indeterminate_1.5s_ease-in-out_infinite]",
+        "h-full w-full flex-1 bg-primary transition-transform duration-500 ease-in-out will-change-transform motion-reduce:transition-none",
+        "data-[indeterminate]:animate-[progress-indeterminate_1.5s_ease-in-out_infinite] data-[indeterminate]:motion-reduce:animate-none",
         className
       )}
       style={style}

@@ -123,7 +123,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/static') ||
     pathname.includes('.') || // Static files like favicon.ico, images, manifest.json
     pathname === '/portal' ||
-    pathname.startsWith('/portal/')
+    pathname.startsWith('/portal/') ||
+    // Bảng mẫu thành phần: chỉ tồn tại ở môi trường phát triển (production trả 404).
+    (process.env.NODE_ENV !== 'production' && pathname === '/design')
   ) {
     return NextResponse.next();
   }

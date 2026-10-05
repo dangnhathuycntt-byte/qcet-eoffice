@@ -378,7 +378,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
       <div className="relative shrink-0 mt-0.5">
         <div
           className={cn(
-            "size-10 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none shadow-2xs ring-1",
+            "size-10 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none ring-1",
             avatarStyle.bg,
             avatarStyle.text,
             avatarStyle.ring
@@ -391,7 +391,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
         {/* Micro overlay icon badge */}
         <div
           className={cn(
-            "absolute -bottom-1 -right-1 size-4.5 rounded-full ring-2 ring-card flex items-center justify-center shadow-2xs",
+            "absolute -bottom-1 -right-1 size-4.5 rounded-full ring-2 ring-card flex items-center justify-center",
             badge.bg
           )}
         >

@@ -57,16 +57,16 @@ export interface VietnameseDatePickerProps {
   id?: string;
 }
 
-const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+  "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
 ];
 
 const MONTH_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  "Th1", "Th2", "Th3", "Th4", "Th5", "Th6",
+  "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"
 ];
 
 function getDaysInMonth(year: number, month: number): number {
@@ -87,7 +87,7 @@ export function VietnameseDatePicker({
   onChange,
   label,
   title,
-  placeholder = "Target date",
+  placeholder = "Chọn ngày...",
   icon,
   variant = "chip",
   required = false,
@@ -313,19 +313,19 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md border text-[11px] font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap focus-visible:outline-hidden",
+            "group inline-flex items-center gap-1.5 h-6.5 px-2 rounded-md text-xs font-medium transition-colors duration-100 cursor-pointer select-none whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1",
             error
-              ? "border-rose-300 bg-rose-50 text-rose-700"
+              ? "border-0 bg-danger-soft text-destructive"
               : isOpen
-              ? "border-border bg-accent text-foreground shadow-2xs"
-              : "border-border/60 bg-muted/30 hover:bg-accent hover:border-border text-foreground",
+              ? "border-0 bg-selected text-foreground"
+              : "border-0 bg-secondary hover:bg-accent text-foreground",
             hasValue ? "text-foreground" : "text-muted-foreground",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName
           )}
         >
           {icon !== null && (icon || <CalendarIcon className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
-          {label && <span className={cn(error ? "text-rose-600" : "text-muted-foreground font-normal")}>{label}</span>}
+          {label && <span className={cn(error ? "text-destructive" : "text-muted-foreground font-normal")}>{label}</span>}
           <span className={cn("tabular-nums", hasValue ? "text-foreground font-medium" : "text-muted-foreground")}>
             {hasValue ? displayDate : placeholder}
           </span>
@@ -340,8 +340,8 @@ export function VietnameseDatePicker({
           aria-haspopup="dialog"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "w-full flex items-center justify-between h-9 px-3 rounded-lg border border-border bg-background text-xs text-foreground font-mono tabular-nums transition-colors cursor-pointer focus-visible:outline-hidden",
-            isOpen && "border-foreground/40",
+            "w-full flex items-center justify-between h-9 px-3 rounded-xl border-0 bg-secondary text-xs text-foreground font-mono tabular-nums transition-colors duration-100 cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 focus-visible:bg-selected",
+            isOpen && "bg-selected",
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName
           )}
@@ -369,10 +369,10 @@ export function VietnameseDatePicker({
       <Popover.Positioner className="z-50" side={side} align={align === "right" ? "end" : "start"} sideOffset={4} collisionPadding={12}>
       <Popover.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
         aria-label="Chọn ngày trên lịch"
-        className="w-[290px] p-3 text-foreground rounded-xl border border-border bg-popover shadow-2xl"
+        className="w-[290px] p-4 text-foreground rounded-2xl border-0 bg-popover shadow-menu"
       >
         {/* Header Label */}
-        <div className="text-[12px] font-normal text-muted-foreground mb-1.5 px-0.5">
+        <div className="text-xs font-medium text-muted-foreground mb-1.5 px-0.5">
           {title || label || placeholder || "Chọn ngày"}
         </div>
 
@@ -383,7 +383,7 @@ export function VietnameseDatePicker({
             readOnly
             value={headerInputValue}
             placeholder="Select date..."
-            className="w-full h-8 px-2.5 text-[13px] font-sans text-foreground bg-background rounded-lg border border-border outline-none focus:border-foreground/40"
+            className="w-full h-8 px-2.5 text-xs font-sans text-foreground bg-secondary rounded-lg border-0 outline-none focus:bg-selected"
           />
           {hasValue && (
             <button
@@ -392,7 +392,7 @@ export function VietnameseDatePicker({
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 transition-colors cursor-pointer"
               title="Xóa ngày"
             >
-              <div className="size-3.5 rounded-full bg-muted-foreground/20 flex items-center justify-center">
+              <div className="size-3.5 rounded-full bg-muted flex items-center justify-center">
                 <X className="size-2 text-foreground" strokeWidth={1.5} />
               </div>
             </button>
@@ -400,14 +400,14 @@ export function VietnameseDatePicker({
         </div>
 
         {/* Granularity Segmented Control (Capsule style) */}
-        <div className="flex items-center p-0.5 bg-muted/40 rounded-full mb-3 border border-border/40 select-none text-[11px]">
+        <div className="flex items-center p-1 bg-secondary rounded-xl mb-3 select-none text-xs gap-1">
           {(
             [
-              { key: "day", label: "Day" },
-              { key: "month", label: "Month" },
-              { key: "quarter", label: "Quarter" },
-              { key: "half-year", label: "Half-year" },
-              { key: "year", label: "Year" },
+              { key: "day", label: "Ngày" },
+              { key: "month", label: "Tháng" },
+              { key: "quarter", label: "Quý" },
+              { key: "half-year", label: "Nửa năm" },
+              { key: "year", label: "Năm" },
             ] as const
           ).map((item) => (
             <button
@@ -415,11 +415,11 @@ export function VietnameseDatePicker({
               type="button"
               onClick={() => setMode(item.key)}
               className={cn(
-                "py-1 rounded-full font-medium transition-all text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none",
-                item.key === "half-year" ? "px-2.5" : "flex-1 px-1.5",
+                "py-1 rounded-lg font-medium transition-colors text-center cursor-pointer select-none whitespace-nowrap flex items-center justify-center leading-none text-xs",
+                item.key === "half-year" ? "px-2" : "flex-1 px-1.5",
                 mode === item.key
-                  ? "bg-background text-foreground font-semibold shadow-2xs border border-border/40"
-                  : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
+                  ? "bg-card text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
               )}
             >
               {item.label}
@@ -429,7 +429,7 @@ export function VietnameseDatePicker({
 
         {/* MODE 1: DAY CALENDAR */}
         {mode === "day" && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {/* Month Navigator Header */}
             <div className="flex items-center justify-between px-1 text-xs">
               <span className="font-semibold text-foreground">
@@ -470,7 +470,7 @@ export function VietnameseDatePicker({
               {WEEKDAY_LABELS.map((w) => (
                 <div
                   key={w}
-                  className="text-[11px] font-medium text-muted-foreground py-1 select-none"
+                  className="text-xs font-medium text-muted-foreground py-1 select-none"
                 >
                   {w}
                 </div>
@@ -488,10 +488,10 @@ export function VietnameseDatePicker({
                     "size-8 mx-auto flex items-center justify-center rounded-full text-xs transition-colors cursor-pointer",
                     cell.isCurrentMonth
                       ? "text-foreground font-normal"
-                      : "text-muted-foreground/40",
+                      : "text-disabled",
                     cell.isSelected &&
-                      "border-2 border-primary bg-primary/10 font-bold text-primary",
-                    cell.isToday && !cell.isSelected && "font-bold text-primary underline"
+                      "bg-primary font-semibold text-primary-foreground",
+                    cell.isToday && !cell.isSelected && "font-semibold text-primary underline"
                   )}
                 >
                   {cell.day}
@@ -503,13 +503,13 @@ export function VietnameseDatePicker({
 
         {/* SCROLLABLE CONTAINER FOR NON-DAY MODES */}
         {mode !== "day" && (
-          <div className="max-h-[220px] overflow-y-auto pr-1 space-y-3 pt-0.5">
+          <div className="max-h-[220px] overflow-y-auto pr-1 flex flex-col gap-3 pt-0.5">
             {/* MODE 2: MONTH PICKER */}
             {mode === "month" && (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {yearOptions.map((yr) => (
-                  <div key={yr} className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                  <div key={yr} className="flex flex-col gap-1.5">
+                    <div className="text-xs font-semibold text-muted-foreground px-1">
                       {yr}
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -525,10 +525,10 @@ export function VietnameseDatePicker({
                               handleSelectDate(yr, mNum, lastDay);
                             }}
                             className={cn(
-                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              "h-7 rounded-full border-0 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
                               isSel
-                                ? "border-primary bg-primary/10 text-primary font-semibold"
-                                : "border-border bg-background text-foreground hover:bg-muted"
+                                ? "bg-selected text-primary font-semibold"
+                                : "bg-secondary text-foreground hover:bg-accent"
                             )}
                           >
                             {mName}
@@ -543,10 +543,10 @@ export function VietnameseDatePicker({
 
             {/* MODE 3: QUARTER PICKER */}
             {mode === "quarter" && (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {yearOptions.map((yr) => (
-                  <div key={yr} className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                  <div key={yr} className="flex flex-col gap-1.5">
+                    <div className="text-xs font-semibold text-muted-foreground px-1">
                       {yr}
                     </div>
                     <div className="grid grid-cols-4 gap-1.5">
@@ -565,10 +565,10 @@ export function VietnameseDatePicker({
                             type="button"
                             onClick={() => handleSelectDate(yr, q.endMonth, q.endDay)}
                             className={cn(
-                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              "h-7 rounded-full border-0 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
                               isSel
-                                ? "border-primary bg-primary/10 text-primary font-semibold"
-                                : "border-border bg-background text-foreground hover:bg-muted"
+                                ? "bg-selected text-primary font-semibold"
+                                : "bg-secondary text-foreground hover:bg-accent"
                             )}
                           >
                             {q.label}
@@ -583,10 +583,10 @@ export function VietnameseDatePicker({
 
             {/* MODE 4: HALF-YEAR PICKER */}
             {mode === "half-year" && (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {yearOptions.map((yr) => (
-                  <div key={yr} className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-muted-foreground px-1">
+                  <div key={yr} className="flex flex-col gap-1.5">
+                    <div className="text-xs font-semibold text-muted-foreground px-1">
                       {yr}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -603,10 +603,10 @@ export function VietnameseDatePicker({
                             type="button"
                             onClick={() => handleSelectDate(yr, h.endMonth, h.endDay)}
                             className={cn(
-                              "h-7 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                              "h-7 rounded-full border-0 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
                               isSel
-                                ? "border-primary bg-primary/10 text-primary font-semibold"
-                                : "border-border bg-background text-foreground hover:bg-muted"
+                                ? "bg-selected text-primary font-semibold"
+                                : "bg-secondary text-foreground hover:bg-accent"
                             )}
                           >
                             {h.label}
@@ -621,7 +621,7 @@ export function VietnameseDatePicker({
 
             {/* MODE 5: YEAR PICKER */}
             {mode === "year" && (
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 {fullYearOptions.map((yr) => {
                   const isSel = selectedParts?.year === yr;
                   return (
@@ -630,10 +630,10 @@ export function VietnameseDatePicker({
                       type="button"
                       onClick={() => handleSelectDate(yr, 12, 31)}
                       className={cn(
-                        "w-full h-8 rounded-full border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                        "w-full h-8 rounded-full border-0 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
                         isSel
-                          ? "border-primary bg-primary/10 text-primary font-semibold"
-                          : "border-border bg-background text-foreground hover:bg-muted"
+                          ? "bg-selected text-primary font-semibold"
+                          : "bg-secondary text-foreground hover:bg-accent"
                       )}
                     >
                       {yr}

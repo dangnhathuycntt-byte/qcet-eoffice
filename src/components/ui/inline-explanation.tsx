@@ -33,7 +33,7 @@ export function InlineExplanation({
       <BasePopover.Trigger
         type="button"
         className={cn(
-          "inline-flex items-center gap-1 border-b border-dotted border-muted-foreground/60 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none",
+          "inline-flex items-center gap-1 underline decoration-dotted underline-offset-2 text-xs text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 cursor-pointer select-none",
           className,
         )}
       >
@@ -45,12 +45,11 @@ export function InlineExplanation({
         <BasePopover.Positioner side="top" align="center" sideOffset={6} className="z-50">
           <BasePopover.Popup
             className={cn(
-              "w-72 rounded-xl border border-border/70 bg-popover p-3 text-xs text-popover-foreground shadow-md outline-none",
-              "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+              "w-72 rounded-2xl border-0 bg-popover p-3 text-xs text-popover-foreground shadow-menu outline-none",
             )}
           >
             {title && (
-              <div className="font-medium text-foreground pb-1 mb-1 border-b border-border/40">
+              <div className="font-semibold text-foreground pb-1 mb-1 border-0">
                 {title}
               </div>
             )}

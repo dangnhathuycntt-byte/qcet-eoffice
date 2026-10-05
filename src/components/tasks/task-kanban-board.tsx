@@ -942,7 +942,7 @@ function KanbanCard({
             <Calendar strokeWidth={1.5} className="size-3 shrink-0" />
             <span>Hạn {formatDate(item.dueDate)}</span>
             {overdue && (
-              <span className="text-[10px] text-rose-600 font-semibold ml-0.5">
+              <span className="text-[11px] text-rose-600 font-semibold ml-0.5">
                 {lateDays > 0 ? `(trễ ${lateDays} ngày)` : "(Quá hạn)"}
               </span>
             )}

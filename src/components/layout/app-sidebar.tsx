@@ -14,6 +14,7 @@ import {
   User,
   LogOut,
   Smartphone,
+  HelpCircle,
 
   Focus,
   CircleDot,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { Menu } from "@base-ui/react/menu";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials as baseGetInitials } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { QcetIcon } from "@/components/icons";
@@ -376,18 +378,11 @@ export function AppSidebar() {
               aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={formatDisplayName(user?.name)}
-                  className="size-5 rounded-full object-cover shrink-0 shadow-2xs"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="size-5 rounded-full flex items-center justify-center bg-muted text-foreground border border-border/80 font-medium text-[10px] shrink-0 shadow-2xs">
-                  {getInitials(user?.name)}
-                </div>
-              )}
+              <UserAvatar
+                name={formatDisplayName(user?.name)}
+                avatarUrl={user?.avatar}
+                size="sm"
+              />
               {!isCollapsed && (
                 <ChevronDown
                   size={11}
@@ -490,6 +485,19 @@ export function AppSidebar() {
                   >
                     <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
                     <span>Cài đặt ứng dụng di động</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsProfileDropdownOpen(false);
+                      const { resetAllFeatureGuides } = await import("@/components/feature-guide/feature-guide");
+                      resetAllFeatureGuides();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
+                  >
+                    <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                    <span>Hướng dẫn tính năng</span>
                   </button>
                 </div>
 

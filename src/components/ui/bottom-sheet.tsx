@@ -52,7 +52,7 @@ export const BottomSheetOverlay = React.forwardRef<
   <VaulDrawer.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-200",
+      "fixed inset-0 z-40 bg-overlay transition-opacity duration-200 motion-reduce:transition-none",
       className
     )}
     {...props}
@@ -73,13 +73,13 @@ export const BottomSheetContent = React.forwardRef<
     return (
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-0 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-[24px] border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
       >
         {!hideHandle && (
-          <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30 active:bg-muted-foreground/50" />
+          <div className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark" />
         )}
         {children}
       </div>
@@ -92,14 +92,14 @@ export const BottomSheetContent = React.forwardRef<
       <VaulDrawer.Content
         ref={ref}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-0 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-[24px] border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
         {...props}
       >
         {!hideHandle && (
-          <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30 active:bg-muted-foreground/50" />
+          <div className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-mark" />
         )}
         {children}
       </VaulDrawer.Content>
@@ -128,7 +128,7 @@ export const BottomSheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <VaulDrawer.Title
     ref={ref}
-    className={cn("text-base font-bold tracking-tight text-foreground", className)}
+    className={cn("text-base font-semibold tracking-tight text-foreground", className)}
     {...props}
   />
 ));

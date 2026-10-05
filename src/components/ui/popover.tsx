@@ -9,7 +9,20 @@ export const Popover = BasePopover;
 
 // Individual primitives re-export
 export const PopoverRoot = BasePopover.Root;
-export const PopoverTrigger = BasePopover.Trigger;
+export const PopoverTrigger = React.forwardRef<
+  HTMLElement,
+  React.ComponentPropsWithoutRef<typeof BasePopover.Trigger> & { asChild?: boolean }
+>(({ children, asChild, render, ...props }, ref) => {
+  if (asChild && React.isValidElement(children)) {
+    return <BasePopover.Trigger ref={ref as any} render={children as any} {...props} />;
+  }
+  return (
+    <BasePopover.Trigger ref={ref as any} render={render} {...props}>
+      {children}
+    </BasePopover.Trigger>
+  );
+});
+PopoverTrigger.displayName = "PopoverTrigger";
 export const PopoverPortal = BasePopover.Portal;
 export const PopoverPositioner = BasePopover.Positioner;
 export const PopoverPopup = BasePopover.Popup;
@@ -64,7 +77,7 @@ export const PopoverContent = React.forwardRef<
         {showBackdrop && (
           <BasePopover.Backdrop
             className={cn(
-              "fixed inset-0 z-40 bg-black/15 backdrop-blur-xs transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+              "fixed inset-0 z-30 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none",
               backdropClassName
             )}
           />
@@ -75,23 +88,22 @@ export const PopoverContent = React.forwardRef<
           sideOffset={sideOffset}
           alignOffset={alignOffset}
           collisionPadding={collisionPadding}
-          className={cn("z-50 outline-none", positionerClassName)}
+          className={cn("z-30 outline-none", positionerClassName)}
         >
           <BasePopover.Popup
             ref={ref}
             className={cn(
-              "z-50 w-72 rounded-[var(--radius-menu)] border-0 bg-popover p-4 text-popover-foreground shadow-dropdown outline-none",
-              "origin-[var(--transform-origin)] transition-opacity duration-[var(--motion-duration-normal)] motion-reduce:transition-none ease-out",
+              "z-30 w-72 rounded-[var(--radius-menu)] border-0 bg-popover p-4 text-popover-foreground shadow-menu outline-none motion-reduce:transition-none",
+              "origin-[var(--transform-origin)] transition-opacity duration-100 ease-out",
               "data-[starting-style]:opacity-0",
               "data-[ending-style]:opacity-0",
-              "motion-safe:animate-in motion-safe:fade-in-0",
               className
             )}
             {...props}
           >
             {children}
             {arrow && (
-              <BasePopover.Arrow className="fill-popover stroke-border stroke-1" />
+              <BasePopover.Arrow className="fill-popover" />
             )}
           </BasePopover.Popup>
         </BasePopover.Positioner>

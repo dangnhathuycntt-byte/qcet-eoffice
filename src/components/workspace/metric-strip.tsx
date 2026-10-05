@@ -231,7 +231,7 @@ export function MetricStrip({
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className={cn(
-                    "size-8 rounded-lg flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs",
+                    "size-8 rounded-lg flex items-center justify-center shrink-0 border border-border/40 shadow-none",
                     scheme.iconBg
                   )}
                   aria-hidden="true"
@@ -241,7 +241,7 @@ export function MetricStrip({
                     strokeWidth={1.5}
                   />
                 </div>
-                <span className="text-xs sm:text-sm font-semibold text-slate-700 truncate">
+                <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
                   {card.title}
                 </span>
               </div>
@@ -263,7 +263,7 @@ export function MetricStrip({
 
             {/* Middle row: Large high-contrast metric value */}
             <div className="mt-2.5 sm:mt-3 flex items-baseline justify-between gap-2">
-              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900">
+              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-foreground">
                 {isLoading ? "--" : card.value}
               </span>
 
@@ -272,10 +272,10 @@ export function MetricStrip({
                   className={cn(
                     "inline-flex items-center gap-0.5 text-xs font-semibold shrink-0 px-1.5 py-0.5 rounded-md",
                     card.trend.direction === "up"
-                      ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                      ? "text-emerald-700 bg-emerald-500/10 border border-emerald-500/20"
                       : card.trend.direction === "down"
-                      ? "text-rose-700 bg-rose-50 border border-rose-200"
-                      : "text-slate-700 bg-slate-100 border border-slate-200"
+                      ? "text-rose-700 bg-rose-500/10 border border-rose-500/20"
+                      : "text-muted-foreground bg-secondary border border-border/50"
                   )}
                   aria-label={`Xu hướng: ${card.trend.value} ${card.trend.label || ""}`}
                 >
@@ -284,7 +284,7 @@ export function MetricStrip({
                   ) : card.trend.direction === "down" ? (
                     <TrendingDown className="size-3 text-rose-600" aria-hidden="true" />
                   ) : (
-                    <Minus className="size-3 text-slate-500" aria-hidden="true" />
+                    <Minus className="size-3 text-muted-foreground" aria-hidden="true" />
                   )}
                   <span>{card.trend.value}</span>
                 </div>
@@ -292,10 +292,10 @@ export function MetricStrip({
             </div>
 
             {/* Bottom row: Subtitle or Trend Description */}
-            <div className="mt-1 flex items-center justify-between text-xs text-slate-700">
+            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span className="truncate">{card.subtitle}</span>
               {card.trend?.label && (
-                <span className="text-xs text-slate-700 shrink-0 hidden sm:inline">
+                <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
                   {card.trend.label}
                 </span>
               )}
@@ -313,16 +313,16 @@ export function MetricStrip({
               aria-label={`${card.title}: ${card.value}${card.subtitle ? ` (${card.subtitle})` : ""}. Nhấn để lọc.`}
               onClick={() => handleCardClick(card)}
               className={cn(
-                "group relative text-left rounded-xl p-3.5 sm:p-4 bg-white border transition-all select-none min-h-[96px] w-full",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
-                "cursor-pointer hover:shadow-sm hover:border-slate-300 active:scale-[0.99]",
+                "group relative text-left rounded-card p-3.5 sm:p-4 bg-card border transition-all select-none min-h-[96px] w-full",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                "cursor-pointer hover:border-border active:scale-[0.99]",
                 isActive
                   ? cn(
-                      "border-2 shadow-xs ring-1 bg-slate-50/40",
+                      "border-2 shadow-none ring-1 bg-secondary/40",
                       scheme.borderActive,
                       scheme.ringActive
                     )
-                  : "border-slate-200 shadow-2xs"
+                  : "border-border/60 shadow-none"
               )}
             >
               {cardContent}
@@ -335,7 +335,7 @@ export function MetricStrip({
             key={card.id}
             role="region"
             aria-label={`${card.title}: ${card.value}`}
-            className="relative rounded-xl p-3.5 sm:p-4 bg-white border border-slate-200 shadow-2xs min-h-[96px]"
+            className="relative rounded-card p-3.5 sm:p-4 bg-card border border-border/60 shadow-none min-h-[96px]"
           >
             {cardContent}
           </div>

@@ -37,17 +37,17 @@ export function DestructiveConfirmDialog({
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <AlertDialog.Portal>
         <AlertDialog.Backdrop
-          className="fixed inset-0 z-60 bg-background/80 backdrop-blur-xs"
+          className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none"
         />
         <AlertDialog.Popup
-          className="fixed inset-0 z-60 flex items-center justify-center p-4"
+          className="fixed inset-0 z-40 flex items-center justify-center p-4 outline-none motion-reduce:transition-none"
         >
-          <div className="bg-card rounded-xl shadow-2xl border border-border max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
+          <div className="bg-card rounded-2xl shadow-dialog border-0 max-w-md w-full p-4 sm:p-6 flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className="size-8 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+              <div className="size-8 rounded-full bg-danger-soft text-destructive flex items-center justify-center shrink-0">
                 <AlertOctagon className="size-4" strokeWidth={1.5} />
               </div>
-              <div className="space-y-1 min-w-0">
+              <div className="flex flex-col gap-1 min-w-0">
                 <AlertDialog.Title className="text-sm font-semibold text-foreground">
                   {title}
                 </AlertDialog.Title>
@@ -57,15 +57,15 @@ export function DestructiveConfirmDialog({
                   )}
                   {description || "sẽ được lưu trữ / hủy bỏ."}
                   {irreversible && (
-                    <span className="block mt-1 text-rose-600 font-medium">Hành động này không thể hoàn tác.</span>
+                    <span className="block mt-1 text-destructive font-medium">Hành động này không thể hoàn tác.</span>
                   )}
                 </AlertDialog.Description>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+            <div className="flex items-center justify-end gap-2 pt-2 border-0">
               <AlertDialog.Close
-                render={<Button variant="outline" size="sm" className="text-xs h-8" />}
+                render={<Button variant="secondary" size="default" />}
                 disabled={isConfirming}
               >
                 {cancelLabel}
@@ -73,10 +73,10 @@ export function DestructiveConfirmDialog({
               <Button
                 type="button"
                 variant="destructive"
-                size="sm"
+                size="default"
                 onClick={handleConfirm}
                 disabled={isConfirming}
-                className={cn("text-xs h-8", isConfirming && "opacity-70")}
+                className={cn(isConfirming && "opacity-70")}
               >
                 {isConfirming ? "Đang xử lý..." : confirmLabel}
               </Button>

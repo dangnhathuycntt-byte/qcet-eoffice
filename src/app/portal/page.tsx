@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   type PortalStatsSummary,
   formatProgressMetric,
@@ -128,10 +129,8 @@ export default function PortalPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Avatar initial badge + QCET Logo + Branding */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* User Avatar Circle */}
-            <div className="size-8 rounded-full bg-foreground text-background font-black text-xs flex items-center justify-center shadow-xs shrink-0 select-none">
-              {user?.name ? user.name.slice(0, 1).toUpperCase() : "Q"}
-            </div>
+            {/* User Avatar */}
+            <UserAvatar name={user?.name} avatarUrl={user?.avatar} size="lg" />
 
             {/* School Crest / Logo */}
             <div className="relative size-8 shrink-0">
@@ -150,7 +149,7 @@ export default function PortalPage() {
               <span className="text-xs font-semibold text-muted-foreground leading-tight truncate">
                 Trường CĐ KTCN Quy Nhơn
               </span>
-              <span className="text-xs sm:text-sm font-extrabold tracking-tight text-foreground leading-tight truncate">
+              <span className="text-xs sm:text-sm font-bold tracking-tight text-foreground leading-tight truncate">
                 VĂN PHÒNG ĐIỆN TỬ
               </span>
             </div>
@@ -174,7 +173,7 @@ export default function PortalPage() {
       >
         {/* Centered Hero Section */}
         <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground font-heading">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground font-heading">
             Hệ Thống Điều Hành QCET
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-3 leading-relaxed font-normal">

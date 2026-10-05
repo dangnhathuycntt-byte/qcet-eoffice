@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { MobileOrgDrillDown } from "./mobile-org-drilldown";
 import {
   QCET_ORG_UNITS,
@@ -969,27 +970,17 @@ export function OrganizationTree({
                     >
                       <div className="flex items-start gap-3">
                         <div className="relative shrink-0">
-                          {staff.avatar ? (
-                            <img
-                              src={staff.avatar}
-                              alt={staff.name}
-                              className="size-11 rounded-xl object-cover border border-border shadow-2xs"
-                            />
-                          ) : (
-                            <div className="flex size-11 items-center justify-center rounded-xl border border-border bg-primary/10 text-primary font-bold text-sm shadow-2xs">
-                              {getStaffInitials(staff.name)}
-                            </div>
-                          )}
-                          <span
-                            className={cn(
-                              "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card",
+                          <UserAvatar
+                            name={staff.name}
+                            avatarUrl={staff.avatar}
+                            size="lg"
+                            presence={
                               staff.status === "ACTIVE"
-                                ? "bg-emerald-500"
+                                ? "online"
                                 : staff.status === "BUSY"
-                                ? "bg-amber-500"
-                                : "bg-slate-400"
-                            )}
-                            title={staff.status === "ACTIVE" ? "Đang công tác" : staff.status === "BUSY" ? "Bận công vụ" : "Nghỉ phép"}
+                                ? "busy"
+                                : "offline"
+                            }
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -1086,17 +1077,11 @@ export function OrganizationTree({
                           >
                             <td className="py-2.5 px-3">
                               <div className="flex items-center gap-2.5">
-                                {staff.avatar ? (
-                                  <img
-                                    src={staff.avatar}
-                                    alt={staff.name}
-                                    className="size-7 rounded-lg object-cover border border-border/70 shrink-0"
-                                  />
-                                ) : (
-                                  <div className="flex size-7 items-center justify-center rounded-lg border border-border/70 bg-primary/10 text-primary font-semibold text-xs shrink-0">
-                                    {getStaffInitials(staff.name)}
-                                  </div>
-                                )}
+                                <UserAvatar
+                                  name={staff.name}
+                                  avatarUrl={staff.avatar}
+                                  size="md"
+                                />
                                 <span className="font-semibold text-foreground">
                                   {staff.titlePrefix ? `${staff.titlePrefix} ` : ""}
                                   {staff.name}
@@ -1162,17 +1147,12 @@ export function OrganizationTree({
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5">
-                {activeProfileStaff.avatar ? (
-                  <img
-                    src={activeProfileStaff.avatar}
-                    alt={activeProfileStaff.name}
-                    className="size-14 rounded-2xl object-cover border border-border shadow-xs shrink-0"
-                  />
-                ) : (
-                  <div className="flex size-14 items-center justify-center rounded-2xl border border-border bg-primary/10 text-primary font-bold text-lg shadow-xs shrink-0">
-                    {getStaffInitials(activeProfileStaff.name)}
-                  </div>
-                )}
+                <UserAvatar
+                  name={activeProfileStaff.name}
+                  avatarUrl={activeProfileStaff.avatar}
+                  size="xl"
+                  className="shrink-0"
+                />
                 <div>
                   <h3 className="text-base font-bold text-foreground">
                     {activeProfileStaff.titlePrefix

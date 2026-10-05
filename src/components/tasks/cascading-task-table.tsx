@@ -168,7 +168,7 @@ export function getStatusBadgeConfig(
     default:
       return {
         label: typeof status === "string" ? status : "Chưa rõ",
-        className: "border-zinc-200 bg-zinc-50 text-zinc-700",
+        className: "border-border bg-secondary text-muted-foreground",
         variant: "outline",
       };
   }

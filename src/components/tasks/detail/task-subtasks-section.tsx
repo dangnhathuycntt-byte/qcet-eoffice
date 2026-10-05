@@ -25,6 +25,7 @@ import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   toCanonicalUnitCode,
 } from "@/lib/departments";
@@ -470,25 +471,13 @@ export function TaskSubtasksSection({
                       </div>
 
                       {/* Avatar tròn 24px + tooltip tên đầy đủ */}
-                      <div
-                        className="size-6 shrink-0 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-border/40"
+                      <UserAvatar
+                        name={st.assigneeName}
+                        avatarUrl={st.assigneeAvatar}
+                        size="md"
+                        className="ring-1 ring-border/40"
                         title={`Phụ trách: ${assigneeTitle}`}
-                      >
-                        {st.assigneeAvatar ? (
-                          <img
-                            src={st.assigneeAvatar}
-                            alt={assigneeTitle}
-                            width={24}
-                            height={24}
-                            loading="lazy"
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <span className="flex size-full items-center justify-center bg-muted text-[10px] font-semibold text-muted-foreground">
-                            {getInitials(st.assigneeName || "?")}
-                          </span>
-                        )}
-                      </div>
+                      />
                     </div>
                   </div>
 
@@ -514,7 +503,7 @@ export function TaskSubtasksSection({
                     <span className="text-muted-foreground/40">·</span>
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium border leading-tight",
+                        "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-medium border leading-tight",
                         statusObj.colorClass
                       )}
                     >

@@ -1283,7 +1283,7 @@ Sau khi xác thực và nạp thông tin cán bộ thành công, thành phần t
 ### 7.1. Bối cảnh Nhánh & Điểm Xuất Phát (Branch Baseline)
 - **Nhánh triển khai chính**: `feat/dacum-role-delegation-workflow` tại thư mục `/Users/dnhhuy/Projects/QCET/QCET Work`.
 - **Nhánh đích (Target Base)**: `main`.
-- **Mục tiêu di chuyển**: Chuyển đổi toàn diện hệ thống sang mô hình **Database-First 100% & Zero-Mockup Runtime**, chấm dứt việc nhúng thông tin đăng nhập cứng (hardcoded credentials), cô lập toàn bộ dữ liệu kiểm thử sang thư mục test độc lập, chuẩn hóa cơ cấu tổ chức QCET thực tế, và đồng bộ giao diện làm việc thích ứng (Unified Adaptive Workspace) theo đúng Engineering Rules tại `/Users/dnhhuy/Projects/QCET/QCET Work/CLAUDE.md`.
+- **Mục tiêu di chuyển**: Chuyển đổi toàn diện hệ thống sang mô hình **Database-First 100% & Zero-Mockup Runtime**, chấm dứt việc nhúng thông tin đăng nhập cứng (hardcoded credentials), cô lập toàn bộ dữ liệu kiểm thử sang thư mục test độc lập, chuẩn hóa cơ cấu tổ chức QCET thực tế, và đồng bộ giao diện làm việc thích ứng (Unified Adaptive Workspace) theo đúng Engineering Rules tại `AGENTS.md`.
 
 ---
 
@@ -1366,7 +1366,7 @@ Mỗi bước thay đổi phải được đóng gói thành các commit nguyên
 
 ### 7.4. Quy Tắc Kiểm Soát Xung Đột Cache Dev Next.js (Strict Cache Protocol)
 
-Tuân thủ nghiêm ngặt Engineering Rules tại `/Users/dnhhuy/Projects/QCET/QCET Work/CLAUDE.md`:
+Tuân thủ nghiêm ngặt Engineering Rules tại `AGENTS.md`:
 
 #### 1. Cơ Chế Gây Lỗi Cache (Root Cause)
 Khi tiến trình `next dev` đang chạy (phục vụ cổng `localhost:3001`), nếu tiến trình khác chạy `next build` (`npm run build`), Next.js sẽ xóa sạch và ghi đè thư mục `.next/` bằng các production hashed chunks (`*.css`, `main-app-*.js`). Dev server trong bộ nhớ RAM bị mất liên kết đến các asset động, dẫn đến hiện tượng trả về HTTP 404 cho CSS/JS, khiến trang web bị rơi về dạng thô (FOUC / Unstyled HTML: nền đen, link tím gạch chân, mất toàn bộ Tailwind CSS).

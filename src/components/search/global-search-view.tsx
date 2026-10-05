@@ -24,6 +24,7 @@ import {
   Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   fadeVariants,
   listItemVariants,
@@ -741,30 +742,17 @@ function UserResults({
       className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-2xs divide-y divide-border/30"
     >
       {items.map((user) => {
-        const initials = user.name
-          .split(" ")
-          .filter(Boolean)
-          .slice(-2)
-          .map((w) => w[0])
-          .join("")
-          .toUpperCase();
-
         return (
           <m.div key={user.id} variants={listItemVariants}>
             <div className="flex items-center gap-3 px-4 py-3">
               {/* Avatar */}
               <div className="shrink-0">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="size-9 rounded-full object-cover ring-1 ring-border/40"
-                  />
-                ) : (
-                  <div className="size-9 rounded-full bg-muted/70 flex items-center justify-center text-xs font-bold text-muted-foreground ring-1 ring-border/40 select-none">
-                    {initials}
-                  </div>
-                )}
+                <UserAvatar
+                  name={user.name}
+                  avatarUrl={user.avatarUrl}
+                  size="lg"
+                  className="ring-1 ring-border/40"
+                />
               </div>
 
               {/* Info */}

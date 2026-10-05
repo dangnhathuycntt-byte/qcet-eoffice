@@ -114,7 +114,7 @@ export function TaskActivityTimeline({
               <div className="rounded-xl border border-border/60 bg-card p-3 space-y-1.5 shadow-2xs hover:border-border transition-colors">
                 <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
                   <div className="flex items-center gap-1.5 font-medium text-foreground">
-                    <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold">
+                    <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold">
                       {(ev.actorName || "U").charAt(0).toUpperCase()}
                     </div>
                     <span>{ev.actorName || "Người điều hành"}</span>

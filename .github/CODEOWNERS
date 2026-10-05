@@ -72,4 +72,3 @@ src/telemetry/                        @qcet-security-team @qcet-core-infra
 # 7. CI/CD, AUTOMATION & GOVERNANCE
 # ------------------------------------------------------------------------------
 .github/                              @qcet-core-infra @cdktcnqn-admin
-.claude/                              @qcet-core-infra @cdktcnqn-admin

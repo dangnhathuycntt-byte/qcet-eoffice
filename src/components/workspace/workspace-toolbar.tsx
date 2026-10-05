@@ -77,7 +77,7 @@ export function WorkspaceToolbar({
       role="toolbar"
       aria-label="Thanh công cụ không gian làm việc"
       className={cn(
-        "flex flex-col gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-xs",
+        "flex flex-col gap-3 p-3 sm:p-4 rounded-panel bg-card border border-border/60 shadow-none",
         className
       )}
     >
@@ -88,7 +88,7 @@ export function WorkspaceToolbar({
           {typeof onSearchChange === "function" && (
             <div className="relative flex-1 min-w-[220px]">
               <div
-                className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500"
+                className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground"
                 aria-hidden="true"
               >
                 <Search className="size-4" strokeWidth={1.5} />
@@ -101,9 +101,8 @@ export function WorkspaceToolbar({
                 placeholder={searchPlaceholder}
                 aria-label="Tìm kiếm trong không gian làm việc"
                 className={cn(
-                  "w-full rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-600 min-h-[44px] transition-all",
-                  "hover:bg-slate-100/70 hover:border-slate-300",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1 focus-visible:bg-white focus-visible:border-blue-600"
+                  "w-full rounded-control pl-10 pr-10 py-2 text-sm bg-secondary border-0 text-foreground placeholder:text-muted-foreground min-h-[40px] sm:min-h-[36px] transition-colors",
+                  "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
                 )}
               />
               {searchQuery && (
@@ -112,8 +111,8 @@ export function WorkspaceToolbar({
                   onClick={handleClearSearch}
                   aria-label="Xóa nội dung tìm kiếm"
                   className={cn(
-                    "absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 min-w-[44px] justify-center",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
+                    "absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground min-w-[44px] justify-center",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
                   )}
                 >
                   <X className="size-4" strokeWidth={1.5} aria-hidden="true" />

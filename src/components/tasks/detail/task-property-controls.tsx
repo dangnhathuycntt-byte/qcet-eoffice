@@ -143,7 +143,7 @@ export function TaskDateRange({
   const urgencyClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-600" : "";
   const iconClass = dueInfo.isOverdue ? "text-rose-700" : nearDue ? "text-amber-500" : "text-muted-foreground";
 
-  const startLabel = startDateIso ? formatDisplayDate(startDateIso) : "—";
+  const startLabel = startDateIso ? formatDisplayDate(startDateIso) : "-";
   const dueLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn";
 
   return (

@@ -42,6 +42,7 @@ const MobileAppInstallModal = dynamic(
   { ssr: false }
 );
 
+
 function MobileAppInstallModalContainer() {
   const [isOpen, setIsOpen] = React.useState(false);
 

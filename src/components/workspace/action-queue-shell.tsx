@@ -80,24 +80,24 @@ export function ActionQueueShell({
     <section
       aria-labelledby="action-queue-title"
       className={cn(
-        "rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden transition-all",
+        "rounded-panel bg-card border border-border/60 shadow-none overflow-hidden transition-all",
         className
       )}
     >
       {/* Header Container */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-border/40 bg-secondary/30">
         <div className="flex items-center gap-3">
           <div
-            className="size-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0"
+            className="size-10 rounded-control bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0"
             aria-hidden="true"
           >
-            <CheckCheck className="size-5 text-blue-600" strokeWidth={1.5} />
+            <CheckCheck className="size-5 text-primary" strokeWidth={1.5} />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2
                 id="action-queue-title"
-                className="text-base sm:text-lg font-bold text-slate-900 tracking-tight"
+                className="text-base sm:text-lg font-bold text-foreground tracking-tight"
               >
                 {title}
               </h2>
@@ -108,13 +108,13 @@ export function ActionQueueShell({
                   size="sm"
                 />
               ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                   Hoàn thành
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs sm:text-sm text-slate-700 mt-0.5">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {subtitle}
               </p>
             )}
@@ -132,8 +132,8 @@ export function ActionQueueShell({
               aria-expanded={!isCollapsed}
               aria-label={isCollapsed ? "Mở rộng hàng đợi" : "Thu gọn hàng đợi"}
               className={cn(
-                "inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1"
+                "inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-control bg-secondary text-foreground hover:bg-accent transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
               )}
             >
               {isCollapsed ? (

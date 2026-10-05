@@ -497,7 +497,7 @@ Khi hệ thống đã hoàn toàn ổn định và được sự phê duyệt ch
    ```
 3. **Dọn dẹp mã nguồn (Dead Code Elimination)**:
    - Xóa bỏ các type interfaces: `TaskAssigneeDomain`, `TaskAssigneeDTO`, `TaskAssigneeInfo`.
-   - Đổi tên các component UI mang tính lịch sử (ví dụ: `TaskAssigneePicker` $\to$ `TaskLeadPicker` hoặc `TaskActorPicker`) theo đúng quy chuẩn đặt tên [Component & Identifier Naming (.claude/rules/naming.md)](.claude/rules/naming.md).
+   - Đổi tên các component UI mang tính lịch sử (ví dụ: `TaskAssigneePicker` $\to$ `TaskLeadPicker` hoặc `TaskActorPicker`) theo đúng quy chuẩn đặt tên [Hướng dẫn làm việc](../../../AGENTS.md).
 
 ---
 
@@ -550,7 +550,7 @@ Nhờ áp dụng chiến lược mở rộng và thu hẹp (Expand-Contract), h�
 
 ### 7.1 Kế hoạch Kiểm thử Tự động (Automated Verification)
 
-Tuân thủ nghiêm ngặt quy tắc [Verification & Testing Rules (.claude/rules/verification.md)](.claude/rules/verification.md), tuyệt đối **không** chạy `next build` / `npm run build` trong môi trường dev server. Các bước kiểm thử bao gồm:
+Tuân thủ nghiêm ngặt quy tắc [Hướng dẫn làm việc](../../../AGENTS.md), tuyệt đối **không** chạy `next build` / `npm run build` trong môi trường dev server. Các bước kiểm thử bao gồm:
 
 1. **Kiểm tra Type-safety**:
    ```bash

@@ -156,7 +156,7 @@ stateDiagram-v2
 
 ## 5. THIẾT KẾ GIAO DIỆN & COMPONENTS (UI/UX - CHUẨN DESIGN.MD)
 
-Giao diện Module Văn bản tuân thủ triệt để bộ nhận diện **Monochrome than chì tinh tế** của Golden Master Benchmark (`DESIGN.md`):
+Các mô tả giao diện dưới đây thuộc đặc tả Module Văn bản. Màu và component dùng chung được đối chiếu qua [DESIGN.md](../../../DESIGN.md); mô tả than chì trong đặc tả cũ không phải chỉ thị ghi đè token hiện tại.
 
 ### 5.1. Màn hình Sổ Văn bản Đến (`src/app/documents/incoming/page.tsx`)
 * **Header & Bộ lọc tinh gọn (Filter Bar):**

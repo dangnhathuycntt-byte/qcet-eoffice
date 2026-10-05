@@ -514,7 +514,7 @@ export function SubtaskDetailDrawer({
                     {sib.title}
                   </span>
                   {(assigneeName || formattedDueDate) && (
-                    <span className="text-[10px] text-muted-foreground/70 font-normal">
+                    <span className="text-[11px] text-muted-foreground/70 font-normal">
                       {formattedDueDate ? `· ${formattedDueDate}` : ""}
                     </span>
                   )}
@@ -642,7 +642,7 @@ export function SubtaskDetailDrawer({
                         >
                           <span className="min-w-0">
                             <span className="block truncate">{person.name}</span>
-                            {person.departmentName && <span className="block truncate text-[10px] text-muted-foreground">{person.departmentName}</span>}
+                            {person.departmentName && <span className="block truncate text-[11px] text-muted-foreground">{person.departmentName}</span>}
                           </span>
                           <Combobox.ItemIndicator><Check className="size-3 text-primary" /></Combobox.ItemIndicator>
                         </Combobox.Item>
@@ -679,7 +679,7 @@ export function SubtaskDetailDrawer({
                   className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
                 />
               ) : (
-                <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "—"}</span>
+                <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "-"}</span>
               )}
               <span className="text-muted-foreground px-0.5">→</span>
               {canEdit ? (

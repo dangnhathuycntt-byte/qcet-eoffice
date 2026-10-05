@@ -500,7 +500,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.dueSoon > 0
-                  ? "text-amber-600 font-extrabold"
+                  ? "text-amber-600 font-bold"
                   : "text-foreground"
               )}
             >
@@ -513,7 +513,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.overdue > 0
-                  ? "text-rose-600 font-extrabold"
+                  ? "text-rose-600 font-bold"
                   : "text-foreground"
               )}
             >

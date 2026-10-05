@@ -74,6 +74,6 @@ Because `AuditEvent` records must be retained for 5 years, table partitioning by
 
 ## 4. Archiving vs. Hard Deletion Invariant
 
-In accordance with Core System Invariant 4 (`docs/plans/active/2026-09-09-database-architecture-hardening-plan.md`):
+Retention invariant (retained after removal of the historical DB hardening execution plan):
 - **No Casual Deletion**: Business entities (`Task`, `Document`, `ExecutiveResolution`, `User`) must **never be hard-deleted** through regular user interfaces.
 - **Soft Archive**: Entities implement `archivedAt` and `archivedById` timestamps. They are excluded from default queries via global filters but remain intact for institutional history and audit reviews.

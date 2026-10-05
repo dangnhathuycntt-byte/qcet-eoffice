@@ -6,6 +6,7 @@ import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, Chevron
 import type { UpcomingItem } from "@/types/dashboard";
 export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 export { getInitials };
 import { formatDisplayDate } from "@/lib/format";
@@ -229,32 +230,12 @@ export function UpcomingDeadlinesWidget({
 
                 {/* Right side: Assignee */}
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                  {item.assigneeAvatar ? (
-                    <img
-                      src={item.assigneeAvatar}
-                      alt=""
-                      aria-hidden="true"
-                      width={16}
-                      height={16}
-                      loading="lazy"
-                      className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
-                    />
-                  ) : item.assigneeName === "Chưa phân công" ? (
-                    <div
-                      aria-hidden="true"
-                      className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
-                      title="Chưa phân công"
-                    >
-                      <UserMinus className="size-2.5 opacity-70" strokeWidth={1.5} />
-                    </div>
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-2xs font-semibold text-secondary-foreground ring-1 ring-border/50"
-                    >
-                      {getInitials(item.assigneeName)}
-                    </div>
-                  )}
+                  <UserAvatar
+                    name={item.assigneeName}
+                    avatarUrl={item.assigneeAvatar}
+                    size="xs"
+                    className="ring-1 ring-border/50"
+                  />
                   <span className={cn(
                     "truncate max-w-[120px] font-medium hidden sm:inline",
                     item.assigneeName === "Chưa phân công" ? "text-muted-foreground/70 italic text-2xs" : "text-foreground/80"

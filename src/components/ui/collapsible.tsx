@@ -27,7 +27,7 @@ export const CollapsiblePanel = React.forwardRef<
     <BaseCollapsible.Panel
       ref={ref}
       className={cn(
-        "grid motion-safe:transition-[grid-template-rows] duration-200 ease-out",
+        "grid motion-safe:transition-[grid-template-rows] motion-reduce:transition-none duration-200 ease-out",
         "data-[state=closed]:grid-rows-[0fr] data-[state=open]:grid-rows-[1fr]",
         "data-closed:grid-rows-[0fr] data-open:grid-rows-[1fr]",
         "data-[starting-style]:grid-rows-[0fr] data-[ending-style]:grid-rows-[0fr]",
@@ -82,9 +82,13 @@ export function StandardCollapsible({
       className={cn("w-full", className)}
     >
       <BaseCollapsible.Trigger
-        className={triggerClassName}
-        render={React.isValidElement(trigger) ? trigger : <span>{trigger}</span>}
-      />
+        className={cn(
+          "w-full text-left cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1",
+          triggerClassName
+        )}
+      >
+        {trigger}
+      </BaseCollapsible.Trigger>
       <CollapsiblePanel className={panelClassName} innerClassName={innerClassName}>
         {children}
       </CollapsiblePanel>

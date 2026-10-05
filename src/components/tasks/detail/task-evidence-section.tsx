@@ -210,7 +210,7 @@ export function TaskEvidenceSection({
                       {item.status && (
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-semibold border",
+                            "inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[11px] font-semibold border",
                             isApproved
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : isRejected

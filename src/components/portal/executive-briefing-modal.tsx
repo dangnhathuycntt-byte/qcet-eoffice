@@ -199,11 +199,11 @@ export function ExecutiveBriefingModal({
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-500/[0.04] space-y-1">
-                <div className="text-xs font-medium text-indigo-600">
+              <div className="p-3.5 rounded-xl border border-primary/30 bg-primary/[0.04] space-y-1">
+                <div className="text-xs font-medium text-primary">
                   Chờ BGH phê duyệt
                 </div>
-                <div className="text-2xl font-bold text-indigo-600 tabular-nums">
+                <div className="text-2xl font-bold text-primary tabular-nums">
                   {metrics.pendingInstitutionalApprovalCount}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -366,11 +366,11 @@ export function ExecutiveBriefingModal({
           {/* Section 4: Pending Approvals */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-indigo-600 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-primary flex items-center gap-2">
                 <FileCheck className="w-4 h-4" />
                 <span>IV. Tờ trình & hồ sơ chờ Ban Giám Hiệu phê duyệt</span>
               </h3>
-              <Badge className="bg-indigo-600 text-white text-xs">
+              <Badge className="bg-primary text-primary-foreground text-xs">
                 {approvalQueue.length} hồ sơ
               </Badge>
             </div>

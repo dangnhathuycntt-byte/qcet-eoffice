@@ -2284,7 +2284,7 @@ export function TaskBlockEditor({
           >
             <div className="p-4 rounded-2xl bg-card border border-border shadow-2xl flex flex-col items-center gap-3 text-center max-w-sm">
               <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <UploadCloud className="size-8 animate-bounce" />
+                <UploadCloud className="size-8 motion-safe:animate-pulse" />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-foreground">Thả để thêm vào nội dung</h3>

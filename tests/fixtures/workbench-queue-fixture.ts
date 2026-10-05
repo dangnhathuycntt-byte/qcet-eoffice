@@ -1,7 +1,6 @@
 /**
  * T02 — Workbench queue fixture with HAND-WRITTEN expected results.
  *
- * Plan: docs/plans/active/qcet-workbench-uiux-agent-execution-plan.md §5 (T02).
  *
  * Rules this file obeys:
  *  - Expected IDs are written by hand from the table in the plan. They are NEVER

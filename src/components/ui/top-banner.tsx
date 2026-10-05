@@ -11,7 +11,7 @@ const topBannerVariants = cva(
     variants: {
       variant: {
         default: "bg-secondary text-foreground",
-        warning: "bg-amber-500/10 text-amber-900",
+        warning: "bg-secondary text-foreground font-medium",
         destructive: "bg-danger-soft text-destructive",
       },
     },
@@ -50,7 +50,7 @@ export function TopBanner({
     variant === "destructive" ? (
       <AlertCircle className="size-4 shrink-0 text-destructive" />
     ) : variant === "warning" ? (
-      <AlertTriangle className="size-4 shrink-0 text-amber-700" />
+      <AlertTriangle className="size-4 shrink-0 text-foreground" />
     ) : (
       <Info className="size-4 shrink-0 text-muted-foreground" />
     );
@@ -77,7 +77,7 @@ export function TopBanner({
         <button
           type="button"
           onClick={handleDismiss}
-          className="rounded p-1 text-muted-foreground hover:bg-black/5 hover:text-foreground active:scale-95 transition-all cursor-pointer shrink-0"
+          className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-100 cursor-pointer shrink-0 outline-none focus-visible:outline-2 focus-visible:outline-primary"
           aria-label="Ẩn thông báo"
         >
           <X className="size-3.5" />

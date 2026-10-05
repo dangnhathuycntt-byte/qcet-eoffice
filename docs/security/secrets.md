@@ -120,8 +120,8 @@ QCET E-Office strictly enforces physical and logical isolation across deployment
 To ensure zero secrets enter version control:
 1. **Repository `.gitignore`**:
    - Excludes `.env`, `.env.local`, `.env.*.local`, `*.pem`, `*.key`, `credentials.json`.
-2. **Deterministic Pre-Tool / Pre-Commit Hooks**:
-   - Hook `./.claude/hooks/protect-sensitive-files` blocks any tool or command attempting to read, edit, or commit sensitive secret files.
-   - Only `.env.example` and `*.example` templates are permitted.
+2. **Agent configuration**:
+   - The legacy Claude hooks have been removed; do not rely on an agent hook to protect secrets.
+   - Only `.env.example` and `*.example` templates are permitted in version control.
 3. **CI Secret Scanner**:
    - Automated CI workflows run regex checks against all commits, flagging patterns such as `BEGIN PRIVATE KEY`, `postgres://...`, and high-entropy base64 strings.

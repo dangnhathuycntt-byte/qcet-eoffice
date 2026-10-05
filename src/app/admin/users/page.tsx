@@ -14,7 +14,7 @@ export default function UserDirectoryPage() {
       <div>
         <h1 className="text-xl font-bold text-foreground tracking-tight">Danh bạ Nhân sự</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Tra cứu thông tin nhân sự toàn trường — chế độ chỉ đọc
+          Tra cứu thông tin nhân sự toàn trường - chế độ chỉ đọc
         </p>
       </div>
       <React.Suspense

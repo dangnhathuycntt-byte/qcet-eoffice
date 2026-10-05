@@ -9,6 +9,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { StandardDialog } from "@/components/ui/dialog";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn, getInitials } from "@/lib/utils";
@@ -298,17 +299,12 @@ export function TaskPeekPreviewModal({
 
         {/* Lead assignee */}
         <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
-          {leadAvatar ? (
-            <img
-              src={leadAvatar}
-              alt=""
-              className="size-4 rounded-full object-cover ring-1 ring-border/60"
-            />
-          ) : (
-            <span className="size-4 rounded-full bg-muted text-[8px] font-semibold text-muted-foreground flex items-center justify-center">
-              {getInitials(leadName)}
-            </span>
-          )}
+          <UserAvatar
+            name={leadName}
+            avatarUrl={leadAvatar}
+            size="xs"
+            className="ring-1 ring-border/60"
+          />
           <span className="truncate max-w-[130px]">{leadName}</span>
         </span>
 

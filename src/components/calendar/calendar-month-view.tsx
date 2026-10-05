@@ -21,6 +21,7 @@ import type {
 } from "@/types/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 import {
   getCategoryBadgeConfig,
@@ -1388,21 +1389,12 @@ export function CalendarMonthView({
                     {/* Footer: Assignee avatar & name */}
                     <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-xs">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        {item.assigneeAvatar ? (
-                          <img
-                            src={item.assigneeAvatar}
-                            alt=""
-                            aria-hidden="true"
-                            className="size-4.5 rounded-full object-cover shrink-0 border border-border"
-                          />
-                        ) : (
-                          <span
-                            aria-hidden="true"
-                            className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground border border-border"
-                          >
-                            {getInitials(item.assigneeName)}
-                          </span>
-                        )}
+                        <UserAvatar
+                          name={item.assigneeName}
+                          avatarUrl={item.assigneeAvatar}
+                          size="xs"
+                          className="border border-border shrink-0"
+                        />
                         <span className="font-medium text-foreground">
                           {item.assigneeName}
                         </span>

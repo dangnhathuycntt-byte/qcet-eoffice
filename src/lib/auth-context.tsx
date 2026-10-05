@@ -369,6 +369,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsOfflineReadOnly(resolution.isOfflineReadOnly);
     setCanMutate(resolution.canMutate);
     setIsLoading(false);
+
+    if (resolution.user?.name && resolution.user?.email && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(
+          "qcet_last_login_user",
+          JSON.stringify({ name: resolution.user.name, email: resolution.user.email, avatar: resolution.user.avatar || undefined })
+        );
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   // Sync session with server /api/auth/me on mount.
@@ -421,6 +432,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (raw) {
           const parsed = JSON.parse(raw);
           userIdToPurge = parsed?.id;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 0. Preserve last user identity for quick login ("Chào mừng quay lại") on /login
+    if (typeof window !== "undefined") {
+      try {
+        let lastUserName = user?.name;
+        let lastUserEmail = user?.email;
+        let lastUserAvatar = user?.avatar;
+        if (!lastUserName || !lastUserEmail) {
+          const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            lastUserName = lastUserName || parsed?.name;
+            lastUserEmail = lastUserEmail || parsed?.email;
+            lastUserAvatar = lastUserAvatar || parsed?.avatar;
+          }
+        }
+        if (lastUserName && lastUserEmail) {
+          localStorage.setItem(
+            "qcet_last_login_user",
+            JSON.stringify({ name: lastUserName, email: lastUserEmail, avatar: lastUserAvatar || undefined })
+          );
         }
       } catch {
         // ignore

@@ -3,38 +3,38 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "group/badge inline-flex w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-sm border-0 px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none [&>svg]:size-3.5",
+  "group/badge inline-flex w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-sm border-0 px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:bg-danger-soft aria-invalid:text-destructive [&>svg]:pointer-events-none [&>svg]:size-3.5",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default: "bg-primary text-primary-foreground [a]:hover:opacity-90",
         secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+          "bg-secondary text-secondary-foreground [a]:hover:bg-accent",
         destructive:
-          "bg-danger-soft text-destructive focus-visible:ring-destructive/20 [a]:hover:bg-destructive/20",
+          "bg-danger-soft text-destructive [a]:hover:opacity-90",
         outline:
           "bg-secondary text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:
           "hover:bg-muted hover:text-muted-foreground border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
-        // QCET task status variants
+        // QCET task status variants (10% tint pastel, accessible text)
         sapphire:
-          "bg-secondary text-foreground",
+          "bg-blue-500/10 text-blue-600",
         emerald:
-          "bg-secondary text-foreground",
+          "bg-emerald-500/10 text-emerald-700",
         amber:
-          "bg-secondary text-foreground",
+          "bg-amber-500/10 text-amber-700",
         rose:
-          "bg-secondary text-foreground",
+          "bg-rose-500/10 text-rose-600",
         violet:
-          "bg-secondary text-foreground",
+          "bg-violet-500/10 text-violet-600",
         // Backward-compatible aliases
         success:
-          "bg-secondary text-foreground",
+          "bg-emerald-500/10 text-emerald-700",
         progress:
-          "bg-secondary text-foreground",
+          "bg-blue-500/10 text-blue-600",
         warning:
-          "bg-secondary text-foreground",
+          "bg-amber-500/10 text-amber-700",
       },
     },
     defaultVariants: {

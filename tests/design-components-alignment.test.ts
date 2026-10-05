@@ -44,7 +44,7 @@ describe("Design Components & Foundation Alignment Suite", () => {
 
       assert.ok(html.includes('data-slot="textarea"'), "Renders textarea element");
       assert.ok(html.includes("19 / 500"), "Displays character counter formatted as current / max");
-      assert.ok(html.includes("rounded-xl"), "Textarea has rounded-xl (12px radius)");
+      assert.ok(html.includes("rounded-control") || html.includes("rounded-xl"), "Textarea has rounded-control / 12px radius");
     });
 
     it("highlights counter in red when remaining characters is <= 20", () => {
@@ -146,7 +146,7 @@ describe("Design Components & Foundation Alignment Suite", () => {
         )
       );
 
-      assert.ok(html.includes("border-dotted"), "Trigger must have border-dotted underline");
+      assert.ok(html.includes("border-dotted") || html.includes("decoration-dotted"), "Trigger must have dotted underline");
       assert.ok(html.includes("Vì sao trễ?"), "Trigger text must be displayed");
     });
   });

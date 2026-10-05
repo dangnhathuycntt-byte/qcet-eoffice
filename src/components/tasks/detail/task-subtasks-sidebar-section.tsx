@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Plus, User } from "lucide-react";
+import { Plus } from "lucide-react";
 import * as m from "motion/react-m";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { StaffTask } from "@/types/dashboard";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
-import { cn, getInitials } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { cn } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
 import { listItemVariants, staggerContainerVariants } from "@/lib/motion/variants";
 
@@ -18,53 +19,6 @@ export interface TaskSubtasksSidebarSectionProps {
 }
 
 const MAX_COLLAPSED = 5;
-
-function SubtaskAssigneeAvatar({
-  avatarUrl,
-  name,
-}: {
-  avatarUrl?: string;
-  name?: string;
-}) {
-  const [imgError, setImgError] = React.useState(false);
-  const normalized = name?.trim().toLowerCase();
-  const hasAssignee = Boolean(
-    name && name.trim() && normalized !== "chưa phân công"
-  );
-  const initials = getInitials(name);
-
-  if (avatarUrl && !imgError) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name || "Người phụ trách"}
-        onError={() => setImgError(true)}
-        className="size-4 rounded-full object-cover"
-        title={name || "Người phụ trách"}
-      />
-    );
-  }
-
-  if (hasAssignee) {
-    return (
-      <div
-        className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-[8px]"
-        title={name}
-      >
-        {initials}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="size-4 rounded-full bg-muted/60 text-muted-foreground flex items-center justify-center"
-      title="Chưa phân công"
-    >
-      <User className="size-2.5" />
-    </div>
-  );
-}
 
 export function TaskSubtasksSidebarSection({
   subTasks = [],
@@ -92,7 +46,7 @@ export function TaskSubtasksSidebarSection({
             {subTasks.length}
           </span>
           {completedCount > 0 && (
-            <span className="text-[10px] text-muted-foreground font-mono tabular-nums shrink-0">
+            <span className="text-[11px] text-muted-foreground font-mono tabular-nums shrink-0">
               ({completedCount} xong)
             </span>
           )}
@@ -170,7 +124,7 @@ export function TaskSubtasksSidebarSection({
                 {/* 3. Hạn hoàn thành: DD/MM */}
                 {formattedDueDate && (
                   <span
-                    className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5"
+                    className="shrink-0 text-[11px] font-mono tabular-nums text-muted-foreground mt-0.5"
                     title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
                   >
                     {formattedDueDate}
@@ -179,9 +133,10 @@ export function TaskSubtasksSidebarSection({
 
                 {/* 4. Avatar người phụ trách */}
                 <div className="shrink-0 mt-0.5">
-                  <SubtaskAssigneeAvatar
+                  <UserAvatar
                     avatarUrl={st.assigneeAvatar}
                     name={st.assigneeName}
+                    size="xs"
                   />
                 </div>
               </button>
@@ -228,16 +183,17 @@ export function TaskSubtasksSidebarSection({
                       </span>
                       {formattedDueDate && (
                         <span
-                          className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5"
+                          className="shrink-0 text-[11px] font-mono tabular-nums text-muted-foreground mt-0.5"
                           title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
                         >
                           {formattedDueDate}
                         </span>
                       )}
                       <div className="shrink-0 mt-0.5">
-                        <SubtaskAssigneeAvatar
+                        <UserAvatar
                           avatarUrl={st.assigneeAvatar}
                           name={st.assigneeName}
+                          size="xs"
                         />
                       </div>
                     </button>

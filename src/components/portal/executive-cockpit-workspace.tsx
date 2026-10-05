@@ -1224,7 +1224,7 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-baseline gap-2">
             <span
               className={cn(
-                "text-3xl font-extrabold tracking-tight tabular-nums",
+                "text-3xl font-bold tracking-tight tabular-nums",
                 metrics.bottlenecksCount > 0
                   ? "text-rose-600"
                   : "text-emerald-600"
@@ -1294,7 +1294,7 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-baseline gap-2">
             <span
               className={cn(
-                "text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums",
+                "text-2xl sm:text-3xl font-bold tracking-tight tabular-nums",
                 metrics.pendingInstitutionalApprovalCount > 0
                   ? "text-indigo-600"
                   : "text-foreground"

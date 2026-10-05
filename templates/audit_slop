@@ -1,0 +1,51 @@
+# QCET: danh sách sửa để bỏ "AI slop"
+
+Nguồn quét: `_ds_bundle.js`, các class Tailwind trong `src/components/ui/*`. Quét theo mẫu class, cần xem lại từng chỗ khi sửa. Mục tiêu: không mềm mại, không hiện đại hoá, tối giản, đúng guide (không viền, không bóng nặng, một màu nhấn, 12 bậc màu).
+
+## Quy tắc chung (sửa một lần ở token/tiện ích)
+1. Xoá `backdrop-blur-*`. Backdrop chỉ là `bg-black/40`.
+2. Chỉ giữ một bóng: `--shadow-dialog` cho Dialog, Drawer, Popover, Menu. Bỏ `shadow-sm/md/lg/xl/2xl` ở nơi khác.
+3. Focus và lỗi: bỏ `ring-2 ring-ring/50` và `ring-destructive/30`. Dùng nền `bg-selected` (focus) và `bg-danger-soft` (lỗi). Giữ một outline 2px `focus-visible` cho bàn phím (yêu cầu truy cập).
+4. Bỏ `border` / `border-border/*` để phân vùng. Dùng lớp nền (bậc 1 đến 4) và khoảng trắng.
+5. Bỏ opacity lẻ (`/5`, `/40`, `/50`, `/60`, `/80`). Thay bằng bậc màu đã có (bậc 3, 4, 5, 6).
+6. Bỏ màu Tailwind thô (`zinc-*`, `red-*`, `green-*`, `amber-*`...). Chỉ dùng 12 bậc xám, `#0058A0` và `#B91C1C`.
+7. Bỏ `animate-in`, `zoom-in-95`, `fade-in-50`, `slide-in-*`, `active:scale-[0.98]`. Giữ chuyển màu 100ms và trượt SidePanel 260ms.
+8. Cỡ chữ chỉ 12/13/14/16/20/24/28. Bỏ `text-[9px]`, `[10px]`, `[11px]`.
+9. Không gradient (đã sạch).
+
+## Theo component
+
+### Mờ kính (mục 1)
+bottom-sheet, command-menu, destructive-confirm-dialog, dialog, drawer, feedback-layer, menu, popover
+
+### Bóng thừa (mục 2)
+bottom-sheet (`shadow-2xl`), command-menu (`shadow-2xl`), vietnamese-date-picker (`shadow-2xl`), tooltip (`shadow-lg`), bulk-action-bar, delegation-card, digital-signature, document-register-export, drawer, inline-explanation, role-permission-matrix, skip-link
+
+### Viền (mục 4)
+administrative-header, command-menu, comment-thread, vietnamese-date-picker, date-range-picker (2 ô nhập và đường `border-t`), delegation-card, digital-signature (thẻ chọn nhà cung cấp `border rounded-lg` + `bg-primary/5 ring-1`), document-register-export, document-status-timeline, drawer, feedback-layer, inline-explanation, multi-select, person-picker, priority-urgency-badge, role-permission-matrix, slider, tabs, time-picker, timeline
+
+### Ring focus/lỗi (mục 3)
+accordion, breadcrumb, button, checkbox, combobox, comment-thread, data-table, date-range-picker, dialog, digital-signature, document-register-export, file-dropzone, filter-chip, inline-explanation, input, menubar, multi-select, pagination, person-picker, quick-entry, radio-group, read-only-field, segmented-control, select, skip-link, slider, switch, textarea, time-picker, toolbar, user-avatar
+
+Ngoại lệ: `ring-2 ring-background` ở user-avatar/group là viền tách avatar chồng nhau, có thể giữ.
+
+### Animation (mục 7)
+bulk-action-bar, button, command-menu, date-range-picker, destructive-confirm-dialog, dialog, drawer, feedback-layer, inline-explanation, menu, multi-select, person-picker, popover, read-only-field, skeleton (`animate-pulse`, đổi thành nền tĩnh hoặc chuyển nhẹ), slider, time-picker, top-banner
+
+### Màu ngoài thang (mục 6)
+administrative-header, user-avatar, delegation-card, digital-signature, document-register-export, drawer, feedback-layer, priority-urgency-badge, read-only-field, timeline, tooltip (`bg-zinc-600/90` đổi thành `#1A1D23`), top-banner
+
+### Cỡ chữ lẻ (mục 8)
+administrative-header, cascading-menu, user-avatar, kbd, command-menu, comment-thread, context-menu, vietnamese-date-picker, date-range-picker, delegation-card, digital-signature, document-register-export, document-status-timeline, menubar, quick-entry, role-permission-matrix, select, time-picker
+
+### Opacity lẻ (mục 5)
+Hầu hết component trong danh sách trên. Ưu tiên: card, badge, input, textarea, button (hover `/60`, `/80`), popover, dialog, timeline, tabs.
+
+## Còn thiếu so với guide
+- Icon trạng thái nhiệm vụ (icon nét mảnh 16px, icon đặc khi hoàn thành).
+- Chỉ báo mức ưu tiên 4 vạch (priority-urgency-badge hiện dùng màu và viền).
+- Thẻ đăng nhập `rounded-3xl`.
+- Sidebar/AppShell, thông báo, Toggle/ToggleGroup, Calendar độc lập, spinner.
+
+## Cách áp dụng
+Sửa ở repo gốc `qcet-eoffice`, rồi chạy lại `/design-sync`. Sau đó chạy `check_design_system` để xác nhận.

@@ -33,7 +33,7 @@ Hệ thống QCET E-Office phục vụ quản trị điều hành, quản lý nh
 - **Dung lượng DOM Tree**: Nhỏ hơn 800 DOM nodes ở trạng thái mở rộng toàn bộ danh sách phòng ban.
 - **Total Blocking Time (TBT)**: Nhỏ hơn 50ms trong toàn bộ chu kỳ khởi tạo trang chủ.
 
-### 1.2. Nguyên tắc Tuân thủ Kỹ thuật (CLAUDE.md & Architecture Governance)
+### 1.2. Nguyên tắc Tuân thủ Kỹ thuật (AGENTS.md & Architecture Governance)
 Mọi can thiệp mã nguồn trong tài liệu này bắt buộc tuân thủ 5 nguyên tắc nền tảng:
 1. **Tiêu chuẩn Giao diện Light-Only (OKLCH Color Space)**:
    - Hệ thống vận hành thuần túy trên Light Mode chuẩn công sở hành chính giáo dục.

@@ -15,7 +15,7 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
         role="switch"
         data-slot="switch"
         className={cn(
-          "peer h-6 w-10 cursor-pointer appearance-none rounded-full bg-mark outline-none transition-colors duration-[var(--motion-duration-micro)] checked:bg-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+          "peer h-6 w-10 cursor-pointer appearance-none rounded-full bg-control-edge outline-none transition-colors duration-100 checked:bg-primary focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
           className,
         )}
       />

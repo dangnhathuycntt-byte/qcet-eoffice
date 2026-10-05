@@ -428,7 +428,8 @@ export const TaskRow = React.memo(function TaskRow({
     onContextMenu?.(task, e);
   };
 
-  const taskCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
+  const rawCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
+  const taskCode = rawCode.replace(/[–—–—]/g, "-");
   const statusLabel =
     task.status === "COMPLETED"
       ? "Hoàn thành"
@@ -440,32 +441,7 @@ export const TaskRow = React.memo(function TaskRow({
       ? "Đang thực hiện"
       : "Mới";
 
-  const paddingClass = "py-2 px-2.5";
-  const titlePaddingClass = "pl-3.5 sm:pl-4 pr-2.5 py-2";
-  const rowHeightClass = "min-h-[44px] sm:min-h-[48px]";
-
-  // Cell styling based on column position (first, middle, last) and contiguous selection group status
-  const getCellClasses = (isFirst: boolean, isLast: boolean) => {
-    const bgClass = isSelected
-      ? "bg-primary/[0.08] group-hover:bg-primary/[0.12]"
-      : "bg-transparent group-hover:bg-muted/35";
-
-    let radiusClass = "rounded-none";
-    if (!isSelected || selectionGroupPosition === "only" || !selectionGroupPosition) {
-      if (isFirst) radiusClass = "rounded-l-xl";
-      else if (isLast) radiusClass = "rounded-r-xl";
-    } else if (selectionGroupPosition === "first") {
-      if (isFirst) radiusClass = "rounded-tl-xl rounded-bl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-tr-xl rounded-br-none rounded-l-none";
-    } else if (selectionGroupPosition === "middle") {
-      radiusClass = "rounded-none";
-    } else if (selectionGroupPosition === "last") {
-      if (isFirst) radiusClass = "rounded-bl-xl rounded-tl-none rounded-r-none";
-      else if (isLast) radiusClass = "rounded-br-xl rounded-tr-none rounded-l-none";
-    }
-
-    return cn("transition-colors border-b-[1.5px] border-transparent", bgClass, radiusClass);
-  };
+  const rowHeightClass = "h-12 min-h-[48px]";
 
   return (
     <tr
@@ -478,14 +454,14 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-all select-none bg-transparent text-foreground",
+        "group cursor-pointer transition-colors select-none text-foreground border-b border-border/70 last:border-b-0",
         rowHeightClass,
-        // State 1: Hover on unselected row — subtle tint without competing with selected state
-        !isSelected && "hover:bg-muted/35",
-        // State 2: Focus on unselected row (WCAG 2.2 AA Focus visible)
-        !isSelected && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:bg-muted/30 focus-visible:outline-none",
-        // Focus on selected row: subtle inner tint without recreating individual rounded capsule or gaps
-        isSelected && "focus-visible:outline-none focus-visible:[&>td]:bg-primary/[0.14]",
+        // State 1: Hover on unselected row
+        !isSelected && "hover:bg-muted/40",
+        // State 2: Selected row
+        isSelected && "bg-selected/80 hover:bg-selected",
+        // State 3: Focus on unselected row (WCAG 2.2 AA Focus visible)
+        "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none",
         // State 4: Previewing (Peek preview)
         isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
@@ -495,7 +471,7 @@ export const TaskRow = React.memo(function TaskRow({
       )}
     >
       {/* 1. Mã Column: Selector + Status Circle + Priority Signal Bars + Task Code */}
-      <td className={cn("w-44 min-w-[170px] align-middle whitespace-nowrap", titlePaddingClass, getCellClasses(true, false))}>
+      <td className="w-[195px] min-w-[180px] align-middle whitespace-nowrap pl-4 sm:pl-5 pr-2.5 py-2">
         <div className="flex items-center gap-2">
           {/* Integrated leading selector: Accessible keyboard + large hit area (~32px) */}
           <div
@@ -537,12 +513,6 @@ export const TaskRow = React.memo(function TaskRow({
             )}
           </div>
 
-          {/* Geometric Status Indicator Circle with accessible label */}
-          <div title={statusLabel} className="shrink-0 flex items-center">
-            <TaskStatusCircle status={task.status} />
-            <span className="sr-only">{statusLabel}</span>
-          </div>
-
           {/* Priority 3-bar signal indicator */}
           <PrioritySignalBars priority={task.priority} />
 
@@ -556,10 +526,16 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 2. Tên Column: Title + Inline Subtask Count */}
-      <td className={cn("min-w-[280px] md:min-w-[360px] flex-1 align-middle", paddingClass, getCellClasses(false, false))}>
+      {/* 2. Tên Column: Geometric Status Circle + Title + Inline Subtask Count */}
+      <td className="w-[38%] min-w-[240px] align-middle px-3 py-2">
         <div className="flex flex-col min-w-0 gap-0.5">
           <div className="flex items-center gap-2 min-w-0">
+            {/* Geometric Status Indicator Circle with accessible label (status bullet) */}
+            <div title={statusLabel} className="shrink-0 flex items-center">
+              <TaskStatusCircle status={task.status} />
+              <span className="sr-only">{statusLabel}</span>
+            </div>
+
             <span
               className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
@@ -581,7 +557,7 @@ export const TaskRow = React.memo(function TaskRow({
             {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
               <span
                 data-slot="subtask-dri-badge"
-                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-[10px] font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
+                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-[11px] font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
                 title={`Bạn phụ trách ${task.viewerContext.matchedSubtaskCount} việc con trong nhiệm vụ này`}
               >
                 Phụ trách {task.viewerContext.matchedSubtaskCount} việc con
@@ -591,7 +567,7 @@ export const TaskRow = React.memo(function TaskRow({
             {/* Due in month indicator */}
             {dueInMonthCount > 0 && (
               <span
-                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-[10px] font-semibold tabular-nums shrink-0"
+                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-[11px] font-semibold tabular-nums shrink-0"
                 title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
               >
                 Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
@@ -602,14 +578,14 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 3. Đơn vị Column */}
-      <td className={cn("w-36 lg:w-44 min-w-[120px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+      <td className="w-[22%] min-w-[160px] align-middle whitespace-nowrap px-3 py-2">
         <span className="text-xs text-muted-foreground truncate block" title={departmentName}>
           {departmentName || "-"}
         </span>
       </td>
 
       {/* 4. Phụ trách Column: Pastel Avatar + Name */}
-      <td className={cn("w-40 lg:w-48 min-w-[140px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
+      <td className="w-[22%] min-w-[160px] align-middle whitespace-nowrap px-3 py-2">
         <div
           className="flex items-center gap-2 min-w-0"
           title={`${driInfo.primaryName || "-"}${departmentName ? ` (${departmentName})` : ""}`}
@@ -632,8 +608,8 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 5. Hạn Column: DD/MM (bold red if overdue) + title with DD/MM/YYYY */}
-      <td className={cn("w-28 min-w-[90px] align-middle whitespace-nowrap", paddingClass, getCellClasses(false, false))}>
-        <div className="flex flex-col gap-0.5">
+      <td className="w-[140px] min-w-[120px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-right relative group/due">
+        <div className="flex flex-col items-end gap-0.5">
           {task.dueDate ? (
             <>
               <span
@@ -651,14 +627,14 @@ export const TaskRow = React.memo(function TaskRow({
               </span>
               {slaStatus.isOverdue && (
                 <span
-                  className="inline-flex items-center text-[10px] font-semibold text-rose-600"
+                  className="inline-flex items-center text-[11px] font-semibold text-rose-600 leading-tight"
                   title={slaStatus.label || "Quá hạn"}
                 >
                   {slaStatus.label || "Quá hạn"}
                 </span>
               )}
               {!slaStatus.isOverdue && slaStatus.isToday && (
-                <span className="inline-flex items-center text-[10px] font-semibold text-amber-600">
+                <span className="inline-flex items-center text-[11px] font-semibold text-amber-600 leading-tight">
                   Hôm nay
                 </span>
               )}
@@ -667,20 +643,15 @@ export const TaskRow = React.memo(function TaskRow({
             <span className="text-muted-foreground/50 text-xs">-</span>
           )}
         </div>
-      </td>
 
-      {/* 6. Thao tác Column (Context button `...` - Mobile/Touch overflow) */}
-      <td
-        className={cn("w-8 min-w-[32px] align-middle text-right whitespace-nowrap pr-2.5", paddingClass, getCellClasses(false, true))}
-        onClick={(e) => e.stopPropagation()}
-      >
+        {/* Quick Context Button on Hover without taking table column space */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onContextMenu?.(task, e);
           }}
-          className="inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
+          className="absolute right-1 top-1/2 -translate-y-1/2 size-6 inline-flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none bg-background/90 shadow-2xs"
           aria-label="Thao tác nhanh"
           title="Thao tác nhanh (Chuột phải hoặc nhấp)"
         >

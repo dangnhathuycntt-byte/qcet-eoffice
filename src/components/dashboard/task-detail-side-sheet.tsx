@@ -60,6 +60,7 @@ import {
 } from "@/lib/dacum-workflow-engine";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn, getInitials } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
 import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
@@ -1196,9 +1197,7 @@ export function TaskDetailSideSheet({
                 Chủ trì nhiệm vụ
               </span>
               <div className="flex items-center gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary border border-primary/20">
-                  {getInitials(assigneeName)}
-                </span>
+                <UserAvatar name={assigneeName} size="md" />
                 <span className="font-semibold text-foreground truncate">
                   {assigneeName}
                 </span>
@@ -2005,21 +2004,12 @@ export function TaskDetailSideSheet({
                             className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80"
                             title={`Người phụ trách duy nhất: ${sub.assigneeName || "Chưa phân công"}`}
                           >
-                            {sub.assigneeAvatar ? (
-                              <img
-                                src={sub.assigneeAvatar}
-                                alt=""
-                                aria-hidden="true"
-                                className="size-4 rounded-full object-cover border border-border/60"
-                              />
-                            ) : (
-                              <div
-                                aria-hidden="true"
-                                className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs"
-                              >
-                                {sub.assigneeName ? sub.assigneeName.charAt(0).toUpperCase() : "?"}
-                              </div>
-                            )}
+                            <UserAvatar
+                              name={sub.assigneeName}
+                              avatarUrl={sub.assigneeAvatar}
+                              size="xs"
+                              className="border border-border/60"
+                            />
                             <span className="truncate max-w-[120px] font-medium text-slate-800">
                               {sub.assigneeName || "Chưa phân công"}
                             </span>

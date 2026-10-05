@@ -41,9 +41,11 @@ yarn-error.log*
 
 # design export archives and temp outputs
 Claude outputs/
+/docs/ux/references/*.local.html
 *.zip
 *.db-journal
 dev.db
+cdm.json
 
 # typescript
 *.tsbuildinfo
@@ -81,3 +83,9 @@ uploads/
 # Obsidian — giữ plugin config, loại workspace cá nhân
 docs/.obsidian/workspace.json
 docs/.obsidian/workspace-mobile.json
+
+# design-sync artifacts
+.ds-sync/
+ds-bundle/
+.design-sync/
+

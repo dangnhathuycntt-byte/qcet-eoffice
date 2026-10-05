@@ -89,4 +89,4 @@
 ---
 
 *Autonomous evidence-based resolution — 28/09/2026*
-*Rationale recorded per execution plan §0.3 and implementation-plan-v1 §I governance rules.*
+*Rationale recorded per execution plan §0.3 and the historical implementation v1 §I governance rules (plan removed from the checkout).*

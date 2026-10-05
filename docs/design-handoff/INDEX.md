@@ -1,5 +1,7 @@
 # Chỉ mục bảng design
 
+Bộ bàn giao tham khảo; không tự thay thế bộ thiết kế người dùng chọn. Tra [DESIGN.md ở gốc](../../DESIGN.md) để xác định nguồn và khác biệt hiện tại.
+
 Mỗi bảng có ảnh trong `shots/` và nguồn trong `project/`. Bảng tương tác (is_interactive) chỉ chụp trạng thái mặc định.
 
 

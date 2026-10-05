@@ -38,7 +38,7 @@ const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
 
 /**
  * Standard Dialog wrapper over `@base-ui/react/dialog`.
- * Provides accessible portal, backdrop blur (bg-black/40 + backdrop-blur-xs), focus trap, ESC dismiss, and clean layout.
+ * Provides accessible portal, overlay backdrop (bg-overlay / bg-black/40), focus trap, ESC dismiss, and clean layout.
  * Aligned with Modal.dc.html: 10% distance from top edge (avoids vertical jump on content resize), max-height 85vh.
  */
 export function StandardDialog({
@@ -55,12 +55,11 @@ export function StandardDialog({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal keepMounted={open}>
-        <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-safe:transition-opacity motion-safe:duration-150" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none" />
         <BaseDialog.Popup
           className={cn(
-            "fixed left-1/2 top-[10%] z-50 w-full -translate-x-1/2 outline-none max-h-[85vh] flex flex-col overflow-y-auto",
-            "rounded-2xl border-0 bg-card p-6 shadow-[var(--shadow-dialog)]",
-            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+            "fixed left-1/2 top-[10%] z-40 w-full -translate-x-1/2 outline-none max-h-[85vh] flex flex-col overflow-y-auto",
+            "rounded-2xl border-0 bg-card p-4 sm:p-6 shadow-dialog motion-reduce:transition-none",
             sizeClasses[size],
             className
           )}
@@ -68,12 +67,12 @@ export function StandardDialog({
           {showHeader ? (
             <>
               <div className="flex items-center justify-between gap-3 pb-4">
-                <BaseDialog.Title className="text-lg font-semibold tracking-tight text-foreground">
+                <BaseDialog.Title className={cn("font-semibold tracking-tight text-foreground", (size === "lg" || size === "xl" || size === "full") ? "text-xl" : "text-base")}>
                   {title}
                 </BaseDialog.Title>
                 {showCloseButton && (
                   <BaseDialog.Close
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
                     aria-label="Đóng"
                   >
                     <X className="h-4 w-4" />

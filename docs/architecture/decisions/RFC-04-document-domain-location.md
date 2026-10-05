@@ -16,7 +16,7 @@
   - `RFC-03: Delegation Consolidation Analysis`
   - `RFC-06: TaskScope vs TaskOriginLevel Boundary Analysis`
   - `docs/architecture/enterprise-product-architecture.md` (Mục Gap G9: Document FSM Outside Domain Layer)
-  - `docs/architecture/implementation-plan-v1.md` (Mục Phase 5 / WI-5.2)
+  - kế hoạch implementation v1 đã xóa khỏi checkout (tra lịch sử Git nếu cần) (Mục Phase 5 / WI-5.2)
   - `Nghị định 30/2020/NĐ-CP` về Công tác văn thư
   - `Nghị định 68/2024/NĐ-CP` về Chữ ký số và dịch vụ tin cậy trong giao dịch điện tử
 
@@ -333,7 +333,7 @@ Tầng này chịu trách nhiệm tương tác với cơ sở dữ liệu Prisma
 Việc tái cấu trúc một phân hệ lớn như Document có nguy cơ gây lỗi biên dịch hoặc gián đoạn phiên làm việc của dev server nếu thực hiện di chuyển tệp tin (file move) đột ngột.
 Để đảm bảo an toàn tuyệt đối, dự án áp dụng **Quy tắc Bắt buộc**:
 1. **Bảo toàn giao diện tương thích ngược 100% (100% Backward Compatibility)**: Mọi đường dẫn import cũ (`@/lib/documents/*`, `@/lib/document-numbering`) phải tiếp tục hoạt động mà không gây lỗi TypeScript hay runtime error.
-2. **Tuân thủ nghiêm ngặt Quy chuẩn Xác thực (`.claude/rules/verification.md`)**: Tuyệt đối không chạy `next build` / `npm run build` gây crash dev server và hỏng thư mục `.next/`. Xác thực bằng `npm run typecheck`, `npm run lint`, và các test suites chuyên biệt.
+2. **Tuân thủ nghiêm ngặt Quy chuẩn Xác thực (`AGENTS.md`)**: Tuyệt đối không chạy `next build` / `npm run build` gây crash dev server và hỏng thư mục `.next/`. Xác thực bằng `npm run typecheck`, `npm run lint`, và các test suites chuyên biệt.
 3. **Mô hình Expand & Contract qua Re-export Facades**: Tạo cấu trúc mới trước, biến cấu trúc cũ thành facade chuyển tiếp, sau đó di chuyển các caller theo từng pha độc lập.
 
 ### 5.2 Thiết Kế Các Re-export Facades Tại `src/lib/documents/`
@@ -471,7 +471,7 @@ Quá trình triển khai vật lý sẽ được thực thi trong Work Item ti�
 
 ### 6.1 Quy Chuẩn Kiểm Tra Bắt Buộc (Verification Protocol)
 
-Nhằm đảm bảo an toàn tuyệt đối cho môi trường dev server theo đúng quy định tại `.claude/rules/verification.md`:
+Nhằm đảm bảo an toàn tuyệt đối cho môi trường dev server theo đúng quy định tại `AGENTS.md`:
 - **NGHIÊM CẤM**:
   ```bash
   # TUYỆT ĐỐI KHÔNG CHẠY TRONG QUÁ TRÌNH KIỂM TRA
@@ -525,7 +525,7 @@ Do toàn bộ quá trình tái cấu trúc sử dụng mẫu thiết kế Re-exp
 2. **Rủi ro lỗi tại tầng facade (Shim Failure)**:
    - Trong trường hợp xấu nhất, thực hiện `git revert` commit di chuyển mã nguồn. Không có dữ liệu nào bị ảnh hưởng do không có database migration.
 3. **Tính độc lập của nhánh**:
-   - Mọi thao tác đều được thực thi trên nhánh riêng `rfc/document-location`, tuân thủ chính sách Git Workflow (`.claude/rules/git-workflow.md`): Tuyệt đối không tự ý merge vào `main` cho đến khi có chỉ thị từ người dùng.
+   - Mọi thao tác đều được thực thi trên nhánh riêng `rfc/document-location`, tuân thủ chính sách Git Workflow (`AGENTS.md`): Tuyệt đối không tự ý merge vào `main` cho đến khi có chỉ thị từ người dùng.
 
 ---
 

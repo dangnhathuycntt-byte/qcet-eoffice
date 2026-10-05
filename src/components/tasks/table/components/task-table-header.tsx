@@ -41,14 +41,13 @@ interface ColumnDefinition {
   widthClass?: string;
 }
 
-// Columns: Mã | Tên (Nhiệm vụ) | Đơn vị | Phụ trách | Hạn | Actions
+// Columns: Mã | Tên (Nhiệm vụ) | Đơn vị | Phụ trách | Hạn
 const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "code", label: "Mã", sortable: true, widthClass: "w-44 min-w-[170px]" },
-  { id: "title", label: "Tên", sortable: true, widthClass: "min-w-[280px] md:min-w-[360px] flex-1" },
-  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-36 lg:w-44 min-w-[120px]" },
-  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-40 lg:w-48 min-w-[140px]" },
-  { id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-28 min-w-[90px]" },
-  { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8 min-w-[32px]" },
+  { id: "code", label: "Mã", sortable: true, widthClass: "w-[195px] min-w-[180px]" },
+  { id: "title", label: "Tên", sortable: true, widthClass: "w-[38%] min-w-[240px]" },
+  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-[22%] min-w-[160px]" },
+  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-[22%] min-w-[160px]" },
+  { id: "dueDate", label: "Hạn", sortable: true, align: "right", widthClass: "w-[140px] min-w-[120px]" },
 ];
 
 export function TaskTableHeader({
@@ -93,13 +92,13 @@ export function TaskTableHeader({
     );
   };
 
-  const rowHeightClass = "h-9";
-  const paddingClass = "px-2.5 py-1.5";
+  const rowHeightClass = "h-11";
+  const paddingClass = "px-3 py-2.5";
 
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/60 bg-white/95 backdrop-blur-xs select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/70 bg-card select-none",
         className
       )}
     >
@@ -138,7 +137,13 @@ export function TaskTableHeader({
 
           // First column padding alignment when selection checkbox is absent
           const isFirstColumn = !showSelection && colIdx === 0;
-          const leadingPaddingClass = isFirstColumn ? "pl-3.5 sm:pl-4 pr-2.5 py-1.5" : paddingClass;
+          const leadingPaddingClass = isFirstColumn ? "pl-4 sm:pl-5 pr-2.5 py-2.5" : paddingClass;
+          const isLastColumn = colIdx === activeColumns.length - 1;
+          const columnPaddingClass = col.id === "dueDate" || isLastColumn
+            ? "pl-2.5 pr-4 sm:pr-5 py-2.5"
+            : isFirstColumn
+            ? leadingPaddingClass
+            : paddingClass;
 
           // Special alignment for Code column (First Column): Header leading selector + label "Mã"
           if (col.id === "code") {
@@ -218,7 +223,7 @@ export function TaskTableHeader({
                 className={cn(
                   "align-middle font-medium transition-colors group/th text-left",
                   col.widthClass,
-                  paddingClass
+                  columnPaddingClass
                 )}
               >
                 <div className="flex items-center gap-1">
@@ -254,7 +259,7 @@ export function TaskTableHeader({
                   : col.align === "center"
                   ? "text-center"
                   : "text-left",
-                paddingClass
+                columnPaddingClass
               )}
             >
               <div
