@@ -215,6 +215,8 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
 
             academicMonth: 9,
             academicYear: '2026-2027',
+            // Explicit startDate ensures dueDate > startDate regardless of NOW()
+            startDate: new Date('2026-01-01T00:00:00Z'),
             dueDate: new Date('2027-06-30T17:00:00Z'),
           },
         });
@@ -267,6 +269,8 @@ describe('Task 10: Transactional Outbox Pattern & Model', () => {
 
               academicMonth: 9,
               academicYear: '2026-2027',
+              // Explicit startDate ensures dueDate > startDate regardless of NOW()
+              startDate: new Date('2026-01-01T00:00:00Z'),
               dueDate: new Date('2027-06-30T17:00:00Z'),
             },
           });
