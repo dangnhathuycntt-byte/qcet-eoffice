@@ -112,7 +112,7 @@ jobs:
           fi
           echo "ClamAV start command completed."
 
-      - name: Wait for ClamAV to become ready (up to 120s)
+      - name: Wait for ClamAV to become ready (up to 300s)
         env:
           COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
         run: |
@@ -122,28 +122,40 @@ jobs:
             exit 1
           fi
           echo "ClamAV container: $CLAM"
-          echo "Waiting for PONG on TCP:3310 (max 120s)..."
+          echo "Waiting for PONG on TCP:3310 (max 300s — first-run definition download)..."
 
           CLAM_IP=$(docker inspect "$CLAM" --format \
             '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -1)
-          if [ -z "$CLAM_IP" ]; then
-            echo "ERROR: ClamAV container has no IP address." >&2
-            exit 1
-          fi
-          echo "ClamAV IP: $CLAM_IP"
+          echo "ClamAV IP: ${CLAM_IP:-<detecting...>}"
 
-          for i in $(seq 1 24); do
-            RESPONSE=$(timeout 5 bash -c "echo 'PING' | nc -w 3 $CLAM_IP 3310" 2>/dev/null || true)
+          for i in $(seq 1 60); do
+            # Try multiple methods to send PING and get PONG:
+            # 1. docker exec (most reliable — avoids nc availability issues)
+            # 2. nc with -q flag (GNU netcat)
+            # 3. nc without -q (BSD netcat)
+            RESPONSE=""
+            if command -v docker >/dev/null 2>&1; then
+              RESPONSE=$(docker exec "$CLAM" sh -c "echo PING | nc -w 3 127.0.0.1 3310" 2>/dev/null || \
+                         docker exec "$CLAM" sh -c "printf 'nZPING\0' | nc -w 3 -q1 127.0.0.1 3310" 2>/dev/null || true)
+            fi
+            # Fallback: try from runner host
+            if [ -z "$RESPONSE" ] && [ -n "$CLAM_IP" ]; then
+              RESPONSE=$(echo 'PING' | nc -w 3 "$CLAM_IP" 3310 2>/dev/null || \
+                         echo 'PING' | timeout 4 ncat "$CLAM_IP" 3310 2>/dev/null || true)
+            fi
+
             if echo "$RESPONSE" | grep -qi "PONG"; then
               echo "ClamAV TCP:3310 → PONG received (attempt $i)"
               break
             fi
-            if [ $i -eq 24 ]; then
-              echo "ERROR: ClamAV did not respond after 120s." >&2
-              docker logs --tail 30 "$CLAM" >&2 || true
+
+            if [ $i -eq 60 ]; then
+              echo "ERROR: ClamAV did not respond with PONG after 300s." >&2
+              echo "Last response: ${RESPONSE:-<empty>}" >&2
+              docker logs --tail 40 "$CLAM" >&2 || true
               exit 1
             fi
-            echo "Attempt $i: no PONG yet (${RESPONSE:-<empty>}). Waiting 5s..."
+            echo "Attempt $i/60: no PONG yet. Waiting 5s..."
             sleep 5
           done
 
