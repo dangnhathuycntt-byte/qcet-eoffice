@@ -1,0 +1,216 @@
+# Production Database Migration — Manual Trigger
+#
+# Runs `prisma migrate deploy` against the production database via
+# the app container on qcet-network (Docker-internal hostname resolves).
+#
+# Security:
+#   - DATABASE_URL read from running app container env (masked immediately)
+#   - Migration runs inside app container which already has DATABASE_URL set
+#   - No credential values appear in logs
+#
+# Prerequisites:
+#   - qcet-eoffice-app container running on self-hosted runner
+#   - APP_DATABASE_URL must have schema-write permissions (qcet_admin)
+#
+# Usage:
+#   gh workflow run migrate-production.yml -f confirm=migrate
+
+name: Production Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'migrate' to confirm running prisma migrate deploy in production"
+        required: true
+        type: string
+
+concurrency:
+  group: production-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Prisma Migrate Deploy (Production)
+    runs-on: [self-hosted, Linux, X64, qcet]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "migrate" ]; then
+            echo "ERROR: Must type 'migrate' exactly to confirm." >&2
+            exit 1
+          fi
+          echo "Confirmation accepted."
+
+      - name: Find app container
+        id: app
+        run: |
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' \
+              | grep -v "db\|clamav\|cloudflared\|tunnel" | head -1)
+          fi
+          if [ -z "$APP" ]; then
+            echo "ERROR: No qcet app container is running." >&2
+            docker ps --format '{{.Names}}' >&2
+            exit 1
+          fi
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+          echo "App container: $APP"
+          if docker exec "$APP" sh -c "ls /app/node_modules/.bin/prisma" >/dev/null 2>&1; then
+            echo "prisma CLI: found"
+          else
+            echo "ERROR: prisma CLI not found at /app/node_modules/.bin/prisma" >&2
+            exit 1
+          fi
+
+      - name: Check migration status (pre-migrate)
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          echo "=== Current migration status ==="
+          DOCKER_NET=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -v '^$' | head -1)
+          echo "Docker network: $DOCKER_NET"
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          echo "::add-mask::$DB_URL"
+
+          TMPDIR_M=$(mktemp -d /tmp/migrate-check.XXXXXX)
+          trap 'rm -rf "$TMPDIR_M"' EXIT
+
+          # Write Python URL parser to file (avoids << in YAML run block)
+          PY="$TMPDIR_M/parse.py"
+          printf '%s\n' \
+            'import os, base64' \
+            'from urllib.parse import urlsplit, unquote' \
+            'u = urlsplit(os.environ.get("DATABASE_URL",""))' \
+            'b = lambda s: base64.b64encode(s.encode()).decode()' \
+            'pu = unquote(u.username or "")' \
+            'pp = unquote(u.password or "")' \
+            'ph = unquote(u.hostname or "localhost")' \
+            'po = str(u.port or 5432)' \
+            'pd = unquote((u.path.lstrip("/").split("?")[0] if u.path else "postgres"))' \
+            'print("PG_USER=$(printf '"'"'%s'"'"' '"'"'" + b(pu) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_PASS=$(printf '"'"'%s'"'"' '"'"'" + b(pp) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_HOST=$(printf '"'"'%s'"'"' '"'"'" + b(ph) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_PORT=$(printf '"'"'%s'"'"' '"'"'" + b(po) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_DB=$(printf '"'"'%s'"'"' '"'"'"   + b(pd) + "'"'"'" + "'"'"' | base64 -d)")' \
+            > "$PY"
+          eval "$(DATABASE_URL="$DB_URL" python3 "$PY")"
+          echo "DB: host=$PG_HOST port=$PG_PORT db=$PG_DB user=$PG_USER" >&2
+
+          ENV_FILE="$TMPDIR_M/pgenv"
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$ENV_FILE"
+          chmod 600 "$ENV_FILE"
+
+          APPLIED=$(docker run --rm \
+            --network "$DOCKER_NET" \
+            --env-file "$ENV_FILE" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A \
+              -c "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL" \
+            2>&1 | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Applied migrations (before): $APPLIED"
+
+          PENDING=$(docker run --rm \
+            --network "$DOCKER_NET" \
+            --env-file "$ENV_FILE" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A \
+              -c "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL ORDER BY started_at" \
+            2>&1 || echo "none")
+          echo "Migrations with issues (if any): ${PENDING:-none}"
+
+          TOTAL_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+          echo "Migration directories in repo: $TOTAL_DIRS"
+
+      - name: Run prisma migrate deploy (production)
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          echo "=== RUNNING: prisma migrate deploy ==="
+          echo "Actor: @${{ github.actor }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          docker exec "$APP_CONTAINER" \
+            sh -c "cd /app && node_modules/.bin/prisma migrate deploy 2>&1"
+          echo "prisma migrate deploy: complete"
+
+      - name: Verify migration success
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          echo "=== POST-MIGRATION VERIFICATION ==="
+          DOCKER_NET=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -v '^$' | head -1)
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          echo "::add-mask::$DB_URL"
+
+          TMPDIR_V=$(mktemp -d /tmp/migrate-verify.XXXXXX)
+          trap 'rm -rf "$TMPDIR_V"' EXIT
+
+          PY="$TMPDIR_V/parse.py"
+          printf '%s\n' \
+            'import os, base64' \
+            'from urllib.parse import urlsplit, unquote' \
+            'u = urlsplit(os.environ.get("DATABASE_URL",""))' \
+            'b = lambda s: base64.b64encode(s.encode()).decode()' \
+            'pu = unquote(u.username or "")' \
+            'pp = unquote(u.password or "")' \
+            'ph = unquote(u.hostname or "localhost")' \
+            'po = str(u.port or 5432)' \
+            'pd = unquote((u.path.lstrip("/").split("?")[0] if u.path else "postgres"))' \
+            'print("PG_USER=$(printf '"'"'%s'"'"' '"'"'" + b(pu) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_PASS=$(printf '"'"'%s'"'"' '"'"'" + b(pp) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_HOST=$(printf '"'"'%s'"'"' '"'"'" + b(ph) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_PORT=$(printf '"'"'%s'"'"' '"'"'" + b(po) + "'"'"'" + "'"'"' | base64 -d)")' \
+            'print("PG_DB=$(printf '"'"'%s'"'"' '"'"'"   + b(pd) + "'"'"'" + "'"'"' | base64 -d)")' \
+            > "$PY"
+          eval "$(DATABASE_URL="$DB_URL" python3 "$PY")"
+
+          ENV_FILE="$TMPDIR_V/pgenv"
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$ENV_FILE"
+          chmod 600 "$ENV_FILE"
+
+          APPLIED=$(docker run --rm \
+            --network "$DOCKER_NET" \
+            --env-file "$ENV_FILE" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A \
+              -c "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL" \
+            2>&1 | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Applied migrations (after): $APPLIED"
+
+          FO_EXISTS=$(docker run --rm \
+            --network "$DOCKER_NET" \
+            --env-file "$ENV_FILE" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A \
+              -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='file_objects'" \
+            2>&1 | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "file_objects exists (1=yes, 0=no): $FO_EXISTS"
+
+          if [ "$FO_EXISTS" != "1" ]; then
+            echo "ERROR: file_objects table still missing after migration!" >&2
+            exit 1
+          fi
+          echo "VERIFIED: file_objects exists. Migration complete."
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Production Migration" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Actor: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SHA: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
