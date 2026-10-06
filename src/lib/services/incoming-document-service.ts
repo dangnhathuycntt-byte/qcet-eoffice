@@ -1000,11 +1000,23 @@ export async function assignUnitWork(
     };
   },
   {
-    // Serializable isolation prevents phantom reads between the pre-transaction
-    // doc.read and the in-transaction lock+CAS.  The SELECT FOR UPDATE inside
-    // the callback additionally serialises concurrent callers under the default
-    // READ COMMITTED level, so both layers guard against the double-claim race.
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    // READ COMMITTED isolation is required here, not Serializable.
+    //
+    // Under Postgres SSI (Serializable Snapshot Isolation), each transaction
+    // takes a snapshot at START and does not see commits from concurrent
+    // transactions within its own snapshot — even after acquiring a FOR UPDATE
+    // lock.  This means:
+    //   Tx A and Tx B both start → both snapshot status=DIRECTED
+    //   Tx A acquires FOR UPDATE lock, updates → commits
+    //   Tx B unblocks from FOR UPDATE but still sees status=DIRECTED in its
+    //     snapshot → updateMany WHERE status=DIRECTED → count=1 → both succeed
+    //
+    // Under READ COMMITTED (Postgres default), each *statement* re-evaluates
+    // with the latest committed data.  When Tx B unblocks after Tx A commits,
+    // Tx B's updateMany sees status=IN_PROGRESS → count=0 → ConflictError.
+    //
+    // Therefore: use READ COMMITTED (the Postgres default).
+    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
   }
 );
 }
