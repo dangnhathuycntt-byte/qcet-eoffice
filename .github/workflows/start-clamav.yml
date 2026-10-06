@@ -86,15 +86,34 @@ jobs:
           COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
         run: |
           echo "Starting ClamAV service..."
-          # Use the project's .env.production (or .env) so compose can interpolate
-          # all service variables. Runner must have the env file at compose dir.
-          ENV_FILE=""
+          # Docker Compose interpolates all service variables when parsing the file,
+          # even for services not being started. Supply placeholder values for required
+          # variables that belong to other services (app, db) — these are not used by
+          # the clamav service itself but must satisfy compose's variable resolution.
+          #
+          # Actual secrets stay in the host .env.production file owned by the app.
+          # We do not read or print those secrets here.
+          ENV_OVERRIDES=""
           if [ -f "$COMPOSE_DIR/.env.production" ]; then
-            ENV_FILE="--env-file $COMPOSE_DIR/.env.production"
+            echo "Using project .env.production for variable interpolation."
+            ENV_FILE_ARG="--env-file $COMPOSE_DIR/.env.production"
           elif [ -f "$COMPOSE_DIR/.env" ]; then
-            ENV_FILE="--env-file $COMPOSE_DIR/.env"
+            echo "Using project .env for variable interpolation."
+            ENV_FILE_ARG="--env-file $COMPOSE_DIR/.env"
+          else
+            # No env file found — supply placeholder values for compose variable resolution.
+            # These placeholders are NOT used by clamav service; they only satisfy compose parser.
+            echo "No .env file found; providing placeholder values for compose variable resolution."
+            export APP_DATABASE_URL="placeholder://localhost/placeholder"
+            export POSTGRES_PASSWORD="placeholder"
+            export POSTGRES_DB="placeholder"
+            export UPLOADS_HOST_PATH="/tmp/placeholder"
+            export NEXTAUTH_SECRET="placeholder"
+            export NEXTAUTH_URL="http://localhost:3000"
+            export TUNNEL_TOKEN="placeholder"
+            ENV_FILE_ARG=""
           fi
-          docker compose -f "$COMPOSE_DIR/docker-compose.yml" $ENV_FILE up -d --no-recreate clamav
+          docker compose -f "$COMPOSE_DIR/docker-compose.yml" $ENV_FILE_ARG up -d --no-recreate clamav
           echo "ClamAV start command completed."
 
       - name: Wait for ClamAV to become ready (up to 120s)
