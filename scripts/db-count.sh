@@ -55,13 +55,20 @@ rm -f "$PARSE_PY"
 
 echo "psql: db=$PG_DB user=$PG_USER pass-len=${#PG_PASS}" >&2
 
-# Run COUNT(*) inside DB container; PGPASSWORD as env var, not CLI arg.
-# Capture stderr in output so auth errors are visible.
+# Diagnostic: list schemas and tables so we can identify exact table location.
+SCHEMA_OUT=$(docker exec \
+  -e "PGPASSWORD=$PG_PASS" \
+  "$DB_CTR" \
+  psql -U "$PG_USER" -d "$PG_DB" -t -A \
+    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_name LIKE '%file%' ORDER BY table_schema, table_name" 2>&1 || echo "DIAG_FAILED")
+echo "diag schemas/tables: $SCHEMA_OUT" >&2
+
+# Try schema-qualified form first, then fall back to search-path default.
 PSQL_OUT=$(docker exec \
   -e "PGPASSWORD=$PG_PASS" \
   "$DB_CTR" \
   psql -U "$PG_USER" -d "$PG_DB" -t -A \
-    -c "SELECT COUNT(*) FROM file_objects" 2>&1 || echo "PSQL_FAILED")
+    -c "SELECT COUNT(*) FROM public.file_objects" 2>&1 || echo "PSQL_FAILED")
 
 echo "psql raw: $(echo "$PSQL_OUT" | head -1)" >&2
 
