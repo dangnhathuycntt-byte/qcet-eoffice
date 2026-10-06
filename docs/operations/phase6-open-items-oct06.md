@@ -8,18 +8,44 @@
 
 ## Evidence Basis
 
-| Evidence Source | Verified Fact |
+| Evidence Source | Verified Fact | Caveat |
+|---|---|---|
+| `~/.ssh/config` | Alias `xeon` → `100.78.3.20 User dnhhuy IdentityFile ~/.ssh/id_ed25519` | Config entry only; does not prove host is reachable |
+| `tailscale status` | Node `dnhhuy` (100.78.3.20, Linux) = **offline, last seen 7 days ago** | Tailscale client on local machine is the observer; host status accurate |
+| SSH connect attempt | `100.78.3.20:22` → Operation timed out | **Only port 22 attempted via Tailscale IP.** Other ports and other paths (workflow_dispatch via runner) not ruled out. |
+| `qcet.dixxie.store:22` | No route to host | Cloudflare Tunnel routes HTTP/HTTPS only; SSH over port 22 via domain name was not expected to work. **Does NOT prove SSH is unavailable via all paths.** |
+| `gh api /repos/.../actions/runners` | `qcet-runner-01`: status=`online`, OS=Linux, version=2.337.0 | Runner process online means its host machine is reachable via GitHub Actions network. |
+| CI run 37354723272 logs | Runner home: `/home/dnhhuy/actions-runner/_work/`; Docker API 1.55 on host | Runner executes on the host that also runs production Docker containers. **This IS the production host.** |
+| CI PostgreSQL service | `postgres:16-alpine` service container used in tests | **Not evidence of production DB.** CI uses an ephemeral service container, not the production database. |
+| `deploy.yml` (confirmed) | No SSH, no docker push steps; staging job writes `receipt.json` only | Production deploy job requires `v*.*.*` tag and `production` environment |
+| `qcet.dixxie.store/api/health` | `{"status":"ok","database":{"latencyMs":2},"uptimeSeconds":921233}` | Proves app + DB running; does not prove version or container identity |
+| `docker-compose.yml` | `CLAMAV_HOST: clamav` (service name), port defaults to 3310 via `CLAMAV_PORT` | Declared config; whether daemon is healthy on host requires `host-diagnostics.yml` run |
+| `src/lib/services/file-service.ts:113-114` | `host = CLAMAV_HOST`, `port = parseInt(CLAMAV_PORT \|\| "3310")` — separate env vars | Source truth; confirms format |
+| `cloudflared.yml` | Tunnel `514f4f82` → `qcet-app:3000` → `qcet.dixxie.store` | App reachable at domain; does not prove SSH blocked everywhere |
+
+### Corrections to prior evidence claims
+
+| Prior claim | Correction |
 |---|---|
-| `~/.ssh/config` | Alias `xeon` → `100.78.3.20 User dnhhuy IdentityFile ~/.ssh/id_ed25519` |
-| `tailscale status` | Node `dnhhuy` (100.78.3.20, Linux) = **offline, last seen 7 days ago** |
-| SSH connect attempt | `100.78.3.20:22` → Operation timed out (all ports) |
-| `gh api /repos/.../actions/runners` | `qcet-runner-01`: status=`online`, OS=Linux, version=2.337.0 |
-| CI run 37354723272 logs | Runner home: `/home/dnhhuy/actions-runner/_work/`; Docker API 1.55 on host |
-| `deploy.yml` (confirmed) | No SSH, no docker push steps; staging job writes `receipt.json` only |
-| `qcet.dixxie.store/api/health` | `{"status":"ok","database":{"latencyMs":2},"uptimeSeconds":921233}` |
-| `docker-compose.yml` | `CLAMAV_HOST: clamav` (service name), port defaults to 3310 via `CLAMAV_PORT` |
-| `src/lib/services/file-service.ts:113-114` | `host = CLAMAV_HOST`, `port = parseInt(CLAMAV_PORT \|\| "3310")` — separate env vars |
-| `cloudflared.yml` | Tunnel `514f4f82` → `qcet-app:3000` → `qcet.dixxie.store` |
+| "SSH timeout on all ports" | Only port 22 via Tailscale IP `100.78.3.20` was attempted. No scan of other ports; no attempt via workflow_dispatch runner execution. |
+| "SSH via production domain blocked by Cloudflare" | Cloudflare Tunnel routes HTTP only — port 22 on the domain was never expected to work. This is not evidence that SSH is unavailable on all paths. |
+| "CI Docker PostgreSQL proves production DB" | CI uses an ephemeral `postgres:16-alpine` service container. It has no relation to the production database. |
+| "Runner online but host unreachable for interactive commands" | The runner IS on the production host. `workflow_dispatch` can execute read-only diagnostics on that host without SSH. `host-diagnostics.yml` created for this purpose. |
+
+---
+
+## Runner as Production Host — Evidence Chain
+
+`qcet-runner-01` (online, Linux) runs at `/home/dnhhuy/actions-runner/_work/qcet-eoffice/`. CI run logs confirm Docker API 1.55 on the same machine. `docker-compose.yml` defines `qcet-app` (app), `qcet-db` (PostgreSQL), `clamav`, and `cloudflared` services. The Cloudflare tunnel routes `qcet.dixxie.store → qcet-app:3000`. The runner therefore executes on the same host as all production containers.
+
+**`workflow_dispatch` can execute bounded read-only commands on this host without SSH.** The `host-diagnostics.yml` workflow (created this PR) collects:
+- Physical hostname and kernel
+- Running container names, image digests, mounts, network IPs
+- ClamAV TCP:3310 health probe
+- Uploads mount source path
+- Environment variable NAMES in app container (no values)
+
+Dispatch result will be recorded in this document once available.
 
 ---
 
@@ -60,19 +86,18 @@ Provider-neutral WebCrypto SHA-256 pipeline in `src/lib/crypto/digital-signature
 **Execution plan line 172:**
 > Deploy the pilot to a bounded user group; observe authorization denials, command conflicts, outbox failures, upload/download failures, and workflow aging.
 
-**Status: `[ ]` BLOCKED — production host network unreachable**
+**Status: `[ ]` BLOCKED — interactive SSH to production host not yet established**
 
-| Access method | Result |
-|---|---|
-| SSH via Tailscale (`100.78.3.20`) | Timeout — node offline 7 days |
-| SSH via production domain (`qcet.dixxie.store:22`) | No route to host (Cloudflare blocks SSH) |
-| `deploy.yml` staging job | Writes receipt only; no container push |
-| `deploy.yml` production job | Requires `v*.*.*` tag + `production` environment — not triggered |
-| Self-hosted runner `qcet-runner-01` | Online (runner process alive) but host unreachable for interactive commands |
+| Access method | Result | Notes |
+|---|---|---|
+| SSH via Tailscale (`100.78.3.20:22`) | Timeout | Only port 22 attempted; Tailscale node offline 7 days |
+| SSH via `qcet.dixxie.store:22` | No route | Domain goes through Cloudflare Tunnel (HTTP only) — this result was expected, not evidence SSH is unavailable everywhere |
+| `deploy.yml` staging job | Writes receipt only; no container push | Confirmed from source |
+| `deploy.yml` production job | Requires `v*.*.*` tag + `production` environment | Not triggered |
+| `workflow_dispatch` via `qcet-runner-01` | **Available** — runner is on the production host | `host-diagnostics.yml` uses this path for read-only evidence; deploy commands also executable here |
 
-**Infrastructure confirmed from runner logs**: Docker 1.55 on host, PostgreSQL 16 runs in Docker on host, runner at `/home/dnhhuy/actions-runner/`.  
-**What production deployment requires**: `docker build -t qcet-eoffice-app:latest . && docker compose up -d` on the xeon host.  
-**Unblock path**: Restore Tailscale connectivity to `100.78.3.20` OR owner executes manually on host.
+**What production deployment requires**: `docker build -t qcet-eoffice-app:latest . && docker compose up -d` on the xeon host — executable via `workflow_dispatch` on `qcet-runner-01`.  
+**Unblock path**: Verify host identity via `host-diagnostics.yml` run, then authorise deploy workflow on runner.
 
 ---
 
@@ -109,34 +134,55 @@ No observation data exists. Legacy paths cannot be safely removed without confir
 
 | Sub-item | Evidence | Gap |
 |---|---|---|
-| Backup-restore drill (row-count parity) | `backup-restore-drill.mjs` executed 2026-09-28 on local `qcet_eoffice` — 46/46 tables MATCH | Production backup content checksum not verified (host unreachable) |
-| Outbox replay | 21/21 `outbox-pattern.test.ts` pass on `qcet_test` (2026-09-28) | Production outbox table state unknown |
-| Audit evidence retrieval | 19/19 `audit-events.test.ts` pass on `qcet_test`; 63,483 non-null `request_id` rows confirmed | Production audit log volume unverified |
-| Support runbooks | `docs/operations/recovery-paths.md` (11 scenarios), `docs/operations/rollback.md` | Physical drill (SSH-based) blocked |
-| ClamAV scan gate | `CLAMAV_HOST=clamav` (service name) + `CLAMAV_PORT=3310` (default) set in `docker-compose.yml` | No evidence ClamAV daemon is healthy on production host |
+| Backup-restore drill (row-count parity) | `backup-restore-drill.mjs` executed 2026-09-28 on local `qcet_eoffice` — 46/46 tables MATCH | Production backup content checksum not verified (no interactive SSH yet) |
+| Outbox replay | 21/21 `outbox-pattern.test.ts` pass on `qcet_test` (2026-09-28) | Production outbox table state: query via runner possible after host identity confirmed |
+| Audit evidence retrieval | 19/19 `audit-events.test.ts` pass on `qcet_test`; 63,483 non-null `request_id` rows confirmed | Production audit log volume: query via runner possible after host identity confirmed |
+| Support runbooks | `docs/operations/recovery-paths.md` (11 scenarios), `docs/operations/rollback.md` | Physical drill (interactive SSH) blocked; runner-based execution feasible for read-only steps |
+| ClamAV scan gate | `CLAMAV_HOST=clamav` (service name) + `CLAMAV_PORT=3310` (default) in `docker-compose.yml` | Daemon health on production host: `host-diagnostics.yml` gate 7 will confirm |
 
-**ClamAV config correction** (prior report error): `CLAMAV_HOST` is the hostname only (`clamav` service name in Docker network). Port is a **separate** `CLAMAV_PORT` env var defaulting to `3310` — not `host:port` format. `docker-compose.yml` does NOT set `CLAMAV_PORT` (so 3310 default applies). This is correct for intra-container communication.
+**ClamAV config**: `CLAMAV_HOST` is the hostname only (`clamav` Docker service name). Port is a **separate** `CLAMAV_PORT` env var defaulting to `3310`. `docker-compose.yml` does not set `CLAMAV_PORT` (3310 default applies). This is correct for intra-container communication.
 
 ---
 
-## Provider-Independent Preparations Completed (2026-10-06)
+## Provider-Independent Preparations (2026-10-06)
 
 | Preparation | Location | Status |
 |---|---|---|
-| Production backfill workflow | `.github/workflows/backfill-production.yml` | ✅ Created — triggers via `workflow_dispatch`, runs on self-hosted runner, supports dry-run/apply |
-| ClamAV env var format corrected | This document + `docker-compose.yml` verified | ✅ `CLAMAV_HOST=clamav`, `CLAMAV_PORT=3310` (default) — no change needed |
+| Host diagnostics workflow | `.github/workflows/host-diagnostics.yml` | ✅ Created — read-only, dispatched via `workflow_dispatch`, captures container/ClamAV/uploads identity |
+| Production backfill workflow (hardened) | `.github/workflows/backfill-production.yml` | ✅ Updated — 7 gates: non-empty secrets, absolute uploads path, dir existence, mount match, DB reachability, ClamAV health, concurrency lock |
+| ClamAV env var format corrected | This document + source verified | ✅ `CLAMAV_HOST=clamav`, `CLAMAV_PORT=3310` (default) — no change needed |
 | Recovery runbooks | `docs/operations/recovery-paths.md`, `rollback.md` | ✅ Complete (11 failure scenarios) |
 | Outbox replay evidence | `tests/outbox-pattern.test.ts` 21/21 on `qcet_test` | ✅ Verified |
 | Audit retrieval evidence | `tests/audit-events.test.ts` 19/19 on `qcet_test` | ✅ Verified |
 
-## Secrets Required Before Production Backfill
+## Secrets Required Before Production Backfill Apply
 
-Owner must add to GitHub repository secrets before triggering `.github/workflows/backfill-production.yml`:
+Owner must add to GitHub repository secrets before triggering `backfill-production.yml` with `apply=true`:
 
-| Secret | Value |
+| Secret | Value | Status |
+|---|---|---|
+| `PRODUCTION_DATABASE_URL` | Already configured (used by `deploy.yml`) | Assumed set; not independently verified |
+| `PRODUCTION_UPLOADS_DIR` | Host path for uploads bind-mount — value of `UPLOADS_HOST_PATH` in `.env.production` on xeon host | **Must be set before apply** |
+
+The backfill workflow will fail closed if either secret is empty, if `PRODUCTION_UPLOADS_DIR` is not an absolute path, or if the path does not match the running container's `/app/uploads` mount.
+
+## Host Diagnostics Evidence (to be populated)
+
+Dispatch `host-diagnostics.yml` via:
+```
+gh workflow run host-diagnostics.yml
+```
+Capture run ID and attach step summaries here as production host evidence for items 172 and 175.
+
+| Evidence Field | Value |
 |---|---|
-| `PRODUCTION_DATABASE_URL` | Already configured (used by `deploy.yml`) |
-| `PRODUCTION_UPLOADS_DIR` | Host path for uploads bind-mount — value of `UPLOADS_HOST_PATH` in `.env.production` on xeon host |
+| Diagnostics run ID | _pending dispatch_ |
+| Hostname | _pending_ |
+| App container name | _pending_ |
+| App image digest | _pending_ |
+| Uploads mount source | _pending_ |
+| ClamAV TCP:3310 health | _pending_ |
+| Health endpoint at dispatch time | _pending_ |
 
 ---
 
@@ -146,12 +192,12 @@ Owner must add to GitHub repository secrets before triggering `.github/workflows
 |---|---|---|---|
 | Digital-signature provider choice | 67 | `[ ]` DEFERRED | Owner selects CA vendor |
 | Digital-signature integration | 157 | `[ ]` BLOCKED | Item 67 unblocked |
-| Deploy pilot | 172 | `[ ]` BLOCKED | Tailscale restored to xeon OR owner runs `docker compose up -d` on host |
+| Deploy pilot | 172 | `[ ]` BLOCKED | Host identity confirmed via diagnostics → deploy workflow authorised on runner |
 | Reconcile post-pilot findings | 173 | `[ ]` PARTIAL | Item 172 deployed |
 | Observation + legacy removal | 174 | `[ ]` BLOCKED | Item 172 deployed |
-| Backup/restore + runbook verification | 175 | `[ ]` PARTIAL | Host access for production backup drill |
+| Backup/restore + runbook verification | 175 | `[ ]` PARTIAL | Host identity confirmed → production DB/ClamAV/backup queries via runner |
 
 **35/41 items complete. 6 open items all have concrete blockers documented above.**  
-**No items are policy-blocked only — all have specific infrastructure or vendor dependencies.**
+**No items are declared complete without independently verified production evidence.**
 
-*Last updated: 2026-10-06 by operational closeout workflow*
+*Last updated: 2026-10-06 by operational closeout workflow (PR fix/production-gates-oct06)*

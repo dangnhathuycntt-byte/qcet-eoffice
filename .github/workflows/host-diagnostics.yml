@@ -1,0 +1,120 @@
+# Host Diagnostics — Read-Only Identity Verification
+#
+# Captures independently verified facts about the self-hosted runner environment.
+# Rules: never prints DATABASE_URL, .env, or any secret value.
+# Dispatch: gh workflow run host-diagnostics.yml
+
+name: Host Diagnostics (Read-Only)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: host-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Collect Host Identity Evidence
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 5
+    steps:
+      - name: Host identity
+        run: |
+          echo "=== HOSTNAME ===" && hostname -f
+          echo "=== KERNEL ===" && uname -r
+          echo "=== OS RELEASE ===" && grep -E "^(NAME|VERSION)=" /etc/os-release || true
+          echo "=== RUNNER USER ===" && id
+
+      - name: Docker daemon version
+        run: |
+          echo "Docker server: $(docker version --format '{{.Server.Version}}')"
+          echo "Docker API: $(docker version --format '{{.Server.APIVersion}}')"
+
+      - name: Running containers (names, image, status)
+        run: |
+          echo "=== RUNNING CONTAINERS ==="
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' || true
+
+      - name: App container image and mounts
+        run: |
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
+          fi
+          if [ -z "$APP" ]; then echo "WARNING: No qcet app container found."; exit 0; fi
+          echo "=== APP CONTAINER: $APP ==="
+
+          echo "--- ImageID ---"
+          docker inspect "$APP" --format '{{.Image}}' | cut -c1-72
+
+          echo "--- Mounts (source -> destination) ---"
+          docker inspect "$APP" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}} [{{.Mode}}]{{"\n"}}{{end}}'
+
+          echo "--- Networks ---"
+          docker inspect "$APP" --format '{{range $n,$c := .NetworkSettings.Networks}}{{$n}} ip={{$c.IPAddress}}{{"\n"}}{{end}}'
+
+          echo "--- Env var NAMES only (values redacted by sed) ---"
+          docker inspect "$APP" --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' | sed 's/=.*/=<REDACTED>/'
+
+      - name: App container git labels
+        run: |
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
+          fi
+          if [ -z "$APP" ]; then echo "WARNING: No qcet app container."; exit 0; fi
+          echo "--- Image labels (all) ---"
+          docker inspect "$APP" --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' \
+            | grep -iE "git|sha|version|revision|build" || echo "(no git/build labels found)"
+
+      - name: ClamAV daemon health (TCP PING)
+        run: |
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          echo "ClamAV container: ${CLAM:-NOT FOUND}"
+          if [ -z "$CLAM" ]; then echo "WARNING: No ClamAV container."; exit 0; fi
+          CLAM_NET=$(docker inspect "$CLAM" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}')
+          CLAM_IP=$(echo "$CLAM_NET" | tr ' ' '\n' | grep -v '^$' | head -1)
+          echo "ClamAV IP: ${CLAM_IP:-unknown}"
+          if [ -n "$CLAM_IP" ]; then
+            RESPONSE=$(timeout 5 bash -c "echo 'PING' | nc -w 3 $CLAM_IP 3310" 2>/dev/null || true)
+            if echo "$RESPONSE" | grep -qi "PONG"; then
+              echo "ClamAV TCP:3310 HEALTHY (PONG)"
+            else
+              echo "ClamAV TCP:3310 NOT REACHABLE. Response: ${RESPONSE:-empty}"
+            fi
+          fi
+          echo "ClamAV status: $(docker ps --filter "name=$CLAM" --format '{{.Status}}')"
+
+      - name: Uploads volume mount check (no file listing)
+        run: |
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
+          fi
+          if [ -z "$APP" ]; then echo "WARNING: No qcet app container."; exit 0; fi
+          UPLOADS_SRC=$(docker inspect "$APP" --format '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}')
+          if [ -z "$UPLOADS_SRC" ]; then
+            echo "WARNING: No bind-mount at /app/uploads in $APP"
+          else
+            echo "Uploads mount source: $UPLOADS_SRC"
+            echo "Exists on host: $(test -d "$UPLOADS_SRC" && echo YES || echo NO)"
+            echo "Readable: $(test -r "$UPLOADS_SRC" && echo YES || echo NO)"
+            echo "Top-level file count: $(find "$UPLOADS_SRC" -maxdepth 1 -type f 2>/dev/null | wc -l)"
+          fi
+
+      - name: Production health endpoint
+        run: |
+          echo "=== qcet.dixxie.store/api/health ==="
+          curl -sf --max-time 10 https://qcet.dixxie.store/api/health || echo "Health endpoint unreachable"
+
+      - name: Evidence summary
+        run: |
+          {
+            echo "### Host Diagnostics Complete"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo "- Runner: ${{ runner.name }}"
+            echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo ""
+            echo "Attach logs to docs/operations/phase6-open-items-oct06.md as production host evidence."
+          } >> "$GITHUB_STEP_SUMMARY"
