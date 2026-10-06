@@ -86,7 +86,15 @@ jobs:
           COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
         run: |
           echo "Starting ClamAV service..."
-          docker compose -f "$COMPOSE_DIR/docker-compose.yml" up -d --no-recreate clamav
+          # Use the project's .env.production (or .env) so compose can interpolate
+          # all service variables. Runner must have the env file at compose dir.
+          ENV_FILE=""
+          if [ -f "$COMPOSE_DIR/.env.production" ]; then
+            ENV_FILE="--env-file $COMPOSE_DIR/.env.production"
+          elif [ -f "$COMPOSE_DIR/.env" ]; then
+            ENV_FILE="--env-file $COMPOSE_DIR/.env"
+          fi
+          docker compose -f "$COMPOSE_DIR/docker-compose.yml" $ENV_FILE up -d --no-recreate clamav
           echo "ClamAV start command completed."
 
       - name: Wait for ClamAV to become ready (up to 120s)
