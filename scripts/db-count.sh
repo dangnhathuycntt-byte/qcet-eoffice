@@ -55,15 +55,23 @@ rm -f "$PARSE_PY"
 
 echo "psql: db=$PG_DB user=$PG_USER pass-len=${#PG_PASS}" >&2
 
-# Diagnostic: list schemas and tables so we can identify exact table location.
-SCHEMA_OUT=$(docker exec \
+# Diagnostic: list all databases available in this postgres instance.
+DBS_OUT=$(docker exec \
+  -e "PGPASSWORD=$PG_PASS" \
+  "$DB_CTR" \
+  psql -U "$PG_USER" -d postgres -t -A \
+    -c "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname" 2>&1 || echo "DIAG_FAILED")
+echo "diag databases: $DBS_OUT" >&2
+
+# Diagnostic: count all user tables in the target DB.
+TABLES_OUT=$(docker exec \
   -e "PGPASSWORD=$PG_PASS" \
   "$DB_CTR" \
   psql -U "$PG_USER" -d "$PG_DB" -t -A \
-    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_name LIKE '%file%' ORDER BY table_schema, table_name" 2>&1 || echo "DIAG_FAILED")
-echo "diag schemas/tables: $SCHEMA_OUT" >&2
+    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema') ORDER BY table_schema, table_name LIMIT 10" 2>&1 || echo "DIAG_FAILED")
+echo "diag user-tables: $TABLES_OUT" >&2
 
-# Try schema-qualified form first, then fall back to search-path default.
+# Run COUNT(*) on file_objects (schema-qualified).
 PSQL_OUT=$(docker exec \
   -e "PGPASSWORD=$PG_PASS" \
   "$DB_CTR" \
