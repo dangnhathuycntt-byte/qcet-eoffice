@@ -200,15 +200,16 @@ jobs:
           REPO_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
           echo "Migration directories in repo: $REPO_DIRS"
 
-          # ClamAV check
+          # ClamAV check (TCP:3310 PING/PONG via docker exec + nc)
           CLAM_CTR=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
           if [ -n "$CLAM_CTR" ]; then
-            CLAM_PING=$(docker exec "$CLAM_CTR" clamdscan --ping 2>&1 | head -2 || echo "CLAMAV_NORESPONSE")
-            echo "ClamAV: $CLAM_PING"
-            if ! echo "$CLAM_PING" | grep -q "PONG"; then
-              echo "ERROR: ClamAV is not responding. Aborting migration." >&2
+            CLAM_PING=$(docker exec "$CLAM_CTR" sh -c "echo PING | nc -w 3 127.0.0.1 3310" 2>/dev/null || echo "CLAMAV_NORESPONSE")
+            echo "ClamAV response: $CLAM_PING"
+            if ! echo "$CLAM_PING" | grep -qi "PONG"; then
+              echo "ERROR: ClamAV did not respond with PONG on TCP:3310. Aborting migration." >&2
               exit 1
             fi
+            echo "ClamAV: HEALTHY (PONG received)"
           else
             echo "WARNING: No clamav container found — skipping ClamAV check."
           fi
