@@ -18,7 +18,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma, Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
 import {
   IncomingDocumentStatus,
   DocumentType,
@@ -819,13 +820,32 @@ export async function assignUnitWork(
 
   const deadline = input.deadline ? new Date(input.deadline) : doc.incomingWorkflow.deadline;
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(
+    async (tx) => {
     let createdTaskId: string | null = null;
 
     if (input.createTask && doc.linkedTaskId) {
       throw new ConflictError(
         "Văn bản này đã được liên kết với một nhiệm vụ.",
         "DOCUMENT_TASK_ALREADY_LINKED"
+      );
+    }
+
+    // Lock the workflow row with SELECT FOR UPDATE before the CAS update.
+    // Under Postgres READ COMMITTED the pre-transaction read of `doc` may be
+    // stale by the time we enter the transaction.  The explicit lock ensures
+    // only one concurrent request holds the row lock at a time; the updateMany
+    // CAS then sees the *current* committed status and will set count=0 for
+    // the losing request, which is re-thrown as ConflictError.
+    const locked = await tx.$queryRaw<{ id: string; status: string }[]>`
+      SELECT id, status FROM document_incoming_workflows
+      WHERE id = ${doc.incomingWorkflow!.id}
+      FOR UPDATE
+    `;
+    if (!locked.length) {
+      throw new ConflictError(
+        "Không tìm thấy quy trình văn bản để khoá.",
+        "DOCUMENT_WORKFLOW_NOT_FOUND"
       );
     }
 
@@ -978,7 +998,15 @@ export async function assignUnitWork(
       assignment: assignmentWithCompat,
       workflow: workflowWithCompat,
     };
-  });
+  },
+  {
+    // Serializable isolation prevents phantom reads between the pre-transaction
+    // doc.read and the in-transaction lock+CAS.  The SELECT FOR UPDATE inside
+    // the callback additionally serialises concurrent callers under the default
+    // READ COMMITTED level, so both layers guard against the double-claim race.
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  }
+);
 }
 
 /**

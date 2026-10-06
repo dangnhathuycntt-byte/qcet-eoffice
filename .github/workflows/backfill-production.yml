@@ -1,21 +1,20 @@
 # Production FileObject Backfill — Manual Trigger
 #
-# Gates (all must pass before --apply):
-#   1. PRODUCTION_DATABASE_URL secret must be non-empty
-#   2. PRODUCTION_UPLOADS_DIR secret must be non-empty AND be an absolute path
-#   3. Uploads directory must exist and be readable on the runner host
-#   4. Uploads directory must match the /app/uploads bind-mount source in the
-#      running qcet-app container (prevents backfilling wrong directory)
-#   5. DB must be reachable and return a non-empty FileObject table count
-#   6. App container image label must match current git HEAD SHA (version identity)
-#   7. ClamAV daemon must be reachable on TCP:3310 (scanner gate)
-#   8. Dry-run must be executed first in same workflow run (apply step depends on verify step)
+# Gates (all must pass before any write):
+#   1. PRODUCTION_DATABASE_URL + PRODUCTION_UPLOADS_DIR secrets non-empty; path absolute
+#   2. Uploads directory exists and is readable on runner host
+#   3. Uploads dir matches /app/uploads bind-mount of running qcet-app container
+#   4. DB reachable — numeric COUNT(*) via Node $queryRaw (NOT prisma db execute)
+#   5. App image identity: compose image digest logged; apply blocked if no revision label
+#   6. ClamAV daemon PONG on TCP:3310
+#   7. Dry-run passes programmatically
+#   -- All gates re-run inside same job before apply (no TOCTOU two-job gap) --
+#   8. Apply run + post-apply idempotency: linkedOrEligible asserted === 0
 #
-# Rules:
-#   - NEVER prints DATABASE_URL, UPLOADS_DIR, or any secret value.
-#   - Uses prisma db execute for DB probes — no raw psql credentials in logs.
-#   - concurrency: group prevents two simultaneous apply runs.
-#   - apply=false (dry-run) can run concurrently with itself safely.
+# Security:
+#   - DATABASE_URL and UPLOADS_DIR NEVER printed to logs (only length/prefix shown)
+#   - Count query runs via node -e with DATABASE_URL masked as secret
+#   - No psql credentials in command line args
 #
 # Usage (dry-run, safe any time):
 #   gh workflow run backfill-production.yml -f apply=false
@@ -44,110 +43,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # -------------------------------------------------------------------------
-  # Gate job: all verification steps. apply job depends on this.
-  # -------------------------------------------------------------------------
-  verify:
-    name: Verify Production Target (${{ github.event.inputs.apply == 'true' && 'APPLY' || 'DRY RUN' }})
+  # ---------------------------------------------------------------------------
+  # Single job — all gates + optional apply run on the SAME runner execution.
+  # Eliminates TOCTOU: state verified and written in one continuous job.
+  # ---------------------------------------------------------------------------
+  backfill:
+    name: Backfill (${{ github.event.inputs.apply == 'true' && 'APPLY' || 'DRY RUN' }})
     runs-on: [self-hosted, Linux, X64, qcet]
     environment:
       name: staging
-    outputs:
-      uploads_src: ${{ steps.mounts.outputs.uploads_src }}
-      app_container: ${{ steps.mounts.outputs.app_container }}
     steps:
-      # --------------------------------------------------------------------
-      # Gate 1 & 2: Non-empty secrets; UPLOADS_DIR must be absolute
-      # --------------------------------------------------------------------
-      - name: Gate — secrets present and uploads path is absolute
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
-        run: |
-          FAIL=0
-          if [ -z "$DATABASE_URL" ]; then
-            echo "ERROR: PRODUCTION_DATABASE_URL secret is empty or not set." >&2
-            FAIL=1
-          fi
-          if [ -z "$UPLOADS_DIR" ]; then
-            echo "ERROR: PRODUCTION_UPLOADS_DIR secret is empty or not set." >&2
-            echo "       Set it to the host path (UPLOADS_HOST_PATH value from .env.production)." >&2
-            FAIL=1
-          elif [[ "$UPLOADS_DIR" != /* ]]; then
-            echo "ERROR: PRODUCTION_UPLOADS_DIR is not an absolute path: got '${UPLOADS_DIR:0:3}...' (redacted)" >&2
-            echo "       Must start with /  (e.g. /data/qcet/uploads)" >&2
-            FAIL=1
-          fi
-          # Print only length/prefix — never print the full secret value
-          echo "DATABASE_URL: set (${#DATABASE_URL} chars)"
-          echo "UPLOADS_DIR: absolute=$([ "${UPLOADS_DIR:0:1}" = "/" ] && echo YES || echo NO) length=${#UPLOADS_DIR}"
-          exit $FAIL
-
-      # --------------------------------------------------------------------
-      # Gate 3: Uploads directory exists on host
-      # --------------------------------------------------------------------
-      - name: Gate — uploads directory exists and is readable
-        env:
-          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
-        run: |
-          if [ ! -d "$UPLOADS_DIR" ]; then
-            echo "ERROR: UPLOADS_DIR does not exist on this runner host: path not found." >&2
-            echo "       Verify PRODUCTION_UPLOADS_DIR matches the actual host bind-mount source." >&2
-            exit 1
-          fi
-          if [ ! -r "$UPLOADS_DIR" ]; then
-            echo "ERROR: UPLOADS_DIR exists but is not readable by runner user $(id -un)." >&2
-            exit 1
-          fi
-          echo "Uploads directory: exists=YES readable=YES"
-          FILE_COUNT=$(find "$UPLOADS_DIR" -maxdepth 1 -type f 2>/dev/null | wc -l)
-          echo "Top-level file count (not recursive): $FILE_COUNT"
-
-      # --------------------------------------------------------------------
-      # Gate 4: Uploads dir must match running app container's /app/uploads mount
-      # --------------------------------------------------------------------
-      - name: Gate — uploads dir matches app container mount
-        id: mounts
-        env:
-          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
-        run: |
-          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
-          if [ -z "$APP" ]; then
-            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
-          fi
-          if [ -z "$APP" ]; then
-            echo "ERROR: No qcet app container is running on this host." >&2
-            echo "       Cannot verify uploads mount without a running container." >&2
-            exit 1
-          fi
-          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
-
-          MOUNT_SRC=$(docker inspect "$APP" --format \
-            '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' 2>/dev/null)
-
-          if [ -z "$MOUNT_SRC" ]; then
-            echo "ERROR: Container $APP has no bind-mount at /app/uploads." >&2
-            echo "       Production uploads must be bind-mounted, not a named volume." >&2
-            exit 1
-          fi
-          echo "uploads_src=$MOUNT_SRC" >> "$GITHUB_OUTPUT"
-
-          # Resolve both paths to canonical form before comparing
-          CANONICAL_SECRET=$(realpath -m "$UPLOADS_DIR" 2>/dev/null || echo "$UPLOADS_DIR")
-          CANONICAL_MOUNT=$(realpath -m "$MOUNT_SRC" 2>/dev/null || echo "$MOUNT_SRC")
-
-          if [ "$CANONICAL_SECRET" != "$CANONICAL_MOUNT" ]; then
-            echo "ERROR: PRODUCTION_UPLOADS_DIR does not match container mount source." >&2
-            echo "       Secret resolves to a different path than the running container's /app/uploads." >&2
-            echo "       Update PRODUCTION_UPLOADS_DIR to match, or this backfill would target wrong files." >&2
-            exit 1
-          fi
-          echo "Uploads mount verified: PRODUCTION_UPLOADS_DIR matches container mount source."
-          echo "Container: $APP | Mount source confirmed (paths match)."
-
-      # --------------------------------------------------------------------
-      # Gate 5: Database reachable — count existing FileObjects (no secrets in log)
-      # --------------------------------------------------------------------
+      # -----------------------------------------------------------------------
+      # Checkout + Node setup (needed for Prisma client and tsx)
+      # -----------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -165,58 +73,183 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
 
-      - name: Gate — database reachable and FileObject table accessible
+      # -----------------------------------------------------------------------
+      # Gate 1: Non-empty secrets; UPLOADS_DIR must be absolute
+      # -----------------------------------------------------------------------
+      - name: Gate 1 — secrets present and uploads path is absolute
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+        run: |
+          FAIL=0
+          if [ -z "$DATABASE_URL" ]; then
+            echo "ERROR: PRODUCTION_DATABASE_URL secret is empty or not set." >&2
+            FAIL=1
+          fi
+          if [ -z "$UPLOADS_DIR" ]; then
+            echo "ERROR: PRODUCTION_UPLOADS_DIR secret is empty or not set." >&2
+            echo "       Set it to the host path matching UPLOADS_HOST_PATH in .env.production." >&2
+            FAIL=1
+          elif [[ "$UPLOADS_DIR" != /* ]]; then
+            echo "ERROR: PRODUCTION_UPLOADS_DIR is not an absolute path (got non-/ prefix, redacted)." >&2
+            FAIL=1
+          fi
+          echo "DATABASE_URL: set (${#DATABASE_URL} chars)"
+          echo "UPLOADS_DIR: absolute=$([ "${UPLOADS_DIR:0:1}" = "/" ] && echo YES || echo NO) length=${#UPLOADS_DIR}"
+          exit $FAIL
+
+      # -----------------------------------------------------------------------
+      # Gate 2: Uploads directory exists on runner host
+      # -----------------------------------------------------------------------
+      - name: Gate 2 — uploads directory exists and is readable
+        env:
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+        run: |
+          if [ ! -d "$UPLOADS_DIR" ]; then
+            echo "ERROR: UPLOADS_DIR does not exist on runner host." >&2
+            exit 1
+          fi
+          if [ ! -r "$UPLOADS_DIR" ]; then
+            echo "ERROR: UPLOADS_DIR exists but is not readable by runner user $(id -un)." >&2
+            exit 1
+          fi
+          echo "Uploads directory: exists=YES readable=YES"
+          FILE_COUNT=$(find "$UPLOADS_DIR" -maxdepth 1 -type f 2>/dev/null | wc -l)
+          echo "Top-level file count (non-recursive): $FILE_COUNT"
+
+      # -----------------------------------------------------------------------
+      # Gate 3: Uploads dir must match running app container's /app/uploads mount
+      # -----------------------------------------------------------------------
+      - name: Gate 3 — uploads dir matches app container mount
+        id: mounts
+        env:
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+        run: |
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared\|tunnel" | head -1)
+          fi
+          if [ -z "$APP" ]; then
+            echo "ERROR: No qcet app container is running on this host." >&2
+            exit 1
+          fi
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+
+          MOUNT_SRC=$(docker inspect "$APP" --format \
+            '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' 2>/dev/null)
+
+          if [ -z "$MOUNT_SRC" ]; then
+            echo "ERROR: Container $APP has no bind-mount at /app/uploads." >&2
+            exit 1
+          fi
+          echo "uploads_src=$MOUNT_SRC" >> "$GITHUB_OUTPUT"
+
+          CANONICAL_SECRET=$(realpath -m "$UPLOADS_DIR" 2>/dev/null || echo "$UPLOADS_DIR")
+          CANONICAL_MOUNT=$(realpath -m "$MOUNT_SRC" 2>/dev/null || echo "$MOUNT_SRC")
+
+          if [ "$CANONICAL_SECRET" != "$CANONICAL_MOUNT" ]; then
+            echo "ERROR: PRODUCTION_UPLOADS_DIR does not match container mount source." >&2
+            echo "       Update PRODUCTION_UPLOADS_DIR to match the running container's /app/uploads." >&2
+            exit 1
+          fi
+          echo "App container: $APP"
+          echo "Uploads mount: PRODUCTION_UPLOADS_DIR matches container /app/uploads bind-mount source."
+
+      # -----------------------------------------------------------------------
+      # Gate 4: DB reachable — numeric COUNT(*) via Node $queryRaw
+      # prisma db execute returns "Script executed successfully." NOT row data.
+      # Use Node.js + @prisma/client $queryRaw for an actual numeric result.
+      # -----------------------------------------------------------------------
+      - name: Gate 4 — database reachable, FileObject table accessible
+        id: dbcount
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
-          COUNT=$(echo "SELECT COUNT(*)::text FROM file_objects;" | npx prisma db execute --stdin 2>/dev/null | tail -1 | tr -d '[:space:]')
-          if [ -z "$COUNT" ]; then
-            echo "ERROR: Could not query file_objects table. Check PRODUCTION_DATABASE_URL." >&2
+          COUNT=$(node -e "
+          const { PrismaClient } = require('@prisma/client');
+          const db = new PrismaClient();
+          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
+            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
+            .catch(e => { console.error('DB_ERROR', e.message); db.\$disconnect(); process.exit(1); });
+          " 2>/dev/null)
+
+          if [ -z "$COUNT" ] || ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: Could not get numeric file_objects count. DB may be unreachable." >&2
+            echo "       Raw output: '${COUNT:-<empty>}'" >&2
             exit 1
           fi
+          echo "pre_count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Production DB reachable. Current file_objects row count: $COUNT"
 
-      # --------------------------------------------------------------------
-      # Gate 6: App container image label must carry a git SHA
-      # --------------------------------------------------------------------
-      - name: Gate — app container image git SHA label
+      # -----------------------------------------------------------------------
+      # Gate 5: App container image identity — fail-closed on apply with no label
+      # Image labels from diagnostics: only compose labels, no git SHA label.
+      # We log the compose image digest as identity evidence.
+      # For apply=true: FAIL if no git revision label (cannot verify intended image).
+      # -----------------------------------------------------------------------
+      - name: Gate 5 — app container image identity
         env:
           APP_CONTAINER: ${{ steps.mounts.outputs.app_container }}
+          APPLY: ${{ github.event.inputs.apply }}
         run: |
           if [ -z "$APP_CONTAINER" ]; then
-            echo "WARNING: No app container identified; skipping image SHA check."
-            exit 0
+            echo "ERROR: No app container identified from Gate 3." >&2
+            exit 1
           fi
+
+          # Log compose image reference (not a secret — just image name)
+          COMPOSE_IMAGE=$(docker inspect "$APP_CONTAINER" --format \
+            '{{index .Config.Labels "com.docker.compose.image"}}' 2>/dev/null || true)
+          IMG_ID=$(docker inspect "$APP_CONTAINER" --format '{{.Image}}' 2>/dev/null | cut -c1-19)
+          echo "App container: $APP_CONTAINER"
+          echo "Compose image ref: ${COMPOSE_IMAGE:-<not set>}"
+          echo "Image SHA256 prefix: ${IMG_ID:-<unknown>}"
+
+          # Check for OCI revision label
           IMG_SHA=$(docker inspect "$APP_CONTAINER" --format \
             '{{range $k,$v := .Config.Labels}}{{if or (eq $k "org.opencontainers.image.revision") (eq $k "git.sha") (eq $k "git_sha")}}{{$v}}{{end}}{{end}}' \
             2>/dev/null | head -1)
 
           if [ -z "$IMG_SHA" ]; then
-            echo "WARNING: App container image has no git SHA label (org.opencontainers.image.revision)."
-            echo "         Image version cannot be independently verified against git HEAD."
-            echo "         Continuing — document this gap in operational evidence."
+            echo "WARNING: App image has no git SHA label (org.opencontainers.image.revision)."
+            if [ "$APPLY" = "true" ]; then
+              echo "ERROR: apply=true requires image revision label for identity verification." >&2
+              echo "       Rebuild and redeploy the app image with --label org.opencontainers.image.revision=<sha>." >&2
+              echo "       Or set SKIP_IMAGE_LABEL_CHECK=true in workflow env to override (requires code change)." >&2
+              exit 1
+            else
+              echo "Dry-run: continuing without image label (document this gap in operational evidence)."
+            fi
           else
             echo "App image git SHA label: $IMG_SHA"
-            echo "Current git HEAD: ${{ github.sha }}"
+            echo "Workflow git SHA: ${{ github.sha }}"
+            if [ "$IMG_SHA" != "${{ github.sha }}" ]; then
+              echo "WARNING: Image git SHA ($IMG_SHA) does not match workflow SHA (${{ github.sha }})."
+              echo "         App may be running an older build. Consider redeploying before apply."
+              if [ "$APPLY" = "true" ]; then
+                echo "ERROR: apply=true with SHA mismatch blocked. Deploy current image first." >&2
+                exit 1
+              fi
+            else
+              echo "Image git SHA matches workflow SHA. Identity verified."
+            fi
           fi
-          # Non-blocking: log gap but do not fail — image may be older build without labels.
-          # The uploads mount and DB count gate are the hard identity requirements.
 
-      # --------------------------------------------------------------------
-      # Gate 7: ClamAV daemon TCP health check
-      # --------------------------------------------------------------------
-      - name: Gate — ClamAV daemon reachable on TCP:3310
+      # -----------------------------------------------------------------------
+      # Gate 6: ClamAV daemon TCP health check
+      # -----------------------------------------------------------------------
+      - name: Gate 6 — ClamAV daemon reachable on TCP:3310
         run: |
           CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
           if [ -z "$CLAM" ]; then
             echo "ERROR: No ClamAV container found on host." >&2
-            echo "       Production requires ClamAV for file scan on upload. Start clamav service." >&2
+            echo "       Start clamav: docker compose -f <compose-file> up -d clamav" >&2
             exit 1
           fi
           CLAM_IP=$(docker inspect "$CLAM" --format \
             '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -1)
           if [ -z "$CLAM_IP" ]; then
-            echo "ERROR: ClamAV container $CLAM has no IP address (may not be running)." >&2
+            echo "ERROR: ClamAV container $CLAM has no IP address." >&2
             exit 1
           fi
           echo "ClamAV container: $CLAM at $CLAM_IP"
@@ -229,85 +262,177 @@ jobs:
             exit 1
           fi
 
-      # --------------------------------------------------------------------
-      # Step 8: Dry-run always (both modes)
-      # --------------------------------------------------------------------
+      # -----------------------------------------------------------------------
+      # Step 7: Dry-run (always runs — both dry-run and apply modes)
+      # Output is JSON; capture to file for parsing.
+      # -----------------------------------------------------------------------
       - name: Run backfill dry-run
+        id: dryrun
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
         run: |
           echo "=== DRY RUN (no writes) ==="
-          npx tsx scripts/backfill-file-objects.ts 2>&1 | tail -40
+          npx tsx scripts/backfill-file-objects.ts 2>&1 | tee /tmp/backfill-dryrun.json
+          echo "Dry-run output written to /tmp/backfill-dryrun.json"
 
-  # -------------------------------------------------------------------------
-  # Apply job: only runs when input is apply=true; depends on verify passing
-  # -------------------------------------------------------------------------
-  apply:
-    name: Apply Backfill (WRITE)
-    needs: [verify]
-    if: ${{ github.event.inputs.apply == 'true' }}
-    runs-on: [self-hosted, Linux, X64, qcet]
-    environment:
-      name: staging
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Generate Prisma client
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-        run: npx prisma generate
-
-      - name: Pre-apply FileObject count
-        id: precount
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      - name: Verify dry-run output is valid JSON
         run: |
-          COUNT=$(echo "SELECT COUNT(*)::text FROM file_objects;" | npx prisma db execute --stdin 2>/dev/null | tail -1 | tr -d '[:space:]')
-          echo "Pre-apply file_objects count: $COUNT"
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          # Extract the JSON block (last {...} in output)
+          python3 -c "
+          import sys, json, re
+          txt = open('/tmp/backfill-dryrun.json').read()
+          # Find the last JSON object in the output
+          matches = list(re.finditer(r'\{[^{}]*\"mode\"[^{}]*\}', txt, re.DOTALL))
+          if not matches:
+            # Try broader match
+            idx = txt.rfind('{')
+            if idx < 0:
+              print('ERROR: No JSON object found in dry-run output', file=sys.stderr)
+              sys.exit(1)
+            blob = txt[idx:]
+          else:
+            blob = matches[-1].group(0)
+          try:
+            d = json.loads(blob)
+          except Exception as e:
+            print(f'ERROR: Could not parse dry-run JSON: {e}', file=sys.stderr)
+            sys.exit(1)
+          print(f'Dry-run parsed: mode={d.get(\"mode\")}, candidates={d.get(\"candidates\")}, linkedOrEligible={d.get(\"linkedOrEligible\")}')
+          open('/tmp/backfill-dryrun-parsed.json','w').write(json.dumps(d))
+          "
+
+      # -----------------------------------------------------------------------
+      # Apply block: only runs when apply=true
+      # Gates are re-validated inline (same runner state, no TOCTOU gap).
+      # -----------------------------------------------------------------------
+      - name: Pre-apply revalidation — mount + ClamAV + DB count
+        if: ${{ github.event.inputs.apply == 'true' }}
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+          APP_CONTAINER: ${{ steps.mounts.outputs.app_container }}
+        run: |
+          echo "=== PRE-APPLY REVALIDATION ==="
+          # Recheck uploads mount (same job, but verify nothing changed)
+          MOUNT_SRC=$(docker inspect "$APP_CONTAINER" --format \
+            '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' 2>/dev/null)
+          CANONICAL_SECRET=$(realpath -m "$UPLOADS_DIR" 2>/dev/null || echo "$UPLOADS_DIR")
+          CANONICAL_MOUNT=$(realpath -m "$MOUNT_SRC" 2>/dev/null || echo "$MOUNT_SRC")
+          if [ "$CANONICAL_SECRET" != "$CANONICAL_MOUNT" ]; then
+            echo "ERROR: Mount changed between gate verification and apply! Aborting." >&2
+            exit 1
+          fi
+          echo "Mount re-check: OK"
+
+          # Recheck ClamAV
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          if [ -z "$CLAM" ]; then
+            echo "ERROR: ClamAV no longer running before apply!" >&2
+            exit 1
+          fi
+          CLAM_IP=$(docker inspect "$CLAM" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -1)
+          RESPONSE=$(timeout 5 bash -c "echo 'PING' | nc -w 3 $CLAM_IP 3310" 2>/dev/null || true)
+          if ! echo "$RESPONSE" | grep -qi "PONG"; then
+            echo "ERROR: ClamAV not responding before apply!" >&2
+            exit 1
+          fi
+          echo "ClamAV re-check: OK"
+
+          # Recheck DB count
+          COUNT=$(node -e "
+          const { PrismaClient } = require('@prisma/client');
+          const db = new PrismaClient();
+          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
+            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
+            .catch(e => { console.error('DB_ERROR', e.message); db.\$disconnect(); process.exit(1); });
+          " 2>/dev/null)
+          if [ -z "$COUNT" ] || ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: DB count re-check failed before apply." >&2
+            exit 1
+          fi
+          echo "DB re-check: file_objects count = $COUNT (pre-apply baseline)"
+          echo "$COUNT" > /tmp/pre_apply_count.txt
 
       - name: Apply backfill
+        if: ${{ github.event.inputs.apply == 'true' }}
+        id: apply_step
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
         run: |
           echo "=== APPLY (writing FileObject records) ==="
-          npx tsx scripts/backfill-file-objects.ts --apply 2>&1 | tail -60
+          npx tsx scripts/backfill-file-objects.ts --apply 2>&1 | tee /tmp/backfill-apply.json
+          echo "Apply output written to /tmp/backfill-apply.json"
 
-      - name: Post-apply FileObject count (idempotency evidence)
+      - name: Post-apply DB count
+        if: ${{ github.event.inputs.apply == 'true' }}
+        id: postcount
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
-          COUNT=$(echo "SELECT COUNT(*)::text FROM file_objects;" | npx prisma db execute --stdin 2>/dev/null | tail -1 | tr -d '[:space:]')
+          COUNT=$(node -e "
+          const { PrismaClient } = require('@prisma/client');
+          const db = new PrismaClient();
+          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
+            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
+            .catch(e => { console.error('DB_ERROR', e.message); db.\$disconnect(); process.exit(1); });
+          " 2>/dev/null)
+          PRE=$(cat /tmp/pre_apply_count.txt 2>/dev/null || echo "unknown")
+          echo "post_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Pre-apply file_objects count:  $PRE"
           echo "Post-apply file_objects count: $COUNT"
-          echo "Pre-apply was: ${{ steps.precount.outputs.count }}"
 
-      - name: Idempotency re-run (dry-run after apply)
+      - name: Idempotency check — dry-run after apply, assert linkedOrEligible === 0
+        if: ${{ github.event.inputs.apply == 'true' }}
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
         run: |
           echo "=== IDEMPOTENCY CHECK: dry-run immediately after apply ==="
-          echo "Expect: 0 new records to create (all already exist)"
-          npx tsx scripts/backfill-file-objects.ts 2>&1 | tail -20
+          npx tsx scripts/backfill-file-objects.ts 2>&1 | tee /tmp/backfill-idempotency.json
 
-      - name: Summarise apply result
+          # Programmatic assertion: linkedOrEligible MUST be 0 after a successful apply
+          python3 -c "
+          import sys, json, re
+          txt = open('/tmp/backfill-idempotency.json').read()
+          matches = list(re.finditer(r'\{[^{}]*\"mode\"[^{}]*\}', txt, re.DOTALL))
+          if matches:
+            blob = matches[-1].group(0)
+          else:
+            idx = txt.rfind('{')
+            if idx < 0:
+              print('ERROR: No JSON found in idempotency output', file=sys.stderr)
+              sys.exit(1)
+            blob = txt[idx:]
+          try:
+            d = json.loads(blob)
+          except Exception as e:
+            print(f'ERROR: Could not parse idempotency JSON: {e}', file=sys.stderr)
+            sys.exit(1)
+          linked = d.get('linkedOrEligible', -1)
+          print(f'Idempotency result: linkedOrEligible={linked}')
+          if linked != 0:
+            print(f'ASSERTION FAILED: expected linkedOrEligible=0 after apply, got {linked}', file=sys.stderr)
+            print('This means apply did not fully backfill all candidates, or new candidates appeared.', file=sys.stderr)
+            sys.exit(1)
+          print('ASSERTION PASSED: linkedOrEligible=0 — backfill is idempotent.')
+          "
+
+      # -----------------------------------------------------------------------
+      # Summary
+      # -----------------------------------------------------------------------
+      - name: Summarise result
+        if: always()
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          APPLY: ${{ github.event.inputs.apply }}
         run: |
-          echo "### Backfill Apply Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Backfill $( [ "$APPLY" = "true" ] && echo "Apply" || echo "Dry-Run") Complete" >> "$GITHUB_STEP_SUMMARY"
           echo "Run ID: ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Actor: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
-          echo "Pre-apply count: ${{ steps.precount.outputs.count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Workflow SHA: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$APPLY" = "true" ]; then
+            PRE=$(cat /tmp/pre_apply_count.txt 2>/dev/null || echo "N/A")
+            echo "Pre-apply count: $PRE" >> "$GITHUB_STEP_SUMMARY"
+          fi
