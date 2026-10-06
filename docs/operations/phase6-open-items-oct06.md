@@ -18,6 +18,7 @@
 | CI run 37354723272 logs | Runner home: `/home/dnhhuy/actions-runner/_work/`; Docker API 1.55 on host | Runner executes on the host that also runs production Docker containers. **This IS the production host.** |
 | CI PostgreSQL service | `postgres:16-alpine` service container used in tests | **Not evidence of production DB.** CI uses an ephemeral service container, not the production database. |
 | `deploy.yml` (confirmed) | No SSH, no docker push steps; staging job writes `receipt.json` only | Production deploy job requires `v*.*.*` tag and `production` environment |
+| `host-diagnostics.yml` run 37402290999 | Host: `debian` (Debian 13), runner `qcet-runner-01`, Docker 29.7.2/API 1.55, `qcet-eoffice-app` up 10 days (healthy), uploads bind-mount `/home/dnhhuy/projects/qcet-eoffice/uploads` → `/app/uploads [rw]`, ClamAV container **NOT FOUND**, health `{"status":"ok","latencyMs":3}` | **Independently established via runner execution — not inferred from config files.** |
 | `qcet.dixxie.store/api/health` | `{"status":"ok","database":{"latencyMs":2},"uptimeSeconds":921233}` | Proves app + DB running; does not prove version or container identity |
 | `docker-compose.yml` | `CLAMAV_HOST: clamav` (service name), port defaults to 3310 via `CLAMAV_PORT` | Declared config; whether daemon is healthy on host requires `host-diagnostics.yml` run |
 | `src/lib/services/file-service.ts:113-114` | `host = CLAMAV_HOST`, `port = parseInt(CLAMAV_PORT \|\| "3310")` — separate env vars | Source truth; confirms format |
@@ -86,7 +87,17 @@ Provider-neutral WebCrypto SHA-256 pipeline in `src/lib/crypto/digital-signature
 **Execution plan line 172:**
 > Deploy the pilot to a bounded user group; observe authorization denials, command conflicts, outbox failures, upload/download failures, and workflow aging.
 
-**Status: `[ ]` BLOCKED — interactive SSH to production host not yet established**
+**Status: `[ ]` BLOCKED — ClamAV not running; `PRODUCTION_UPLOADS_DIR` secret not yet set**
+
+Host identity **confirmed** via diagnostics run 37402290999:
+- Machine `debian` (Debian 13 Trixie), runner `qcet-runner-01`, user `dnhhuy`
+- `qcet-eoffice-app` running healthy (10 days uptime)
+- Uploads bind-mount: `/home/dnhhuy/projects/qcet-eoffice/uploads` → `/app/uploads [rw]`
+- Production health endpoint live: `{"status":"ok","database":{"latencyMs":3}}`
+
+Remaining blockers before deploy:
+1. Owner must set `PRODUCTION_UPLOADS_DIR=/home/dnhhuy/projects/qcet-eoffice/uploads` in GitHub repo secrets
+2. Owner must start ClamAV: `docker compose up -d clamav` on the production host
 
 | Access method | Result | Notes |
 |---|---|---|
@@ -138,7 +149,7 @@ No observation data exists. Legacy paths cannot be safely removed without confir
 | Outbox replay | 21/21 `outbox-pattern.test.ts` pass on `qcet_test` (2026-09-28) | Production outbox table state: query via runner possible after host identity confirmed |
 | Audit evidence retrieval | 19/19 `audit-events.test.ts` pass on `qcet_test`; 63,483 non-null `request_id` rows confirmed | Production audit log volume: query via runner possible after host identity confirmed |
 | Support runbooks | `docs/operations/recovery-paths.md` (11 scenarios), `docs/operations/rollback.md` | Physical drill (interactive SSH) blocked; runner-based execution feasible for read-only steps |
-| ClamAV scan gate | `CLAMAV_HOST=clamav` (service name) + `CLAMAV_PORT=3310` (default) in `docker-compose.yml` | Daemon health on production host: `host-diagnostics.yml` gate 7 will confirm |
+| ClamAV scan gate | `CLAMAV_HOST=clamav` (service name) + `CLAMAV_PORT=3310` (default) in `docker-compose.yml` | **ClamAV container NOT RUNNING** (confirmed by diagnostics run 37402290999). Backfill apply is blocked until owner starts `docker compose up -d clamav`. |
 
 **ClamAV config**: `CLAMAV_HOST` is the hostname only (`clamav` Docker service name). Port is a **separate** `CLAMAV_PORT` env var defaulting to `3310`. `docker-compose.yml` does not set `CLAMAV_PORT` (3310 default applies). This is correct for intra-container communication.
 
@@ -166,23 +177,39 @@ Owner must add to GitHub repository secrets before triggering `backfill-producti
 
 The backfill workflow will fail closed if either secret is empty, if `PRODUCTION_UPLOADS_DIR` is not an absolute path, or if the path does not match the running container's `/app/uploads` mount.
 
-## Host Diagnostics Evidence (to be populated)
+## Host Diagnostics Evidence (run ID 37402290999)
 
-Dispatch `host-diagnostics.yml` via:
-```
-gh workflow run host-diagnostics.yml
-```
-Capture run ID and attach step summaries here as production host evidence for items 172 and 175.
+Dispatched 2026-10-06T02:03:48Z via `gh workflow run host-diagnostics.yml --ref main`.  
+Run: https://github.com/dangnhathuycntt-byte/qcet-eoffice/actions/runs/37402290999  
+Result: ✅ SUCCESS (33s)
 
-| Evidence Field | Value |
+| Evidence Field | Verified Value |
 |---|---|
-| Diagnostics run ID | _pending dispatch_ |
-| Hostname | _pending_ |
-| App container name | _pending_ |
-| App image digest | _pending_ |
-| Uploads mount source | _pending_ |
-| ClamAV TCP:3310 health | _pending_ |
-| Health endpoint at dispatch time | _pending_ |
+| Diagnostics run ID | `37402290999` |
+| Runner name | `qcet-runner-01` |
+| Machine hostname | `debian` |
+| OS | Debian GNU/Linux 13 (Trixie) |
+| Kernel | `6.12.107+deb13-amd64` |
+| Runner user | `uid=1000(dnhhuy)` — member of `docker` group (gid 986) |
+| Docker server | `29.7.2`, API `1.55` |
+| App container | `qcet-eoffice-app` — `Up 10 days (healthy)` |
+| App image digest | `sha256:b4b6864a01dcf6b9c778e0f6febc9369380e4c7f078d26b138e50edfe97971d0` |
+| DB container | `qcet-eoffice-db` — `Up 10 days (healthy)` |
+| Cloudflare tunnel | `qcet-eoffice-tunnel` — `Up 10 days` |
+| App network | `qcet-network`, container IP `172.19.0.3` |
+| Uploads mount | `/home/dnhhuy/projects/qcet-eoffice/uploads` → `/app/uploads [rw]` — exists, readable |
+| Top-level file count | `0` (directory exists, no files at root level) |
+| ClamAV container | **NOT FOUND** — no container named `clamav` running |
+| ClamAV TCP:3310 | **UNAVAILABLE** — no container to probe |
+| Health endpoint | `{"status":"ok","database":{"status":"healthy","latencyMs":3},"uptimeSeconds":927971}` ✅ |
+| App env vars present | `UPLOADS_DIR`, `DATABASE_URL`, `NEXTAUTH_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `NODE_ENV`, `PORT` (values redacted) |
+
+**Critical finding**: ClamAV container is **not running** on this host at time of diagnostics.  
+The `docker-compose.yml` declares a `clamav` service, but `docker ps` shows no container named `clamav`.  
+Gate 7 in `backfill-production.yml` will **block** the apply until ClamAV is running.  
+Owner must start the ClamAV container (`docker compose up -d clamav`) before backfill apply is possible.
+
+**Uploads path for secret**: Set `PRODUCTION_UPLOADS_DIR=/home/dnhhuy/projects/qcet-eoffice/uploads` in GitHub repository secrets (confirmed from mount evidence above).
 
 ---
 
@@ -192,12 +219,12 @@ Capture run ID and attach step summaries here as production host evidence for it
 |---|---|---|---|
 | Digital-signature provider choice | 67 | `[ ]` DEFERRED | Owner selects CA vendor |
 | Digital-signature integration | 157 | `[ ]` BLOCKED | Item 67 unblocked |
-| Deploy pilot | 172 | `[ ]` BLOCKED | Host identity confirmed via diagnostics → deploy workflow authorised on runner |
+| Deploy pilot | 172 | `[ ]` BLOCKED | Host identity ✅ confirmed (run 37402290999). Remaining: set `PRODUCTION_UPLOADS_DIR` secret + start ClamAV container |
 | Reconcile post-pilot findings | 173 | `[ ]` PARTIAL | Item 172 deployed |
 | Observation + legacy removal | 174 | `[ ]` BLOCKED | Item 172 deployed |
-| Backup/restore + runbook verification | 175 | `[ ]` PARTIAL | Host identity confirmed → production DB/ClamAV/backup queries via runner |
+| Backup/restore + runbook verification | 175 | `[ ]` PARTIAL | Host confirmed; ClamAV not running → backfill apply blocked |
 
 **35/41 items complete. 6 open items all have concrete blockers documented above.**  
 **No items are declared complete without independently verified production evidence.**
 
-*Last updated: 2026-10-06 by operational closeout workflow (PR fix/production-gates-oct06)*
+*Last updated: 2026-10-06T02:09Z — host diagnostics evidence populated from run 37402290999*
