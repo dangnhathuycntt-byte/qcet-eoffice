@@ -21,13 +21,14 @@ if [ -z "$DB_CTR" ]; then
 fi
 echo "DB container: $DB_CTR" >&2
 
-# Parse DATABASE_URL → base64-encoded shell assignments (nothing logged).
-# Use process substitution to avoid heredoc quoting issues with eval.
-eval "$(python3 -c '
+# Write Python credential parser to a temp file to avoid shell quoting nightmares.
+# The script reads DATABASE_URL from env, outputs base64-encoded shell assignments.
+PARSE_PY=$(mktemp /tmp/db-count-parse.XXXXXX.py)
+cat > "$PARSE_PY" << 'PYEOF'
 import os, sys, base64
 url = os.environ.get("DATABASE_URL", "")
 if not url:
-    print("echo \"ERROR: DATABASE_URL is empty\" >&2; exit 1")
+    print('echo "ERROR: DATABASE_URL is empty" >&2; exit 1')
     sys.exit(0)
 # Strip scheme (postgresql:// or postgres://)
 rest = url.split("://", 1)[1] if "://" in url else url
@@ -42,29 +43,33 @@ pg_pass = parts[1] if len(parts) > 1 else ""
 # Extract dbname (strip query params)
 pg_db = hostpart.split("/", 1)[1].split("?")[0] if "/" in hostpart else "postgres"
 b64 = lambda s: base64.b64encode(s.encode()).decode()
-# Emit shell assignments using base64 to avoid quoting issues
-print("PG_USER=$(printf %s " + repr(b64(pg_user)) + " | base64 -d)")
-print("PG_PASS=$(printf %s " + repr(b64(pg_pass)) + " | base64 -d)")
-print("PG_DB=$(printf %s " + repr(b64(pg_db)) + " | base64 -d)")
-'")"
+# Emit shell assignments using printf + base64 to avoid quoting issues
+print("PG_USER=$(printf '%s' '" + b64(pg_user) + "' | base64 -d)")
+print("PG_PASS=$(printf '%s' '" + b64(pg_pass) + "' | base64 -d)")
+print("PG_DB=$(printf '%s' '" + b64(pg_db) + "' | base64 -d)")
+PYEOF
 
-echo "psql: connecting to db=$PG_DB user=$PG_USER (password length=${#PG_PASS})" >&2
+# Run Python parser; eval the resulting shell assignments (values are base64-safe)
+eval "$(python3 "$PARSE_PY")"
+rm -f "$PARSE_PY"
+
+echo "psql: db=$PG_DB user=$PG_USER pass-len=${#PG_PASS}" >&2
 
 # Run COUNT(*) inside DB container; PGPASSWORD as env var, not CLI arg.
-# Redirect psql stderr to stderr (not /dev/null) so auth errors are visible.
+# Capture stderr in output so auth errors are visible.
 PSQL_OUT=$(docker exec \
   -e "PGPASSWORD=$PG_PASS" \
   "$DB_CTR" \
   psql -U "$PG_USER" -d "$PG_DB" -t -A \
     -c "SELECT COUNT(*) FROM file_objects" 2>&1 || echo "PSQL_FAILED")
 
-echo "psql raw output: $(echo "$PSQL_OUT" | head -1)" >&2
+echo "psql raw: $(echo "$PSQL_OUT" | head -1)" >&2
 
 COUNT=$(echo "$PSQL_OUT" | tr -d '[:space:]')
 
 if [ -z "$COUNT" ] || ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
   echo "ERROR: Could not get numeric file_objects count from psql in $DB_CTR." >&2
-  echo "       (psql output was non-numeric; see 'psql raw output' line above)" >&2
+  echo "       (psql output non-numeric; see 'psql raw' line above for details)" >&2
   exit 1
 fi
 
