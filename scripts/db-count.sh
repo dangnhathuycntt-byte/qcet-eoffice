@@ -63,13 +63,37 @@ DBS_OUT=$(docker exec \
     -c "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname" 2>&1 || echo "DIAG_FAILED")
 echo "diag databases: $DBS_OUT" >&2
 
-# Diagnostic: count all user tables in the target DB.
+# Diagnostic: count all user tables in the target DB — across ALL schemas.
 TABLES_OUT=$(docker exec \
   -e "PGPASSWORD=$PG_PASS" \
   "$DB_CTR" \
   psql -U "$PG_USER" -d "$PG_DB" -t -A \
-    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema') ORDER BY table_schema, table_name LIMIT 10" 2>&1 || echo "DIAG_FAILED")
-echo "diag user-tables: $TABLES_OUT" >&2
+    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema') ORDER BY table_schema, table_name LIMIT 20" 2>&1 || echo "DIAG_FAILED")
+echo "diag user-tables (all schemas): $TABLES_OUT" >&2
+
+# Diagnostic: show current search_path setting.
+SP_OUT=$(docker exec \
+  -e "PGPASSWORD=$PG_PASS" \
+  "$DB_CTR" \
+  psql -U "$PG_USER" -d "$PG_DB" -t -A \
+    -c "SHOW search_path" 2>&1 || echo "DIAG_FAILED")
+echo "diag search_path: $SP_OUT" >&2
+
+# Diagnostic: list all schemas in the connected DB.
+SCHEMAS_OUT=$(docker exec \
+  -e "PGPASSWORD=$PG_PASS" \
+  "$DB_CTR" \
+  psql -U "$PG_USER" -d "$PG_DB" -t -A \
+    -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('pg_catalog','information_schema','pg_toast') ORDER BY schema_name" 2>&1 || echo "DIAG_FAILED")
+echo "diag schemas: $SCHEMAS_OUT" >&2
+
+# Try to find file_objects in any schema.
+FO_PROBE=$(docker exec \
+  -e "PGPASSWORD=$PG_PASS" \
+  "$DB_CTR" \
+  psql -U "$PG_USER" -d "$PG_DB" -t -A \
+    -c "SELECT table_schema, table_name FROM information_schema.tables WHERE table_name='file_objects'" 2>&1 || echo "DIAG_FAILED")
+echo "diag file_objects location: $FO_PROBE" >&2
 
 # Run COUNT(*) on file_objects (schema-qualified).
 PSQL_OUT=$(docker exec \
