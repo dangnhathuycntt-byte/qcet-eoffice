@@ -6,11 +6,7 @@
 # Security:
 #   - DATABASE_URL read from running app container env (masked immediately)
 #   - Migration runs inside app container which already has DATABASE_URL set
-#   - No credential values appear in logs
-#
-# Prerequisites:
-#   - qcet-eoffice-app container running on self-hosted runner
-#   - APP_DATABASE_URL must have schema-write permissions (qcet_admin)
+#   - PG credentials in chmod-600 files; never appear on CLI
 #
 # Usage:
 #   gh workflow run migrate-production.yml -f confirm=migrate
@@ -28,6 +24,20 @@ on:
 concurrency:
   group: production-migrate
   cancel-in-progress: false
+
+env:
+  # Python URL-parser script, base64-encoded to avoid heredoc/YAML conflicts.
+  # Decodes to: parse DATABASE_URL env var, write components to argv file paths.
+  PY_URL_PARSER: >-
+    aW1wb3J0IG9zLCBzeXMKZnJvbSB1cmxsaWIucGFyc2UgaW1wb3J0IHVybHNwbGl0LCB1bnF1
+    b3RlCnVybCA9IG9zLmVudmlyb24uZ2V0KCJEQVRBQkFTRV9VUkwiLCAiIikKdSA9IHVybHNw
+    bGl0KHVybCkKdmFscyA9IFsKICAgIHVucXVvdGUodS51c2VybmFtZSBvciAiIiksCiAgICB1
+    bnF1b3RlKHUucGFzc3dvcmQgb3IgIiIpLAogICAgdW5xdW90ZSh1Lmhvc3RuYW1lIG9yICJs
+    b2NhbGhvc3QiKSwKICAgIHN0cih1LnBvcnQgb3IgNTQzMiksCiAgICB1bnF1b3RlKCh1LnBh
+    dGgubHN0cmlwKCIvIikuc3BsaXQoIj8iKVswXSBpZiB1LnBhdGggZWxzZSAicG9zdGdyZXMi
+    KSksCl0KZm9yIHBhdGgsIHZhbCBpbiB6aXAoc3lzLmFyZ3ZbMTpdLCB2YWxzKToKICAgIHdp
+    dGggb3BlbihwYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSh2YWwpCiAgICBvcy5j
+    aG1vZChwYXRoLCAwbzYwMCkK
 
 jobs:
   migrate:
@@ -85,25 +95,16 @@ jobs:
           TMPDIR_M=$(mktemp -d /tmp/migrate-check.XXXXXX)
           trap 'rm -rf "$TMPDIR_M"' EXIT
 
-          # Write Python URL parser to file (avoids << in YAML run block)
-          PY="$TMPDIR_M/parse.py"
-          printf '%s\n' \
-            'import os, base64' \
-            'from urllib.parse import urlsplit, unquote' \
-            'u = urlsplit(os.environ.get("DATABASE_URL",""))' \
-            'b = lambda s: base64.b64encode(s.encode()).decode()' \
-            'pu = unquote(u.username or "")' \
-            'pp = unquote(u.password or "")' \
-            'ph = unquote(u.hostname or "localhost")' \
-            'po = str(u.port or 5432)' \
-            'pd = unquote((u.path.lstrip("/").split("?")[0] if u.path else "postgres"))' \
-            'print("PG_USER=$(printf '"'"'%s'"'"' '"'"'" + b(pu) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_PASS=$(printf '"'"'%s'"'"' '"'"'" + b(pp) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_HOST=$(printf '"'"'%s'"'"' '"'"'" + b(ph) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_PORT=$(printf '"'"'%s'"'"' '"'"'" + b(po) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_DB=$(printf '"'"'%s'"'"' '"'"'"   + b(pd) + "'"'"'" + "'"'"' | base64 -d)")' \
-            > "$PY"
-          eval "$(DATABASE_URL="$DB_URL" python3 "$PY")"
+          # Decode and run Python URL parser (no heredoc = no YAML conflict)
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$TMPDIR_M/parse.py"
+          DATABASE_URL="$DB_URL" python3 "$TMPDIR_M/parse.py" \
+            "$TMPDIR_M/pg_user" "$TMPDIR_M/pg_pass" \
+            "$TMPDIR_M/pg_host" "$TMPDIR_M/pg_port" "$TMPDIR_M/pg_db"
+          PG_USER=$(cat "$TMPDIR_M/pg_user")
+          PG_PASS=$(cat "$TMPDIR_M/pg_pass")
+          PG_HOST=$(cat "$TMPDIR_M/pg_host")
+          PG_PORT=$(cat "$TMPDIR_M/pg_port")
+          PG_DB=$(cat   "$TMPDIR_M/pg_db")
           echo "DB: host=$PG_HOST port=$PG_PORT db=$PG_DB user=$PG_USER" >&2
 
           ENV_FILE="$TMPDIR_M/pgenv"
@@ -160,24 +161,15 @@ jobs:
           TMPDIR_V=$(mktemp -d /tmp/migrate-verify.XXXXXX)
           trap 'rm -rf "$TMPDIR_V"' EXIT
 
-          PY="$TMPDIR_V/parse.py"
-          printf '%s\n' \
-            'import os, base64' \
-            'from urllib.parse import urlsplit, unquote' \
-            'u = urlsplit(os.environ.get("DATABASE_URL",""))' \
-            'b = lambda s: base64.b64encode(s.encode()).decode()' \
-            'pu = unquote(u.username or "")' \
-            'pp = unquote(u.password or "")' \
-            'ph = unquote(u.hostname or "localhost")' \
-            'po = str(u.port or 5432)' \
-            'pd = unquote((u.path.lstrip("/").split("?")[0] if u.path else "postgres"))' \
-            'print("PG_USER=$(printf '"'"'%s'"'"' '"'"'" + b(pu) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_PASS=$(printf '"'"'%s'"'"' '"'"'" + b(pp) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_HOST=$(printf '"'"'%s'"'"' '"'"'" + b(ph) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_PORT=$(printf '"'"'%s'"'"' '"'"'" + b(po) + "'"'"'" + "'"'"' | base64 -d)")' \
-            'print("PG_DB=$(printf '"'"'%s'"'"' '"'"'"   + b(pd) + "'"'"'" + "'"'"' | base64 -d)")' \
-            > "$PY"
-          eval "$(DATABASE_URL="$DB_URL" python3 "$PY")"
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$TMPDIR_V/parse.py"
+          DATABASE_URL="$DB_URL" python3 "$TMPDIR_V/parse.py" \
+            "$TMPDIR_V/pg_user" "$TMPDIR_V/pg_pass" \
+            "$TMPDIR_V/pg_host" "$TMPDIR_V/pg_port" "$TMPDIR_V/pg_db"
+          PG_USER=$(cat "$TMPDIR_V/pg_user")
+          PG_PASS=$(cat "$TMPDIR_V/pg_pass")
+          PG_HOST=$(cat "$TMPDIR_V/pg_host")
+          PG_PORT=$(cat "$TMPDIR_V/pg_port")
+          PG_DB=$(cat   "$TMPDIR_V/pg_db")
 
           ENV_FILE="$TMPDIR_V/pgenv"
           printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$ENV_FILE"
