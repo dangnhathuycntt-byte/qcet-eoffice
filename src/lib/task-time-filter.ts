@@ -27,7 +27,7 @@ export function getTaskTimeFilterLabel(filter: TaskTimeFilter): string {
       today: "Hôm nay",
       this_week: "Tuần này",
       this_month: "Tháng này",
-      overdue: "Quá hạn",
+      overdue: "Trễ hạn",
     }[filter.preset];
   }
   return "Thời gian";

@@ -1143,7 +1143,7 @@ export function ModularCascadingTaskTable({
                           </td>
                           <td className="px-3 py-1.5">
                             <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
-                              {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
+                              {task.dueDate ? formatTableDate(task.dueDate) : "Trễ hạn"}
                             </span>
                           </td>
                           <td className="px-3 py-1.5">
@@ -1216,7 +1216,7 @@ export function ModularCascadingTaskTable({
                       <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-amber-100">
                         <span>{task.leadAssigneeName}</span>
                         <span className="font-mono font-semibold text-rose-700 tabular-nums">
-                          {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
+                          {task.dueDate ? formatTableDate(task.dueDate) : "Trễ hạn"}
                         </span>
                       </div>
                     </div>

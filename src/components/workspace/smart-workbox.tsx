@@ -126,7 +126,7 @@ export function SmartWorkbox({
     },
     {
       key: "overdue",
-      label: "Quá hạn",
+      label: "Trễ hạn",
       description: "Cần xử lý khẩn",
       count: counts.overdueCount,
       href: getSmartWorkboxNavigationUrl("overdue", roleScope, departmentCode),

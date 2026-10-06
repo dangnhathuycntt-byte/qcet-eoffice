@@ -51,7 +51,7 @@ export function getWorkboxDisplayLabel(workbox: string): string {
     case "review":
       return "Cần duyệt/nộp";
     case "overdue":
-      return "Quá hạn";
+      return "Trễ hạn";
     case "today":
       return "Hôm nay";
     case "this_week":
@@ -81,7 +81,7 @@ export function getSingleStatusDisplayLabel(status: string): string {
     case "NEW":
       return "Mới";
     case "OVERDUE":
-      return "Quá hạn";
+      return "Trễ hạn";
     default:
       return status;
   }
@@ -105,7 +105,7 @@ function getDeadlineDisplayLabel(deadline: string): string {
     case "this_week":
       return "Trong tuần này";
     case "overdue":
-      return "Quá hạn";
+      return "Trễ hạn";
     case "no_deadline":
       return "Chưa có thời hạn";
     default:
@@ -238,7 +238,7 @@ export function getActiveFilterSummary(params: ActiveFilterSummaryParams): strin
     parts.push(`Trạng thái: ${params.status}`);
   }
   if (params.overdue) {
-    parts.push("Quá hạn");
+    parts.push("Trễ hạn");
   }
   if (params.scope && params.scope !== "ALL") {
     const scopeLabel =
@@ -439,9 +439,9 @@ export function ActiveFilterBreadcrumb({
             dataSlot="filter-chip-overdue"
             icon={AlertTriangle}
             label="Trạng thái"
-            value="Quá hạn"
+            value="Trễ hạn"
             onRemove={(onRemoveOverdue || onRemoveFilter) ? () => handleRemove(onRemoveOverdue, "overdue") : undefined}
-            removeAriaLabel="Xóa lọc Quá hạn"
+            removeAriaLabel="Xóa lọc Trễ hạn"
           />
         )}
 

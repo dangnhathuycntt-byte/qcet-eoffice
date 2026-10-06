@@ -937,13 +937,13 @@ function KanbanCard({
               "flex items-center gap-1 text-[11px] font-mono tabular-nums",
               overdue ? "text-rose-600 font-semibold" : "text-muted-foreground/75 font-normal"
             )}
-            title={overdue ? `Quá hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
+            title={overdue ? `Trễ hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
           >
             <Calendar strokeWidth={1.5} className="size-3 shrink-0" />
             <span>Hạn {formatDate(item.dueDate)}</span>
             {overdue && (
               <span className="text-[11px] text-rose-600 font-semibold ml-0.5">
-                {lateDays > 0 ? `(trễ ${lateDays} ngày)` : "(Quá hạn)"}
+                {lateDays > 0 ? `(trễ ${lateDays} ngày)` : "(Trễ hạn)"}
               </span>
             )}
           </div>

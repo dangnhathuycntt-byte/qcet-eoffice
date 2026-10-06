@@ -172,7 +172,7 @@ export function MetricStrip({
       },
       {
         id: "overdue",
-        title: "Quá hạn",
+        title: "Trễ hạn",
         value: overdue,
         subtitle: overdue > 0 ? "Cần ưu tiên xử lý" : "Đúng tiến độ",
         statusFilterKey: "OVERDUE",

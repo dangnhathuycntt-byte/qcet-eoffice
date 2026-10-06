@@ -48,8 +48,8 @@ export const DEFAULT_STATUS_OPTIONS: StatusFilterOption[] = [
   },
   {
     id: "OVERDUE",
-    label: "Quá hạn",
-    shortLabel: "Quá hạn",
+    label: "Trễ hạn",
+    shortLabel: "Trễ hạn",
     icon: AlertCircle,
   },
 ];

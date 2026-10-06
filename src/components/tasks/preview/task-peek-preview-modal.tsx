@@ -316,7 +316,7 @@ export function TaskPeekPreviewModal({
               {relativeDue && (
                 <span className={cn(
                   "text-[11px]",
-                  relativeDue.text.includes("Quá hạn")
+                  relativeDue.text.includes("Trễ hạn")
                     ? "text-rose-600 font-medium"
                     : "text-muted-foreground/60"
                 )}>

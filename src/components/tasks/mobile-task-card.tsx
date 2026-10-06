@@ -83,7 +83,7 @@ export function getMobileDueBadge(
 
   if (diffDays < 0) {
     return {
-      label: `Quá hạn ${Math.abs(diffDays)} ngày`,
+      label: `Trễ hạn ${Math.abs(diffDays)} ngày`,
       className: "border-rose-500/20 bg-rose-500/10 text-rose-700 font-semibold",
     };
   }

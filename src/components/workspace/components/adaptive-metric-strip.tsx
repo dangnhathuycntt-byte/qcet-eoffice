@@ -63,7 +63,7 @@ export function AdaptiveMetricStrip({
           {
             id: "urgent",
             status: "OVERDUE",
-            title: "Quá hạn",
+            title: "Trễ hạn",
             value: safeMetrics.urgentOverdueCount,
             subtitle:
               safeMetrics.urgentOverdueCount > 0
@@ -115,7 +115,7 @@ export function AdaptiveMetricStrip({
           {
             id: "urgent",
             status: "OVERDUE",
-            title: "Quá hạn đơn vị",
+            title: "Trễ hạn đơn vị",
             value: safeMetrics.urgentOverdueCount,
             subtitle:
               safeMetrics.urgentOverdueCount > 0
@@ -172,7 +172,7 @@ export function AdaptiveMetricStrip({
             value: safeMetrics.urgentOverdueCount,
             subtitle:
               safeMetrics.urgentOverdueCount > 0
-                ? "Hạn gấp & Quá hạn"
+                ? "Hạn gấp & Trễ hạn"
                 : "Tiến độ đúng hạn",
             icon: AlertCircle,
             iconColor:

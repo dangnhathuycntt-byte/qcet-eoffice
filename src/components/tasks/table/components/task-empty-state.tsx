@@ -347,7 +347,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayDescription =
         "Vui lòng thử tìm kiếm với từ khóa khác, hoặc kiểm tra lại bộ lọc danh mục và trạng thái.";
     } else if (activeTab === "overdue" || attention === "overdue") {
-      displayTitle = "Không có nhiệm vụ nào quá hạn";
+      displayTitle = "Không có nhiệm vụ nào trễ hạn";
       displayDescription =
         "Tuyệt vời! Tất cả các nhiệm vụ đều đang đúng tiến độ hoặc đã được giải quyết.";
     } else if (

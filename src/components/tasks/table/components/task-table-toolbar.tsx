@@ -443,7 +443,7 @@ export function TaskTableToolbar({
                   : "border border-rose-200 bg-rose-50/70 text-rose-700 font-medium"
               )}
             >
-              <span>Quá hạn</span>
+              <span>Trễ hạn</span>
               <span className="font-mono tabular-nums text-xs font-bold">
                 ({computedPillCounts?.overdue ?? 0})
               </span>

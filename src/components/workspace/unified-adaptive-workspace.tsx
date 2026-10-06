@@ -474,7 +474,7 @@ function ExecutiveDashboardSections({
       WAITING_APPROVAL: "Chờ phê duyệt",
       COMPLETED: "Hoàn thành",
       CANCELLED: "Đã hủy",
-      OVERDUE: "Quá hạn",
+      OVERDUE: "Trễ hạn",
     };
     return map[status] || status;
   };
@@ -504,7 +504,7 @@ function ExecutiveDashboardSections({
         </div>
         <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
         <div className="flex items-center gap-1.5 px-3 py-1">
-          <span className="text-muted-foreground">Quá hạn:</span>
+          <span className="text-muted-foreground">Trễ hạn:</span>
           <span
             className={cn(
               "font-mono font-semibold tabular-nums",
@@ -622,7 +622,7 @@ function ExecutiveDashboardSections({
               <div className="flex items-center gap-1.5 px-1">
                 <CircleAlert className="size-3.5 text-rose-600" strokeWidth={1.5} />
                 <h3 className="text-xs font-semibold text-rose-700">
-                  Quá hạn ({overdueTasks.length})
+                  Trễ hạn ({overdueTasks.length})
                 </h3>
               </div>
               {/* Column headers */}
@@ -661,7 +661,7 @@ function ExecutiveDashboardSections({
                   onClick={() => onViewAllOverdue?.()}
                   className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
                 >
-                  Xem tất cả {overdueTasks.length} nhiệm vụ quá hạn
+                  Xem tất cả {overdueTasks.length} nhiệm vụ trễ hạn
                   <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
                 </button>
               )}
@@ -2331,11 +2331,11 @@ function UnifiedAdaptiveWorkspaceInner({
               <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
               <span>nhiệm vụ</span>
               <span className="text-border">·</span>
-              <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : ""}>{metrics.waitingApprovalCount}</span>
-              <span className={metrics.waitingApprovalCount > 0 ? "text-amber-600" : ""}>chờ duyệt</span>
+              <span className="font-semibold text-foreground">{metrics.waitingApprovalCount}</span>
+              <span>chờ duyệt</span>
               <span className="text-border">·</span>
-              <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : ""}>{metrics.urgentOverdueCount}</span>
-              <span className={metrics.urgentOverdueCount > 0 ? "text-rose-600" : ""}>quá hạn</span>
+              <span className={metrics.urgentOverdueCount > 0 ? "font-semibold text-feedback-danger" : "font-semibold text-foreground"}>{metrics.urgentOverdueCount}</span>
+              <span className={metrics.urgentOverdueCount > 0 ? "text-feedback-danger" : ""}>trễ hạn</span>
             </div>
           }
           scope={activeScope}
@@ -2734,10 +2734,10 @@ function UnifiedAdaptiveWorkspaceInner({
                 <div className="font-medium text-slate-900">
                   <span className="font-semibold tabular-nums">{metrics?.totalTasks ?? 0}</span> nhiệm vụ {activeScope === "school" ? "toàn trường" : activeScope === "unit" ? "đơn vị" : "cá nhân"}
                 </div>
-                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : "text-slate-500")}>
-                  <span className="font-semibold tabular-nums">{metrics?.urgentOverdueCount ?? 0}</span> quá hạn
+                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-feedback-danger font-medium" : "text-slate-500")}>
+                  <span className="font-semibold tabular-nums">{metrics?.urgentOverdueCount ?? 0}</span> trễ hạn
                 </div>
-                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : "text-slate-500")}>
+                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-slate-700 font-medium" : "text-slate-500")}>
                   <span className="font-semibold tabular-nums">{metrics?.waitingApprovalCount ?? 0}</span> chờ phân công/duyệt
                 </div>
                 <div className="text-slate-500">

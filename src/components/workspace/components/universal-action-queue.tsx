@@ -150,7 +150,7 @@ export function UniversalActionQueue({
         >
           <div className="flex items-center gap-1.5 font-medium">
             <AlertTriangle className="size-3.5 shrink-0 text-rose-500" strokeWidth={1.5} />
-            <span>Có <span className="font-mono font-semibold tabular-nums">{totalOverdue}</span> tác vụ quá hạn cần ưu tiên xử lý.</span>
+            <span>Có <span className="font-mono font-semibold tabular-nums">{totalOverdue}</span> tác vụ trễ hạn cần ưu tiên xử lý.</span>
           </div>
           {onFilterCanvas && (
             <button
@@ -397,7 +397,7 @@ export function UniversalActionQueue({
                     <div className="text-[11px] text-slate-400 truncate">
                       {item.isOverdue ? (
                         <span className="text-rose-600 font-medium">
-                          Quá hạn: {item.dueDate}
+                          Trễ hạn: {item.dueDate}
                         </span>
                       ) : (
                         <span>Hạn: {item.dueDate || "Trong tuần"}</span>

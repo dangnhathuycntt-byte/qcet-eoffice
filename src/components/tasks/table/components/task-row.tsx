@@ -201,7 +201,7 @@ function HealthIndicator({
     return (
       <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/90 font-medium">
         <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
-        <span>Quá hạn</span>
+        <span>Trễ hạn</span>
       </div>
     );
   }
@@ -434,7 +434,7 @@ export const TaskRow = React.memo(function TaskRow({
     task.status === "COMPLETED"
       ? "Hoàn thành"
       : slaStatus.isOverdue
-      ? "Quá hạn"
+      ? "Trễ hạn"
       : isWaitingApproval
       ? "Chờ duyệt"
       : task.status === "IN_PROGRESS"
@@ -628,9 +628,9 @@ export const TaskRow = React.memo(function TaskRow({
               {slaStatus.isOverdue && (
                 <span
                   className="inline-flex items-center text-[11px] font-semibold text-rose-600 leading-tight"
-                  title={slaStatus.label || "Quá hạn"}
+                  title={slaStatus.label || "Trễ hạn"}
                 >
-                  {slaStatus.label || "Quá hạn"}
+                  {slaStatus.label || "Trễ hạn"}
                 </span>
               )}
               {!slaStatus.isOverdue && slaStatus.isToday && (

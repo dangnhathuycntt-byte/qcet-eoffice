@@ -61,6 +61,6 @@ export function formatRelativeDate(
   if (diff === 1) return "Ngày mai";
   if (diff >= 2 && diff <= RELATIVE_NEAR_TERM_MAX_DAYS) return `Còn ${diff} ngày`;
   if (diff > RELATIVE_NEAR_TERM_MAX_DAYS) return formatDisplayDate(target, fallback);
-  if (diff === -1) return "Quá hạn 1 ngày";
-  return `Quá hạn ${Math.abs(diff)} ngày`;
+  if (diff === -1) return "Trễ hạn 1 ngày";
+  return `Trễ hạn ${Math.abs(diff)} ngày`;
 }

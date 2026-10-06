@@ -575,7 +575,7 @@ export function AppSidebar() {
                             "group relative flex items-center rounded-[6px] h-[30px] text-[13px] transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
                             isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-2",
                             active
-                              ? "bg-black/[0.06] dark:bg-white/[0.08] text-foreground font-medium"
+                              ? "bg-bg-selected text-foreground font-medium"
                               : "text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
                           )}
                         >
@@ -584,7 +584,7 @@ export function AppSidebar() {
                               className={cn(
                                 "size-4 shrink-0 transition-colors",
                                 active
-                                  ? "text-foreground"
+                                  ? "text-action"
                                   : "text-muted-foreground/75 group-hover:text-foreground"
                               )}
                             />

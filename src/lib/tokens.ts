@@ -60,7 +60,7 @@ export const QCET_TOKENS = {
       bg: "bg-rose-500/10",
       text: "text-rose-600",
       border: "border-rose-500/20",
-      label: "Quá hạn",
+      label: "Trễ hạn",
       hex: "#F43F5E",
       oklch: "oklch(0.63 0.22 25)",
     },

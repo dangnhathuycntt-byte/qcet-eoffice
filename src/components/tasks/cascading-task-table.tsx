@@ -161,7 +161,7 @@ export function getStatusBadgeConfig(
       };
     case "OVERDUE":
       return {
-        label: "Quá hạn",
+        label: "Trễ hạn",
         className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
         variant: "rose",
       };

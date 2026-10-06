@@ -2591,9 +2591,9 @@ export function UnifiedTaskToolbar({
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
               aria-label="Tạo nhiệm vụ"
-              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none touch-manipulation"
+              className="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium bg-action text-on-action transition-all duration-150 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
             >
-              <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
             </button>
           )}
@@ -2861,9 +2861,9 @@ export function UnifiedTaskToolbar({
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
           aria-label="Tạo việc mới"
-          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background px-2 sm:px-2.5 text-[11px] font-medium text-foreground transition-all duration-150 hover:bg-accent hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 shadow-none touch-manipulation"
+          className="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium bg-action text-on-action transition-all duration-150 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
         >
-          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+          <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>
         </button>
       )}

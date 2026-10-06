@@ -63,7 +63,7 @@ export function getRelativeDueTime(
 
   if (diffDays < 0) {
     return {
-      text: `Quá hạn ${Math.abs(diffDays)} ngày`,
+      text: `Trễ hạn ${Math.abs(diffDays)} ngày`,
       color: "border-red-500/30 bg-red-500/10 text-red-700",
     };
   }
