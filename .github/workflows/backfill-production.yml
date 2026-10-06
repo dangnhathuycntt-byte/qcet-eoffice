@@ -1,0 +1,64 @@
+# Production FileObject Backfill — Manual Trigger
+# Requires: PRODUCTION_DATABASE_URL secret populated and production uploads volume mounted.
+# This workflow runs the idempotent backfill script against the production database.
+# Safe to re-run: uses findUnique + conditional create keyed on storageKey uniqueness.
+#
+# Usage: gh workflow run backfill-production.yml -f dry_run=false
+# Owner must confirm PRODUCTION_DATABASE_URL is set and UPLOADS_DIR is correct.
+name: Production FileObject Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (--apply omitted, shows what would be backfilled)"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  backfill:
+    name: Backfill FileObjects (${{ github.event.inputs.dry_run == 'true' && 'DRY RUN' || 'APPLY' }})
+    runs-on: [self-hosted, Linux, X64, qcet]
+    environment:
+      name: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (via .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run backfill (dry run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          # UPLOADS_DIR must match UPLOADS_HOST_PATH from .env.production on the host
+          # (the bind-mount source path, not the /app/uploads container path).
+          # Set PRODUCTION_UPLOADS_DIR secret to the actual host path before applying.
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+        run: |
+          echo "DRY RUN — no changes will be written"
+          npx tsx scripts/backfill-file-objects.ts
+
+      - name: Run backfill (apply)
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+        run: |
+          echo "APPLY — writing FileObject records to production DB"
+          echo "Idempotent: storageKey uniqueness prevents duplicates"
+          npx tsx scripts/backfill-file-objects.ts --apply
