@@ -5,21 +5,30 @@
 #      DATABASE_URL bootstrapped from running app container (masked immediately)
 #   2. Uploads directory exists and is readable on runner host
 #   3. Uploads dir matches /app/uploads bind-mount of running qcet-app container
-#   4. DB reachable — COUNT(*) via scripts/db-count.sh (psql in DB container)
-#      DATABASE_URL uses Docker-internal db:5432, not resolvable from runner host
+#   4. DB reachable — COUNT(*) via scripts/db-count.sh
+#      Runs psql in a one-shot postgres:16-alpine container joined to qcet-network,
+#      so Docker DNS resolves qcet-db:5432 correctly. Never runs on runner host.
 #   5. App image identity: compose image digest logged; apply blocked if no revision label
 #   6. ClamAV daemon PONG on TCP:3310 (via docker exec inside container)
-#   7. Dry-run passes programmatically
+#   7. Dry-run passes programmatically (runs inside qcet-network via docker run)
 #   -- All gates re-run inside same job before apply (no TOCTOU two-job gap) --
 #   8. Apply run + post-apply idempotency: linkedOrEligible asserted === 0
+#
+# Network architecture:
+#   - DATABASE_URL uses qcet-db:5432 (Docker-internal hostname on qcet-network).
+#     Runner host CANNOT resolve this hostname. All DB access and backfill script
+#     execution run inside qcet-network via `docker run --rm --network qcet-network`.
+#   - The workspace is bind-mounted read-only for script execution.
+#   - UPLOADS_DIR is bind-mounted at /app/uploads (same path backfill script expects).
 #
 # Security:
 #   - DATABASE_URL NEVER printed to logs — masked immediately via ::add-mask::
 #     after reading from running container. NEVER sourced from .env or logged.
 #   - UPLOADS_DIR NEVER printed (only length/prefix shown)
-#   - Count query runs via scripts/db-count.sh: psql in DB container, credentials
-#     parsed from DATABASE_URL in-memory by Python3 (never logged), PGPASSWORD in env
-#   - No psql credentials in command line args
+#   - DATABASE_URL passed to docker run via env-file (never on CLI / ps output)
+#   - Count query uses scripts/db-count.sh: credentials parsed by Python3 urllib.parse,
+#     PGPASSWORD in per-exec env-file passed to docker run --env-file
+#   - No credentials in command line args
 #
 # Usage (dry-run, safe any time):
 #   gh workflow run backfill-production.yml -f apply=false
@@ -73,6 +82,7 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Bootstrap: read DATABASE_URL from running app container, mask it.
+      # Also discover the Docker network name so backfill steps can join it.
       # This avoids storing the production DB URL as a GitHub secret while
       # keeping it masked in logs. The URL is NEVER printed — only its length.
       # -----------------------------------------------------------------------
@@ -106,6 +116,17 @@ jobs:
           echo "::add-mask::$DB_URL"
           echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
           echo "DATABASE_URL: bootstrapped from $APP (${#DB_URL} chars, masked)"
+
+          # Discover the Docker network the app container is on (for docker run --network)
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -v '^$' | head -1)
+          if [ -z "$DOCKER_NET" ]; then
+            echo "ERROR: Could not determine Docker network from app container." >&2
+            exit 1
+          fi
+          echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "Docker network: $DOCKER_NET"
 
       - name: Generate Prisma client
         run: npx prisma generate
@@ -184,8 +205,10 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Gate 4: DB reachable — COUNT(*) via scripts/db-count.sh
-      # The script uses psql inside the DB container (Docker DNS resolves db:5432).
-      # Credentials parsed from DATABASE_URL in-memory by Python3, never logged.
+      # The script spawns a one-shot postgres:16-alpine container on qcet-network
+      # so Docker DNS resolves qcet-db:5432 correctly (runner host cannot).
+      # Credentials parsed from DATABASE_URL in-memory by Python3 urllib.parse,
+      # PGPASSWORD written to per-exec env-file — never on CLI.
       # -----------------------------------------------------------------------
       - name: Gate 4 — database reachable, FileObject table accessible
         id: dbcount
@@ -276,15 +299,38 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Step 7: Dry-run (always runs — both dry-run and apply modes)
-      # Output is JSON; capture to file for parsing.
+      # Runs inside qcet-network via docker run so DATABASE_URL hostname resolves.
+      # Workspace bind-mounted read-only; uploads dir bind-mounted at /app/uploads.
+      # DATABASE_URL passed via env-file (never on CLI).
       # -----------------------------------------------------------------------
       - name: Run backfill dry-run
         id: dryrun
         env:
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+          DOCKER_NETWORK: ${{ steps.bootstrap.outputs.docker_network }}
         run: |
           echo "=== DRY RUN (no writes) ==="
-          npx tsx scripts/backfill-file-objects.ts 2>&1 | tee /tmp/backfill-dryrun.json
+
+          # Write DATABASE_URL to env-file — never expanded on CLI
+          DBENV=$(mktemp /tmp/db-env.XXXXXX)
+          chmod 600 "$DBENV"
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > "$DBENV"
+          trap 'rm -f "$DBENV"' EXIT
+
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$DBENV" \
+            -e NODE_ENV=production \
+            -e NEXT_TELEMETRY_DISABLED=1 \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            --mount "type=bind,source=${UPLOADS_DIR},target=/app/uploads,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "
+              export UPLOADS_DIR=/app/uploads
+              export PATH=/workspace/node_modules/.bin:\$PATH
+              tsx scripts/backfill-file-objects.ts
+            " 2>&1 | tee /tmp/backfill-dryrun.json
           echo "Dry-run output written to /tmp/backfill-dryrun.json"
 
       - name: Verify dry-run output is valid JSON
@@ -363,9 +409,29 @@ jobs:
         id: apply_step
         env:
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+          DOCKER_NETWORK: ${{ steps.bootstrap.outputs.docker_network }}
         run: |
           echo "=== APPLY (writing FileObject records) ==="
-          npx tsx scripts/backfill-file-objects.ts --apply 2>&1 | tee /tmp/backfill-apply.json
+
+          DBENV=$(mktemp /tmp/db-env.XXXXXX)
+          chmod 600 "$DBENV"
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > "$DBENV"
+          trap 'rm -f "$DBENV"' EXIT
+
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$DBENV" \
+            -e NODE_ENV=production \
+            -e NEXT_TELEMETRY_DISABLED=1 \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            --mount "type=bind,source=${UPLOADS_DIR},target=/app/uploads,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "
+              export UPLOADS_DIR=/app/uploads
+              export PATH=/workspace/node_modules/.bin:\$PATH
+              tsx scripts/backfill-file-objects.ts --apply
+            " 2>&1 | tee /tmp/backfill-apply.json
           echo "Apply output written to /tmp/backfill-apply.json"
 
       - name: Post-apply DB count
@@ -382,9 +448,29 @@ jobs:
         if: ${{ github.event.inputs.apply == 'true' }}
         env:
           UPLOADS_DIR: ${{ secrets.PRODUCTION_UPLOADS_DIR }}
+          DOCKER_NETWORK: ${{ steps.bootstrap.outputs.docker_network }}
         run: |
           echo "=== IDEMPOTENCY CHECK: dry-run immediately after apply ==="
-          npx tsx scripts/backfill-file-objects.ts 2>&1 | tee /tmp/backfill-idempotency.json
+
+          DBENV=$(mktemp /tmp/db-env.XXXXXX)
+          chmod 600 "$DBENV"
+          printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > "$DBENV"
+          trap 'rm -f "$DBENV"' EXIT
+
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$DBENV" \
+            -e NODE_ENV=production \
+            -e NEXT_TELEMETRY_DISABLED=1 \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            --mount "type=bind,source=${UPLOADS_DIR},target=/app/uploads,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "
+              export UPLOADS_DIR=/app/uploads
+              export PATH=/workspace/node_modules/.bin:\$PATH
+              tsx scripts/backfill-file-objects.ts
+            " 2>&1 | tee /tmp/backfill-idempotency.json
 
           # Programmatic assertion: linkedOrEligible MUST be 0 after a successful apply
           python3 -c "
