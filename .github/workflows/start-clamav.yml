@@ -68,8 +68,9 @@ jobs:
             exit 1
           fi
           echo "ClamAV service definition found in compose file."
-          # Show service config (no secrets in clamav service)
-          docker compose -f "$COMPOSE_DIR/docker-compose.yml" config --services
+          # Show just the clamav section (grep context, no env interpolation needed)
+          echo "=== ClamAV service config (raw) ==="
+          awk '/^  clamav:/,/^  [a-z]/' "$COMPOSE_DIR/docker-compose.yml" | head -20
 
       - name: Check existing ClamAV state
         run: |
