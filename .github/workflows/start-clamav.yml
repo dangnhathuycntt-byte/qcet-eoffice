@@ -87,28 +87,22 @@ jobs:
         run: |
           echo "Starting ClamAV service..."
           # Docker Compose interpolates ALL service variables when parsing the compose
-          # file, even for services not being started. The missing APP_DATABASE_URL and
-          # other variables belong to the app/db services. We must supply them for the
-          # compose parser even though clamav doesn't use them.
-          #
-          # Strategy: write a temporary .env override that satisfies the parser with
-          # placeholder values, then remove it after. The actual app secrets stay in
-          # the host's .env.production file — we never read or overwrite those.
+          # file, even for services not being started. Supply placeholders for required
+          # variables belonging to the app/db services so the parser does not fail.
+          # The clamav service itself uses none of these variables.
           TEMP_ENV=$(mktemp /tmp/clamav-compose-env.XXXXX)
-          # Start with existing .env if present (to inherit real values)
+          # Start with existing .env if present (inherits real non-secret values)
           if [ -f "$COMPOSE_DIR/.env" ]; then
             cp "$COMPOSE_DIR/.env" "$TEMP_ENV"
           fi
-          # Append placeholder for any missing required vars
-          cat >> "$TEMP_ENV" << 'ENVEOF'
-APP_DATABASE_URL=placeholder://localhost/placeholder
-POSTGRES_PASSWORD=placeholder
-POSTGRES_DB=placeholder
-UPLOADS_HOST_PATH=/tmp/placeholder
-NEXTAUTH_SECRET=placeholder
-NEXTAUTH_URL=http://localhost:3000
-TUNNEL_TOKEN=placeholder
-ENVEOF
+          # Append placeholder values for any required vars not in .env
+          printf 'APP_DATABASE_URL=placeholder://localhost/placeholder\n' >> "$TEMP_ENV"
+          printf 'POSTGRES_PASSWORD=placeholder\n' >> "$TEMP_ENV"
+          printf 'POSTGRES_DB=placeholder\n' >> "$TEMP_ENV"
+          printf 'UPLOADS_HOST_PATH=/tmp/placeholder\n' >> "$TEMP_ENV"
+          printf 'NEXTAUTH_SECRET=placeholder\n' >> "$TEMP_ENV"
+          printf 'NEXTAUTH_URL=http://localhost:3000\n' >> "$TEMP_ENV"
+          printf 'TUNNEL_TOKEN=placeholder\n' >> "$TEMP_ENV"
           docker compose -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$TEMP_ENV" up -d --no-recreate clamav
           EXIT=$?
           rm -f "$TEMP_ENV"
