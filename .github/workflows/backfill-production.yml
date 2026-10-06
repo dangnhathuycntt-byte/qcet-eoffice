@@ -5,8 +5,8 @@
 #      DATABASE_URL bootstrapped from running app container (masked immediately)
 #   2. Uploads directory exists and is readable on runner host
 #   3. Uploads dir matches /app/uploads bind-mount of running qcet-app container
-#   4. DB reachable — numeric COUNT(*) via docker exec inside app container
-#      (DATABASE_URL uses Docker-internal db:5432 — not resolvable from runner host)
+#   4. DB reachable — COUNT(*) via scripts/db-count.sh (psql in DB container)
+#      DATABASE_URL uses Docker-internal db:5432, not resolvable from runner host
 #   5. App image identity: compose image digest logged; apply blocked if no revision label
 #   6. ClamAV daemon PONG on TCP:3310 (via docker exec inside container)
 #   7. Dry-run passes programmatically
@@ -17,8 +17,8 @@
 #   - DATABASE_URL NEVER printed to logs — masked immediately via ::add-mask::
 #     after reading from running container. NEVER sourced from .env or logged.
 #   - UPLOADS_DIR NEVER printed (only length/prefix shown)
-#   - Count query runs via docker exec inside app container (DATABASE_URL uses
-#     Docker-internal db:5432 hostname — runner host cannot resolve it directly)
+#   - Count query runs via scripts/db-count.sh: psql in DB container, credentials
+#     parsed from DATABASE_URL in-memory by Python3 (never logged), PGPASSWORD in env
 #   - No psql credentials in command line args
 #
 # Usage (dry-run, safe any time):
@@ -183,32 +183,20 @@ jobs:
           echo "Uploads mount: PRODUCTION_UPLOADS_DIR matches container /app/uploads bind-mount source."
 
       # -----------------------------------------------------------------------
-      # Gate 4: DB reachable — numeric COUNT(*) via docker exec inside app container.
-      # The DATABASE_URL uses Docker-internal hostname (db:5432) which is NOT
-      # resolvable from the runner host. Run the query inside the app container
-      # where Docker DNS works. Node + @prisma/client live at /app/node_modules.
+      # Gate 4: DB reachable — COUNT(*) via scripts/db-count.sh
+      # The script uses psql inside the DB container (Docker DNS resolves db:5432).
+      # Credentials parsed from DATABASE_URL in-memory by Python3, never logged.
       # -----------------------------------------------------------------------
       - name: Gate 4 — database reachable, FileObject table accessible
         id: dbcount
-        env:
-          APP_CONTAINER: ${{ steps.bootstrap.outputs.app_container }}
         run: |
-          COUNT=$(docker exec "$APP_CONTAINER" sh -c \
-            'node -e "
-          const { PrismaClient } = require(\"/app/node_modules/@prisma/client\");
-          const db = new PrismaClient();
-          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
-            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
-            .catch(e => { console.error(\"DB_ERROR\", e.message); db.\$disconnect(); process.exit(1); });
-          "' 2>&1)
-
+          COUNT=$(bash scripts/db-count.sh)
           if [ -z "$COUNT" ] || ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Could not get numeric file_objects count from docker exec. DB may be unreachable." >&2
-            echo "       Raw output: '${COUNT:-<empty>}'" >&2
+            echo "ERROR: scripts/db-count.sh did not return a numeric count." >&2
             exit 1
           fi
           echo "pre_count=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "Production DB reachable (via docker exec $APP_CONTAINER). Current file_objects row count: $COUNT"
+          echo "Production DB reachable. file_objects row count: $COUNT"
 
       # -----------------------------------------------------------------------
       # Gate 5: App container image identity — fail-closed on apply with no label
@@ -360,17 +348,11 @@ jobs:
           fi
           echo "ClamAV re-check: OK"
 
-          # Recheck DB count via docker exec (DATABASE_URL uses db:5432 internal hostname)
-          COUNT=$(docker exec "$APP_CONTAINER" sh -c \
-            'node -e "
-          const { PrismaClient } = require(\"/app/node_modules/@prisma/client\");
-          const db = new PrismaClient();
-          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
-            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
-            .catch(e => { console.error(\"DB_ERROR\", e.message); db.\$disconnect(); process.exit(1); });
-          "' 2>&1)
+          # Recheck DB count via scripts/db-count.sh (psql in DB container)
+          COUNT=$(bash scripts/db-count.sh 2>/dev/null)
+          COUNT=$(echo "$COUNT" | tr -d '[:space:]')
           if [ -z "$COUNT" ] || ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: DB count re-check failed before apply. Output: '${COUNT:-<empty>}'" >&2
+            echo "ERROR: DB count re-check failed before apply." >&2
             exit 1
           fi
           echo "DB re-check: file_objects count = $COUNT (pre-apply baseline)"
@@ -389,17 +371,8 @@ jobs:
       - name: Post-apply DB count
         if: ${{ github.event.inputs.apply == 'true' }}
         id: postcount
-        env:
-          APP_CONTAINER: ${{ steps.bootstrap.outputs.app_container }}
         run: |
-          COUNT=$(docker exec "$APP_CONTAINER" sh -c \
-            'node -e "
-          const { PrismaClient } = require(\"/app/node_modules/@prisma/client\");
-          const db = new PrismaClient();
-          db.\$queryRaw\`SELECT COUNT(*) AS n FROM file_objects\`
-            .then(r => { console.log(r[0].n.toString()); db.\$disconnect(); })
-            .catch(e => { console.error(\"DB_ERROR\", e.message); db.\$disconnect(); process.exit(1); });
-          "' 2>&1)
+          COUNT=$(bash scripts/db-count.sh 2>/dev/null | tr -d '[:space:]')
           PRE=$(cat /tmp/pre_apply_count.txt 2>/dev/null || echo "unknown")
           echo "post_count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Pre-apply file_objects count:  $PRE"
