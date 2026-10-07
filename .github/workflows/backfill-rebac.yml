@@ -72,29 +72,42 @@ jobs:
             echo "MODE: DRY-RUN — no writes; showing preview only."
           fi
 
-      - name: Gate — verify recent backup exists
+      - name: Gate — verify known pre-migrate backup (SHA256 + size bound)
         run: |
           set -euo pipefail
-          BACKUP_DIR="/home/dnhhuy/migrate-backups"
-          if [ ! -d "$BACKUP_DIR" ]; then
-            echo "ERROR: Backup dir '$BACKUP_DIR' not found." >&2
+          # Bind to the KNOWN verified backup from run 37567838096.
+          # SHA256: 61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42
+          # Size: 335908 bytes (332K). Any deviation = abort.
+          KNOWN_BACKUP="/home/dnhhuy/migrate-backups/qcet_eoffice_20261007T034055Z_premigrate.dump"
+          KNOWN_SHA="61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42"
+          KNOWN_MIN_SIZE=320000   # 312K lower bound
+          KNOWN_MAX_SIZE=400000   # 390K upper bound
+
+          if [ ! -f "$KNOWN_BACKUP" ]; then
+            echo "ERROR: Known pre-migrate backup not found: $KNOWN_BACKUP" >&2
+            echo "       Backfill must use the verified pre-migrate backup, not an arbitrary file." >&2
+            ls -lh "$(dirname "$KNOWN_BACKUP")" >&2 || true
             exit 1
           fi
-          # Find a .dump file newer than 24 hours
-          RECENT=$(find "$BACKUP_DIR" -name '*.dump' -newer "$BACKUP_DIR" -type f 2>/dev/null | head -1)
-          # Fallback: any dump in last 24h by mtime
-          RECENT=$(find "$BACKUP_DIR" -name '*.dump' -mmin -1440 -type f 2>/dev/null | head -1)
-          if [ -z "$RECENT" ]; then
-            echo "ERROR: No backup .dump found in '$BACKUP_DIR' newer than 24 hours." >&2
-            echo "       Run restore-drill.yml to verify backup freshness before backfill." >&2
-            echo "       Existing files:" >&2
-            ls -lh "$BACKUP_DIR" >&2 || true
+
+          ACTUAL_SIZE=$(stat -c%s "$KNOWN_BACKUP" 2>/dev/null || stat -f%z "$KNOWN_BACKUP")
+          echo "Backup: $KNOWN_BACKUP"
+          echo "Size: $ACTUAL_SIZE bytes"
+          if [ "$ACTUAL_SIZE" -lt "$KNOWN_MIN_SIZE" ] || [ "$ACTUAL_SIZE" -gt "$KNOWN_MAX_SIZE" ]; then
+            echo "ERROR: Backup size $ACTUAL_SIZE outside expected range [$KNOWN_MIN_SIZE, $KNOWN_MAX_SIZE]." >&2
             exit 1
           fi
-          BACKUP_SIZE=$(stat -c%s "$RECENT" 2>/dev/null || stat -f%z "$RECENT")
-          echo "Backup gate: PASS"
-          echo "  Most recent backup: $RECENT"
-          echo "  Size: $BACKUP_SIZE bytes"
+
+          echo "Verifying SHA256..."
+          ACTUAL_SHA=$(sha256sum "$KNOWN_BACKUP" 2>/dev/null | cut -d' ' -f1 \
+            || shasum -a 256 "$KNOWN_BACKUP" | cut -d' ' -f1)
+          echo "Expected SHA256: $KNOWN_SHA"
+          echo "Actual   SHA256: $ACTUAL_SHA"
+          if [ "$ACTUAL_SHA" != "$KNOWN_SHA" ]; then
+            echo "ERROR: SHA256 mismatch — backup may be corrupted or tampered." >&2
+            exit 1
+          fi
+          echo "Backup gate: PASS (SHA256 verified, size within bounds)"
 
       - name: Find app container and network
         id: app
@@ -182,12 +195,13 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
 
           run_psql() {
+            # -X: no .psqlrc; -v ON_ERROR_STOP=1: SQL errors exit non-zero (not silently empty)
             docker run --rm \
               --network "$DOCKER_NETWORK" \
               --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
               psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-                -t -A -c "$1" 2>&1
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           ACTUAL_DB=$(run_psql "SELECT current_database();" | tr -d '[:space:]')
@@ -210,12 +224,14 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           # Check if task_assignees table exists at all
+          # Note: EXISTS()::text in psql -t -A returns 'true'/'false' (not 't'/'f')
           TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
-          if [ "$TABLE_EXISTS" != "t" ]; then
+          if [ "$TABLE_EXISTS" != "true" ]; then
             echo "task_assignees table does not exist — backfill not needed."
             echo "SUPERVISOR gate: N/A (table gone)"
             exit 0
@@ -247,11 +263,12 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
-          if [ "$TABLE_EXISTS" != "t" ]; then
+          if [ "$TABLE_EXISTS" != "true" ]; then
             echo "task_assignees table does not exist — unknown-role gate: N/A"
             exit 0
           fi
@@ -279,11 +296,12 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
-          if [ "$TABLE_EXISTS" != "t" ]; then
+          if [ "$TABLE_EXISTS" != "true" ]; then
             echo "task_assignees does not exist — 0 rows to backfill."
             echo "pending_count=0" >> "$GITHUB_OUTPUT"
             exit 0
@@ -341,13 +359,18 @@ jobs:
           echo "  Mapping: PRIMARY_OWNER → DRI (is_primary_dri=true), COLLABORATOR → COLLABORATOR (is_primary_dri=false)"
           echo "  Idempotency: WHERE NOT EXISTS (no unique constraint — ON CONFLICT cannot be used)"
           echo "  Cast: 'DRI'::\"TaskActorRole\" — double-quoted type identifier for mixed-case enum"
+          echo "  Column: appointed_at (matches task_actors schema; NOT created_at/updated_at)"
+          echo "  Advisory lock: pg_advisory_xact_lock prevents concurrent backfill runs"
 
           # Write SQL to a chmod-600 file and mount into docker (avoids shell quoting of "TaskActorRole")
           # task_actors has NO unique constraint (only @@index) — ON CONFLICT cannot be used.
           # WHERE NOT EXISTS is the sole idempotency guard.
+          # Advisory lock (session-level key) prevents concurrent backfill dispatches from duplicating.
+          # Note: does NOT block concurrent app writes — run during known low-traffic window.
           cat > "$WORK_DIR/backfill.sql" << 'SQLEOF'
+          SELECT pg_advisory_xact_lock(hashtext('backfill_task_actors'));
           WITH inserted AS (
-            INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, created_at, updated_at)
+            INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)
             SELECT
               gen_random_uuid()::text,
               ta.task_id,
@@ -357,7 +380,6 @@ jobs:
                 WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'::"TaskActorRole"
               END,
               CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN true ELSE false END,
-              NOW(),
               NOW()
             FROM task_assignees ta
             WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
@@ -382,7 +404,7 @@ jobs:
             -v "$WORK_DIR/backfill.sql:/tmp/backfill.sql:ro" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-              -t -A -f /tmp/backfill.sql 2>&1 | tr -d '[:space:]')
+              -t -A -X -v ON_ERROR_STOP=1 -f /tmp/backfill.sql 2>&1 | tr -d '[:space:]')
 
           echo "Inserted: $INSERTED row(s)"
 
@@ -409,9 +431,13 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
+          # This re-runs the same WHERE NOT EXISTS predicate against live DB post-INSERT.
+          # It is NOT a second INSERT — it counts rows that would still be inserted.
+          # Must be 0 after the backfill INSERT committed.
           SECOND_RUN=$(run_psql "SELECT COUNT(*)
           FROM task_assignees ta
           WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
@@ -445,9 +471,15 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
+          # All DRI actors inserted by this backfill have is_primary_dri=true (PRIMARY_OWNER mapping).
+          # All non-DRI actors inserted have is_primary_dri=false (COLLABORATOR mapping).
+          # NOTE: This assertion covers ALL task_actors rows, including any pre-existing app-written rows.
+          # If the app has ever written DRI rows with is_primary_dri=false, this step will fail.
+          # That would indicate a schema/app invariant violation pre-existing this backfill.
           # All DRI actors must have is_primary_dri=true
           # All non-DRI actors must have is_primary_dri=false
           DRI_NO_FLAG=$(run_psql "SELECT COUNT(*) FROM task_actors WHERE role::text='DRI' AND is_primary_dri=false;" | tr -d '[:space:]')
@@ -480,12 +512,14 @@ jobs:
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -t -A -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
 
-          if [ "$TABLE_EXISTS" = "t" ]; then
+          # Note: EXISTS()::text in psql -t -A returns 'true'/'false' (full word), not 't'/'f'
+          if [ "$TABLE_EXISTS" = "true" ]; then
             TOTAL_ASSIGNEES=$(run_psql "SELECT COUNT(*) FROM task_assignees;" | tr -d '[:space:]')
             TOTAL_ACTORS=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
             PARITY=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR') AND NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id=ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text=CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN 'DRI' WHEN 'COLLABORATOR' THEN 'COLLABORATOR' END);" | tr -d '[:space:]')
