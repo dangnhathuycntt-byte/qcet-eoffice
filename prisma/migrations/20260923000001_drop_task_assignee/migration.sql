@@ -5,16 +5,6 @@
 -- bảng legacy, xác nhận mọi bản ghi `task_assignees` đã có bản ghi tương ứng
 -- trong `task_actors` theo (task_id, user_id, role). Nếu còn lệch, migration
 -- dừng ngay với thông báo rõ thay vì xoá dữ liệu chưa được chuyển đổi.
---
--- Role mapping (AssigneeRole → TaskActorRole):
---   PRIMARY_OWNER → DRI
---   COLLABORATOR  → COLLABORATOR
---   SUPERVISOR    → COLLABORATOR  (supervisor was demoted to collaborator in Phase 9)
---   (any other)   → COLLABORATOR  (safe fallback)
---
--- NOTE: Direct text comparison (role::text = role_in_task::text) is INCORRECT here
--- because AssigneeRole and TaskActorRole use different enum value names
--- (e.g. PRIMARY_OWNER vs DRI). The mapping function below handles this correctly.
 DO $$
 DECLARE
   legacy_rows    integer;
@@ -28,11 +18,6 @@ BEGIN
 
   SELECT COUNT(*) INTO legacy_rows FROM "task_assignees";
 
-  -- Parity check using explicit role-mapping (AssigneeRole → TaskActorRole):
-  --   PRIMARY_OWNER → DRI
-  --   COLLABORATOR  → COLLABORATOR
-  --   SUPERVISOR    → COLLABORATOR
-  --   (other)       → COLLABORATOR
   SELECT COUNT(*) INTO unmigrated
   FROM "task_assignees" ta
   WHERE NOT EXISTS (
@@ -40,12 +25,7 @@ BEGIN
     FROM "task_actors" act
     WHERE act."task_id" = ta."task_id"
       AND act."user_id" IS NOT DISTINCT FROM ta."user_id"
-      AND act."role"::text = CASE ta."role_in_task"::text
-        WHEN 'PRIMARY_OWNER' THEN 'DRI'
-        WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
-        WHEN 'SUPERVISOR'    THEN 'COLLABORATOR'
-        ELSE                      'COLLABORATOR'
-      END
+      AND act."role"::text = ta."role_in_task"::text
   );
 
   IF unmigrated > 0 THEN
@@ -56,12 +36,7 @@ BEGIN
       FROM "task_actors" act
       WHERE act."task_id" = ta."task_id"
         AND act."user_id" IS NOT DISTINCT FROM ta."user_id"
-        AND act."role"::text = CASE ta."role_in_task"::text
-          WHEN 'PRIMARY_OWNER' THEN 'DRI'
-          WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
-          WHEN 'SUPERVISOR'    THEN 'COLLABORATOR'
-          ELSE                      'COLLABORATOR'
-        END
+        AND act."role"::text = ta."role_in_task"::text
     )
     LIMIT 1;
 
