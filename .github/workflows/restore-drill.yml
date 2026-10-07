@@ -186,9 +186,10 @@ jobs:
           set -euo pipefail
           # Use docker exec directly into the drill container — no separate docker run,
           # no env-file needed, no network routing. drill_user is the superuser for drill_db.
+          # -X: skip .psqlrc; ON_ERROR_STOP=1: SQL errors exit non-zero (not silently empty)
           run_drill() {
             docker exec "$DRILL_CONTAINER" \
-              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
+              psql -U drill_user -d drill_db -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           TABLE_COUNT=$(run_drill "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" | tr -d '[:space:]')
@@ -208,19 +209,22 @@ jobs:
         run: |
           set -euo pipefail
           # docker exec: bypasses network entirely; drill_user is superuser of isolated drill_db
+          # -X: skip .psqlrc; ON_ERROR_STOP=1: SQL errors exit non-zero (fail-closed, not silent empty)
+          # Note: EXISTS()::text in psql -t -A returns 'true'/'false' (full word), not 't'/'f'
           run_drill() {
             docker exec "$DRILL_CONTAINER" \
-              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
+              psql -U drill_user -d drill_db -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           check_table() {
             local tbl="$1"
             local EXISTS
-            EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$tbl')::text;") || true
+            # Fail-closed: run_drill exits non-zero on SQL error (ON_ERROR_STOP=1), no || true
+            EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$tbl')::text;")
             EXISTS=$(printf '%s' "$EXISTS" | tr -d '[:space:]')
-            if [ "$EXISTS" = "t" ]; then
+            if [ "$EXISTS" = "true" ]; then
               local COUNT
-              COUNT=$(run_drill "SELECT COUNT(*) FROM \"$tbl\";" | tr -d '[:space:]') || COUNT="ERR"
+              COUNT=$(run_drill "SELECT COUNT(*) FROM \"$tbl\";" | tr -d '[:space:]')
               echo "  $tbl: EXISTS ($COUNT rows)"
             else
               echo "  $tbl: MISSING (raw exists output: '$EXISTS')"
@@ -233,37 +237,63 @@ jobs:
           check_table "_prisma_migrations"
 
           # Hard gate: task_assignees must exist (backup is pre-drop)
-          TA_EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;") || true
+          # Fail-closed: no || true — SQL error is a hard failure
+          TA_EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;")
           TA_EXISTS=$(printf '%s' "$TA_EXISTS" | tr -d '[:space:]')
           echo "TA_EXISTS raw: '$TA_EXISTS'"
-          if [ "$TA_EXISTS" != "t" ]; then
+          if [ "$TA_EXISTS" != "true" ]; then
             echo "ERROR: task_assignees not in backup — backup may be post-drop or corrupted." >&2
             exit 1
           fi
           echo "task_assignees present: PASS"
 
-      - name: Verify row counts in restored DB
+      - name: Verify row counts and content in restored DB
         env:
           DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
         run: |
           set -euo pipefail
+          # -X ON_ERROR_STOP=1: fail-closed; SQL errors exit non-zero
           run_drill() {
             docker exec "$DRILL_CONTAINER" \
-              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
+              psql -U drill_user -d drill_db -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
+          # Hard assertion: task_assignees must have rows (backup is pre-drop production data)
+          TA_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees;" | tr -d '[:space:]')
+          echo "task_assignees total rows: $TA_COUNT"
+          if [ -z "$TA_COUNT" ] || [ "$TA_COUNT" -lt 1 ]; then
+            echo "ERROR: task_assignees has $TA_COUNT rows — backup data appears empty or missing." >&2
+            exit 1
+          fi
+          echo "task_assignees row count: PASS ($TA_COUNT rows)"
+
+          echo ""
           echo "=== task_assignees role distribution (from backup) ==="
           run_drill "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;"
 
+          # Soft check: SUPERVISOR rows must be 0 (per schema — SUPERVISOR is legacy/unused)
+          # Any non-zero count here indicates unexpected legacy data in backup
+          SUP_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'SUPERVISOR';" | tr -d '[:space:]')
+          echo ""
+          echo "SUPERVISOR rows in task_assignees: $SUP_COUNT (expected 0; non-zero is a pre-existing condition to investigate)"
+          if [ "$SUP_COUNT" != "0" ]; then
+            echo "WARNING: $SUP_COUNT SUPERVISOR row(s) found in task_assignees — backfill SUPERVISOR gate will block on APPLY." >&2
+          fi
+
           echo ""
           echo "=== task_actors role distribution (from backup) ==="
-          run_drill "SELECT role::text, is_primary_dri, COUNT(*) AS cnt FROM task_actors GROUP BY role::text, is_primary_dri ORDER BY cnt DESC;" \
-            || echo "(task_actors not in backup)"
+          # task_actors in backup may be empty (backfill not yet run) — that is expected, not an error
+          TA_ACTORS_COUNT=$(run_drill "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+          echo "task_actors total rows: $TA_ACTORS_COUNT"
+          if [ "$TA_ACTORS_COUNT" -gt 0 ]; then
+            run_drill "SELECT role::text, is_primary_dri, COUNT(*) AS cnt FROM task_actors GROUP BY role::text, is_primary_dri ORDER BY cnt DESC;"
+          else
+            echo "(task_actors empty — backfill not yet run; this is expected for pre-backfill backup)"
+          fi
 
           echo ""
           echo "=== _prisma_migrations status ==="
-          run_drill "SELECT migration_name, applied_steps_count, CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK' WHEN finished_at IS NULL THEN 'FAILED/PENDING' ELSE 'APPLIED' END AS status FROM _prisma_migrations ORDER BY started_at;" \
-            || echo "(_prisma_migrations not in backup)"
+          run_drill "SELECT migration_name, applied_steps_count, CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK' WHEN finished_at IS NULL THEN 'FAILED/PENDING' ELSE 'APPLIED' END AS status FROM _prisma_migrations ORDER BY started_at;"
 
       - name: Drill result summary
         run: |

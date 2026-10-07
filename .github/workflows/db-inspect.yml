@@ -132,13 +132,14 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user")
           PG_DB=$(cat   "$WORK_DIR/pg_db")
 
+          # -X: skip .psqlrc; ON_ERROR_STOP=1: SQL errors exit non-zero (not silently empty string)
           run_psql() {
             docker run --rm \
               --network "$DOCKER_NETWORK" \
               --env-file "$WORK_DIR/pgenv" \
               postgres:16-alpine \
               psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-                -t -A -c "$1" 2>&1
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           ACTUAL_DB=$(run_psql "SELECT current_database();" | tr -d '[:space:]')
@@ -156,14 +157,27 @@ jobs:
         run: |
           PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          # -X ON_ERROR_STOP=1: SQL errors exit non-zero; fail-closed (no silent empty string)
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
           echo "=== task_assignees column schema ==="
-          run_psql "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='task_assignees' ORDER BY ordinal_position;" \
-            || echo "(table does not exist)"
+          # Explicit existence check before querying — fail-closed on SQL error, display-closed on absent table
+          # EXISTS()::text in psql -t -A returns 'true'/'false' (not 't'/'f')
+          TA_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TA_EXISTS" = "true" ]; then
+            run_psql "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='task_assignees' ORDER BY ordinal_position;"
+          else
+            echo "(task_assignees does not exist in public schema)"
+          fi
 
       - name: task_assignees — counts and role distribution
         env:
@@ -174,16 +188,26 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
-          echo "=== task_assignees counts ==="
-          run_psql "SELECT COUNT(*) AS total_rows, COUNT(DISTINCT task_id) AS distinct_tasks, COUNT(DISTINCT user_id) AS distinct_users FROM task_assignees;" \
-            || echo "(table does not exist)"
+          # Explicit existence check — fail-closed on SQL error
+          TA_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TA_EXISTS" = "true" ]; then
+            echo "=== task_assignees counts ==="
+            run_psql "SELECT COUNT(*) AS total_rows, COUNT(DISTINCT task_id) AS distinct_tasks, COUNT(DISTINCT user_id) AS distinct_users FROM task_assignees;"
 
-          echo "=== task_assignees role_in_task distribution ==="
-          run_psql "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;" \
-            || echo "(table or column does not exist)"
+            echo "=== task_assignees role_in_task distribution ==="
+            run_psql "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;"
+          else
+            echo "(task_assignees does not exist in public schema)"
+          fi
 
       - name: task_actors — role distribution
         env:
@@ -194,7 +218,8 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
           }
 
           echo "=== task_actors role distribution ==="
@@ -209,12 +234,28 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
           }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # Explicit existence check before parity queries — fail-closed on SQL error
+          TA_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+
+          if [ "$TA_EXISTS" != "true" ]; then
+            echo "task_assignees does not exist — parity trivially satisfied (table absent)"
+            exit 0
+          fi
 
           echo "=== Parity: unmigrated task_assignees rows (role-mapped) ==="
           echo "  Mapping: PRIMARY_OWNER→DRI, COLLABORATOR→COLLABORATOR"
-          echo "  (SUPERVISOR and other roles are NOT mapped — will appear as unmigrated)"
+          echo "  Note: SUPERVISOR and other roles have no canonical mapping."
+          echo "  CASE ELSE maps them to themselves for display — they appear as unmigrated."
+          echo "  Backfill SUPERVISOR gate will hard-block on APPLY if SUPERVISOR count > 0."
           run_psql "SELECT
             ta.role_in_task::text AS assignee_role,
             COUNT(*) AS unmigrated_count
@@ -230,8 +271,7 @@ jobs:
               END
           )
           GROUP BY ta.role_in_task::text
-          ORDER BY unmigrated_count DESC;" \
-            || echo "(task_assignees does not exist — parity trivially satisfied)"
+          ORDER BY unmigrated_count DESC;"
 
           echo ""
           echo "=== Total unmigrated count ==="
@@ -246,8 +286,7 @@ jobs:
                 WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
                 ELSE ta.role_in_task::text
               END
-          );" \
-            || echo "(task_assignees does not exist)"
+          );"
 
       - name: AssigneeRole and TaskActorRole enum values
         env:
@@ -258,7 +297,8 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
           }
 
           echo "=== AssigneeRole enum values ==="
@@ -278,7 +318,8 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
           }
 
           echo "=== _prisma_migrations: 20260923000001_drop_task_assignee ==="
@@ -293,7 +334,8 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
           run_psql() {
             docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
           }
 
           echo "=== _prisma_migrations full status ==="
