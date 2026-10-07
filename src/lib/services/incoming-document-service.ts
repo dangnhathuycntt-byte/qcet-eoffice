@@ -831,12 +831,12 @@ export async function assignUnitWork(
       );
     }
 
-    // Lock the workflow row with SELECT FOR UPDATE before the CAS update.
-    // Under Postgres READ COMMITTED the pre-transaction read of `doc` may be
-    // stale by the time we enter the transaction.  The explicit lock ensures
-    // only one concurrent request holds the row lock at a time; the updateMany
-    // CAS then sees the *current* committed status and will set count=0 for
-    // the losing request, which is re-thrown as ConflictError.
+    // Lock the workflow row with SELECT FOR UPDATE.  Under READ COMMITTED,
+    // SELECT FOR UPDATE sees the latest committed row — so after acquiring the
+    // lock we get the true current status rather than the stale pre-transaction
+    // snapshot stored in `currentStatus`.  If a concurrent winner already
+    // transitioned the workflow, `lockedStatus` will differ from `currentStatus`
+    // and we reject immediately (see check below).
     const locked = await tx.$queryRaw<{ id: string; status: string }[]>`
       SELECT id, status FROM document_incoming_workflows
       WHERE id = ${doc.incomingWorkflow!.id}
@@ -849,12 +849,42 @@ export async function assignUnitWork(
       );
     }
 
+    // Use the committed (locked) status as the authoritative current status.
+    // This is the root fix for the concurrent-assignment race: the pre-tx read
+    // of `doc` may be stale when two requests race.  After acquiring the
+    // exclusive lock, `lockedStatus` reflects the true committed state.  If
+    // a concurrent transaction already transitioned the workflow, `lockedStatus`
+    // will differ from `currentStatus` and we reject immediately rather than
+    // relying solely on the CAS count check below.
+    const lockedStatus = locked[0].status as IncomingDocumentStatus;
+    if (lockedStatus !== currentStatus) {
+      throw new ConflictError(
+        "Quy trình văn bản đã được giao việc bởi yêu cầu khác. Hãy tải lại để xem trạng thái mới.",
+        "DOCUMENT_WORKFLOW_CONFLICT"
+      );
+    }
+
+    // Also re-check linkedTaskId inside the transaction using the locked document
+    // row so that a concurrent winner's Task creation is visible here.
+    if (input.createTask) {
+      const lockedDoc = await tx.document.findUnique({
+        where: { id: input.documentId },
+        select: { linkedTaskId: true },
+      });
+      if (lockedDoc?.linkedTaskId) {
+        throw new ConflictError(
+          "Văn bản này đã được liên kết với một nhiệm vụ.",
+          "DOCUMENT_TASK_ALREADY_LINKED"
+        );
+      }
+    }
+
     // Compare-and-swap the workflow before creating any related records. The
     // transaction rolls back the claim together with Task/assignment/audit if a
     // later write fails, while a concurrent request can no longer claim the same
     // transition and create a second Task.
     const claim = await tx.documentIncomingWorkflow.updateMany({
-      where: { id: doc.incomingWorkflow!.id, status: currentStatus },
+      where: { id: doc.incomingWorkflow!.id, status: lockedStatus },
       data: { status: targetStatus },
     });
     if (claim.count !== 1) {
