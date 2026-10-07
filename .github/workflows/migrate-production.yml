@@ -284,18 +284,22 @@ jobs:
           echo "dump_sha256=$SHA" >> "$GITHUB_OUTPUT"
 
           # pg_restore --list (table of contents only, no data, safe to log — bounded to 60 lines)
-          # Assert: exit code 0 and at least one content line (dump is valid and non-empty).
+          # Assert: exit code 0, at least one TABLE DATA entry (dump contains real table data).
           echo "--- pg_restore table of contents (first 60 entries) ---"
           RESTORE_LIST=$(docker run --rm \
             -v "$BACKUP_DIR:/backup" \
             postgres:16-alpine \
             pg_restore --list "/backup/qcet_eoffice_${STAMP}_premigrate.dump" 2>&1) \
             || { echo "ERROR: pg_restore --list failed — backup file may be corrupt." >&2; exit 1; }
-          RESTORE_LIST_LINES=$(printf '%s\n' "$RESTORE_LIST" | grep -c '.' || true)
           echo "$RESTORE_LIST" | head -60
-          echo "--- end of table of contents ($RESTORE_LIST_LINES total entries) ---"
-          if [ "$RESTORE_LIST_LINES" -lt 1 ]; then
-            echo "ERROR: pg_restore --list returned 0 entries — backup appears empty or invalid." >&2
+          # Count only TABLE DATA entries (real row data, not just schema headers/comments)
+          TABLE_DATA_COUNT=$(printf '%s\n' "$RESTORE_LIST" | grep -c 'TABLE DATA' || true)
+          RESTORE_LIST_LINES=$(printf '%s\n' "$RESTORE_LIST" | grep -c '.' || true)
+          echo "--- end of table of contents ($RESTORE_LIST_LINES total entries, $TABLE_DATA_COUNT TABLE DATA entries) ---"
+          if [ "$TABLE_DATA_COUNT" -lt 1 ]; then
+            echo "ERROR: pg_restore --list contains no TABLE DATA entries — backup appears to have no row data." >&2
+            echo "  Total TOC entries: $RESTORE_LIST_LINES" >&2
+            echo "  This may indicate pg_dump succeeded but captured an empty or schema-only dump." >&2
             exit 1
           fi
           # Assert backup file is not world-readable before declaring success
@@ -310,8 +314,8 @@ jobs:
       # ── Step 7: Setup Node.js + install + generate ───────────────────────
       # ORDERING NOTE: node_modules must exist before the resolve step because
       # prisma migrate resolve runs node_modules/.bin/prisma inside the container
-      # via a bind-mount of the workspace. Installing here (before step 8) ensures
-      # the binary is available when step 8 executes it.
+      # via a bind-mount of the workspace. Installing here (before step 8/compat and step 9/resolve)
+      # ensures the binary is available when step 8 tests it and step 9 executes it.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -324,7 +328,54 @@ jobs:
       - name: Generate Prisma client
         run: node_modules/.bin/prisma generate
 
-      # ── Step 8: Per-migration inspection and allowlisted resolve ──────────
+      # ── Step 8: Prisma binary compatibility check (MUST run before resolve) ──
+      # node_modules is now installed (Step 7). Test whether the Prisma binary
+      # that was installed by npm ci on the Debian runner can execute inside
+      # node:20-alpine (musl libc). If it cannot, the resolve step (Step 9)
+      # would fail trying to invoke it — so we detect and remediate HERE first.
+      - name: Check Prisma binary compatibility (node:20-alpine vs runner)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          echo "=== Prisma binary compatibility check ==="
+
+          # Test if workspace prisma CLI runs correctly inside node:20-alpine
+          # (runner may have installed Debian/glibc native binaries; alpine uses musl libc)
+          COMPAT_RESULT=$(docker run --rm \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "node_modules/.bin/prisma --version 2>&1" || echo "COMPAT_FAILED")
+
+          echo "Prisma version in node:20-alpine: $COMPAT_RESULT"
+
+          if echo "$COMPAT_RESULT" | grep -qE "COMPAT_FAILED|error|Error|cannot|No such"; then
+            echo "Prisma native binary is incompatible with node:20-alpine (musl libc)." >&2
+            echo "Attempting to install prisma inside alpine container..." >&2
+
+            # Fallback: install prisma inside alpine container using npm
+            # (Uses network to download; writes to a temp volume)
+            COMPAT_FIX=$(docker run --rm \
+              --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
+              -w /workspace \
+              node:20-alpine \
+              sh -c "apk add --no-cache python3 make g++ 2>&1 | tail -3 && npm ci --ignore-scripts 2>&1 | tail -5 && node_modules/.bin/prisma --version 2>&1" \
+              || echo "INSTALL_FAILED")
+            echo "Alpine prisma install result: $COMPAT_FIX" | head -10
+
+            if echo "$COMPAT_FIX" | grep -qE "INSTALL_FAILED|Error"; then
+              echo "ERROR: Cannot run Prisma inside node:20-alpine. Manual intervention required." >&2
+              exit 1
+            fi
+            echo "WARNING: node:20-alpine re-install needed — this will be done in the deploy step."
+            echo "alpine_reinstall=true" >> "$GITHUB_ENV"
+          else
+            echo "Prisma binary is compatible with node:20-alpine."
+            echo "alpine_reinstall=false" >> "$GITHUB_ENV"
+          fi
+
+      # ── Step 9: Per-migration inspection and allowlisted resolve ──────────
       - name: Inspect failed migrations and resolve with evidence
         id: resolve
         env:
@@ -535,6 +586,7 @@ jobs:
 
             echo "  Executing: prisma migrate resolve --rolled-back [migration_name]"
             # node_modules/.bin/prisma is available because Setup Node.js / npm ci ran above (step 7)
+            # and compat was verified in step 8 (binary runs in node:20-alpine without COMPAT_FAILED).
             docker run --rm \
               --network "$DOCKER_NETWORK" \
               --env-file "$WORK_DIR/dbenv_resolve" \
@@ -554,49 +606,6 @@ jobs:
           if [ "$BLOCKED_COUNT" -gt 0 ]; then
             echo "ERROR: $BLOCKED_COUNT failed migration(s) could not be resolved — manual investigation required." >&2
             exit 1
-          fi
-
-      # ── Step 9: Prisma binary compatibility check ─────────────────────────
-      - name: Check Prisma binary compatibility (node:20-alpine vs runner)
-        env:
-          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
-          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
-        run: |
-          echo "=== Prisma binary compatibility check ==="
-
-          # Test if workspace prisma CLI runs correctly inside node:20-alpine
-          # (runner may have installed Debian/glibc native binaries; alpine uses musl libc)
-          COMPAT_RESULT=$(docker run --rm \
-            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
-            -w /workspace \
-            node:20-alpine \
-            sh -c "node_modules/.bin/prisma --version 2>&1" || echo "COMPAT_FAILED")
-
-          echo "Prisma version in node:20-alpine: $COMPAT_RESULT"
-
-          if echo "$COMPAT_RESULT" | grep -qE "COMPAT_FAILED|error|Error|cannot|No such"; then
-            echo "Prisma native binary is incompatible with node:20-alpine (musl libc)." >&2
-            echo "Attempting to install prisma inside alpine container..." >&2
-
-            # Fallback: install prisma inside alpine container using npm
-            # (Uses network to download; writes to a temp volume)
-            COMPAT_FIX=$(docker run --rm \
-              --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
-              -w /workspace \
-              node:20-alpine \
-              sh -c "apk add --no-cache python3 make g++ 2>&1 | tail -3 && npm ci --ignore-scripts 2>&1 | tail -5 && node_modules/.bin/prisma --version 2>&1" \
-              || echo "INSTALL_FAILED")
-            echo "Alpine prisma install result: $COMPAT_FIX" | head -10
-
-            if echo "$COMPAT_FIX" | grep -qE "INSTALL_FAILED|Error"; then
-              echo "ERROR: Cannot run Prisma inside node:20-alpine. Manual intervention required." >&2
-              exit 1
-            fi
-            echo "WARNING: node:20-alpine re-install needed — this will be done in the deploy step."
-            echo "alpine_reinstall=true" >> "$GITHUB_ENV"
-          else
-            echo "Prisma binary is compatible with node:20-alpine."
-            echo "alpine_reinstall=false" >> "$GITHUB_ENV"
           fi
 
       # ── Step 10: prisma migrate deploy ────────────────────────────────────
