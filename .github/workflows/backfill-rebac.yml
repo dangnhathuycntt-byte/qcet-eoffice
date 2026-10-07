@@ -398,13 +398,15 @@ jobs:
           SQLEOF
           chmod 600 "$WORK_DIR/backfill.sql"
 
-          INSERTED=$(docker run --rm \
+          # Pipe SQL via stdin (-f -) to avoid bind-mount (docker run exit 125 on some runners).
+          # stdin is not a tty so no -t flag; 2>&1 captures psql error output alongside count.
+          INSERTED=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
-            -v "$WORK_DIR/backfill.sql:/tmp/backfill.sql:ro" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-              -t -A -X -v ON_ERROR_STOP=1 -f /tmp/backfill.sql 2>&1 | tr -d '[:space:]')
+              -A -X -v ON_ERROR_STOP=1 -f - 2>&1 \
+            < "$WORK_DIR/backfill.sql" | tr -d '[:space:]')
 
           echo "Inserted: $INSERTED row(s)"
 
