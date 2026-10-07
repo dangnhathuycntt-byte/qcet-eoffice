@@ -71,16 +71,25 @@ jobs:
       - name: Find app container and network
         id: app
         run: |
-          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          # Pin to the exact expected container name. Fallback only to detect
+          # a renamed container; any fallback is treated as a hard error requiring
+          # explicit investigation — never silently migrate against an unknown target.
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
           if [ -z "$APP" ]; then
-            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' \
-              | grep -vE 'db|clamav|cloudflared|tunnel|c2c' | head -1)
-          fi
-          if [ -z "$APP" ]; then
-            echo "ERROR: No qcet app container is running." >&2
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            echo "Running containers:" >&2
             docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' >&2
+            echo "Do not proceed with an unknown app container — verify deployment before retrying." >&2
             exit 1
           fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved container '$APP' does not match expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+
           DOCKER_NET=$(docker inspect "$APP" \
             --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
             | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
@@ -88,6 +97,12 @@ jobs:
             echo "ERROR: Could not determine Docker network from app container." >&2
             exit 1
           fi
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: App container is on network '$DOCKER_NET', expected '${EXPECTED_NET}'." >&2
+            echo "Migration requires a known network topology. Aborting." >&2
+            exit 1
+          fi
+
           IMG=$(docker inspect "$APP" --format '{{.Config.Image}}' 2>/dev/null)
           echo "app_container=$APP" >> "$GITHUB_OUTPUT"
           echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
@@ -269,16 +284,47 @@ jobs:
           echo "dump_sha256=$SHA" >> "$GITHUB_OUTPUT"
 
           # pg_restore --list (table of contents only, no data, safe to log — bounded to 60 lines)
+          # Assert: exit code 0 and at least one content line (dump is valid and non-empty).
           echo "--- pg_restore table of contents (first 60 entries) ---"
-          docker run --rm \
+          RESTORE_LIST=$(docker run --rm \
             -v "$BACKUP_DIR:/backup" \
             postgres:16-alpine \
-            pg_restore --list "/backup/qcet_eoffice_${STAMP}_premigrate.dump" \
-            | head -60
+            pg_restore --list "/backup/qcet_eoffice_${STAMP}_premigrate.dump" 2>&1) \
+            || { echo "ERROR: pg_restore --list failed — backup file may be corrupt." >&2; exit 1; }
+          RESTORE_LIST_LINES=$(printf '%s\n' "$RESTORE_LIST" | grep -c '.' || true)
+          echo "$RESTORE_LIST" | head -60
+          echo "--- end of table of contents ($RESTORE_LIST_LINES total entries) ---"
+          if [ "$RESTORE_LIST_LINES" -lt 1 ]; then
+            echo "ERROR: pg_restore --list returned 0 entries — backup appears empty or invalid." >&2
+            exit 1
+          fi
+          # Assert backup file is not world-readable before declaring success
+          BACKUP_PERMS=$(stat -c '%a' "$DUMP_FILE" 2>/dev/null || stat -f '%p' "$DUMP_FILE" 2>/dev/null | tail -c 4)
+          if [ "$BACKUP_PERMS" != "600" ]; then
+            echo "WARNING: Backup file permissions are $BACKUP_PERMS, expected 600. Fixing." >&2
+            chmod 600 "$DUMP_FILE"
+          fi
 
           echo "Backup complete: $(du -sh "$DUMP_FILE" | cut -f1)"
 
-      # ── Step 7: Per-migration inspection and allowlisted resolve ──────────
+      # ── Step 7: Setup Node.js + install + generate ───────────────────────
+      # ORDERING NOTE: node_modules must exist before the resolve step because
+      # prisma migrate resolve runs node_modules/.bin/prisma inside the container
+      # via a bind-mount of the workspace. Installing here (before step 8) ensures
+      # the binary is available when step 8 executes it.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: node_modules/.bin/prisma generate
+
+      # ── Step 8: Per-migration inspection and allowlisted resolve ──────────
       - name: Inspect failed migrations and resolve with evidence
         id: resolve
         env:
@@ -310,7 +356,7 @@ jobs:
 
           # Allowlist: migrations that have been investigated with explicit SQL/object evidence.
           # ONLY add a migration here after confirming: DDL rolled back (table still exists or not),
-          # parity checks pass, and safe to mark as rolled-back.
+          # parity checks pass, AND all deployment prerequisite gates have been met.
           # Format: one migration name per line.
           ALLOWLIST="20260923000001_drop_task_assignee"
 
@@ -346,67 +392,149 @@ jobs:
 
             echo "Migration '$MIG_NAME' is in allowlist. Performing evidence checks..."
 
-            # Evidence check for 20260923000001_drop_task_assignee:
-            # - This migration failed with RAISE EXCEPTION (guard: parity check failed)
-            # - Postgres transaction rolled back -> DROP TABLE task_assignees was never executed
-            # - Evidence: task_assignees table still exists, AssigneeRole enum still exists
-            # - Safe to mark as rolled-back IFF: parity check now passes (unmigrated = 0)
+            # ── Evidence checks for 20260923000001_drop_task_assignee ──────
+            # This migration's SQL contains an explicit parity guard (DO $$ ... RAISE EXCEPTION).
+            # When it failed: the guard fired because unmigrated rows > 0.
+            # Postgres rolled back the whole transaction → DROP TABLE was never executed.
+            # To resolve as --rolled-back we must confirm ALL of the following:
+            #   1. task_assignees table STILL EXISTS (proof DDL did not execute)
+            #   2. Parity = 0 (all rows migrated to task_actors — necessary but not sufficient)
+            #   3. AssigneeRole enum STILL EXISTS (also rolled back with the transaction)
+            #   4. _prisma_migrations record: finished_at IS NULL, rolled_back_at IS NULL
+            #      (confirms the row is truly in failed/pending state, not already resolved)
+            #   5. _prisma_migrations logs contain evidence of the RAISE EXCEPTION guard
+            #   6. DEPLOYMENT GATE: Tracker 174 observation window must be explicitly closed.
+            #      The migration.sql itself states: "Prerequisite: Stage B dual-write active,
+            #      Stage C observation window completed." Parity=0 proves data was backfilled
+            #      but does NOT prove the observation window has elapsed or the old app version
+            #      that reads task_assignees has been retired. Dropping the table while any
+            #      deployed app version still queries task_assignees directly will cause
+            #      runtime errors. This gate MUST be verified before proceeding.
             if [ "$MIG_NAME" = "20260923000001_drop_task_assignee" ]; then
-              echo "  Special evidence required for $MIG_NAME:"
-              echo "  1. Verify task_assignees table still exists (DDL rolled back)"
-              echo "  2. Verify parity: all task_assignees rows have matching task_actors rows"
+              echo "  Evidence checks for $MIG_NAME:"
 
               # Check 1: task_assignees table must still exist
               TA_EXISTS=$(run_psql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees'" \
                 | tr -d '[:space:]' || echo "PROBE_FAILED")
-              echo "  task_assignees exists (1=yes): $TA_EXISTS"
+              echo "  [1] task_assignees table exists (1=yes): $TA_EXISTS"
+              if [ "$TA_EXISTS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [1] Probe failed — cannot determine if task_assignees exists." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
               if [ "$TA_EXISTS" != "1" ]; then
-                echo "ERROR: task_assignees does not exist — unexpected state." >&2
-                echo "  If the table was already dropped, this migration should have succeeded, not failed." >&2
+                echo "ERROR: [1] task_assignees does not exist — unexpected state." >&2
+                echo "  If the table was already dropped, this migration should have succeeded." >&2
+                echo "  Investigate manually before resolving." >&2
                 BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
                 continue
               fi
 
-              # Check 2: parity — count rows in task_assignees with no matching task_actors entry
+              # Check 2: parity — count unmigrated rows in task_assignees
               UNMIGRATED=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id = ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text = ta.role_in_task::text)" \
                 | tr -d '[:space:]' || echo "PROBE_FAILED")
-              echo "  Unmigrated task_assignees rows (must be 0): $UNMIGRATED"
-
+              echo "  [2] Unmigrated task_assignees rows (must be 0): $UNMIGRATED"
               if [ "$UNMIGRATED" = "PROBE_FAILED" ]; then
-                echo "ERROR: Parity check query failed. Cannot safely resolve." >&2
+                echo "ERROR: [2] Parity check query failed. Cannot safely resolve." >&2
                 BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
                 continue
               fi
-
               if [ "$UNMIGRATED" != "0" ]; then
-                echo "ERROR: Parity check FAILED: $UNMIGRATED task_assignees rows have no matching task_actors entry." >&2
+                echo "ERROR: [2] Parity check FAILED: $UNMIGRATED task_assignees rows have no matching task_actors entry." >&2
                 echo "  ReBAC backfill (task_assignees -> task_actors) is incomplete." >&2
                 echo "  Run the backfill workflow (backfill-production.yml) first, then retry." >&2
                 BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
                 continue
               fi
 
-              # Check 3: AssigneeRole enum — should still exist (also rolled back)
+              # Check 3: AssigneeRole enum must still exist (also rolled back)
               AR_EXISTS=$(run_psql "SELECT COUNT(*) FROM pg_type WHERE typname = 'AssigneeRole'" \
                 | tr -d '[:space:]' || echo "PROBE_FAILED")
-              echo "  AssigneeRole enum exists (1=yes): $AR_EXISTS"
+              echo "  [3] AssigneeRole enum exists (1=yes): $AR_EXISTS"
+              if [ "$AR_EXISTS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [3] AssigneeRole enum probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$AR_EXISTS" != "1" ]; then
+                echo "ERROR: [3] AssigneeRole enum does not exist — unexpected state (expected rollback)." >&2
+                echo "  The enum should still exist since the transaction rolled back." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
 
-              # Check 4: log the started_at / logs from _prisma_migrations
-              MIG_RECORD=$(run_psql "SELECT migration_name, started_at, finished_at, rolled_back_at, logs FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+              # Check 4: _prisma_migrations record — assert known failed state
+              # Expected: finished_at IS NULL, rolled_back_at IS NULL (truly failed, not already resolved)
+              MIG_FINISHED=$(run_psql "SELECT COALESCE(finished_at::text, 'NULL') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              MIG_ROLLEDBACK=$(run_psql "SELECT COALESCE(rolled_back_at::text, 'NULL') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [4] _prisma_migrations finished_at: $MIG_FINISHED  rolled_back_at: $MIG_ROLLEDBACK"
+              if [ "$MIG_FINISHED" = "PROBE_FAILED" ] || [ "$MIG_ROLLEDBACK" = "PROBE_FAILED" ]; then
+                echo "ERROR: [4] _prisma_migrations record probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$MIG_FINISHED" != "NULL" ]; then
+                echo "ERROR: [4] finished_at is not NULL ('$MIG_FINISHED') — migration may have succeeded. Do not resolve." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$MIG_ROLLEDBACK" != "NULL" ]; then
+                echo "ERROR: [4] rolled_back_at is not NULL ('$MIG_ROLLEDBACK') — migration already resolved. Check state." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 5: _prisma_migrations logs must contain evidence of the guard exception
+              MIG_LOGS=$(run_psql "SELECT COALESCE(logs, '') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
                 || echo "PROBE_FAILED")
-              echo "  _prisma_migrations record: $MIG_RECORD" | head -5
+              echo "  [5] Migration logs (first 3 lines):"
+              printf '%s\n' "$MIG_LOGS" | head -3
+              if [ "$MIG_LOGS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [5] logs probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if ! printf '%s\n' "$MIG_LOGS" | grep -qi "task_assignees\|backfill\|parity\|chưa\|ERROR\|RAISE\|Exception"; then
+                echo "ERROR: [5] Migration logs do not contain expected guard exception evidence." >&2
+                echo "  Expected log content relating to the parity guard failure." >&2
+                echo "  Actual logs: $MIG_LOGS" | head -5 >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
 
-              echo "  EVIDENCE CONFIRMED: task_assignees exists, parity=0, DDL rolled back."
-              echo "  Safe to mark as rolled-back."
+              # Check 6: DEPLOYMENT GATE — Tracker 174 observation window
+              # The migration.sql states: "Prerequisite: Stage B dual-write active, Stage C
+              # observation window completed." Parity=0 proves backfill is done but does NOT
+              # prove that all deployed app instances have been upgraded past the version that
+              # reads task_assignees directly. Dropping the table while any app version still
+              # queries it directly will cause 500 errors.
+              #
+              # This gate is OPEN (Tracker 174 not yet closed with real evidence).
+              # Until the observation window is confirmed closed and the old app version retired,
+              # this migration MUST NOT proceed to resolve+deploy.
+              #
+              # To unblock: close Tracker 174 with evidence (observation window end timestamp,
+              # confirmation no live app reads task_assignees directly), then remove this block.
+              echo "ERROR: [6] DEPLOYMENT GATE OPEN — Tracker 174 (Stage C observation window) not yet closed." >&2
+              echo "  The migration SQL requires observation window completed before DROP TABLE." >&2
+              echo "  Parity=0 is necessary but not sufficient: it proves backfill is done," >&2
+              echo "  not that all deployed app instances have been upgraded past task_assignees." >&2
+              echo "  Dropping the table while any live app reads task_assignees causes 500 errors." >&2
+              echo "  ACTION REQUIRED: close Tracker 174 with real evidence, then update this workflow." >&2
+              BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+              continue
             fi
 
-            # Safe resolve: pass MIG_NAME as positional argument (not shell-interpolated string)
+            # Safe resolve: only reached if ALL evidence checks pass (none continue above)
             # Write DATABASE_URL env-file for docker run
             printf 'DATABASE_URL=%s\n' "$(grep '^DATABASE_URL=' "$WORK_DIR/dburl" | cut -d= -f2-)" \
               > "$WORK_DIR/dbenv_resolve"
             chmod 600 "$WORK_DIR/dbenv_resolve"
 
             echo "  Executing: prisma migrate resolve --rolled-back [migration_name]"
+            # node_modules/.bin/prisma is available because Setup Node.js / npm ci ran above (step 7)
             docker run --rm \
               --network "$DOCKER_NETWORK" \
               --env-file "$WORK_DIR/dbenv_resolve" \
@@ -427,19 +555,6 @@ jobs:
             echo "ERROR: $BLOCKED_COUNT failed migration(s) could not be resolved — manual investigation required." >&2
             exit 1
           fi
-
-      # ── Step 8: Setup Node.js + install + generate ────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Generate Prisma client
-        run: node_modules/.bin/prisma generate
 
       # ── Step 9: Prisma binary compatibility check ─────────────────────────
       - name: Check Prisma binary compatibility (node:20-alpine vs runner)
