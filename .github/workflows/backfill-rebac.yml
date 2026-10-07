@@ -365,7 +365,7 @@ jobs:
           echo "       snapshot is stable. App reads unaffected (SRE mode allows concurrent SELECTs)."
           echo "  Advisory lock: DO/PERFORM (no result row) — no output noise to strip"
           echo "  Output: -q -A -t tuples-only; -q suppresses command tags (BEGIN/DO/LOCK TABLE/COMMIT)"
-          echo "  Timeouts: lock_timeout=5s, statement_timeout=120s — avoids blocking production app"
+          echo "  Timeouts: lock_timeout=5000ms (5s), statement_timeout=120000ms (120s) — avoids blocking production app"
           echo "  Stderr: captured to separate file (not merged into stdout) to keep count capture clean"
 
           # SQL written via printf to avoid heredoc-at-column-0 YAML parse conflict.
@@ -373,13 +373,15 @@ jobs:
           #   -A -t, making stdout "BEGIN\nDO\nLOCK TABLE\nN\nCOMMIT" — numeric assert fails.
           # DO $$ BEGIN PERFORM pg_advisory_xact_lock(...); END $$; produces NO result row.
           # LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE blocks concurrent app INSERTs for txn duration.
-          # lock_timeout=5s: LOCK TABLE aborts if blocked >5s instead of indefinitely blocking app.
-          # statement_timeout=120s: hard ceiling on total transaction duration.
+          # lock_timeout=5000 (5s): LOCK TABLE aborts if blocked >5s instead of indefinitely blocking app.
+          # statement_timeout=120000 (120s): hard ceiling on total transaction duration.
+          # Note: SET LOCAL lock_timeout = 5000 (integer ms) avoids shell single-quote escaping pitfall
+          # where printf '...' with ''5s'' produces unquoted 5s → SQL syntax error.
           # NULL dedup: WHERE NOT EXISTS uses IS NOT DISTINCT FROM for user_id (handles NULL=NULL).
           printf '%s\n' \
             'BEGIN;' \
-            'SET LOCAL lock_timeout = ''5s'';' \
-            'SET LOCAL statement_timeout = ''120s'';' \
+            'SET LOCAL lock_timeout = 5000;' \
+            'SET LOCAL statement_timeout = 120000;' \
             'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
             'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
             'WITH inserted AS (' \
@@ -493,8 +495,8 @@ jobs:
           # Expected result: COUNT(*) FROM inserted = 0 because WHERE NOT EXISTS matches all rows.
           printf '%s\n' \
             'BEGIN;' \
-            'SET LOCAL lock_timeout = ''5s'';' \
-            'SET LOCAL statement_timeout = ''120s'';' \
+            'SET LOCAL lock_timeout = 5000;' \
+            'SET LOCAL statement_timeout = 120000;' \
             'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
             'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
             'WITH inserted AS (' \
