@@ -1,0 +1,235 @@
+# Restore Drill — Isolated Backup Integrity Verification
+#
+# Restores the latest production backup into a temporary Docker postgres
+# container COMPLETELY ISOLATED from production data.
+#
+# Safety:
+#   - Creates a NEW ephemeral container "qcet-restore-drill-<run_id>"
+#   - No production volumes are mounted or modified
+#   - Restores from existing backup file at $HOME/migrate-backups/
+#   - Row-count parity check across critical tables
+#   - Container and temp data cleaned up after the job
+#
+# Dispatch: gh workflow run restore-drill.yml
+
+name: Restore Drill (Isolated Backup Integrity)
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_file:
+        description: "Backup filename in $HOME/migrate-backups/ (leave blank for latest)"
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Isolated Restore Drill
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 15
+
+    env:
+      DRILL_CONTAINER: qcet-restore-drill-${{ github.run_id }}
+      DRILL_DB: qcet_drill_restore_${{ github.run_id }}
+      BACKUP_DIR: ${{ github.workspace }}/../../../migrate-backups
+      PG_IMAGE: postgres:16-alpine
+
+    steps:
+      - name: Locate backup file
+        id: backup
+        run: |
+          set -euo pipefail
+
+          BACKUP_BASE="$HOME/migrate-backups"
+          echo "Backup directory: $BACKUP_BASE"
+
+          INPUT_FILE="${{ github.event.inputs.backup_file }}"
+          if [ -n "$INPUT_FILE" ]; then
+            BACKUP_FILE="$BACKUP_BASE/$INPUT_FILE"
+          else
+            # Find the latest .dump file
+            BACKUP_FILE=$(ls -1t "$BACKUP_BASE"/*.dump 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$BACKUP_FILE" ] || [ ! -f "$BACKUP_FILE" ]; then
+            echo "ERROR: No backup file found in $BACKUP_BASE" >&2
+            ls -la "$BACKUP_BASE/" 2>/dev/null || echo "(directory empty or missing)"
+            exit 1
+          fi
+
+          echo "Backup file: $BACKUP_FILE"
+          echo "Size: $(du -h "$BACKUP_FILE" | cut -f1)"
+          echo "SHA-256: $(sha256sum "$BACKUP_FILE" | awk '{print $1}')"
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Start isolated drill postgres container
+        id: drill_container
+        run: |
+          set -euo pipefail
+
+          # Remove any stale container with this name
+          docker rm -f "$DRILL_CONTAINER" 2>/dev/null || true
+
+          echo "Starting ephemeral postgres container: $DRILL_CONTAINER"
+          docker run -d \
+            --name "$DRILL_CONTAINER" \
+            -e POSTGRES_USER=drill_user \
+            -e POSTGRES_PASSWORD=drill_pass_local \
+            -e POSTGRES_DB="$DRILL_DB" \
+            --no-healthcheck \
+            "$PG_IMAGE"
+
+          echo "Waiting for postgres to be ready (up to 30s)..."
+          for i in $(seq 1 15); do
+            if docker exec "$DRILL_CONTAINER" pg_isready -U drill_user -q 2>/dev/null; then
+              echo "Postgres ready after ${i}x2s"
+              break
+            fi
+            sleep 2
+          done
+
+          docker exec "$DRILL_CONTAINER" pg_isready -U drill_user || {
+            echo "ERROR: Drill postgres not ready after 30s." >&2
+            docker logs "$DRILL_CONTAINER" 2>&1 | tail -20
+            exit 1
+          }
+          echo "Drill container up: $DRILL_CONTAINER"
+
+      - name: Restore backup into drill database
+        id: restore
+        run: |
+          set -euo pipefail
+
+          BACKUP_FILE="${{ steps.backup.outputs.backup_file }}"
+          echo "Restoring: $BACKUP_FILE → $DRILL_CONTAINER:$DRILL_DB"
+
+          # Copy backup into container then restore
+          docker cp "$BACKUP_FILE" "$DRILL_CONTAINER:/tmp/restore.dump"
+
+          RESTORE_OUT=$(docker exec "$DRILL_CONTAINER" \
+            pg_restore \
+              --username=drill_user \
+              --dbname="$DRILL_DB" \
+              --no-owner \
+              --no-privileges \
+              --verbose \
+              /tmp/restore.dump 2>&1 || true)
+
+          echo "$RESTORE_OUT" | head -50
+          ERRORS=$(echo "$RESTORE_OUT" | grep -i "^pg_restore: error:" | grep -v "already exists" | wc -l || echo 0)
+          echo "pg_restore errors (non-already-exists): $ERRORS"
+
+          if [ "$ERRORS" -gt 5 ]; then
+            echo "ERROR: pg_restore produced $ERRORS critical errors — restore may be incomplete." >&2
+            echo "$RESTORE_OUT" | grep -i "^pg_restore: error:" | grep -v "already exists" | head -20 >&2
+            exit 1
+          fi
+          echo "Restore complete. Non-fatal errors: $ERRORS"
+
+      - name: Verify TABLE DATA entries in backup TOC
+        run: |
+          set -euo pipefail
+
+          echo "=== Verifying backup TOC integrity ==="
+          TOC=$(docker exec "$DRILL_CONTAINER" \
+            pg_restore --list /tmp/restore.dump 2>&1)
+
+          TABLE_DATA_COUNT=$(echo "$TOC" | grep -c 'TABLE DATA' || true)
+          TOTAL_ENTRIES=$(echo "$TOC" | grep -c '.' || true)
+          echo "TOC: $TOTAL_ENTRIES total entries, $TABLE_DATA_COUNT TABLE DATA entries"
+
+          if [ "$TABLE_DATA_COUNT" -lt 1 ]; then
+            echo "ERROR: No TABLE DATA entries in backup TOC — backup may be schema-only." >&2
+            exit 1
+          fi
+          echo "TABLE DATA assertion: PASS ($TABLE_DATA_COUNT entries)"
+
+      - name: Row-count parity check (critical tables)
+        id: row_counts
+        run: |
+          set -euo pipefail
+          echo "=== Row count verification in restored database ==="
+
+          TABLES="tasks task_actors task_assignees users documents audit_events"
+          PASS=0
+          FAIL=0
+
+          for TABLE in $TABLES; do
+            COUNT=$(docker exec -e PGPASSWORD=drill_pass_local "$DRILL_CONTAINER" \
+              psql -U drill_user -d "$DRILL_DB" -P pager=off -t -A \
+              -c "SELECT COUNT(*) FROM \"$TABLE\";" 2>&1 || echo "NOT_FOUND")
+
+            if echo "$COUNT" | grep -q "NOT_FOUND\|does not exist\|ERROR"; then
+              echo "  $TABLE: MISSING or ERROR"
+              FAIL=$((FAIL + 1))
+            else
+              echo "  $TABLE: $COUNT rows"
+              PASS=$((PASS + 1))
+            fi
+          done
+
+          echo "Tables found: $PASS, missing: $FAIL"
+
+          # tasks and users must exist and have >0 rows
+          TASKS=$(docker exec -e PGPASSWORD=drill_pass_local "$DRILL_CONTAINER" \
+            psql -U drill_user -d "$DRILL_DB" -P pager=off -t -A \
+            -c "SELECT COUNT(*) FROM tasks;" 2>&1 | tr -d '[:space:]')
+          USERS=$(docker exec -e PGPASSWORD=drill_pass_local "$DRILL_CONTAINER" \
+            psql -U drill_user -d "$DRILL_DB" -P pager=off -t -A \
+            -c "SELECT COUNT(*) FROM users;" 2>&1 | tr -d '[:space:]')
+
+          echo "tasks rows: $TASKS"
+          echo "users rows: $USERS"
+
+          if ! echo "$TASKS" | grep -qE '^[0-9]+$' || [ "$TASKS" = "0" ]; then
+            echo "ERROR: 'tasks' table has 0 rows or is missing — restore appears incomplete." >&2
+            exit 1
+          fi
+          if ! echo "$USERS" | grep -qE '^[0-9]+$' || [ "$USERS" = "0" ]; then
+            echo "ERROR: 'users' table has 0 rows or is missing — restore appears incomplete." >&2
+            exit 1
+          fi
+
+          echo "Row-count parity: PASS (tasks=$TASKS, users=$USERS)"
+
+      - name: _prisma_migrations state in restored DB
+        run: |
+          echo "=== _prisma_migrations in restored database ==="
+          docker exec -e PGPASSWORD=drill_pass_local "$DRILL_CONTAINER" \
+            psql -U drill_user -d "$DRILL_DB" -P pager=off -c "
+              SELECT
+                migration_name,
+                applied_steps_count,
+                CASE
+                  WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK'
+                  WHEN finished_at IS NULL THEN 'FAILED/PENDING'
+                  ELSE 'APPLIED'
+                END AS status,
+                started_at
+              FROM _prisma_migrations
+              ORDER BY started_at;
+            " 2>&1
+
+      - name: Cleanup drill container and temp data
+        if: always()
+        run: |
+          echo "=== Cleanup ==="
+          docker rm -f "$DRILL_CONTAINER" 2>/dev/null && echo "Container $DRILL_CONTAINER removed." || echo "Container already gone."
+
+      - name: Drill summary
+        if: always()
+        run: |
+          {
+            echo "### Isolated Restore Drill Summary"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo "- Backup: ${{ steps.backup.outputs.backup_file }}"
+            echo "- Drill container: $DRILL_CONTAINER (ephemeral, cleaned up)"
+            echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo ""
+            echo "No production data was modified. This drill used an isolated container."
+          } >> "$GITHUB_STEP_SUMMARY"

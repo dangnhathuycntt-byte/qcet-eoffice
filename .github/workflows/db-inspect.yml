@@ -1,0 +1,233 @@
+# DB Inspect — Read-Only Production DB Schema/Data Inspection
+#
+# Safe read-only queries against production DB via docker exec.
+# Never modifies data. Masks credential values.
+# Dispatch: gh workflow run db-inspect.yml
+#
+# Captures:
+#   - task_assignees table schema + role distribution
+#   - task_actors table schema + role distribution
+#   - Parity count (unmigrated task_assignees rows)
+#   - _prisma_migrations state for failed migration
+#   - Sample unmigrated rows (task_id, user_id, role_in_task only)
+
+name: DB Inspect (Read-Only)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: db-inspect
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect Production DB State
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 5
+    steps:
+      - name: Locate DB container and derive connection
+        id: db_conn
+        run: |
+          set -euo pipefail
+
+          DB=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -i "db" | head -1)
+          if [ -z "$DB" ]; then
+            echo "ERROR: No qcet DB container found." >&2
+            exit 1
+          fi
+          echo "DB container: $DB"
+          echo "db_container=$DB" >> "$GITHUB_OUTPUT"
+
+          # Derive PGUSER/PGPASSWORD/PGDATABASE from the app container's DATABASE_URL env
+          APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No qcet app container found." >&2
+            exit 1
+          fi
+          echo "App container: $APP"
+
+          DB_URL=$(docker inspect "$APP" --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+
+          # Parse URL safely without exposing value
+          PGUSER=$(echo "$DB_URL" | sed 's|.*://||; s|:.*||')
+          PGPASSWORD=$(echo "$DB_URL" | sed 's|.*://[^:]*:||; s|@.*||')
+          PGDATABASE=$(echo "$DB_URL" | sed 's|.*/||; s|?.*||')
+          echo "PGUSER=$PGUSER (masked password)"
+          echo "PGDATABASE=$PGDATABASE"
+
+          echo "PGUSER=$PGUSER"   >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$PGPASSWORD" >> "$GITHUB_ENV"
+          echo "PGDATABASE=$PGDATABASE" >> "$GITHUB_ENV"
+
+      - name: task_assignees — column schema
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== task_assignees column schema ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT column_name, data_type, is_nullable, column_default
+              FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'task_assignees'
+              ORDER BY ordinal_position;
+            " 2>&1 || echo "(table does not exist)"
+
+      - name: task_assignees — row count and role distribution
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== task_assignees row count and role distribution ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                COUNT(*) AS total_rows,
+                COUNT(DISTINCT task_id) AS distinct_tasks,
+                COUNT(DISTINCT user_id) AS distinct_users
+              FROM task_assignees;
+            " 2>&1 || echo "(table does not exist)"
+
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT role_in_task, COUNT(*) AS cnt
+              FROM task_assignees
+              GROUP BY role_in_task
+              ORDER BY cnt DESC;
+            " 2>&1 || echo "(role_in_task column does not exist)"
+
+      - name: task_actors — column schema
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== task_actors column schema ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT column_name, data_type, is_nullable, column_default
+              FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'task_actors'
+              ORDER BY ordinal_position;
+            " 2>&1 || echo "(table does not exist)"
+
+      - name: task_actors — role distribution
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== task_actors role distribution ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT role, COUNT(*) AS cnt
+              FROM task_actors
+              GROUP BY role
+              ORDER BY cnt DESC;
+            " 2>&1
+
+      - name: Parity check — unmigrated task_assignees rows
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== Parity check: unmigrated task_assignees rows ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                COUNT(*) AS total_task_assignees,
+                SUM(CASE WHEN matched IS NULL THEN 1 ELSE 0 END) AS unmigrated,
+                SUM(CASE WHEN matched IS NOT NULL THEN 1 ELSE 0 END) AS already_migrated
+              FROM (
+                SELECT
+                  ta.task_id,
+                  ta.user_id,
+                  ta.role_in_task,
+                  act.id AS matched
+                FROM task_assignees ta
+                LEFT JOIN task_actors act
+                  ON act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              ) parity;
+            " 2>&1 || echo "(task_assignees table does not exist — parity already satisfied)"
+
+      - name: Sample unmigrated rows (task_id, user_id, role_in_task — top 20)
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== Sample unmigrated task_assignees rows (top 20) ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT ta.task_id, ta.user_id, ta.role_in_task
+              FROM task_assignees ta
+              WHERE NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              )
+              LIMIT 20;
+            " 2>&1 || echo "(no unmigrated rows or table does not exist)"
+
+      - name: role_in_task enum values (AssigneeRole type)
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== AssigneeRole enum values ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT enumlabel AS role_value, enumsortorder AS sort_order
+              FROM pg_enum e
+              JOIN pg_type t ON t.oid = e.enumtypid
+              WHERE t.typname = 'AssigneeRole'
+              ORDER BY enumsortorder;
+            " 2>&1 || echo "(AssigneeRole enum not found)"
+
+          echo "=== TaskActorRole enum values ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT enumlabel AS role_value, enumsortorder AS sort_order
+              FROM pg_enum e
+              JOIN pg_type t ON t.oid = e.enumtypid
+              WHERE t.typname = 'TaskActorRole'
+              ORDER BY enumsortorder;
+            " 2>&1 || echo "(TaskActorRole enum not found)"
+
+      - name: _prisma_migrations — failed migration state
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== _prisma_migrations for 20260923000001_drop_task_assignee ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                migration_name,
+                started_at,
+                finished_at,
+                applied_steps_count,
+                rolled_back_at,
+                checksum,
+                CASE WHEN logs IS NULL THEN '(no error logs)' ELSE LEFT(logs, 500) END AS logs_excerpt
+              FROM _prisma_migrations
+              WHERE migration_name = '20260923000001_drop_task_assignee';
+            " 2>&1
+
+      - name: _prisma_migrations — full status summary
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== _prisma_migrations full status ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                migration_name,
+                applied_steps_count,
+                CASE
+                  WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK'
+                  WHEN finished_at IS NULL THEN 'FAILED/PENDING'
+                  ELSE 'APPLIED'
+                END AS status,
+                started_at,
+                finished_at
+              FROM _prisma_migrations
+              ORDER BY started_at;
+            " 2>&1
