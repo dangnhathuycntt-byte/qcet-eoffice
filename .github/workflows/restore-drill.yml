@@ -258,38 +258,112 @@ jobs:
               psql -U drill_user -d drill_db -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
-          # Hard assertion: task_assignees must have rows (backup is pre-drop production data)
+          # ── Known-snapshot hard assertions ──────────────────────────────────────
+          # SHA256=61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42
+          # These counts are from db-inspect run 37580366562 (verified production state
+          # at time of backup). Any deviation means wrong backup or corrupted restore.
+          EXPECTED_TA_TOTAL=393
+          EXPECTED_TA_PO=145
+          EXPECTED_TA_COLLAB=248
+          # task_actors: 457 rows were present in production at backup time (pre-backfill
+          # value; or 705 if backup was taken post-backfill). Accept either.
+          # The backup SHA is pre-backfill so expect 457.
+          EXPECTED_ACTORS_MIN=450   # allow slight variance for pre-vs-post uncertainty
+          EXPECTED_ACTORS_MAX=720   # post-backfill 705 is also acceptable
+
+          # Hard assertion: task_assignees total
           TA_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees;" | tr -d '[:space:]')
-          echo "task_assignees total rows: $TA_COUNT"
-          if [ -z "$TA_COUNT" ] || [ "$TA_COUNT" -lt 1 ]; then
-            echo "ERROR: task_assignees has $TA_COUNT rows — backup data appears empty or missing." >&2
+          echo "task_assignees total rows: $TA_COUNT (expected $EXPECTED_TA_TOTAL)"
+          if [ -z "$TA_COUNT" ] || ! echo "$TA_COUNT" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: task_assignees count non-numeric: '$TA_COUNT'" >&2; exit 1
+          fi
+          if [ "$TA_COUNT" -ne "$EXPECTED_TA_TOTAL" ]; then
+            echo "ERROR: task_assignees has $TA_COUNT rows, expected $EXPECTED_TA_TOTAL — wrong backup or corrupted restore." >&2
             exit 1
           fi
-          echo "task_assignees row count: PASS ($TA_COUNT rows)"
+          echo "task_assignees total: PASS ($TA_COUNT rows)"
 
           echo ""
           echo "=== task_assignees role distribution (from backup) ==="
           run_drill "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;"
 
-          # Soft check: SUPERVISOR rows must be 0 (per schema — SUPERVISOR is legacy/unused)
-          # Any non-zero count here indicates unexpected legacy data in backup
-          SUP_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'SUPERVISOR';" | tr -d '[:space:]')
-          echo ""
-          echo "SUPERVISOR rows in task_assignees: $SUP_COUNT (expected 0; non-zero is a pre-existing condition to investigate)"
-          if [ "$SUP_COUNT" != "0" ]; then
-            echo "WARNING: $SUP_COUNT SUPERVISOR row(s) found in task_assignees — backfill SUPERVISOR gate will block on APPLY." >&2
+          # Hard assertion: PRIMARY_OWNER count
+          PO_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'PRIMARY_OWNER';" | tr -d '[:space:]')
+          echo "task_assignees PRIMARY_OWNER: $PO_COUNT (expected $EXPECTED_TA_PO)"
+          if [ "$PO_COUNT" -ne "$EXPECTED_TA_PO" ]; then
+            echo "ERROR: PRIMARY_OWNER count $PO_COUNT != expected $EXPECTED_TA_PO." >&2; exit 1
           fi
+          echo "task_assignees PRIMARY_OWNER count: PASS"
+
+          # Hard assertion: COLLABORATOR count
+          COL_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'COLLABORATOR';" | tr -d '[:space:]')
+          echo "task_assignees COLLABORATOR: $COL_COUNT (expected $EXPECTED_TA_COLLAB)"
+          if [ "$COL_COUNT" -ne "$EXPECTED_TA_COLLAB" ]; then
+            echo "ERROR: COLLABORATOR count $COL_COUNT != expected $EXPECTED_TA_COLLAB." >&2; exit 1
+          fi
+          echo "task_assignees COLLABORATOR count: PASS"
+
+          # Hard assertion: FK integrity — all task_assignees.task_id must reference tasks
+          ORPHAN_TA=$(run_drill "SELECT COUNT(*) FROM task_assignees ta WHERE NOT EXISTS (SELECT 1 FROM tasks t WHERE t.id = ta.task_id);" | tr -d '[:space:]')
+          echo "task_assignees orphan rows (no matching task): $ORPHAN_TA"
+          if [ "$ORPHAN_TA" != "0" ]; then
+            echo "ERROR: $ORPHAN_TA task_assignees row(s) have no matching task — FK integrity violated." >&2; exit 1
+          fi
+          echo "task_assignees FK integrity (task_id → tasks.id): PASS"
+
+          # Hard assertion: all task_assignees.user_id values must reference an existing user (if not null)
+          ORPHAN_USER=$(run_drill "SELECT COUNT(*) FROM task_assignees ta WHERE ta.user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ta.user_id);" | tr -d '[:space:]')
+          echo "task_assignees orphan user rows: $ORPHAN_USER"
+          if [ "$ORPHAN_USER" != "0" ]; then
+            echo "ERROR: $ORPHAN_USER task_assignees row(s) have user_id not in users — FK integrity violation in backup." >&2
+            exit 1
+          fi
+          echo "task_assignees FK integrity (user_id -> users.id): PASS"
+
+          # Hard assertion: SUPERVISOR rows must be 0 in known backup snapshot
+          # Known backup SHA=61e8d06... had 0 SUPERVISOR rows. Non-zero = wrong backup.
+          SUP_COUNT=$(run_drill "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'SUPERVISOR';" | tr -d '[:space:]')
+          echo "SUPERVISOR rows in task_assignees: $SUP_COUNT (expected 0 for known backup)"
+          if [ "$SUP_COUNT" != "0" ]; then
+            echo "ERROR: $SUP_COUNT SUPERVISOR row(s) found — known backup had 0. Wrong backup or corrupted." >&2; exit 1
+          fi
+          echo "SUPERVISOR count: PASS (0)"
 
           echo ""
           echo "=== task_actors role distribution (from backup) ==="
-          # task_actors in backup may be empty (backfill not yet run) — that is expected, not an error
+          # task_actors: 457 (pre-backfill) or 705 (post-backfill) — both acceptable
           TA_ACTORS_COUNT=$(run_drill "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
-          echo "task_actors total rows: $TA_ACTORS_COUNT"
+          echo "task_actors total rows: $TA_ACTORS_COUNT (expected $EXPECTED_ACTORS_MIN-$EXPECTED_ACTORS_MAX)"
+          if [ "$TA_ACTORS_COUNT" -lt "$EXPECTED_ACTORS_MIN" ] || [ "$TA_ACTORS_COUNT" -gt "$EXPECTED_ACTORS_MAX" ]; then
+            echo "ERROR: task_actors count $TA_ACTORS_COUNT outside expected range [$EXPECTED_ACTORS_MIN,$EXPECTED_ACTORS_MAX]." >&2; exit 1
+          fi
+          echo "task_actors count: PASS ($TA_ACTORS_COUNT rows)"
           if [ "$TA_ACTORS_COUNT" -gt 0 ]; then
             run_drill "SELECT role::text, is_primary_dri, COUNT(*) AS cnt FROM task_actors GROUP BY role::text, is_primary_dri ORDER BY cnt DESC;"
-          else
-            echo "(task_actors empty — backfill not yet run; this is expected for pre-backfill backup)"
+            ACTORS_ORPHAN=$(run_drill "SELECT COUNT(*) FROM task_actors act WHERE NOT EXISTS (SELECT 1 FROM tasks t WHERE t.id = act.task_id);" | tr -d '[:space:]')
+            echo "task_actors orphan rows (no matching task): $ACTORS_ORPHAN"
+            if [ "$ACTORS_ORPHAN" != "0" ]; then
+              echo "ERROR: $ACTORS_ORPHAN task_actors row(s) have no matching task — FK integrity violated." >&2; exit 1
+            fi
+            echo "task_actors FK integrity (task_id -> tasks.id): PASS"
           fi
+
+          echo ""
+          echo "=== Constraint and index presence ==="
+          IDX_COUNT=$(run_drill "SELECT COUNT(*) FROM pg_indexes WHERE schemaname='public' AND tablename IN ('task_assignees','task_actors','tasks','users');" | tr -d '[:space:]')
+          echo "Indexes on key tables (task_assignees/task_actors/tasks/users): $IDX_COUNT"
+          if [ -z "$IDX_COUNT" ] || [ "$IDX_COUNT" -lt 4 ]; then
+            echo "ERROR: Fewer than 4 indexes on key tables — schema may not have restored correctly." >&2; exit 1
+          fi
+          echo "Index count on key tables: PASS ($IDX_COUNT indexes)"
+
+          # Hard assertion: both enum types must be present (pre-drop backup)
+          ENUM_COUNT=$(run_drill "SELECT COUNT(*) FROM pg_type WHERE typtype='e' AND typname IN ('TaskActorRole','AssigneeRole');" | tr -d '[:space:]')
+          echo "Enum types (TaskActorRole, AssigneeRole): $ENUM_COUNT (expected 2)"
+          if [ "$ENUM_COUNT" != "2" ]; then
+            echo "ERROR: Only $ENUM_COUNT/2 enum types found — AssigneeRole or TaskActorRole missing." >&2; exit 1
+          fi
+          echo "Enum types: PASS"
 
           echo ""
           echo "=== _prisma_migrations status ==="
@@ -303,6 +377,10 @@ jobs:
           echo "  pg_restore completed without error"
           echo "  task_assignees table present in restored schema"
           echo "  Table count ≥ 10"
+          echo "  task_assignees: PRIMARY_OWNER rows present, FK integrity (task_id/user_id) verified"
+          echo "  task_actors: FK integrity verified (if populated)"
+          echo "  Enum types: TaskActorRole and AssigneeRole present"
+          echo "  Index count on key tables verified"
           echo ""
           echo "Production data/volumes: UNTOUCHED"
           echo "Drill DB: ephemeral — will be destroyed in cleanup"
