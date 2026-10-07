@@ -356,58 +356,82 @@ jobs:
           PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
 
           echo "=== Inserting backfill rows ==="
-          echo "  Mapping: PRIMARY_OWNER → DRI (is_primary_dri=true), COLLABORATOR → COLLABORATOR (is_primary_dri=false)"
-          echo "  Idempotency: WHERE NOT EXISTS (no unique constraint — ON CONFLICT cannot be used)"
-          echo "  Cast: 'DRI'::\"TaskActorRole\" — double-quoted type identifier for mixed-case enum"
-          echo "  Column: appointed_at (matches task_actors schema; NOT created_at/updated_at)"
-          echo "  Advisory lock: pg_advisory_xact_lock prevents concurrent backfill runs"
+          echo "  Mapping: PRIMARY_OWNER->DRI (is_primary_dri=true), COLLABORATOR->COLLABORATOR (false)"
+          echo "  Idempotency: WHERE NOT EXISTS (no unique constraint — ON CONFLICT unavailable)"
+          echo "  Locking:"
+          echo "    1. pg_advisory_xact_lock (hashtext key) — prevents concurrent backfill dispatch"
+          echo "    2. LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE — blocks concurrent app INSERTs"
+          echo "       into task_actors for duration of backfill transaction, ensuring WHERE NOT EXISTS"
+          echo "       snapshot is stable. App reads unaffected (SRE mode allows concurrent SELECTs)."
+          echo "  Advisory lock: DO/PERFORM (no result row) — no output noise to strip"
+          echo "  Output: -At tuples-only; single SELECT COUNT(*) produces clean numeric line"
 
-          # Write SQL to a chmod-600 file and mount into docker (avoids shell quoting of "TaskActorRole")
-          # task_actors has NO unique constraint (only @@index) — ON CONFLICT cannot be used.
-          # WHERE NOT EXISTS is the sole idempotency guard.
-          # Advisory lock (session-level key) prevents concurrent backfill dispatches from duplicating.
-          # Note: does NOT block concurrent app writes — run during known low-traffic window.
-          cat > "$WORK_DIR/backfill.sql" << 'SQLEOF'
-          SELECT pg_advisory_xact_lock(hashtext('backfill_task_actors'));
-          WITH inserted AS (
-            INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)
-            SELECT
-              gen_random_uuid()::text,
-              ta.task_id,
-              ta.user_id,
-              CASE ta.role_in_task::text
-                WHEN 'PRIMARY_OWNER' THEN 'DRI'::"TaskActorRole"
-                WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'::"TaskActorRole"
-              END,
-              CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN true ELSE false END,
-              NOW()
-            FROM task_assignees ta
-            WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
-              AND NOT EXISTS (
-                SELECT 1 FROM task_actors act
-                WHERE act.task_id = ta.task_id
-                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
-                  AND act.role::text = CASE ta.role_in_task::text
-                    WHEN 'PRIMARY_OWNER' THEN 'DRI'
-                    WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
-                  END
-              )
-            RETURNING id
-          )
-          SELECT COUNT(*) FROM inserted;
-          SQLEOF
+          # SQL written via printf to avoid heredoc-at-column-0 YAML parse conflict.
+          # DO $$ BEGIN PERFORM pg_advisory_xact_lock(...); END $$; produces NO result row
+          # (unlike SELECT pg_advisory_xact_lock which emits a row even with -q/-t).
+          # LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE acquires a real table lock that blocks
+          # concurrent INSERT/UPDATE/DELETE on task_actors — cooperative advisory lock alone
+          # does not protect against concurrent app writes (app does not call pg_advisory_xact_lock).
+          # NULL dedup: WHERE NOT EXISTS uses IS NOT DISTINCT FROM for user_id (handles NULL=NULL).
+          printf '%s\n' \
+            'BEGIN;' \
+            'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
+            'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
+            'WITH inserted AS (' \
+            '  INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)' \
+            '  SELECT' \
+            '    gen_random_uuid()::text,' \
+            '    ta.task_id,' \
+            '    ta.user_id,' \
+            '    CASE ta.role_in_task::text' \
+            '      WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'::"TaskActorRole"' \
+            '      WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'::"TaskActorRole"' \
+            '    END,' \
+            '    CASE ta.role_in_task::text WHEN '"'"'PRIMARY_OWNER'"'"' THEN true ELSE false END,' \
+            '    NOW()' \
+            '  FROM task_assignees ta' \
+            '  WHERE ta.role_in_task::text IN ('"'"'PRIMARY_OWNER'"'"','"'"'COLLABORATOR'"'"')' \
+            '    AND NOT EXISTS (' \
+            '      SELECT 1 FROM task_actors act' \
+            '      WHERE act.task_id = ta.task_id' \
+            '        AND act.user_id IS NOT DISTINCT FROM ta.user_id' \
+            '        AND act.role::text = CASE ta.role_in_task::text' \
+            '          WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'' \
+            '          WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'' \
+            '        END' \
+            '    )' \
+            '  RETURNING id' \
+            ')' \
+            'SELECT COUNT(*) FROM inserted;' \
+            'COMMIT;' \
+            > "$WORK_DIR/backfill.sql"
           chmod 600 "$WORK_DIR/backfill.sql"
 
-          # Pipe SQL via stdin (-f -) to avoid bind-mount (docker run exit 125 on some runners).
-          # stdin is not a tty so no -t flag; 2>&1 captures psql error output alongside count.
+          # Validate SQL file is non-empty and starts correctly
+          HEAD=$(head -1 "$WORK_DIR/backfill.sql")
+          if [ "$HEAD" != "BEGIN;" ]; then
+            echo "ERROR: backfill.sql first line is not BEGIN; — got: '$HEAD'" >&2
+            exit 1
+          fi
+
+          # -A -t: unaligned tuples-only — only the numeric COUNT(*) line is emitted
+          # -X: skip .psqlrc  -v ON_ERROR_STOP=1: SQL errors exit non-zero
+          # -f -: read SQL from stdin (avoids bind-mount exit 125 on self-hosted runner)
+          # No -q: DO block emits nothing; LOCK TABLE emits nothing; only SELECT COUNT(*) outputs
           INSERTED=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-              -A -X -v ON_ERROR_STOP=1 -f - 2>&1 \
+              -A -t -X -v ON_ERROR_STOP=1 -f - 2>&1 \
             < "$WORK_DIR/backfill.sql" | tr -d '[:space:]')
 
+          # Validate INSERTED is a non-negative integer (not an error message or empty)
+          if ! echo "$INSERTED" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: INSERT returned non-numeric output: '$INSERTED'" >&2
+            echo "  Possible SQL error not caught by ON_ERROR_STOP=1 via 2>&1 capture." >&2
+            exit 1
+          fi
           echo "Inserted: $INSERTED row(s)"
 
       - name: Skip apply — dry-run or already at parity
@@ -420,7 +444,111 @@ jobs:
             echo "Already at parity — no insert needed."
           fi
 
-      - name: Assert idempotency — second-run inserts must be 0
+      - name: Assert idempotency — second INSERT must produce 0 rows and leave counts unchanged
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -A -t -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # Capture task_actors total count AND per-role/flag digest BEFORE second INSERT.
+          # Digest = "DRI:N|COLLABORATOR:M" — used to confirm content unchanged, not just count.
+          COUNT_BEFORE=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+          if ! echo "$COUNT_BEFORE" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: task_actors count before second INSERT non-numeric: '$COUNT_BEFORE'" >&2; exit 1
+          fi
+          DIGEST_BEFORE=$(run_psql "SELECT role::text || ':' || COUNT(*)::text FROM task_actors GROUP BY role::text ORDER BY role::text;" | tr '\n' '|' | sed 's/|$//')
+          echo "task_actors before second INSERT: count=$COUNT_BEFORE digest='$DIGEST_BEFORE'"
+
+          # Real second INSERT attempt — identical SQL to the first INSERT.
+          # DO/PERFORM advisory lock: no result row (unlike SELECT pg_advisory_xact_lock).
+          # LOCK TABLE: blocks concurrent app INSERTs for duration, making WHERE NOT EXISTS stable.
+          # Expected result: COUNT(*) FROM inserted = 0 because WHERE NOT EXISTS matches all rows.
+          printf '%s\n' \
+            'BEGIN;' \
+            'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
+            'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
+            'WITH inserted AS (' \
+            '  INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)' \
+            '  SELECT' \
+            '    gen_random_uuid()::text,' \
+            '    ta.task_id,' \
+            '    ta.user_id,' \
+            '    CASE ta.role_in_task::text' \
+            '      WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'::"TaskActorRole"' \
+            '      WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'::"TaskActorRole"' \
+            '    END,' \
+            '    CASE ta.role_in_task::text WHEN '"'"'PRIMARY_OWNER'"'"' THEN true ELSE false END,' \
+            '    NOW()' \
+            '  FROM task_assignees ta' \
+            '  WHERE ta.role_in_task::text IN ('"'"'PRIMARY_OWNER'"'"','"'"'COLLABORATOR'"'"')' \
+            '    AND NOT EXISTS (' \
+            '      SELECT 1 FROM task_actors act' \
+            '      WHERE act.task_id = ta.task_id' \
+            '        AND act.user_id IS NOT DISTINCT FROM ta.user_id' \
+            '        AND act.role::text = CASE ta.role_in_task::text' \
+            '          WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'' \
+            '          WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'' \
+            '        END' \
+            '    )' \
+            '  RETURNING id' \
+            ')' \
+            'SELECT COUNT(*) FROM inserted;' \
+            'COMMIT;' \
+            > "$WORK_DIR/backfill2.sql"
+          chmod 600 "$WORK_DIR/backfill2.sql"
+
+          SECOND_INSERT=$(docker run --rm -i \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -A -t -X -v ON_ERROR_STOP=1 -f - 2>&1 \
+            < "$WORK_DIR/backfill2.sql" | tr -d '[:space:]')
+
+          if ! echo "$SECOND_INSERT" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: Second INSERT returned non-numeric: '$SECOND_INSERT'" >&2; exit 1
+          fi
+          echo "Second INSERT row count (must be 0): $SECOND_INSERT"
+
+          # Capture count and digest AFTER second INSERT
+          COUNT_AFTER=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+          if ! echo "$COUNT_AFTER" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: task_actors count after second INSERT non-numeric: '$COUNT_AFTER'" >&2; exit 1
+          fi
+          DIGEST_AFTER=$(run_psql "SELECT role::text || ':' || COUNT(*)::text FROM task_actors GROUP BY role::text ORDER BY role::text;" | tr '\n' '|' | sed 's/|$//')
+          echo "task_actors after second INSERT:  count=$COUNT_AFTER digest='$DIGEST_AFTER'"
+
+          FAIL=0
+          if [ "$SECOND_INSERT" != "0" ]; then
+            echo "ERROR: Second INSERT produced $SECOND_INSERT row(s) — idempotency violated." >&2
+            echo "  WHERE NOT EXISTS predicate did not cover all inserted rows." >&2
+            FAIL=1
+          fi
+          if [ "$COUNT_AFTER" != "$COUNT_BEFORE" ]; then
+            echo "ERROR: task_actors count changed $COUNT_BEFORE -> $COUNT_AFTER — rows inserted." >&2
+            FAIL=1
+          fi
+          if [ "$DIGEST_AFTER" != "$DIGEST_BEFORE" ]; then
+            echo "ERROR: task_actors content digest changed." >&2
+            echo "  Before: '$DIGEST_BEFORE'" >&2
+            echo "  After:  '$DIGEST_AFTER'" >&2
+            FAIL=1
+          fi
+          if [ "$FAIL" = "1" ]; then exit 1; fi
+          echo "Idempotency assertion: PASS (second INSERT=0, count=$COUNT_AFTER stable, digest='$DIGEST_AFTER')"
+
+      - name: Assert duplicate-DRI invariant and is_primary_dri semantic parity
         if: steps.mode.outputs.mode == 'apply'
         env:
           DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
@@ -437,53 +565,47 @@ jobs:
                 -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
-          # This re-runs the same WHERE NOT EXISTS predicate against live DB post-INSERT.
-          # It is NOT a second INSERT — it counts rows that would still be inserted.
-          # Must be 0 after the backfill INSERT committed.
-          SECOND_RUN=$(run_psql "SELECT COUNT(*)
-          FROM task_assignees ta
-          WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
-            AND NOT EXISTS (
-              SELECT 1 FROM task_actors act
-              WHERE act.task_id = ta.task_id
-                AND act.user_id IS NOT DISTINCT FROM ta.user_id
-                AND act.role::text = CASE ta.role_in_task::text
-                  WHEN 'PRIMARY_OWNER' THEN 'DRI'
-                  WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
-                END
-            );" | tr -d '[:space:]')
+          # ── Duplicate DRI invariant ─────────────────────────────────────────────
+          # A task must have at most one actor with (role='DRI' AND is_primary_dri=true).
+          # The partial unique index task_actors_one_primary_dri_idx (migration 00005) enforces
+          # this AFTER that migration runs.  We verify it here so backfill failures surface
+          # clearly before any migration attempt.
+          #
+          # We check current state: tasks with >1 DRI where is_primary_dri=true.
+          # Pre-existing violations (from app writes before backfill) are reported as WARNING.
+          # Violations introduced by this backfill's WHERE NOT EXISTS predicate should be 0
+          # (predicate prevents duplicate insert for same task+user+role, but cannot prevent
+          #  two different users both mapped as DRI for the same task from task_assignees).
 
-          echo "Post-backfill pending count (must be 0): $SECOND_RUN"
-          if [ "$SECOND_RUN" != "0" ]; then
-            echo "ERROR: Idempotency assertion failed — $SECOND_RUN row(s) still unmigrated after backfill." >&2
+          DUP_DRI=$(run_psql "SELECT COUNT(*) FROM (
+            SELECT task_id FROM task_actors
+            WHERE role::text = 'DRI' AND is_primary_dri = true
+            GROUP BY task_id HAVING COUNT(*) > 1
+          ) sub;" | tr -d '[:space:]')
+
+          if ! echo "$DUP_DRI" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: duplicate DRI query returned non-numeric: '$DUP_DRI'" >&2
             exit 1
           fi
-          echo "Idempotency assertion: PASS (second-run pending=0)"
 
-      - name: Assert is_primary_dri semantic parity
-        if: steps.mode.outputs.mode == 'apply'
-        env:
-          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
-          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
-        run: |
-          set -euo pipefail
-          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
-          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          if [ "$DUP_DRI" != "0" ]; then
+            echo "ERROR: $DUP_DRI task(s) have >1 DRI actor with is_primary_dri=true — invariant violated." >&2
+            echo "  This means multiple PRIMARY_OWNER rows existed in task_assignees for the same task." >&2
+            echo "  Migration 20260923000005 partial-unique-index will FAIL unless resolved." >&2
+            echo "  Sample violating tasks:" >&2
+            run_psql "SELECT task_id, COUNT(*) AS dri_count
+              FROM task_actors WHERE role::text='DRI' AND is_primary_dri=true
+              GROUP BY task_id HAVING COUNT(*) > 1 LIMIT 5;" >&2
+            exit 1
+          fi
+          echo "Duplicate DRI invariant: PASS — no task has >1 primary DRI actor"
 
-          run_psql() {
-            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
-              postgres:16-alpine \
-              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
-          }
-
+          # ── is_primary_dri semantic parity ─────────────────────────────────────
           # All DRI actors inserted by this backfill have is_primary_dri=true (PRIMARY_OWNER mapping).
           # All non-DRI actors inserted have is_primary_dri=false (COLLABORATOR mapping).
           # NOTE: This assertion covers ALL task_actors rows, including any pre-existing app-written rows.
           # If the app has ever written DRI rows with is_primary_dri=false, this step will fail.
           # That would indicate a schema/app invariant violation pre-existing this backfill.
-          # All DRI actors must have is_primary_dri=true
-          # All non-DRI actors must have is_primary_dri=false
           DRI_NO_FLAG=$(run_psql "SELECT COUNT(*) FROM task_actors WHERE role::text='DRI' AND is_primary_dri=false;" | tr -d '[:space:]')
           NONDRI_WITH_FLAG=$(run_psql "SELECT COUNT(*) FROM task_actors WHERE role::text<>'DRI' AND is_primary_dri=true;" | tr -d '[:space:]')
 
