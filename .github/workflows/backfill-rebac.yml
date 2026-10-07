@@ -1,0 +1,315 @@
+# ReBAC Backfill — task_assignees → task_actors
+#
+# Copies remaining task_assignees rows into task_actors where no matching
+# task_actors entry exists (same task_id + user_id + role mapping).
+#
+# Safety gates:
+#   1. DB identity check (must be qcet_eoffice on 172.19.0.4 / qcet-db)
+#   2. Dry-run mode: shows what would be inserted — no mutations.
+#   3. Apply mode (confirm='backfill'): executes INSERT with CONFLICT guard.
+#   4. Idempotency check: re-run verify parity=0 after apply.
+#
+# Role mapping: AssigneeRole → TaskActorRole
+#   PRIMARY_OWNER → DRI (is_primary_dri=true)
+#   COLLABORATOR  → COLLABORATOR (is_primary_dri=false)
+#   (any unknown)  → COLLABORATOR (is_primary_dri=false, logged as warning)
+#
+# After backfill succeeds (parity=0), Tracker 174 Stage B evidence is
+# recorded. Stage C observation window must still elapse before
+# 20260923000001_drop_task_assignee can be resolved.
+#
+# Dispatch:
+#   Dry-run:  gh workflow run backfill-rebac.yml
+#   Apply:    gh workflow run backfill-rebac.yml -f confirm=backfill
+
+name: ReBAC Backfill (task_assignees → task_actors)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'backfill' to apply changes. Leave blank for dry-run only."
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: rebac-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    name: ReBAC Backfill — task_assignees → task_actors
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 10
+    steps:
+      - name: Locate containers and derive DB connection
+        id: db_conn
+        run: |
+          set -euo pipefail
+
+          DB=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -i "db" | head -1)
+          if [ -z "$DB" ]; then
+            echo "ERROR: No qcet DB container found." >&2
+            exit 1
+          fi
+          echo "DB container: $DB"
+          echo "db_container=$DB" >> "$GITHUB_OUTPUT"
+
+          APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared" | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: No qcet app container found." >&2
+            exit 1
+          fi
+          echo "App container: $APP"
+
+          DB_URL=$(docker inspect "$APP" --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+
+          PGUSER=$(echo "$DB_URL" | sed 's|.*://||; s|:.*||')
+          PGPASSWORD=$(echo "$DB_URL" | sed 's|.*://[^:]*:||; s|@.*||')
+          PGDATABASE=$(echo "$DB_URL" | sed 's|.*/||; s|?.*||')
+          echo "PGUSER=$PGUSER"
+          echo "PGDATABASE=$PGDATABASE"
+
+          echo "PGUSER=$PGUSER"       >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$PGPASSWORD" >> "$GITHUB_ENV"
+          echo "PGDATABASE=$PGDATABASE" >> "$GITHUB_ENV"
+
+      - name: DB identity check
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          set -euo pipefail
+          echo "=== DB identity gate ==="
+
+          ACTUAL_DB=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "SELECT current_database();" 2>&1 | tr -d '[:space:]')
+          echo "current_database(): $ACTUAL_DB"
+          if [ "$ACTUAL_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: Expected database 'qcet_eoffice', got '$ACTUAL_DB'. Aborting." >&2
+            exit 1
+          fi
+          echo "DB identity: PASS (qcet_eoffice)"
+
+          DB_IP=$(docker inspect "$DB" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' | tr ' ' '\n' | grep -v '^$' | head -1)
+          echo "DB container IP: $DB_IP"
+          if [ "$DB_IP" != "172.19.0.4" ]; then
+            echo "WARNING: DB IP is $DB_IP, expected 172.19.0.4 — verify network config."
+          fi
+
+      - name: Pre-backfill parity count
+        id: pre_parity
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          set -euo pipefail
+          echo "=== Pre-backfill parity ==="
+
+          # Check table exists first
+          TABLE_EXISTS=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "
+              SELECT COUNT(*) FROM information_schema.tables
+              WHERE table_schema = 'public' AND table_name = 'task_assignees';
+            " 2>&1 | tr -d '[:space:]')
+
+          if [ "$TABLE_EXISTS" = "0" ]; then
+            echo "task_assignees table does not exist — parity is already satisfied (table was dropped)."
+            echo "unmigrated=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          UNMIGRATED=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "
+              SELECT COUNT(*)
+              FROM task_assignees ta
+              WHERE NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              );
+            " 2>&1 | tr -d '[:space:]')
+
+          TOTAL=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "
+              SELECT COUNT(*) FROM task_assignees;
+            " 2>&1 | tr -d '[:space:]')
+
+          echo "Total task_assignees: $TOTAL"
+          echo "Unmigrated (no matching task_actors): $UNMIGRATED"
+          echo "unmigrated=$UNMIGRATED" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+          if [ "$UNMIGRATED" = "0" ]; then
+            echo "Parity already satisfied — no backfill needed."
+          else
+            echo "Backfill required: $UNMIGRATED rows need task_actors entries."
+          fi
+
+      - name: Role distribution in task_assignees (what will be mapped)
+        if: steps.pre_parity.outputs.unmigrated != '0'
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== AssigneeRole → TaskActorRole mapping preview ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                ta.role_in_task AS assignee_role,
+                CASE
+                  WHEN ta.role_in_task::text = 'PRIMARY_OWNER' THEN 'DRI (is_primary_dri=true)'
+                  WHEN ta.role_in_task::text = 'COLLABORATOR'  THEN 'COLLABORATOR (is_primary_dri=false)'
+                  ELSE 'COLLABORATOR (unknown→fallback, is_primary_dri=false)'
+                END AS maps_to_task_actor_role,
+                COUNT(*) AS unmigrated_count
+              FROM task_assignees ta
+              WHERE NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              )
+              GROUP BY ta.role_in_task
+              ORDER BY unmigrated_count DESC;
+            " 2>&1
+
+      - name: Dry-run — show INSERT plan (no mutations)
+        if: steps.pre_parity.outputs.unmigrated != '0'
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          echo "=== DRY-RUN: Rows that would be inserted into task_actors ==="
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              SELECT
+                ta.task_id,
+                ta.user_id,
+                ta.role_in_task AS source_role,
+                CASE
+                  WHEN ta.role_in_task::text = 'PRIMARY_OWNER' THEN 'DRI'::text
+                  ELSE 'COLLABORATOR'::text
+                END AS target_role,
+                CASE
+                  WHEN ta.role_in_task::text = 'PRIMARY_OWNER' THEN TRUE
+                  ELSE FALSE
+                END AS is_primary_dri
+              FROM task_assignees ta
+              WHERE NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              )
+              LIMIT 30;
+            " 2>&1
+          echo "(showing up to 30 of ${{ steps.pre_parity.outputs.unmigrated }} rows)"
+
+      - name: Apply backfill (INSERT task_assignees → task_actors)
+        if: >
+          steps.pre_parity.outputs.unmigrated != '0' &&
+          github.event.inputs.confirm == 'backfill'
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          set -euo pipefail
+          echo "=== APPLY: Backfilling task_assignees → task_actors ==="
+          echo "Confirm input: '${{ github.event.inputs.confirm }}'"
+          echo "Unmigrated rows: ${{ steps.pre_parity.outputs.unmigrated }}"
+
+          RESULT=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -c "
+              WITH unmigrated AS (
+                SELECT
+                  ta.task_id,
+                  ta.user_id,
+                  ta.role_in_task,
+                  CASE
+                    WHEN ta.role_in_task::text = 'PRIMARY_OWNER' THEN 'DRI'::'TaskActorRole'
+                    ELSE 'COLLABORATOR'::'TaskActorRole'
+                  END AS mapped_role,
+                  CASE
+                    WHEN ta.role_in_task::text = 'PRIMARY_OWNER' THEN TRUE
+                    ELSE FALSE
+                  END AS is_primary_dri
+                FROM task_assignees ta
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM task_actors act
+                  WHERE act.task_id = ta.task_id
+                    AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                    AND act.role::text = ta.role_in_task::text
+                )
+              )
+              INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)
+              SELECT
+                gen_random_uuid()::text,
+                u.task_id,
+                u.user_id,
+                u.mapped_role,
+                u.is_primary_dri,
+                NOW()
+              FROM unmigrated u
+              ON CONFLICT DO NOTHING
+              RETURNING id, task_id, user_id, role, is_primary_dri;
+            " 2>&1)
+
+          echo "$RESULT"
+          INSERTED=$(echo "$RESULT" | grep -c "^(" || echo "0")
+          echo "Rows inserted (approx from output): $INSERTED"
+
+      - name: Post-backfill parity check (idempotency verify)
+        if: github.event.inputs.confirm == 'backfill'
+        env:
+          DB: ${{ steps.db_conn.outputs.db_container }}
+        run: |
+          set -euo pipefail
+          echo "=== Post-backfill parity verification ==="
+
+          TABLE_EXISTS=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "
+              SELECT COUNT(*) FROM information_schema.tables
+              WHERE table_schema = 'public' AND table_name = 'task_assignees';
+            " 2>&1 | tr -d '[:space:]')
+
+          if [ "$TABLE_EXISTS" = "0" ]; then
+            echo "task_assignees does not exist — parity=0 trivially."
+            exit 0
+          fi
+
+          UNMIGRATED_AFTER=$(docker exec -e PGPASSWORD="$PGPASSWORD" "$DB" \
+            psql -U "$PGUSER" -d "$PGDATABASE" -P pager=off -t -A -c "
+              SELECT COUNT(*)
+              FROM task_assignees ta
+              WHERE NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = ta.role_in_task::text
+              );
+            " 2>&1 | tr -d '[:space:]')
+
+          echo "Unmigrated rows AFTER backfill: $UNMIGRATED_AFTER"
+
+          if [ "$UNMIGRATED_AFTER" != "0" ]; then
+            echo "ERROR: Parity still not satisfied after backfill — $UNMIGRATED_AFTER rows remain unmigrated." >&2
+            echo "Manual investigation required (may be role mismatches, NULL user_id, or FK violations)." >&2
+            exit 1
+          fi
+
+          echo "SUCCESS: Parity satisfied — all task_assignees rows now have matching task_actors entries."
+          echo "Tracker 174 Stage B: COMPLETE. Stage C observation window must still elapse."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ReBAC Backfill Summary"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo "- Confirm input: '${{ github.event.inputs.confirm }}'"
+            echo "- Mode: $([[ '${{ github.event.inputs.confirm }}' == 'backfill' ]] && echo 'APPLY' || echo 'DRY-RUN')"
+            echo "- Pre-backfill unmigrated: ${{ steps.pre_parity.outputs.unmigrated }}"
+            echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } >> "$GITHUB_STEP_SUMMARY"
