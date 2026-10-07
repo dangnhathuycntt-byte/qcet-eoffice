@@ -426,14 +426,14 @@ jobs:
           # Stderr to separate file (NOT 2>&1): mixing stderr into stdout contaminates count capture;
           #   ON_ERROR_STOP=1 still causes psql exit 1 on SQL error, which propagates via $?.
           PSQL_STDERR="$WORK_DIR/backfill_stderr.txt"
+          PSQL_EXIT=0
           INSERTED=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
               -q -A -t -X -v ON_ERROR_STOP=1 -f - \
-            < "$WORK_DIR/backfill.sql" 2>"$PSQL_STDERR" | tr -d '[:space:]')
-          PSQL_EXIT=$?
+            < "$WORK_DIR/backfill.sql" 2>"$PSQL_STDERR" | tr -d '[:space:]') || PSQL_EXIT=$?
           if [ -s "$PSQL_STDERR" ]; then
             echo "=== psql stderr (backfill INSERT) ===" >&2
             cat "$PSQL_STDERR" >&2
@@ -528,14 +528,14 @@ jobs:
           chmod 600 "$WORK_DIR/backfill2.sql"
 
           PSQL_STDERR2="$WORK_DIR/backfill2_stderr.txt"
+          PSQL_EXIT2=0
           SECOND_INSERT=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
               -q -A -t -X -v ON_ERROR_STOP=1 -f - \
-            < "$WORK_DIR/backfill2.sql" 2>"$PSQL_STDERR2" | tr -d '[:space:]')
-          PSQL_EXIT2=$?
+            < "$WORK_DIR/backfill2.sql" 2>"$PSQL_STDERR2" | tr -d '[:space:]') || PSQL_EXIT2=$?
           if [ -s "$PSQL_STDERR2" ]; then
             echo "=== psql stderr (second INSERT) ===" >&2
             cat "$PSQL_STDERR2" >&2

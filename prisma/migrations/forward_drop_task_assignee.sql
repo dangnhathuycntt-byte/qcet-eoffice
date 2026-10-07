@@ -21,61 +21,75 @@
 --        -f forward_drop_task_assignee.sql
 -- After success: npx prisma migrate resolve --applied 20260923000001_drop_task_assignee
 --
--- IMPORTANT: \set backfill_verified 'yes' sets a psql client variable, NOT a PostgreSQL GUC
--- parameter. current_setting('backfill_verified') reads the GUC namespace and raises
--- "unrecognized configuration parameter" for any psql \set variable. The correct mechanism
--- is psql variable interpolation: :'varname' expands the variable as a quoted SQL literal,
--- allowing a DO block to compare it as a string. With -v ON_ERROR_STOP=1 on the psql command
--- line, any unset variable causes psql to exit 1 immediately (fail-closed). The \set defaults
--- to 'no' here are documentation only — they are overridden by -v on the command line.
--- Without -v ON_ERROR_STOP=1, psql continues after errors — NEVER run without it.
+-- VARIABLE INTERPOLATION DESIGN:
+--   psql interpolates :'varname' at the OUTER SQL parse level — before sending to the server.
+--   Inside a DO $$ ... $$ dollar-quoted body, the content is a string to the SQL parser:
+--   psql does NOT substitute :'var' inside dollar-quoted strings. Writing
+--   IF :'backfill_verified' <> 'yes' THEN inside a DO block is a PL/pgSQL syntax error.
+--
+--   Correct approach (used here):
+--     1. SET myapp.backfill_verified = :'backfill_verified';  -- at SQL level (interpolated)
+--        This writes the CLI value into a PostgreSQL custom session parameter.
+--     2. current_setting('myapp.backfill_verified')           -- inside DO block
+--        Reads the session parameter; works inside dollar-quoted PL/pgSQL bodies.
+--
+--   \set vs -v ORDERING:
+--     CLI -v var=value sets the psql variable BEFORE the script runs.
+--     \set var value in the script body runs AFTER -v and OVERWRITES it.
+--     Therefore: DO NOT use \set defaults in this script. Without \set, if the operator
+--     omits a required -v variable and it is unset, psql exits with "undefined variable"
+--     error at the SET myapp.* = :'var' line (fail-closed, correct behaviour).
 --
 -- DO NOT run this while any active writer uses task_assignees.
 -- DO NOT run unless all prerequisites above are confirmed with -v vars set to 'yes'.
 -- DO NOT mark migration applied before running this script (no fake resolve).
 
--- Default to 'no' so running without -v vars causes gate failure (fail-closed).
--- Operator MUST pass -v backfill_verified=yes etc. on the psql command line.
-\set backfill_verified 'no'
-\set stage_b_active    'no'
-\set stage_c_complete  'no'
-\set old_app_retired   'no'
+-- ── Script-level error stop ──────────────────────────────────────────────────
+-- Redundant with -v ON_ERROR_STOP=1 on CLI, but defensive: ensures any statement
+-- error (including undefined variable at SET lines below) halts psql immediately.
+\set ON_ERROR_STOP on
+
+-- ── Publish CLI variables into PostgreSQL session parameters ─────────────────
+-- :'varname' interpolation happens at the outer SQL parse level (before server).
+-- If any variable is unset (operator forgot -v), psql exits here with "undefined variable".
+-- The SET writes the value into custom GUC namespace myapp.* so DO blocks can read it.
+SET myapp.backfill_verified = :'backfill_verified';
+SET myapp.stage_b_active    = :'stage_b_active';
+SET myapp.stage_c_complete  = :'stage_c_complete';
+SET myapp.old_app_retired   = :'old_app_retired';
 
 -- ── Prerequisite gates ──────────────────────────────────────────────────────
--- Uses psql variable interpolation: :'varname' expands to a quoted SQL string literal.
--- ON_ERROR_STOP=1 (from -v on CLI) causes psql to exit 1 if any statement raises an error.
--- This DO block raises EXCEPTION for any 'no' gate — psql exits immediately, DROP never runs.
+-- current_setting() reads PostgreSQL session parameters — works inside dollar-quoted bodies.
+-- RAISE EXCEPTION causes psql to exit 1 (ON_ERROR_STOP=on). DROP never runs on gate failure.
 DO $$
 BEGIN
-  -- :'backfill_verified' expands to the psql variable value as a quoted string.
-  -- If the variable is unset, psql exits with error before reaching this point (ON_ERROR_STOP=1).
-  IF :'backfill_verified' <> 'yes' THEN
+  IF current_setting('myapp.backfill_verified') <> 'yes' THEN
     RAISE EXCEPTION
       'STOP: backfill_verified=%. '
       'Run the backfill workflow (confirm=backfill), verify idempotency PASS, parity=0, '
       'then re-run with -v backfill_verified=yes.',
-      :'backfill_verified';
+      current_setting('myapp.backfill_verified');
   END IF;
-  IF :'stage_b_active' <> 'yes' THEN
+  IF current_setting('myapp.stage_b_active') <> 'yes' THEN
     RAISE EXCEPTION
       'STOP: stage_b_active=%. '
       'Tracker 174 Stage B (dual-write active + confirmed) must be complete. '
       'Re-run with -v stage_b_active=yes when confirmed.',
-      :'stage_b_active';
+      current_setting('myapp.stage_b_active');
   END IF;
-  IF :'stage_c_complete' <> 'yes' THEN
+  IF current_setting('myapp.stage_c_complete') <> 'yes' THEN
     RAISE EXCEPTION
       'STOP: stage_c_complete=%. '
       'Tracker 174 Stage C (observation window) must be complete. '
       'Re-run with -v stage_c_complete=yes when confirmed.',
-      :'stage_c_complete';
+      current_setting('myapp.stage_c_complete');
   END IF;
-  IF :'old_app_retired' <> 'yes' THEN
+  IF current_setting('myapp.old_app_retired') <> 'yes' THEN
     RAISE EXCEPTION
       'STOP: old_app_retired=%. '
       'Old app must be retired or dual-write confirmed production-safe with no writers on task_assignees. '
       'Re-run with -v old_app_retired=yes when confirmed.',
-      :'old_app_retired';
+      current_setting('myapp.old_app_retired');
   END IF;
   RAISE NOTICE 'All prerequisite gates PASSED. Proceeding with parity check and DROP.';
 END $$;
