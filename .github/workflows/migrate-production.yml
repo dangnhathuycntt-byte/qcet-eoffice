@@ -482,18 +482,47 @@ jobs:
               fi
 
               # Check 2: parity — count unmigrated rows in task_assignees
-              UNMIGRATED=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id = ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text = ta.role_in_task::text)" \
+              # Uses explicit role-mapping CASE (AssigneeRole → TaskActorRole).
+              # Canonical source: src/lib/db/transactions.ts:229-231.
+              #   PRIMARY_OWNER → DRI   (text values differ — direct comparison is WRONG)
+              #   COLLABORATOR  → COLLABORATOR
+              #   SUPERVISOR    → NO canonical mapping; FAIL if any exist (never used operationally)
+              #   (other)       → NO canonical mapping; FAIL if any exist
+              # SUPERVISOR and unknown roles: must be explicitly investigated before any permission grant.
+              # Do NOT silently map SUPERVISOR to COLLABORATOR or any other role.
+
+              # First: check for SUPERVISOR or unknown roles — hard fail if present
+              UNKNOWN_ROLES=$(run_psql "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR')" \
                 | tr -d '[:space:]' || echo "PROBE_FAILED")
-              echo "  [2] Unmigrated task_assignees rows (must be 0): $UNMIGRATED"
+              echo "  [2a] Rows with non-canonical roles (must be 0): $UNKNOWN_ROLES"
+              if [ "$UNKNOWN_ROLES" = "PROBE_FAILED" ]; then
+                echo "ERROR: [2a] Non-canonical role check query failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$UNKNOWN_ROLES" != "0" ]; then
+                echo "ERROR: [2a] Found $UNKNOWN_ROLES row(s) with SUPERVISOR or unknown roles in task_assignees." >&2
+                echo "  SUPERVISOR has no canonical mapping in transactions.ts." >&2
+                echo "  Do NOT grant arbitrary permissions. Investigate these rows before proceeding." >&2
+                run_psql "SELECT role_in_task::text, COUNT(*) FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR') GROUP BY role_in_task::text;" >&2 || true
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 2b: parity count using canonical mapping only
+              UNMIGRATED=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id = ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text = CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN 'DRI' WHEN 'COLLABORATOR' THEN 'COLLABORATOR' END)" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [2b] Unmigrated task_assignees rows (must be 0): $UNMIGRATED"
+              echo "  [2b] (parity uses canonical mapping: PRIMARY_OWNER→DRI, COLLABORATOR→COLLABORATOR)"
               if [ "$UNMIGRATED" = "PROBE_FAILED" ]; then
-                echo "ERROR: [2] Parity check query failed. Cannot safely resolve." >&2
+                echo "ERROR: [2b] Parity check query failed. Cannot safely resolve." >&2
                 BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
                 continue
               fi
               if [ "$UNMIGRATED" != "0" ]; then
-                echo "ERROR: [2] Parity check FAILED: $UNMIGRATED task_assignees rows have no matching task_actors entry." >&2
+                echo "ERROR: [2b] Parity check FAILED: $UNMIGRATED task_assignees rows have no matching task_actors entry." >&2
                 echo "  ReBAC backfill (task_assignees -> task_actors) is incomplete." >&2
-                echo "  Run the backfill workflow (backfill-production.yml) first, then retry." >&2
+                echo "  Run backfill-rebac.yml workflow (confirm=backfill), then retry." >&2
                 BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
                 continue
               fi

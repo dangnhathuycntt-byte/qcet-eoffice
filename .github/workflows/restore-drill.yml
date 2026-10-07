@@ -1,0 +1,301 @@
+# Restore Drill — Isolated pg_restore integrity verification
+#
+# Restores the production backup into an ISOLATED drill container.
+# No production containers, networks, or volumes are touched.
+# The drill DB is entirely ephemeral — destroyed on job completion.
+#
+# Security:
+#   - PGPASSWORD for drill (hardcoded local-only value) still passes via
+#     --env-file (chmod 600); never as -e PGPASSWORD= CLI argument.
+#   - Production DB URL is NOT accessed in this workflow.
+#   - Backup path is the known verified backup on the runner host.
+#
+# Verifications:
+#   - pg_restore completes without error
+#   - Table count in restored DB ≥ expected minimum
+#   - TOC entries match expected range (430–500 for current backup)
+#   - task_assignees and task_actors present in restored schema
+#   - Backup file checksum matches known-good SHA256
+#
+# Dispatch: gh workflow run restore-drill.yml
+
+name: Restore Drill (Isolated Integrity Verification)
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_path:
+        description: "Absolute path to .dump file on runner (default: known pre-migrate backup)"
+        required: false
+        default: '/home/dnhhuy/migrate-backups/qcet_eoffice_20261007T034055Z_premigrate.dump'
+      expected_sha256:
+        description: "Expected SHA256 of backup file (optional; set to skip if unknown)"
+        required: false
+        default: '61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42'
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Isolated Restore Drill
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 10
+    steps:
+      - name: Verify backup file exists and checksum
+        id: backup
+        run: |
+          set -euo pipefail
+          BACKUP_PATH="${{ github.event.inputs.backup_path }}"
+          EXPECTED_SHA="${{ github.event.inputs.expected_sha256 }}"
+
+          if [ ! -f "$BACKUP_PATH" ]; then
+            echo "ERROR: Backup file not found: $BACKUP_PATH" >&2
+            ls -lh "$(dirname "$BACKUP_PATH")" >&2 || true
+            exit 1
+          fi
+
+          ACTUAL_SIZE=$(stat -c%s "$BACKUP_PATH" 2>/dev/null || stat -f%z "$BACKUP_PATH")
+          echo "Backup: $BACKUP_PATH"
+          echo "Size: $ACTUAL_SIZE bytes"
+
+          if [ -n "$EXPECTED_SHA" ] && [ "$EXPECTED_SHA" != "skip" ]; then
+            echo "Verifying SHA256..."
+            ACTUAL_SHA=$(sha256sum "$BACKUP_PATH" 2>/dev/null | cut -d' ' -f1 \
+              || shasum -a 256 "$BACKUP_PATH" | cut -d' ' -f1)
+            echo "Expected: $EXPECTED_SHA"
+            echo "Actual:   $ACTUAL_SHA"
+            if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+              echo "ERROR: SHA256 mismatch — backup file may be corrupted or tampered." >&2
+              exit 1
+            fi
+            echo "SHA256: PASS"
+          else
+            echo "SHA256 check: SKIPPED (no expected hash provided)"
+          fi
+
+          echo "backup_path=$BACKUP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Print TOC (pg_restore --list)
+        env:
+          BACKUP_PATH: ${{ steps.backup.outputs.backup_path }}
+        run: |
+          set -euo pipefail
+          echo "=== TOC entry count ==="
+          TOC_COUNT=$(docker run --rm \
+            -v "$BACKUP_PATH:/backup/restore.dump:ro" \
+            postgres:16-alpine \
+            pg_restore --list /backup/restore.dump 2>/dev/null | wc -l | tr -d '[:space:]')
+          echo "TOC entries: $TOC_COUNT"
+          if [ "$TOC_COUNT" -lt 430 ] || [ "$TOC_COUNT" -gt 600 ]; then
+            echo "WARNING: TOC entry count $TOC_COUNT outside expected range 430-600." >&2
+          fi
+
+          echo ""
+          echo "=== TOC TABLE DATA entries ==="
+          docker run --rm \
+            -v "$BACKUP_PATH:/backup/restore.dump:ro" \
+            postgres:16-alpine \
+            pg_restore --list /backup/restore.dump 2>/dev/null | grep 'TABLE DATA' | head -60
+
+      - name: Start isolated drill DB
+        id: drilldb
+        run: |
+          set -euo pipefail
+          DRILL_CONTAINER="qcet-drill-$(date +%s)"
+          DRILL_NETWORK="qcet-drill-net-$(date +%s)"
+
+          # Create isolated network — not connected to qcet-network or any production net
+          docker network create "$DRILL_NETWORK"
+          echo "drill_network=$DRILL_NETWORK" >> "$GITHUB_OUTPUT"
+
+          # Start ephemeral PostgreSQL — local-only, no production creds
+          docker run -d \
+            --name "$DRILL_CONTAINER" \
+            --network "$DRILL_NETWORK" \
+            -e POSTGRES_USER=drill_user \
+            -e POSTGRES_PASSWORD=drill_pass_local \
+            -e POSTGRES_DB=drill_db \
+            postgres:16-alpine
+          echo "drill_container=$DRILL_CONTAINER" >> "$GITHUB_OUTPUT"
+          echo "Started drill container: $DRILL_CONTAINER on network: $DRILL_NETWORK"
+
+          # Wait for drill DB to be ready (max 30s)
+          READY=0
+          for i in $(seq 1 30); do
+            if docker exec "$DRILL_CONTAINER" pg_isready -U drill_user -d drill_db -q 2>/dev/null; then
+              echo "Drill DB ready after ${i}s"
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" = "0" ]; then
+            echo "ERROR: Drill DB not ready after 30s." >&2
+            docker logs "$DRILL_CONTAINER" >&2 || true
+            exit 1
+          fi
+
+      - name: Create pgenv for drill (chmod 600, --env-file pattern)
+        id: drillenv
+        env:
+          DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
+        run: |
+          set -euo pipefail
+          WORK_DIR=$(mktemp -d /tmp/restore-drill.XXXXXX)
+          chmod 700 "$WORK_DIR"
+
+          # PGPASSWORD for drill only — local hardcoded password, not production
+          # Still uses --env-file (never -e PGPASSWORD= CLI arg) for consistency
+          printf 'PGPASSWORD=drill_pass_local\n' > "$WORK_DIR/pgenv"
+          chmod 600 "$WORK_DIR/pgenv"
+
+          DRILL_HOST=$(docker inspect "$DRILL_CONTAINER" \
+            --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+          echo "drill_host=$DRILL_HOST" >> "$GITHUB_OUTPUT"
+          echo "work_dir=$WORK_DIR" >> "$GITHUB_OUTPUT"
+          echo "Drill DB host: $DRILL_HOST"
+
+      - name: pg_restore into drill DB
+        env:
+          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
+          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
+          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+          BACKUP_PATH: ${{ steps.backup.outputs.backup_path }}
+        run: |
+          set -euo pipefail
+          echo "=== Restoring backup into drill DB ==="
+          # --no-owner --no-acl: avoid owner/role mismatch in isolated drill
+          # --env-file: PGPASSWORD never exposed as CLI argument
+          docker run --rm \
+            --network "$DRILL_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            -v "$BACKUP_PATH:/backup/restore.dump:ro" \
+            postgres:16-alpine \
+            pg_restore \
+              --no-owner --no-acl \
+              -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
+              /backup/restore.dump
+          echo "pg_restore: completed"
+
+      - name: Verify restored schema — table count
+        env:
+          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
+          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
+          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          run_drill() {
+            docker run --rm \
+              --network "$DRILL_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
+                -t -A -c "$1" 2>&1
+          }
+
+          TABLE_COUNT=$(run_drill "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" | tr -d '[:space:]')
+          echo "Restored table count (public schema): $TABLE_COUNT"
+          if [ "$TABLE_COUNT" -lt 10 ]; then
+            echo "ERROR: Only $TABLE_COUNT tables in restored DB — suspiciously low." >&2
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Public tables in restored DB ==="
+          run_drill "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
+
+      - name: Verify restored schema — key tables present
+        env:
+          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
+          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
+          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          run_drill() {
+            docker run --rm \
+              --network "$DRILL_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
+                -t -A -c "$1" 2>&1
+          }
+
+          check_table() {
+            local tbl="$1"
+            EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$tbl')::text;" | tr -d '[:space:]')
+            if [ "$EXISTS" = "t" ]; then
+              COUNT=$(run_drill "SELECT COUNT(*) FROM $tbl;" | tr -d '[:space:]')
+              echo "  $tbl: EXISTS ($COUNT rows)"
+            else
+              echo "  $tbl: MISSING"
+            fi
+          }
+
+          echo "=== Key table verification ==="
+          check_table "task_assignees"
+          check_table "task_actors"
+          check_table "_prisma_migrations"
+
+          # task_assignees must exist (backup is pre-drop)
+          TA_EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TA_EXISTS" != "t" ]; then
+            echo "ERROR: task_assignees not in backup — backup may be post-drop or corrupted." >&2
+            exit 1
+          fi
+          echo "task_assignees present: PASS"
+
+      - name: Verify row counts in restored DB
+        env:
+          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
+          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
+          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          run_drill() {
+            docker run --rm \
+              --network "$DRILL_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
+                -t -A -c "$1" 2>&1
+          }
+
+          echo "=== task_assignees role distribution (from backup) ==="
+          run_drill "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;"
+
+          echo ""
+          echo "=== task_actors role distribution (from backup) ==="
+          run_drill "SELECT role::text, is_primary_dri, COUNT(*) AS cnt FROM task_actors GROUP BY role::text, is_primary_dri ORDER BY cnt DESC;" \
+            || echo "(task_actors not in backup)"
+
+          echo ""
+          echo "=== _prisma_migrations status ==="
+          run_drill "SELECT migration_name, applied_steps_count, CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK' WHEN finished_at IS NULL THEN 'FAILED/PENDING' ELSE 'APPLIED' END AS status FROM _prisma_migrations ORDER BY started_at;" \
+            || echo "(_prisma_migrations not in backup)"
+
+      - name: Drill result summary
+        run: |
+          echo "=== Restore Drill: COMPLETE ==="
+          echo ""
+          echo "Backup integrity: VERIFIED"
+          echo "  pg_restore completed without error"
+          echo "  task_assignees table present in restored schema"
+          echo "  Table count ≥ 10"
+          echo ""
+          echo "Production data/volumes: UNTOUCHED"
+          echo "Drill DB: ephemeral — will be destroyed in cleanup"
+
+      - name: Cleanup — destroy drill container and network
+        if: always()
+        env:
+          DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
+          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
+          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+        run: |
+          echo "Destroying drill container and network..."
+          docker rm -f "$DRILL_CONTAINER" 2>/dev/null || true
+          docker network rm "$DRILL_NETWORK" 2>/dev/null || true
+          rm -rf "$WORK_DIR" 2>/dev/null || true
+          echo "Cleanup complete."

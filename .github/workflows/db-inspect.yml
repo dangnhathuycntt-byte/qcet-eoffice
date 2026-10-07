@@ -1,0 +1,304 @@
+# DB Inspect — Read-Only Production DB Schema/Data Inspection
+#
+# Safe read-only queries against production DB.
+# Pinned to exact container names (qcet-eoffice-app / qcet-eoffice-db network).
+# Credentials: DATABASE_URL extracted via stdlib Python urlsplit/unquote,
+# masked via ::add-mask::, passed via chmod-600 env-file to docker run --env-file.
+# PGPASSWORD never written to GITHUB_ENV; never passed as CLI -e argument.
+#
+# Captures:
+#   - task_assignees schema + role distribution
+#   - task_actors role distribution
+#   - Parity count (unmigrated rows, role-mapped)
+#   - AssigneeRole and TaskActorRole enum values from pg_type
+#   - _prisma_migrations state for 20260923000001_drop_task_assignee
+#   - Full migration status table
+#
+# Dispatch: gh workflow run db-inspect.yml
+
+name: DB Inspect (Read-Only)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: db-inspect
+  cancel-in-progress: false
+
+env:
+  # stdlib Python URL parser (urlsplit + unquote). Identical to migrate-production.yml.
+  PY_URL_PARSER: >-
+    aW1wb3J0IG9zLCBzeXMKZnJvbSB1cmxsaWIucGFyc2UgaW1wb3J0IHVybHNwbGl0LCB1bnF1
+    b3RlCnVybCA9IG9zLmVudmlyb24uZ2V0KCJEQVRBQkFTRV9VUkwiLCAiIikKdSA9IHVybHNw
+    bGl0KHVybCkKdmFscyA9IFsKICAgIHVucXVvdGUodS51c2VybmFtZSBvciAiIiksCiAgICB1
+    bnF1b3RlKHUucGFzc3dvcmQgb3IgIiIpLAogICAgdW5xdW90ZSh1Lmhvc3RuYW1lIG9yICJs
+    b2NhbGhvc3QiKSwKICAgIHN0cih1LnBvcnQgb3IgNTQzMiksCiAgICB1bnF1b3RlKCh1LnBh
+    dGgubHN0cmlwKCIvIikuc3BsaXQoIj8iKVswXSBpZiB1LnBhdGggZWxzZSAicG9zdGdyZXMi
+    KSksCl0KZm9yIHBhdGgsIHZhbCBpbiB6aXAoc3lzLmFyZ3ZbMTpdLCB2YWxzKToKICAgIHdp
+    dGggb3BlbihwYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSh2YWwpCiAgICBvcy5j
+    aG1vZChwYXRoLCAwbzYwMCkK
+
+jobs:
+  inspect:
+    name: Inspect Production DB State
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 5
+    steps:
+      - name: Find app container and network
+        id: app
+        run: |
+          set -euo pipefail
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' >&2
+            exit 1
+          fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved container '$APP' ≠ expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: App container network '$DOCKER_NET' ≠ expected '${EXPECTED_NET}'." >&2
+            exit 1
+          fi
+
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+          echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "App: $APP  Network: $DOCKER_NET"
+
+      - name: Extract and mask DATABASE_URL
+        id: dburl
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          set -euo pipefail
+          WORK_DIR=$(mktemp -d /tmp/db-inspect.XXXXXX)
+          chmod 700 "$WORK_DIR"
+          echo "work_dir=$WORK_DIR" >> "$GITHUB_OUTPUT"
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DB_URL"
+
+          printf 'DATABASE_URL=%s\n' "$DB_URL" > "$WORK_DIR/dburl"
+          chmod 600 "$WORK_DIR/dburl"
+
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$WORK_DIR/parse.py"
+          chmod 600 "$WORK_DIR/parse.py"
+
+          DATABASE_URL="$DB_URL" python3 "$WORK_DIR/parse.py" \
+            "$WORK_DIR/pg_user" "$WORK_DIR/pg_pass" \
+            "$WORK_DIR/pg_host" "$WORK_DIR/pg_port" "$WORK_DIR/pg_db"
+
+          PG_PASS=$(cat "$WORK_DIR/pg_pass")
+          echo "::add-mask::$PG_PASS"
+
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$WORK_DIR/pgenv"
+          chmod 600 "$WORK_DIR/pgenv"
+
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          echo "DB target: host=$PG_HOST port=$PG_PORT db=$PG_DB user=$PG_USER"
+          echo "DB identity expected: host=172.19.0.4 db=qcet_eoffice"
+          if [ "$PG_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: DB name '$PG_DB' ≠ 'qcet_eoffice'. Aborting." >&2
+            exit 1
+          fi
+
+      - name: DB identity verification
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -c "$1" 2>&1
+          }
+
+          ACTUAL_DB=$(run_psql "SELECT current_database();" | tr -d '[:space:]')
+          echo "current_database(): $ACTUAL_DB"
+          if [ "$ACTUAL_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: Live DB is '$ACTUAL_DB', expected 'qcet_eoffice'. Aborting." >&2
+            exit 1
+          fi
+          echo "DB identity: PASS"
+
+      - name: task_assignees — column schema
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== task_assignees column schema ==="
+          run_psql "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='task_assignees' ORDER BY ordinal_position;" \
+            || echo "(table does not exist)"
+
+      - name: task_assignees — counts and role distribution
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== task_assignees counts ==="
+          run_psql "SELECT COUNT(*) AS total_rows, COUNT(DISTINCT task_id) AS distinct_tasks, COUNT(DISTINCT user_id) AS distinct_users FROM task_assignees;" \
+            || echo "(table does not exist)"
+
+          echo "=== task_assignees role_in_task distribution ==="
+          run_psql "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees GROUP BY role_in_task::text ORDER BY cnt DESC;" \
+            || echo "(table or column does not exist)"
+
+      - name: task_actors — role distribution
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== task_actors role distribution ==="
+          run_psql "SELECT role::text, is_primary_dri, COUNT(*) AS cnt FROM task_actors GROUP BY role::text, is_primary_dri ORDER BY cnt DESC;"
+
+      - name: Parity count — role-mapped (PRIMARY_OWNER→DRI, COLLABORATOR→COLLABORATOR)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== Parity: unmigrated task_assignees rows (role-mapped) ==="
+          echo "  Mapping: PRIMARY_OWNER→DRI, COLLABORATOR→COLLABORATOR"
+          echo "  (SUPERVISOR and other roles are NOT mapped — will appear as unmigrated)"
+          run_psql "SELECT
+            ta.role_in_task::text AS assignee_role,
+            COUNT(*) AS unmigrated_count
+          FROM task_assignees ta
+          WHERE NOT EXISTS (
+            SELECT 1 FROM task_actors act
+            WHERE act.task_id = ta.task_id
+              AND act.user_id IS NOT DISTINCT FROM ta.user_id
+              AND act.role::text = CASE ta.role_in_task::text
+                WHEN 'PRIMARY_OWNER' THEN 'DRI'
+                WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
+                ELSE ta.role_in_task::text
+              END
+          )
+          GROUP BY ta.role_in_task::text
+          ORDER BY unmigrated_count DESC;" \
+            || echo "(task_assignees does not exist — parity trivially satisfied)"
+
+          echo ""
+          echo "=== Total unmigrated count ==="
+          run_psql "SELECT COUNT(*) AS total_unmigrated
+          FROM task_assignees ta
+          WHERE NOT EXISTS (
+            SELECT 1 FROM task_actors act
+            WHERE act.task_id = ta.task_id
+              AND act.user_id IS NOT DISTINCT FROM ta.user_id
+              AND act.role::text = CASE ta.role_in_task::text
+                WHEN 'PRIMARY_OWNER' THEN 'DRI'
+                WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
+                ELSE ta.role_in_task::text
+              END
+          );" \
+            || echo "(task_assignees does not exist)"
+
+      - name: AssigneeRole and TaskActorRole enum values
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== AssigneeRole enum values ==="
+          run_psql "SELECT e.enumlabel AS value, e.enumsortorder AS ord FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'AssigneeRole' ORDER BY e.enumsortorder;" \
+            || echo "(AssigneeRole enum not found)"
+
+          echo "=== TaskActorRole enum values ==="
+          run_psql "SELECT e.enumlabel AS value, e.enumsortorder AS ord FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'TaskActorRole' ORDER BY e.enumsortorder;" \
+            || echo "(TaskActorRole enum not found)"
+
+      - name: _prisma_migrations — state for 20260923000001_drop_task_assignee
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== _prisma_migrations: 20260923000001_drop_task_assignee ==="
+          run_psql "SELECT migration_name, started_at, finished_at, applied_steps_count, rolled_back_at, checksum, CASE WHEN logs IS NULL THEN '(no logs)' ELSE left(logs,400) END AS logs_excerpt FROM _prisma_migrations WHERE migration_name='20260923000001_drop_task_assignee';"
+
+      - name: _prisma_migrations — full status
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== _prisma_migrations full status ==="
+          run_psql "SELECT migration_name, applied_steps_count, CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK' WHEN finished_at IS NULL THEN 'FAILED/PENDING' ELSE 'APPLIED' END AS status, started_at FROM _prisma_migrations ORDER BY started_at;"
+
+      - name: Cleanup temp dir
+        if: always()
+        run: rm -rf /tmp/db-inspect.* 2>/dev/null || true
