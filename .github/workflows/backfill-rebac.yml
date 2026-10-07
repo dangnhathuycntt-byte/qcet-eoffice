@@ -364,17 +364,22 @@ jobs:
           echo "       into task_actors for duration of backfill transaction, ensuring WHERE NOT EXISTS"
           echo "       snapshot is stable. App reads unaffected (SRE mode allows concurrent SELECTs)."
           echo "  Advisory lock: DO/PERFORM (no result row) — no output noise to strip"
-          echo "  Output: -At tuples-only; single SELECT COUNT(*) produces clean numeric line"
+          echo "  Output: -q -A -t tuples-only; -q suppresses command tags (BEGIN/DO/LOCK TABLE/COMMIT)"
+          echo "  Timeouts: lock_timeout=5s, statement_timeout=120s — avoids blocking production app"
+          echo "  Stderr: captured to separate file (not merged into stdout) to keep count capture clean"
 
           # SQL written via printf to avoid heredoc-at-column-0 YAML parse conflict.
-          # DO $$ BEGIN PERFORM pg_advisory_xact_lock(...); END $$; produces NO result row
-          # (unlike SELECT pg_advisory_xact_lock which emits a row even with -q/-t).
-          # LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE acquires a real table lock that blocks
-          # concurrent INSERT/UPDATE/DELETE on task_actors — cooperative advisory lock alone
-          # does not protect against concurrent app writes (app does not call pg_advisory_xact_lock).
+          # -q flag: without it, psql emits command tags (BEGIN, DO, LOCK TABLE, COMMIT) even with
+          #   -A -t, making stdout "BEGIN\nDO\nLOCK TABLE\nN\nCOMMIT" — numeric assert fails.
+          # DO $$ BEGIN PERFORM pg_advisory_xact_lock(...); END $$; produces NO result row.
+          # LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE blocks concurrent app INSERTs for txn duration.
+          # lock_timeout=5s: LOCK TABLE aborts if blocked >5s instead of indefinitely blocking app.
+          # statement_timeout=120s: hard ceiling on total transaction duration.
           # NULL dedup: WHERE NOT EXISTS uses IS NOT DISTINCT FROM for user_id (handles NULL=NULL).
           printf '%s\n' \
             'BEGIN;' \
+            'SET LOCAL lock_timeout = ''5s'';' \
+            'SET LOCAL statement_timeout = ''120s'';' \
             'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
             'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
             'WITH inserted AS (' \
@@ -414,22 +419,34 @@ jobs:
             exit 1
           fi
 
-          # -A -t: unaligned tuples-only — only the numeric COUNT(*) line is emitted
-          # -X: skip .psqlrc  -v ON_ERROR_STOP=1: SQL errors exit non-zero
-          # -f -: read SQL from stdin (avoids bind-mount exit 125 on self-hosted runner)
-          # No -q: DO block emits nothing; LOCK TABLE emits nothing; only SELECT COUNT(*) outputs
+          # -q: suppress command tags (BEGIN/DO/LOCK TABLE/COMMIT); without -q stdout is polluted.
+          # -A -t: unaligned tuples-only — only the SELECT COUNT(*) row emitted to stdout.
+          # -X: skip .psqlrc  -v ON_ERROR_STOP=1: SQL errors cause psql exit 1.
+          # -f -: read SQL from stdin (avoids bind-mount exit 125 on self-hosted runner).
+          # Stderr to separate file (NOT 2>&1): mixing stderr into stdout contaminates count capture;
+          #   ON_ERROR_STOP=1 still causes psql exit 1 on SQL error, which propagates via $?.
+          PSQL_STDERR="$WORK_DIR/backfill_stderr.txt"
           INSERTED=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-              -A -t -X -v ON_ERROR_STOP=1 -f - 2>&1 \
-            < "$WORK_DIR/backfill.sql" | tr -d '[:space:]')
+              -q -A -t -X -v ON_ERROR_STOP=1 -f - \
+            < "$WORK_DIR/backfill.sql" 2>"$PSQL_STDERR" | tr -d '[:space:]')
+          PSQL_EXIT=$?
+          if [ -s "$PSQL_STDERR" ]; then
+            echo "=== psql stderr (backfill INSERT) ===" >&2
+            cat "$PSQL_STDERR" >&2
+          fi
+          if [ "$PSQL_EXIT" -ne 0 ]; then
+            echo "ERROR: psql exited $PSQL_EXIT during backfill INSERT." >&2
+            exit 1
+          fi
 
           # Validate INSERTED is a non-negative integer (not an error message or empty)
           if ! echo "$INSERTED" | grep -qE '^[0-9]+$'; then
             echo "ERROR: INSERT returned non-numeric output: '$INSERTED'" >&2
-            echo "  Possible SQL error not caught by ON_ERROR_STOP=1 via 2>&1 capture." >&2
+            echo "  Expected single integer from SELECT COUNT(*) FROM inserted." >&2
             exit 1
           fi
           echo "Inserted: $INSERTED row(s)"
@@ -476,6 +493,8 @@ jobs:
           # Expected result: COUNT(*) FROM inserted = 0 because WHERE NOT EXISTS matches all rows.
           printf '%s\n' \
             'BEGIN;' \
+            'SET LOCAL lock_timeout = ''5s'';' \
+            'SET LOCAL statement_timeout = ''120s'';' \
             'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
             'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
             'WITH inserted AS (' \
@@ -508,13 +527,23 @@ jobs:
             > "$WORK_DIR/backfill2.sql"
           chmod 600 "$WORK_DIR/backfill2.sql"
 
+          PSQL_STDERR2="$WORK_DIR/backfill2_stderr.txt"
           SECOND_INSERT=$(docker run --rm -i \
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
-              -A -t -X -v ON_ERROR_STOP=1 -f - 2>&1 \
-            < "$WORK_DIR/backfill2.sql" | tr -d '[:space:]')
+              -q -A -t -X -v ON_ERROR_STOP=1 -f - \
+            < "$WORK_DIR/backfill2.sql" 2>"$PSQL_STDERR2" | tr -d '[:space:]')
+          PSQL_EXIT2=$?
+          if [ -s "$PSQL_STDERR2" ]; then
+            echo "=== psql stderr (second INSERT) ===" >&2
+            cat "$PSQL_STDERR2" >&2
+          fi
+          if [ "$PSQL_EXIT2" -ne 0 ]; then
+            echo "ERROR: psql exited $PSQL_EXIT2 during second INSERT." >&2
+            exit 1
+          fi
 
           if ! echo "$SECOND_INSERT" | grep -qE '^[0-9]+$'; then
             echo "ERROR: Second INSERT returned non-numeric: '$SECOND_INSERT'" >&2; exit 1
