@@ -56,3 +56,46 @@ npx prisma migrate deploy
 This does NOT rewrite the checksum of `migration.sql`. It marks `20260923000001` as
 applied in `_prisma_migrations` AFTER the equivalent DDL has been manually executed.
 The `migration.sql` file remains as the historical record of original intent.
+
+## psql `\set` vs PostgreSQL GUC: Bug in Original `forward_drop_task_assignee.sql`
+
+The original version of `forward_drop_task_assignee.sql` used:
+```sql
+\set backfill_verified 'no'
+-- ...
+DO $$ BEGIN
+  IF current_setting('backfill_verified') <> 'yes' THEN ...
+```
+
+**This is incorrect.** `\set` creates a *psql client variable*, not a PostgreSQL GUC
+parameter. `current_setting('backfill_verified')` reads the GUC namespace and raises:
+```
+ERROR: unrecognized configuration parameter "backfill_verified"
+```
+This error occurs even when the `\set` variable is set to `'yes'`. The gate fires with an
+unexpected exception instead of the intended `STOP:` message. If psql is run without
+`-v ON_ERROR_STOP=1`, psql may continue past this error — **the DROP could execute without
+any gate verification**.
+
+**Correct mechanism:** psql variable interpolation with `:'varname'` syntax:
+```sql
+\set backfill_verified 'no'
+DO $$ BEGIN
+  IF :'backfill_verified' <> 'yes' THEN
+    RAISE EXCEPTION 'STOP: backfill_verified=%', :'backfill_verified';
+  END IF;
+END $$;
+```
+`:'backfill_verified'` expands at parse time to a quoted SQL string literal (`'no'`).
+This is evaluated as a constant by the DO block — no GUC lookup. With
+`-v ON_ERROR_STOP=1` on the psql command line, any unset variable causes psql to exit 1
+immediately (fail-closed). Combined with `BEGIN`/`COMMIT`, any EXCEPTION in a gate
+check rolls back the entire transaction and the DROP never runs.
+
+The corrected `forward_drop_task_assignee.sql` also adds:
+- `BEGIN;` / `COMMIT;` wrapping the parity check and DROP (atomic + rollback on failure)
+- `LOCK TABLE task_assignees, task_actors IN ACCESS EXCLUSIVE MODE` (consistent snapshot)
+- `SET LOCAL lock_timeout = '10s'` (abort if blocked, never wait indefinitely)
+- `SET LOCAL statement_timeout = '60s'` (hard ceiling)
+- Removed empty `20261007000001_fix_drop_task_assignee_guard/` directory (additive
+  migration that can never run while `20260923000001` is FAILED/PENDING)
