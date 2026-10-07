@@ -17,7 +17,7 @@
 # Security:
 #   - DATABASE_URL extracted from running container, immediately masked
 #   - PG credentials in chmod-600 files; never appear on CLI or logs
-#   - Backup stored at runner-local /home/runner/migrate-backups (not public artifact)
+#   - Backup stored at runner-local $HOME/migrate-backups (not public artifact)
 #   - MIG_NAME validated against repo directory listing before passing to prisma CLI
 #   - No credential values in docker exec -e or command-line arguments
 
@@ -229,7 +229,9 @@ jobs:
           PG_DB=$(cat   "$WORK_DIR/pg_db")
 
           # Backup directory on runner — not a public artifact
-          BACKUP_DIR="/home/runner/migrate-backups"
+          # Use $HOME (resolves to actual runner user home, e.g. /home/dnhhuy)
+          # rather than hardcoded /home/runner which only exists on GitHub-hosted runners.
+          BACKUP_DIR="$HOME/migrate-backups"
           mkdir -p "$BACKUP_DIR"
           chmod 700 "$BACKUP_DIR"
 
@@ -596,7 +598,7 @@ jobs:
             rm -rf "$WORK_DIR"
             echo "Temp directory cleaned: $WORK_DIR"
           fi
-          # Note: backup at /home/runner/migrate-backups is intentionally preserved
+          # Note: backup at $HOME/migrate-backups is intentionally preserved
 
       # ── Step 13: Summary ──────────────────────────────────────────────────
       - name: Summary
@@ -606,4 +608,4 @@ jobs:
           echo "- **Actor**: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA**: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Backup**: runner-local /home/runner/migrate-backups (not public artifact)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Backup**: runner-local \$HOME/migrate-backups (not public artifact)" >> "$GITHUB_STEP_SUMMARY"
