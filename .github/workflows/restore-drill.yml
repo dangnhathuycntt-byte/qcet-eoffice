@@ -181,24 +181,20 @@ jobs:
 
       - name: Verify restored schema — table count
         env:
-          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
-          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
-          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+          DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
         run: |
           set -euo pipefail
+          # Use docker exec directly into the drill container — no separate docker run,
+          # no env-file needed, no network routing. drill_user is the superuser for drill_db.
           run_drill() {
-            docker run --rm \
-              --network "$DRILL_NETWORK" \
-              --env-file "$WORK_DIR/pgenv" \
-              postgres:16-alpine \
-              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
-                -t -A -c "$1" 2>&1
+            docker exec "$DRILL_CONTAINER" \
+              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
           }
 
           TABLE_COUNT=$(run_drill "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" | tr -d '[:space:]')
           echo "Restored table count (public schema): $TABLE_COUNT"
-          if [ "$TABLE_COUNT" -lt 10 ]; then
-            echo "ERROR: Only $TABLE_COUNT tables in restored DB — suspiciously low." >&2
+          if [ -z "$TABLE_COUNT" ] || [ "$TABLE_COUNT" -lt 10 ]; then
+            echo "ERROR: Only ${TABLE_COUNT:-<empty>} tables in restored DB — suspiciously low." >&2
             exit 1
           fi
 
@@ -208,28 +204,26 @@ jobs:
 
       - name: Verify restored schema — key tables present
         env:
-          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
-          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
-          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+          DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
         run: |
           set -euo pipefail
+          # docker exec: bypasses network entirely; drill_user is superuser of isolated drill_db
           run_drill() {
-            docker run --rm \
-              --network "$DRILL_NETWORK" \
-              --env-file "$WORK_DIR/pgenv" \
-              postgres:16-alpine \
-              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
-                -t -A -c "$1" 2>&1
+            docker exec "$DRILL_CONTAINER" \
+              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
           }
 
           check_table() {
             local tbl="$1"
-            EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$tbl')::text;" | tr -d '[:space:]')
+            local EXISTS
+            EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$tbl')::text;") || true
+            EXISTS=$(printf '%s' "$EXISTS" | tr -d '[:space:]')
             if [ "$EXISTS" = "t" ]; then
-              COUNT=$(run_drill "SELECT COUNT(*) FROM $tbl;" | tr -d '[:space:]')
+              local COUNT
+              COUNT=$(run_drill "SELECT COUNT(*) FROM \"$tbl\";" | tr -d '[:space:]') || COUNT="ERR"
               echo "  $tbl: EXISTS ($COUNT rows)"
             else
-              echo "  $tbl: MISSING"
+              echo "  $tbl: MISSING (raw exists output: '$EXISTS')"
             fi
           }
 
@@ -238,8 +232,10 @@ jobs:
           check_table "task_actors"
           check_table "_prisma_migrations"
 
-          # task_assignees must exist (backup is pre-drop)
-          TA_EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          # Hard gate: task_assignees must exist (backup is pre-drop)
+          TA_EXISTS=$(run_drill "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;") || true
+          TA_EXISTS=$(printf '%s' "$TA_EXISTS" | tr -d '[:space:]')
+          echo "TA_EXISTS raw: '$TA_EXISTS'"
           if [ "$TA_EXISTS" != "t" ]; then
             echo "ERROR: task_assignees not in backup — backup may be post-drop or corrupted." >&2
             exit 1
@@ -248,18 +244,12 @@ jobs:
 
       - name: Verify row counts in restored DB
         env:
-          DRILL_NETWORK: ${{ steps.drilldb.outputs.drill_network }}
-          DRILL_HOST: ${{ steps.drillenv.outputs.drill_host }}
-          WORK_DIR: ${{ steps.drillenv.outputs.work_dir }}
+          DRILL_CONTAINER: ${{ steps.drilldb.outputs.drill_container }}
         run: |
           set -euo pipefail
           run_drill() {
-            docker run --rm \
-              --network "$DRILL_NETWORK" \
-              --env-file "$WORK_DIR/pgenv" \
-              postgres:16-alpine \
-              psql -h "$DRILL_HOST" -p 5432 -U drill_user -d drill_db \
-                -t -A -c "$1" 2>&1
+            docker exec "$DRILL_CONTAINER" \
+              psql -U drill_user -d drill_db -t -A -c "$1" 2>&1
           }
 
           echo "=== task_assignees role distribution (from backup) ==="
