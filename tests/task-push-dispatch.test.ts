@@ -26,6 +26,8 @@ describe('Task Push Dispatch & Background after() Integration', () => {
   const createdNotificationIds: string[] = [];
   let execUnitId: string | null = null;
   let execAssignmentId: string | null = null;
+  // Dedicated test users created by this suite — isolated from concurrent tests.
+  const ownedUserIds: string[] = [];
 
   before(async () => {
     // Intercept push notifications
@@ -37,107 +39,54 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       return { statusCode: 200, body: 'OK', headers: {} };
     });
 
-    // 1. Get or create test department
+    // 1. Get or create test department (use any existing unit, not owned by this suite)
     const dept = await prisma.organizationalUnit.findFirst({
       where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
     });
     assert.ok(dept, 'Database must contain at least one department');
     testDepartmentId = dept.id;
 
-    // 2. Find or create test users
-    // Institutional Leader / Ban Giam Hieu (Separation of Powers: ADMIN is SYSTEM_ADMIN and cannot mutate institutional tasks)
-    const ephemeralTestUserIds = ['user-bgh', 'user-creator-1', 'user-assignee', 'user-cntt', 'user-lead-cntt'];
-    let admin = await prisma.user.findFirst({
-      where: {
+    // 2. Create dedicated test users owned by this suite.
+    // Using create (not findFirst) ensures isolation from concurrent test suites that
+    // may upsert or delete shared seeded users, which caused FK violation races.
+    const ts = Date.now();
+
+    // Admin user: BAN_GIAM_HIEU — will receive HIEU_TRUONG position below.
+    const adminCreated = await prisma.user.create({
+      data: {
+        email: `push_dispatch_admin_${ts}@qcet-test.internal`,
+        name: `Push Dispatch Admin ${ts}`,
         role: UserRole.BAN_GIAM_HIEU,
-        positionAssignments: {
-          some: {
-            status: 'ACTIVE',
-            positionDefinition: {
-              code: { in: ['HIEU_TRUONG', 'PHO_HIEU_TRUONG', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG'] },
-            },
-          },
-        },
-        id: { notIn: ephemeralTestUserIds },
+        isActive: true,
       },
     });
-    if (!admin) {
-      admin = await prisma.user.findFirst({
-        where: {
-          role: UserRole.BAN_GIAM_HIEU,
-          id: { notIn: ephemeralTestUserIds },
-        },
-      });
-    }
-    if (!admin) {
-      admin = await prisma.user.findFirst({
-        where: {
-          role: { not: UserRole.ADMIN },
-          positionAssignments: {
-            some: {
-              status: 'ACTIVE',
-              positionDefinition: {
-                code: { in: ['HIEU_TRUONG', 'PHO_HIEU_TRUONG', 'TRUONG_DON_VI_CANONICAL', 'TRUONG_PHONG'] },
-              },
-            },
-          },
-          id: { notIn: ephemeralTestUserIds },
-        },
-      });
-    }
-    assert.ok(admin, 'Admin/BGH user must exist');
-    if (false) {
-      
-    }
+    ownedUserIds.push(adminCreated.id);
+
+    // Staff user: CHUYEN_VIEN — used as task assignee / DRI.
+    const staffCreated = await prisma.user.create({
+      data: {
+        email: `push_dispatch_staff_${ts}@qcet-test.internal`,
+        name: `Push Dispatch Staff ${ts}`,
+        role: UserRole.CHUYEN_VIEN,
+        isActive: true,
+      },
+    });
+    ownedUserIds.push(staffCreated.id);
+
     adminUser = {
-      id: admin.id,
-      name: admin.name,
-      email: admin.email,
-      role: admin.role,
-      
+      id: adminCreated.id,
+      name: adminCreated.name,
+      email: adminCreated.email,
+      role: adminCreated.role,
     };
 
-    // Department Head
-    let deptHead = await prisma.user.findFirst({
-      where: {
-        role: UserRole.TRUONG_PHONG,
-        id: { notIn: ephemeralTestUserIds },
-      },
-    });
-    if (!deptHead) {
-      // Fallback to any user
-      deptHead = await prisma.user.findFirst({
-        where: {
-          id: { notIn: ephemeralTestUserIds },
-        },
-      });
-      if (!deptHead) {
-        deptHead = admin;
-      }
-    }
-    deptHeadUser = {
-      id: deptHead.id,
-      name: deptHead.name,
-      email: deptHead.email,
-      role: deptHead.role,
-      
-    };
+    deptHeadUser = adminUser; // BGH acts as dept-head for this suite
 
-    // Staff member
-    let staff = await prisma.user.findFirst({
-      where: {
-        id: { notIn: [adminUser.id, deptHeadUser.id, ...ephemeralTestUserIds] },
-      },
-    });
-    if (!staff) {
-      staff = deptHead;
-    }
     staffUser = {
-      id: staff.id,
-      name: staff.name,
-      email: staff.email,
-      role: staff.role,
-      
+      id: staffCreated.id,
+      name: staffCreated.name,
+      email: staffCreated.email,
+      role: staffCreated.role,
     };
 
     adminToken = signSessionToken({
@@ -202,6 +151,17 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     if (execUnitId) {
       await prisma.positionAssignment.deleteMany({ where: { unitId: execUnitId } }).catch(() => {});
       await prisma.organizationalUnit.deleteMany({ where: { id: execUnitId } }).catch(() => {});
+    }
+
+    // Cleanup dedicated test users created by this suite (all tasks/assignments already deleted above)
+    if (ownedUserIds.length > 0) {
+      // Delete any remaining position assignments first (FK guard)
+      await prisma.positionAssignment.deleteMany({
+        where: { userId: { in: ownedUserIds } },
+      }).catch(() => {});
+      await prisma.user.deleteMany({
+        where: { id: { in: ownedUserIds } },
+      }).catch(() => {});
     }
   });
 
