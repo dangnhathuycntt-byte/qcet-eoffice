@@ -384,7 +384,7 @@ export function Drawer({
                     <>
                       <span>·</span>
                       <span className="text-destructive font-semibold tabular-nums">
-                        {stats.overdue} quá hạn
+                        {stats.overdue} trễ hạn
                       </span>
                     </>
                   )}

@@ -11,6 +11,7 @@ import { getStatusBadgeConfig } from "./table/constants";
 import {
   getSystemReferenceDate,
   getDaysRemaining,
+  getDueIndicator,
 } from "./table/utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
@@ -53,7 +54,7 @@ export function formatMobileDueDate(dateStr?: string): string {
 }
 
 /**
- * Tính toán badge thời hạn còn lại hoặc quá hạn
+ * Tính toán badge thời hạn còn lại hoặc trễ hạn
  */
 export function getMobileDueBadge(
   dueDate?: string,
@@ -93,7 +94,13 @@ export function getMobileDueBadge(
       className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-semibold",
     };
   }
-  if (diffDays <= 3) {
+  const soon = getDueIndicator({
+    status,
+    isOverdue: false,
+    isToday: false,
+    daysRemaining: diffDays,
+  });
+  if (soon.tone === "warn") {
     return {
       label: `Còn ${diffDays} ngày`,
       className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-medium",
@@ -101,7 +108,7 @@ export function getMobileDueBadge(
   }
   return {
     label: `Còn ${diffDays} ngày`,
-    className: "border-blue-500/20 bg-blue-500/10 text-blue-700 font-medium",
+    className: "border-border bg-secondary text-muted-foreground font-medium",
   };
 }
 
@@ -154,7 +161,7 @@ export function getMobilePriorityBadgeConfig(
  * - Tiêu đề: 14-15px font-semibold text-foreground leading-snug
  * - Đơn vị & Người phụ trách: Tên phòng ban • Tên người phụ trách (avatar/dot)
  * - Thanh tiến độ: Thanh tiến độ mượt mà kèm tỷ lệ phần trăm tabular-nums
- * - Hàng dưới: Ngày hạn (Hạn 14/09) & Huy hiệu thời hạn/quá hạn
+ * - Hàng dưới: Ngày hạn (Hạn 14/09) & Huy hiệu thời hạn/trễ hạn
  * - Không có nút bấm rác bên trong thẻ
  */
 export const MobileTaskCard = React.memo(function MobileTaskCard({

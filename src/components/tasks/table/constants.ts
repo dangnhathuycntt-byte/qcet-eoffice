@@ -105,7 +105,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.96 0.04 150)",
   },
   OVERDUE: {
-    label: "Quá hạn",
+    label: "Trễ hạn",
     className: "border-rose-500/20 bg-rose-500/10 text-rose-700",
     variant: "rose",
     oklchColor: "oklch(0.63 0.22 25)",
@@ -261,7 +261,7 @@ export const DEPARTMENT_OPTIONS: DepartmentOption[] = [
 export const SMART_FILTER_TABS: SmartFilterTabOption[] = [
   { id: "all", label: "Tất cả", description: "Toàn bộ danh sách nhiệm vụ" },
   { id: "my_tasks", label: "Việc của tôi", description: "Nhiệm vụ bạn phụ trách chính (DRI) hoặc được giao việc con" },
-  { id: "overdue", label: "Quá hạn", description: "Nhiệm vụ trễ hạn chót chưa hoàn thành" },
+  { id: "overdue", label: "Trễ hạn", description: "Nhiệm vụ trễ hạn chót chưa hoàn thành" },
   { id: "review", label: "Chờ duyệt", description: "Hồ sơ minh chứng đang chờ nghiệm thu / cần chỉnh sửa" },
   { id: "today", label: "Hôm nay", description: "Hạn chót cần xử lý trong ngày hôm nay" },
   { id: "in_progress", label: "Đang làm", description: "Nhiệm vụ đang trong tiến trình xử lý" },
@@ -365,7 +365,7 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchBg: "oklch(0.96 0.04 150)",
   },
   OVERDUE: {
-    label: "Quá hạn",
+    label: "Trễ hạn",
     badgeClass: "border-rose-500/20 bg-rose-500/10 text-rose-700",
     borderClass: "border-rose-500/30",
     oklchColor: "oklch(0.63 0.22 25)",

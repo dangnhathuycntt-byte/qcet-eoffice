@@ -266,7 +266,7 @@ test('QCET E-Office — Comprehensive DoD & Institutional Acceptance Verificatio
     };
 
     const result = await authorize(delegateUser, 'task.approve', task, {}, now);
-    assert.equal(result.allowed, false, 'Ủy quyền đã quá hạn thời gian hiệu lực phải bị từ chối');
+    assert.equal(result.allowed, false, 'Ủy quyền đã trễ hạn thời gian hiệu lực phải bị từ chối');
     assert.equal(result.rejectionCode, 'DELEGATION_EXPIRED');
   });
 

@@ -112,7 +112,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
     assert.strictEqual(delivItem?.dueDate, "2026-09-14");
   });
 
-  test("trích xuất chính xác danh sách nhiệm vụ quá hạn (Prior Overdue)", () => {
+  test("trích xuất chính xác danh sách nhiệm vụ trễ hạn (Prior Overdue)", () => {
     const overdueItems = getPriorOverdueWorkItems(sampleTasks, "2026-09-14T00:00:00.000Z");
     assert.strictEqual(overdueItems.length, 1);
     assert.strictEqual(overdueItems[0].sourceTaskId, "school-task-overdue");
@@ -133,7 +133,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
     assert.strictEqual(overdueOnly.length, 1);
     assert.strictEqual(overdueOnly[0].sourceTaskId, "school-task-overdue");
 
-    // Lọc theo itemType: "school_milestone" vẫn giữ lại mốc trường dù đã quá hạn (nhờ originType)
+    // Lọc theo itemType: "school_milestone" vẫn giữ lại mốc trường dù đã trễ hạn (nhờ originType)
     const schoolMilestones = filterWorkCalendarItems(items, { itemType: "school_milestone" });
     assert.strictEqual(schoolMilestones.length, 2);
     assert.ok(schoolMilestones.some((m) => m.sourceTaskId === "school-task-overdue"));
@@ -328,7 +328,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
     assert.strictEqual(priorOverdue.length, 0, "Prior overdue list must not include completed tasks");
   });
 
-  test("an toàn múi giờ date-only: không bị quá hạn sớm trong ngày làm việc", () => {
+  test("an toàn múi giờ date-only: không bị trễ hạn sớm trong ngày làm việc", () => {
     const tasks: SchoolTask[] = [
       {
         id: "task-due-today",
@@ -389,7 +389,7 @@ describe("Work Calendar Adapter & Operations Engine", () => {
     }
   });
 
-  test("milestone không tiến độ giữ undefined; date-only due hôm nay không quá hạn dù đã khuya giờ ICT", () => {
+  test("milestone không tiến độ giữ undefined; date-only due hôm nay không trễ hạn dù đã khuya giờ ICT", () => {
     const tasks: SchoolTask[] = [
       {
         id: "task-milestone-no-progress",

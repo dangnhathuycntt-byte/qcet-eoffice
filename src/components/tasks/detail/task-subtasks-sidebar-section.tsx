@@ -6,6 +6,8 @@ import * as m from "motion/react-m";
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { StaffTask } from "@/types/dashboard";
 import { getStatusDisplay } from "@/domain/tasks/display-config";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { getDueIndicator, getSlaBadgeStatus } from "@/components/tasks/table/utils/table-date-helpers";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { formatCompactDate, formatDisplayDate } from "@/lib/format/date";
@@ -19,6 +21,83 @@ export interface TaskSubtasksSidebarSectionProps {
 }
 
 const MAX_COLLAPSED = 5;
+
+function SubtaskRow({
+  subtask,
+  isActive,
+  onSelect,
+}: {
+  subtask: StaffTask;
+  isActive: boolean;
+  onSelect: (subtask: StaffTask) => void;
+}) {
+  const statusOpt = getStatusDisplay(subtask.status);
+  const isCompleted = subtask.status === "COMPLETED";
+  const formattedDueDate = subtask.dueDate ? formatCompactDate(subtask.dueDate, "") : "";
+
+  // Cùng quy tắc màu hạn với bảng: đỏ khi trễ/hôm nay, nhạt khi còn xa
+  const sla = getSlaBadgeStatus(subtask.dueDate, subtask.status);
+  const due = getDueIndicator({
+    status: subtask.status,
+    isOverdue: sla.isOverdue,
+    isToday: sla.isToday,
+    daysRemaining: sla.daysRemaining,
+    label: sla.label,
+  });
+
+  return (
+    <m.div variants={listItemVariants}>
+      <button
+        type="button"
+        onClick={() => onSelect(subtask)}
+        className={cn(
+          "w-full group/sub flex items-center gap-2.5 min-h-9 px-2 py-1.5 rounded-lg text-left text-compact leading-snug transition-colors cursor-pointer hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+          isActive ? "bg-muted/40 ring-1 ring-inset ring-border/60" : ""
+        )}
+        title={subtask.title}
+      >
+        {/* 1. Trạng thái */}
+        <span
+          className="shrink-0"
+          role="status"
+          aria-label={`Trạng thái: ${statusOpt?.label ?? subtask.status}`}
+        >
+          <TaskStatusCircle status={subtask.status} />
+        </span>
+
+        {/* 2. Tên việc con */}
+        <span
+          className={cn(
+            "flex-1 min-w-0 line-clamp-2 break-words group-hover/sub:text-foreground",
+            isCompleted
+              ? "text-muted-foreground line-through decoration-muted-foreground/30"
+              : "text-foreground/90"
+          )}
+        >
+          {subtask.title}
+        </span>
+
+        {/* 3. Hạn hoàn thành: DD/MM (đỏ khi trễ hạn) */}
+        {formattedDueDate && (
+          <span
+            className={cn(
+              "shrink-0 text-xs tabular-nums",
+              due.tone === "danger" ? "text-destructive font-medium" : "text-muted-foreground"
+            )}
+            title={`Hạn hoàn thành: ${formatDisplayDate(subtask.dueDate)}`}
+          >
+            {formattedDueDate}
+          </span>
+        )}
+
+        {/* 4. Người phụ trách */}
+        <div className="shrink-0">
+          <UserAvatar avatarUrl={subtask.assigneeAvatar} name={subtask.assigneeName} size="sm" />
+        </div>
+      </button>
+    </m.div>
+  );
+}
 
 export function TaskSubtasksSidebarSection({
   subTasks = [],
@@ -39,15 +118,36 @@ export function TaskSubtasksSidebarSection({
       {/* Header */}
       <div className="group flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-foreground truncate">
-            Việc con
-          </span>
-          <span className="font-mono text-[11px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded-full tabular-nums shrink-0">
+          <span className="text-compact font-semibold text-foreground truncate">Việc con</span>
+          <span className="text-xs text-muted-foreground tabular-nums shrink-0">
             {subTasks.length}
           </span>
-          {completedCount > 0 && (
-            <span className="text-[11px] text-muted-foreground font-mono tabular-nums shrink-0">
-              ({completedCount} xong)
+          {subTasks.length > 0 && (
+            <span
+              role="progressbar"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Tiến độ hoàn thành việc con"
+              title={`${completedCount}/${subTasks.length} việc con đã xong`}
+              className="inline-flex items-center gap-1 ml-0.5 text-xs text-muted-foreground tabular-nums"
+            >
+              <svg viewBox="0 0 16 16" className="size-3.5 -rotate-90" aria-hidden="true">
+                <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth={1.5} />
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="6.25"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  pathLength={100}
+                  strokeDasharray={`${progressPercent} 100`}
+                  className={completedCount === subTasks.length ? "text-emerald-500" : "text-foreground/70"}
+                />
+              </svg>
+              {progressPercent}%
             </span>
           )}
         </div>
@@ -55,155 +155,31 @@ export function TaskSubtasksSidebarSection({
           <button
             type="button"
             onClick={onAddSubtask}
-            className="inline-flex items-center gap-1 h-5 px-1.5 rounded text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+            className="inline-flex items-center gap-1 h-7 px-1.5 -mr-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             title="Tạo việc con"
           >
-            <Plus className="size-3" strokeWidth={1.5} />
+            <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Thêm</span>
           </button>
         )}
       </div>
 
-      {/* Micro progress bar */}
-      {subTasks.length > 0 && completedCount > 0 && (
-        <div
-          role="progressbar"
-          aria-valuenow={progressPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Tiến độ hoàn thành việc con"
-          className="mt-1.5 h-1 w-full bg-muted/50 rounded-full overflow-hidden"
-        >
-          <div
-            className="h-full bg-emerald-500/80 rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      )}
-
       {/* Rows */}
       {alwaysVisible.length > 0 && (
-        <m.div className="mt-1.5 space-y-0.5" variants={staggerContainerVariants} initial="initial" animate="animate">
-          {alwaysVisible.map((st) => {
-            const isActive = st.id === activeSubtaskId;
-            const statusOpt = getStatusDisplay(st.status);
-            const dotClass = statusOpt?.dotClass ?? "bg-muted-foreground/60";
-            const isCompleted = st.status === "COMPLETED";
-            const formattedDueDate = st.dueDate ? formatCompactDate(st.dueDate, "") : "";
-
-            return (
-              <m.div key={st.id} variants={listItemVariants}>
-              <button
-                type="button"
-                onClick={() => onSelectSubtask(st)}
-                className={cn(
-                  "w-full flex items-start gap-2 px-1.5 py-1.5 rounded text-left text-[12px] leading-snug transition-colors cursor-pointer hover:bg-muted/60 active:scale-[0.98] transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
-                  isActive ? "bg-muted/40" : ""
-                )}
-                title={st.title}
-              >
-                {/* 1. Chấm trạng thái */}
-                <span
-                  className={cn("size-2 rounded-full shrink-0 mt-1.5", dotClass)}
-                  role="status"
-                  aria-label={`Trạng thái: ${statusOpt?.label ?? st.status}`}
-                />
-
-                {/* 2. Tên việc con */}
-                <span
-                  className={cn(
-                    "flex-1 min-w-0 line-clamp-2 break-words",
-                    isCompleted
-                      ? "text-muted-foreground line-through decoration-muted-foreground/30"
-                      : "text-foreground/90"
-                  )}
-                >
-                  {st.title}
-                </span>
-
-                {/* 3. Hạn hoàn thành: DD/MM */}
-                {formattedDueDate && (
-                  <span
-                    className="shrink-0 text-[11px] font-mono tabular-nums text-muted-foreground mt-0.5"
-                    title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
-                  >
-                    {formattedDueDate}
-                  </span>
-                )}
-
-                {/* 4. Avatar người phụ trách */}
-                <div className="shrink-0 mt-0.5">
-                  <UserAvatar
-                    avatarUrl={st.assigneeAvatar}
-                    name={st.assigneeName}
-                    size="xs"
-                  />
-                </div>
-              </button>
-              </m.div>
-            );
-          })}
+        <m.div className="mt-1 space-y-0.5 -mx-1.5" variants={staggerContainerVariants} initial="initial" animate="animate">
+          {alwaysVisible.map((st) => (
+            <SubtaskRow key={st.id} subtask={st} isActive={st.id === activeSubtaskId} onSelect={onSelectSubtask} />
+          ))}
 
           {/* Collapsible remaining items */}
           {collapsibleItems.length > 0 && (
             <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
               <Collapsible.Panel className="space-y-0.5">
-                {collapsibleItems.map((st) => {
-                  const isActive = st.id === activeSubtaskId;
-                  const statusOpt = getStatusDisplay(st.status);
-                  const dotClass = statusOpt?.dotClass ?? "bg-muted-foreground/60";
-                  const isCompleted = st.status === "COMPLETED";
-                  const formattedDueDate = st.dueDate ? formatCompactDate(st.dueDate, "") : "";
-
-                  return (
-                    <m.div key={st.id} variants={listItemVariants}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectSubtask(st)}
-                      className={cn(
-                        "w-full flex items-start gap-2 px-1.5 py-1.5 rounded text-left text-[12px] leading-snug transition-colors cursor-pointer hover:bg-muted/60 active:scale-[0.98] transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
-                        isActive ? "bg-muted/40" : ""
-                      )}
-                      title={st.title}
-                    >
-                      <span
-                        className={cn("size-2 rounded-full shrink-0 mt-1.5", dotClass)}
-                        role="status"
-                        aria-label={`Trạng thái: ${statusOpt?.label ?? st.status}`}
-                      />
-                      <span
-                        className={cn(
-                          "flex-1 min-w-0 line-clamp-2 break-words",
-                          isCompleted
-                            ? "text-muted-foreground line-through decoration-muted-foreground/30"
-                            : "text-foreground/90"
-                        )}
-                      >
-                        {st.title}
-                      </span>
-                      {formattedDueDate && (
-                        <span
-                          className="shrink-0 text-[11px] font-mono tabular-nums text-muted-foreground mt-0.5"
-                          title={`Hạn hoàn thành: ${formatDisplayDate(st.dueDate)}`}
-                        >
-                          {formattedDueDate}
-                        </span>
-                      )}
-                      <div className="shrink-0 mt-0.5">
-                        <UserAvatar
-                          avatarUrl={st.assigneeAvatar}
-                          name={st.assigneeName}
-                          size="xs"
-                        />
-                      </div>
-                    </button>
-                    </m.div>
-                  );
-                })}
+                {collapsibleItems.map((st) => (
+                  <SubtaskRow key={st.id} subtask={st} isActive={st.id === activeSubtaskId} onSelect={onSelectSubtask} />
+                ))}
               </Collapsible.Panel>
-              <Collapsible.Trigger
-                className="mt-1 text-[11px] text-primary hover:underline cursor-pointer pl-1.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded"
-              >
+              <Collapsible.Trigger className="mt-1 text-xs text-primary hover:underline cursor-pointer pl-1.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden rounded">
                 {expanded ? "Thu gọn" : `Xem thêm ${remaining} việc con`}
               </Collapsible.Trigger>
             </Collapsible.Root>

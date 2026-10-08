@@ -228,16 +228,15 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       assert.ok(drawerContent.includes("onAddSubtask"), "Must accept onAddSubtask prop");
     });
 
-    it("drawer renders master-detail sibling list with x/y label, status dots, titles, assignees and dates", () => {
+    it("drawer shows x/y position, uses shared property controls and the outline rail for switching", () => {
       assert.ok(
         drawerContent.includes("siblingPosition") && drawerContent.includes("siblingTotal"),
         "Must compute sibling position and total"
       );
       assert.ok(drawerContent.includes("Việc con"), "Header must show 'Việc con' label");
-      assert.ok(drawerContent.includes("statusObj.dotClass"), "Each sibling row must show status dot");
-      assert.ok(drawerContent.includes("sib.title"), "Each sibling row must show title");
-      assert.ok(drawerContent.includes("formattedDueDate"), "Each sibling row must show due date");
-      assert.ok(drawerContent.includes("assigneeName"), "Each sibling row must show assignee name");
+      assert.ok(drawerContent.includes("<SubtaskOutlineRail"), "Siblings are picked through the thin outline rail");
+      assert.ok(!drawerContent.includes('role="tablist"'), "The horizontal chip list is removed");
+      assert.ok(drawerContent.includes("<TaskStatusSelect") && drawerContent.includes("<TaskAssigneePicker") && drawerContent.includes("<TaskDateRange"), "Drawer must reuse shared property controls");
       // No technical IDs
       assert.ok(
         !drawerContent.includes(">{sib.id}<") && !drawerContent.includes("{sib.taskId}"),

@@ -679,7 +679,7 @@ describe("Deadline Countdown and Badge Computation", () => {
     // Overdue
     const overdue = getDeadlineBadgeInfo("2026-09-04", refDate);
     assert.equal(overdue.variant, "urgent");
-    assert.equal(overdue.label, "Quá hạn 2 ngày");
+    assert.equal(overdue.label, "Trễ hạn 2 ngày");
 
     // Today
     const today = getDeadlineBadgeInfo("2026-09-06", refDate);
@@ -1258,7 +1258,7 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
     assert.ok(
       html.includes("Đơn vị đang chạy") ||
         html.includes("Đang triển khai") ||
-        html.includes("Quá hạn")
+        html.includes("Trễ hạn")
     );
     assert.ok(
       html.includes("Chờ duyệt") ||

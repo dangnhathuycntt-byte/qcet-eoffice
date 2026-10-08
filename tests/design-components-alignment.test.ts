@@ -203,13 +203,13 @@ describe("Design Components & Foundation Alignment Suite", () => {
       assert.ok(htmlNew.includes("stroke-dasharray"), "New/Not started must have dashed circle");
 
       const htmlDoing = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "IN_PROGRESS" }));
-      assert.ok(htmlDoing.includes("M12 4a8 8 0 0 1 0 16z"), "Doing/In progress must have right half filled crescent");
+      assert.ok(htmlDoing.includes("M9.5 5.3L13.1 7.4V11.6L9.5 13.7Z"), "Doing/In progress must have the inner half-circle");
 
       const htmlReview = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "WAITING_APPROVAL" }));
-      assert.ok(htmlReview.includes("M12 7.5V12l3 2"), "Waiting approval must have clock hands");
+      assert.ok(htmlReview.includes("M9.5 9.5L5.9 9.5V11.6L9.5 13.7L13.1 11.6V7.4L9.5 5.3Z"), "Waiting approval must have the three-quarter fill");
 
       const htmlDone = renderToStaticMarkup(React.createElement(TaskStatusCircle, { status: "COMPLETED" }));
-      assert.ok(htmlDone.includes("M8.5 12.3l2.5 2.5 4.5-5"), "Done must have checkmark");
+      assert.ok(htmlDone.includes('fill-rule="evenodd"') && htmlDone.includes("L8.3 12.8Z"), "Done must be a solid disc with a cut-out checkmark");
     });
   });
 

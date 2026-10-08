@@ -151,39 +151,6 @@ const SKELETON_WIDTHS = [
   { title: "70%", desc: "50%" },
 ];
 
-function MockStatusBadge({ status }: { status: MockTask["status"] }) {
-  if (status === "COMPLETED") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700/90">
-        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-        <span className="font-medium">Hoàn thành</span>
-      </div>
-    );
-  }
-  if (status === "WAITING_APPROVAL") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-700">
-        <span className="size-1.5 rounded-full bg-amber-500/80 shrink-0" />
-        <span className="font-medium">Chờ duyệt</span>
-      </div>
-    );
-  }
-  if (status === "IN_PROGRESS") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground">
-        <span className="size-1.5 rounded-full bg-blue-500/80 shrink-0" />
-        <span className="font-medium">Đang làm</span>
-      </div>
-    );
-  }
-  return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-      <span className="font-medium">Mới</span>
-    </div>
-  );
-}
-
 function GhostTaskRow({
   data,
   widths,
@@ -206,7 +173,7 @@ function GhostTaskRow({
   return (
     <div
       className={cn(
-        "relative h-[46px] w-full flex items-center border-b border-border/40 cursor-pointer transition-all duration-200 select-none",
+        "relative h-12 w-full flex items-center border-b border-border/40 cursor-pointer transition-all duration-200 select-none",
         isHovered
           ? "bg-muted/40 rounded-lg border-transparent"
           : isDimmed
@@ -226,19 +193,15 @@ function GhostTaskRow({
           <div className="h-2.5 sm:h-3 rounded bg-muted animate-pulse" style={{ width: widths.title }} />
           <div className="h-2 sm:h-2.5 rounded bg-muted/70 animate-pulse hidden xs:block" style={{ width: widths.desc }} />
         </div>
+        <div className="hidden sm:block w-16 shrink-0 text-center">
+          <div className="h-2.5 rounded bg-muted/50 w-3 mx-auto animate-pulse" />
+        </div>
         <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
           <div className="size-5 rounded-full bg-muted animate-pulse shrink-0" />
           <div className="h-2.5 rounded bg-muted w-20 sm:w-24 animate-pulse" />
         </div>
-        <div className="hidden sm:block w-16 shrink-0 text-center">
-          <div className="h-2.5 rounded bg-muted/50 w-3 mx-auto animate-pulse" />
-        </div>
-        <div className="hidden md:block w-28 shrink-0">
-          <div className="h-2.5 rounded bg-muted w-18 animate-pulse" />
-        </div>
-        <div className="flex items-center gap-1.5 w-24 sm:w-28 shrink-0">
-          <div className="size-1.5 rounded-full bg-muted animate-pulse shrink-0" />
-          <div className="h-2.5 rounded bg-muted w-14 sm:w-16 animate-pulse" />
+        <div className="hidden md:block w-24 shrink-0">
+          <div className="h-2.5 rounded bg-muted w-16 animate-pulse" />
         </div>
       </m.div>
 
@@ -249,19 +212,16 @@ function GhostTaskRow({
         transition={reducedMotion ? { duration: 0 } : motionTransition.enter}
       >
         <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-4">
-          <span className="text-[13px] font-medium text-foreground truncate">{data.title}</span>
-          <span className="text-[11.5px] text-muted-foreground/75 truncate hidden xs:block">{data.summary}</span>
-        </div>
-        <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-[10px] font-semibold text-white shadow-2xs">{data.initial}</span>
-          <span className="text-xs font-medium text-foreground truncate">{data.assignee}</span>
+          <span className="text-compact font-medium text-foreground truncate">{data.title}</span>
+          <span className="text-xs text-muted-foreground/75 truncate hidden xs:block">{data.summary}</span>
         </div>
         <div className="hidden sm:block w-16 shrink-0 text-center text-muted-foreground/40 text-xs">-</div>
-        <div className="hidden md:block w-28 shrink-0">
-          <span className="font-mono text-xs text-muted-foreground">{data.date}</span>
+        <div className="flex items-center gap-2 w-32 sm:w-40 shrink-0">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sky-600/90 text-xs font-semibold text-white shadow-2xs">{data.initial}</span>
+          <span className="text-xs font-medium text-foreground truncate">{data.assignee}</span>
         </div>
-        <div className="w-24 sm:w-28 shrink-0">
-          <MockStatusBadge status={data.status} />
+        <div className="hidden md:block w-24 shrink-0">
+          <span className="text-xs text-muted-foreground tabular-nums">{data.date}</span>
         </div>
       </m.div>
     </div>

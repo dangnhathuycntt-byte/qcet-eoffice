@@ -65,8 +65,7 @@ describe('TaskDbAdapter Unit Tests', () => {
     assert.strictEqual(schoolTask.priority, 'HIGH');
     assert.strictEqual(schoolTask.academicMonth, 9);
     assert.strictEqual(schoolTask.progress, 65);
-    // Collaborators ('Phối hợp') are derived from active subtasks' Primary DRIs only,
-    // so a task without subtasks exposes none (commit 8290ff24).
+    // 'Phối hợp' = nhóm Primary DRI của việc con đang hoạt động; nhiệm vụ không có việc con thì không có
     assert.strictEqual(schoolTask.collaborators, undefined);
     assert.deepEqual(schoolTask.coAssignees, []);
   });
@@ -96,6 +95,28 @@ describe('TaskDbAdapter Unit Tests', () => {
     assert.strictEqual(result.assignedTo, 'Chưa phân công');
     assert.strictEqual(result.status, 'NOT_STARTED');
     assert.strictEqual(result.priority, 'NORMAL');
+    assert.strictEqual(result.createdAt, undefined);
+  });
+
+  test('maps createdAt to a local YYYY-MM-DD string for the table "Ngày tạo" column', () => {
+    const raw: any = {
+      id: 'task-created-1',
+      code: 'NV-2026-09-777',
+      title: 'Nhiệm vụ có ngày tạo',
+      scope: 'SCHOOL',
+      status: 'IN_PROGRESS',
+      priority: 'NORMAL',
+      academicMonth: 9,
+      academicYear: '2026-2027',
+      startDate: new Date('2026-09-10T00:00:00Z'),
+      dueDate: new Date('2026-09-20T00:00:00Z'),
+      createdAt: new Date('2026-09-15T23:30:00+07:00'),
+      leadUnit: null,
+      actors: [],
+      deliverables: [],
+    };
+
+    assert.strictEqual(mapPrismaTaskToSchoolTask(raw).createdAt, '2026-09-15');
   });
 
   test('maps SchoolTask domain object to Prisma create input structure', () => {
@@ -260,17 +281,14 @@ describe('TaskDbAdapter Unit Tests', () => {
       assert.equal(mapped.leadAssigneeName, 'TS. Lê Hoàng B');
       assert.equal(mapped.leadAssigneeId, 'user-dri-01');
       assert.equal(mapped.leadAssigneeAvatar, '/avatars/dri.jpg');
-      // 'Phối hợp' = unique Primary DRIs of active subtasks, excluding the parent's own DRI
-      assert.deepEqual(mapped.collaborators, [
+      // 'Phối hợp' = Primary DRI duy nhất của việc con đang hoạt động (kể cả người phụ trách chính của cha)
+      const expectedCollaborators = [
         'ThS. Nguyễn Văn A',
         'TS. Trần Thị E',
         'CN. Hoàng G',
-      ]);
-      assert.deepEqual(mapped.coAssignees, [
-        'ThS. Nguyễn Văn A',
-        'TS. Trần Thị E',
-        'CN. Hoàng G',
-      ]);
+      ];
+      assert.deepEqual(mapped.collaborators, expectedCollaborators);
+      assert.deepEqual(mapped.coAssignees, expectedCollaborators);
 
       // Subtask metrics
       assert.equal(mapped.totalSubTasks, 3);
@@ -353,8 +371,7 @@ describe('TaskDbAdapter Unit Tests', () => {
       assert.equal(staffTask.assigneeAvatar, '/avatars/v.png');
       assert.equal(staffTask.assignedTo, 'KS. Đặng Minh V');
 
-      // Leaf tasks carry no 'Phối hợp' entries: collaborators are derived on parent
-      // tasks from their subtasks' Primary DRIs (commit 8290ff24), not from actors.
+      // Nhiệm vụ lá không có việc con nên không có 'Phối hợp' (actors COLLABORATOR không được tính)
       assert.deepEqual(staffTask.collaborators, []);
       assert.deepEqual(staffTask.coAssignees, []);
 
@@ -364,8 +381,8 @@ describe('TaskDbAdapter Unit Tests', () => {
       assert.equal(staffTask.parentSchoolTaskCode, 'NV-2026-09-099');
       assert.equal(staffTask.parentTaskScope, 'SCHOOL');
 
-      // Status mapping
-      assert.equal(staffTask.status, 'NEEDS_REVIEW');
+      // Status mapping: chờ duyệt giữ nguyên là WAITING_APPROVAL (không đổi thành 'Cần chỉnh sửa')
+      assert.equal(staffTask.status, 'WAITING_APPROVAL');
 
       // Deliverable & Review requirements
       assert.equal(staffTask.requiresReview, true);

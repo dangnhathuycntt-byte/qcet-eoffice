@@ -122,7 +122,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
     assert.equal(todayDue.isToday, true);
 
     const pastDue = formatShortDueDate("2026-09-08", "2026-09-09");
-    assert.match(pastDue.text, /Quá hạn/);
+    assert.match(pastDue.text, /Trễ hạn/);
     assert.equal(pastDue.isOverdue, true);
 
     const futureDue = formatShortDueDate("2026-09-15", "2026-09-09");
@@ -153,7 +153,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
     assert.ok(html.includes('data-section="needs-attention"'));
     assert.ok(html.includes("Cần xử lý ngay"));
     assert.ok(html.includes("Hồ sơ chờ xem xét"));
-    assert.ok(html.includes("Quá hạn toàn trường"));
+    assert.ok(html.includes("Trễ hạn toàn trường"));
 
     // Section 2: Nhiệm vụ trọng tâm
     assert.ok(html.includes('data-section="key-tasks"'));
@@ -185,7 +185,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
       })
     );
     assert.ok(bghHtml.includes("Ban Giám hiệu"));
-    assert.ok(bghHtml.includes("Quá hạn toàn trường"));
+    assert.ok(bghHtml.includes("Trễ hạn toàn trường"));
     assert.ok(bghHtml.includes("Hồ sơ chờ xem xét"));
     assert.ok(bghHtml.includes("/tasks?scope=school"));
 
@@ -202,7 +202,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
       })
     );
     assert.ok(managerHtml.includes("Lãnh đạo Khoa Cơ khí"));
-    assert.ok(managerHtml.includes("Quá hạn đơn vị"));
+    assert.ok(managerHtml.includes("Trễ hạn đơn vị"));
     assert.ok(managerHtml.includes("Hồ sơ chờ xem xét"));
     assert.ok(managerHtml.includes("/tasks?scope=unit"));
 
@@ -269,7 +269,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
 
       test("calculates overdue badges accurately", () => {
         const badge = getMobileDueBadge("2026-09-01", "IN_PROGRESS", "2026-09-05");
-        assert.ok(badge.label.includes("Quá hạn 4 ngày"));
+        assert.ok(badge.label.includes("Trễ hạn 4 ngày"));
         assert.ok(badge.className.includes("text-rose-700"));
       });
 
@@ -328,7 +328,7 @@ describe("Mobile Workbench Feed & Task Workspace", () => {
         assert.ok(html.includes("(25)"), "Must render all count value");
         assert.ok(html.includes("Của tôi"), "Must render my tasks count chip");
         assert.ok(html.includes("Chờ duyệt"), "Must render pending review count chip");
-        assert.ok(html.includes("Quá hạn"), "Must render overdue count chip");
+        assert.ok(html.includes("Trễ hạn"), "Must render overdue count chip");
         assert.ok(html.includes("Bộ lọc"), "Must render filter bottom sheet trigger button");
       });
     });

@@ -111,7 +111,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
     <nav
       aria-label="Phân trang danh sách văn bản"
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-2.5 select-none",
+        "flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/50 px-2 py-2 select-none",
         className
       )}
       data-slot="document-pagination"
@@ -124,11 +124,11 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           ) : (
             <span>
               Hiển thị{" "}
-              <strong className="font-semibold text-foreground font-mono">
+              <strong className="font-medium text-foreground">
                 {startItem}–{endItem}
               </strong>{" "}
               /{" "}
-              <strong className="font-semibold text-foreground font-mono">
+              <strong className="font-medium text-foreground">
                 {totalItems}
               </strong>{" "}
               {itemLabel}
@@ -154,11 +154,11 @@ export const DocumentPagination = React.memo(function DocumentPagination({
               aria-haspopup="listbox"
               disabled={disabled || totalItems === 0}
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-0.5 text-xs font-medium text-foreground shadow-2xs transition-all hover:bg-muted/60 focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                isSizeMenuOpen && "border-primary ring-1 ring-primary bg-muted/40"
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/50 outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+                isSizeMenuOpen && "bg-muted"
               )}
             >
-              <span className="font-mono tabular-nums">{pageSize} / trang</span>
+              <span className="tabular-nums">{pageSize} / trang</span>
               <ChevronDown
                 className={cn(
                   "size-3 text-muted-foreground transition-transform duration-150",
@@ -252,7 +252,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           type="button"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
@@ -264,7 +264,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           type="button"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
@@ -278,7 +278,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
               return (
                 <span
                   key={`ellipsis-${idx}`}
-                  className="inline-flex size-8 items-center justify-center text-xs font-mono text-muted-foreground select-none"
+                  className="inline-flex size-7 items-center justify-center text-xs text-muted-foreground select-none"
                   aria-hidden="true"
                 >
                   ...
@@ -295,10 +295,10 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                 disabled={disabled}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
-                  "inline-flex size-8 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-all shadow-2xs cursor-pointer active:scale-[0.98]",
+                  "inline-flex size-7 items-center justify-center rounded-md text-xs font-medium tabular-nums transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                   isCurrent
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "border border-border/80 bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    ? "bg-muted text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                 )}
                 aria-label={`Trang ${p}`}
               >
@@ -313,7 +313,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           type="button"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
@@ -325,7 +325,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
           type="button"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-[0.98]"
+          className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           title="Trang cuối"
           aria-label="Về trang cuối"
         >

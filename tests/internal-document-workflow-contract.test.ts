@@ -116,7 +116,7 @@ describe("Internal Document Workflow Contract", () => {
     resetFeatureFlagOverrides();
   });
 
-  test("Registry UI includes submission tab for internal documents", async () => {
+  test("Registry UI includes submission view for internal documents", async () => {
     const registrySource = await import("node:fs").then((fs) =>
       fs.readFileSync(
         "src/components/documents/document-registry-view.tsx",
@@ -125,11 +125,11 @@ describe("Internal Document Workflow Contract", () => {
     );
     assert.ok(
       registrySource.includes("submission"),
-      "Registry must include submission tab"
+      "Registry must include submission view"
     );
     assert.ok(
-      registrySource.includes("Tờ trình duyệt"),
-      'Submission tab must be labeled "Tờ trình duyệt"'
+      registrySource.includes("Tờ trình nội bộ"),
+      'Submission view must be titled "Tờ trình nội bộ" (sidebar + design)'
     );
   });
 });

@@ -31,9 +31,9 @@ export interface DocumentStatsData {
   pending?: number;
   /** Văn bản đang xử lý */
   processing?: number;
-  /** Văn bản có độ khẩn cao (Hỏa tốc, Thượng khẩn, Khẩn) hoặc quá hạn */
+  /** Văn bản có độ khẩn cao (Hỏa tốc, Thượng khẩn, Khẩn) hoặc trễ hạn */
   urgent?: number;
-  /** Văn bản quá hạn */
+  /** Văn bản trễ hạn */
   overdue?: number;
   /** Văn bản đã hoàn thành / ký duyệt / lưu sổ */
   completed?: number;
@@ -178,7 +178,7 @@ export function DocumentStatsSummary({
         activeBg: "bg-rose-500/5",
         textColor: "text-rose-600 dark:text-rose-400",
       },
-      ariaLabel: `Văn bản quá hạn hoặc khẩn: ${stats.urgent ?? stats.overdue ?? 0}. Nhấn để lọc văn bản khẩn.`,
+      ariaLabel: `Văn bản trễ hạn hoặc khẩn: ${stats.urgent ?? stats.overdue ?? 0}. Nhấn để lọc văn bản khẩn.`,
     },
     {
       key: "completed",

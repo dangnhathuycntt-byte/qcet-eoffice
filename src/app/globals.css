@@ -769,3 +769,13 @@
 }
 
 
+
+/* Vùng kéo chọn nhiều khối trong trình soạn thảo nhiệm vụ (nằm ngoài khung soạn thảo nên cần kiểu toàn cục) */
+.slate-selection-area {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}

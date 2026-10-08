@@ -55,7 +55,7 @@ describe("Calendar Month View Component & Precision Specs", () => {
       assert.equal(getStatusLabel("COMPLETED"), "Đã hoàn thành");
       assert.equal(getStatusLabel("IN_PROGRESS"), "Đang thực hiện");
       assert.equal(getStatusLabel("NEEDS_REVIEW"), "Chờ xét duyệt");
-      assert.equal(getStatusLabel("IN_PROGRESS", "2026-08-20"), "Quá hạn");
+      assert.equal(getStatusLabel("IN_PROGRESS", "2026-08-20"), "Trễ hạn");
     });
   });
 

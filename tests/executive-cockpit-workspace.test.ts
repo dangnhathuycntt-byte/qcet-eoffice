@@ -136,7 +136,7 @@ describe("Executive Bottleneck Card Presentation", () => {
     assert.equal(sampleItem.title.includes("staff-task-"), false);
   });
 
-  it("xác định đúng nhãn trạng thái quá hạn hoặc tắc nghẽn", () => {
+  it("xác định đúng nhãn trạng thái trễ hạn hoặc tắc nghẽn", () => {
     const getBadgeLabel = (item: { daysOverdue?: number; isBlocked?: boolean; isOverdue?: boolean }) => {
       if (typeof item.daysOverdue === "number" && item.daysOverdue > 0) {
         return `QUÁ HẠN ${item.daysOverdue} NGÀY`;

@@ -9,6 +9,7 @@ export interface DepartmentPersonnel {
   email?: string;
   role?: string;
   title?: string;
+  avatarUrl?: string | null;
 }
 
 export interface DepartmentOption {

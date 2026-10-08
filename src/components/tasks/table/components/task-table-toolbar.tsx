@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 import {
   Search,
   X,
@@ -19,6 +20,7 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ArrowUpDown,
+  Check,
 } from "lucide-react";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,38 @@ import {
   DEPARTMENT_OPTIONS,
   SMART_FILTER_TABS,
 } from "../constants";
+
+export const DISPLAY_PROPERTY_OPTIONS: Array<{
+  id: keyof TableColumnVisibility;
+  label: string;
+}> = [
+  // Thứ tự khớp thứ tự cột trên bảng: ô Nhiệm vụ (mã, việc con, danh mục) → mức độ → người → đơn vị → thời gian → trạng thái, tiến độ
+  { id: "code", label: "Mã" },
+  { id: "subtasks", label: "Việc con" },
+  { id: "category", label: "Danh mục" },
+  { id: "priority", label: "Ưu tiên" },
+  { id: "leadAssignee", label: "Phụ trách" },
+  { id: "coAssignees", label: "Phối hợp" },
+  { id: "department", label: "Đơn vị" },
+  { id: "dueDate", label: "Hạn" },
+  { id: "createdAt", label: "Ngày tạo" },
+  { id: "status", label: "Trạng thái" },
+  { id: "progress", label: "Tiến độ" },
+];
+
+export const DEFAULT_DISPLAY_PROPERTIES: TableColumnVisibility = {
+  code: false,
+  department: true,
+  priority: true,
+  leadAssignee: true,
+  dueDate: true,
+  subtasks: true,
+  progress: true,
+  coAssignees: true,
+  status: false,
+  createdAt: false,
+  category: false,
+};
 import { isInputElement } from "../hooks/use-task-keyboard-nav";
 import type {
   CategoryTab,
@@ -37,6 +71,8 @@ import type {
   TableDensity,
   TableColumnVisibility,
   TaskViewMode,
+  TaskSortField,
+  SortDirection,
 } from "../types";
 import { getSystemReferenceDate } from "../utils/table-date-helpers";
 import {
@@ -167,6 +203,10 @@ export interface TaskTableToolbarProps {
   viewMode?: TaskViewMode;
   onViewModeChange?: (mode: TaskViewMode) => void;
 
+  // Tiêu chí nhóm (Linear-style Grouping)
+  groupingField?: string;
+  onGroupingChange?: (field: string) => void;
+
   // Sắp xếp
   sortField?: string;
   sortDirection?: "asc" | "desc";
@@ -185,6 +225,317 @@ export interface TaskTableToolbarProps {
 
   className?: string;
 }
+
+export interface TaskTableViewOptionsPopoverProps {
+  viewMode?: TaskViewMode;
+  onViewModeChange?: (mode: TaskViewMode) => void;
+  groupingField: string;
+  onGroupingChange: (field: string) => void;
+  sortField?: TaskSortField | string;
+  sortDirection?: SortDirection;
+  onSort?: (field: any) => void;
+  density?: TableDensity;
+  onDensityChange?: (density: TableDensity) => void;
+  visibleColumns: TableColumnVisibility;
+  onVisibleColumnsChange?: (columns: TableColumnVisibility) => void;
+  isCustomized: boolean;
+  onReset: () => void;
+  triggerClassName?: string;
+  ariaLabel?: string;
+}
+
+/**
+ * Popover tùy chọn hiển thị và thuộc tính bảng theo phong cách Linear (View Options)
+ */
+export function TaskTableViewOptionsPopover({
+  viewMode = "table",
+  onViewModeChange,
+  groupingField,
+  onGroupingChange,
+  sortField,
+  sortDirection = "asc",
+  onSort,
+  density = "comfortable",
+  onDensityChange,
+  visibleColumns,
+  onVisibleColumnsChange,
+  isCustomized,
+  onReset,
+  triggerClassName,
+  ariaLabel = "Tùy chọn hiển thị và thuộc tính bảng",
+}: TaskTableViewOptionsPopoverProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Popover.Trigger
+        type="button"
+        className={cn(
+          "cursor-pointer relative shadow-2xs transition-all",
+          isOpen || isCustomized
+            ? "border-primary/50 bg-primary/5 text-primary"
+            : "border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+          triggerClassName
+        )}
+        aria-label={ariaLabel}
+        title="Tùy chọn hiển thị (View options)"
+      >
+        <SlidersHorizontal className="size-3.5 sm:size-4" strokeWidth={1.5} />
+        <span className="sr-only">Hiển thị</span>
+        {isCustomized && (
+          <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
+        )}
+      </Popover.Trigger>
+
+      {isOpen && (
+        <Popover.Portal>
+          <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-50">
+            <Popover.Popup className="w-[280px] rounded-2xl border border-border/80 bg-card p-0 overflow-hidden shadow-xl select-none animate-in fade-in-0 zoom-in-95 duration-150">
+              <div data-slot="desktop-display-panel">
+                {/* 1. Layout View Mode Switcher */}
+                {onViewModeChange && (
+                  <div
+                    aria-label="Chế độ xem không gian làm việc"
+                    className="grid grid-cols-2 gap-1.5 px-3 pt-3 pb-2.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onViewModeChange("table")}
+                      className={cn(
+                        "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-colors cursor-pointer",
+                        viewMode === "table"
+                          ? "bg-muted text-foreground font-medium border border-border"
+                          : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <List className="size-3.5" strokeWidth={1.5} />
+                      <span>Danh sách</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onViewModeChange("kanban")}
+                      className={cn(
+                        "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium transition-colors cursor-pointer",
+                        viewMode === "kanban"
+                          ? "bg-muted text-foreground font-medium border border-border"
+                          : "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <Kanban className="size-3.5" strokeWidth={1.5} />
+                      <span>Bảng Kanban</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Density Options */}
+                {onDensityChange && (
+                  <div
+                    aria-label="Mật độ hiển thị bảng"
+                    className="flex items-center justify-between text-xs px-3 py-2.5 border-t border-border/50"
+                  >
+                    <span className="text-muted-foreground font-medium">Mật độ dòng</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        aria-label="Chế độ hiển thị gọn"
+                        onClick={() => onDensityChange("compact")}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                          density === "compact"
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        Gọn
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Chế độ hiển thị thoải mái"
+                        onClick={() => onDensityChange("comfortable")}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                          density === "comfortable"
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        Vừa
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Grouping & Ordering */}
+                <div className="space-y-2 px-3 py-2.5 border-t border-border/50">
+                  {/* Grouping */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">Nhóm theo</span>
+                    <CustomSelectMenu
+                      value={groupingField}
+                      onChange={(val) => onGroupingChange(val)}
+                      options={GROUPING_OPTIONS}
+                      ariaLabel="Nhóm theo tiêu chí"
+                    />
+                  </div>
+
+                  {/* Ordering */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">Sắp xếp</span>
+                    <div className="flex items-center gap-1.5">
+                      {onSort && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (sortField) {
+                              onSort(sortField);
+                            }
+                          }}
+                          className="size-7 inline-flex items-center justify-center rounded-md border border-border/70 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                          title={sortDirection === "asc" ? "Đang tăng dần (Bấm để đổi)" : "Đang giảm dần (Bấm để đổi)"}
+                          aria-label="Đổi chiều sắp xếp"
+                        >
+                          <ArrowUpDown className="size-3.5" strokeWidth={1.5} />
+                        </button>
+                      )}
+                      <CustomSelectMenu
+                        value={sortField || "dueDate"}
+                        onChange={(val) => onSort?.(val)}
+                        options={SORT_OPTIONS}
+                        ariaLabel="Tiêu chí sắp xếp"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. List options: Display properties */}
+                <div className="space-y-2 px-3 py-2.5 border-t border-border/50">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Thuộc tính hiển thị
+                  </div>
+
+                  {/* Chips toggle: bật = nền xám + viền + chữ đậm vừa, tắt = chữ nhạt không viền */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {DISPLAY_PROPERTY_OPTIONS.map((prop) => {
+                      const isEnabled = visibleColumns[prop.id] !== false;
+                      return (
+                        <button
+                          key={prop.id}
+                          type="button"
+                          onClick={() => {
+                            onVisibleColumnsChange?.({
+                              ...visibleColumns,
+                              [prop.id]: !isEnabled,
+                            });
+                          }}
+                          aria-pressed={isEnabled}
+                          className={cn(
+                            "px-2.5 h-6 inline-flex items-center rounded-full text-xs border transition-colors cursor-pointer select-none",
+                            isEnabled
+                              ? "bg-muted border-border text-foreground font-medium"
+                              : "bg-card border-border/70 text-muted-foreground font-normal hover:bg-muted/50 hover:text-foreground"
+                          )}
+                        >
+                          {prop.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Footer: Reset & Default */}
+                <div className="flex items-center justify-end px-3 py-2.5 border-t border-border/50 text-xs">
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    className="text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    Đặt lại
+                  </button>
+                </div>
+              </div>
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      )}
+    </Popover.Root>
+  );
+}
+
+interface CustomSelectOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+function CustomSelectMenu<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T;
+  onChange: (val: T) => void;
+  options: CustomSelectOption<T>[];
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger
+        type="button"
+        aria-label={ariaLabel}
+        className="h-7 px-2.5 rounded-lg border border-border/70 bg-card text-xs font-medium text-foreground hover:bg-muted/70 transition-colors inline-flex items-center justify-between gap-1.5 cursor-pointer shadow-2xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-[105px]"
+      >
+        <span className="truncate">{selected.label}</span>
+        <ChevronDown className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="end" sideOffset={4} className="z-50">
+          <Popover.Popup className="min-w-[130px] rounded-xl border border-border/80 bg-card p-1 shadow-lg select-none text-xs animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col">
+            {options.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer",
+                    isSelected
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted/70 text-foreground font-normal"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {isSelected && <Check className="size-3.5 text-primary shrink-0" />}
+                </button>
+              );
+            })}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+const GROUPING_OPTIONS = [
+  { value: "none", label: "Không nhóm" },
+  { value: "department", label: "Đơn vị" },
+  { value: "priority", label: "Ưu tiên" },
+  { value: "status", label: "Trạng thái" },
+];
+
+const SORT_OPTIONS: Array<{ value: TaskSortField; label: string }> = [
+  { value: "dueDate", label: "Hạn" },
+  { value: "priority", label: "Ưu tiên" },
+  { value: "status", label: "Trạng thái" },
+  { value: "title", label: "Tên" },
+  { value: "progress", label: "Tiến độ" },
+];
 
 export function TaskTableToolbar({
   searchQuery,
@@ -212,6 +563,8 @@ export function TaskTableToolbar({
   onVisibleColumnsChange,
   viewMode = "table",
   onViewModeChange,
+  groupingField: propGroupingField,
+  onGroupingChange: propOnGroupingChange,
   sortField,
   sortDirection,
   onSort,
@@ -292,7 +645,29 @@ export function TaskTableToolbar({
   // Period, unit, category, density, sort and export live on secondary
   // surfaces, so the bar does not dominate the viewport (R-D1).
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = React.useState(false);
-  const [isDesktopDisplayOpen, setIsDesktopDisplayOpen] = React.useState(false);
+  const [internalGroupingField, setInternalGroupingField] = React.useState<string>("none");
+  const groupingField = propGroupingField ?? internalGroupingField;
+  const setGroupingField = propOnGroupingChange ?? setInternalGroupingField;
+
+  const isDisplayCustomized = React.useMemo(() => {
+    return (
+      visibleColumns.code !== DEFAULT_DISPLAY_PROPERTIES.code ||
+      visibleColumns.department !== DEFAULT_DISPLAY_PROPERTIES.department ||
+      visibleColumns.priority !== DEFAULT_DISPLAY_PROPERTIES.priority ||
+      visibleColumns.leadAssignee !== DEFAULT_DISPLAY_PROPERTIES.leadAssignee ||
+      visibleColumns.dueDate !== DEFAULT_DISPLAY_PROPERTIES.dueDate ||
+      visibleColumns.progress !== DEFAULT_DISPLAY_PROPERTIES.progress ||
+      visibleColumns.subtasks !== DEFAULT_DISPLAY_PROPERTIES.subtasks ||
+      visibleColumns.coAssignees !== DEFAULT_DISPLAY_PROPERTIES.coAssignees ||
+      visibleColumns.status !== DEFAULT_DISPLAY_PROPERTIES.status ||
+      visibleColumns.category !== DEFAULT_DISPLAY_PROPERTIES.category ||
+      visibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt
+    );
+  }, [visibleColumns]);
+
+  const handleResetDisplayProperties = React.useCallback(() => {
+    onVisibleColumnsChange?.(DEFAULT_DISPLAY_PROPERTIES);
+  }, [onVisibleColumnsChange]);
 
   // Tính toán số lượng thẻ lọc nếu không được truyền trực tiếp
   const computedPillCounts = React.useMemo(() => {
@@ -429,7 +804,7 @@ export function TaskTableToolbar({
             </span>
           </button>
 
-          {/* Chip Quá hạn nếu có */}
+          {/* Chip Trễ hạn nếu có */}
           {(computedPillCounts?.overdue ?? 0) > 0 && (
             <button
               type="button"
@@ -453,7 +828,7 @@ export function TaskTableToolbar({
 
         {/* Hàng 3: Thanh nút bấm chức năng di động (min 44px touch targets) */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* Nút Bộ lọc mở Bottom Sheet */}
             <button
               type="button"
@@ -462,11 +837,11 @@ export function TaskTableToolbar({
                 "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs",
                 activeAdvancedFilterCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary font-semibold"
-                  : "border-border/80 bg-card text-foreground hover:bg-muted/60"
+                  : "border-border/80 bg-card text-foreground hover:bg-muted"
               )}
               aria-label={`Mở bộ lọc nâng cao, hiện có ${activeAdvancedFilterCount} bộ lọc đang chọn`}
             >
-              <Filter className="size-4" strokeWidth={1.5} />
+              <Filter className="size-4 text-muted-foreground" strokeWidth={1.5} />
               <span>Bộ lọc</span>
               {activeAdvancedFilterCount > 0 && (
                 <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold">
@@ -474,6 +849,25 @@ export function TaskTableToolbar({
                 </span>
               )}
             </button>
+
+            {/* Nút Tùy chọn hiển thị di động (kề bên nút Bộ lọc theo phong cách Linear) */}
+            <TaskTableViewOptionsPopover
+              viewMode={viewMode}
+              onViewModeChange={onViewModeChange}
+              groupingField={groupingField}
+              onGroupingChange={setGroupingField}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={onSort}
+              density={density}
+              onDensityChange={onDensityChange}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={onVisibleColumnsChange}
+              isCustomized={isDisplayCustomized}
+              onReset={handleResetDisplayProperties}
+              ariaLabel="Tùy chọn hiển thị"
+              triggerClassName="inline-flex size-[44px] min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs relative"
+            />
 
             {/* Nút Sắp xếp nhanh di động */}
             {onSort && (
@@ -488,7 +882,7 @@ export function TaskTableToolbar({
                       : "dueDate";
                   onSort(nextSort);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs hover:bg-muted"
                 aria-label="Sắp xếp danh sách công việc"
               >
                 <ArrowUpDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
@@ -509,15 +903,16 @@ export function TaskTableToolbar({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Nút Tạo nhiệm vụ mới */}
+            {/* Nút Tạo việc mới (Linear style: thanh lịch, tối giản) */}
             {canCreateTask && onAddTask && (
               <button
                 type="button"
                 onClick={onAddTask}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-all touch-manipulation cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation cursor-pointer"
+                aria-label="Tạo việc mới"
               >
-                <Plus className="size-4" strokeWidth={1.5} />
-                <span>Tạo nhiệm vụ</span>
+                <Plus className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                <span>Tạo việc</span>
               </button>
             )}
           </div>
@@ -732,7 +1127,7 @@ export function TaskTableToolbar({
               placeholder={searchPlaceholder}
               disabled={loading}
               aria-label="Tìm kiếm nhiệm vụ"
-              className="w-full h-9 pl-9 pr-14 rounded-lg border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors disabled:opacity-60"
+              className="w-full h-8.5 pl-8.5 pr-14 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/80 transition-all disabled:opacity-60 shadow-2xs"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {localQuery ? (
@@ -745,7 +1140,7 @@ export function TaskTableToolbar({
                   <X className="size-3.5" strokeWidth={1.5} />
                 </button>
               ) : (
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground select-none">
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70 select-none">
                   /
                 </kbd>
               )}
@@ -754,27 +1149,55 @@ export function TaskTableToolbar({
 
           {/* Plan T10: Filter is one first-row control; period, unit and category
               are disclosed on this secondary surface instead of standing open. */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-expanded={isDesktopFilterOpen}
-            onClick={() => {
-              setIsDesktopFilterOpen((v) => !v);
-              setIsDesktopDisplayOpen(false);
-            }}
-            className="h-9 gap-1.5 text-xs font-medium cursor-pointer"
-          >
-            <Filter className="size-4" strokeWidth={1.5} />
-            <span>Lọc</span>
-            <ChevronDown
+          {/* Cặp công cụ: Lọc & Hiển thị (Linear View Options kề bên nhau) */}
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={isDesktopFilterOpen}
+              onClick={() => {
+                setIsDesktopFilterOpen((v) => !v);
+              }}
               className={cn(
-                "size-3.5 transition-transform",
-                isDesktopFilterOpen && "rotate-180"
+                "h-8.5 gap-1.5 text-xs font-medium cursor-pointer border-border/80 bg-card text-foreground hover:bg-muted shadow-2xs transition-all",
+                isDesktopFilterOpen && "border-primary/50 bg-primary/5 text-primary"
               )}
-              strokeWidth={1.5}
+            >
+              <Filter className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <span>Lọc</span>
+              {activeAdvancedFilterCount > 0 && (
+                <span className="flex size-4.5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-[10px] font-bold">
+                  {activeAdvancedFilterCount}
+                </span>
+              )}
+              <ChevronDown
+                className={cn(
+                  "size-3 text-muted-foreground transition-transform",
+                  isDesktopFilterOpen && "rotate-180 text-primary"
+                )}
+                strokeWidth={1.5}
+              />
+            </Button>
+
+            {/* Linear-style View Options & Display Properties Popover (Kề bên nút Filter) */}
+            <TaskTableViewOptionsPopover
+              viewMode={viewMode}
+              onViewModeChange={onViewModeChange}
+              groupingField={groupingField}
+              onGroupingChange={setGroupingField}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={onSort}
+              density={density}
+              onDensityChange={onDensityChange}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={onVisibleColumnsChange}
+              isCustomized={isDisplayCustomized}
+              onReset={handleResetDisplayProperties}
+              triggerClassName="inline-flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-all cursor-pointer relative shadow-2xs"
             />
-          </Button>
+          </div>
 
           {isDesktopFilterOpen && (
             <div
@@ -844,116 +1267,8 @@ export function TaskTableToolbar({
           )}
         </div>
 
-        {/* Nhóm bên phải: Mật độ + Chế độ xem + Xuất Excel + Thêm công việc */}
+        {/* Nhóm bên phải: Xuất Excel + Thêm công việc */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Plan T10: Display is one first-row control; density, view mode and
-              export are disclosed here rather than standing open. */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-expanded={isDesktopDisplayOpen}
-            onClick={() => {
-              setIsDesktopDisplayOpen((v) => !v);
-              setIsDesktopFilterOpen(false);
-            }}
-            className="h-9 gap-1.5 text-xs font-medium cursor-pointer"
-          >
-            <SlidersHorizontal className="size-4" strokeWidth={1.5} />
-            <span>Hiển thị</span>
-            <ChevronDown
-              className={cn(
-                "size-3.5 transition-transform",
-                isDesktopDisplayOpen && "rotate-180"
-              )}
-              strokeWidth={1.5}
-            />
-          </Button>
-
-          {isDesktopDisplayOpen && (
-            <div
-              data-slot="desktop-display-panel"
-              className="flex items-center gap-2"
-            >
-          {/* Điều khiển mật độ hiển thị hàng (Compact / Comfortable) */}
-          {onDensityChange && (
-            <div
-              role="group"
-              aria-label="Mật độ hiển thị bảng"
-              className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 text-xs"
-            >
-              <button
-                type="button"
-                onClick={() => onDensityChange("compact")}
-                aria-pressed={density === "compact"}
-                aria-label="Chế độ hiển thị gọn"
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
-                  density === "compact"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Rows3 className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Gọn</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDensityChange("comfortable")}
-                aria-pressed={density === "comfortable"}
-                aria-label="Chế độ hiển thị chuẩn"
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
-                  density === "comfortable"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Rows4 className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Chuẩn</span>
-              </button>
-            </div>
-          )}
-
-          {/* Bộ chuyển đổi chế độ xem (Bảng / Kanban) */}
-          {onViewModeChange && (
-            <div
-              role="group"
-              aria-label="Chế độ xem không gian làm việc"
-              className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5 text-xs"
-            >
-              <button
-                type="button"
-                onClick={() => onViewModeChange("table")}
-                aria-pressed={viewMode === "table"}
-                aria-label="Chế độ xem bảng"
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
-                  viewMode === "table"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <List className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Bảng</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange("kanban")}
-                aria-pressed={viewMode === "kanban"}
-                aria-label="Chế độ xem Kanban"
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
-                  viewMode === "kanban"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Kanban className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Kanban</span>
-              </button>
-            </div>
-          )}
 
           {/* Nút Xuất file Excel */}
           {onExportExcel && (
@@ -973,84 +1288,33 @@ export function TaskTableToolbar({
             </Button>
           )}
 
-          {/* Tùy chọn ẩn/hiển thị các cột phụ */}
-          {onVisibleColumnsChange && (
-            <div className="flex items-center gap-2 border-l border-border/70 pl-2.5 text-xs py-0.5">
-              <span className="text-slate-500 text-[11px] font-medium select-none">Cột phụ:</span>
-              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.priority !== false}
-                  onChange={(e) =>
-                    onVisibleColumnsChange({
-                      ...visibleColumns,
-                      priority: e.target.checked,
-                    })
-                  }
-                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
-                />
-                <span className="text-xs">Ưu tiên</span>
-              </label>
-              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.subtasks !== false}
-                  onChange={(e) =>
-                    onVisibleColumnsChange({
-                      ...visibleColumns,
-                      subtasks: e.target.checked,
-                    })
-                  }
-                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
-                />
-                <span className="text-xs">Việc con</span>
-              </label>
-              <label className="inline-flex items-center gap-1 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.progress !== false}
-                  onChange={(e) =>
-                    onVisibleColumnsChange({
-                      ...visibleColumns,
-                      progress: e.target.checked,
-                    })
-                  }
-                  className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer"
-                />
-                <span className="text-xs">Tiến độ</span>
-              </label>
-            </div>
-          )}
-            </div>
-          )}
-
-          {/* Nút Tạo nhiệm vụ mới */}
+          {/* Nút Tạo việc mới (Phong cách Linear: nhẹ nhàng, thanh lịch) */}
           {onAddTask && canCreateTask && (
-            <Button
+            <button
               type="button"
-              variant="default"
-              size="sm"
               onClick={onAddTask}
-              className="h-8 px-3 gap-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 hover:brightness-105 shadow-2xs cursor-pointer"
-              aria-label="Tạo nhiệm vụ mới"
+              className="inline-flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer active:scale-[0.98]"
+              aria-label="Tạo việc mới"
             >
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              <span>Tạo nhiệm vụ</span>
-            </Button>
+              <Plus className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <span>Tạo việc</span>
+              <span className="sr-only">Tạo nhiệm vụ</span>
+            </button>
           )}
         </div>
       </div>
 
-      {/* Hàng 2 (Desktop): Dải thẻ lọc thông minh (Smart Filter Pills) */}
+      {/* Hàng 2 (Desktop): Dải thẻ lọc thông minh (Smart Filter Tabs - Linear Segmented Style) */}
       <div
         role="tablist"
         aria-label="Bộ lọc thông minh theo ngữ cảnh"
-        className="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+        className="hidden sm:inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/40 gap-0.5 overflow-x-auto max-w-full scrollbar-none"
       >
         {availableTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = computedPillCounts?.[tab.id];
           const hasCount = typeof count === "number" && count >= 0;
+          const isOverdueTab = tab.id === "overdue" && (count ?? 0) > 0;
 
           return (
             <button
@@ -1061,20 +1325,28 @@ export function TaskTableToolbar({
               aria-pressed={isActive}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer whitespace-nowrap shrink-0",
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer whitespace-nowrap shrink-0",
                 isActive
-                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                  : "bg-card text-muted-foreground hover:bg-muted/80 hover:text-foreground border border-border/80 font-medium"
+                  ? isOverdueTab
+                    ? "bg-card text-rose-600 font-semibold shadow-2xs border border-rose-200/80"
+                    : "bg-card text-foreground font-semibold shadow-2xs border border-border/50"
+                  : isOverdueTab
+                  ? "text-rose-600/90 hover:bg-card/60 hover:text-rose-700 font-medium"
+                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground font-medium"
               )}
             >
               <span>{tab.label}</span>
               {hasCount && (
                 <span
                   className={cn(
-                    "px-1.5 py-0.5 rounded-full font-mono text-xs tabular-nums",
+                    "px-1 py-0.2 rounded font-mono text-[11px] tabular-nums",
                     isActive
-                      ? "bg-primary-foreground/20 text-primary-foreground font-bold"
-                      : "bg-muted text-muted-foreground font-medium"
+                      ? isOverdueTab
+                        ? "bg-rose-50 text-rose-700 font-bold"
+                        : "bg-muted text-foreground font-bold"
+                      : isOverdueTab
+                      ? "bg-rose-50/60 text-rose-600/90 font-medium"
+                      : "text-muted-foreground/70 font-normal"
                   )}
                 >
                   {count}

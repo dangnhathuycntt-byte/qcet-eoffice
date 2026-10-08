@@ -144,7 +144,7 @@ export function getTodayIctDate(): string {
 export const getSystemReferenceDateStr = getSystemReferenceDate;
 
 /**
- * Kiểm tra quá hạn an toàn theo phép so sánh chuỗi ISO YYYY-MM-DD.
+ * Kiểm tra trễ hạn an toàn theo phép so sánh chuỗi ISO YYYY-MM-DD.
  * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) khi trích xuất ngày từ đối tượng Date.
  */
 export function isTaskPastDue(
@@ -174,7 +174,7 @@ export function isTaskPastDue(
 }
 
 /**
- * Hàm kiểm tra trạng thái quá hạn quy chuẩn toàn hệ thống.
+ * Hàm kiểm tra trạng thái trễ hạn quy chuẩn toàn hệ thống.
  */
 export function isTaskOverdue(
   status: string,

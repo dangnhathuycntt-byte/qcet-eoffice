@@ -319,7 +319,7 @@ export function VietnameseDatePicker({
               : isOpen
               ? "border-0 bg-selected text-foreground"
               : "border-0 bg-secondary hover:bg-accent text-foreground",
-            hasValue ? "text-foreground" : "text-muted-foreground",
+            !error && (hasValue ? "text-foreground" : "text-muted-foreground"),
             disabled && "opacity-50 cursor-not-allowed",
             triggerClassName
           )}

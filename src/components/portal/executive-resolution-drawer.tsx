@@ -294,7 +294,7 @@ export function ExecutiveResolutionDrawer({
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Kéo dài hạn chót thực hiện và tự động gỡ cảnh báo quá hạn
+                          Kéo dài hạn chót thực hiện và tự động gỡ cảnh báo trễ hạn
                         </p>
 
                         {/* Sub-controls for Extend Deadline */}

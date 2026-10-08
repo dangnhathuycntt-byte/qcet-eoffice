@@ -93,8 +93,8 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
     assert.equal(formatRelativeDate("2026-09-13", ref), "13/09/2026");
     assert.equal(formatRelativeDate("2026-10-09", ref), "09/10/2026");
     // Past due.
-    assert.equal(formatRelativeDate("2026-09-08", ref), "Quá hạn 1 ngày");
-    assert.equal(formatRelativeDate("2026-09-07", ref), "Quá hạn 2 ngày");
+    assert.equal(formatRelativeDate("2026-09-08", ref), "Trễ hạn 1 ngày");
+    assert.equal(formatRelativeDate("2026-09-07", ref), "Trễ hạn 2 ngày");
   });
 
   it("defaults the relative reference to the canonical system reference date", () => {

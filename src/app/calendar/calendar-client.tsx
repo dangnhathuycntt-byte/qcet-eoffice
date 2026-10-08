@@ -851,7 +851,7 @@ function CalendarRouteContent({
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
                 <div className="grid grid-cols-2 gap-1">
-                  {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Quá hạn"]] as const).map(([value, label]) => (
+                  {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Trễ hạn"]] as const).map(([value, label]) => (
                     <button
                       key={value}
                       type="button"
@@ -992,7 +992,7 @@ function CalendarRouteContent({
                   : statusFilter === "COMPLETED"
                   ? "Hoàn thành"
                   : statusFilter === "OVERDUE"
-                  ? "Quá hạn"
+                  ? "Trễ hạn"
                   : statusFilter}
               </span>
               <button

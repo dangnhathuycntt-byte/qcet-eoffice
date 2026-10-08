@@ -49,7 +49,7 @@ export interface CalendarAgendaViewProps {
 function getStatusLabel(state: CalendarAttentionState): string {
   switch (state) {
     case "overdue":
-      return "Quá hạn";
+      return "Trễ hạn";
     case "waiting":
       return "Chờ xét duyệt";
     case "due_today":

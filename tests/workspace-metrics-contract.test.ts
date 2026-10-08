@@ -281,7 +281,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
         },
         {
           id: "st-2",
-          title: "Cần rà soát và quá hạn",
+          title: "Cần rà soát và trễ hạn",
           assigneeName: "C",
           status: "NEEDS_REVIEW",
           dueDate: "2026-09-08", // past due AND waiting approval
@@ -289,7 +289,7 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
         },
         {
           id: "st-3",
-          title: "Đang làm nhưng quá hạn",
+          title: "Đang làm nhưng trễ hạn",
           assigneeName: "D",
           status: "IN_PROGRESS",
           dueDate: "2026-09-07", // past due
@@ -522,7 +522,7 @@ describe("AdaptiveMetricStrip Component", () => {
     );
 
     assert.ok(html.includes("Tiến độ chung"), "Shows overall school progress");
-    assert.ok(html.includes("Quá hạn"), "Shows school overdue");
+    assert.ok(html.includes("Trễ hạn"), "Shows school overdue");
     assert.ok(html.includes("Đang chờ duyệt"), "Shows school waiting approval");
     assert.ok(html.includes("Toàn trường") || html.includes("toàn trường"), "Shows school scope context");
   });
@@ -536,7 +536,7 @@ describe("AdaptiveMetricStrip Component", () => {
     );
 
     assert.ok(html.includes("Tiến độ đơn vị") || html.includes("Tiến độ khoa"), "Shows faculty progress");
-    assert.ok(html.includes("Quá hạn đơn vị"), "Shows unit overdue indicator");
+    assert.ok(html.includes("Trễ hạn đơn vị"), "Shows unit overdue indicator");
     assert.ok(html.includes("Chờ phân công/duyệt"), "Shows unit triage indicator");
     assert.ok(html.includes("Đã nghiệm thu"), "Shows acceptance metric indicator");
     assert.ok(html.includes("Khoa CNTT"), "Shows department label");

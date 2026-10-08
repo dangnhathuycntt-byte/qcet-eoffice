@@ -20,6 +20,8 @@ import { TaskDetailHeaderNav } from "@/components/tasks/detail/task-detail-heade
 import { TaskIdentityBlock } from "@/components/tasks/detail/task-identity-block";
 import { DirectInlineEditor } from "@/components/tasks/detail/direct-inline-editor";
 import { TaskProgressComposer } from "@/components/tasks/detail/task-progress-composer";
+import { markSelectionStartTarget, installGlobalSelectionStart, didDrag } from "@/components/tasks/detail/block-selection-canvas";
+import { TaskActivityFeed } from "@/components/tasks/detail/task-activity-feed";
 import { SubtaskDetailDrawer } from "@/components/tasks/detail/subtask-detail-drawer";
 import { DEFAULT_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./detail/subtask-peek-layout";
 import { TaskBlockEditor } from "@/components/tasks/detail/task-block-editor";
@@ -74,6 +76,8 @@ export function TaskDetailPage({
   const isStatusUpdatingRef = React.useRef(false);
   const taskIdRef = React.useRef(task.id);
   taskIdRef.current = task.id;
+  const taskVersionRef = React.useRef<unknown>((task as any).version);
+  taskVersionRef.current = (task as any).version;
 
   // Inspector visibility state
   const [inspectorExpanded, setShowInspector] = React.useState(true);
@@ -373,7 +377,7 @@ export function TaskDetailPage({
     const res = await fetch(`/api/tasks/${taskIdRef.current}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: trimmed, expectedVersion: (task as any).version }),
+      body: JSON.stringify({ description: trimmed, expectedVersion: taskVersionRef.current }),
     });
 
     if (!res.ok) {
@@ -385,6 +389,7 @@ export function TaskDetailPage({
     const payload = await res.json().catch(() => null);
     setTask((prev) => {
       const newVersion = payload?.data?.version ?? payload?.task?.version ?? (prev as any).version;
+      taskVersionRef.current = newVersion;
       if (isSchoolTask(prev)) {
         return { ...prev, description: trimmed, version: newVersion } as any;
       }
@@ -750,9 +755,20 @@ export function TaskDetailPage({
   }, [currentUser?.name, notifyError]);
 
   // Click canvas padding (empty space below content) → focus editor at end
+  // Kéo chọn khối được phép bắt đầu từ cả sidebar và thanh trên
+  React.useEffect(() => installGlobalSelectionStart(), []);
+
+  const mouseDownPosRef = React.useRef<{ x: number; y: number } | null>(null);
+  const handleCanvasMouseDownCapture = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+    markSelectionStartTarget(e);
+  }, []);
+
   const handleCanvasClick = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!canEdit) return;
+      // Vừa kéo chọn khối: không coi là nhấp để focus soạn thảo (sẽ làm mất vùng chọn)
+      if (didDrag(mouseDownPosRef.current, { x: e.clientX, y: e.clientY })) return;
       const target = e.target as HTMLElement;
       if (target !== canvasRef.current && !target.classList.contains(styles.content)) return;
       e.preventDefault();
@@ -837,30 +853,34 @@ export function TaskDetailPage({
             onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
           />
 
-          {/* Tabs: Tổng quan + Hoạt động — pill style */}
-          {/* Tabs: Tổng quan + Hoạt động */}
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => handleTabChange(v as DetailTab)}
-            className="shrink-0"
-          >
-            <TabsList className="bg-transparent border border-border/70 p-0.5 rounded-lg h-8 gap-0.5" aria-label="Các phân mục chi tiết nhiệm vụ">
-              <TabsTrigger value="overview" className="rounded-md h-7 px-2.5 text-xs font-medium data-active:bg-selected data-active:text-primary data-active:font-semibold">
+          {/* Tabs: Tổng quan + Hoạt động — dưới dải đầu trang */}
+          <div className="shrink-0">
+          <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as DetailTab)}>
+            <TabsList className="bg-transparent p-0 h-6 gap-0.5" aria-label="Các phân mục chi tiết nhiệm vụ">
+              <TabsTrigger value="overview" className="rounded-md h-6 px-2 text-xs font-medium text-muted-foreground hover:text-foreground data-active:bg-accent data-active:text-foreground data-active:font-semibold">
                 Tổng quan
               </TabsTrigger>
-              <TabsTrigger value="activity" className="rounded-md h-7 px-2.5 text-xs font-medium data-active:bg-selected data-active:text-primary data-active:font-semibold">
+              <TabsTrigger value="activity" className="rounded-md h-6 px-2 text-xs font-medium text-muted-foreground hover:text-foreground data-active:bg-accent data-active:text-foreground data-active:font-semibold">
                 Hoạt động
                 {feedActivityEvents.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold tabular-nums leading-none">
+                  <span className="ml-1 text-xs font-normal tabular-nums text-muted-foreground">
                     {feedActivityEvents.length}
                   </span>
                 )}
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          </div>
 
           {/* Main Workspace Canvas */}
-          <div ref={canvasRef} className={styles.canvas} onClick={handleCanvasClick}>
+          <div
+            ref={canvasRef}
+            className={styles.canvas}
+            data-selection-canvas="page"
+            data-plate-selectable="true"
+            onMouseDownCapture={handleCanvasMouseDownCapture}
+            onClick={handleCanvasClick}
+          >
             <TaskDetailSplitLayout
               inspectorOpen={showInspector}
               onToggleInspector={handleToggleInspector}
@@ -920,6 +940,7 @@ export function TaskDetailPage({
               )}
 
               <TaskBlockEditor
+                selectionContainerSelector="body"
                 globalFileDrop={!activeSubtask}
                 taskId={task.id}
                 initialDescription={currentDescription}
@@ -933,9 +954,9 @@ export function TaskDetailPage({
 
           {activeTab === "activity" && (
             <div className="space-y-4">
-              <section className="space-y-4">
-                <div className="pb-3 border-b border-border/40">
-                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
+              <section className="max-w-3xl space-y-3">
+                <div className="px-2">
+                  <h2 className="text-compact font-semibold text-foreground tracking-tight">
                     Nhật ký xử lý &amp; Lịch sử hoạt động
                   </h2>
                   <p className="text-xs text-muted-foreground pt-0.5">
@@ -944,33 +965,7 @@ export function TaskDetailPage({
                 </div>
 
                 {feedActivityEvents.length > 0 ? (
-                  <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
-                    {feedActivityEvents.map((evt) => (
-                      <div key={evt.id} className="relative flex flex-col gap-0.5 text-xs">
-                        <span className="absolute -left-5 top-1 flex size-2.5 items-center justify-center rounded-full border border-background bg-primary" />
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-medium text-foreground">
-                              {evt.description || getAuditActionLabel(evt.action)}
-                            </span>
-                            {evt.count > 1 && (
-                              <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono text-muted-foreground">
-                                {evt.count} lần lưu
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                            {formatDetailDate(evt.timestamp)}
-                          </span>
-                        </div>
-                        {evt.actorName && (
-                          <span className="text-[11px] text-muted-foreground">
-                            Người thao tác: {evt.actorName}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <TaskActivityFeed events={feedActivityEvents} />
                 ) : (
                   <div className="py-12 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60">
                     Chưa có lịch sử xử lý nào được ghi nhận cho nhiệm vụ này.

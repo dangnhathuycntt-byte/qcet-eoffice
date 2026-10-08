@@ -308,23 +308,23 @@ describe("Task 6 — Filter breadcrumb: hiện tiêu chí lọc ngoài popover",
     function getStatusLabel(s: string): string {
       if (s === "IN_PROGRESS") return "Đang làm";
       if (s === "COMPLETED") return "Hoàn thành";
-      if (s === "OVERDUE") return "Quá hạn";
+      if (s === "OVERDUE") return "Trễ hạn";
       return s;
     }
     const label = getStatusLabel(statusFilter);
     assert.equal(label, "Đang làm");
   });
 
-  test("Filter chip label for statusFilter OVERDUE displays 'Quá hạn'", () => {
+  test("Filter chip label for statusFilter OVERDUE displays 'Trễ hạn'", () => {
     const statusFilter = "OVERDUE";
     function getStatusLabel(s: string): string {
       if (s === "IN_PROGRESS") return "Đang làm";
       if (s === "COMPLETED") return "Hoàn thành";
-      if (s === "OVERDUE") return "Quá hạn";
+      if (s === "OVERDUE") return "Trễ hạn";
       return s;
     }
     const label = getStatusLabel(statusFilter);
-    assert.equal(label, "Quá hạn");
+    assert.equal(label, "Trễ hạn");
   });
 });
 

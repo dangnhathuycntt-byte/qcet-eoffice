@@ -1168,7 +1168,7 @@ export function LegacyDepartmentManagerWorkspace({
                 {[
                   { id: "ALL", label: "Tất cả" },
                   { id: "IN_PROGRESS", label: "Đang thực hiện" },
-                  { id: "OVERDUE", label: "Quá hạn" },
+                  { id: "OVERDUE", label: "Trễ hạn" },
                   { id: "COMPLETED", label: "Hoàn thành" },
                 ].map((tab) => (
                   <button

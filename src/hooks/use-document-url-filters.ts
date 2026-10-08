@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { parseDocumentBucket } from "@/lib/documents/document-sidebar-buckets";
 
 export type DocumentTabType = "all" | "inbox" | "outbox" | "submission";
 
@@ -9,6 +10,8 @@ export interface DocumentUrlFilters {
   type: DocumentTabType;
   search: string;
   status: string;
+  /** Nhóm trạng thái từ sidebar: pending | done | issued ('' = không lọc). */
+  bucket: string;
   urgency: string;
   leadUnitId: string;
   documentYear?: number;
@@ -20,6 +23,7 @@ export const DEFAULT_DOCUMENT_URL_FILTERS: DocumentUrlFilters = {
   type: "all",
   search: "",
   status: "ALL",
+  bucket: "",
   urgency: "ALL",
   leadUnitId: "",
   documentYear: undefined,
@@ -114,6 +118,9 @@ export function parseDocumentUrlFilters(
       ? rawStatus.trim()
       : defaults.status;
 
+  const rawBucket = params.get("bucket");
+  const bucket = rawBucket !== null ? parseDocumentBucket(rawBucket) : defaults.bucket;
+
   // 4. urgency
   const rawUrgency = params.get("urgency");
   const urgency =
@@ -162,6 +169,7 @@ export function parseDocumentUrlFilters(
     type,
     search,
     status,
+    bucket,
     urgency,
     leadUnitId,
     documentYear,
@@ -236,6 +244,14 @@ export function serializeDocumentUrlFilters(
     }
   }
 
+  if (state.bucket !== undefined) {
+    if (state.bucket === "" || state.bucket === defaults.bucket) {
+      params.delete("bucket");
+    } else {
+      params.set("bucket", state.bucket);
+    }
+  }
+
   // 4. urgency
   if (state.urgency !== undefined) {
     if (state.urgency === "ALL" || state.urgency === "" || state.urgency === defaults.urgency) {
@@ -300,6 +316,7 @@ export function isDocumentFiltered(
   const isSearchFiltered = filters.search.trim() !== defaults.search.trim();
   const isStatusFiltered =
     filters.status !== defaults.status && filters.status !== "ALL" && filters.status !== "";
+  const isBucketFiltered = filters.bucket !== defaults.bucket && filters.bucket !== "";
   const isUrgencyFiltered =
     filters.urgency !== defaults.urgency && filters.urgency !== "ALL" && filters.urgency !== "";
   const isLeadUnitFiltered =
@@ -313,6 +330,7 @@ export function isDocumentFiltered(
     isTypeFiltered ||
     isSearchFiltered ||
     isStatusFiltered ||
+    isBucketFiltered ||
     isUrgencyFiltered ||
     isLeadUnitFiltered ||
     isYearFiltered
@@ -477,6 +495,7 @@ export function useDocumentUrlFilters(
       type: effectiveDefaults.type,
       search: effectiveDefaults.search,
       status: effectiveDefaults.status,
+      bucket: effectiveDefaults.bucket,
       urgency: effectiveDefaults.urgency,
       leadUnitId: effectiveDefaults.leadUnitId,
       documentYear: effectiveDefaults.documentYear,

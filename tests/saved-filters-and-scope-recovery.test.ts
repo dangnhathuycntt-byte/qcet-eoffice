@@ -64,7 +64,7 @@ describe("Saved Filters & Scope Recovery Test Suite", () => {
   });
 
   describe("2. Quick Filter Pills Order & Business Logic", () => {
-    test("buildQuickFilterPills places Tất cả → Quá hạn → Đến hạn tuần này → Chờ duyệt first", () => {
+    test("buildQuickFilterPills places Tất cả → Trễ hạn → Đến hạn tuần này → Chờ duyệt first", () => {
       const tabCounts = {
         all: 50,
         overdue: 5,
@@ -83,7 +83,7 @@ describe("Saved Filters & Scope Recovery Test Suite", () => {
       assert.strictEqual(pills[0].count, 50);
 
       assert.strictEqual(pills[1].id, "overdue");
-      assert.strictEqual(pills[1].label, "Quá hạn");
+      assert.strictEqual(pills[1].label, "Trễ hạn");
       assert.strictEqual(pills[1].count, 5);
 
       assert.strictEqual(pills[2].id, "this_week");
@@ -107,9 +107,9 @@ describe("Saved Filters & Scope Recovery Test Suite", () => {
       };
 
       // Save filter
-      const saved = saveCustomView("Việc CNTT quá hạn khẩn cấp", sampleCriteria, testUserId);
+      const saved = saveCustomView("Việc CNTT trễ hạn khẩn cấp", sampleCriteria, testUserId);
       assert.ok(saved.id);
-      assert.strictEqual(saved.name, "Việc CNTT quá hạn khẩn cấp");
+      assert.strictEqual(saved.name, "Việc CNTT trễ hạn khẩn cấp");
       assert.strictEqual(saved.criteria.dept, "CNTT");
       assert.strictEqual(saved.criteria.status, "overdue");
 

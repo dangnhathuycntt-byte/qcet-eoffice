@@ -68,7 +68,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
 
     assert.ok(html.includes("data-slot=\"unified-adaptive-workspace\""));
     assert.ok(html.includes("data-slot=\"unified-task-toolbar\""));
-    assert.ok(html.includes("data-slot=\"task-summary-strip\""));
+    assert.ok(!html.includes("data-slot=\"task-summary-strip\""), "Thanh tóm tắt đã được bỏ, xem số liệu qua bộ lọc");
   });
 
   test("defaults to 'my' scope for staff users", () => {

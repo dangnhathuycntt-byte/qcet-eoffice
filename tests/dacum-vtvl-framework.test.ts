@@ -101,7 +101,7 @@ describe("DACUM & VTVL Framework (Nghị định 106/2020 & Ma trận DACUM)", (
     test("kiem tra hieu luc uy quyen theo moc thoi gian tham chieu", () => {
       assert.equal(isDelegationActive(activeRule, "2026-09-09"), true, "Phải active trong khoảng ngày");
       assert.equal(isDelegationActive(activeRule, "2026-08-30"), false, "Chưa đến ngày bắt đầu");
-      assert.equal(isDelegationActive(activeRule, "2026-10-01"), false, "Đã quá hạn");
+      assert.equal(isDelegationActive(activeRule, "2026-10-01"), false, "Đã trễ hạn");
     });
 
     test("kiem tra quyen thuc thi theo pham vi (Scope)", () => {

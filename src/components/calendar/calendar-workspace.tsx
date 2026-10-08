@@ -72,14 +72,14 @@ export const QCET_ITEM_TYPE_OPTIONS = [
   { id: "school_milestone", label: "Mốc cấp Trường" },
   { id: "subtask", label: "Nhiệm vụ Đơn vị" },
   { id: "deliverable", label: "Sản phẩm minh chứng" },
-  { id: "urgent_overdue", label: "Khẩn / Quá hạn" },
+  { id: "urgent_overdue", label: "Khẩn / Trễ hạn" },
 ];
 
 export const QCET_STATUS_FILTER_OPTIONS = [
   { id: "ALL", label: "Mọi trạng thái" },
   { id: "IN_PROGRESS", label: "Đang thực hiện" },
   { id: "COMPLETED", label: "Hoàn thành" },
-  { id: "OVERDUE", label: "Đã quá hạn" },
+  { id: "OVERDUE", label: "Đã trễ hạn" },
 ];
 
 function pad(n: number): string {

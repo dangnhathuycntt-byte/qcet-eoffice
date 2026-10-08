@@ -36,6 +36,9 @@ import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
+import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/components/tasks/table/types";
+import { getNextSortDirection } from "@/components/tasks/table/hooks/use-task-table-state";
+import { DEFAULT_DISPLAY_PROPERTIES } from "@/components/tasks/table/components/task-table-toolbar";
 import { TaskEmptyState } from "@/components/tasks/table/components/task-empty-state";
 const TaskKanbanBoard = dynamic(
   () => import("@/components/tasks/task-kanban-board").then((m) => ({ default: m.TaskKanbanBoard })),
@@ -616,7 +619,7 @@ function ExecutiveDashboardSections({
         <section data-slot="executive-attention-section" className="space-y-4">
           <h2 className="text-sm font-bold text-foreground">Nhiệm vụ cần chú ý</h2>
 
-          {/* Quá hạn */}
+          {/* Trễ hạn */}
           {overdueTasks.length > 0 && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 px-1">
@@ -1150,6 +1153,19 @@ function UnifiedAdaptiveWorkspaceInner({
     return NO_TASK_TIME_FILTER;
   });
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
+  const [visibleColumns, setVisibleColumns] = React.useState<TableColumnVisibility>(DEFAULT_DISPLAY_PROPERTIES);
+  const [groupingField, setGroupingField] = React.useState<string>("none");
+  const [tableSort, setTableSort] = React.useState<{ field?: TaskSortField; direction: SortDirection }>({
+    field: "dueDate",
+    direction: "asc",
+  });
+  const handleToolbarSort = React.useCallback((field: string) => {
+    setTableSort((current) => getNextSortDirection(current.field, field as TaskSortField, current.direction));
+  }, []);
+  const handleTableSortChange = React.useCallback(
+    (field: TaskSortField | undefined, direction: SortDirection) => setTableSort({ field, direction }),
+    []
+  );
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
   const [healthFilter, setHealthFilter] = React.useState<string | null>(null);
   const [originFilter, setOriginFilter] = React.useState<string | null>(null);
@@ -1473,7 +1489,7 @@ function UnifiedAdaptiveWorkspaceInner({
     };
   }, [tasks, user, currentDept]);
 
-  // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
+  // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Trễ hạn, Hôm nay)
   const tabCounts = React.useMemo(() => {
     return computeWorkspaceTabCounts({
       scopedTasks,
@@ -2323,20 +2339,11 @@ function UnifiedAdaptiveWorkspaceInner({
           {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
           {!hideScopeSwitcher && (
             <UnifiedTaskToolbar
+          // Tiêu đề trang ở góc trái; cũng đẩy nhóm điều khiển sang phải (không hiện tab phạm vi ở hàng này)
           leftContent={
-            <div
-              data-slot="task-summary-strip"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums select-none"
-            >
-              <span className="font-semibold text-foreground">{metrics.totalTasks}</span>
-              <span>nhiệm vụ</span>
-              <span className="text-border">·</span>
-              <span className="font-semibold text-foreground">{metrics.waitingApprovalCount}</span>
-              <span>chờ duyệt</span>
-              <span className="text-border">·</span>
-              <span className={metrics.urgentOverdueCount > 0 ? "font-semibold text-feedback-danger" : "font-semibold text-foreground"}>{metrics.urgentOverdueCount}</span>
-              <span className={metrics.urgentOverdueCount > 0 ? "text-feedback-danger" : ""}>trễ hạn</span>
-            </div>
+            <h1 data-slot="task-page-title" className="text-compact font-semibold text-foreground select-none">
+              Nhiệm vụ
+            </h1>
           }
           scope={activeScope}
           onScopeChange={handleScopeChange}
@@ -2400,6 +2407,13 @@ function UnifiedAdaptiveWorkspaceInner({
           onViewModeChange={handleViewModeChange}
           density={tableDensity}
           onDensityChange={setTableDensity}
+          visibleColumns={visibleColumns}
+          onVisibleColumnsChange={setVisibleColumns}
+          groupingField={groupingField}
+          onGroupingChange={setGroupingField}
+          sortField={tableSort.field}
+          sortDirection={tableSort.direction}
+          onSort={handleToolbarSort}
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
           totalTasksCount={scopedTasks.length}
@@ -2525,6 +2539,12 @@ function UnifiedAdaptiveWorkspaceInner({
                     hideToolbar={true}
                     density={tableDensity}
                     onDensityChange={setTableDensity}
+                    visibleColumns={visibleColumns}
+                    groupingField={groupingField}
+                    onGroupingChange={setGroupingField}
+                    sortField={tableSort.field}
+                    sortDirection={tableSort.direction}
+                    onSortChange={handleTableSortChange}
                     onSelectTask={handleSelectTask}
                     onStatusChange={handleStatusChange}
                     onRefresh={handleRefresh}
@@ -2646,6 +2666,12 @@ function UnifiedAdaptiveWorkspaceInner({
                   hideToolbar={true}
                   density={tableDensity}
                   onDensityChange={setTableDensity}
+                  visibleColumns={visibleColumns}
+                  groupingField={groupingField}
+                  onGroupingChange={setGroupingField}
+                  sortField={tableSort.field}
+                  sortDirection={tableSort.direction}
+                  onSortChange={handleTableSortChange}
                   onSelectTask={handleSelectTask}
                   onStatusChange={handleStatusChange}
                   onRefresh={handleRefresh}
@@ -2715,14 +2741,14 @@ function UnifiedAdaptiveWorkspaceInner({
             role="region"
             aria-label="Hàng đợi xử lý công việc"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white">
-              <h3 className="text-sm font-semibold text-slate-900">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card">
+              <h3 className="text-sm font-semibold text-foreground">
                 Hàng đợi xử lý công việc
               </h3>
               <button
                 type="button"
                 onClick={() => setIsActionQueueOpen(false)}
-                className="size-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 aria-label="Đóng hàng đợi"
               >
                 <X className="size-4" strokeWidth={1.5} />
@@ -2731,21 +2757,21 @@ function UnifiedAdaptiveWorkspaceInner({
             <div className="flex-1 overflow-y-auto thin-scrollbar">
               {/* Summary Metrics - Clean Typography & Alignment */}
               <div className="px-5 py-4 space-y-1 text-xs">
-                <div className="font-medium text-slate-900">
+                <div className="font-medium text-foreground">
                   <span className="font-semibold tabular-nums">{metrics?.totalTasks ?? 0}</span> nhiệm vụ {activeScope === "school" ? "toàn trường" : activeScope === "unit" ? "đơn vị" : "cá nhân"}
                 </div>
-                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-feedback-danger font-medium" : "text-slate-500")}>
+                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-feedback-danger font-medium" : "text-muted-foreground")}>
                   <span className="font-semibold tabular-nums">{metrics?.urgentOverdueCount ?? 0}</span> trễ hạn
                 </div>
-                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-slate-700 font-medium" : "text-slate-500")}>
+                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-foreground font-medium" : "text-muted-foreground")}>
                   <span className="font-semibold tabular-nums">{metrics?.waitingApprovalCount ?? 0}</span> chờ phân công/duyệt
                 </div>
-                <div className="text-slate-500">
-                  <span className="font-semibold tabular-nums text-slate-700">{typeof metrics?.completedRate === "number" ? `${metrics.completedRate}%` : "0%"}</span> tiến độ
+                <div className="text-muted-foreground">
+                  <span className="font-semibold tabular-nums text-foreground">{typeof metrics?.completedRate === "number" ? `${metrics.completedRate}%` : "0%"}</span> tiến độ
                 </div>
               </div>
 
-              <div className="h-px bg-slate-100 mx-5" />
+              <div className="h-px bg-border/40 mx-5" />
 
               {/* Actionable items list */}
               <div className="p-5">

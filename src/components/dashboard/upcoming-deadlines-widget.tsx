@@ -103,8 +103,8 @@ export function formatDeadlineDistance(dateStr: string, referenceDate?: Date | s
   if (diffDays === 2) return "Còn 2 ngày";
   if (diffDays > 2 && diffDays <= 7) return `Còn ${diffDays} ngày`;
   if (diffDays > 7) return `Còn ${diffDays} ngày`;
-  if (diffDays === -1) return "Quá hạn 1 ngày";
-  if (diffDays < -1) return `Quá hạn ${Math.abs(diffDays)} ngày`;
+  if (diffDays === -1) return "Trễ hạn 1 ngày";
+  if (diffDays < -1) return `Trễ hạn ${Math.abs(diffDays)} ngày`;
   return dateStr;
 }
 
@@ -217,7 +217,7 @@ export function UpcomingDeadlinesWidget({
                     {overdue ? (
                       <span className="text-rose-600 font-semibold inline-flex items-center gap-1">
                         <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
-                        {relativeDistance.startsWith("Quá hạn") ? relativeDistance : `Quá hạn · ${relativeDistance}`}
+                        {relativeDistance.startsWith("Trễ hạn") ? relativeDistance : `Trễ hạn · ${relativeDistance}`}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">

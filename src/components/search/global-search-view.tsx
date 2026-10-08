@@ -154,7 +154,7 @@ const STATUS_LABELS: Record<string, string> = {
   IN_PROGRESS: "Đang thực hiện",
   COMPLETED: "Hoàn thành",
   CANCELLED: "Đã hủy",
-  OVERDUE: "Quá hạn",
+  OVERDUE: "Trễ hạn",
   RECEIVED: "Đã tiếp nhận",
   PROCESSED: "Đã xử lý",
   ARCHIVED: "Đã lưu trữ",

@@ -370,7 +370,7 @@ export function StaffFocusView({
                 )}
               >
                 <AlertCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>Quá hạn &amp; Hôm nay:</span>
+                <span>Trễ hạn &amp; Hôm nay:</span>
                 <span className="font-mono tabular-nums font-bold">
                   {stats.urgentTodayCount}
                 </span>
@@ -524,7 +524,7 @@ export function StaffFocusView({
               <div className="rounded-lg border border-border bg-card/60 p-5 text-center flex items-center justify-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" strokeWidth={1.5} />
                 <span className="text-sm text-muted-foreground">
-                  Tuyệt vời! Không có nhiệm vụ nào quá hạn hoặc cần làm gấp hôm nay.
+                  Tuyệt vời! Không có nhiệm vụ nào trễ hạn hoặc cần làm gấp hôm nay.
                 </span>
               </div>
             ) : (
@@ -739,7 +739,7 @@ function TaskActionCard({
               <Calendar className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>
                 {isOverdue && tier !== "COMPLETED"
-                  ? "Quá hạn: "
+                  ? "Trễ hạn: "
                   : isDueToday && tier !== "COMPLETED"
                   ? "Hôm nay: "
                   : "Hạn: "}

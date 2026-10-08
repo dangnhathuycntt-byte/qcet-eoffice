@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { mapPrismaTaskToStaffTask, formatLocalDate } from "@/lib/adapters/task-db-adapter";
+import { mapPrismaTaskToStaffTask, formatLocalDate, deriveSubtaskCollaborators } from "@/lib/adapters/task-db-adapter";
 import type {
   DashboardPayload,
   SchoolTask,
@@ -163,10 +163,11 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   const mappedTasks: SchoolTask[] = dbTasks.map((t) => {
     const actors = (t as any).actors || [];
     const leadAssignee = actors.find((a: any) => a.role === "DRI" && a.isPrimaryDRI) || actors.find((a: any) => a.role === "DRI");
-    const coAssignees = actors
-      .filter((a: any) => a.role !== "DRI" && a.role !== "ASSIGNER")
-      .map((a: any) => a.user?.name || "")
-      .filter(Boolean);
+    // Phối hợp = nhóm người phụ trách chính của các việc con còn hoạt động (cùng quy tắc với adapter/DTO).
+    const coAssigneeUsers = deriveSubtaskCollaborators(t as any).filter(
+      (c): c is { id: string | undefined; name: string; avatarUrl: string | undefined } => Boolean(c.name)
+    );
+    const coAssignees = coAssigneeUsers.map((c) => c.name);
 
     const subTasks: StaffTask[] = (t.subTasks || []).map((sub) => {
       const staff = mapPrismaTaskToStaffTask(sub as any);
@@ -222,6 +223,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       departmentName: t.leadUnit?.name,
       createdById: t.createdById,
       coAssignees,
+      coAssigneeUsers,
       assignedDate: formatLocalDate(t.startDate),
       dueDate: formatLocalDate(t.dueDate),
       status: t.status,
@@ -342,7 +344,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     };
   });
 
-  // Tổng hợp Upcoming Items (Hạn chót sắp đến & Quá hạn từ nhiệm vụ cấp trường và đơn vị)
+  // Tổng hợp Upcoming Items (Hạn chót sắp đến & Trễ hạn từ nhiệm vụ cấp trường và đơn vị)
   const upcomingItems: UpcomingItem[] = [];
 
   for (const t of mappedTasks) {
@@ -376,7 +378,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     }
   }
 
-  // Sắp xếp theo thứ tự hạn chót tăng dần (quá hạn và cận hạn lên trước)
+  // Sắp xếp theo thứ tự hạn chót tăng dần (trễ hạn và cận hạn lên trước)
   upcomingItems.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const upcoming = mappedTasks.length > 0 ? upcomingItems.slice(0, 20) : [];
 

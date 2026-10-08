@@ -315,7 +315,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         priority: "NORMAL",
 
         createdById: "user-creator-1",
-        dueDate: new Date("2026-10-01"),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         academicMonth: 9,
         academicYear: "2026-2027",
       },
@@ -332,7 +332,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         priority: "NORMAL",
 
         createdById: "user-creator-1",
-        dueDate: new Date("2026-10-01"),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         academicMonth: 9,
         academicYear: "2026-2027",
       },
@@ -523,7 +523,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         status: "NOT_STARTED",
 
         createdById: "user-creator-1",
-        dueDate: new Date("2026-10-01"),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         academicMonth: 9,
         academicYear: "2026-2027",
       },
@@ -555,7 +555,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         status: "NOT_STARTED",
 
         createdById: "user-creator-1",
-        dueDate: new Date("2026-10-01"),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         academicMonth: 9,
         academicYear: "2026-2027",
       },

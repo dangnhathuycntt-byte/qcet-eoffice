@@ -29,7 +29,7 @@ const mockSchoolTasks: SchoolTask[] = [
   {
     id: "task-02",
     code: "NV-002",
-    title: "Nhiệm vụ 2: Quá hạn thực hiện",
+    title: "Nhiệm vụ 2: Trễ hạn thực hiện",
     status: "IN_PROGRESS",
     priority: "HIGH",
     dueDate: "2026-09-04", // Past due relative to 2026-09-06

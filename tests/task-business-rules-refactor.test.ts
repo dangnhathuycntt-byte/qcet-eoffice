@@ -237,7 +237,7 @@ describe('Task Business Rules Refactor — Targeted Verification', () => {
       assert.strictEqual(collabs[0].id, 'usr_active');
     });
 
-    test('7. Parent DRI exclusion: child task assigned to parent DRI does not duplicate into parent collaborators', () => {
+    test('7. Child task assigned to the parent DRI is still listed in parent collaborators (once)', () => {
       const parentWithSelfChild = {
         ...parentTask,
         subTasks: [
@@ -259,8 +259,26 @@ describe('Task Business Rules Refactor — Targeted Verification', () => {
       };
 
       const collabs = extractDerivedCollaborators(parentWithSelfChild);
-      assert.strictEqual(collabs.length, 1);
-      assert.strictEqual(collabs[0].id, 'usr_b', 'Must exclude parent DRI from collaborators list');
+      assert.deepStrictEqual(collabs.map((c) => c.id), ['usr_lead_parent', 'usr_b'], 'Parent DRI who owns a child task is also a collaborator');
+    });
+
+    test('7b. Directly assigned COLLABORATOR actors are not part of parent collaborators', () => {
+      const withDirect = {
+        ...parentTask,
+        actors: [
+          { userId: 'usr_direct', role: 'COLLABORATOR', isPrimaryDRI: false, user: { id: 'usr_direct', name: 'Người gán trực tiếp' } },
+        ],
+        subTasks: [
+          {
+            id: 'sub_other',
+            title: 'Việc con do B làm',
+            status: 'IN_PROGRESS',
+            archivedAt: null,
+            assignees: [{ userId: 'usr_b', roleInTask: 'PRIMARY_OWNER', user: { id: 'usr_b', name: 'Cán bộ B' } }],
+          },
+        ],
+      };
+      assert.deepStrictEqual(extractDerivedCollaborators(withDirect).map((c) => c.id), ['usr_b']);
     });
 
     test('mapPrismaTaskToSchoolTask projects derived collaborators into coAssignees and collaborators arrays', () => {

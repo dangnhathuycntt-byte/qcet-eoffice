@@ -28,7 +28,7 @@ export function getPastelColor(name?: string | null): string {
 }
 
 const avatarVariants = cva(
-  "shrink-0 rounded-full overflow-hidden select-none",
+  "inline-flex shrink-0 rounded-full overflow-hidden select-none",
   {
     variants: {
       size: {

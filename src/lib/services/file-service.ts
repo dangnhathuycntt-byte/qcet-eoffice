@@ -18,6 +18,7 @@ export interface StoreUploadedFileInput {
   originalName: string;
   declaredMimeType?: string;
   bytes: Buffer;
+  metadata?: Record<string, unknown>;
 }
 
 export type ClamAvScanResult =
@@ -251,6 +252,12 @@ export async function storeUploadedFile(input: StoreUploadedFileInput) {
   }
 
   const safeOriginalName = sanitizeDownloadFilename(input.originalName).slice(0, 255) || `file${extension}`;
+  const isDevOrNoScanner =
+    !process.env.CLAMAV_HOST?.trim() &&
+    process.env.NODE_ENV !== "test" &&
+    process.env.NODE_ENV !== "production";
+  const initialScanStatus = isDevOrNoScanner ? FileScanStatus.CLEAN : FileScanStatus.PENDING;
+
   try {
     const fileObject = await prisma.fileObject.create({
       data: {
@@ -260,11 +267,12 @@ export async function storeUploadedFile(input: StoreUploadedFileInput) {
         extension,
         byteSize: BigInt(input.bytes.byteLength),
         contentHash,
-        scanStatus: FileScanStatus.PENDING,
+        scanStatus: initialScanStatus,
         uploadedById: input.uploadedById,
-        metadata: input.declaredMimeType
-          ? { declaredMimeType: input.declaredMimeType.slice(0, 100) }
-          : undefined,
+        metadata: {
+          ...(input.declaredMimeType ? { declaredMimeType: input.declaredMimeType.slice(0, 100) } : {}),
+          ...(input.metadata || {}),
+        },
       },
     });
     let scanStatus = fileObject.scanStatus;

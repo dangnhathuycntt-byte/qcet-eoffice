@@ -193,7 +193,7 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
 
     it("creates a 2-rail layout with flexible whitespace between main rail and details rail", () => {
       // The layout uses splitWorkspace grid + workspace card + TaskDetailSplitLayout
-      // with a flex-based split (main flex-1 + inspector w-[300px])
+      // with a flex-based split (main flex-1 + inspector w-[340px])
       assert.ok(
         cssContent.includes(".splitWorkspace") &&
           cssContent.includes("grid-template-columns: minmax(0, 1fr)"),
@@ -211,7 +211,7 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     });
 
     it("places main content rail at column 1 and details inspector at column 3", () => {
-      // TaskDetailSplitLayout uses flex layout: main content (flex-1) + inspector (w-[300px])
+      // TaskDetailSplitLayout uses flex layout: main content (flex-1) + inspector (w-[340px])
       // The CSS module uses .content for main and .inspector for the sidebar panel
       const splitLayoutFile = path.resolve(
         process.cwd(),
@@ -220,8 +220,8 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
       const splitLayoutContent = fs.readFileSync(splitLayoutFile, "utf-8");
       assert.ok(
         splitLayoutContent.includes("flex-1") &&
-          splitLayoutContent.includes("w-[300px]"),
-        "Split layout must use flex-1 for main content and w-[300px] for inspector"
+          splitLayoutContent.includes("w-[340px]"),
+        "Split layout must use flex-1 for main content and w-[340px] for inspector"
       );
     });
 
@@ -291,10 +291,9 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
 
     it("renders collaborators with overlapping avatar stack and remaining count", () => {
       assert.ok(
-        sidebarContent.includes("-space-x-1.5") &&
-          sidebarContent.includes("+${collaborators.length - 3}") &&
-          sidebarContent.includes("size-5 rounded-full"),
-        "Must render overlapping avatar stack with size-5 circles and +N counter"
+        sidebarContent.includes("<UserAvatarGroup") &&
+          sidebarContent.includes("users={collaborators}"),
+        "Must render collaborators through the shared overlapping UserAvatarGroup (+N counter)"
       );
     });
 
@@ -317,10 +316,10 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     });
 
     it("maintains lightweight compact cards with reduced padding and gap", () => {
-      // The sidebar inspector uses gap: 26px between sections and
-      // individual property rows use padding-block: 2px for compact density
+      // Các khối của inspector là thẻ riêng cách nhau 8px (kiểu Linear);
+      // từng dòng thuộc tính dùng padding-block: 2px cho mật độ gọn
       assert.ok(
-        cssContent.includes("gap: 26px") &&
+        cssContent.includes("gap: 8px") &&
           cssContent.includes("padding-block: 2px"),
         "Sidebar must use structured gap and compact padding for property rows"
       );

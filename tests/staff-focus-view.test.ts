@@ -253,7 +253,7 @@ describe("StaffFocusView Component", () => {
 
     // Must render metric pills
     assert.ok(
-      html.includes("Quá hạn &amp; Hôm nay") || html.includes("Quá hạn & Hôm nay"),
+      html.includes("Trễ hạn &amp; Hôm nay") || html.includes("Trễ hạn & Hôm nay"),
       "Should render urgent/today pill label"
     );
     assert.ok(
@@ -372,7 +372,7 @@ describe("StaffFocusView Component", () => {
     // Positive reassurance messaging
     assert.ok(
       html.includes("Tuyệt vời") ||
-      html.includes("Không có nhiệm vụ nào quá hạn") ||
+      html.includes("Không có nhiệm vụ nào trễ hạn") ||
       html.includes("hoàn tất"),
       "Must render positive empty state messaging"
     );

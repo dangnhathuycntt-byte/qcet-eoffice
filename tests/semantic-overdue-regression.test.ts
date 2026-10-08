@@ -134,9 +134,9 @@ describe("getStatusDotClass — calendar presentation (referenceDate injected)",
 // Calendar presentation: getStatusLabel
 // ---------------------------------------------------------------------------
 describe("getStatusLabel — calendar presentation (referenceDate injected)", () => {
-  test("due yesterday + IN_PROGRESS => 'Quá hạn'", () => {
+  test("due yesterday + IN_PROGRESS => 'Trễ hạn'", () => {
     const label = getStatusLabel("IN_PROGRESS", DUE_YESTERDAY, REF);
-    assert.equal(label, "Quá hạn");
+    assert.equal(label, "Trễ hạn");
   });
 
   test("due today + IN_PROGRESS => 'Đang thực hiện' (not overdue)", () => {
@@ -154,8 +154,8 @@ describe("getStatusLabel — calendar presentation (referenceDate injected)", ()
     assert.equal(label, "Đã hoàn thành");
   });
 
-  test("due yesterday + NEEDS_REVIEW => 'Quá hạn'", () => {
+  test("due yesterday + NEEDS_REVIEW => 'Trễ hạn'", () => {
     const label = getStatusLabel("NEEDS_REVIEW", DUE_YESTERDAY, REF);
-    assert.equal(label, "Quá hạn");
+    assert.equal(label, "Trễ hạn");
   });
 });

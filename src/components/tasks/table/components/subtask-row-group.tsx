@@ -36,7 +36,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
   parentTask,
   subTasks = parentTask.subTasks || [],
   isExpanded,
-  colSpan = 8,
+  colSpan = 5,
   density = "comfortable",
   scope,
   selectedAcademicMonth,
@@ -67,7 +67,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
     <tr
       data-parent-id={parentTask.id}
       data-task-tier="2"
-      className={cn("bg-muted/10 dark:bg-zinc-800/10 transition-colors rounded-lg", className)}
+      className={cn("bg-muted/10 transition-colors rounded-lg", className)}
     >
       <td colSpan={colSpan} className="p-0 rounded-lg">
         <div className="py-2 pr-3.5 pl-3.5 sm:pl-4">

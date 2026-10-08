@@ -1,6 +1,12 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { TaskPriority } from "@/types/dashboard";
+import {
+  TaskIconPriorityUrgent,
+  TaskIconPriorityHigh,
+  TaskIconPriorityNormal,
+  TaskIconPriorityLow,
+} from "@/lib/icons/task-icons";
 
 export interface PrioritySignalBarsProps {
   priority?: TaskPriority | string;
@@ -9,11 +15,11 @@ export interface PrioritySignalBarsProps {
 }
 
 /**
- * Priority 3-bar signal indicator matching design artifact qcet-nhiem-vu.html:
- * - Urgent: 3 red bars
- * - High: 3 dark bars
- * - Normal: 2 dark bars, 1 faint bar
- * - Low: 1 dark bar, 2 faint bars
+ * Chỉ báo mức độ ưu tiên dùng bộ icon chuẩn của dự án:
+ * - Khẩn cấp: ô có dấu chấm than (đỏ)
+ * - Cao: 3 cột sáng (đậm)
+ * - Bình thường: 2 cột sáng, 1 cột mờ
+ * - Thấp: 1 cột sáng, 2 cột mờ
  */
 export function PrioritySignalBars({
   priority = "NORMAL",
@@ -24,9 +30,6 @@ export function PrioritySignalBars({
   const isUrgent = p === "URGENT";
   const isHigh = p === "HIGH";
   const isNormal = p === "NORMAL";
-  const isLow = p === "LOW";
-
-  const level = isLow ? 1 : isNormal ? 2 : 3;
 
   const label = isUrgent
     ? "Khẩn cấp"
@@ -39,31 +42,23 @@ export function PrioritySignalBars({
   return (
     <span
       className={cn(
-        "inline-flex items-end gap-[2px] h-[13px] shrink-0 select-none",
-        isUrgent ? "text-rose-600" : "text-foreground",
+        "inline-flex items-center gap-1 shrink-0 select-none",
+        isUrgent ? "text-rose-600" : isHigh ? "text-foreground/70" : "text-muted-foreground",
         className
       )}
       title={`Độ ưu tiên: ${label}`}
       role="img"
       aria-label={`Độ ưu tiên: ${label}`}
     >
-      {[1, 2, 3].map((n) => {
-        const isFilled = n <= level;
-        return (
-          <i
-            key={n}
-            className={cn(
-              "block w-[3px] rounded-[1px] transition-colors",
-              isUrgent && isFilled
-                ? "bg-rose-600"
-                : isFilled
-                ? "bg-foreground/80"
-                : "bg-muted-foreground/25"
-            )}
-            style={{ height: `${4 + n * 2.5}px` }}
-          />
-        );
-      })}
+      {isUrgent ? (
+        <TaskIconPriorityUrgent className="size-4" />
+      ) : isHigh ? (
+        <TaskIconPriorityHigh className="size-4" />
+      ) : isNormal ? (
+        <TaskIconPriorityNormal className="size-4" />
+      ) : (
+        <TaskIconPriorityLow className="size-4" />
+      )}
       {showLabel && (
         <span
           className={cn(

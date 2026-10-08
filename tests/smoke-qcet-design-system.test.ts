@@ -154,42 +154,23 @@ describe("QCET Design System Smoke Test Suite", () => {
       const defaultBadge = badgeVariants({ variant: "default" });
       assert.ok(defaultBadge.includes("rounded-sm"));
 
-      const successBadge = badgeVariants({ variant: "success" });
-      assert.ok(successBadge.includes("bg-secondary"));
-      assert.ok(!successBadge.includes("dark:"), "success badge must not contain dark: classes");
-
-      const progressBadge = badgeVariants({ variant: "progress" });
-      assert.ok(progressBadge.includes("bg-secondary"));
-      assert.ok(!progressBadge.includes("dark:"), "progress badge must not contain dark: classes");
-
-      const warningBadge = badgeVariants({ variant: "warning" });
-      assert.ok(warningBadge.includes("bg-secondary"));
-      assert.ok(!warningBadge.includes("dark:"), "warning badge must not contain dark: classes");
-
-      const sapphireBadge = badgeVariants({ variant: "sapphire" });
-      assert.ok(sapphireBadge.includes("bg-secondary"));
-      assert.ok(sapphireBadge.includes("text-foreground"));
-      assert.ok(!sapphireBadge.includes("dark:"), "sapphire badge must not contain dark: classes");
-
-      const emeraldBadge = badgeVariants({ variant: "emerald" });
-      assert.ok(emeraldBadge.includes("bg-secondary"));
-      assert.ok(emeraldBadge.includes("text-foreground"));
-      assert.ok(!emeraldBadge.includes("dark:"), "emerald badge must not contain dark: classes");
-
-      const amberBadge = badgeVariants({ variant: "amber" });
-      assert.ok(amberBadge.includes("bg-secondary"));
-      assert.ok(amberBadge.includes("text-foreground"));
-      assert.ok(!amberBadge.includes("dark:"), "amber badge must not contain dark: classes");
-
-      const roseBadge = badgeVariants({ variant: "rose" });
-      assert.ok(roseBadge.includes("bg-secondary"));
-      assert.ok(roseBadge.includes("text-foreground"));
-      assert.ok(!roseBadge.includes("dark:"), "rose badge must not contain dark: classes");
-
-      const violetBadge = badgeVariants({ variant: "violet" });
-      assert.ok(violetBadge.includes("bg-secondary"));
-      assert.ok(violetBadge.includes("text-foreground"));
-      assert.ok(!violetBadge.includes("dark:"), "violet badge must not contain dark: classes");
+      // Biến thể trạng thái: nền pastel 10% + chữ đậm đủ tương phản (không dùng dark:)
+      const tinted: Array<[string, string, string]> = [
+        ["success", "bg-emerald-500/10", "text-emerald-700"],
+        ["progress", "bg-blue-500/10", "text-blue-600"],
+        ["warning", "bg-amber-500/10", "text-amber-700"],
+        ["sapphire", "bg-blue-500/10", "text-blue-600"],
+        ["emerald", "bg-emerald-500/10", "text-emerald-700"],
+        ["amber", "bg-amber-500/10", "text-amber-700"],
+        ["rose", "bg-rose-500/10", "text-rose-600"],
+        ["violet", "bg-violet-500/10", "text-violet-600"],
+      ];
+      for (const [variant, bg, text] of tinted) {
+        const classes = badgeVariants({ variant: variant as any });
+        assert.ok(classes.includes(bg), `${variant} badge must use ${bg}`);
+        assert.ok(classes.includes(text), `${variant} badge must use ${text}`);
+        assert.ok(!classes.includes("dark:"), `${variant} badge must not contain dark: classes`);
+      }
     });
 
     it("exports all new and overhauled Base UI components cleanly", () => {

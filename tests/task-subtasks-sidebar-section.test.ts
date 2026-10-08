@@ -42,7 +42,7 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       })
     );
     assert.ok(html.includes("Kiểm tra tài liệu"), "Must show subtask title");
-    assert.ok(html.includes("bg-foreground/80"), "Must show IN_PROGRESS dot color");
+    assert.ok(html.includes("text-amber-500"), "Must show IN_PROGRESS status icon color");
     assert.ok(html.includes(">1<"), "Count must be 1");
   });
 
@@ -137,10 +137,10 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
         onSelectSubtask: () => {},
       })
     );
-    assert.ok(html.includes("bg-muted-foreground/60"), "NOT_STARTED dot");
-    assert.ok(html.includes("bg-foreground/80"), "IN_PROGRESS dot");
-    assert.ok(html.includes("bg-foreground/70"), "WAITING_APPROVAL dot");
-    assert.ok(html.includes("bg-foreground/90"), "COMPLETED dot");
+    assert.ok(html.includes("text-muted-foreground/50"), "NOT_STARTED icon");
+    assert.ok(html.includes("text-amber-500"), "IN_PROGRESS icon");
+    assert.ok(html.includes("text-sky-500"), "WAITING_APPROVAL icon");
+    assert.ok(html.includes("text-emerald-500"), "COMPLETED icon");
   });
 
   it("renders due date formatted as DD/MM", () => {
@@ -194,9 +194,11 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
         onSelectSubtask: () => {},
       })
     );
+    // UserAvatar (Base UI Avatar) chỉ thay chữ cái bằng ảnh sau khi ảnh tải xong ở client,
+    // nên SSR hiển thị avatar 20px có tên người phụ trách + chữ cái làm fallback.
     assert.ok(
-      html.includes('src="https://example.com/avatar.png"'),
-      "Must render img element with assigneeAvatar src"
+      html.includes('title="Nguyễn Văn A"') && html.includes("size-5") && html.includes(">NA<"),
+      "Must render the shared UserAvatar (20px) for the assignee with initials fallback"
     );
   });
 
@@ -217,8 +219,8 @@ describe("TaskSubtasksSidebarSection — Compact sidebar child list", () => {
       "Must have title attribute with assigneeName"
     );
     assert.ok(
-      html.includes("bg-primary/10"),
-      "Must render circle with bg-primary/10"
+      html.includes(">TB<") && html.includes("rounded-full"),
+      "Must render a round avatar with the assignee initials"
     );
   });
 });

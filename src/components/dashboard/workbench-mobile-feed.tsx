@@ -158,7 +158,7 @@ export function formatShortDueDate(
   }
   if (due < ref) {
     const [, m, d] = due.split("-");
-    return { text: `Quá hạn (${d}/${m})`, isOverdue: true, isToday: false };
+    return { text: `Trễ hạn (${d}/${m})`, isOverdue: true, isToday: false };
   }
   const [, m, d] = due.split("-");
   return { text: `Hạn ${d}/${m}`, isOverdue: false, isToday: false };
@@ -258,7 +258,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       });
     }
 
-    // Staff: việc có deadline hôm nay, việc quá hạn hoặc đang làm
+    // Staff: việc có deadline hôm nay, việc trễ hạn hoặc đang làm
     return tasks
       .filter((t) => {
         if (t.status === "COMPLETED") return false;
@@ -477,7 +477,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
 
             <div className="p-3 rounded-xl border border-rose-500/25 bg-rose-500/5 flex flex-col justify-between min-h-[64px]">
               <span className="text-xs font-medium text-rose-900">
-                {isExecutive ? "Quá hạn toàn trường" : "Quá hạn đơn vị"}
+                {isExecutive ? "Trễ hạn toàn trường" : "Trễ hạn đơn vị"}
               </span>
               <div className="flex items-baseline justify-between mt-1">
                 <span className="font-mono tabular-nums text-xl font-extrabold text-rose-900">

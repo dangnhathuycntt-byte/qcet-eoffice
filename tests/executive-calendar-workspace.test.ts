@@ -273,7 +273,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
     // Verify Overdue banner presence and styling
     assert.ok(html.includes("prior-overdue-backlog-banner") || html.includes("bg-rose-50"), "Must have overdue banner");
     assert.ok(html.includes("Kế hoạch tu sửa xưởng thực hành E3"), "Must list overdue task title");
-    assert.ok(html.includes("Trễ") || html.includes("quá hạn"), "Must display overdue duration marker");
+    assert.ok(html.includes("Trễ") || html.includes("trễ hạn"), "Must display overdue duration marker");
   });
 
   test("renders work-oriented filter controls (Department, Type, Status, Search)", () => {
@@ -292,7 +292,7 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
     assert.ok(html.includes("Việc đơn vị"), "Should include subtask filter");
     // Status filter options
     assert.ok(html.includes("Đang làm") || html.includes("Đang thực hiện"), "Should include active status filter");
-    assert.ok(html.includes("Quá hạn"), "Should include overdue status filter");
+    assert.ok(html.includes("Trễ hạn"), "Should include overdue status filter");
     assert.ok(html.includes("Hoàn thành"), "Should include completed status filter");
     // Search input
     assert.ok(html.includes("Tìm kiếm") || html.includes("input"), "Should include search query input");

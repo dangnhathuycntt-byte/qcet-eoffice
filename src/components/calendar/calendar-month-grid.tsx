@@ -386,7 +386,7 @@ export function CalendarMonthGrid({
                   {(overdueCount > 0 || waitingCount > 0) && (
                     <div className="flex items-center gap-1">
                       {overdueCount > 0 && (
-                        <span className="inline-flex items-center gap-0.5" title={`${overdueCount} quá hạn`}>
+                        <span className="inline-flex items-center gap-0.5" title={`${overdueCount} trễ hạn`}>
                           <span className="size-1.5 rounded-full bg-rose-500" />
                           <span className="text-xs font-semibold text-rose-600 tabular-nums">{overdueCount}</span>
                         </span>
@@ -475,7 +475,7 @@ export function CalendarMonthGrid({
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3 text-emerald-700" aria-hidden="true" />Hoàn thành</span>
           <span className="inline-flex items-center gap-1"><CircleDot className="size-3 text-blue-600" aria-hidden="true" />Đang thực hiện</span>
-          <span className="inline-flex items-center gap-1"><AlertTriangle className="size-3 text-rose-600" aria-hidden="true" />Quá hạn</span>
+          <span className="inline-flex items-center gap-1"><AlertTriangle className="size-3 text-rose-600" aria-hidden="true" />Trễ hạn</span>
           <span className="inline-flex items-center gap-1"><CalendarIcon className="size-3 text-sky-600" aria-hidden="true" />Sự kiện</span>
         </div>
       </div>

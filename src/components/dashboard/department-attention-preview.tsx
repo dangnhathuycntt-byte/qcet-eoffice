@@ -72,7 +72,7 @@ export function DepartmentAttentionPreview({
           className="px-1 py-3 text-xs text-muted-foreground"
           data-slot="department-attention-empty"
         >
-          Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này
+          Không có đơn vị có việc trễ hạn hoặc bị chặn trong phạm vi này
         </p>
       ) : (
         <ul className="divide-y divide-border/50 pt-1">
@@ -99,7 +99,7 @@ export function DepartmentAttentionPreview({
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     {overdue > 0 && (
                       <span className="font-mono tabular-nums text-rose-700 font-medium">
-                        {overdue} quá hạn
+                        {overdue} trễ hạn
                       </span>
                     )}
                     {blocked > 0 && (

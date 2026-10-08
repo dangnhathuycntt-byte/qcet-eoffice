@@ -23,7 +23,7 @@ describe("ActiveFilterBreadcrumb Component & Logic", () => {
     assert.ok(filters.includes("Hộp việc: URGENT_OVERDUE"));
     assert.ok(filters.includes('Từ khóa: "nghiệm thu"'));
     assert.ok(filters.includes("Trạng thái: IN_PROGRESS"));
-    assert.ok(filters.includes("Quá hạn"));
+    assert.ok(filters.includes("Trễ hạn"));
     assert.ok(filters.includes("Phạm vi: Đơn vị"));
   });
 
@@ -73,7 +73,7 @@ describe("ActiveFilterBreadcrumb Component & Logic", () => {
     assert.ok(html.includes("Khoa CNTT"));
     assert.ok(html.includes("nghiệm thu đề tài"));
     assert.ok(html.includes("IN_PROGRESS"));
-    assert.ok(html.includes("Quá hạn"));
+    assert.ok(html.includes("Trễ hạn"));
     assert.ok(html.includes("Xóa lọc") || html.includes("Xóa bộ lọc"));
     assert.ok(html.includes('data-slot="clear-all-filters"'));
     // Must use tabular numerals for count

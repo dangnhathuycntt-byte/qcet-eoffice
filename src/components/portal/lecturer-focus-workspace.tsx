@@ -149,7 +149,7 @@ export function getDeadlineBadgeInfo(
 
   if (days < 0) {
     return {
-      label: `Quá hạn ${Math.abs(days)} ngày`,
+      label: `Trễ hạn ${Math.abs(days)} ngày`,
       variant: "urgent",
       daysLeft: days,
     };

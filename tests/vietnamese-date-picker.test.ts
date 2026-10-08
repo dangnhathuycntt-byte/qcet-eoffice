@@ -54,7 +54,7 @@ describe("VietnameseDatePicker Component Suite", () => {
     );
 
     assert.ok(
-      html.includes("bg-rose-50") || html.includes("text-rose-700"),
+      html.includes("bg-danger-soft") && html.includes("text-destructive"),
       "applies error classes"
     );
   });

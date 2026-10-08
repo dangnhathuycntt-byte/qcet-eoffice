@@ -17,6 +17,7 @@ export interface PersonnelOption {
   title?: string;
   /** UserRole from DB */
   role?: string;
+  avatarUrl?: string | null;
 }
 
 /**
@@ -41,6 +42,7 @@ async function fetchPersonnel(): Promise<PersonnelOption[]> {
           departmentName: u.department?.name || u.departmentName || "Đơn vị",
           title: u.position || u.title || null,
           role: u.role || null,
+          avatarUrl: u.avatarUrl || null,
         }));
       } else {
         _cache = [];

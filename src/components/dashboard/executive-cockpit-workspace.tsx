@@ -163,7 +163,7 @@ export function buildExecutiveAttentionQueue(
         dueDate: task.dueDate,
         progressPercent: task.progressPercent,
         type: "OVERDUE",
-        typeLabel: "Quá hạn thực hiện",
+        typeLabel: "Trễ hạn thực hiện",
         badgeVariant: "warning",
         tasksUrl: `/tasks?taskId=${encodeURIComponent(task.id)}`,
         rawTask: task,

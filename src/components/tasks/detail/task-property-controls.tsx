@@ -3,11 +3,21 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { Calendar, Check, CheckCircle2, ChevronDown, CircleDashed, Clock, Loader2, Signal, UserPlus, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
+import {
+  TaskIconAssignee,
+  TaskIconDeadline,
+  TaskIconPriorityUrgent,
+  TaskIconPriorityHigh,
+  TaskIconPriorityNormal,
+  TaskIconPriorityLow,
+} from "@/lib/icons/task-icons";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import type { TaskStatus, TaskPriority } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 import { computeDueStatus } from "@/domain/tasks/deadlines";
 import { formatDisplayDate } from "@/lib/format/date";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { propertyMotionStyle, propertyPopupClassName, propertyTriggerVariants } from "@/components/ui/property-control-styles";
 import type { PriorityDisplayConfig } from "@/domain/tasks/display-config";
@@ -31,16 +41,14 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
   const HIDDEN_STATUSES = new Set(["CANCELLED"]);
   const visibleOptions = options.filter((opt) => !HIDDEN_STATUSES.has(opt.value) || opt.value === value);
   const selected = visibleOptions.find((option) => option.value === value);
-  const Icon = value === "COMPLETED" ? CheckCircle2 : value === "WAITING_APPROVAL" ? Clock : CircleDashed;
 
   return (
     <Select.Root value={value} disabled={disabled} onValueChange={(next) => {
       if (next && next !== value && !visibleOptions.find((option) => option.value === next)?.disabled) onValueChange(next);
     }}>
       <Select.Trigger aria-label="Trạng thái" className={propertyTriggerVariants()} style={propertyMotionStyle}>
-        <Icon className={cn("size-3.5 shrink-0", selected?.iconClass)} strokeWidth={1.5} aria-hidden="true" />
+        <TaskStatusCircle status={value} />
         <Select.Value>{() => <span>{selected?.label ?? value}</span>}</Select.Value>
-        {!disabled && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" strokeWidth={1.5} /></Select.Icon>}
       </Select.Trigger>
       <Select.Portal>
         <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
@@ -48,12 +56,12 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
             <Select.List>
               {visibleOptions.map((option) => (
                 <Select.Item key={option.value} value={option.value} disabled={option.disabled} title={option.reason}
-                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40">
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn("size-1.5 rounded-full", option.dotClass)} aria-hidden="true" />
+                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40">
+                  <span className="flex items-center gap-2">
+                    <TaskStatusCircle status={option.value} />
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3 text-primary" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>
@@ -67,10 +75,11 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
 
-export function TaskAssigneePicker({ items, assigneeId, assigneeName, displayName, disabled, pending, onSelect }: {
+export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAvatarUrl, displayName, disabled, pending, onSelect }: {
   items: PersonnelOption[];
   assigneeId?: string;
   assigneeName?: string;
+  assigneeAvatarUrl?: string | null;
   displayName: string;
   disabled?: boolean;
   pending?: boolean;
@@ -89,7 +98,13 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, displayNam
         return !normalized || [person.name, person.email, person.departmentName].some((text) => text?.toLocaleLowerCase("vi").includes(normalized));
       }} autoHighlight disabled={disabled || pending}>
       <Combobox.Trigger aria-label={`Người phụ trách: ${displayName}`} className={propertyTriggerVariants({ variant: "muted" })} style={propertyMotionStyle}>
-        {pending ? <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} /> : <UserPlus className="size-3.5 shrink-0" strokeWidth={1.5} />}
+        {pending ? (
+          <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+        ) : selected || assigneeName ? (
+          <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
+        ) : (
+          <TaskIconAssignee className="size-4 shrink-0" />
+        )}
         <span className="truncate font-normal">{displayName}</span>
       </Combobox.Trigger>
       <Combobox.Portal>
@@ -99,16 +114,19 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, displayNam
               <Combobox.Input aria-label="Tìm cán bộ" placeholder="Tìm cán bộ..." className="h-8 w-full rounded-md bg-muted/40 px-2 text-xs outline-none focus:bg-background" />
             </Combobox.InputGroup>
             <Combobox.Empty>
-              <div className="px-2 py-3 text-center text-[11px] text-muted-foreground">Không tìm thấy cán bộ phù hợp</div>
+              <div className="px-2 py-3 text-center text-xs text-muted-foreground">Không tìm thấy cán bộ phù hợp</div>
             </Combobox.Empty>
             <Combobox.List className="max-h-60 overflow-y-auto overscroll-contain outline-none">
               {(person) => (
-                <Combobox.Item key={person.id} value={person} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs font-normal outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary">
-                  <span className="min-w-0">
-                    <span className="block truncate font-normal">{person.name}</span>
-                    {person.departmentName && <span className="block truncate text-[10px] text-muted-foreground">{person.departmentName}</span>}
+                <Combobox.Item key={person.id} value={person} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs font-normal outline-none data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="sm" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-normal">{person.name}</span>
+                      {person.departmentName && <span className="block truncate text-xs text-muted-foreground">{person.departmentName}</span>}
+                    </span>
                   </span>
-                  <Combobox.ItemIndicator><Check className="size-3 text-primary" strokeWidth={1.5} /></Combobox.ItemIndicator>
+                  <Combobox.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Combobox.ItemIndicator>
                 </Combobox.Item>
               )}
             </Combobox.List>
@@ -148,7 +166,7 @@ export function TaskDateRange({
 
   return (
     <div className="relative group/date-row inline-flex items-center gap-1">
-      <Calendar className={cn("size-3.5 shrink-0", iconClass)} strokeWidth={1.5} aria-hidden="true" />
+      <TaskIconDeadline className={cn("size-4 shrink-0", iconClass)} />
       {canEdit && onStartDateChange ? (
         <VietnameseDatePicker
           value={startDateIso || null}
@@ -196,6 +214,21 @@ export function TaskDateRange({
 
 /* ── TaskPrioritySelect ── */
 
+const PRIORITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  URGENT: TaskIconPriorityUrgent,
+  HIGH: TaskIconPriorityHigh,
+  NORMAL: TaskIconPriorityNormal,
+  LOW: TaskIconPriorityLow,
+};
+
+// Cùng quy tắc màu với PrioritySignalBars: khẩn cấp đỏ, cao đậm, còn lại mờ
+const PRIORITY_ICON_COLOR: Record<string, string> = {
+  URGENT: "text-rose-600",
+  HIGH: "text-foreground/70",
+  NORMAL: "text-muted-foreground",
+  LOW: "text-muted-foreground",
+};
+
 export function TaskPrioritySelect({ value, options, disabled, onValueChange }: {
   value: TaskPriority;
   options: PriorityDisplayConfig[];
@@ -209,9 +242,8 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
       if (next && next !== value) onValueChange(next as TaskPriority);
     }}>
       <Select.Trigger aria-label="Ưu tiên" className={propertyTriggerVariants()} style={propertyMotionStyle}>
-        <Signal className={cn("size-3.5 shrink-0", selected?.iconClass)} strokeWidth={1.5} aria-hidden="true" />
+        {React.createElement(PRIORITY_ICONS[value] ?? TaskIconPriorityNormal, { className: cn("size-4 shrink-0", PRIORITY_ICON_COLOR[value] ?? "text-muted-foreground") })}
         <Select.Value>{() => <span>{selected?.label ?? value}</span>}</Select.Value>
-        {!disabled && <Select.Icon><ChevronDown className="size-3 text-muted-foreground/60" strokeWidth={1.5} /></Select.Icon>}
       </Select.Trigger>
       <Select.Portal>
         <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4} collisionPadding={8} alignItemWithTrigger={false} collisionAvoidance={{ side: "none", align: "shift" }}>
@@ -219,12 +251,12 @@ export function TaskPrioritySelect({ value, options, disabled, onValueChange }: 
             <Select.List>
               {options.map((option) => (
                 <Select.Item key={option.value} value={option.value}
-                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary">
-                  <span className="flex items-center gap-1.5">
-                    <Signal className={cn("size-3.5", option.iconClass)} strokeWidth={1.5} aria-hidden="true" />
+                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-accent data-[selected]:font-medium">
+                  <span className="flex items-center gap-2">
+                    {React.createElement(PRIORITY_ICONS[option.value] ?? TaskIconPriorityNormal, { className: cn("size-4", PRIORITY_ICON_COLOR[option.value] ?? "text-muted-foreground") })}
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </span>
-                  <Select.ItemIndicator><Check className="size-3 text-primary" strokeWidth={1.5} /></Select.ItemIndicator>
+                  <Select.ItemIndicator><Check className="size-3.5 text-foreground" strokeWidth={1.5} /></Select.ItemIndicator>
                 </Select.Item>
               ))}
             </Select.List>

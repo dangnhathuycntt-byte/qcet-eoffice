@@ -318,7 +318,7 @@ describe("Role-Aware Home Workbench & Smart Workbox (Phase 7)", () => {
       assert.ok(html.includes("Của tôi"), "Must render Của tôi card");
       assert.ok(html.includes("Chờ tôi duyệt"), "Must render Chờ tôi duyệt card");
       assert.ok(html.includes("Chờ nộp báo cáo"), "Must render Chờ nộp báo cáo card");
-      assert.ok(html.includes("Quá hạn"), "Must render Quá hạn card");
+      assert.ok(html.includes("Trễ hạn"), "Must render Trễ hạn card");
       assert.ok(html.includes("font-mono"), "Must use font-mono for counts");
       assert.ok(html.includes("tabular-nums"), "Must use tabular-nums for counts");
       assert.ok(html.includes("/tasks?scope=my"), "Must link to /tasks");

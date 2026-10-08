@@ -111,7 +111,7 @@ describe("Executive Matrix Aggregator", () => {
       },
       {
         id: "task-2",
-        title: "Nhiệm vụ 2: Đang làm, có subtask cần duyệt và quá hạn",
+        title: "Nhiệm vụ 2: Đang làm, có subtask cần duyệt và trễ hạn",
         category: "CNTT",
         categoryLabel: "CNTT",
         leadAssigneeName: "Nguyễn Ngọc Vinh",
@@ -124,7 +124,7 @@ describe("Executive Matrix Aggregator", () => {
         subTasks: [
           {
             id: "st-2-1",
-            title: "Subtask cần duyệt và quá hạn",
+            title: "Subtask cần duyệt và trễ hạn",
             assigneeName: "Phan Đình Khôi",
             status: "NEEDS_REVIEW",
             dueDate: "2026-09-01",
@@ -172,7 +172,7 @@ describe("Executive Matrix Aggregator", () => {
       },
       {
         id: "task-4",
-        title: "Nhiệm vụ 4: Quá hạn cấp trường và đang thực hiện",
+        title: "Nhiệm vụ 4: Trễ hạn cấp trường và đang thực hiện",
         category: "KHAC",
         categoryLabel: "Hành chính",
         leadAssigneeName: "Phan Văn Thanh",

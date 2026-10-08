@@ -381,7 +381,7 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       assert.ok(markup.includes("Khối lượng công việc"), "has total card");
       assert.ok(markup.includes("Đang thực hiện"), "has in-progress card");
       assert.ok(markup.includes("Chờ phê duyệt"), "has waiting card");
-      assert.ok(markup.includes("Quá hạn"), "has overdue card");
+      assert.ok(markup.includes("Trễ hạn"), "has overdue card");
       assert.ok(markup.includes("Tỷ lệ hoàn thành"), "has completed card");
       assert.ok(
         markup.includes("Đang lọc"),
@@ -399,13 +399,13 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       const markup = renderToStaticMarkup(
         React.createElement(AttentionBadge, {
           level: "urgent",
-          label: "Quá hạn cấp bách",
+          label: "Trễ hạn cấp bách",
           count: 3,
         })
       );
 
       assert.ok(markup.includes('role="status"'), "has role status");
-      assert.ok(markup.includes("Quá hạn cấp bách"), "includes visible text");
+      assert.ok(markup.includes("Trễ hạn cấp bách"), "includes visible text");
       assert.ok(markup.includes("3"), "includes numeric count");
       assert.ok(markup.includes("svg"), "includes SVG icon");
     });

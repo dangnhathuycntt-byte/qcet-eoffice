@@ -143,7 +143,7 @@ export function DashboardSituationStrip({
     verdictSentence,
     `${progressPercent}% tiến độ`,
     `${totalTasks} nhiệm vụ`,
-    overdueCount > 0 ? `${overdueCount} quá hạn` : null,
+    overdueCount > 0 ? `${overdueCount} trễ hạn` : null,
     blockedCount > 0 ? `${blockedCount} vướng mắc` : null,
     unitsNeedingAttention ? `${unitsNeedingAttention} đơn vị cần chú ý` : null,
   ]
@@ -178,7 +178,7 @@ export function DashboardSituationStrip({
         </span>
         {overdueCount > 0 && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/25 text-xs font-mono tabular-nums font-semibold text-rose-700">
-            {overdueCount} quá hạn
+            {overdueCount} trễ hạn
           </span>
         )}
       </div>
@@ -244,7 +244,7 @@ export function DashboardSituationStrip({
           {overdueCount > 0 && (
             <div
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-700 text-xs font-semibold border border-rose-500/20"
-              title={`${overdueCount} nhiệm vụ quá hạn`}
+              title={`${overdueCount} nhiệm vụ trễ hạn`}
             >
               <AlertTriangle className="size-3" strokeWidth={1.5} />
               <span className="font-mono tabular-nums">{overdueCount}</span>
@@ -265,7 +265,7 @@ export function DashboardSituationStrip({
           {unitsNeedingAttention != null && unitsNeedingAttention > 0 && (
             <div
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-700 text-xs font-medium border border-amber-500/20"
-              title={`${unitsNeedingAttention} đơn vị có nhiệm vụ quá hạn hoặc vướng mắc`}
+              title={`${unitsNeedingAttention} đơn vị có nhiệm vụ trễ hạn hoặc vướng mắc`}
             >
               <span className="font-mono tabular-nums font-semibold">{unitsNeedingAttention}</span>
               <span className="text-2xs">đơn vị lưu ý</span>

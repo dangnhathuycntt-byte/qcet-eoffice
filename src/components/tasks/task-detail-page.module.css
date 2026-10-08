@@ -12,6 +12,7 @@
 
 /* ── Parent pane — independent card ───────────────────────────── */
 .workspace {
+  position: relative;
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--border);
@@ -53,7 +54,7 @@
   }
 }
 
-/* ── Tab bar — pill style via CSS module (single source of truth) ─ */
+/* ── Tab bar — căn trái, tab im lặng (nền chỉ hiện khi chọn) ──── */
 .workspace [data-slot='tabs'] {
   flex-shrink: 0;
 }
@@ -63,27 +64,26 @@
   gap: 4px;
   height: auto;
   width: auto;
-  padding: 8px;
-  padding-inline: 18px;
+  padding: 6px 0 0;
+  padding-inline: calc(clamp(24px, 3vw, 48px) - 8px);
   border: 0;
   border-radius: 0;
-  background: var(--card);
-  justify-content: flex-end;
+  background: transparent;
+  justify-content: flex-start;
 }
 .workspace [data-slot='tabs-trigger'] {
   flex: none;
   height: auto;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 500;
-  background: var(--card);
+  background: transparent;
   box-shadow: none;
 }
 .workspace [data-slot='tabs-trigger'][data-active] {
-  background: var(--muted);
-  border-color: transparent;
+  background: var(--accent);
 }
 
 /* ── Header nav ───────────────────────────────────────────────── */
@@ -119,6 +119,7 @@
 
 /* ── Main canvas (scrollable content area) ────────────────────── */
 .canvas {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -132,6 +133,12 @@
   background: var(--card);
   box-sizing: border-box;
   cursor: text;
+}
+
+/* Khi có cột thuộc tính: cột xám sát mép phải/dưới của thẻ, nội dung tự giữ lề */
+.canvas:has([data-slot='task-detail-inspector']) {
+  padding-right: 0;
+  padding-bottom: 0;
 }
 
 /* ── Smart cursor opt-out: non-editable interactive sections ──── */
@@ -159,14 +166,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 8px;
 }
+/* Mỗi khối (Thuộc tính, Việc con) là một thẻ trắng viền mảnh trên khay xám */
 .workspace [data-slot='task-properties-sidebar'] > div {
   margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
   box-shadow: none;
 }
 .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div {

@@ -69,7 +69,7 @@ const COLORS_SEMANTIC: Array<[string, string, string, string]> = [
   ["Hành động chính", "--accent-9", "#0058A0", "Xanh trường: nút chính, CTA, focus ring"],
   ["Hành động hover", "--accent-10", "#004A88", "Di chuột nút chính"],
   ["Vùng đang chọn", "--accent-3", "#E1EBF8", "Nền dòng/khối được chọn"],
-  ["Nguy hiểm / Quá hạn", "--destructive", "#B91C1C", "Quá hạn, lỗi, xóa"],
+  ["Nguy hiểm / Trễ hạn", "--destructive", "#B91C1C", "Trễ hạn, lỗi, xóa"],
   ["Nền lỗi / Xóa", "--danger-soft", "#FBEDED", "Nền ô lỗi, nút xóa"],
   ["Nhấn tranh / Icon", "--icon-accent", "#C0D0F4", "Nền chip icon nghiệp vụ"],
   ["Nhấn logo trường", "--brand-accent", "#F8F000", "Chỉ dùng trong logo và tranh"],
@@ -986,7 +986,7 @@ export function DesignShowcase() {
                     <Badge>Mặc định</Badge>
                     <Badge variant="secondary">Thứ cấp</Badge>
                     <Badge variant="outline">Đường viền</Badge>
-                    <Badge variant="destructive">Quá hạn 2 ngày</Badge>
+                    <Badge variant="destructive">Trễ hạn 2 ngày</Badge>
                   </div>
                 </div>
 
@@ -1440,7 +1440,7 @@ export function DesignShowcase() {
                   <h3 className="text-2xl font-semibold tracking-tight text-foreground">Nhiệm vụ</h3>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     11 nhiệm vụ · <span className="font-medium text-foreground">3 chờ duyệt</span> ·{" "}
-                    <span className="font-medium text-destructive">2 quá hạn</span>
+                    <span className="font-medium text-destructive">2 trễ hạn</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1932,7 +1932,7 @@ export function DesignShowcase() {
                           <div className="text-xs font-medium text-foreground">Tổng hợp báo cáo tuyển sinh</div>
                           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                             <UserAvatar name="Đặng Nhật Huy" size="xs" />
-                            <span className="text-destructive font-medium">28/09 (Quá hạn)</span>
+                            <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
                           </div>
                         </div>
                       </div>
@@ -1950,7 +1950,7 @@ export function DesignShowcase() {
                           <div className="text-xs font-medium text-foreground">Chuẩn bị tài liệu hội nghị cán bộ</div>
                           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                             <UserAvatar name="Đặng Nhật Huy" size="xs" />
-                            <span className="text-destructive font-medium">28/09 (Quá hạn)</span>
+                            <span className="text-destructive font-medium">28/09 (Trễ hạn)</span>
                           </div>
                         </div>
                       </div>

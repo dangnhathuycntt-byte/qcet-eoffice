@@ -3,18 +3,18 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { FileText, Plus, RefreshCw, Inbox, Send, FileCheck, ChevronRight, ArrowLeft, CheckCircle2, FilePlus, Stamp } from "lucide-react";
+import { ArrowLeft, Stamp } from "lucide-react";
 import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@/types/document";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useDocumentUrlFilters, type DocumentTabType } from "@/hooks/use-document-url-filters";
-import { DocumentFilterBar, DocumentStatsSummary, DocumentTable, DocumentCardList, DocumentPagination, DocumentBulkToolbar, type DocumentStatsData, type DocumentKpiType } from "./registry";
+import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";
+import { DocumentLedgerToolbar, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, type DocumentStatsData } from "./registry";
 import { DocumentDetailDialog } from "./document-detail-dialog";
 import { DocumentOutgoingDetailView } from "./document-outgoing-detail-view";
 import { CreateDocumentModal } from "./create-document-modal";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
 import { DigitalSignatureDialog } from "./digital-signature-dialog";
+import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagination-bar";
 import { InboundDocumentFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 const DocumentPdfViewer = dynamic(() => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer), {
@@ -28,7 +28,7 @@ interface ApiDoc {
   registrationNumber?: number | null; documentYear?: number | null;
   issuedDate?: string | Date | null; registeredDate?: string | Date | null; receivedDate?: string | null;
   issuingAuthority?: string | null; signatory?: string | null; signerName?: string | null; signerTitle?: string | null;
-  summary?: string | null; leadDepartment?: string | null; leadDepartmentName?: string | null; draftingDeptName?: string | null;
+  summary?: string | null; workflowStatus?: string | null; dueDate?: string | Date | null; leadUnitName?: string | null; leadDepartment?: string | null; leadDepartmentName?: string | null; draftingDeptName?: string | null;
   linkedTaskId?: string | null;
   linkedTask?: { id: string; code?: string; title: string; status: string; progressPercent: number; dueDate?: string | null } | null;
   signatures?: Array<unknown> | null;
@@ -56,13 +56,17 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
     id: item.id,
     type: typeMap[item.type] || "inbox",
     documentNumber: docNumber,
+    registrationNumber: item.registrationNumber ?? undefined,
+    documentYear: item.documentYear ?? undefined,
+    dueDate: formatDate(item.dueDate) || undefined,
+    workflowStatus: item.workflowStatus || undefined,
     issuedDate: formatDate(item.issuedDate),
     receivedDate: formatDate(item.registeredDate) || item.receivedDate || undefined,
     issuingAuthority: item.issuingAuthority || "Cơ quan ban hành",
     summary: item.summary || "",
     urgency: urgencyMap[item.urgency] || "normal",
     status,
-    leadDepartment: item.leadDepartmentName || item.leadDepartment || item.draftingDeptName || "Chưa phân công",
+    leadDepartment: item.leadUnitName || item.leadDepartmentName || item.leadDepartment || item.draftingDeptName || "Chưa phân công",
     signatory: item.signerName ? `${item.signerName}${item.signerTitle ? ` (${item.signerTitle})` : ""}` : item.signatory || "Lãnh đạo đơn vị",
     linkedTaskId: item.linkedTaskId || undefined,
     linkedTaskTitle: item.linkedTask?.title || (item.linkedTaskId ? `Nhiệm vụ #${item.linkedTaskId}` : undefined),
@@ -73,13 +77,6 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
     signatures: item.signatures || undefined,
   };
 }
-
-const TAB_CONFIGS: Array<{ id: DocumentTabType; label: string; icon: React.ElementType }> = [
-  { id: "all", label: "Tất cả", icon: FileText },
-  { id: "inbox", label: "Văn bản đến", icon: Inbox },
-  { id: "outbox", label: "Văn bản đi", icon: Send },
-  { id: "submission", label: "Tờ trình duyệt", icon: FileCheck },
-];
 
 export function DocumentRegistryView() {
   const router = useRouter();
@@ -97,6 +94,7 @@ export function DocumentRegistryView() {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
   // Statistics
+  const [buckets, setBuckets] = React.useState<Record<string, number>>({});
   const [stats, setStats] = React.useState<DocumentStatsData>({
     total: 0, totalInbox: 0, totalOutbox: 0, totalSubmissions: 0,
     pending: 0, processing: 0, urgent: 0, overdue: 0, completed: 0, linkedTasks: 0,
@@ -116,10 +114,12 @@ export function DocumentRegistryView() {
   // Fetch document stats
   const fetchStats = React.useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/documents/stats", { signal });
+      const typeQs = filters.type === "all" ? "" : `?type=${filters.type}`;
+      const res = await fetch(`/api/documents/stats${typeQs}`, { signal });
       if (!res.ok) return;
       const json = await res.json();
       if (json.success && json.data) {
+        setBuckets(json.data.buckets ?? {});
         setStats({
           total: json.data.total ?? (json.data.incoming ?? 0) + (json.data.outgoing ?? 0) + (json.data.internal ?? 0),
           totalInbox: json.data.incoming ?? 0, totalOutbox: json.data.outgoing ?? 0, totalSubmissions: json.data.internal ?? 0,
@@ -130,7 +130,7 @@ export function DocumentRegistryView() {
     } catch (err: unknown) {
       if ((err as { name?: string })?.name !== "AbortError") console.error("Stats fetch error:", err);
     }
-  }, []);
+  }, [filters.type]);
 
   // Fetch documents matching filters
   const fetchDocuments = React.useCallback(async (signal?: AbortSignal) => {
@@ -142,6 +142,7 @@ export function DocumentRegistryView() {
       else if (filters.type === "outbox") p.set("type", "VAN_BAN_DI");
       else if (filters.type === "submission") p.set("type", "TO_TRINH_NOI_BO");
 
+      if (filters.bucket) p.set("bucket", filters.bucket);
       if (filters.search.trim()) p.set("search", filters.search.trim());
 
       const uMap: Record<string, string> = { flash: "HOA_TOC", top_urgent: "THUONG_KHAN", urgent: "KHAN", normal: "THUONG" };
@@ -255,128 +256,72 @@ export function DocumentRegistryView() {
     }
   }, [filters]);
 
-  // KPI Card Selection Handler
-  const handleSelectKpi = React.useCallback((kpi: DocumentKpiType) => {
-    if (kpi === "pending") setFilters({ status: "pending_assignment", urgency: "ALL" });
-    else if (kpi === "processing") setFilters({ status: "processing", urgency: "ALL" });
-    else if (kpi === "urgent") setFilters({ urgency: "urgent", status: "ALL" });
-    else if (kpi === "completed") setFilters({ status: "completed", urgency: "ALL" });
-    else setFilters({ status: "ALL", urgency: "ALL" });
-  }, [setFilters]);
+  const typeTitle: Record<string, string> = { all: "Sổ văn bản", inbox: "Văn bản đến", outbox: "Văn bản đi", submission: "Tờ trình nội bộ" };
+  const bucketLabels: Record<string, string> = filters.type === "outbox"
+    ? { pending: "Chờ xử lý", done: "Đã xử lý", issued: "Đã phát hành" }
+    : { pending: "Chờ xử lý", done: "Đã xử lý" };
+  const urgencyLabels: Record<string, string> = { flash: "Hỏa tốc", top_urgent: "Thượng khẩn", urgent: "Khẩn", normal: "Thường" };
+  const statusLabels: Record<string, string> = { pending_assignment: "Chờ bút phê", processing: "Đang xử lý", approved: "Chờ phê duyệt", completed: "Đã lập hồ sơ" };
+
+  const primaryAction = filters.type === "outbox"
+    ? { label: "Soạn văn bản đi", run: () => router.push("/documents/outgoing/compose") }
+    : filters.type === "inbox"
+    ? { label: "Vào sổ văn bản đến", run: () => setIsQuickEntryOpen(true) }
+    : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsCreateOpen(true) };
+
+  const toggleBucket = (b: string) => setFilter("bucket", filters.bucket === b ? "" : b);
+  const bucketCount = (b: string, label: string, tone: "warning" | "default", key: string) => ({
+    id: `bucket-${b}`, count: buckets[key] ?? 0, label, tone, active: filters.bucket === b, onSelect: () => toggleBucket(b),
+  });
+  // Nhóm trạng thái bám theo workflow (Quy trình 6/7) để khớp cột "Bước" và sidebar.
+  const stateCounts =
+    filters.type === "inbox"
+      ? [bucketCount("pending", "chờ xử lý", "warning", "incomingPending"), bucketCount("done", "đã xử lý", "default", "incomingDone")]
+      : filters.type === "outbox"
+      ? [bucketCount("pending", "chờ xử lý", "warning", "outgoingPending"), bucketCount("done", "đã xử lý", "default", "outgoingDone"), bucketCount("issued", "đã phát hành", "default", "outgoingIssued")]
+      : [
+          { id: "pending", count: stats.pending ?? 0, label: "chờ bút phê", tone: "warning" as const, active: filters.status === "pending_assignment", onSelect: () => setFilter("status", filters.status === "pending_assignment" ? "ALL" : "pending_assignment") },
+          { id: "processing", count: stats.processing ?? 0, label: "đang xử lý", tone: "default" as const, active: filters.status === "processing", onSelect: () => setFilter("status", filters.status === "processing" ? "ALL" : "processing") },
+        ];
+  const quickCounts = [
+    ...stateCounts,
+    ...((stats.urgent ?? 0) > 0 ? [{ id: "urgent", count: stats.urgent ?? 0, label: "khẩn", tone: "warning" as const }] : []),
+    ...((stats.overdue ?? 0) > 0 ? [{ id: "overdue", count: stats.overdue ?? 0, label: "trễ hạn xử lý", tone: "danger" as const }] : []),
+  ];
+
+  const activeFilters = [
+    ...(filters.bucket ? [{ id: "bucket", label: "Nhóm", value: bucketLabels[filters.bucket] ?? filters.bucket, onClear: () => setFilter("bucket", "") }] : []),
+    ...(filters.status && filters.status !== "ALL" ? [{ id: "status", label: "Trạng thái", value: statusLabels[filters.status] ?? filters.status, onClear: () => setFilter("status", "ALL") }] : []),
+    ...(filters.urgency && filters.urgency !== "ALL" ? [{ id: "urgency", label: "Mức khẩn", value: urgencyLabels[filters.urgency] ?? filters.urgency, onClear: () => setFilter("urgency", "ALL") }] : []),
+  ];
 
   return (
-    <div className="max-w-[1440px] w-full mx-auto space-y-5 pb-6 md:pb-10" data-slot="document-registry-view">
-      {/* 1. Header & Actions */}
-      <div>
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-          <Link href="/tasks" className="transition-colors hover:text-foreground hover:underline underline-offset-4">Nhiệm vụ</Link>
-          <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
-          <span className="font-medium text-foreground">Văn bản &amp; Quản lý Công văn</span>
-        </nav>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-700 border border-sky-500/20">
-                <FileText className="size-3" strokeWidth={1.5} /> Nghị định 30/2020/NĐ-CP
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
-                <CheckCircle2 className="size-3" strokeWidth={1.5} /> Liên thông Task Hub
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Sổ Quản Lý Văn Bản &amp; Công Văn Điện Tử</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              Hệ thống đăng ký, quản lý công văn đi - đến, tờ trình nội bộ và bút phê lãnh đạo theo chuẩn văn thư lưu trữ
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { fetchDocuments(); fetchStats(); }}
-              disabled={isLoading}
-              className="min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 active:scale-[0.98] cursor-pointer"
-            >
-              <RefreshCw className={cn("size-3.5 mr-1.5", isLoading && "animate-spin")} strokeWidth={1.5} />
-              <span>Làm mới</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsQuickEntryOpen(true)}
-              className="min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 active:scale-[0.98] cursor-pointer"
-            >
-              <FilePlus className="size-3.5 mr-1.5 text-primary" strokeWidth={1.5} />
-              <span>Vào sổ nhanh</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsCreateOpen(true)}
-              className="min-h-[44px] sm:min-h-9 px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.98] cursor-pointer"
-            >
-              <Plus className="size-3.5 mr-1.5" strokeWidth={1.5} />
-              <span>Soạn văn bản / Tờ trình</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. KPIs Summary */}
-      <DocumentStatsSummary stats={stats} onSelectKpi={handleSelectKpi} currentTab={filters.type} currentStatus={filters.status} currentUrgency={filters.urgency} isLoading={isLoading} />
-
-      {/* 3. Navigation Tabs - Horizontal Segmented Control theo Tasks Benchmark */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/60 border border-border/60 overflow-x-auto scrollbar-none">
-        {TAB_CONFIGS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = filters.type === tab.id;
-          const count = tab.id === "inbox" ? stats.totalInbox : tab.id === "outbox" ? stats.totalOutbox : tab.id === "submission" ? stats.totalSubmissions : stats.total;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFilter("type", tab.id)}
-              className={cn(
-                "min-h-[44px] sm:min-h-[32px] px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]",
-                isActive
-                  ? "bg-card text-foreground font-semibold shadow-2xs border border-border/70"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/40"
-              )}
-            >
-              <Icon className="size-3.5" strokeWidth={1.5} />
-              <span>{tab.label}</span>
-              {typeof count === "number" && count > 0 && (
-                <span
-                  className={cn(
-                    "text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md",
-                    isActive ? "bg-muted text-foreground" : "bg-muted/60 text-muted-foreground"
-                  )}
-                >
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 4. Filter Bar */}
-      <DocumentFilterBar
-        searchQuery={searchInputValue} onSearchChange={setSearchInputValue}
-        urgencyFilter={filters.urgency} onUrgencyChange={(urgency) => setFilter("urgency", urgency)}
-        statusFilter={filters.status} onStatusChange={(status) => setFilter("status", status)}
-        departmentFilter={filters.leadUnitId} onDepartmentChange={(deptId) => setFilter("leadUnitId", deptId)}
-        yearFilter={filters.documentYear ? String(filters.documentYear) : "ALL"} onYearChange={(year) => setFilter("documentYear", year === "ALL" ? undefined : parseInt(year, 10))}
-        onExportExcel={handleExportExcel} isExporting={isExporting} onResetFilters={resetFilters} showDensityToggle
+    <div className="w-full pb-6 md:pb-10" data-slot="document-registry-view">
+      <DocumentLedgerToolbar
+        title={typeTitle[filters.type] ?? "Sổ văn bản"}
+        total={totalCount}
+        searchValue={searchInputValue}
+        onSearchChange={setSearchInputValue}
+        urgency={filters.urgency}
+        onUrgencyChange={(v) => setFilter("urgency", v)}
+        status={filters.status}
+        onStatusChange={(v) => setFilter("status", v)}
+        year={filters.documentYear}
+        onYearChange={(y) => setFilter("documentYear", y)}
+        primaryActionLabel={primaryAction.label}
+        onPrimaryAction={primaryAction.run}
+        quickCounts={quickCounts}
+        activeFilters={activeFilters}
       />
 
-      {/* 5. Main Content: Desktop Table & Mobile Card List */}
       <InboundDocumentFeatureGuide>
-        <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-xs">
+        <div className="mt-2">
           <div className="hidden sm:block">
-            <DocumentTable
-              documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
-              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll} onClearSelection={handleClearSelection}
-              onViewPdf={(doc) => setFullscreenPdfDoc(doc)} onLinkTask={(doc) => router.push(doc.linkedTaskId ? `/tasks?taskId=${doc.linkedTaskId}` : `/tasks`)}
-              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+            <DocumentLedgerTable
+              documents={documents} selectedIds={selectedIds} selectedDocumentId={selectedDocument?.id}
+              numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
+              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
+              onOpen={handleOpenDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
             />
           </div>
           <div className="block sm:hidden">
@@ -386,10 +331,15 @@ export function DocumentRegistryView() {
               isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
             />
           </div>
-          <DocumentPagination
+          <TaskPaginationBar
             currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
             onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
           />
+          {filters.type === "inbox" || filters.type === "outbox" ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {filters.type === "inbox" ? "Số đến" : "Số đi"} cấp liên tục từ 01/01 đến 31/12 hằng năm (Nghị định 30/2020/NĐ-CP).
+            </p>
+          ) : null}
         </div>
       </InboundDocumentFeatureGuide>
 

@@ -2,26 +2,30 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ChevronRight,
   ChevronDown,
-  ChevronUp,
-  Settings,
-  X,
-  Search,
-  ChevronLeft,
+  ChevronsUpDown,
   User,
-  LogOut,
+  Settings,
   Smartphone,
   HelpCircle,
-
-  Focus,
-  CircleDot,
-  MoreHorizontal,
-  SquarePen,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
+import {
+  IconSidebarHome,
+  IconSidebarTasks,
+  IconSidebarMail,
+  IconSidebarCalendar,
+  IconSidebarReports,
+  IconSidebarSend,
+  IconSidebarDocLines,
+  IconSidebarFolder,
+  IconSidebarPeople,
+  IconSidebarSettingsBracket,
+} from "@/components/layout/sidebar-rounded-icons";
 import dynamic from "next/dynamic";
 import {
   getSidebarNavItems,
@@ -158,9 +162,144 @@ export function handleSidebarShortcut(
   return false;
 }
 
-const SECTIONS: { key: NavigationSection; label?: string }[] = [
-  { key: "work" },
-  { key: "org", label: "Tổ chức" },
+export interface SidebarNavSubItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }>;
+  badgeKey?: string;
+  defaultBadge?: number;
+  aliases?: string[];
+  isMaintenance?: boolean;
+  /** Menu con lồng nhau (chỉ hiển thị khi sidebar mở rộng). */
+  children?: SidebarNavChild[];
+}
+
+export interface SidebarNavChild {
+  id: string;
+  label: string;
+  href: string;
+  badgeKey: string;
+}
+
+export interface SidebarNavGroup {
+  id: string;
+  label?: string;
+  collapsible?: boolean;
+  items: SidebarNavSubItem[];
+}
+
+/**
+ * Danh mục nhóm điều hướng bám sát thiết kế chuẩn (3. Danh sách · 1440×900@1x.png)
+ * Sử dụng bộ icon bo tròn mềm mại đồng bộ với Vector 2758.svg và mẫu UI
+ */
+const SIDEBAR_NAV_GROUPS: SidebarNavGroup[] = [
+  // 1. Nhóm chính (Core Workspace): Tổng quan, Hộp thư, Nhiệm vụ, Lịch công tác
+  {
+    id: "core",
+    items: [
+      {
+        id: "desk",
+        label: "Tổng quan",
+        href: "/",
+        icon: IconSidebarHome,
+        aliases: ["/dashboard", "/workbench"],
+      },
+      {
+        id: "inbox",
+        label: "Hộp thư",
+        href: "/inbox",
+        icon: IconSidebarMail,
+        badgeKey: "notifications",
+        defaultBadge: 4,
+        aliases: ["/notifications"],
+      },
+      {
+        id: "tasks",
+        label: "Nhiệm vụ",
+        href: "/tasks",
+        icon: IconSidebarTasks,
+        badgeKey: "taskAttention",
+        aliases: ["/unit-tasks"],
+      },
+      {
+        id: "calendar",
+        label: "Lịch công tác",
+        href: "/calendar",
+        icon: IconSidebarCalendar,
+        badgeKey: "calendar",
+        aliases: ["/meetings"],
+      },
+    ],
+  },
+  // 2. Nhóm Văn bản: Văn bản đến, Văn bản đi, Tờ trình nội bộ, Hồ sơ công việc
+  {
+    id: "documents",
+    label: "Văn bản",
+    collapsible: true,
+    items: [
+      {
+        id: "docs-incoming",
+        label: "Văn bản đến",
+        href: "/documents?type=inbox",
+        icon: IconSidebarReports,
+        aliases: ["/documents/incoming"],
+        children: [
+          { id: "docs-incoming-pending", label: "Chờ xử lý", href: "/documents?type=inbox&bucket=pending", badgeKey: "docsIncomingPending" },
+          { id: "docs-incoming-done", label: "Đã xử lý", href: "/documents?type=inbox&bucket=done", badgeKey: "docsIncomingDone" },
+        ],
+      },
+      {
+        id: "docs-outgoing",
+        label: "Văn bản đi",
+        href: "/documents?type=outbox",
+        icon: IconSidebarSend,
+        aliases: ["/documents/outgoing"],
+        children: [
+          { id: "docs-outgoing-pending", label: "Chờ xử lý", href: "/documents?type=outbox&bucket=pending", badgeKey: "docsOutgoingPending" },
+          { id: "docs-outgoing-done", label: "Đã xử lý", href: "/documents?type=outbox&bucket=done", badgeKey: "docsOutgoingDone" },
+          { id: "docs-outgoing-issued", label: "Đã phát hành", href: "/documents?type=outbox&bucket=issued", badgeKey: "docsOutgoingIssued" },
+        ],
+      },
+      {
+        id: "docs-internal",
+        label: "Tờ trình nội bộ",
+        href: "/documents?tab=submission",
+        icon: IconSidebarDocLines,
+        aliases: ["/documents/internal", "/documents?tab=submission", "/documents?tab=pending", "/documents?type=submission"],
+      },
+      {
+        id: "docs-dossiers",
+        label: "Hồ sơ công việc",
+        href: "/documents?tab=dossiers",
+        icon: IconSidebarFolder,
+        aliases: ["/documents/dossiers", "/documents?tab=archive", "/documents?type=dossier", "/dossiers"],
+      },
+    ],
+  },
+  // 3. Nhóm Đơn vị: Cơ cấu & Danh bạ, Thêm
+  {
+    id: "org",
+    label: "Đơn vị",
+    collapsible: true,
+    items: [
+      {
+        id: "org-directory",
+        label: "Cơ cấu & Danh bạ",
+        href: "/org",
+        icon: IconSidebarPeople,
+        aliases: ["/organization", "/directory", "/?zone=org"],
+      },
+      {
+        id: "more",
+        label: "Thêm",
+        href: "/settings",
+        icon: IconSidebarSettingsBracket,
+        defaultBadge: 1,
+        aliases: ["/settings", "/more"],
+      },
+    ],
+  },
 ];
 
 export function AppSidebar() {
@@ -169,6 +308,7 @@ export function AppSidebar() {
     toggleCollapse,
     sidebarWidthMotion,
     badgeCounts,
+    setBadgeCounts,
   } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -176,10 +316,47 @@ export function AppSidebar() {
   const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
-  const profileDropdownRef = React.useRef<HTMLDivElement>(null);
   const accountTriggerRef = React.useRef<HTMLButtonElement>(null);
 
-  // ponytail: click-outside handled by Base UI Popover
+  // Quản lý trạng thái mở/đóng của các nhóm collapsible
+  const [collapsedGroups, setCollapsedGroups] = React.useState<Record<string, boolean>>({});
+
+  const toggleGroup = React.useCallback((groupId: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  }, []);
+
+  // Menu con có thể mở/đóng thủ công; mặc định mở khi đang ở bên trong.
+  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
+
+  // Số đếm thật cho menu con "Văn bản" (theo quyền đọc của người dùng).
+  const docsUserId = user?.id;
+  React.useEffect(() => {
+    if (!docsUserId) return;
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/documents/stats", { signal: ctrl.signal });
+        if (!res.ok) return;
+        const json = await res.json();
+        const b = json?.data?.buckets;
+        if (!b) return;
+        setBadgeCounts((prev) => ({
+          ...prev,
+          docsIncomingPending: b.incomingPending ?? 0,
+          docsIncomingDone: b.incomingDone ?? 0,
+          docsOutgoingPending: b.outgoingPending ?? 0,
+          docsOutgoingDone: b.outgoingDone ?? 0,
+          docsOutgoingIssued: b.outgoingIssued ?? 0,
+        }));
+      } catch {
+        // giữ nguyên số đếm cũ khi lỗi mạng
+      }
+    })();
+    return () => ctrl.abort();
+  }, [docsUserId, pathname, searchParams, setBadgeCounts]);
 
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
@@ -230,16 +407,6 @@ export function AppSidebar() {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search", { detail: { open: true } }));
   }, []);
 
-  // Quick create task helper
-  const handleQuickCreate = React.useCallback(() => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
-    }
-    if (pathname !== "/tasks") {
-      router.push("/tasks?create=true");
-    }
-  }, [pathname, router]);
-
   // Global shortcuts: ⌘K / Ctrl+K and ⌘B / Ctrl+B
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -265,64 +432,47 @@ export function AppSidebar() {
 
   // Helper to determine if a nav item is active
   const isItemActive = React.useCallback(
-    (item: DesktopSidebarItem) => {
+    (item: SidebarNavSubItem) => {
       return isRouteActive(
         item.href,
         pathname,
         searchParams,
-        (item.aliases as string[]) || (item.id === "tasks" ? ["/unit-tasks"] : undefined)
+        item.aliases
       );
     },
     [pathname, searchParams]
   );
 
-  // Helper to get badge counter and variant
-  const getBadgeInfo = React.useCallback(
-    (item: DesktopSidebarItem): {
-      text: string;
-      variant: "primary" | "sky" | "rose" | "amber" | "muted";
-    } | null => {
-      let text: string | number | undefined;
-      let variant: "primary" | "sky" | "rose" | "amber" | "muted" = "primary";
+  // Helper to get badge counter
+  const getBadgeNumber = React.useCallback(
+    (item: SidebarNavSubItem): string | null => {
+      let val: string | number | undefined;
 
       if (item.badgeKey && badgeCounts?.[item.badgeKey] !== undefined) {
-        text = badgeCounts[item.badgeKey];
-      } else if (item.href === "/calendar") {
-        text = badgeCounts?.calendar;
-      } else if (item.href === "/inbox" || item.href === "/notifications") {
-        text = badgeCounts?.notifications;
-      } else if (item.href === "/documents") {
-        text = badgeCounts?.docsInbox;
-      } else if (item.href === "/tasks") {
-        text = badgeCounts?.taskAttention ?? badgeCounts?.tasks;
+        val = badgeCounts[item.badgeKey];
+      } else if (item.defaultBadge !== undefined) {
+        val = item.defaultBadge;
       }
 
-      if (item.badgeKey === "calendar" || item.href === "/calendar") {
-        variant = "sky";
-      } else if (item.badgeKey === "notifications" || item.href === "/inbox" || item.href === "/notifications") {
-        variant = "rose";
-      } else if (item.badgeKey === "docsInbox" || item.href === "/documents") {
-        variant = "amber";
-      } else if (
-        item.badgeKey === "tasks" ||
-        item.badgeKey === "taskAttention" ||
-        item.href === "/tasks"
-      ) {
-        variant = "primary";
-      } else {
-        variant = "muted";
-      }
-
-      if (
-        text === undefined ||
-        text === null ||
-        text === "" ||
-        text === 0 ||
-        text === "0"
-      ) {
+      if (val === undefined || val === null || val === "" || val === 0 || val === "0") {
         return null;
       }
-      return { text: String(text), variant };
+      return String(val);
+    },
+    [badgeCounts]
+  );
+
+  const isChildActive = React.useCallback(
+    (child: SidebarNavChild) => isRouteActive(child.href, pathname, searchParams),
+    [pathname, searchParams]
+  );
+
+  const getChildBadge = React.useCallback(
+    (child: SidebarNavChild): string | null => {
+      const val = badgeCounts?.[child.badgeKey];
+      return val === undefined || val === null || val === "" || val === 0 || val === "0"
+        ? null
+        : String(val);
     },
     [badgeCounts]
   );
@@ -334,358 +484,414 @@ export function AppSidebar() {
       ? "Trưởng đơn vị"
       : "Chuyên viên";
 
-  const userDepartment =
-    user?.department ||
-    user?.departmentCode ||
-    "Trường QCET";
-
-  const roleDepartmentSubtitle = React.useMemo(() => {
-    const role = userRoleLabel || "";
-    const dept = userDepartment || "";
-    if (!dept || dept === "Trường QCET" || role.trim().toLowerCase() === dept.trim().toLowerCase()) {
-      return role || dept;
-    }
-    return `${role} • ${dept}`;
-  }, [userRoleLabel, userDepartment]);
-
   return (
     <TooltipProvider>
       <>
-      <m.aside
-        id="app-sidebar"
-        data-slot="app-sidebar"
-        aria-label="Thanh điều hướng chính"
-        style={{ width: sidebarWidthMotion }}
-        className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
-      >
-        {/* ========================================================= */}
-        {/* 1. SIDEBAR TOP HEADER: USER IDENTITY + SEARCH + CREATE */}
-        {/* ========================================================= */}
-        <Menu.Root open={isProfileDropdownOpen && Boolean(user)} onOpenChange={(open) => setIsProfileDropdownOpen(open)}>
-        <div className="shrink-0 w-full relative" ref={profileDropdownRef}>
-          {/* Header: Avatar + Name + Chevron (Left) & Search + Floating Create (Right) */}
-          <div className="px-2.5 pt-3 pb-1 flex items-center justify-between gap-1.5 w-full">
-            {/* Left: User Identity / Account Menu Trigger */}
-            <Menu.Trigger
-              ref={accountTriggerRef}
-              type="button"
-              className={cn(
-                "h-[30px] flex items-center gap-1 px-1.5 rounded-[6px] transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 group/user shrink-0",
-                isProfileDropdownOpen
-                  ? "bg-black/[0.06] dark:bg-white/[0.08]"
-                  : "hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
-              )}
-              aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
-              aria-expanded={isProfileDropdownOpen}
-            >
-              <UserAvatar
-                name={formatDisplayName(user?.name)}
-                avatarUrl={user?.avatar}
-                size="sm"
-              />
-              {!isCollapsed && (
-                <ChevronDown
-                  size={11}
-                  strokeWidth={1.5}
-                  className={cn(
-                    "text-muted-foreground/50 shrink-0 ml-0.5 transition-transform duration-200",
-                    isProfileDropdownOpen && "rotate-180 text-foreground"
-                  )}
+        <m.aside
+          id="app-sidebar"
+          data-slot="app-sidebar"
+          aria-label="Thanh điều hướng chính"
+          style={{ width: sidebarWidthMotion }}
+          className="fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col bg-sidebar text-foreground select-none group/sidebar overflow-hidden"
+        >
+          {/* ========================================================= */}
+          {/* 1. SIDEBAR TOP HEADER: QCET LOGO + QCET E-OFFICE          */}
+          {/* ========================================================= */}
+          <div className="shrink-0 w-full pt-3.5 pb-2.5 px-3">
+            <div className={cn(
+              "flex items-center",
+              isCollapsed ? "justify-center" : "justify-between"
+            )}>
+              <Link
+                href="/"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg py-1 transition-opacity hover:opacity-90 outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  isCollapsed ? "justify-center px-0" : "px-1.5"
+                )}
+                title="QCET E-Office"
+              >
+                <Image
+                  src="/logo-qcet.png"
+                  alt="QCET"
+                  width={24}
+                  height={24}
+                  className="size-6 rounded-full object-contain shrink-0"
+                  priority
                 />
-              )}
-            </Menu.Trigger>
+                {!isCollapsed && (
+                  <span className="font-semibold text-[13.5px] tracking-tight text-foreground truncate select-none">
+                    QCET E-Office
+                  </span>
+                )}
+              </Link>
 
-            {/* Right: Quick Action Buttons — hidden when collapsed (shown below as rail items) */}
-            {!isCollapsed && (
-              <div className="flex items-center gap-0.5 shrink-0 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleOpenSearch}
-                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    aria-label="Tìm kiếm (⌘K)"
-                  >
-                    <Search size={14} strokeWidth={1.5} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}>
-                  <span>Tìm kiếm [⌘K]</span>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleQuickCreate}
-                    className="size-7 rounded-[6px] flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    aria-label="Giao việc mới (C)"
-                  >
-                    <SquarePen size={14} strokeWidth={1.5} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}>
-                  <span>Giao việc mới [C]</span>
-                </TooltipContent>
-              </Tooltip>
             </div>
-            )}
           </div>
 
-          {/* Account dropdown via Base UI Popover */}
+          {/* ========================================================= */}
+          {/* 2. NAVIGATION ITEMS BODY                                  */}
+          {/* ========================================================= */}
+          <div className="overflow-y-auto flex-1 px-2.5 pt-1.5 pb-2 space-y-3 thin-scrollbar">
+            {SIDEBAR_NAV_GROUPS.map((group) => {
+              const isGroupCollapsed = Boolean(collapsedGroups[group.id]);
 
-          <Menu.Portal>
-          <Menu.Positioner className="z-50" align="start" sideOffset={6} collisionPadding={12}>
-          <Menu.Popup style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-            className="w-56 p-1 shadow-dropdown border border-border/80 bg-popover rounded-xl text-popover-foreground"
-            role="menu"
-            aria-label="Menu tài khoản"
-          >
-            {user && (
-              <div>
-                {isOfflineReadOnly && (
-                  <div className="mb-1.5 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
-                    Chế độ chỉ xem từ bộ nhớ tạm.
-                  </div>
-                )}
-
-                {/* Menu Items */}
-                <div className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      setIsProfileModalOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
-                  >
-                    <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                    <span>Hồ sơ cá nhân</span>
-                  </button>
-
-                  <Link
-                    href="/settings"
-                    onClick={() => setIsProfileDropdownOpen(false)}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
-                  >
-                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                    <span>Cài đặt hệ thống</span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      if (typeof window !== "undefined") {
-                        window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                      }
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
-                  >
-                    <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
-                    <span>Cài đặt ứng dụng di động</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      if (typeof window !== "undefined") {
-                        window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
-                      }
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-black/[0.04] transition-colors cursor-pointer text-left"
-                  >
-                    <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
-                    <span>Trợ giúp &amp; Hướng dẫn</span>
-                  </button>
-                </div>
-
-                {/* Logout */}
-                <div className="border-t border-black/[0.06] pt-1 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      logout();
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
-                  >
-                    <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
-                    <span>Đăng xuất</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </Menu.Popup>
-          </Menu.Positioner>
-          </Menu.Portal>
-
-        </div>
-        </Menu.Root>
-
-        {/* ========================================================= */}
-        {/* 2. NAVIGATION ITEMS BODY                                  */}
-        {/* ========================================================= */}
-        <div className="overflow-y-auto flex-1 px-2.5 pt-5 pb-3 space-y-3.5 thin-scrollbar">
-          {SECTIONS.map((sec) => {
-            const items = SINGLE_TIER_NAV_ITEMS.filter(
-              (item) => item.section === sec.key
-            );
-            if (items.length === 0) return null;
-            return (
-              <div
-                key={sec.key}
-                className={cn(
-                  "space-y-0.5",
-                  isCollapsed && sec.label && "mt-2 border-t border-border/60 pt-2"
-                )}
-              >
-                {sec.label && !isCollapsed ? (
-                  <div className="text-[11.5px] font-medium text-muted-foreground/60 px-2 pt-2 pb-1 select-none flex items-center gap-1">
-                    <span>{sec.label}</span>
-                    <ChevronDown size={10} strokeWidth={1.5} className="text-muted-foreground/40 opacity-70" />
-                  </div>
-                ) : null}
-                <div className="space-y-0.5">
-                  {items.map((item) => {
-                    const active = isItemActive(item);
-                    const Icon = item.icon;
-                    const badge = getBadgeInfo(item);
-                    return (
-                      <Tooltip key={item.id}>
-                        <TooltipTrigger asChild>
-                        <Link
-                          href={item.href}
-                          onClick={(e) => {
-                            if (item.isMaintenance) {
-                              e.preventDefault();
-                              setMaintenanceDialog({
-                                isOpen: true,
-                                title: item.label,
-                                feature: item.id,
-                              });
-                              return;
-                            }
-                          }}
-                          aria-current={active ? "page" : undefined}
-                          aria-label={item.label}
-                          className={cn(
-                            "group relative flex items-center rounded-[6px] h-[30px] text-[13px] transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
-                            isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-2",
-                            active
-                              ? "bg-bg-selected text-foreground font-medium"
-                              : "text-[#555a64] dark:text-zinc-400 hover:text-foreground hover:bg-black/[0.035] dark:hover:bg-white/[0.04] font-normal"
-                          )}
-                        >
-                          <span className="shrink-0 flex items-center justify-center size-4">
-                            <Icon
-                              className={cn(
-                                "size-4 shrink-0 transition-colors",
-                                active
-                                  ? "text-action"
-                                  : "text-muted-foreground/75 group-hover:text-foreground"
-                              )}
-                            />
-                          </span>
-                          <span
-                            aria-hidden={isCollapsed}
-                            className={cn(
-                              "truncate flex-1 text-[13px] tracking-tight transition-[opacity,max-width] duration-[200ms] ease-[var(--motion-ease-enter)]",
-                              isCollapsed ? "opacity-0 max-w-0 pointer-events-none" : "opacity-100 max-w-full"
-                            )}
-                          >{item.label}</span>
-                          {badge && !isCollapsed ? (
-                            <span
-                              className="inline-flex items-center justify-center min-w-[15px] h-3.5 px-1 rounded-full text-[9px] font-mono font-medium tabular-nums leading-none select-none ml-auto shrink-0 bg-muted/80 text-muted-foreground border border-border/60"
-                            >
-                              {badge.text}
-                            </span>
-                          ) : null}
-                        </Link>
-                        </TooltipTrigger>
-                        {isCollapsed && (
-                          <TooltipContent side="right" sideOffset={8}>
-                            <span>{item.label}{badge ? ` (${badge.text})` : ""}</span>
-                          </TooltipContent>
+              return (
+                <div key={group.id} className="space-y-0.5">
+                  {/* Group Section Header (Văn bản, Đơn vị) */}
+                  {group.label && !isCollapsed ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.id)}
+                      className="w-full flex items-center gap-1 px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground transition-colors text-left cursor-pointer group/gh"
+                    >
+                      <span>{group.label}</span>
+                      <ChevronDown
+                        size={11}
+                        strokeWidth={1.5}
+                        className={cn(
+                          "text-muted-foreground/70 transition-transform duration-150 shrink-0",
+                          isGroupCollapsed && "-rotate-90"
                         )}
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      />
+                    </button>
+                  ) : null}
 
-        {/* ========================================================= */}
-        {/* 3. SIDEBAR BOTTOM FOOTER: GLOBAL HELP & SHORTCUTS (?) */}
-        {/* ========================================================= */}
-        <div className="shrink-0 px-3 py-2.5 mt-auto flex items-center">
+                  {/* Divider when collapsed */}
+                  {group.label && isCollapsed ? (
+                    <div className="w-6 mx-auto my-2 border-t border-border/50" />
+                  ) : null}
+
+                  {/* Group Items */}
+                  {(!group.label || !isGroupCollapsed) && (
+                    <div className="space-y-0.5">
+                      {group.items.map((item) => {
+                        const hasActiveChild = Boolean(item.children?.some(isChildActive));
+                        const active = isItemActive(item) && !hasActiveChild;
+                        const Icon = item.icon;
+                        const children = item.children;
+                        const isExpanded = expandedItems[item.id] ?? (hasActiveChild || isItemActive(item));
+                        const badgeText = children
+                          ? (() => {
+                              const pending = badgeCounts?.[children[0].badgeKey];
+                              return pending ? String(pending) : null;
+                            })()
+                          : getBadgeNumber(item);
+
+                        return (
+                          <React.Fragment key={item.id}>
+                          <div className="relative">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={item.href}
+                                onClick={(e) => {
+                                  if (item.isMaintenance) {
+                                    e.preventDefault();
+                                    setMaintenanceDialog({
+                                      isOpen: true,
+                                      title: item.label,
+                                      feature: item.id,
+                                    });
+                                    return;
+                                  }
+                                }}
+                                aria-current={active ? "page" : undefined}
+                                aria-label={item.label}
+                                className={cn(
+                                  "group relative flex items-center transition-colors duration-150 select-none overflow-hidden whitespace-nowrap",
+                                  isCollapsed
+                                    ? "size-10 mx-auto justify-center rounded-xl p-0"
+                                    : "gap-2.5 px-2 h-8 rounded-md text-[13px]",
+                                  !isCollapsed && children && "pr-7",
+                                  active
+                                    ? "bg-[#EAEDF1] text-foreground font-medium"
+                                    : "text-foreground/80 hover:text-foreground hover:bg-muted/50 font-medium"
+                                )}
+                              >
+                                <span className={cn(
+                                  "shrink-0 flex items-center justify-center",
+                                  isCollapsed ? "size-6" : "size-4"
+                                )}>
+                                  <Icon
+                                    size={isCollapsed ? 19 : 16}
+                                    strokeWidth={1.5}
+                                    className={cn(
+                                      isCollapsed ? "size-[19px]" : "size-4",
+                                      "shrink-0 transition-colors",
+                                      active
+                                        ? "text-foreground"
+                                        : "text-foreground/70 group-hover:text-foreground"
+                                    )}
+                                  />
+                                </span>
+
+                                {!isCollapsed && (
+                                  <>
+                                    <span className="truncate flex-1 text-[13px] tracking-tight">
+                                      {item.label}
+                                    </span>
+                                    {badgeText ? (
+                                      <span className="text-[12px] font-normal text-muted-foreground/75 tabular-nums ml-auto shrink-0 select-none">
+                                        {badgeText}
+                                      </span>
+                                    ) : null}
+                                  </>
+                                )}
+                              </Link>
+                            </TooltipTrigger>
+                            {isCollapsed && (
+                              <TooltipContent side="right" sideOffset={8}>
+                                <span>
+                                  {item.label}
+                                  {badgeText ? ` (${badgeText})` : ""}
+                                </span>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                          {children && !isCollapsed ? (
+                            <button
+                              type="button"
+                              aria-label={isExpanded ? `Thu gọn ${item.label}` : `Mở rộng ${item.label}`}
+                              aria-expanded={isExpanded}
+                              onClick={() =>
+                                setExpandedItems((prev) => ({ ...prev, [item.id]: !isExpanded }))
+                              }
+                              className="absolute right-1 top-1/2 -translate-y-1/2 flex size-6 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                            >
+                              <ChevronDown
+                                size={12}
+                                strokeWidth={1.5}
+                                className={cn("transition-transform duration-150", !isExpanded && "-rotate-90")}
+                              />
+                            </button>
+                          ) : null}
+                          </div>
+                          {children && !isCollapsed && isExpanded ? (
+                            <div className="ml-[15px] border-l border-border/60 pl-1.5 space-y-0.5">
+                              {children.map((child) => {
+                                const childActive = isChildActive(child);
+                                const childBadge = getChildBadge(child);
+                                return (
+                                  <Link
+                                    key={child.id}
+                                    href={child.href}
+                                    aria-current={childActive ? "page" : undefined}
+                                    className={cn(
+                                      "flex items-center gap-2 px-2 h-7 rounded-md text-[13px] tracking-tight transition-colors whitespace-nowrap",
+                                      childActive
+                                        ? "bg-accent text-foreground font-medium"
+                                        : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+                                    )}
+                                  >
+                                    <span className="truncate flex-1">{child.label}</span>
+                                    {childBadge ? (
+                                      <span className="text-[12px] font-normal text-muted-foreground/75 tabular-nums shrink-0">
+                                        {childBadge}
+                                      </span>
+                                    ) : null}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ========================================================= */}
+          {/* 3. SIDEBAR BOTTOM FOOTER: USER ACCOUNT PROFILE CARD       */}
+          {/* ========================================================= */}
+          <div className="shrink-0 w-full p-2 mt-auto border-t border-border/40">
+            <Menu.Root
+              open={isProfileDropdownOpen && Boolean(user)}
+              onOpenChange={(open) => setIsProfileDropdownOpen(open)}
+            >
+              <Menu.Trigger
+                ref={accountTriggerRef}
+                type="button"
+                className={cn(
+                  "flex items-center transition-colors cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  isCollapsed
+                    ? "size-10 mx-auto justify-center rounded-xl p-0"
+                    : "w-full gap-2.5 px-2 py-1.5 rounded-lg",
+                  isProfileDropdownOpen
+                    ? "bg-muted"
+                    : "hover:bg-muted/60"
+                )}
+                aria-label={`Tài khoản: ${formatDisplayName(user?.name)}`}
+                aria-expanded={isProfileDropdownOpen}
+              >
+                <UserAvatar
+                  name={formatDisplayName(user?.name)}
+                  avatarUrl={user?.avatar}
+                  size="sm"
+                  className="shrink-0 size-7"
+                />
+
+                {!isCollapsed && (
+                  <>
+                    <div className="flex flex-col min-w-0 flex-1 leading-none gap-0.5">
+                      <span className="text-[13px] font-medium text-foreground truncate">
+                        {formatDisplayName(user?.name)}
+                      </span>
+                      <span className="text-[11.5px] text-muted-foreground truncate">
+                        {userRoleLabel}
+                      </span>
+                    </div>
+
+                    <ChevronsUpDown
+                      size={13}
+                      strokeWidth={1.5}
+                      className="text-muted-foreground/50 shrink-0 ml-1"
+                    />
+                  </>
+                )}
+              </Menu.Trigger>
+
+              {/* Account Dropdown Menu via Base UI Popover (Bay lên trên vì ở đáy) */}
+              <Menu.Portal>
+                <Menu.Positioner
+                  className="z-50"
+                  side="top"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={12}
+                >
+                  <Menu.Popup
+                    style={{
+                      maxWidth: "var(--available-width)",
+                      maxHeight: "var(--available-height)",
+                      overflowY: "auto",
+                    }}
+                    className="w-56 p-1 shadow-dropdown border border-border/80 bg-popover rounded-xl text-popover-foreground select-none"
+                    role="menu"
+                    aria-label="Menu tài khoản"
+                  >
+                    {user && (
+                      <div>
+                        {isOfflineReadOnly && (
+                          <div className="mb-1.5 p-1.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] text-amber-900 font-medium leading-relaxed">
+                            Chế độ chỉ xem từ bộ nhớ tạm.
+                          </div>
+                        )}
+
+                        {/* Menu Items */}
+                        <div className="space-y-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              setIsProfileModalOpen(true);
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                          >
+                            <User size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <span>Hồ sơ cá nhân</span>
+                          </button>
+
+                          <Link
+                            href="/settings"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                          >
+                            <Settings size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <span>Cài đặt hệ thống</span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              if (typeof window !== "undefined") {
+                                window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                              }
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                          >
+                            <Smartphone size={14} strokeWidth={1.5} className="text-primary/85 shrink-0" />
+                            <span>Cài đặt ứng dụng di động</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              if (typeof window !== "undefined") {
+                                window.dispatchEvent(new CustomEvent("qcet:open-help-guide"));
+                              }
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-normal text-foreground/90 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                          >
+                            <HelpCircle size={14} strokeWidth={1.5} className="text-muted-foreground/75 shrink-0" />
+                            <span>Trợ giúp &amp; Hướng dẫn</span>
+                          </button>
+                        </div>
+
+                        {/* Logout */}
+                        <div className="border-t border-border/60 pt-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              logout();
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-[6px] px-2.5 py-1.5 text-[12.5px] font-medium text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer text-left"
+                          >
+                            <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
+                            <span>Đăng xuất</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.Root>
+          </div>
+        </m.aside>
+
+        {/* Collapse toggle — mỏng, dính mép sidebar, chỉ hiện khi hover */}
+        <m.div
+          style={{ left: sidebarWidthMotion }}
+          className="fixed top-0 bottom-0 z-50 hidden md:flex items-center -ml-px group/collapse-trigger"
+        >
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    window.dispatchEvent(new CustomEvent("qcet:open-shortcuts"));
-                  }
-                }}
-                className="size-7 rounded-full flex items-center justify-center bg-white border border-black/12 shadow-2xs hover:shadow-xs hover:border-black/20 text-muted-foreground/80 hover:text-foreground font-mono font-semibold text-[13.5px] leading-none transition-all active:scale-[0.98] motion-reduce:transition-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label="Phím tắt và trợ giúp (?)"
+                onClick={toggleCollapse}
+                aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
+                aria-expanded={!isCollapsed}
+                aria-controls="app-sidebar"
+                className="opacity-0 group-hover/collapse-trigger:opacity-100 transition-opacity duration-150 flex h-12 w-3 items-center justify-center cursor-pointer outline-none"
               >
-                ?
+                <div className="h-6 w-[3px] rounded-full bg-border group-hover/collapse-trigger:bg-muted-foreground/50 transition-colors duration-150" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8} className="text-xs">
-              Phím tắt &amp; Trợ giúp (?)
+            <TooltipContent side="right" sideOffset={10}>
+              {isCollapsed ? "Mở rộng thanh bên [⌘B]" : "Thu gọn thanh bên [⌘B]"}
             </TooltipContent>
           </Tooltip>
-        </div>
-      </m.aside>
+        </m.div>
 
-      {/* Sidebar collapse toggle — icon sits just inside content area, fades in on hover */}
-      <m.div
-        style={{ left: sidebarWidthMotion }}
-        className="fixed top-1/2 z-50 hidden w-8 -translate-y-1/2 md:flex items-center justify-center group/collapse-trigger cursor-pointer"
-        aria-hidden="true"
-      >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
-              aria-expanded={!isCollapsed}
-              aria-controls="app-sidebar"
-              className="inline-flex size-9 items-center justify-center text-border/60 hover:text-muted-foreground transition-colors duration-[140ms] ease-[var(--motion-ease-enter)] outline-none focus-visible:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 rounded active:scale-[0.98] motion-reduce:transition-none cursor-pointer"
-            >
-              {isCollapsed ? (
-                <ChevronRight size={28} strokeWidth={1.5} aria-hidden="true" />
-              ) : (
-                <ChevronLeft size={28} strokeWidth={1.5} aria-hidden="true" />
-              )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={6}>
-            {isCollapsed ? "Mở rộng thanh bên ⌘B" : "Thu gọn thanh bên ⌘B"}
-          </TooltipContent>
-        </Tooltip>
-      </m.div>
+        {/* User Profile Modal Container */}
+        <UserProfileModal />
 
-      {/* User Profile Modal Container */}
-      <UserProfileModal />
-
-      {/* Maintenance Dialog Modal */}
-      <MaintenanceDialog
-        isOpen={maintenanceDialog.isOpen}
-        onClose={() => setMaintenanceDialog({ isOpen: false, title: "" })}
-        title={maintenanceDialog.title}
-        feature={maintenanceDialog.feature}
-        description={maintenanceDialog.description}
-      />
-    </>
+        {/* Maintenance Dialog Modal */}
+        <MaintenanceDialog
+          isOpen={maintenanceDialog.isOpen}
+          onClose={() => setMaintenanceDialog({ isOpen: false, title: "" })}
+          title={maintenanceDialog.title}
+          feature={maintenanceDialog.feature}
+          description={maintenanceDialog.description}
+        />
+      </>
     </TooltipProvider>
   );
 }

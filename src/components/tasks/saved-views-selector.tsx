@@ -56,7 +56,7 @@ function suggestFilterName(
   }
 
   if (criteria.status && criteria.status !== "all" && criteria.status !== "ALL") {
-    if (criteria.status === "overdue") parts.push("Quá hạn");
+    if (criteria.status === "overdue") parts.push("Trễ hạn");
     else if (criteria.status === "this_week" || criteria.status === "today") parts.push("Đến hạn tuần này");
     else if (criteria.status === "waiting_approval" || criteria.status === "review") parts.push("Chờ duyệt");
     else if (criteria.status === "in_progress") parts.push("Đang thực hiện");
@@ -169,7 +169,7 @@ export function SavedViewsSelector({
     }
     if (currentCriteria.status && currentCriteria.status !== "all" && currentCriteria.status !== "ALL") {
       let statusLabel = currentCriteria.status;
-      if (currentCriteria.status === "overdue") statusLabel = "Quá hạn";
+      if (currentCriteria.status === "overdue") statusLabel = "Trễ hạn";
       else if (currentCriteria.status === "this_week" || currentCriteria.status === "today") statusLabel = "Đến hạn tuần này";
       else if (currentCriteria.status === "waiting_approval" || currentCriteria.status === "review") statusLabel = "Chờ duyệt";
       items.push({ label: "Trạng thái", value: statusLabel });
@@ -513,7 +513,7 @@ export function SavedViewsSelector({
                     type="text"
                     value={newViewName}
                     onChange={(e) => setNewViewName(e.target.value)}
-                    placeholder="VD: Việc CNTT quá hạn..."
+                    placeholder="VD: Việc CNTT trễ hạn..."
                     autoFocus
                     className="w-full h-8 px-2.5 text-xs rounded border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                   />

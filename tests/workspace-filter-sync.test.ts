@@ -26,7 +26,7 @@ describe("Task 2: Workspace Filter Synchronization, Empty States & Drill-Down In
       leadDepartment: "Khoa CNTT",
       leadAssigneeId: "user-1",
       leadAssigneeName: "Nguyễn Văn A",
-      dueDate: "2026-08-01", // Quá hạn so với tham chiếu
+      dueDate: "2026-08-01", // Trễ hạn so với tham chiếu
       academicMonth: 8,
       academicYear: "2026-2027",
       subTasks: [],
@@ -63,7 +63,7 @@ describe("Task 2: Workspace Filter Synchronization, Empty States & Drill-Down In
     } as unknown as SchoolTask,
   ];
 
-  describe("1. Transition: Chọn chờ duyệt sau quá hạn", () => {
+  describe("1. Transition: Chọn chờ duyệt sau trễ hạn", () => {
     test("chuyển từ overdue sang waiting_approval loại bỏ overdue và áp dụng chờ duyệt", () => {
       // Bắt đầu ở trạng thái overdue
       const overdueState: WorkspaceFilterState = {
@@ -298,7 +298,7 @@ describe("Task 2: Workspace Filter Synchronization, Empty States & Drill-Down In
       assert.equal(result[0].id, "task-approval-1");
     });
 
-    test("lọc overdue chỉ lấy task quá hạn theo dueDate", () => {
+    test("lọc overdue chỉ lấy task trễ hạn theo dueDate", () => {
       const result = filterDisplayedTasks({
         tasks: sampleTasks,
         status: "overdue",

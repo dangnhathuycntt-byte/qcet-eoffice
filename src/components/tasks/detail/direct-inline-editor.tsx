@@ -132,6 +132,8 @@ export function DirectInlineEditor({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const viewContainerRef = React.useRef<HTMLElement>(null);
   const pendingSelectionRef = React.useRef<{ start: number; end: number } | null>(null);
+  // Giữ chiều cao khi chuyển View ⇄ Edit để bố cục không giật
+  const [lockedHeight, setLockedHeight] = React.useState<number | null>(null);
 
   const isComposingRef = React.useRef(false);
   const isFocusedRef = React.useRef(false);
@@ -242,6 +244,7 @@ export function DirectInlineEditor({
     end = Math.max(0, Math.min(end, draft.length));
 
     pendingSelectionRef.current = { start, end };
+    setLockedHeight(container.offsetHeight);
     setIsEditing(true);
   };
 
@@ -250,7 +253,7 @@ export function DirectInlineEditor({
     if (isEditing && textareaRef.current) {
       const textarea = textareaRef.current;
       adjustTextareaHeight();
-      textarea.focus();
+      textarea.focus({ preventScroll: true });
 
       if (pendingSelectionRef.current) {
         const { start, end } = pendingSelectionRef.current;
@@ -285,6 +288,7 @@ export function DirectInlineEditor({
     }
     await executeSave(draft);
     setIsEditing(false);
+    setLockedHeight(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -319,7 +323,7 @@ export function DirectInlineEditor({
   return (
     <div className={cn("relative w-full group/editor", className)}>
       {isEditing ? (
-        <div className="w-full relative">
+        <div className="w-full relative" style={lockedHeight ? { minHeight: lockedHeight } : undefined}>
           <textarea
             ref={textareaRef}
             value={draft}
@@ -373,13 +377,14 @@ export function DirectInlineEditor({
               onKeyDown: (e: React.KeyboardEvent) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
+                  setLockedHeight(viewContainerRef.current?.offsetHeight ?? null);
                   setIsEditing(true);
                 }
               },
             } : {})}
             className={cn(
-              "block w-full cursor-text select-text transition-colors p-0 m-0",
-              canEdit && "hover:text-foreground/85 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+              "block w-full cursor-text select-text p-0 m-0",
+              canEdit && "hover:text-foreground/85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
               viewClassName
             )}
             title={canEdit ? "Nhấp vào vị trí bất kỳ để chỉnh sửa" : undefined}

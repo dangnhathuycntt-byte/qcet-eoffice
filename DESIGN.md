@@ -28,6 +28,16 @@ Hướng dẫn agent nằm ở [AGENTS.md](AGENTS.md). Tệp này chỉ dẫn ng
 
 `--gray-5: #DEE2E8` vẫn tồn tại trong thang xám, nhưng không phải token ngữ nghĩa vùng chọn hiện tại. Hover và selected là hai trạng thái khác nhau.
 
+## Quy ước giao diện nhiệm vụ đã duyệt (phiên 2026-10)
+
+Các điểm dưới đây do người dùng duyệt trực tiếp khi chỉnh danh sách và chi tiết nhiệm vụ; chỉ áp cho phạm vi này, không tự mở rộng sang trang khác.
+
+- Thang chữ gọn: `text-compact` (13px) cho nội dung chính, `text-xs` (12px) cho nhãn, số phụ, tab; không dùng cỡ lẻ 9/10/11px. Nét icon 1,5px (lint bắt buộc).
+- Icon nhiệm vụ lấy từ một nguồn: [task-icons.tsx](src/lib/icons/task-icons.tsx) (lưới 19×19, `currentColor`). Trạng thái hiển thị bằng [TaskStatusCircle](src/components/tasks/task-status-circle.tsx), ưu tiên bằng [PrioritySignalBars](src/components/tasks/priority-signal-bars.tsx); không tự vẽ chấm hay icon lucide thay thế.
+- Hạn hoàn thành dùng `getDueIndicator` trong [table-date-helpers.ts](src/components/tasks/table/utils/table-date-helpers.ts): đỏ khi trễ hoặc hôm nay, cam trong 7 ngày, còn lại xám; việc đã hoàn thành/hủy luôn xám.
+- Chi tiết nhiệm vụ: trang cha và khung việc con dùng chung `TaskStatusSelect`, `TaskAssigneePicker`, `TaskDateRange` ([task-property-controls.tsx](src/components/tasks/detail/task-property-controls.tsx)). Cột phải gồm hai thẻ viền mảnh (Thuộc tính, Việc con); chỉ ô điều khiển sáng lên khi hover, không tô nền cả hàng. Tab "Tổng quan / Hoạt động" căn trái dưới dải đầu trang; thanh breadcrumb desktop ẩn ở `/tasks` và `/tasks/[id]`.
+- Mô tả nhiệm vụ tự lưu sau 0,8 giây và hiện "Đang lưu… / Đã lưu" ở góc editor.
+
 ## Component và trạng thái
 
 - Font Be Vietnam Pro được cấu hình trong [layout.tsx](src/app/layout.tsx); chọn cỡ và weight theo bảng liên quan, không suy ra weight mới chỉ vì font đã được nạp.

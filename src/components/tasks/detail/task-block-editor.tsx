@@ -61,6 +61,25 @@ import { BaseCalloutPlugin } from "@platejs/callout";
 import { BaseListPlugin, BulletedListRules, OrderedListRules, TaskListRules } from "@platejs/list";
 import { BaseIndentPlugin, indent as plateIndent, outdent as plateOutdent } from "@platejs/indent";
 import { LinkPlugin, triggerFloatingLinkInsert } from "@platejs/link/react";
+import {
+  TaskIconBlockText,
+  TaskIconBlockBulletList,
+  TaskIconBlockNumberedList,
+  TaskIconBlockChecklist,
+  TaskIconBlockHeading1,
+  TaskIconBlockHeading2,
+  TaskIconBlockHeading3,
+  TaskIconBlockQuote,
+  TaskIconBlockCallout,
+  TaskIconBlockTable,
+  TaskIconBlockToggle,
+  TaskIconBlockImage,
+  TaskIconBlockAttachment,
+  TaskIconBlockEmbed,
+  TaskIconBlockBookmark,
+  TaskIconBlockLink,
+  TaskIconBlockDivider,
+} from "@/lib/icons/task-icons";
 import { SlashPlugin, SlashInputPlugin } from "@platejs/slash-command/react";
 import { BlockSelectionPlugin, useBlockSelectable, useBlockSelected } from "@platejs/selection/react";
 import { DndPlugin, useDraggable, useDropLine } from "@platejs/dnd";
@@ -118,6 +137,7 @@ import {
   Bookmark,
   Globe,
   UploadCloud,
+  Loader2,
   Highlighter,
   Table as TableIcon,
   AtSign,
@@ -210,6 +230,8 @@ export interface TaskBlockEditorProps {
   subTasks?: StaffTask[];
   canEdit?: boolean;
   globalFileDrop?: boolean;
+  /** Bộ chọn CSS của vùng cuộn dùng làm phạm vi kéo chọn nhiều khối (mặc định: chỉ trong khung soạn thảo) */
+  selectionContainerSelector?: string;
   showFixedToolbar?: boolean;
   onSaveContent: (newContent: string) => Promise<void> | void;
   onSelectSubtask?: (subtask: StaffTask) => void;
@@ -323,23 +345,23 @@ interface MenuItemOption {
 }
 
 const MENU_OPTIONS: MenuItemOption[] = [
-  { id: "opt-text", type: "text", group: "Soạn thảo", title: "Văn bản", description: "Văn bản thuần túy, tự do định dạng", icon: Type, shortcut: "text" },
-  { id: "opt-bulleted", type: "bulleted_list", group: "Danh sách", title: "Danh sách dấu đầu dòng", description: "Danh sách dấu chấm đầu dòng", icon: List, shortcut: "-" },
-  { id: "opt-numbered", type: "numbered_list", group: "Danh sách", title: "Danh sách đánh số", description: "Danh sách đánh số thứ tự", icon: ListOrdered, shortcut: "1." },
-  { id: "opt-checklist", type: "checklist", group: "Danh sách", title: "Checklist", description: "Danh sách việc cần làm có ô đánh dấu", icon: CheckSquare, shortcut: "[]" },
-  { id: "opt-h1", type: "heading", level: 1, group: "Tiêu đề", title: "Tiêu đề 1", description: "Tiêu đề lớn phân mục chính", icon: Heading1, shortcut: "#" },
-  { id: "opt-h2", type: "heading", level: 2, group: "Tiêu đề", title: "Tiêu đề 2", description: "Tiêu đề vừa", icon: Heading2, shortcut: "##" },
-  { id: "opt-h3", type: "heading", level: 3, group: "Tiêu đề", title: "Tiêu đề 3", description: "Tiêu đề nhỏ", icon: Heading3, shortcut: "###" },
-  { id: "opt-quote", type: "quote", group: "Trích dẫn & Ghi chú", title: "Trích dẫn", description: "Trích dẫn ý kiến hoặc chỉ đạo", icon: Quote, shortcut: ">" },
-  { id: "opt-callout", type: "callout", group: "Trích dẫn & Ghi chú", title: "Ghi chú nổi bật", description: "Hộp lưu ý hoặc thông điệp quan trọng", icon: Info },
-  { id: "opt-table", type: "table", group: "Bảng biểu & Cấu trúc", title: "Bảng biểu", description: "Tạo bảng dữ liệu phân công, báo cáo", icon: TableIcon, shortcut: "/table" },
-  { id: "opt-toggle", type: "toggle", group: "Bảng biểu & Cấu trúc", title: "Khối thu gọn (Toggle)", description: "Thu gọn hướng dẫn, danh mục dài", icon: ChevronRight, shortcut: "/toggle" },
-  { id: "opt-image", type: "image", group: "Phương tiện & Tệp", title: "Hình ảnh", description: "Tải lên hoặc dán hình ảnh trực quan", icon: ImageIcon, shortcut: "/image" },
-  { id: "opt-attachment", type: "attachment", group: "Phương tiện & Tệp", title: "Tệp đính kèm", description: "Đính kèm tệp PDF, DOCX, bảng tính", icon: Paperclip, shortcut: "/file" },
-  { id: "opt-media-embed", type: "media_embed", group: "Phương tiện & Tệp", title: "Nhúng phương tiện", description: "Nhúng video hướng dẫn YouTube/Loom/Drive", icon: Tv, shortcut: "/embed" },
-  { id: "opt-bookmark", type: "bookmark", group: "Liên kết", title: "Dấu trang web", description: "Thẻ xem trước trực quan cho liên kết", icon: Bookmark, shortcut: "/bookmark" },
-  { id: "opt-link", type: "link", group: "Liên kết", title: "Liên kết", description: "Đường dẫn liên kết web hoặc tài liệu ngoài", icon: Link2, shortcut: "/link" },
-  { id: "opt-divider", type: "divider", group: "Phân cách", title: "Đường phân cách", description: "Đường kẻ chia tách phân đoạn", icon: Minus, shortcut: "---" },
+  { id: "opt-text", type: "text", group: "Soạn thảo", title: "Văn bản", description: "Văn bản thuần túy, tự do định dạng", icon: TaskIconBlockText, shortcut: "text" },
+  { id: "opt-bulleted", type: "bulleted_list", group: "Danh sách", title: "Danh sách dấu đầu dòng", description: "Danh sách dấu chấm đầu dòng", icon: TaskIconBlockBulletList, shortcut: "-" },
+  { id: "opt-numbered", type: "numbered_list", group: "Danh sách", title: "Danh sách đánh số", description: "Danh sách đánh số thứ tự", icon: TaskIconBlockNumberedList, shortcut: "1." },
+  { id: "opt-checklist", type: "checklist", group: "Danh sách", title: "Checklist", description: "Danh sách việc cần làm có ô đánh dấu", icon: TaskIconBlockChecklist, shortcut: "[]" },
+  { id: "opt-h1", type: "heading", level: 1, group: "Tiêu đề", title: "Tiêu đề 1", description: "Tiêu đề lớn phân mục chính", icon: TaskIconBlockHeading1, shortcut: "#" },
+  { id: "opt-h2", type: "heading", level: 2, group: "Tiêu đề", title: "Tiêu đề 2", description: "Tiêu đề vừa", icon: TaskIconBlockHeading2, shortcut: "##" },
+  { id: "opt-h3", type: "heading", level: 3, group: "Tiêu đề", title: "Tiêu đề 3", description: "Tiêu đề nhỏ", icon: TaskIconBlockHeading3, shortcut: "###" },
+  { id: "opt-quote", type: "quote", group: "Trích dẫn & Ghi chú", title: "Trích dẫn", description: "Trích dẫn ý kiến hoặc chỉ đạo", icon: TaskIconBlockQuote, shortcut: ">" },
+  { id: "opt-callout", type: "callout", group: "Trích dẫn & Ghi chú", title: "Ghi chú nổi bật", description: "Hộp lưu ý hoặc thông điệp quan trọng", icon: TaskIconBlockCallout },
+  { id: "opt-table", type: "table", group: "Bảng biểu & Cấu trúc", title: "Bảng biểu", description: "Tạo bảng dữ liệu phân công, báo cáo", icon: TaskIconBlockTable, shortcut: "/table" },
+  { id: "opt-toggle", type: "toggle", group: "Bảng biểu & Cấu trúc", title: "Khối thu gọn (Toggle)", description: "Thu gọn hướng dẫn, danh mục dài", icon: TaskIconBlockToggle, shortcut: "/toggle" },
+  { id: "opt-image", type: "image", group: "Phương tiện & Tệp", title: "Hình ảnh", description: "Tải lên hoặc dán hình ảnh trực quan", icon: TaskIconBlockImage, shortcut: "/image" },
+  { id: "opt-attachment", type: "attachment", group: "Phương tiện & Tệp", title: "Tệp đính kèm", description: "Đính kèm tệp PDF, DOCX, bảng tính", icon: TaskIconBlockAttachment, shortcut: "/file" },
+  { id: "opt-media-embed", type: "media_embed", group: "Phương tiện & Tệp", title: "Nhúng phương tiện", description: "Nhúng video hướng dẫn YouTube/Loom/Drive", icon: TaskIconBlockEmbed, shortcut: "/embed" },
+  { id: "opt-bookmark", type: "bookmark", group: "Liên kết", title: "Dấu trang web", description: "Thẻ xem trước trực quan cho liên kết", icon: TaskIconBlockBookmark, shortcut: "/bookmark" },
+  { id: "opt-link", type: "link", group: "Liên kết", title: "Liên kết", description: "Đường dẫn liên kết web hoặc tài liệu ngoài", icon: TaskIconBlockLink, shortcut: "/link" },
+  { id: "opt-divider", type: "divider", group: "Phân cách", title: "Đường phân cách", description: "Đường kẻ chia tách phân đoạn", icon: TaskIconBlockDivider, shortcut: "---" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -627,7 +649,17 @@ function MentionInputElement({ attributes, children, element }: RenderElementPro
 // ---------------------------------------------------------------------------
 
 function MediaEmbedEl({ attributes, children, element }: any) {
+  const editor = useEditorRef();
   const { url } = element;
+  const [draftUrl, setDraftUrl] = React.useState("");
+
+  const applyUrl = () => {
+    const next = draftUrl.trim();
+    if (!/^https?:\/\/\S+$/i.test(next)) return;
+    const path = editor.api.findPath(element);
+    if (path) editor.tf.setNodes({ url: next } as any, { at: path });
+  };
+
   return (
     <div {...attributes} className="my-3">
       <div contentEditable={false} className="aspect-video w-full rounded-xl overflow-hidden border border-border/60 bg-muted/20 shadow-2xs">
@@ -640,9 +672,31 @@ function MediaEmbedEl({ attributes, children, element }: any) {
             allowFullScreen
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground text-xs gap-1.5">
-            <Tv className="size-6 text-primary/60" />
-            <span>Chưa cấu hình URL video/iframe</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-6 text-xs text-muted-foreground">
+            <TaskIconBlockEmbed className="size-6" />
+            <span>Dán đường dẫn YouTube, Loom hoặc Drive</span>
+            <div className="flex w-full max-w-sm items-center gap-1.5">
+              <input
+                value={draftUrl}
+                onChange={(e) => setDraftUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyUrl();
+                  }
+                }}
+                placeholder="https://..."
+                aria-label="Đường dẫn nhúng"
+                className="h-7 min-w-0 flex-1 rounded-md bg-muted/60 px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:bg-muted"
+              />
+              <button
+                type="button"
+                onClick={applyUrl}
+                className="h-7 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer"
+              >
+                Nhúng
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -672,14 +726,29 @@ function TocEl({ attributes, children }: any) {
 // Media / Attachment / Link / Bookmark Renderers (existing)
 // ---------------------------------------------------------------------------
 
+interface TaskEditorUploadContextValue {
+  uploadFileToServer?: (file: File) => Promise<{ fileUrl: string; fileName: string } | null>;
+  taskId?: string;
+  triggerAutoSave?: (val: PlateValue) => void;
+}
+const TaskEditorUploadContext = React.createContext<TaskEditorUploadContextValue>({});
+
 function ImageEl({ attributes, children, element }: any) {
   const editor = useEditorRef();
+  const uploadCtx = React.useContext(TaskEditorUploadContext);
   const { url, caption, imageWidth = 100 } = element;
   const [captionValue, setCaptionValue] = React.useState(caption || "");
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = React.useState(false);
 
   React.useEffect(() => {
     setCaptionValue(caption || "");
   }, [caption]);
+
+  React.useEffect(() => {
+    setImageLoadError(false);
+  }, [url]);
 
   const commitCaption = React.useCallback((newCaption: string) => {
     if (editor.api.isReadOnly()) return;
@@ -706,18 +775,136 @@ function ImageEl({ attributes, children, element }: any) {
       );
     }
   }, [editor, element]);
+
+  const handleUploadFile = React.useCallback(async (f: File) => {
+    if (!f || editor.api.isReadOnly()) return;
+    setIsUploading(true);
+    setUploadError(null);
+    setImageLoadError(false);
+
+    let objectUrl = "";
+    try {
+      objectUrl = URL.createObjectURL(f);
+    } catch {}
+
+    if (objectUrl) {
+      setImageUrl(objectUrl, f.name);
+    }
+
+    if (uploadCtx.uploadFileToServer) {
+      try {
+        const result = await uploadCtx.uploadFileToServer(f);
+        setIsUploading(false);
+        if (!result) {
+          setUploadError("Không thể tải ảnh lên máy chủ");
+          setImageUrl("", f.name);
+          return;
+        }
+        setImageUrl(result.fileUrl, f.name);
+        uploadCtx.triggerAutoSave?.(editor.children as PlateValue);
+      } catch (err) {
+        setIsUploading(false);
+        setUploadError(err instanceof Error ? err.message : "Lỗi khi tải ảnh lên");
+        setImageUrl("", f.name);
+      }
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setIsUploading(false);
+        setImageUrl(ev.target?.result as string, f.name);
+        uploadCtx.triggerAutoSave?.(editor.children as PlateValue);
+      };
+      reader.onerror = () => {
+        setIsUploading(false);
+        setUploadError("Không thể đọc tệp ảnh");
+        setImageUrl("", f.name);
+      };
+      reader.readAsDataURL(f);
+    }
+  }, [editor, element, setImageUrl, uploadCtx]);
+
   return (
     <div {...attributes}>
       <div contentEditable={false} className="py-1">
         {url ? (
           <div className="relative group/image my-2 max-w-full">
             <div style={{ width: `${imageWidth}%` }} className="relative mx-auto transition-all duration-150">
-              <img src={url} alt={caption || "Hình ảnh"} className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none" loading="lazy" />
-              {!editor.api.isReadOnly() && <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                {[25, 50, 75, 100].map((w) => <button key={w} type="button" onClick={() => { const p = editor.api.findPath(element); if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p }); }} className={"px-1.5 py-0.5 text-[10px] rounded cursor-pointer " + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{w}%</button>)}
-              </div>}
+              {!imageLoadError ? (
+                <img
+                  src={url}
+                  alt={caption || "Hình ảnh"}
+                  className="w-full h-auto max-h-[640px] object-contain rounded-lg select-none"
+                  loading="lazy"
+                  onError={() => setImageLoadError(true)}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-6 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 text-center my-2">
+                  <ImageIcon className="size-8 text-destructive/60 mb-2" />
+                  <p className="text-xs font-medium text-destructive">Không thể hiển thị hình ảnh</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Tệp có thể đang chờ kiểm tra hoặc liên kết đã thay đổi.</p>
+                  {!editor.api.isReadOnly() && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setImageLoadError(false)}
+                        className="px-2.5 py-1 text-xs rounded-md bg-background border border-border hover:bg-muted text-foreground cursor-pointer transition-colors"
+                      >
+                        Thử lại
+                      </button>
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md bg-primary text-primary-foreground font-medium hover:opacity-90 cursor-pointer transition-opacity">
+                        <UploadCloud className="size-3" />
+                        <span>Tải ảnh khác</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUploadFile(f);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isUploading && (
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-2xs flex items-center justify-center rounded-lg">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 shadow-sm border border-border text-xs text-foreground font-medium">
+                    <Loader2 className="size-3.5 animate-spin text-primary" />
+                    <span>Đang tải ảnh lên máy chủ...</span>
+                  </div>
+                </div>
+              )}
+              {!editor.api.isReadOnly() && !imageLoadError && (
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 p-0.5 rounded bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                  {[25, 50, 75, 100].map((w) => (
+                    <button
+                      key={w}
+                      type="button"
+                      onClick={() => {
+                        const p = editor.api.findPath(element);
+                        if (p) editor.tf.setNodes({ imageWidth: w } as any, { at: p });
+                      }}
+                      className={"px-1.5 py-0.5 text-[10px] rounded cursor-pointer " + (imageWidth === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
+                    >
+                      {w}%
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-lg bg-background/80 border border-border/60 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                <button type="button" onClick={() => { if (!editor.api.isReadOnly()) { const p = editor.api.findPath(element); if (p) editor.tf.removeNodes({ at: p }); } }} className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer" title="Xóa">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!editor.api.isReadOnly()) {
+                      const p = editor.api.findPath(element);
+                      if (p) editor.tf.removeNodes({ at: p });
+                    }
+                  }}
+                  className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 cursor-pointer"
+                  title="Xóa"
+                >
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
@@ -749,20 +936,39 @@ function ImageEl({ attributes, children, element }: any) {
             ) : null}
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs">
-            <ImageIcon className="size-4 text-primary shrink-0" />
-            <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
-              <UploadCloud className="size-3.5" />
-              <span>Tải ảnh lên</span>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => { setImageUrl(ev.target?.result as string, f.name); };
-                  reader.readAsDataURL(f);
-                }
-              }} />
-            </label>
+          <div
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const f = e.dataTransfer.files?.[0];
+              if (f && f.type.startsWith("image/")) {
+                handleUploadFile(f);
+              }
+            }}
+            className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/80 text-xs"
+          >
+            <div className="flex items-center gap-2">
+              <ImageIcon className="size-4 text-primary shrink-0" />
+              <span className="text-muted-foreground text-xs">Kéo thả ảnh vào đây hoặc bấm để chọn</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {uploadError && <span className="text-destructive text-[11px]">{uploadError}</span>}
+              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
+                {isUploading ? <Loader2 className="size-3.5 animate-spin" /> : <UploadCloud className="size-3.5" />}
+                <span>{isUploading ? "Đang tải ảnh..." : "Tải ảnh lên"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploading}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadFile(f);
+                  }}
+                />
+              </label>
+            </div>
           </div>
         )}
       </div>
@@ -772,8 +978,48 @@ function ImageEl({ attributes, children, element }: any) {
 }
 
 function AttachmentEl({ attributes, children, element }: any) {
+  const editor = useEditorRef();
+  const uploadCtx = React.useContext(TaskEditorUploadContext);
   const { fileName, fileSize, fileType, url } = element;
+  const [isUploading, setIsUploading] = React.useState(false);
   const meta = [fileType, fileSize].filter(Boolean).join(" · ");
+
+  const handleUploadFile = React.useCallback(async (f: File) => {
+    if (!f || editor.api.isReadOnly()) return;
+    setIsUploading(true);
+    const formatSize = (bytes: number) => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+    const ext = f.name.split(".").pop()?.toUpperCase() || "TỆP";
+
+    if (uploadCtx.uploadFileToServer) {
+      try {
+        const result = await uploadCtx.uploadFileToServer(f);
+        setIsUploading(false);
+        if (result) {
+          const path = editor.api.findPath(element);
+          if (path) {
+            editor.tf.setNodes(
+              {
+                url: result.fileUrl,
+                fileName: f.name,
+                fileSize: formatSize(f.size),
+                fileType: ext,
+                content: f.name,
+              } as any,
+              { at: path }
+            );
+            uploadCtx.triggerAutoSave?.(editor.children as PlateValue);
+          }
+        }
+      } catch {
+        setIsUploading(false);
+      }
+    }
+  }, [editor, element, uploadCtx]);
+
   const inner = (
     <div className="inline-flex items-center gap-1.5 py-0.5 px-1.5 my-0.5 rounded-md bg-muted/40 hover:bg-muted/70 border border-border/40 transition-colors text-xs max-w-full group/file">
       <FileText className="size-3.5 text-muted-foreground shrink-0" />
@@ -789,7 +1035,24 @@ function AttachmentEl({ attributes, children, element }: any) {
           <a href={url} target="_blank" rel="noreferrer" className="block w-fit">
             {inner}
           </a>
-        ) : inner}
+        ) : (
+          <div className="flex items-center gap-2 py-1 px-2.5 rounded-lg bg-muted/30 border border-dashed border-border/70 text-xs w-fit">
+            <FileText className="size-3.5 text-muted-foreground" />
+            <label className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer font-medium">
+              {isUploading ? <Loader2 className="size-3 animate-spin" /> : <UploadCloud className="size-3" />}
+              <span>{isUploading ? "Đang tải tệp..." : "Tải tệp đính kèm lên"}</span>
+              <input
+                type="file"
+                disabled={isUploading}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadFile(f);
+                }}
+              />
+            </label>
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -1521,51 +1784,83 @@ function PlateDndContainer({ children }: { children: React.ReactNode }) {
 
 const SlashSelectContext = React.createContext<((option: MenuItemOption) => void) | null>(null);
 
+/** Bỏ dấu + chữ thường để gõ "hinh anh" vẫn khớp "Hình ảnh" */
+function foldText(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
+}
+
+/**
+ * Phần tử nhập lệnh "/": là node void nên văn bản gõ vào KHÔNG nằm trong Slate.
+ * Cần một <input> thật giữ focus để người dùng gõ tiếp (ví dụ "/image") và lọc menu.
+ */
 function SlashInputElement({ attributes, children, element }: any) {
   const editor = useEditorRef();
   const onSelectOption = React.useContext(SlashSelectContext);
-  const searchQuery = (element.children?.[0]?.text || "").replace(/^\//, "");
+  const [query, setQuery] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
   const filteredOptions = React.useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = foldText(query.trim().replace(/^\//, ""));
     if (!q) return MENU_OPTIONS;
     return MENU_OPTIONS.filter((opt) =>
-      opt.title.toLowerCase().includes(q) || opt.description.toLowerCase().includes(q) ||
-      opt.group.toLowerCase().includes(q) || (opt.shortcut?.toLowerCase().includes(q) ?? false)
+      foldText(opt.title).includes(q) || foldText(opt.description).includes(q) ||
+      foldText(opt.group).includes(q) || (opt.shortcut ? foldText(opt.shortcut).includes(q) : false)
     );
-  }, [searchQuery]);
+  }, [query]);
+
+  // Đóng ô nhập: xóa node "/" rồi trả focus về trình soạn thảo
+  const closeInput = React.useCallback(() => {
+    const path = editor.api.findPath(element);
+    if (path) editor.tf.removeNodes({ at: path });
+    editor.tf.focus();
+  }, [editor, element]);
 
   const handleSelect = React.useCallback((option: MenuItemOption) => {
     const path = editor.api.findPath(element);
     if (path) editor.tf.removeNodes({ at: path });
+    editor.tf.focus();
     onSelectOption?.(option);
   }, [editor, element, onSelectOption]);
 
-  const [anchorEl, setAnchorEl] = React.useState<HTMLSpanElement | null>(null);
+  // Lấy focus ngay khi mở để gõ tiếp được
+  React.useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-  const setMergedRef = React.useCallback(
-    (node: HTMLSpanElement | null) => {
-      if (typeof attributes?.ref === "function") {
-        attributes.ref(node);
-      } else if (attributes?.ref) {
-        (attributes.ref as any).current = node;
-      }
-      setAnchorEl(node);
-    },
-    [attributes]
-  );
+  // Neo menu vào chính ô nhập (vị trí thật của con trỏ), không phụ thuộc node void của Slate
+  const [anchorEl, setAnchorEl] = React.useState<HTMLInputElement | null>(null);
+  const setInputRef = React.useCallback((node: HTMLInputElement | null) => {
+    inputRef.current = node;
+    setAnchorEl((prev) => (prev === node ? prev : node));
+  }, []);
 
   return (
-    <span {...attributes} ref={setMergedRef}>
-      <span contentEditable={false} className="inline">
-        <SlashMenu
-          isOpen={true}
-          onClose={() => {
-            const path = editor.api.findPath(element);
-            if (path) editor.tf.removeNodes({ at: path });
+    <span {...attributes}>
+      <span contentEditable={false} className="inline-flex items-baseline text-muted-foreground">
+        <span aria-hidden="true">/</span>
+        <input
+          ref={setInputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            // Xóa hết chữ rồi Backspace: đóng menu
+            if (e.key === "Backspace" && query === "") {
+              e.preventDefault();
+              closeInput();
+            }
           }}
+          aria-label="Tìm khối nội dung"
+          autoComplete="off"
+          spellCheck={false}
+          style={{ width: `${Math.max(query.length, 1) + 1}ch` }}
+          className="bg-transparent p-0 text-foreground outline-none"
+        />
+        <SlashMenu
+          isOpen={Boolean(anchorEl)}
+          onClose={closeInput}
           onSelect={handleSelect}
-          searchQuery={searchQuery}
-          setSearchQuery={() => {}}
+          searchQuery={query}
+          setSearchQuery={setQuery}
           anchorElement={anchorEl}
           filteredOptions={filteredOptions}
         />
@@ -1692,37 +1987,40 @@ function SlashMenu({
     <div
       ref={refs.setFloating}
       style={floatingStyles}
-      className="z-50 w-72 overflow-y-scroll overscroll-contain rounded-xl border border-border/80 bg-card p-1 text-xs shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
+      className="z-50 w-64 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 text-xs shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
     >
-      <div ref={menuListRef} className="space-y-0.5">
+      <div ref={menuListRef} role="listbox" aria-label="Chèn khối nội dung">
         {filteredOptions.map((opt, idx) => {
           const Icon = opt.icon;
           const isSelected = idx === activeIndex;
+          const showGroup = idx === 0 || filteredOptions[idx - 1].group !== opt.group;
           return (
-            <button
-              key={opt.id}
-              ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
-              type="button"
-              onMouseEnter={() => setActiveIndex(idx)}
-              onClick={() => onSelect(opt)}
-              className={cn(
-                "flex w-full items-center gap-2.5 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
-                isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
+            <React.Fragment key={opt.id}>
+              {showGroup && (
+                <div className={cn("px-2 pb-0.5 text-xs text-muted-foreground", idx === 0 ? "pt-1" : "pt-2")}>
+                  {opt.group}
+                </div>
               )}
-            >
-              <div className={cn("p-1 rounded-md", isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                <Icon className="size-3.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{opt.title}</div>
-                <div className={cn("text-[10px] truncate", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{opt.description}</div>
-              </div>
-              {opt.shortcut && (
-                <span className={cn("font-mono text-[10px] px-1 py-0.5 rounded", isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                  {opt.shortcut}
-                </span>
-              )}
-            </button>
+              <button
+                ref={(el) => { if (el) menuItemRefs.current.set(idx, el); else menuItemRefs.current.delete(idx); }}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                title={opt.description}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onClick={() => onSelect(opt)}
+                className={cn(
+                  "flex h-7 w-full items-center gap-2 px-2 rounded-md text-left transition-colors cursor-pointer",
+                  isSelected ? "bg-accent text-foreground" : "text-foreground"
+                )}
+              >
+                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 min-w-0 truncate">{opt.title}</span>
+                {opt.shortcut && (
+                  <span className="font-mono text-xs text-muted-foreground">{opt.shortcut}</span>
+                )}
+              </button>
+            </React.Fragment>
           );
         })}
         {filteredOptions.length === 0 && (
@@ -1745,6 +2043,7 @@ export function TaskBlockEditor({
   subTasks = [],
   canEdit = true,
   globalFileDrop = true,
+  selectionContainerSelector,
   showFixedToolbar = false,
   onSaveContent,
   onSelectSubtask,
@@ -1861,8 +2160,25 @@ export function TaskBlockEditor({
     },
   }, []);
 
+  // Phạm vi kéo chọn khối: cả vùng cuộn của trang (kiểu Notion) thay vì chỉ khung soạn thảo.
+  // Phải đặt trước khi <Plate> render để useSelectionArea đọc đúng tùy chọn.
+  React.useMemo(() => {
+    if (!selectionContainerSelector) return;
+    editor.setOption(BlockSelectionPlugin as any, "areaOptions" as any, {
+      behaviour: { startThreshold: 4, scrolling: { speedDivider: 1.5 } },
+      features: { singleTap: { allow: false } },
+      boundaries: selectionContainerSelector,
+      container: selectionContainerSelector,
+    } as any);
+  }, [editor, selectionContainerSelector]);
+
   // Autosave: debounced, skip blob URLs
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved">("idle");
+  const savedFadeRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Luôn gọi bản onSaveContent mới nhất (version/đóng gói state đổi theo mỗi lần render)
+  const onSaveRef = React.useRef(onSaveContent);
+  onSaveRef.current = onSaveContent;
 
   // URL Paste Chooser
   const [urlPastePopover, setUrlPastePopover] = React.useState<{ url: string; blockPath: number[] } | null>(null);
@@ -1885,30 +2201,34 @@ export function TaskBlockEditor({
   const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {
     const form = new FormData();
     form.append("file", file);
+    if (taskId) {
+      form.append("taskId", taskId);
+    }
+    let res: Response;
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      if (!res.ok) return null;
-      const json = await res.json();
-      return json.data ?? json;
+      res = await fetch("/api/upload", { method: "POST", body: form });
     } catch {
-      return null;
+      throw new Error("Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại");
     }
-  }, []);
-
-  // Create deliverable record after successful upload
-  const createDeliverable = React.useCallback(async (fileUrl: string, title: string) => {
-    try {
-      const res = await fetch(`/api/tasks/${taskId}/deliverables`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, fileUrl }),
-      });
-      if (!res.ok) {
-        console.warn(`[TaskBlockEditor] Không thể tạo deliverable (${res.status}): ${res.statusText}`);
-      }
-    } catch (err) {
-      console.warn("[TaskBlockEditor] Lỗi mạng khi tạo deliverable:", err);
+    if (!res.ok) {
+      // Hiện đúng nguyên nhân từ máy chủ (quyền, dung lượng, định dạng, giới hạn tần suất...)
+      const body = await res.json().catch(() => null);
+      const serverMsg =
+        (typeof body?.error === "string" ? body.error : body?.error?.message) ||
+        body?.message ||
+        "";
+      const fallback =
+        res.status === 401 ? "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại"
+        : res.status === 403 ? "Bạn không có quyền tải tệp lên nhiệm vụ này"
+        : res.status === 413 ? "Tệp quá lớn (tối đa 10MB)"
+        : res.status === 429 ? "Tải lên quá nhanh, vui lòng thử lại sau ít giây"
+        : `Máy chủ từ chối tải lên (mã ${res.status})`;
+      throw new Error(serverMsg || fallback);
     }
+    const json = await res.json().catch(() => null);
+    const data = json?.data ?? json;
+    if (!data?.fileUrl) throw new Error("Máy chủ không trả về đường dẫn tệp");
+    return data;
   }, [taskId]);
 
   const triggerAutoSave = React.useCallback(
@@ -1920,36 +2240,54 @@ export function TaskBlockEditor({
       const savableBlocks = contentBlocks.filter((b) => !b.url?.startsWith("blob:"));
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(async () => {
+        debounceTimerRef.current = null;
         try {
           const payload = serializeBlocksToContent(savableBlocks);
           if (payload === lastSavedContentRef.current) return;
-          await onSaveContent(payload);
+          if (savedFadeRef.current) clearTimeout(savedFadeRef.current);
+          setSaveState("saving");
+          await onSaveRef.current(payload);
           lastSavedContentRef.current = payload;
           setSaveError(null);
+          setSaveState("saved");
+          savedFadeRef.current = setTimeout(() => setSaveState("idle"), 2000);
         } catch (err: unknown) {
+          setSaveState("idle");
           setSaveError(err instanceof Error ? err.message : "Lỗi lưu nội dung");
         }
       }, 800);
     },
-    [onSaveContent],
+    [],
+  );
+
+  const uploadContextValue = React.useMemo<TaskEditorUploadContextValue>(
+    () => ({
+      uploadFileToServer,
+      taskId,
+      triggerAutoSave,
+    }),
+    [uploadFileToServer, taskId, triggerAutoSave]
   );
 
   // Flush pending save on unmount / navigate away
   React.useEffect(() => {
     return () => {
+      if (savedFadeRef.current) clearTimeout(savedFadeRef.current);
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
         try {
           const blocks = plateToBlocks(editor.children as PlateValue);
           const savable = blocks.filter((b) => !b.url?.startsWith("blob:"));
           const payload = serializeBlocksToContent(savable);
           if (payload && payload !== lastSavedContentRef.current) {
-            onSaveContent(payload);
+            lastSavedContentRef.current = payload;
+            void Promise.resolve(onSaveRef.current(payload)).catch(() => {});
           }
         } catch { /* best-effort on unmount */ }
       }
     };
-  }, [editor, onSaveContent]);
+  }, [editor]);
 
   // Process dropped files
   const handleProcessDroppedFiles = React.useCallback((files: FileList | File[], clientY?: number) => {
@@ -1973,8 +2311,11 @@ export function TaskBlockEditor({
       let objectUrl = "";
       try { objectUrl = URL.createObjectURL(file); } catch {}
 
-      // Background upload → create deliverable first → then set server URL on editor node
-      uploadFileToServer(file).then(async (result) => {
+      // Background upload → then set server URL on editor node
+      uploadFileToServer(file).catch((err: unknown) => {
+        setSaveError(err instanceof Error ? err.message : "Không thể tải lên tệp đính kèm");
+        return null;
+      }).then(async (result) => {
         if (!result) {
           // Clean up placeholder node on failure
           const nodes = editor.children as PlateElemT[];
@@ -1982,12 +2323,9 @@ export function TaskBlockEditor({
           if (nodeIdx >= 0) {
             editor.tf.removeNodes({ at: [nodeIdx] });
           }
-          setSaveError("Không thể tải lên tệp đính kèm");
           return;
         }
-        // Create deliverable FIRST so /api/files/ authorization check passes
-        await createDeliverable(result.fileUrl, file.name);
-        // Now set server URL on editor node — file is registered, auth will pass
+        // Set server URL on editor node
         const nodes = editor.children as PlateElemT[];
         const nodeIdx = nodes.findIndex((n) => n.id === nodeId);
         if (nodeIdx >= 0) {
@@ -2020,7 +2358,7 @@ export function TaskBlockEditor({
       insertAt = [editor.children.length];
     }
     editor.tf.insertNodes(newNodes as any, { at: insertAt });
-  }, [canEdit, editor, uploadFileToServer, createDeliverable, triggerAutoSave]);
+  }, [canEdit, editor, uploadFileToServer, triggerAutoSave]);
 
   // Container paste and drop handlers
   const handleContainerPaste = React.useCallback((e: React.ClipboardEvent) => {
@@ -2148,7 +2486,7 @@ export function TaskBlockEditor({
         const embedNode: PlateElemT = {
           id,
           type: PT.mediaEmbed,
-          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          url: "",
           children: [{ text: "" }],
         };
         editor.tf.insertNodes([embedNode] as any);
@@ -2204,9 +2542,10 @@ export function TaskBlockEditor({
 
   return (
     <SlashSelectContext.Provider value={handleSlashSelect}>
-      <div
-        ref={containerRef}
-        data-slot="task-block-editor"
+      <TaskEditorUploadContext.Provider value={uploadContextValue}>
+        <div
+          ref={containerRef}
+          data-slot="task-block-editor"
         data-plate-selectable="true"
         onPaste={handleContainerPaste}
         onDrop={handleContainerDrop}
@@ -2295,12 +2634,23 @@ export function TaskBlockEditor({
           document.body
         )}
 
+        {canEdit && saveState !== "idle" && !saveError && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none sticky bottom-2 flex justify-end px-3 text-xs text-muted-foreground"
+          >
+            {saveState === "saving" ? "Đang lưu…" : "Đã lưu"}
+          </div>
+        )}
+
         {saveError && (
           <div className="px-3 py-1 bg-rose-50 border-t border-rose-200 text-rose-600 text-xs">
             {saveError}
           </div>
         )}
       </div>
+      </TaskEditorUploadContext.Provider>
     </SlashSelectContext.Provider>
   );
 }

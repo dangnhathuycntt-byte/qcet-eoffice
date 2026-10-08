@@ -96,7 +96,8 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
     assert.ok(html.includes('data-slot="unified-adaptive-workspace"'));
     // Scope switching is now integrated into UnifiedTaskToolbar, not a separate AdaptiveScopeHeader
     assert.ok(html.includes('data-slot="unified-task-toolbar"'));
-    assert.ok(html.includes('data-slot="task-summary-strip"'));
+    assert.ok(!html.includes('data-slot="task-summary-strip"'), "Thanh tóm tắt đã được bỏ");
+    assert.ok(html.includes('data-slot="task-page-title"'), "Tiêu đề trang Nhiệm vụ phải hiển thị");
   });
 
   test("TasksFocusLanding renders UnifiedAdaptiveWorkspace for manager and staff users", () => {

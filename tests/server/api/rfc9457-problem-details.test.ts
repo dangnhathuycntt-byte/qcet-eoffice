@@ -121,7 +121,7 @@ describe('WI-7.6: RFC 9457 Problem Details Implementation', () => {
     });
 
     it('transforms RateLimitError into RFC 9457 Too Many Requests', () => {
-      const err = new RateLimitError('Vượt quá hạn ngạch 60 req/min', 'RATE_LIMITED', 45);
+      const err = new RateLimitError('Vượt trễ hạn ngạch 60 req/min', 'RATE_LIMITED', 45);
       const { status, problem } = toProblemDetails(err);
 
       assert.strictEqual(status, 429);

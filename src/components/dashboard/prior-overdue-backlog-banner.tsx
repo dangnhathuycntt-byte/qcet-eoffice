@@ -102,7 +102,7 @@ export function PriorOverdueBacklogBanner({
                 Có {count} nhiệm vụ tồn đọng/trễ hạn từ các kỳ trước cần xử lý
               </span>
               <Badge variant="rose" className="font-mono text-xs px-2 py-0.5 font-bold">
-                {count} Quá hạn chuyển tiếp
+                {count} Trễ hạn chuyển tiếp
               </Badge>
             </div>
             <p className="text-xs text-amber-900/80">
@@ -172,7 +172,7 @@ export function PriorOverdueBacklogBanner({
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span>Hạn chót: {task.dueDate || "Chưa xác định"}</span>
                     <span className="text-rose-600 font-semibold font-mono text-xs">
-                      Quá hạn
+                      Trễ hạn
                     </span>
                   </div>
                 </div>

@@ -311,7 +311,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
         ...Array.from({ length: 4 }, (_, i) =>
           makeSchoolTask({
             id: `task-overdue-${i}`,
-            title: `Nhiệm vụ quá hạn #${i + 1}`,
+            title: `Nhiệm vụ trễ hạn #${i + 1}`,
             status: "IN_PROGRESS",
             isOverdue: true,
             progressPercent: 50,
@@ -419,7 +419,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       ...Array.from({ length: 1 }, (_, i) =>
         makeSchoolTask({
           id: `inst-od-${i}`,
-          title: `Nhiệm vụ quá hạn #${i + 1}`,
+          title: `Nhiệm vụ trễ hạn #${i + 1}`,
           status: "IN_PROGRESS",
           isOverdue: true,
           progressPercent: 40,
@@ -607,7 +607,7 @@ describe("Workspace Count Invariants - Count Reconciliation & Kanban Mapping", (
       ...Array.from({ length: 1 }, (_, i) =>
         makeSchoolTask({
           id: `audit-od-${i}`,
-          title: `Quá hạn #${i + 1}`,
+          title: `Trễ hạn #${i + 1}`,
           status: "IN_PROGRESS",
           isOverdue: true,
           progressPercent: 30,

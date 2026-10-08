@@ -82,7 +82,7 @@ export const EXECUTIVE_PRESETS: SavedTaskView[] = [
   {
     id: "exec-school-overdue",
     name: "Trễ hạn toàn trường",
-    description: "Nhiệm vụ chậm tiến độ hoặc quá hạn trên phạm vi toàn trường",
+    description: "Nhiệm vụ chậm tiến độ hoặc trễ hạn trên phạm vi toàn trường",
     isPreset: true,
     targetRole: "EXECUTIVE",
     criteria: {
@@ -109,7 +109,7 @@ export const EXECUTIVE_PRESETS: SavedTaskView[] = [
  * Manager Presets (Trưởng Khoa / Trưởng Phòng):
  * - Chờ tôi duyệt
  * - Việc đơn vị
- * - Quá hạn đơn vị
+ * - Trễ hạn đơn vị
  */
 export const MANAGER_PRESETS: SavedTaskView[] = [
   {
@@ -137,7 +137,7 @@ export const MANAGER_PRESETS: SavedTaskView[] = [
   },
   {
     id: "mgr-unit-overdue",
-    name: "Quá hạn đơn vị",
+    name: "Trễ hạn đơn vị",
     description: "Nhiệm vụ của đơn vị đang bị trễ hạn cần tập trung đôn đốc",
     isPreset: true,
     targetRole: "MANAGER",

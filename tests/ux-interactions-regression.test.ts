@@ -345,7 +345,7 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
       const overdueState = getCalendarAttentionState(
         {
           id: "t-1",
-          title: "Việc quá hạn",
+          title: "Việc trễ hạn",
           status: "IN_PROGRESS",
           dueDate: "2026-09-13",
         },
@@ -383,7 +383,7 @@ describe("Stream Form + Kanban + Lịch UX Interactions Regression Suite", () =>
       const items = [
         { id: "1", title: "Việc bình thường", status: "IN_PROGRESS", dueDate: "2026-09-20" },
         { id: "2", title: "Việc đã xong", status: "COMPLETED", dueDate: "2026-09-10" },
-        { id: "3", title: "Việc quá hạn khẩn", status: "IN_PROGRESS", dueDate: "2026-09-12" },
+        { id: "3", title: "Việc trễ hạn khẩn", status: "IN_PROGRESS", dueDate: "2026-09-12" },
         { id: "4", title: "Việc đến hạn hôm nay", status: "IN_PROGRESS", dueDate: "2026-09-14" },
       ];
 

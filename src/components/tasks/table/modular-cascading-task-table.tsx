@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import {
+  Building2,
   ChevronDown,
+  Plus,
   RotateCcw,
   X,
 } from "lucide-react";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import type {
   SchoolTask,
   StaffTask,
@@ -37,6 +41,7 @@ import type {
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_DENSITY,
+  getStatusBadgeConfig,
 } from "./constants";
 import {
   filterTasks,
@@ -45,7 +50,7 @@ import {
 import { deleteTask } from "@/lib/tasks/task-actions";
 import { formatTableDate } from "./utils/table-date-helpers";
 import { sortTasks } from "./utils/table-sorters";
-import { useTaskTableState } from "./hooks/use-task-table-state";
+import { getNextSortDirection, useTaskTableState } from "./hooks/use-task-table-state";
 import { useTaskUrlSync } from "./hooks/use-task-url-sync";
 import { useTaskKeyboardNav } from "./hooks/use-task-keyboard-nav";
 
@@ -61,6 +66,7 @@ import { MobileTaskCard } from "./components/mobile-task-card";
 import {
   TaskTableToolbar,
   aggregateFilterCounts,
+  DEFAULT_DISPLAY_PROPERTIES,
 } from "./components/task-table-toolbar";
 import { BatchActionBar, TaskBulkActionBar } from "./components/batch-action-bar";
 import {
@@ -117,6 +123,11 @@ export interface ModularCascadingTaskTableProps {
   onDensityChange?: (density: TableDensity) => void;
   visibleColumns?: TableColumnVisibility;
   onVisibleColumnsChange?: (cols: TableColumnVisibility) => void;
+  groupingField?: string;
+  onGroupingChange?: (field: string) => void;
+  sortField?: TaskSortField;
+  sortDirection?: SortDirection;
+  onSortChange?: (field: TaskSortField | undefined, direction: SortDirection) => void;
   initialPageSize?: number;
   syncWithUrl?: boolean;
   referenceDate?: string | Date;
@@ -161,6 +172,11 @@ export function ModularCascadingTaskTable({
   onDensityChange: propOnDensityChange,
   visibleColumns: propVisibleColumns,
   onVisibleColumnsChange: propOnVisibleColumnsChange,
+  groupingField: propGroupingField,
+  onGroupingChange: propOnGroupingChange,
+  sortField: propSortField,
+  sortDirection: propSortDirection,
+  onSortChange,
   initialPageSize = DEFAULT_PAGE_SIZE,
   syncWithUrl = false,
   referenceDate = getSystemReferenceDate(),
@@ -208,7 +224,7 @@ export function ModularCascadingTaskTable({
 
   const [localVisibleColumns, setLocalVisibleColumns] =
     React.useState<TableColumnVisibility>(
-      propVisibleColumns ?? { priority: true, subtasks: true, progress: true }
+      propVisibleColumns ?? DEFAULT_DISPLAY_PROPERTIES
     );
 
   const effectiveVisibleColumns = propVisibleColumns ?? localVisibleColumns;
@@ -220,15 +236,44 @@ export function ModularCascadingTaskTable({
     [propOnVisibleColumnsChange]
   );
 
+  // Linear-style Grouping state
+  const [internalGroupingField, setInternalGroupingField] = React.useState<string>("none");
+  const activeGroupingField = propGroupingField ?? internalGroupingField;
+  const handleGroupingChange = React.useCallback(
+    (field: string) => {
+      setInternalGroupingField(field);
+      propOnGroupingChange?.(field);
+    },
+    [propOnGroupingChange]
+  );
+
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = React.useState<Set<string>>(new Set());
+  const toggleGroupCollapse = React.useCallback((key: string) => {
+    setCollapsedGroupKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const lastClickedIndexRef = React.useRef<number | null>(null);
 
   const activeColSpan = React.useMemo(() => {
-    let span = 5; // Title + Status + Lead + Due + Actions = 5
+    let span = 5; // Title + Lead + Due + Actions base
+    if (effectiveVisibleColumns.department !== false) span++;
     if (effectiveVisibleColumns.priority !== false) span++;
     if (effectiveVisibleColumns.subtasks !== false) span++;
-    if (effectiveVisibleColumns.progress !== false) span++;
-    return span; // total columns without checkbox
+    if (effectiveVisibleColumns.progress === true) span++;
+    if (effectiveVisibleColumns.coAssignees === true) span++;
+    if (effectiveVisibleColumns.status === true) span++;
+    if (effectiveVisibleColumns.category === true) span++;
+    if (effectiveVisibleColumns.createdAt === true) span++;
+    return span;
   }, [effectiveVisibleColumns]);
 
   const effectiveMonthInput =
@@ -672,6 +717,23 @@ export function ModularCascadingTaskTable({
     prevFilterKeyRef.current = currentKey;
   }, [hideToolbar, tasks, scope, activeSearch, activeTab, activeDept, activeCategory, activeMonth, tableState.setPage]);
 
+  // Đồng bộ sắp xếp do workspace/toolbar điều khiển vào state của bảng
+  React.useEffect(() => {
+    if (propSortDirection === undefined) return;
+    if (propSortField !== tableState.sortField || propSortDirection !== tableState.sortDirection) {
+      tableState.setSorting(propSortField, propSortDirection);
+    }
+  }, [propSortField, propSortDirection, tableState.sortField, tableState.sortDirection, tableState.setSorting]);
+
+  const handleSortRequest = React.useCallback(
+    (field: TaskSortField) => {
+      const next = getNextSortDirection(tableState.sortField, field, tableState.sortDirection);
+      tableState.setSorting(next.field, next.direction);
+      onSortChange?.(next.field, next.direction);
+    },
+    [tableState.sortField, tableState.sortDirection, tableState.setSorting, onSortChange]
+  );
+
   React.useEffect(() => {
     if (propDensity && tableState.density !== propDensity) {
       tableState.setDensity(propDensity);
@@ -1017,6 +1079,139 @@ export function ModularCascadingTaskTable({
     return `Kỳ vận hành Tháng ${selectedAcademicMonth} ${dateSpan} - ${filteredTasks.length} nhiệm vụ`;
   }, [selectedAcademicMonth, monthPeriod, filteredTasks.length]);
 
+  const totalColumns = React.useMemo(() => {
+    let count = 1; // Title/Nhiệm vụ
+    if (effectiveVisibleColumns.department !== false) count++;
+    if (effectiveVisibleColumns.priority !== false) count++;
+    if (effectiveVisibleColumns.leadAssignee !== false) count++;
+    if (effectiveVisibleColumns.dueDate !== false) count++;
+    if (effectiveVisibleColumns.coAssignees === true) count++;
+    if (effectiveVisibleColumns.progress === true) count++;
+    if (effectiveVisibleColumns.status === true) count++;
+    if (effectiveVisibleColumns.createdAt === true) count++;
+    return count;
+  }, [effectiveVisibleColumns]);
+
+  interface TaskGroup {
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    tasks: SchoolTask[];
+  }
+
+  const groupedTasks = React.useMemo<TaskGroup[] | null>(() => {
+    if (activeGroupingField === "none" || !activeGroupingField) {
+      return null;
+    }
+
+    const items = paginatedResult.items;
+
+    if (activeGroupingField === "status") {
+      const statusOrder: TaskStatus[] = [
+        "NEW",
+        "IN_PROGRESS",
+        "WAITING_APPROVAL",
+        "NEEDS_REVIEW",
+        "COMPLETED",
+        "CANCELLED",
+      ];
+      const groupsMap = new Map<string, SchoolTask[]>();
+      for (const task of items) {
+        const s = task.status || "NEW";
+        if (!groupsMap.has(s)) groupsMap.set(s, []);
+        groupsMap.get(s)!.push(task);
+      }
+
+      const groups: TaskGroup[] = [];
+      for (const s of statusOrder) {
+        const tasksForStatus = groupsMap.get(s);
+        if (tasksForStatus && tasksForStatus.length > 0) {
+          groups.push({
+            key: `status-${s}`,
+            label: getStatusBadgeConfig(s).label,
+            icon: <TaskStatusCircle status={s} />,
+            tasks: tasksForStatus,
+          });
+          groupsMap.delete(s);
+        }
+      }
+      for (const [s, tasksForStatus] of groupsMap.entries()) {
+        if (tasksForStatus.length > 0) {
+          groups.push({
+            key: `status-${s}`,
+            label: getStatusBadgeConfig(s).label || s,
+            icon: <TaskStatusCircle status={s as TaskStatus} />,
+            tasks: tasksForStatus,
+          });
+        }
+      }
+      return groups;
+    }
+
+    if (activeGroupingField === "priority") {
+      const priorityOrder: TaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
+      const priorityLabels: Record<string, string> = {
+        URGENT: "Khẩn cấp",
+        HIGH: "Cao",
+        MEDIUM: "Trung bình",
+        LOW: "Thấp",
+      };
+      const groupsMap = new Map<string, SchoolTask[]>();
+      for (const task of items) {
+        const p = task.priority || "MEDIUM";
+        if (!groupsMap.has(p)) groupsMap.set(p, []);
+        groupsMap.get(p)!.push(task);
+      }
+
+      const groups: TaskGroup[] = [];
+      for (const p of priorityOrder) {
+        const tasksForPriority = groupsMap.get(p);
+        if (tasksForPriority && tasksForPriority.length > 0) {
+          groups.push({
+            key: `priority-${p}`,
+            label: priorityLabels[p] || p,
+            icon: <PrioritySignalBars priority={p} />,
+            tasks: tasksForPriority,
+          });
+          groupsMap.delete(p);
+        }
+      }
+      for (const [p, tasksForPriority] of groupsMap.entries()) {
+        if (tasksForPriority.length > 0) {
+          groups.push({
+            key: `priority-${p}`,
+            label: priorityLabels[p] || p,
+            icon: <PrioritySignalBars priority={p as TaskPriority} />,
+            tasks: tasksForPriority,
+          });
+        }
+      }
+      return groups;
+    }
+
+    if (activeGroupingField === "department") {
+      const groupsMap = new Map<string, SchoolTask[]>();
+      for (const task of items) {
+        const d = task.department || task.leadDepartment || "Chưa phân đơn vị";
+        if (!groupsMap.has(d)) groupsMap.set(d, []);
+        groupsMap.get(d)!.push(task);
+      }
+
+      const groups: TaskGroup[] = [];
+      for (const [d, tasksForDept] of groupsMap.entries()) {
+        groups.push({
+          key: `dept-${d}`,
+          label: d,
+          icon: <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />,
+          tasks: tasksForDept,
+        });
+      }
+      return groups;
+    }
+
+    return null;
+  }, [activeGroupingField, paginatedResult.items]);
+
   return (
     <div
       ref={containerRef}
@@ -1082,14 +1277,14 @@ export function ModularCascadingTaskTable({
                 <span className="font-semibold text-amber-950 tracking-wide">
                   TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
                 </span>
-                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-[11px] font-bold">
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-xs font-bold">
                   {priorOverdueBacklog.length}
                 </span>
-                <span className="text-[11px] text-amber-800/80 hidden sm:inline">
+                <span className="text-xs text-amber-800/80 hidden sm:inline">
                   (Prior Overdue Backlog - Cần ưu tiên xử lý dứt điểm)
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-amber-800">
+              <span className="text-xs font-medium text-amber-800">
                 {isBacklogExpanded ? "Thu gọn" : "Xem chi tiết"}
               </span>
             </div>
@@ -1101,7 +1296,7 @@ export function ModularCascadingTaskTable({
                 <div className="hidden md:block overflow-x-auto thin-scrollbar">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="h-8 border-b border-amber-200/50 bg-amber-100/30 text-[11px] font-medium text-amber-900/80 uppercase">
+                      <tr className="h-8 border-b border-amber-200/50 bg-amber-100/30 text-xs font-medium text-amber-900/80 uppercase">
                         <th className="w-24 px-3 py-1">Mã NV</th>
                         <th className="px-3 py-1">Nhiệm vụ tồn đọng</th>
                         <th className="px-3 py-1">Chủ trì</th>
@@ -1133,7 +1328,7 @@ export function ModularCascadingTaskTable({
                               {task.title}
                             </div>
                             {task.categoryLabel && (
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 {task.categoryLabel}
                               </span>
                             )}
@@ -1182,7 +1377,7 @@ export function ModularCascadingTaskTable({
                               )}
                               <Badge
                                 variant="rose"
-                                className="h-5 px-1.5 text-[11px] font-semibold tabular-nums shrink-0"
+                                className="h-5 px-1.5 text-xs font-semibold tabular-nums shrink-0"
                               >
                                 Tồn đọng
                               </Badge>
@@ -1206,7 +1401,7 @@ export function ModularCascadingTaskTable({
                         <span className="font-mono text-xs font-bold text-amber-900 tabular-nums">
                           {task.taskCode || "NV-QCET"}
                         </span>
-                        <Badge variant="rose" className="text-[11px] font-semibold">
+                        <Badge variant="rose" className="text-xs font-semibold">
                           Tồn đọng
                         </Badge>
                       </div>
@@ -1245,6 +1440,8 @@ export function ModularCascadingTaskTable({
           onDensityChange={tableState.setDensity}
           visibleColumns={effectiveVisibleColumns}
           onVisibleColumnsChange={handleVisibleColumnsChange}
+          groupingField={activeGroupingField}
+          onGroupingChange={handleGroupingChange}
           onAddTask={onAddTask}
           totalTasksCount={filteredTasks.length}
         />
@@ -1268,16 +1465,20 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div ref={tableContainerRef} className="space-y-3 scroll-mt-[calc(48px+env(safe-area-inset-top,0px)+12px)] md:scroll-mt-4">
-          {/* Desktop Table View (>= 768px) — Clean borderless table surface */}
+          {/* Desktop Table View (>= 768px) — Clean borderless table surface (Linear-style) */}
           <div className="hidden md:block">
             <div className="overflow-x-auto thin-scrollbar">
               <table className="w-full text-left border-collapse table-fixed">
                 <colgroup>
-                  <col className="w-[195px] min-w-[180px]" />
-                  <col className="w-[38%] min-w-[240px]" />
-                  <col className="w-[22%] min-w-[160px]" />
-                  <col className="w-[22%] min-w-[160px]" />
-                  <col className="w-[140px] min-w-[120px]" />
+                  <col className="min-w-[280px]" />
+                  {effectiveVisibleColumns.priority !== false && <col className="w-[84px]" />}
+                  {effectiveVisibleColumns.leadAssignee !== false && <col className="w-[170px]" />}
+                  {effectiveVisibleColumns.coAssignees === true && <col className="w-[110px]" />}
+                  {effectiveVisibleColumns.department !== false && <col className="w-[170px]" />}
+                  {effectiveVisibleColumns.dueDate !== false && <col className="w-[110px]" />}
+                  {effectiveVisibleColumns.createdAt === true && <col className="w-[96px]" />}
+                  {effectiveVisibleColumns.status === true && <col className="w-[130px]" />}
+                  {effectiveVisibleColumns.progress === true && <col className="w-[90px]" />}
                 </colgroup>
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
@@ -1291,7 +1492,7 @@ export function ModularCascadingTaskTable({
                   }}
                   sortField={tableState.sortField}
                   sortDirection={tableState.sortDirection}
-                  onSort={tableState.handleSort}
+                  onSort={handleSortRequest}
                   density={tableState.density}
                   visibleColumns={effectiveVisibleColumns}
                   showSelection={false}
@@ -1307,42 +1508,140 @@ export function ModularCascadingTaskTable({
                   hasTasks={paginatedResult.items.length > 0}
                 />
                 <tbody>
-                  {paginatedResult.items.map((task, index) => {
-                    const isExpanded = tableState.isExpanded(task.id);
-                    const isSelected = tableState.isSelected(task.id);
-                    const isRowActive =
-                      keyboardNav.activeIndex === index ||
-                      task.id === selectedTaskId ||
-                      Boolean(task.code && task.code === selectedTaskId);
-                    const hasSubtasks = Boolean(
-                      task.subTasks && task.subTasks.length > 0
-                    );
+                  {groupedTasks ? (
+                    groupedTasks.map((group) => {
+                      const isCollapsed = collapsedGroupKeys.has(group.key);
+                      return (
+                        <React.Fragment key={group.key}>
+                          {/* Linear-style Collapsible Group Header Row */}
+                          <tr
+                            data-slot="group-header"
+                            data-group-key={group.key}
+                            className="bg-muted/40 hover:bg-muted/60 transition-colors border-y border-border/60 select-none cursor-pointer group/gh"
+                            onClick={() => toggleGroupCollapse(group.key)}
+                          >
+                            <td colSpan={totalColumns} className="px-4 py-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleGroupCollapse(group.key);
+                                    }}
+                                    className="size-5 flex items-center justify-center rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                    aria-label={isCollapsed ? `Mở rộng nhóm ${group.label}` : `Thu gọn nhóm ${group.label}`}
+                                  >
+                                    <ChevronDown
+                                      className={cn("size-3.5 transition-transform duration-200", isCollapsed && "-rotate-90")}
+                                      strokeWidth={1.5}
+                                    />
+                                  </button>
+                                  <div className="shrink-0 flex items-center">
+                                    {group.icon}
+                                  </div>
+                                  <span className="text-xs font-semibold text-foreground tracking-tight">
+                                    {group.label}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded-full text-xs font-semibold bg-muted text-muted-foreground tabular-nums border border-border/50">
+                                    {group.tasks.length}
+                                  </span>
+                                </div>
+                                {onAddTask && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onAddTask();
+                                    }}
+                                    className="size-5 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer opacity-0 group-hover/gh:opacity-100"
+                                    title={`Thêm nhiệm vụ vào ${group.label}`}
+                                    aria-label={`Thêm nhiệm vụ vào ${group.label}`}
+                                  >
+                                    <Plus className="size-3" strokeWidth={1.5} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
 
-                    return (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        scope={scope}
-                        isExpanded={false}
-                        isSelected={isSelected}
-                        isActive={isRowActive}
-                        isPreviewing={previewTask?.id === task.id}
-                        density={tableState.density}
-                        visibleColumns={effectiveVisibleColumns}
-                        showSelection={false}
-                        selectionGroupPosition={selectionGroupPositions.get(task.id) ?? null}
-                        selectedAcademicMonth={selectedAcademicMonth}
-                        activeCategory={activeCategory}
-                        canAssign={canAssignUnit}
-                        onAddSubTask={effectiveOnAddSubTask}
-                        onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
-                        onClick={handleEffectiveSelectTask}
-                        onContextMenu={handleRowContextMenu}
-                        onStatusChange={onStatusChange}
-                        onUrge={onUrge}
-                      />
-                    );
-                  })}
+                          {/* Group Tasks */}
+                          {!isCollapsed &&
+                            group.tasks.map((task, index) => {
+                              const isSelected = tableState.isSelected(task.id);
+                              const isRowActive =
+                                keyboardNav.activeIndex === index ||
+                                task.id === selectedTaskId ||
+                                Boolean(task.code && task.code === selectedTaskId);
+
+                              return (
+                                <TaskRow
+                                  key={task.id}
+                                  task={task}
+                                  scope={scope}
+                                  isExpanded={false}
+                                  isSelected={isSelected}
+                                  isActive={isRowActive}
+                                  isPreviewing={previewTask?.id === task.id}
+                                  density={tableState.density}
+                                  visibleColumns={effectiveVisibleColumns}
+                                  showSelection={false}
+                                  selectionGroupPosition={selectionGroupPositions.get(task.id) ?? null}
+                                  selectedAcademicMonth={selectedAcademicMonth}
+                                  activeCategory={activeCategory}
+                                  canAssign={canAssignUnit}
+                                  onAddSubTask={effectiveOnAddSubTask}
+                                  onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
+                                  onClick={handleEffectiveSelectTask}
+                                  isContextMenuTarget={contextMenu.isOpen && contextMenu.task?.id === task.id}
+                          onContextMenu={handleRowContextMenu}
+                                  onStatusChange={onStatusChange}
+                                  onUrge={onUrge}
+                                />
+                              );
+                            })}
+                        </React.Fragment>
+                      );
+                    })
+                  ) : (
+                    paginatedResult.items.map((task, index) => {
+                      const isExpanded = tableState.isExpanded(task.id);
+                      const isSelected = tableState.isSelected(task.id);
+                      const isRowActive =
+                        keyboardNav.activeIndex === index ||
+                        task.id === selectedTaskId ||
+                        Boolean(task.code && task.code === selectedTaskId);
+                      const hasSubtasks = Boolean(
+                        task.subTasks && task.subTasks.length > 0
+                      );
+
+                      return (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          scope={scope}
+                          isExpanded={false}
+                          isSelected={isSelected}
+                          isActive={isRowActive}
+                          isPreviewing={previewTask?.id === task.id}
+                          density={tableState.density}
+                          visibleColumns={effectiveVisibleColumns}
+                          showSelection={false}
+                          selectionGroupPosition={selectionGroupPositions.get(task.id) ?? null}
+                          selectedAcademicMonth={selectedAcademicMonth}
+                          activeCategory={activeCategory}
+                          canAssign={canAssignUnit}
+                          onAddSubTask={effectiveOnAddSubTask}
+                          onToggleSelect={(id, e) => handleRowToggleSelect(task.id, e)}
+                          onClick={handleEffectiveSelectTask}
+                          isContextMenuTarget={contextMenu.isOpen && contextMenu.task?.id === task.id}
+                          onContextMenu={handleRowContextMenu}
+                          onStatusChange={onStatusChange}
+                          onUrge={onUrge}
+                        />
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1350,23 +1649,71 @@ export function ModularCascadingTaskTable({
 
           {/* Mobile Card Feed View (< 768px) */}
           <div className="md:hidden space-y-2.5">
-            {paginatedResult.items.map((task) => (
-              <MobileTaskCard
-                key={task.id}
-                task={task}
-                isExpanded={tableState.isExpanded(task.id)}
-                onToggleExpand={(id, e) => {
-                  e?.stopPropagation?.();
-                  tableState.toggleExpand(id);
-                }}
-                onSelectTask={handleEffectiveSelectTask}
-                onStatusChange={onStatusChange}
-                selectedAcademicMonth={selectedAcademicMonth}
-                onOpenSubmitModal={onOpenSubmitModal}
-                onAddSubTask={effectiveOnAddSubTask}
-                canAssign={canAssignUnit}
-              />
-            ))}
+            {groupedTasks ? (
+              groupedTasks.map((group) => {
+                const isCollapsed = collapsedGroupKeys.has(group.key);
+                return (
+                  <div key={group.key} className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupCollapse(group.key)}
+                      className="w-full flex items-center justify-between py-1.5 px-3 rounded-lg bg-muted/40 border border-border/50 text-xs font-semibold text-foreground cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ChevronDown
+                          className={cn("size-3.5 transition-transform duration-200", isCollapsed && "-rotate-90")}
+                          strokeWidth={1.5}
+                        />
+                        <div className="shrink-0 flex items-center">{group.icon}</div>
+                        <span>{group.label}</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-xs font-semibold bg-muted text-muted-foreground tabular-nums border border-border/50">
+                          {group.tasks.length}
+                        </span>
+                      </div>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="space-y-2 pl-1">
+                        {group.tasks.map((task) => (
+                          <MobileTaskCard
+                            key={task.id}
+                            task={task}
+                            isExpanded={tableState.isExpanded(task.id)}
+                            onToggleExpand={(id, e) => {
+                              e?.stopPropagation?.();
+                              tableState.toggleExpand(id);
+                            }}
+                            onSelectTask={handleEffectiveSelectTask}
+                            onStatusChange={onStatusChange}
+                            selectedAcademicMonth={selectedAcademicMonth}
+                            onOpenSubmitModal={onOpenSubmitModal}
+                            onAddSubTask={effectiveOnAddSubTask}
+                            canAssign={canAssignUnit}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              paginatedResult.items.map((task) => (
+                <MobileTaskCard
+                  key={task.id}
+                  task={task}
+                  isExpanded={tableState.isExpanded(task.id)}
+                  onToggleExpand={(id, e) => {
+                    e?.stopPropagation?.();
+                    tableState.toggleExpand(id);
+                  }}
+                  onSelectTask={handleEffectiveSelectTask}
+                  onStatusChange={onStatusChange}
+                  selectedAcademicMonth={selectedAcademicMonth}
+                  onOpenSubmitModal={onOpenSubmitModal}
+                  onAddSubTask={effectiveOnAddSubTask}
+                  canAssign={canAssignUnit}
+                />
+              ))
+            )}
           </div>
 
           {/* Pagination Controls - Show only when totalItems > pageSize and not explicitly hidden */}

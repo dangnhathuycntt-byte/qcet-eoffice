@@ -113,6 +113,11 @@ import {
   clearCustomViews,
   useSavedViews,
 } from "@/lib/saved-views/saved-views-store";
+import type { TableColumnVisibility } from "@/components/tasks/table/types";
+import {
+  DEFAULT_DISPLAY_PROPERTIES,
+  TaskTableViewOptionsPopover,
+} from "@/components/tasks/table/components/task-table-toolbar";
 
 // Export Saved Views Infrastructure
 export {
@@ -262,9 +267,15 @@ export interface UnifiedTaskToolbarProps {
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
 
+  // Column Visibility (Display properties)
+  visibleColumns?: TableColumnVisibility;
+  onVisibleColumnsChange?: (columns: TableColumnVisibility) => void;
+
   // Sorting (Mobile & Adaptive support)
   sortField?: string;
   sortDirection?: "asc" | "desc";
+  groupingField?: string;
+  onGroupingChange?: (field: string) => void;
   onSort?: (field: string) => void;
 
   // Refresh
@@ -471,7 +482,7 @@ export function buildQuickFilterPills(
     },
     {
       id: "overdue",
-      label: "Quá hạn",
+      label: "Trễ hạn",
       count: tabCounts?.overdue ?? 0,
       isActive: activeTab === "overdue",
     },
@@ -566,8 +577,12 @@ export function UnifiedTaskToolbar({
   onViewModeChange,
   density = "comfortable",
   onDensityChange,
+  visibleColumns: propVisibleColumns,
+  onVisibleColumnsChange,
   sortField,
   sortDirection,
+  groupingField: propGroupingField,
+  onGroupingChange,
   onSort,
   totalTasksCount,
   filteredTasksCount,
@@ -643,6 +658,35 @@ export function UnifiedTaskToolbar({
     if (onCollaboratorChange) onCollaboratorChange(val);
     else setInternalCollaborator(val);
   }, [onCollaboratorChange]);
+
+  // Display properties (Column Visibility) & Grouping
+  const [internalVisibleColumns, setInternalVisibleColumns] = React.useState<TableColumnVisibility>(DEFAULT_DISPLAY_PROPERTIES);
+  const effectiveVisibleColumns = propVisibleColumns || internalVisibleColumns;
+  const handleVisibleColumnsChange = onVisibleColumnsChange || setInternalVisibleColumns;
+
+  const [internalGroupingField, setInternalGroupingField] = React.useState<string>("none");
+  const groupingField = propGroupingField ?? internalGroupingField;
+  const setGroupingField = onGroupingChange ?? setInternalGroupingField;
+
+  const isDisplayCustomized = React.useMemo(() => {
+    return (
+      effectiveVisibleColumns.code !== DEFAULT_DISPLAY_PROPERTIES.code ||
+      effectiveVisibleColumns.department !== DEFAULT_DISPLAY_PROPERTIES.department ||
+      effectiveVisibleColumns.priority !== DEFAULT_DISPLAY_PROPERTIES.priority ||
+      effectiveVisibleColumns.leadAssignee !== DEFAULT_DISPLAY_PROPERTIES.leadAssignee ||
+      effectiveVisibleColumns.dueDate !== DEFAULT_DISPLAY_PROPERTIES.dueDate ||
+      effectiveVisibleColumns.progress !== DEFAULT_DISPLAY_PROPERTIES.progress ||
+      effectiveVisibleColumns.subtasks !== DEFAULT_DISPLAY_PROPERTIES.subtasks ||
+      effectiveVisibleColumns.coAssignees !== DEFAULT_DISPLAY_PROPERTIES.coAssignees ||
+      effectiveVisibleColumns.status !== DEFAULT_DISPLAY_PROPERTIES.status ||
+      effectiveVisibleColumns.category !== DEFAULT_DISPLAY_PROPERTIES.category ||
+      effectiveVisibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt
+    );
+  }, [effectiveVisibleColumns]);
+
+  const handleResetDisplayProperties = React.useCallback(() => {
+    handleVisibleColumnsChange(DEFAULT_DISPLAY_PROPERTIES);
+  }, [handleVisibleColumnsChange]);
 
   React.useEffect(() => {
     if (isCollapsedFilterOpen) {
@@ -948,13 +992,13 @@ export function UnifiedTaskToolbar({
     { value: "all", label: "Tất cả thời hạn" },
     { value: "today", label: "Đến hạn hôm nay", count: tabCounts?.today },
     { value: "this_week", label: "Trong tuần này", count: tabCounts?.this_week },
-    { value: "overdue", label: "Quá hạn", count: tabCounts?.overdue },
+    { value: "overdue", label: "Trễ hạn", count: tabCounts?.overdue },
   ], [tabCounts]);
 
   const deadlineLabel = React.useMemo(() => {
     if (effectiveDeadline === "today") return "Đến hạn hôm nay";
     if (effectiveDeadline === "this_week") return "Trong tuần này";
-    if (effectiveDeadline === "overdue") return "Quá hạn";
+    if (effectiveDeadline === "overdue") return "Trễ hạn";
     return "Thời hạn";
   }, [effectiveDeadline]);
 
@@ -1096,7 +1140,7 @@ export function UnifiedTaskToolbar({
 
     if (activeTab && activeTab !== "all") {
       let tabLabel = "";
-      if (activeTab === "overdue") tabLabel = "Quá hạn";
+      if (activeTab === "overdue") tabLabel = "Trễ hạn";
       else if (activeTab === "waiting_approval" || activeTab === "review") {
         tabLabel = isExecutiveRole ? "Cần tôi duyệt" : "Chờ duyệt";
       } else if (activeTab === "pending_submission") {
@@ -1989,7 +2033,7 @@ export function UnifiedTaskToolbar({
           { value: "all", label: "Tất cả tiến độ" },
           { value: "on_track", label: "Đúng tiến độ (Bình thường)" },
           { value: "at_risk", label: "Có nguy cơ trễ hạn (≤ 7 ngày)" },
-          { value: "overdue", label: "Trễ hạn / Quá hạn" },
+          { value: "overdue", label: "Trễ hạn / Trễ hạn" },
           { value: "completed", label: "Đã hoàn thành 100%" },
         ];
         const selectedList = (selectedHealth || "all").toLowerCase().split(",").map((h) => h.trim()).filter(Boolean);
@@ -2328,7 +2372,7 @@ export function UnifiedTaskToolbar({
     const healthOptions = [
       { value: "on_track", label: "Đúng tiến độ (Bình thường)" },
       { value: "at_risk", label: "Có nguy cơ trễ hạn (≤ 7 ngày)" },
-      { value: "overdue", label: "Trễ hạn / Quá hạn" },
+      { value: "overdue", label: "Trễ hạn / Trễ hạn" },
       { value: "completed", label: "Đã hoàn thành 100%" },
     ];
     healthOptions.forEach((opt) => {
@@ -2584,16 +2628,16 @@ export function UnifiedTaskToolbar({
             )}
           </div>
 
-          {/* Right: Primary Page Action Button (Tạo nhiệm vụ) */}
+          {/* Right: Primary Page Action Button (Tạo nhiệm vụ - Linear Understated Style) */}
           {canCreateTask && handlePrimaryAction && (
             <button
               type="button"
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
               aria-label="Tạo nhiệm vụ"
-              className="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium bg-action text-on-action transition-all duration-150 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
+              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
             >
-              <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
+              <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
             </button>
           )}
@@ -2628,7 +2672,7 @@ export function UnifiedTaskToolbar({
           onBlur={() => setSearchFocused(false)}
           placeholder="Tìm nhiệm vụ… /"
           aria-label="Tìm nhiệm vụ"
-          className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-[11px] text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
+          className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
           {loading && (
@@ -2664,7 +2708,7 @@ export function UnifiedTaskToolbar({
               aria-expanded={isCollapsedFilterOpen}
               title="Bộ lọc (F)"
               className={cn(
-                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium transition-colors touch-manipulation",
+                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-colors touch-manipulation",
                 isCollapsedFilterOpen || activeFilterCount > 0
                   ? "border-border bg-accent/60 text-foreground hover:bg-accent"
                   : "border-border/80 bg-background text-foreground hover:bg-accent"
@@ -2808,62 +2852,32 @@ export function UnifiedTaskToolbar({
         </button>
       )}
 
-      {/* 4. Chế độ hiển thị (Dạng ngang: Bảng / Kanban) */}
-      {onViewModeChange && (
-        <div
-          role="group"
-          aria-label="Chế độ hiển thị"
-          title="Hiển thị"
-          className="inline-flex h-7 items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
-        >
-          <button
-            type="button"
-            onClick={() => onViewModeChange("table")}
-            aria-pressed={viewMode === "table"}
-            aria-label="Chế độ xem bảng"
-            className={cn(
-              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              viewMode === "table"
-                ? "bg-background text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            )}
-          >
-            <List className="size-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Bảng</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange("kanban")}
-            aria-pressed={viewMode === "kanban"}
-            aria-label="Chế độ xem Kanban"
-            className={cn(
-              "inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none touch-manipulation",
-              viewMode === "kanban"
-                ? "bg-background text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            )}
-          >
-            <Kanban className="size-3.5 shrink-0" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Kanban</span>
-          </button>
-        </div>
-      )}
+      {/* 3. Linear Display / View Options Popover — Icon hiển thị kề bên Filter! */}
+      <TaskTableViewOptionsPopover
+        viewMode={viewMode === "kanban" ? "kanban" : "table"}
+        onViewModeChange={onViewModeChange}
+        groupingField={groupingField}
+        onGroupingChange={setGroupingField}
+        sortField={sortField as any}
+        sortDirection={sortDirection}
+        onSort={onSort as any}
+        visibleColumns={effectiveVisibleColumns}
+        onVisibleColumnsChange={handleVisibleColumnsChange}
+        isCustomized={isDisplayCustomized}
+        onReset={handleResetDisplayProperties}
+        triggerClassName="inline-flex h-7 w-7 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-border/80 bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors touch-manipulation"
+      />
 
-      {/* Divider trước CTA */}
-      {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
-        <div className="h-4 w-px bg-border/60 shrink-0" />
-      )}
-
-      {/* 5. + Tạo việc CTA */}
+      {/* 4. + Tạo việc CTA (Linear Understated Style) */}
       {(leftContent || !onScopeChange) && canCreateTask && handlePrimaryAction && (
         <button
           type="button"
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
           aria-label="Tạo việc mới"
-          className="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium bg-action text-on-action transition-all duration-150 hover:bg-action-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
+          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
         >
-          <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
+          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>
         </button>
       )}

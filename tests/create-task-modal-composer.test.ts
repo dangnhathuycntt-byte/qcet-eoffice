@@ -104,7 +104,8 @@ describe("Compact Composer Modal - Production Specification", () => {
     );
 
     // Footer elements
-    assert.ok(source.includes("Hủy"), "Source must have Cancel button");
+    assert.ok(!source.includes("Hủy và xóa nháp"), "Closing discards the draft immediately; no confirm dialog");
+    assert.ok(source.includes("handleClearDraft"), "Closing a dirty form must clear the draft");
     assert.ok(source.includes("Tạo nhiệm vụ"), "Source must have submit button labeled 'Tạo nhiệm vụ'");
 
     // Property chips

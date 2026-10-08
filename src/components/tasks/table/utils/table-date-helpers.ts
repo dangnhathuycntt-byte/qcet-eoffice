@@ -31,7 +31,7 @@ export function extractIsoDateString(val?: string | Date | null): string | null 
 }
 
 /**
- * Kiểm tra xem ngày hạn chót có quá hạn so với ngày tham chiếu hay không (UTC-safe).
+ * Kiểm tra xem ngày hạn chót có trễ hạn so với ngày tham chiếu hay không (UTC-safe).
  */
 export function isTaskPastDue(
   dueDate?: string | Date | null,
@@ -58,7 +58,7 @@ export function isTaskDueToday(
  * Tính số ngày còn lại đến hạn chót (so với ngày tham chiếu hệ thống).
  * - > 0: Còn N ngày (tương lai)
  * - = 0: Đúng ngày hôm nay
- * - < 0: Đã quá hạn N ngày (quá khứ)
+ * - < 0: Đã trễ hạn N ngày (quá khứ)
  * - null: Không có hạn chót hợp lệ
  */
 export function getDaysRemaining(
@@ -106,7 +106,7 @@ export function getTaskTableReferenceDate(ref?: string | Date): Date {
 }
 
 /**
- * Kiểm tra xem một nhiệm vụ có bị quá hạn hay không (UTC-safe và tôn trọng trạng thái hoàn thành).
+ * Kiểm tra xem một nhiệm vụ có bị trễ hạn hay không (UTC-safe và tôn trọng trạng thái hoàn thành).
  */
 export function isTableTaskPastDue(
   task: { dueDate?: string | Date | null; status?: string },
@@ -170,7 +170,7 @@ export function getSlaBadgeStatus(
     };
   }
 
-  // Nếu nhiệm vụ đã hoàn thành hoặc đã hủy -> không báo quá hạn
+  // Nếu nhiệm vụ đã hoàn thành hoặc đã hủy -> không báo trễ hạn
   if (status === "COMPLETED") {
     return {
       label: "Đã hoàn thành",
@@ -193,11 +193,11 @@ export function getSlaBadgeStatus(
     };
   }
 
-  // Quá hạn
+  // Trễ hạn
   if (daysRemaining < 0) {
     const overdueDays = Math.abs(daysRemaining);
     return {
-      label: `Quá hạn ${overdueDays} ngày`,
+      label: `Trễ hạn ${overdueDays} ngày`,
       colorClass: "text-rose-700 bg-rose-50 border-rose-200/60 font-medium",
       isOverdue: true,
       isToday: false,
@@ -250,5 +250,40 @@ export function getSlaBadgeStatus(
     isToday: false,
     daysRemaining,
     formattedDate,
+  };
+}
+
+export type DueTone = "danger" | "warn" | "muted";
+export type DueIconKind = "closed" | "overdue" | "soon" | "default";
+
+/** Số ngày còn lại để coi là "sắp đến hạn" (cam). */
+export const DUE_SOON_DAYS = 7;
+
+/**
+ * Chỉ báo hạn dùng chung cho bảng và thẻ di động:
+ * đỏ khi trễ/hôm nay, cam khi trong 7 ngày, xám còn lại; nhiệm vụ đã đóng luôn xám.
+ */
+export function getDueIndicator(input: {
+  status?: TaskStatus | string;
+  isOverdue: boolean;
+  isToday: boolean;
+  daysRemaining: number | null;
+  label?: string | null;
+}): { tone: DueTone; icon: DueIconKind; hint: string } {
+  const { status, isOverdue, isToday, daysRemaining, label } = input;
+  const isClosed = status === "COMPLETED" || status === "CANCELLED";
+  const isSoon =
+    daysRemaining !== null && daysRemaining > 0 && daysRemaining <= DUE_SOON_DAYS;
+
+  if (isClosed) return { tone: "muted", icon: "closed", hint: label || "Đã đóng" };
+  if (isOverdue && daysRemaining !== null) {
+    return { tone: "danger", icon: "overdue", hint: `Trễ ${Math.abs(daysRemaining)} ngày` };
+  }
+  if (isToday) return { tone: "danger", icon: "default", hint: "Hôm nay" };
+  if (isSoon) return { tone: "warn", icon: "soon", hint: `Còn ${daysRemaining} ngày` };
+  return {
+    tone: "muted",
+    icon: "default",
+    hint: daysRemaining !== null ? `Còn ${daysRemaining} ngày` : "",
   };
 }

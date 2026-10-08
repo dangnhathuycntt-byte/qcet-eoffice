@@ -123,7 +123,7 @@ describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
     assert.match(html, /data-slot="department-progress-matrix-table"/, "Must have table data-slot");
     assert.match(html, /Đơn vị/, "Must have Đơn vị column");
     assert.match(html, /Tiến độ/, "Must have Tiến độ column");
-    assert.match(html, /Quá hạn/, "Must have Quá hạn column");
+    assert.match(html, /Trễ hạn/, "Must have Trễ hạn column");
     assert.match(html, /Đang làm/, "Must have Đang làm column");
     assert.match(html, /Hoàn thành/, "Must have Hoàn thành column");
     assert.match(html, /Hành động|Xem/, "Must have Hành động (Xem) column or button");

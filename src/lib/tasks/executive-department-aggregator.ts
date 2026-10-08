@@ -537,7 +537,7 @@ export function computeExecutiveDepartmentSummaries(
       ragStatus = "RED";
       ragReason =
         overdue > 0
-          ? `Có ${overdue} nhiệm vụ quá hạn cần BGH chỉ đạo`
+          ? `Có ${overdue} nhiệm vụ trễ hạn cần BGH chỉ đạo`
           : `Tiến độ hoàn thành thấp (${completionRate}%)`;
     } else if (dueSoon > 0 || (completionRate < 60 && totalTasks > 0)) {
       ragStatus = "AMBER";

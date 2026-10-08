@@ -103,7 +103,7 @@ function StateIcon({ state, isEvent }: { state: CalendarAttentionState; isEvent?
 const filterLabels: Record<CalendarDayFilter, string> = {
   all: "Tất cả",
   attention: "Cần xử lý",
-  overdue: "Quá hạn",
+  overdue: "Trễ hạn",
   waiting: "Chờ duyệt",
 };
 
@@ -195,7 +195,7 @@ export function CalendarDaySheet({
 
       let statusBadge: React.ReactNode = null;
       if (state === "overdue") {
-        statusBadge = <span className="text-rose-600 font-medium">Quá hạn</span>;
+        statusBadge = <span className="text-rose-600 font-medium">Trễ hạn</span>;
       } else if (state === "waiting") {
         statusBadge = <span className="text-amber-600 font-medium">Chờ duyệt</span>;
       } else if (state === "due_today") {

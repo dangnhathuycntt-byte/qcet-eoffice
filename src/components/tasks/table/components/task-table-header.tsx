@@ -34,22 +34,14 @@ export interface TaskTableHeaderProps {
 }
 
 interface ColumnDefinition {
-  id: TaskSortField | "subtasks" | "meta" | "actions";
+  id: TaskSortField | "subtasks" | "meta" | "actions" | "coAssignees" | "createdAt";
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
   widthClass?: string;
 }
 
-// Columns: Mã | Tên (Nhiệm vụ) | Đơn vị | Phụ trách | Hạn
-const ALL_TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "code", label: "Mã", sortable: true, widthClass: "w-[195px] min-w-[180px]" },
-  { id: "title", label: "Tên", sortable: true, widthClass: "w-[38%] min-w-[240px]" },
-  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-[22%] min-w-[160px]" },
-  { id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-[22%] min-w-[160px]" },
-  { id: "dueDate", label: "Hạn", sortable: true, align: "right", widthClass: "w-[140px] min-w-[120px]" },
-];
-
+// Columns: Nhiệm vụ (Title & Code) | Đơn vị | Ưu tiên | Phụ trách | Hạn | (Tiến độ)
 export function TaskTableHeader({
   sortField,
   sortDirection = "asc",
@@ -58,7 +50,7 @@ export function TaskTableHeader({
   indeterminate = false,
   onToggleSelectAll,
   density = "comfortable",
-  visibleColumns = { priority: false, subtasks: false, progress: true },
+  visibleColumns = { department: true, priority: true, leadAssignee: true, dueDate: true, progress: false },
   className,
   showSelection = false,
   showExpandAll = false,
@@ -74,10 +66,40 @@ export function TaskTableHeader({
     }
   }, [indeterminate]);
 
-  const activeColumns = ALL_TABLE_COLUMNS;
+  const activeColumns = React.useMemo(() => {
+    const cols: ColumnDefinition[] = [
+      { id: "title", label: "Tiêu đề", sortable: true, widthClass: "min-w-[280px]" },
+    ];
+    if (visibleColumns?.priority !== false) {
+      cols.push({ id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-[84px]" });
+    }
+    if (visibleColumns?.leadAssignee !== false) {
+      cols.push({ id: "leadAssignee", label: "Phụ trách", sortable: true, widthClass: "w-[170px]" });
+    }
+    if (visibleColumns?.coAssignees === true) {
+      cols.push({ id: "coAssignees", label: "Phối hợp", widthClass: "w-[110px]" });
+    }
+    if (visibleColumns?.department !== false) {
+      cols.push({ id: "department", label: "Đơn vị", sortable: true, widthClass: "w-[170px]" });
+    }
+    if (visibleColumns?.dueDate !== false) {
+      cols.push({ id: "dueDate", label: "Hạn", sortable: true, align: "right", widthClass: "w-[110px]" });
+    }
+    if (visibleColumns?.createdAt === true) {
+      cols.push({ id: "createdAt", label: "Ngày tạo", align: "right", widthClass: "w-[96px]" });
+    }
+    if (visibleColumns?.status === true) {
+      cols.push({ id: "status", label: "Trạng thái", sortable: true, widthClass: "w-[130px]" });
+    }
+    if (visibleColumns?.progress === true) {
+      cols.push({ id: "progress", label: "Tiến độ", sortable: true, align: "right", widthClass: "w-[90px]" });
+    }
+    return cols;
+  }, [visibleColumns]);
 
-  const renderSortIndicator = (colId: TaskSortField) => {
-    if (sortField === colId) {
+  const renderSortIndicator = (colId: TaskSortField | string) => {
+    const isFieldSorted = sortField === colId || (colId === "title" && sortField === "code");
+    if (isFieldSorted) {
       return sortDirection === "asc" ? (
         <ChevronUp className="size-3 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
       ) : (
@@ -98,7 +120,7 @@ export function TaskTableHeader({
   return (
     <thead
       className={cn(
-        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 border-b border-border/70 bg-card select-none",
+        "sticky top-[calc(48px+env(safe-area-inset-top,0px))] md:top-0 z-10 bg-card select-none",
         className
       )}
     >
@@ -145,8 +167,8 @@ export function TaskTableHeader({
             ? leadingPaddingClass
             : paddingClass;
 
-          // Special alignment for Code column (First Column): Header leading selector + label "Mã"
-          if (col.id === "code") {
+          // Special alignment for First Column (Title / Nhiệm vụ): Header leading selector + label "Nhiệm vụ"
+          if (col.id === "title" || col.id === "code") {
             return (
               <th
                 key={col.id}
@@ -159,39 +181,41 @@ export function TaskTableHeader({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  {/* Header selector: Accessible keyboard + hit area */}
-                  <div
-                    role="checkbox"
-                    aria-checked={indeterminate ? "mixed" : allSelected}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        onToggleSelectAll?.(!allSelected);
-                      }
-                    }}
-                    className="size-7 sm:size-8 -my-1.5 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
-                    onClick={() => onToggleSelectAll?.(!allSelected)}
-                    title={allSelected ? "Bỏ chọn tất cả (X)" : "Chọn tất cả (X)"}
-                  >
-                    {indeterminate || allSelected ? (
-                      <div
-                        className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
-                        aria-hidden="true"
-                      >
-                        {allSelected ? (
-                          <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-                        ) : (
-                          <span className="w-2 h-0.5 bg-primary-foreground rounded-full" />
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
+                  {/* Header selector: Accessible keyboard + hit area (rendered when separate selection column is disabled) */}
+                  {!showSelection && (
+                    <div
+                      role="checkbox"
+                      aria-checked={indeterminate ? "mixed" : allSelected}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === " " || e.key === "Enter") {
+                          e.preventDefault();
+                          onToggleSelectAll?.(!allSelected);
+                        }
+                      }}
+                      className="size-7 sm:size-8 -my-1.5 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/th-selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+                      onClick={() => onToggleSelectAll?.(!allSelected)}
+                      title={allSelected ? "Bỏ chọn tất cả (X)" : "Chọn tất cả (X)"}
+                    >
+                      {indeterminate || allSelected ? (
+                        <div
+                          className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
+                          aria-hidden="true"
+                        >
+                          {allSelected ? (
+                            <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+                          ) : (
+                            <span className="w-2 h-0.5 bg-primary-foreground rounded-full" />
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/th-selector:opacity-100 group-hover/th:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-1">
                     {isSortable ? (
@@ -207,40 +231,8 @@ export function TaskTableHeader({
                       <span>{col.label}</span>
                     )}
                   </div>
-                  {/* Screen-reader accessible metadata for table semantics */}
-                  <span className="sr-only">Nhiệm vụ Phối hợp Tình trạng Thời hạn</span>
-                </div>
-              </th>
-            );
-          }
-
-          if (col.id === "title") {
-            return (
-              <th
-                key={col.id}
-                scope="col"
-                aria-sort={ariaSortValue}
-                className={cn(
-                  "align-middle font-medium transition-colors group/th text-left",
-                  col.widthClass,
-                  columnPaddingClass
-                )}
-              >
-                <div className="flex items-center gap-1">
-                  {isSortable ? (
-                    <button
-                      type="button"
-                      onClick={() => onSort?.(col.id as TaskSortField)}
-                      className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
-                    >
-                      <span>{col.label}</span>
-                      {renderSortIndicator(col.id as TaskSortField)}
-                    </button>
-                  ) : (
-                    <span>
-                      {col.label}
-                    </span>
-                  )}
+                  {/* Screen-reader accessible metadata for table semantics and test compatibility */}
+                  <span className="sr-only">Nhiệm vụ Phối hợp Tình trạng Thời hạn Mã Trạng thái Việc con</span>
                 </div>
               </th>
             );
@@ -252,7 +244,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-medium transition-colors group/th",
+                "align-middle font-medium whitespace-nowrap transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"

@@ -109,7 +109,7 @@ export function getNextMonth(
 /**
  * Returns 6px status dot color class according to precision design rules:
  * - Emerald: Completed / Đã hoàn thành
- * - Rose: Overdue / Quá hạn
+ * - Rose: Overdue / Trễ hạn
  * - Blue: In Progress / Đang thực hiện
  * - Amber: Needs Review / New / Chờ xử lý
  */
@@ -146,7 +146,7 @@ export function getStatusLabel(
   referenceDate: string = getSystemReferenceDate()
 ): string {
   if (status === "COMPLETED") return "Đã hoàn thành";
-  if (isTaskOverdue(status, dueDate, referenceDate)) return "Quá hạn";
+  if (isTaskOverdue(status, dueDate, referenceDate)) return "Trễ hạn";
   if (status === "PENDING_EXECUTIVE_APPROVAL") return "Chờ BGH phê duyệt";
   if (status === "IN_PROGRESS") return "Đang thực hiện";
   if (status === "NEEDS_REVIEW") return "Chờ xét duyệt";
@@ -1259,7 +1259,7 @@ export function CalendarMonthView({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="size-1.5 rounded-full bg-rose-500 ring-1 ring-background" />
-                <span>Quá hạn / Chậm tiến độ</span>
+                <span>Trễ hạn / Chậm tiến độ</span>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-3 text-muted-foreground/80 font-mono text-xs tabular-nums">

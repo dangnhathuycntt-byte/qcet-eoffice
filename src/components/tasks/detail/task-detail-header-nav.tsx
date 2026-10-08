@@ -52,11 +52,11 @@ export function TaskDetailHeaderNav({
     <header
       data-slot="task-detail-header-nav"
       className={cn(
-        "h-12 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
+        "h-10 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
         className
       )}
     >
-      {/* Left side intentionally empty — breadcrumbs managed by layout */}
+      {/* Bên trái trống — breadcrumb do layout quản lý */}
       <div />
 
       {/* Right actions */}

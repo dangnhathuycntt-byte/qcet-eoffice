@@ -83,7 +83,7 @@ export function ExecutiveBriefingModal({
         : bottlenecks
             .map(
               (b, idx) =>
-                `${idx + 1}. **${b.title}** (${b.departmentCode}) - Phụ trách: ${b.assigneeName || "Chưa giao"} - Quá hạn: ${b.daysOverdue || 0} ngày`
+                `${idx + 1}. **${b.title}** (${b.departmentCode}) - Phụ trách: ${b.assigneeName || "Chưa giao"} - Trễ hạn: ${b.daysOverdue || 0} ngày`
             )
             .join("\n"),
       "",
@@ -134,7 +134,7 @@ export function ExecutiveBriefingModal({
             .slice(0, 5)
             .map(
               (b, idx) =>
-                `- [${idx + 1}] ${b.title} (${b.departmentCode}) - Người thực hiện: ${b.assigneeName || "Chưa giao"} - Quá hạn: ${b.daysOverdue || 0} ngày`
+                `- [${idx + 1}] ${b.title} (${b.departmentCode}) - Người thực hiện: ${b.assigneeName || "Chưa giao"} - Trễ hạn: ${b.daysOverdue || 0} ngày`
             )
             .join("\n"),
     ];
@@ -195,7 +195,7 @@ export function ExecutiveBriefingModal({
                   {metrics.bottlenecksCount}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Quá hạn hoặc bị chặn
+                  Trễ hạn hoặc bị chặn
                 </div>
               </div>
 

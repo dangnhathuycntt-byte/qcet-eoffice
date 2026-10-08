@@ -38,8 +38,8 @@ describe("UpcomingDeadlinesWidget Helpers", () => {
 
   test("formats past dates as overdue", () => {
     const base = new Date("2026-09-04T00:00:00Z");
-    assert.equal(formatDeadlineDistance("2026-09-03", base), "Quá hạn 1 ngày");
-    assert.equal(formatDeadlineDistance("2026-09-01", base), "Quá hạn 3 ngày");
+    assert.equal(formatDeadlineDistance("2026-09-03", base), "Trễ hạn 1 ngày");
+    assert.equal(formatDeadlineDistance("2026-09-01", base), "Trễ hạn 3 ngày");
   });
 
   test("isDateOverdue detects whether a date is before today", () => {

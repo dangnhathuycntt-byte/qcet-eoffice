@@ -126,6 +126,8 @@ export interface StaffTask {
   triageRejectionReason?: string;
   escalation?: EscalationMeta;
   aiReview?: AIReviewSummary;
+  /** Người phối hợp kèm ảnh đại diện (suy ra từ người phụ trách nhiệm vụ con) */
+  coAssigneeUsers?: { id: string; name: string; avatarUrl?: string }[];
   collaborators?: {
     id: string;
     name: string;

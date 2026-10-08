@@ -272,8 +272,8 @@ export function formatDocumentPushPayload(input: DocumentPushInput): PushNotific
       eventShort = "overdue";
       rawTitle = `[QUÁ HẠN XỬ LÝ] ${docRef}`;
       rawBody = dueDateStr
-        ? `${docRef}: "${summary}". Đã quá hạn ngày ${dueDateStr}`
-        : `${docRef}: "${summary}" đã quá hạn xử lý`;
+        ? `${docRef}: "${summary}". Đã trễ hạn ngày ${dueDateStr}`
+        : `${docRef}: "${summary}" đã trễ hạn xử lý`;
       break;
     }
     case "DOCUMENT_EXPIRING_SOON": {

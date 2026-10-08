@@ -310,7 +310,7 @@ export function WorkCalendarCard({
     badgeLabel = "Việc đơn vị";
     badgeStyle = "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
   } else if (type === "urgent_overdue" || isOverdue) {
-    badgeLabel = "Quá hạn";
+    badgeLabel = "Trễ hạn";
     badgeStyle = "bg-rose-500/10 text-rose-700 border-rose-500/20";
   } else if (type === "meeting") {
     badgeLabel = "Lịch họp BGH";
@@ -939,7 +939,7 @@ export function ExecutiveCalendarWorkspace({
           {[
             { id: "ALL", label: "Tất cả" },
             { id: "ACTIVE", label: "Đang làm" },
-            { id: "OVERDUE", label: "Quá hạn" },
+            { id: "OVERDUE", label: "Trễ hạn" },
             { id: "COMPLETED", label: "Hoàn thành" },
           ].map((st) => (
             <button
@@ -1212,7 +1212,7 @@ export function ExecutiveCalendarWorkspace({
                 {selectedPreviewItem.isOverdue && (
                   <div className="flex items-center gap-2 text-rose-600 font-semibold font-mono">
                     <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
-                    <span>Đã quá hạn {selectedPreviewItem.daysOverdue || 1} ngày</span>
+                    <span>Đã trễ hạn {selectedPreviewItem.daysOverdue || 1} ngày</span>
                   </div>
                 )}
               </div>

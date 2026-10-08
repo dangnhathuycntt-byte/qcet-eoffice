@@ -254,7 +254,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     // OVERDUE has been removed from TaskStatus enum — past-due tasks remain IN_PROGRESS with isOverdue flag
     mock395Tasks.push({
       id: "task-overdue-1",
-      title: "Nhiệm vụ quá hạn 1",
+      title: "Nhiệm vụ trễ hạn 1",
       category: "THU_VIEN",
       categoryLabel: "Thư viện",
       leadAssigneeName: "Hoàng Thị E",
@@ -497,7 +497,7 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
     );
   });
 
-  test("overdue is not color-only: text label 'Quá hạn' is present", () => {
+  test("overdue is not color-only: text label 'Trễ hạn' is present", () => {
     const tasks: SchoolTask[] = [
       makeSchoolTask("past-due", {
         title: "Nhiệm vụ trễ hạn theo ngày",
@@ -506,7 +506,7 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
         progressPercent: 30,
       }),
       makeSchoolTask("flagged", {
-        title: "Nhiệm vụ bị gắn cờ quá hạn",
+        title: "Nhiệm vụ bị gắn cờ trễ hạn",
         status: "IN_PROGRESS",
         isOverdue: true,
         dueDate: "2026-08-01",
@@ -518,12 +518,12 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
     );
     assert.ok(
       html.includes("Nhiệm vụ trễ hạn theo ngày") &&
-        html.includes("Nhiệm vụ bị gắn cờ quá hạn"),
+        html.includes("Nhiệm vụ bị gắn cờ trễ hạn"),
       "both overdue cards must render"
     );
     assert.ok(
-      html.includes("Quá hạn"),
-      "overdue must render the 'Quá hạn' text label, not color alone"
+      html.includes("Trễ hạn"),
+      "overdue must render the 'Trễ hạn' text label, not color alone"
     );
   });
 

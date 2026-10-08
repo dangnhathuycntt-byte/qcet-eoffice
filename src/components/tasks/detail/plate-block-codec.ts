@@ -32,6 +32,10 @@ const LEGACY_STRIP_TYPES = new Set([
   "properties_view",
 ]);
 
+/** Chữ mẫu do menu "/" chèn sẵn; để nguyên thì coi như chưa nhập */
+export const TOGGLE_PLACEHOLDER = "Mục hướng dẫn...";
+const TABLE_HEADER_PLACEHOLDER = /^Cột \d+$/;
+
 // Plate node types
 const PT = {
   paragraph: "p",
@@ -157,6 +161,29 @@ function blockToPlateElement(block: ContentBlockItem): PlateElement {
         description: block.description,
       };
 
+    case "toggle":
+      return { ...base, type: PT.toggle, open: block.open ?? true };
+
+    case "media_embed":
+      return { ...base, type: PT.mediaEmbed, url: block.url ?? "", children: [{ text: "" }] };
+
+    case "table": {
+      const rows = block.rows && block.rows.length > 0 ? block.rows : [];
+      return {
+        ...base,
+        type: PT.table,
+        children: rows.map((row, r) => ({
+          id: `${block.id}-r${r}`,
+          type: PT.tableRow,
+          children: row.cells.map((cell, c) => ({
+            id: `${block.id}-r${r}c${c}`,
+            type: cell.isHeader ? PT.tableHeader : PT.tableCell,
+            children: [{ type: PT.paragraph, children: [{ text: cell.content || "" }] }],
+          })),
+        })),
+      };
+    }
+
     case "bookmark":
       return {
         ...base,
@@ -186,6 +213,11 @@ function textOf(el: PlateElement): string {
   return el.children
     .map((c) => ("text" in c ? c.text : ""))
     .join("");
+}
+
+function textOfDeep(node: PlateElement | { text: string }): string {
+  if ("text" in node) return node.text;
+  return node.children.map(textOfDeep).join("");
 }
 
 function plateElementToBlock(el: PlateElement): ContentBlockItem {
@@ -222,6 +254,25 @@ function plateElementToBlock(el: PlateElement): ContentBlockItem {
 
     case PT.hr:
       return { id, type: "divider", content: "" };
+
+    case PT.toggle:
+      return { id, type: "toggle", content, open: el.open ?? true };
+
+    case PT.mediaEmbed:
+      return { id, type: "media_embed", content: "", url: el.url };
+
+    case PT.table:
+      return {
+        id,
+        type: "table",
+        content: "",
+        rows: el.children.map((row) => ({
+          cells: ((row as PlateElement).children ?? []).map((cell) => ({
+            content: textOfDeep(cell),
+            isHeader: (cell as PlateElement).type === PT.tableHeader,
+          })),
+        })),
+      };
 
     case PT.image:
       return {
@@ -268,6 +319,21 @@ export function plateToBlocks(value: PlateValue): ContentBlockItem[] {
 export function isMeaningfulBlock(b: ContentBlockItem | null | undefined): boolean {
   if (!b) return false;
   if (b.type === "divider") return true;
+  // Khối chèn từ menu "/" nhưng chưa nhập gì thì không được lưu thành khối
+  if (b.type === "media_embed") return Boolean(b.url && b.url.trim());
+  if (b.type === "toggle") {
+    const t = (b.content || "").trim();
+    return t.length > 0 && t !== TOGGLE_PLACEHOLDER;
+  }
+  if (b.type === "table") {
+    return (b.rows ?? []).some((row) =>
+      row.cells.some((cell) => {
+        const t = (cell.content || "").trim();
+        if (!t) return false;
+        return !(cell.isHeader && TABLE_HEADER_PLACEHOLDER.test(t));
+      })
+    );
+  }
   if (b.type === "image") return Boolean(b.url && b.url.trim().length > 0);
 
   if (b.type === "attachment") {

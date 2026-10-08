@@ -238,7 +238,7 @@ describe('Document Overdue Cron Scanner & Web-Push Dispatcher (document-overdue-
           issuedDate: new Date('2026-09-01'),
           issuingAuthority: 'Sở Giáo dục và Đào tạo Quảng Ninh',
           category: 'Chỉ đạo điều hành',
-          summary: 'Văn bản quá hạn kiểm thử cron scanner',
+          summary: 'Văn bản trễ hạn kiểm thử cron scanner',
           dueDate: pastDueDate,
           status: DocumentStatus.DANG_XU_LY,
           leadUserId: testLeadUser.id,

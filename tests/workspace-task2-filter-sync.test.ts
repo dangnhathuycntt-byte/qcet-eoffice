@@ -137,7 +137,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
         })
       );
 
-      assert.ok(html.includes("Không có nhiệm vụ nào quá hạn"));
+      assert.ok(html.includes("Không có nhiệm vụ nào trễ hạn"));
     });
 
     test("renders primary CTA to create task when canAddTask is true", () => {
@@ -307,7 +307,7 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
       const allPills = buildQuickFilterPills(true, tabCounts, "all");
       const labels = allPills.map((p: any) => p.label);
       assert.ok(labels.includes("Tất cả"));
-      assert.ok(labels.includes("Quá hạn"));
+      assert.ok(labels.includes("Trễ hạn"));
     });
 
     test("3.1b Role-Based Action Selection: Staff gets 'Chờ tôi nộp'", () => {
@@ -443,8 +443,8 @@ describe("Task 2 Invariants: Filter Transitions, Empty States & URL Synchronizat
         })
       );
 
-      // overdue tab: Không có quá hạn là GOOD STATE
-      assert.ok(html.includes("Không có nhiệm vụ nào quá hạn"), "Phải hiện thông báo khen ngợi khi không có quá hạn");
+      // overdue tab: Không có trễ hạn là GOOD STATE
+      assert.ok(html.includes("Không có nhiệm vụ nào trễ hạn"), "Phải hiện thông báo khen ngợi khi không có trễ hạn");
       // Nhưng hasFilterActive=true vì activeTab !== "all" → nút reset sẽ hiện
       assert.ok(html.includes("Đặt lại bộ lọc"), "overdue tab filter đang active nên phải hiện nút reset");
     });

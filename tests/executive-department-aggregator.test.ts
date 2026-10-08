@@ -52,7 +52,7 @@ describe("Executive Department Aggregator", () => {
     assert.equal(tttv?.headOfDepartment.title, "Giám đốc");
   });
 
-  test("gán đúng RAG status RED khi có task quá hạn", () => {
+  test("gán đúng RAG status RED khi có task trễ hạn", () => {
     const mockTasks: SchoolTask[] = [
       {
         id: "task-cntt-1",
@@ -76,10 +76,10 @@ describe("Executive Department Aggregator", () => {
     assert.ok(cntt, "Department KHOA_CNTT should be found");
     assert.equal(cntt.ragStatus, "RED");
     assert.equal(cntt.metrics.overdue, 1);
-    assert.match(cntt.ragReason || "", /quá hạn/i);
+    assert.match(cntt.ragReason || "", /trễ hạn/i);
   });
 
-  test("gán đúng RAG status RED khi completionRate < 35% dù chưa có task quá hạn", () => {
+  test("gán đúng RAG status RED khi completionRate < 35% dù chưa có task trễ hạn", () => {
     const mockTasks: SchoolTask[] = [
       {
         id: "task-dien-1",
@@ -161,7 +161,7 @@ describe("Executive Department Aggregator", () => {
     assert.equal(xd.metrics.completionRate, 50);
   });
 
-  test("gán đúng RAG status GREEN khi completionRate >= 60% và không có quá hạn", () => {
+  test("gán đúng RAG status GREEN khi completionRate >= 60% và không có trễ hạn", () => {
     const mockTasks: SchoolTask[] = [
       {
         id: "task-kto-1",

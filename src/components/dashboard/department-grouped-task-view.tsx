@@ -82,7 +82,7 @@ function formatTaskStatus(
 
   if (isOverdue) {
     return {
-      label: "Quá hạn",
+      label: "Trễ hạn",
       className:
         "bg-rose-50 text-rose-700 border border-rose-200",
     };

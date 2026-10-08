@@ -1611,7 +1611,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
                     {[
                       { id: "ALL", label: "Tất cả" },
-                      { id: "OVERDUE_3D", label: "Quá hạn >3 ngày" },
+                      { id: "OVERDUE_3D", label: "Trễ hạn >3 ngày" },
                       { id: "BLOCKED", label: "Bị tắc nghẽn" },
                     ].map((btn) => (
                       <Button
@@ -1680,11 +1680,11 @@ export function LegacyExecutiveCockpitWorkspace({
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
                               <span className="tabular-nums tracking-wide">
                                 {typeof item.daysOverdue === "number" && item.daysOverdue > 0
-                                  ? `Quá hạn ${item.daysOverdue} ngày`
+                                  ? `Trễ hạn ${item.daysOverdue} ngày`
                                   : item.isBlocked
                                     ? "Đang bị tắc nghẽn"
                                     : item.isOverdue
-                                      ? "Đã quá hạn"
+                                      ? "Đã trễ hạn"
                                       : "Điểm nghẽn cấp thiết"}
                               </span>
                             </span>
@@ -2371,7 +2371,7 @@ export function LegacyExecutiveCockpitWorkspace({
                             variant="destructive"
                             className="text-xs bg-rose-500"
                           >
-                            Quá hạn
+                            Trễ hạn
                           </Badge>
                         )}
                         {isPendingApproval && (

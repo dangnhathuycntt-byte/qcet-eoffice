@@ -252,7 +252,7 @@ export function buildRoleAttentionQueue({
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskOverdueOrHasOverdueSubtask(t, referenceDate)) {
-        items.push(toQueueItem(t, "OVERDUE", "Quá hạn", "destructive"));
+        items.push(toQueueItem(t, "OVERDUE", "Trễ hạn", "destructive"));
         seenIds.add(t.id);
       }
     }
@@ -335,7 +335,7 @@ export function buildRoleAttentionQueue({
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskOverdueOrHasOverdueSubtask(t, referenceDate)) {
-        items.push(toQueueItem(t, "OVERDUE", "Quá hạn", "destructive"));
+        items.push(toQueueItem(t, "OVERDUE", "Trễ hạn", "destructive"));
         seenIds.add(t.id);
       }
     }

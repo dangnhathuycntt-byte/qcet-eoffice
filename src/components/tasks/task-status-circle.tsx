@@ -1,15 +1,23 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/dashboard";
+import {
+  TaskIconStatusNew,
+  TaskIconStatusInProgress,
+  TaskIconStatusReview,
+  TaskIconStatusDone,
+  TaskIconStatusCancelled,
+} from "@/lib/icons/task-icons";
 
 /**
- * Geometric status indicator circle matching design artifact qcet-nhiem-vu.html:
- * - new / not_started: dashed circle
- * - in_progress / doing: circle with right half filled (crescent)
- * - waiting_approval: circle with clock hands
- * - needs_review: circle with review dot
- * - completed / done: solid circle with white checkmark
- * - cancelled: circle with X
+ * Chỉ báo trạng thái dùng bộ icon chuẩn của dự án (nét 1.5, bo tròn, chỉ viền).
+ * Hình dạng khác nhau theo bậc, không phụ thuộc màu:
+ * - NOT_STARTED / NEW: vòng tròn nét đứt (xám)
+ * - IN_PROGRESS / DOING: vòng tròn có nửa trong (hổ phách)
+ * - WAITING_APPROVAL: vòng tròn có vòng nhỏ ở tâm (xanh da trời)
+ * - NEEDS_REVIEW: vòng tròn có vòng nhỏ ở tâm (hổ phách đậm)
+ * - COMPLETED / DONE: vòng tròn có dấu tick (xanh lá)
+ * - CANCELLED: vòng tròn có dấu X (xám nhạt)
  */
 export function TaskStatusCircle({
   status,
@@ -21,96 +29,19 @@ export function TaskStatusCircle({
   const s = (status || "NOT_STARTED").toUpperCase();
 
   if (s === "COMPLETED" || s === "DONE") {
-    return (
-      <svg
-        className={cn("size-4 shrink-0 text-foreground/85", className)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="8" fill="currentColor" />
-        <path
-          d="M8.5 12.3l2.5 2.5 4.5-5"
-          stroke="#fff"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
+    return <TaskIconStatusDone className={cn("size-4 shrink-0 text-emerald-500", className)} />;
   }
-
   if (s === "IN_PROGRESS" || s === "DOING") {
-    return (
-      <svg
-        className={cn("size-4 shrink-0 text-foreground/80", className)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
-      </svg>
-    );
+    return <TaskIconStatusInProgress className={cn("size-4 shrink-0 text-amber-500", className)} />;
   }
-
   if (s === "WAITING_APPROVAL" || s === "PENDING_EXECUTIVE_APPROVAL") {
-    return (
-      <svg
-        className={cn("size-4 shrink-0 text-foreground/75", className)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 7.5V12l3 2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
+    return <TaskIconStatusReview className={cn("size-4 shrink-0 text-sky-500", className)} />;
   }
-
   if (s === "NEEDS_REVIEW") {
-    return (
-      <svg
-        className={cn("size-4 shrink-0 text-amber-600", className)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <circle cx="12" cy="12" r="3" fill="currentColor" />
-      </svg>
-    );
+    return <TaskIconStatusReview className={cn("size-4 shrink-0 text-amber-600", className)} />;
   }
-
   if (s === "CANCELLED" || s === "CANCELED") {
-    return (
-      <svg
-        className={cn("size-4 shrink-0 text-muted-foreground/50", className)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <path d="M9 9l6 6M15 9l-6 6" strokeLinecap="round" />
-      </svg>
-    );
+    return <TaskIconStatusCancelled className={cn("size-4 shrink-0 text-muted-foreground/40", className)} />;
   }
-
-  // NEW / NOT_STARTED
-  return (
-    <svg
-      className={cn("size-4 shrink-0 text-muted-foreground/60", className)}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <circle cx="12" cy="12" r="8" strokeDasharray="3.5 3.5" />
-    </svg>
-  );
+  return <TaskIconStatusNew className={cn("size-4 shrink-0 text-muted-foreground/50", className)} />;
 }

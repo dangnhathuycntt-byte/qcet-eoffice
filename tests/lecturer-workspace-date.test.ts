@@ -40,7 +40,7 @@ describe("getDaysRemaining & getDeadlineBadgeInfo Date & Timezone Handling", () 
       assert.strictEqual(getDaysRemaining("2026-09-03", refDate), -5);
 
       const overdueBadge = getDeadlineBadgeInfo("2026-09-07", refDate);
-      assert.strictEqual(overdueBadge.label, "Quá hạn 1 ngày");
+      assert.strictEqual(overdueBadge.label, "Trễ hạn 1 ngày");
       assert.strictEqual(overdueBadge.variant, "urgent");
       assert.strictEqual(overdueBadge.daysLeft, -1);
     });

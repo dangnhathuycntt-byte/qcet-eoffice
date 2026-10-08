@@ -51,7 +51,7 @@ Consequences enforced by this vocabulary:
 2. **Attention is not status.** `Chờ phê duyệt` is the objective lifecycle status
    (`WAITING_APPROVAL`). `Chờ tôi duyệt` is the subjective attention state
    (`requires_my_approval`). They are different strings for different concepts.
-3. **Period is not status.** `Hôm nay`, `Ngày mai`, `Quá hạn N ngày` are temporal
+3. **Period is not status.** `Hôm nay`, `Ngày mai`, `Trễ hạn N ngày` are temporal
    predicates, never lifecycle statuses.
 4. **Role is not scope.** Role/position strings are out of scope for this document;
    this vocabulary never encodes authority.
@@ -118,7 +118,7 @@ values and are marked as such.
 | Chờ phê duyệt  | `TaskLifecycleStatus` `WAITING_APPROVAL`                                                      | Submitted, awaiting unit/approval authority.                                                                                                                                                                       |
 | Chờ BGH duyệt  | `TaskLifecycleStatus` `PENDING_EXECUTIVE_APPROVAL`                                            | Awaiting Ban Giám hiệu (executive) approval.                                                                                                                                                                       |
 | Hoàn thành     | `TaskLifecycleStatus` `COMPLETED`                                                             | Fully completed.                                                                                                                                                                                                   |
-| Quá hạn        | `TaskLifecycleStatus` `OVERDUE`                                                               | Past due and not completed.                                                                                                                                                                                        |
+| Trễ hạn        | `TaskLifecycleStatus` `OVERDUE`                                                               | Past due and not completed.                                                                                                                                                                                        |
 | Đã hủy         | `TaskLifecycleStatus` `CANCELLED`                                                             | Cancelled.                                                                                                                                                                                                         |
 | Cần chỉnh sửa  | Runtime status key / `KanbanColumnId` `NEEDS_REVIEW` — **not** a `TaskLifecycleStatus` member | Returned for revision; folds into the frozen lifecycle (`IN_PROGRESS` bucket), never a separate lifecycle status.                                                                                                  |
 | Tạm dừng       | Display-only pause badge — **not** a `TaskLifecycleStatus` member                             | A paused/blocked presentation state. The runtime key `BLOCKED` is the **attention** dimension, whose approved label is `Bị chặn` (§C); `Tạm dừng` is not that attention label and does not add a lifecycle status. |
@@ -136,8 +136,8 @@ Rules:
   `BLOCKED` lifecycle key is the **attention** dimension, and its approved user-facing
   label is `Bị chặn` (see §C). Never conflate `Tạm dừng` (pause badge) with `Bị chặn`
   (attention state).
-- `Quá hạn` denotes the same objective temporal condition in both the status and
-  attention dimensions; the single approved string is `Quá hạn`.
+- `Trễ hạn` denotes the same objective temporal condition in both the status and
+  attention dimensions; the single approved string is `Trễ hạn`.
 
 ---
 
@@ -150,7 +150,7 @@ act on. These are never lifecycle statuses.
 | --- | --- | --- |
 | Cần tôi xử lý | `requires_my_action` | I am assignee/co-assignee and the task is active. |
 | Chờ tôi duyệt | `requires_my_approval` | I hold approval authority and must decide (subject to Separation of Duties). |
-| Quá hạn | `overdue` | Past due and not completed. |
+| Trễ hạn | `overdue` | Past due and not completed. |
 | Sắp đến hạn | `due_soon` | Due within the near-term window (see §G for relative-date rendering). |
 | Bị chặn | `blocked` | Blocked/paused and requiring intervention. |
 
@@ -165,7 +165,7 @@ Rules:
 - The executive composite KPI that sums the overdue **and** blocked dimensions is titled
   `Trễ / vướng` (rendered by `src/components/dashboard/executive-stat-strip.tsx`). It is
   an approved **composite metric title**, not a per-task label and not a third attention
-  state; per-task copy still uses `Quá hạn` / `Bị chặn`.
+  state; per-task copy still uses `Trễ hạn` / `Bị chặn`.
 
 ---
 
@@ -297,8 +297,8 @@ diffDays == 0    → "Hôm nay"
 diffDays == 1    → "Ngày mai"
 diffDays in 2..3 → "Còn {diffDays} ngày"
 diffDays >= 4    → formatted date "dd/MM/yyyy"   (no relative count)
-diffDays == -1   → "Quá hạn 1 ngày"
-diffDays <= -2   → "Quá hạn {abs(diffDays)} ngày"
+diffDays == -1   → "Trễ hạn 1 ngày"
+diffDays <= -2   → "Trễ hạn {abs(diffDays)} ngày"
 ```
 
 Rules:
@@ -414,7 +414,7 @@ Cần chỉnh sửa
 Chờ phê duyệt
 Chờ BGH duyệt
 Hoàn thành
-Quá hạn
+Trễ hạn
 Đã hủy
 Tạm dừng
 # attention
@@ -494,7 +494,7 @@ omits. The four drift copies do not agree with each other, and each renders its 
 | `src/components/dashboard/task-detail-side-sheet.tsx` | `getRelativeTimeString` | `Hạn hôm nay` | `>= 1` → `Còn {n} ngày` (unbounded) | wrong today string; no `dd/MM/yyyy` fallback |
 | `src/components/portal/lecturer-focus-workspace.tsx` | `getDeadlineBadgeInfo` | `Hạn chót: Hôm nay` | `2..7` → `Hạn chót: Còn {n} ngày`; `>= 8` → `Còn {n} ngày` (unbounded) | prefixed today/tomorrow strings; window extended to `7`; no `dd/MM/yyyy` fallback |
 
-- All five agree on the past-due branch (`Quá hạn 1 ngày` / `Quá hạn {abs} ngày`).
+- All five agree on the past-due branch (`Trễ hạn 1 ngày` / `Trễ hạn {abs} ngày`).
 - Reference-date source differs: `getMobileDueBadge` and `getRelativeTimeString` read
   `getSystemReferenceDate()`; `getDeadlineBadgeInfo`'s local `getDaysRemaining` falls back
   to the client's local `new Date()` when no reference is passed, so it does not honour

@@ -43,8 +43,8 @@ export function daysUntil(
  * diffDays == 1    -> "Ngày mai"
  * diffDays in 2..3 -> "Còn {diffDays} ngày"
  * diffDays >= 4    -> "dd/MM/yyyy"
- * diffDays == -1   -> "Quá hạn 1 ngày"
- * diffDays <= -2   -> "Quá hạn {abs(diffDays)} ngày"
+ * diffDays == -1   -> "Trễ hạn 1 ngày"
+ * diffDays <= -2   -> "Trễ hạn {abs(diffDays)} ngày"
  * ```
  *
  * These are temporal predicates, never lifecycle statuses.

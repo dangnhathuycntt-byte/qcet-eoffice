@@ -7,7 +7,7 @@ const propertyRowVariants = cva(
   {
     variants: {
       interactive: {
-        true: "cursor-pointer hover:bg-muted/40",
+        true: "",
         false: "",
       },
     },
@@ -40,7 +40,7 @@ export function PropertyRow({
 }: PropertyRowProps) {
   return (
     <div className={cn(propertyRowVariants({ interactive }), className)} {...props}>
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 min-w-[80px] pt-0.5">
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 min-w-[80px] h-7">
         {icon}
         {label}
       </span>

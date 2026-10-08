@@ -15,7 +15,7 @@ describe("Task Detail V2 — Full-Detail Productivity Workspace Suite", () => {
     pastDate.setDate(pastDate.getDate() - 3);
     const pastResult = computeDueStatus(pastDate.toISOString());
     assert.equal(pastResult.isOverdue, true);
-    assert.match(pastResult.text, /Quá hạn 3 ngày/);
+    assert.match(pastResult.text, /Trễ hạn 3 ngày/);
 
     // Future due date
     const futureDate = new Date();

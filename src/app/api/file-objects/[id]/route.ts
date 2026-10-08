@@ -87,6 +87,38 @@ export async function GET(
     }
 
     if (!hasAuthorizedResource) {
+      const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), {
+        useCache: true,
+      });
+      const taskReadWhere = buildTaskReadWhere(authorizationContext);
+
+      const meta = (file.metadata as Record<string, unknown> | null) ?? null;
+      const linkedTaskId = typeof meta?.taskId === "string" ? meta.taskId : null;
+
+      if (linkedTaskId) {
+        const permitted = await prisma.task.findFirst({
+          where: {
+            id: linkedTaskId,
+            ...taskReadWhere,
+          },
+          select: { id: true },
+        });
+        hasAuthorizedResource = Boolean(permitted);
+      }
+
+      if (!hasAuthorizedResource) {
+        const taskWithFile = await prisma.task.findFirst({
+          where: {
+            description: { contains: file.id },
+            ...taskReadWhere,
+          },
+          select: { id: true },
+        });
+        hasAuthorizedResource = Boolean(taskWithFile);
+      }
+    }
+
+    if (!hasAuthorizedResource) {
       logger.fileAccessDenied({
         requestId,
         userId: authUser.id,
@@ -95,6 +127,19 @@ export async function GET(
         reason: "FileObject is not linked to a resource readable by this user",
       });
       throw new ForbiddenError("Bạn không có quyền truy cập tệp này");
+    }
+
+    // Auto-heal pending scan status in development when no ClamAV scanner is configured
+    if (
+      file.scanStatus === FileScanStatus.PENDING &&
+      !process.env.CLAMAV_HOST?.trim() &&
+      (process.env.NODE_ENV === "development" || !process.env.NODE_ENV)
+    ) {
+      await prisma.fileObject.update({
+        where: { id: file.id },
+        data: { scanStatus: FileScanStatus.CLEAN },
+      });
+      file.scanStatus = FileScanStatus.CLEAN;
     }
 
     if (file.scanStatus !== FileScanStatus.CLEAN) {

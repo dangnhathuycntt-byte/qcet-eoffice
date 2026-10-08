@@ -64,7 +64,7 @@ const ROW_2: StatCardDef[] = [
   { key: "completed", label: "Đã hoàn thành", icon: CheckCircle2 },
   {
     key: "overdue",
-    label: "Quá hạn",
+    label: "Trễ hạn",
     icon: AlertCircle,
     valueClassName: "text-red-600",
     cardClassName: "border-red-500/20 bg-red-500/5",

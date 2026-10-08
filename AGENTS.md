@@ -35,6 +35,9 @@
 - `DESIGN.md` chỉ dẫn nguồn thiết kế, token hiện tại và khác biệt chưa chốt. Chỉ đọc khi sửa UI; không coi hiện trạng code là bằng chứng thiết kế đã được duyệt.
 - Khi cần bảng gốc, tra `INDEX.md`, `project/`, `shots/` trong đúng bộ thiết kế. Bám token, font, khoảng cách, ảnh và trạng thái tương ứng; không tự thêm biến thể hoặc suy nghiệp vụ từ ví dụ.
 - Đối chiếu ở viewport phù hợp, kiểm tra bàn phím, responsive, loading/error khi sửa phần liên quan.
+- Kích thước UI chuẩn (nhỏ gọn, kiểu Linear): chữ nội dung `text-compact` 13px, nhãn/dòng phụ/popover/tab `text-xs` 12px, không dùng cỡ lẻ; hàng danh sách và item popover cao ≤ 32px (`py-1`), control `h-7` (28px, `--control-height-sm`), avatar `size="sm"` (20px) trong hàng, `md` (24px) chỉ ở nơi cần nhận diện; popover rộng 224–256px; nét icon 1,5px. Khi không chắc, chọn cỡ nhỏ hơn một bậc và so với phần tử cạnh nó (sidebar, bảng). Chi tiết ở `DESIGN.md`.
+- Mọi thay đổi UI phải tự kiểm lại kích thước trước khi báo xong: đối chiếu với thang trên và với phần tử lân cận, rà `text-sm`/`text-base`/`py-2+`/`size-8+` mới thêm, xem lại ảnh người dùng gửi (chụp màn Retina nên nhìn to hơn thực tế). Chưa xem được trên trình duyệt thì nói rõ chưa kiểm.
+
 
 ## Kiểm tra
 - Dùng npm theo `package-lock.json`. Tận dụng dev server hiện có; nếu cần khởi chạy, dùng `npm run dev -- -p 3001` sau khi kiểm tra cổng. Không tự kill server hoặc xóa `.next/` để verify.

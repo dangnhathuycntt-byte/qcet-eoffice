@@ -96,7 +96,7 @@ const LEVEL_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { id: "ALL", label: "Tất cả trạng thái" },
-  { id: "OVERDUE", label: "Quá hạn" },
+  { id: "OVERDUE", label: "Trễ hạn" },
   { id: "WAITING", label: "Chờ duyệt" },
   { id: "IN_PROGRESS", label: "Đang thực hiện" },
   { id: "COMPLETED", label: "Hoàn thành" },

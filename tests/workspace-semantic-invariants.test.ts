@@ -548,7 +548,7 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
         "Cần chỉnh sửa",
         "Chờ BGH duyệt",
         "Hoàn thành",
-        "Quá hạn",
+        "Trễ hạn",
         "Đã hủy",
       ];
 

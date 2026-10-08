@@ -27,6 +27,7 @@ import { DEFAULT_DEMO_USERS, matchesUser } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
+import { TaskTableToolbar } from "../src/components/tasks/table/components/task-table-toolbar";
 
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
@@ -397,7 +398,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
   });
 
   // Task 3 (Phase 3A): VIEW-FIRST Row 2 — smart-filter rail removed; Saved Views is primary nav.
-  // The permanent smart-filter pills (Tất cả / Chờ duyệt / Quá hạn / Hôm nay) are intentionally
+  // The permanent smart-filter pills (Tất cả / Chờ duyệt / Trễ hạn / Hôm nay) are intentionally
   // eliminated from the default render surface. Their filter criteria are preserved as Saved View
   // presets and Filter-popover options, not as a permanent third control row.
   test("Row 2 VIEW-FIRST: renders Saved View trigger, Search input, Filter button, Display button — no smart-filter pill rail", () => {
@@ -433,8 +434,16 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
     // Filter button must be present (aria-label="Bộ lọc")
     assert.ok(html.includes('aria-label="Bộ lọc"'), "Must render Filter (Bộ lọc) button");
 
-    // View mode toggle must be present (aria-label="Chế độ hiển thị")
-    assert.ok(html.includes('aria-label="Chế độ hiển thị"'), "Must render view mode toggle group");
+    // Display popover trigger must be present adjacent to Filter
+    assert.ok(
+      html.includes('aria-label="Tùy chọn hiển thị và thuộc tính bảng"'),
+      "Must render display options popover trigger"
+    );
+    // Outer view mode toggle group must be absent (moved into popover)
+    assert.ok(
+      !html.includes('aria-label="Chế độ hiển thị"'),
+      "Outer view mode toggle group must be removed from toolbar surface"
+    );
 
     // Smart-filter pill rail must NOT be rendered as a permanent control row.
     assert.ok(
@@ -472,7 +481,7 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
     assert.ok(filteredHtml.includes("Bộ lọc"), "Must render Bộ lọc trigger with active filters");
   });
 
-  test("Display popover trigger is rendered with 'Hiển thị'", () => {
+  test("Display options are consolidated into Linear View Options popover", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
@@ -484,14 +493,16 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       })
     );
 
-    // In the compact toolbar, the display control is a Bảng/Kanban toggle
-    // group with aria-label="Chế độ hiển thị" — not a "Hiển thị" text popover.
+    // In the Linear design, display control is a popover trigger adjacent to filter
     assert.ok(
-      html.includes('aria-label="Chế độ hiển thị"'),
-      "Must render view mode toggle group with aria-label"
+      html.includes('aria-label="Tùy chọn hiển thị và thuộc tính bảng"'),
+      "Must render display popover trigger"
     );
-    assert.ok(html.includes("Bảng"), "Must render 'Bảng' option in toggle group");
-    assert.ok(html.includes("Kanban"), "Must render 'Kanban' option in toggle group");
+    // Outer toggle group is removed from toolbar surface
+    assert.ok(
+      !html.includes('aria-label="Chế độ hiển thị"'),
+      "Outer toggle group must not be rendered on toolbar surface"
+    );
   });
 
   test("Direct Desktop Toolbar: exposes Search, Thời gian, Trạng thái, Thời hạn, Ưu tiên, Đơn vị directly", () => {
@@ -950,4 +961,44 @@ describe("Active-Filter Feedback and Zero Results Empty State", () => {
     assert.ok(badgeNotStarted, "Filter button must show badge when selectedStatus is 'NOT_STARTED'");
   });
 });
+
+describe("Linear Style TaskTableToolbar: View Options & Create Task Button", () => {
+  test("Renders understated 'Tạo việc' button instead of saturated blue button", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskTableToolbar, {
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "all",
+        onTabChange: () => {},
+        onAddTask: () => {},
+        canCreateTask: true,
+      })
+    );
+
+    assert.ok(html.includes("Tạo việc"), "Toolbar must render 'Tạo việc' button copy");
+    assert.ok(html.includes('aria-label="Tạo việc mới"'), "Button must have accessible aria-label");
+    assert.ok(!html.includes("bg-primary text-primary-foreground hover:bg-primary/90 hover:brightness-105"), "Must not use heavy blue CTA button styling");
+  });
+
+  test("Renders Display/View Options trigger adjacent to Filter button", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskTableToolbar, {
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "all",
+        onTabChange: () => {},
+      })
+    );
+
+    assert.ok(
+      html.includes('aria-label="Tùy chọn hiển thị và thuộc tính bảng"'),
+      "Desktop view options trigger must be present"
+    );
+    assert.ok(
+      html.includes('aria-label="Tùy chọn hiển thị"'),
+      "Mobile view options trigger must be present"
+    );
+  });
+});
+
 

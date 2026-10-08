@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
       type: docType,
       documentYear: query.documentYear || query.year,
       status: query.status as any,
+      bucket: query.bucket,
       urgency: query.urgency as any,
       securityLevel: query.securityLevel as any,
       leadUnitId: query.leadUnitId || query.departmentId,

@@ -42,11 +42,11 @@ export function TaskDetailSplitLayout({
 
   return (
     <div className={cn("flex flex-1 min-h-0 min-w-0", className)}>
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+      <div className={cn("flex-1 min-h-0 min-w-0 flex flex-col", inspectorOpen && "pr-6 pb-16")}>
         {children}
       </div>
       {inspectorOpen && (
-        <div className="w-[300px] shrink-0 min-w-0 pl-8">
+        <div data-slot="task-detail-inspector" className="w-[340px] shrink-0 min-w-0 px-2 pt-3">
           {inspector}
         </div>
       )}

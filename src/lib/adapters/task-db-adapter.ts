@@ -61,6 +61,7 @@ export interface PrismaTaskWithRelations {
   viewerContext?: any;
   startDate: Date;
   dueDate: Date;
+  createdAt?: Date | string | null;
   updatedAt?: Date | string | null;
   completedAt?: Date | null;
   parentTaskId?: string | null;
@@ -180,6 +181,74 @@ function mapLinkedDocument(raw: any): TaskSourceDocument | null {
   };
 }
 
+const STAFF_PRIORITY_MAP: Record<string, TaskPriority> = {
+  URGENT: 'URGENT',
+  HIGH: 'HIGH',
+  NORMAL: 'NORMAL',
+  MEDIUM: 'NORMAL',
+  LOW: 'LOW',
+};
+
+/** Độ ưu tiên của nhiệm vụ đơn vị: lấy đúng từ DB, không mặc định cứng "Bình thường" */
+function normalizeStaffPriority(raw: unknown): TaskPriority {
+  return STAFF_PRIORITY_MAP[String(raw ?? '').toUpperCase()] ?? 'NORMAL';
+}
+
+/**
+ * Phối hợp của nhiệm vụ cha = nhóm người phụ trách các nhiệm vụ con đang hoạt động
+ * (dùng chung cho SchoolTask và StaffTask).
+ */
+export function deriveSubtaskCollaborators(
+  raw: PrismaTaskWithRelations
+): Array<{ id?: string; name: string; avatarUrl?: string }> {
+  // Canonical derived collaborators:
+  // "Phối hợp của task cha = tập unique Primary DRI/Chủ trì của các nhiệm vụ con active."
+  // - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
+  // - Khi task con đổi DRI B → C → parent tự phản ánh C.
+  // - Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần.
+  // - DRI task con trùng DRI task cha vẫn được ghi vào Phối hợp (người phụ trách chính cũng tham gia việc con).
+  // - Khi task con bị cancel/archive/re-parent → recompute.
+  // - Chỉ tính các task con còn active theo lifecycle canonical (status !== 'CANCELLED', !archivedAt).
+  const collaboratorMap = new Map<string, { id?: string; name: string; avatarUrl?: string }>();
+  if (Array.isArray(raw.subTasks)) {
+    for (const st of raw.subTasks) {
+      if (!st || typeof st !== 'object') continue;
+      const s = String(st.status || '').toUpperCase();
+      if (s === 'CANCELLED' || s === 'CANCELED') continue;
+      if (st.archivedAt) continue;
+
+      let subLeadId: string | undefined;
+      let subLeadName: string | undefined;
+      let subLeadAvatar: string | undefined;
+
+      // Check actors
+      if (Array.isArray(st.actors)) {
+        const dri = st.actors.find((a: any) => a && (a.role === 'DRI' || a.isPrimaryDRI) && (a.user || a.userId));
+        if (dri) {
+          subLeadId = dri.userId || dri.user?.id;
+          subLeadName = dri.user?.name || dri.userName;
+          subLeadAvatar = dri.user?.avatarUrl || undefined;
+        }
+      }
+
+      // Fallback
+      if (!subLeadName && (st.assigneeName || st.leadAssigneeName)) {
+        subLeadId = st.assigneeId || st.leadAssigneeId;
+        subLeadName = st.assigneeName || st.leadAssigneeName;
+      }
+
+      if (!subLeadName) continue;
+
+      const key = subLeadId || subLeadName.trim().toLowerCase();
+      if (!collaboratorMap.has(key)) {
+        collaboratorMap.set(key, { id: subLeadId, name: subLeadName, avatarUrl: subLeadAvatar });
+      }
+    }
+  }
+
+  return Array.from(collaboratorMap.values());
+}
+
 export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTask {
   const primaryOwner = findPrimaryActor(raw.actors);
 
@@ -187,14 +256,18 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
   const assigneeId = primaryOwner?.user?.id || primaryOwner?.userId || undefined;
   const assigneeAvatar = primaryOwner?.user?.avatarUrl || undefined;
 
-  // Subtasks/leaf tasks have no manual collaborators; collaborators are derived only on parent tasks
-  const collaborators: any[] = [];
+  // Phối hợp chỉ suy ra từ nhiệm vụ con (nhiệm vụ lá không có nhiệm vụ con nên rỗng)
+  const collaborators: any[] = deriveSubtaskCollaborators(raw).map((c) => ({
+    id: c.id ?? c.name,
+    name: c.name,
+    avatarUrl: c.avatarUrl,
+  }));
 
   const statusMap: Record<string, TaskStatus> = {
     NOT_STARTED: 'NEW',
     NEW: 'NEW',
     IN_PROGRESS: 'IN_PROGRESS',
-    WAITING_APPROVAL: 'NEEDS_REVIEW',
+    WAITING_APPROVAL: 'WAITING_APPROVAL',
     NEEDS_REVIEW: 'NEEDS_REVIEW',
     COMPLETED: 'COMPLETED',
     BLOCKED: 'BLOCKED',
@@ -214,6 +287,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     id: raw.id,
     code: raw.code,
     title: raw.title,
+    priority: normalizeStaffPriority((raw as any).priority),
     assigneeName,
     assigneeId,
     assigneeAvatar,
@@ -240,7 +314,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
     })),
     requiresReview: (raw.dacumTaskDefId != null) || raw.scope === 'SCHOOL',
     collaborators,
-    coAssignees: collaborators,
+    coAssignees: collaborators.map((c: any) => c.name),
     progressPercent: raw.progressPercent ?? 0,
     sourceDocument: mapLinkedDocument(raw),
   };
@@ -249,57 +323,8 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
 export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenceDate?: string): SchoolTask {
   // Tìm người chủ trì chính (Single DRI) từ canonical ReBAC actors
   const primaryOwner = findPrimaryActor(raw.actors);
-  // Canonical derived collaborators:
-  // "Phối hợp của task cha = tập unique Primary DRI/Chủ trì của các nhiệm vụ con active."
-  // - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
-  // - Khi task con đổi DRI B → C → parent tự phản ánh C.
-  // - Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần.
-  // - Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp.
-  // - Khi task con bị cancel/archive/re-parent → recompute.
-  // - Chỉ tính các task con còn active theo lifecycle canonical (status !== 'CANCELLED', !archivedAt).
-  const parentLeadId = (primaryOwner?.user as any)?.id || primaryOwner?.userId;
-  const parentLeadName = (primaryOwner?.user?.name || '').trim().toLowerCase();
-
-  const collaboratorMap = new Map<string, string>();
-  if (Array.isArray(raw.subTasks)) {
-    for (const st of raw.subTasks) {
-      if (!st || typeof st !== 'object') continue;
-      const s = String(st.status || '').toUpperCase();
-      if (s === 'CANCELLED' || s === 'CANCELED') continue;
-      if (st.archivedAt) continue;
-
-      let subLeadId: string | undefined;
-      let subLeadName: string | undefined;
-
-      // Check actors
-      if (Array.isArray(st.actors)) {
-        const dri = st.actors.find((a: any) => a && (a.role === 'DRI' || a.isPrimaryDRI) && (a.user || a.userId));
-        if (dri) {
-          subLeadId = dri.userId || dri.user?.id;
-          subLeadName = dri.user?.name || dri.userName;
-        }
-      }
-
-      // Fallback
-      if (!subLeadName && (st.assigneeName || st.leadAssigneeName)) {
-        subLeadId = st.assigneeId || st.leadAssigneeId;
-        subLeadName = st.assigneeName || st.leadAssigneeName;
-      }
-
-      if (!subLeadName) continue;
-
-      // Do not duplicate parent's own DRI
-      if (parentLeadId && subLeadId && subLeadId === parentLeadId) continue;
-      if (parentLeadName && subLeadName.trim().toLowerCase() === parentLeadName) continue;
-
-      const key = subLeadId || subLeadName.trim().toLowerCase();
-      if (!collaboratorMap.has(key)) {
-        collaboratorMap.set(key, subLeadName);
-      }
-    }
-  }
-
-  const collaborators = Array.from(collaboratorMap.values());
+  const collaboratorUsers = deriveSubtaskCollaborators(raw);
+  const collaborators = collaboratorUsers.map((c) => c.name);
 
   // Ánh xạ trạng thái chuẩn hóa (chuẩn TaskStatus viết hoa)
   const statusMap: Record<string, TaskStatus> = {
@@ -395,6 +420,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     startDate: formatLocalDate(raw.startDate),
     dueDate: isoDueDate,
     assignedDate: formatLocalDate(raw.startDate || new Date()),
+    createdAt: raw.createdAt ? formatLocalDate(raw.createdAt) : undefined,
     status: statusMap[raw.status] || 'in_progress',
     priority: (priorityMap[raw.priority] || (raw.priority as any) || 'NORMAL') as TaskPriority,
     progress,
@@ -404,6 +430,8 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenc
     scope: raw.scope,
     collaborators: collaborators && collaborators.length > 0 ? collaborators : undefined,
     coAssignees: collaborators,
+    // Người phối hợp kèm ảnh đại diện thật (Google) để vẽ nhóm avatar, không dựng lại từ chữ cái
+    coAssigneeUsers: collaboratorUsers.map((c) => ({ id: c.id ?? c.name, name: c.name, avatarUrl: c.avatarUrl })),
     category: raw.scope === 'SCHOOL' ? 'Chỉ đạo cấp Trường' : 'Chuyên môn Khoa/Phòng',
     categoryLabel: raw.scope === 'SCHOOL' ? 'Chỉ đạo cấp Trường' : 'Chuyên môn Khoa/Phòng',
     parentTaskId,

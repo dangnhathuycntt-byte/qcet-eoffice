@@ -1,3 +1,4 @@
+import { getTaskContentPreview } from "@/lib/task-content-preview";
 import type {
   SchoolTask,
   StaffTask,
@@ -193,13 +194,13 @@ export function isTaskAssignedToUser(
 }
 
 /**
- * Kiểm tra xem nhiệm vụ hoặc bất kỳ việc con nào có bị quá hạn SLA không
+ * Kiểm tra xem nhiệm vụ hoặc bất kỳ việc con nào có bị trễ hạn SLA không
  */
 export function isTaskOrSubtaskOverdue(
   task: SchoolTask,
   referenceDate: string | Date = getSystemReferenceDate()
 ): boolean {
-  // Nếu cả nhiệm vụ cha đã hoàn thành hoặc hủy thì không coi là quá hạn
+  // Nếu cả nhiệm vụ cha đã hoàn thành hoặc hủy thì không coi là trễ hạn
   if (task.status === "COMPLETED" || task.status === "CANCELLED") {
     return false;
   }
@@ -373,7 +374,7 @@ export function filterTasks(
         .toLowerCase()
         .includes(query);
       const matchDesc = task.description
-        ? task.description.toLowerCase().includes(query)
+        ? getTaskContentPreview(task.description).toLowerCase().includes(query)
         : false;
       const matchCo = task.coAssignees?.some((name) =>
         name.toLowerCase().includes(query)
@@ -503,6 +504,43 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
 };
 
 /**
+ * Trọng số ưu tiên nghiệp vụ hành chính khi sắp xếp theo trạng thái (Status Urgency Rank)
+ * 1: Trễ hạn (Khẩn cấp nhất)
+ * 2: Chờ duyệt / Chờ BGH duyệt
+ * 3: Cần chỉnh sửa
+ * 4: Đang thực hiện
+ * 5: Mới / Chưa bắt đầu
+ * 6: Hoàn thành
+ * 7: Đã hủy / Tạm dừng
+ */
+export function getTaskStatusUrgencyRank(task: SchoolTask): number {
+  const status = (task.status || "NEW").toUpperCase();
+  if (status === "COMPLETED") return 6;
+  if (status === "CANCELLED" || status === "CANCELED") return 7;
+  if (status === "BLOCKED") return 7;
+
+  // Nhiệm vụ trễ hạn thực tế
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dueIso = extractIsoDateString(task.dueDate);
+  if (status === "OVERDUE" || (dueIso && dueIso < todayIso) || (task as any).isOverdue === true) {
+    return 1;
+  }
+  if (status === "WAITING_APPROVAL" || status === "PENDING_EXECUTIVE_APPROVAL") {
+    return 2;
+  }
+  if (status === "NEEDS_REVIEW") {
+    return 3;
+  }
+  if (status === "IN_PROGRESS") {
+    return 4;
+  }
+  if (status === "NEW" || status === "NOT_STARTED") {
+    return 5;
+  }
+  return 5;
+}
+
+/**
  * Sắp xếp danh sách nhiệm vụ theo cột và chiều được chọn
  */
 export function sortTasks(
@@ -531,9 +569,15 @@ export function sortTasks(
         return factor * dateA.localeCompare(dateB);
       }
       case "status": {
-        const statusA = a.status || "";
-        const statusB = b.status || "";
-        return factor * statusA.localeCompare(statusB);
+        const rankA = getTaskStatusUrgencyRank(a);
+        const rankB = getTaskStatusUrgencyRank(b);
+        if (rankA !== rankB) {
+          return factor * (rankA - rankB);
+        }
+        // Nếu cùng rank, ưu tiên hạn chót gần nhất
+        const dateA = extractIsoDateString(a.dueDate) || "9999-99-99";
+        const dateB = extractIsoDateString(b.dueDate) || "9999-99-99";
+        return dateA.localeCompare(dateB);
       }
       case "progress":
       case "progressPercent": {

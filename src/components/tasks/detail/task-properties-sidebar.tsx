@@ -4,10 +4,7 @@ import * as React from "react";
 import {
   User,
   Users,
-  Building2,
   Calendar,
-  CalendarDays,
-  CalendarCheck,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -19,6 +16,7 @@ import {
   Loader2,
   FileText,
 } from "lucide-react";
+import { TaskIconDeadline, TaskIconDepartment } from "@/lib/icons/task-icons";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
@@ -123,22 +121,18 @@ function extractNameAndTitle(rawName?: string | null): { name: string; prefix?: 
 
 function StartDateIcon({ className }: { className?: string }) {
   return (
-    <CalendarDays
-      className={cn("size-3.5 text-muted-foreground", className)}
-      strokeWidth={1.5}
-    />
+    <TaskIconDeadline className={cn("size-4 text-muted-foreground", className)} />
   );
 }
 
 function TargetDateIcon({ className, isOverdue }: { className?: string; isOverdue?: boolean }) {
   return (
-    <CalendarCheck
+    <TaskIconDeadline
       className={cn(
-        "size-3.5",
-        isOverdue ? "text-rose-500" : "text-muted-foreground",
+        "size-4",
+        isOverdue ? "text-destructive" : "text-muted-foreground",
         className
       )}
-      strokeWidth={1.5}
     />
   );
 }
@@ -183,13 +177,14 @@ export function TaskPropertiesSidebar({
     currentPriority === "MEDIUM" ? "NORMAL" : currentPriority;
 
   // Lead / DRI
-  const leadName = isSchool
-    ? schoolTask?.leadAssigneeName || "Chưa phân công"
-    : staffTask?.assigneeName || "Chưa phân công";
+  // Nhiệm vụ đơn vị (StaffTask) cũng có mảng subTasks nên bị nhận nhầm là SchoolTask:
+  // đọc cả hai nhóm trường để không mất người phụ trách
+  const anyTask = task as any;
+  const leadName: string =
+    anyTask.leadAssigneeName || anyTask.assigneeName || "Chưa phân công";
 
-  const leadAvatar = isSchool
-    ? schoolTask?.leadAssigneeAvatar
-    : staffTask?.assigneeAvatar;
+  const leadAvatar: string | undefined =
+    anyTask.leadAssigneeAvatar || anyTask.assigneeAvatar || undefined;
 
   // Department
   const departmentName = isSchool
@@ -247,35 +242,35 @@ export function TaskPropertiesSidebar({
 
   // Members / Collaborators: strictly read-only derived data from server truth (Rule 2)
   const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
-    if (Array.isArray((task as any).collaborators) && !isSchool) {
-      return (task as any).collaborators.map((c: any) => ({
-        id: c.id || c.userId,
-        name: c.name || c.userName,
-        avatarUrl: c.avatarUrl,
-      }));
+    // Nhiệm vụ đơn vị có mảng subTasks nên có thể bị nhận nhầm là cấp trường (isSchool):
+    // đọc cả hai nguồn thay vì dựa vào phân loại.
+    const anyTask = task as any;
+    if (Array.isArray(anyTask.coAssigneeUsers) && anyTask.coAssigneeUsers.length > 0) {
+      return anyTask.coAssigneeUsers
+        .map((c: any, idx: number) => ({ id: c.id || `co-${idx}`, name: c.name || "", avatarUrl: c.avatarUrl || undefined }))
+        .filter((c: { name: string }) => c.name);
     }
-    if (isSchool && schoolTask) {
-      const list: Array<{ id: string; name: string; avatarUrl?: string }> = [];
-      if (Array.isArray(schoolTask.coAssignees)) {
-        schoolTask.coAssignees.forEach((name, idx) => {
-          if (name && typeof name === "string") {
-            list.push({ id: `co-${idx}`, name });
-          } else if (name && typeof name === "object") {
-            list.push({ id: (name as any).id || `co-${idx}`, name: (name as any).name || '', avatarUrl: (name as any).avatarUrl });
-          }
-        });
-      }
-      return list;
+    if (Array.isArray(anyTask.collaborators) && anyTask.collaborators.length > 0) {
+      return anyTask.collaborators
+        .map((c: any, idx: number) =>
+          typeof c === "string"
+            ? { id: `co-${idx}`, name: c }
+            : { id: c.id || c.userId || `co-${idx}`, name: c.name || c.userName || "", avatarUrl: c.avatarUrl }
+        )
+        .filter((c: { name: string }) => c.name);
     }
-    if (staffTask?.collaborators && Array.isArray(staffTask.collaborators)) {
-      return staffTask.collaborators.map((c) => ({
-        id: c.id,
-        name: c.name,
-        avatarUrl: c.avatarUrl,
-      }));
+    const list: Array<{ id: string; name: string; avatarUrl?: string }> = [];
+    if (Array.isArray(anyTask.coAssignees)) {
+      anyTask.coAssignees.forEach((entry: any, idx: number) => {
+        if (entry && typeof entry === "string") {
+          list.push({ id: `co-${idx}`, name: entry });
+        } else if (entry && typeof entry === "object") {
+          list.push({ id: entry.id || `co-${idx}`, name: entry.name || "", avatarUrl: entry.avatarUrl });
+        }
+      });
     }
-    return [];
-  }, [task, isSchool, schoolTask, staffTask]);
+    return list.filter((c) => c.name);
+  }, [task]);
 
   // Dates — use extractDateIso for ICT-safe date extraction (replaces inline typeof + slice)
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
@@ -373,12 +368,12 @@ export function TaskPropertiesSidebar({
     <div
       data-slot="task-properties-sidebar"
       className={cn(
-        "w-full space-y-0 text-xs text-foreground select-none",
+        "w-full space-y-2 text-xs text-foreground select-none",
         className
       )}
     >
       {/* 1. SECTION: PROPERTIES */}
-      <div className="space-y-3 pb-5">
+      <div className="space-y-3 rounded-lg border border-border/70 bg-card p-3 shadow-2xs">
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -413,7 +408,9 @@ export function TaskPropertiesSidebar({
           <PropertyRow label="Phụ trách" interactive={canEdit}>
             <TaskAssigneePicker
               items={personnelList}
+              assigneeId={anyTask.leadAssigneeId || anyTask.assigneeId}
               assigneeName={leadName}
+              assigneeAvatarUrl={leadAvatar}
               displayName={leadParsed.displayName}
               disabled={!canEdit}
               pending={isReassigning}
@@ -435,8 +432,8 @@ export function TaskPropertiesSidebar({
                   title={collaborators.map((c) => c.name).join(", ")}
                 />
               ) : (
-                <div className="inline-flex items-center px-1.5 py-0.5 text-xs text-muted-foreground/60">
-                  <span className="size-4 shrink-0 flex items-center justify-center">-</span>
+                <div className="inline-flex h-7 items-center px-1.5 text-xs text-muted-foreground/70 select-none">
+                  Chưa có
                 </div>
               )}
             </div>
@@ -454,7 +451,7 @@ export function TaskPropertiesSidebar({
                   variant="inline"
                   icon={
                     <div className="size-4 shrink-0 flex items-center justify-center">
-                      <CalendarDays className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <TaskIconDeadline className="size-4 text-muted-foreground" />
                     </div>
                   }
                   showPresets={false}
@@ -466,7 +463,7 @@ export function TaskPropertiesSidebar({
                   className="inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
                 >
                   <div className="size-4 shrink-0 flex items-center justify-center">
-                    <CalendarDays className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <TaskIconDeadline className="size-4 text-muted-foreground" />
                   </div>
                   <span className="tabular-nums font-normal">
                     {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
@@ -488,19 +485,18 @@ export function TaskPropertiesSidebar({
                   variant="inline"
                   icon={
                     <div className="size-4 shrink-0 flex items-center justify-center">
-                      <CalendarCheck
+                      <TaskIconDeadline
                         className={cn(
-                          "size-3.5",
+                          "size-4",
                           dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                            ? "text-rose-500"
+                            ? "text-destructive"
                             : "text-muted-foreground"
                         )}
-                        strokeWidth={1.5}
-                      />
+                        />
                     </div>
                   }
                   triggerClassName={cn(
-                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-rose-600 font-normal"
+                    dueStatus.isOverdue && normalizedStatus !== "COMPLETED" && "text-destructive font-normal"
                   )}
                   showPresets={true}
                   align="right"
@@ -511,20 +507,19 @@ export function TaskPropertiesSidebar({
                   className={cn(
                     "inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs select-none",
                     dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                      ? "text-rose-600 font-normal"
+                      ? "text-destructive font-normal"
                       : "text-foreground font-normal"
                   )}
                 >
                   <div className="size-4 shrink-0 flex items-center justify-center">
-                    <CalendarCheck
+                    <TaskIconDeadline
                       className={cn(
-                        "size-3.5",
+                        "size-4",
                         dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
-                          ? "text-rose-500"
+                          ? "text-destructive"
                           : "text-muted-foreground"
                       )}
-                      strokeWidth={1.5}
-                    />
+                      />
                   </div>
                   <span className="tabular-nums font-normal">
                     {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
@@ -546,7 +541,7 @@ export function TaskPropertiesSidebar({
               }}
             >
               <div className="size-4 shrink-0 flex items-center justify-center mt-0.5">
-                <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                <TaskIconDepartment className="size-4 text-muted-foreground" />
               </div>
               <span
                 className="min-w-0 font-normal select-text line-clamp-2"
@@ -577,12 +572,14 @@ export function TaskPropertiesSidebar({
       </div>
 
       {subTasks && onSelectSubtask && (
-        <TaskSubtasksSidebarSection
-          subTasks={subTasks}
-          activeSubtaskId={activeSubtaskId}
-          onSelectSubtask={onSelectSubtask}
-          onAddSubtask={onAddSubtask}
-        />
+        <div className="rounded-lg border border-border/70 bg-card p-3 shadow-2xs">
+          <TaskSubtasksSidebarSection
+            subTasks={subTasks}
+            activeSubtaskId={activeSubtaskId}
+            onSelectSubtask={onSelectSubtask}
+            onAddSubtask={onAddSubtask}
+          />
+        </div>
       )}
     </div>
   );

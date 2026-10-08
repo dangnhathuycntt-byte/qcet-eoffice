@@ -1,32 +1,21 @@
 "use client";
 
 import * as React from "react";
-import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
-import {
-  FileText,
-  Calendar,
-  Building2,
-  User,
-  Clock,
-  ArrowLeft,
-  Shield,
-  AlertTriangle,
-  Hash,
-  Tag,
-  Zap,
-  CheckCircle2,
-  ExternalLink,
-  Loader2,
-  Paperclip,
-  Download,
-} from "lucide-react";
+import dynamic from "next/dynamic";
+import { Check, Loader2, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { fadeVariants } from "@/lib/motion/variants";
-import { motionTransition } from "@/lib/motion/tokens";
 import { DocumentAuditTimeline } from "@/components/documents/document-audit-timeline";
 import { cn } from "@/lib/utils";
+import { getLedgerDueNote, getLedgerUrgencyTag, todayInVietnam } from "@/lib/documents/document-ledger-format";
+
+const DocumentPdfViewer = dynamic(
+  () => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer),
+  {
+    ssr: false,
+    loading: () => <div role="status" className="p-8 text-center text-xs text-muted-foreground animate-pulse">Đang tải trình xem tệp…</div>,
+  }
+);
 
 // Serializable shape passed from server component
 export interface IncomingDocumentDetail {
@@ -142,37 +131,21 @@ function formatDate(raw: string | null | undefined): string {
   });
 }
 
-function formatDateTime(raw: string | null | undefined): string {
+/** "25/09 15:20" theo giờ Việt Nam. */
+function formatShortDateTime(raw: string | null | undefined): string {
   if (!raw) return "";
   const d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleString("vi-VN", {
+  if (isNaN(d.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
-
-function MetaRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-}) {
-  if (!value) return null;
-  return (
-    <div className="flex items-start gap-2 text-xs">
-      <Icon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
-      <span className="text-muted-foreground shrink-0">{label}:</span>
-      <span className="text-foreground font-medium">{value}</span>
-    </div>
-  );
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  return `${get("day")}/${get("month")} ${get("hour")}:${get("minute")}`;
 }
 
 export function IncomingDocumentDetailView({
@@ -283,436 +256,227 @@ export function IncomingDocumentDetailView({
     });
   }
 
-  const isUrgent = doc.urgency && doc.urgency !== "THUONG" && doc.urgency !== "NORMAL";
   const isConfidential =
     doc.securityLevel && doc.securityLevel !== "THUONG" && doc.securityLevel !== "PUBLIC";
+  const urgencyTag = getLedgerUrgencyTag((doc.urgency ?? "THUONG") as any);
+  const isDone = ["RESOLVED", "FILED", "ARCHIVED"].includes(status);
+  const deadline = detail.deadline ?? doc.dueDate ?? null;
+  const dueNote = getLedgerDueNote(deadline?.slice(0, 10), isDone, todayInVietnam());
+
+  const [attachmentId, setAttachmentId] = React.useState<string | null>(doc.attachments[0]?.id ?? null);
+  const attachment = doc.attachments.find((a) => a.id === attachmentId) ?? doc.attachments[0] ?? null;
+
+  const regLabel =
+    doc.registrationNumber != null ? String(doc.registrationNumber).padStart(4, "0") : null;
+
+  // Luân chuyển: chỉ dựng từ mốc thời gian thật của workflow.
+  const leadName = detail.leadUnit?.name;
+  const steps: { id: string; label: string; at?: string | null }[] = [
+    { id: "registered", label: `Văn thư vào sổ${regLabel ? `, số đến ${regLabel}` : ""}`, at: detail.createdAt },
+    { id: "presented", label: "Trình lãnh đạo", at: detail.presentedAt },
+    { id: "directed", label: leadName ? `Bút phê, giao ${leadName}` : "Bút phê", at: detail.directedAt },
+    {
+      id: "processing",
+      label: leadName ? `Đang xử lý tại ${leadName}` : "Đang xử lý",
+      at: detail.unitAssignments[0]?.createdAt ?? null,
+    },
+    { id: "resolved", label: "Đã giải quyết", at: detail.resolvedAt },
+    { id: "filed", label: "Lập hồ sơ, lưu", at: detail.filedAt },
+  ];
+  const currentIdx = steps.findIndex((st) => !st.at);
+
+  const sentence = isDone
+    ? STATUS_LABEL[status] ?? status
+    : status === "UNIT_ASSIGNED_PERSON" && leadName
+    ? `${leadName} đang xử lý`
+    : STATUS_LABEL[status] ?? status;
+
+  const kv: { label: string; value: React.ReactNode; mono?: boolean }[] = [
+    { label: "Số, ký hiệu", value: doc.originalNumber, mono: true },
+    { label: "Ngày văn bản", value: formatDate(doc.issuedDate), mono: true },
+    { label: "Cơ quan ban hành", value: doc.issuingAuthority },
+    { label: "Loại văn bản", value: doc.category },
+    { label: "Ngày đến", value: formatDate(doc.receivedDate), mono: true },
+    { label: "Chủ trì", value: leadName },
+    { label: "Người phụ trách", value: detail.unitAssignments.map((a) => a.driUser.name).join(", ") },
+    {
+      label: "Nhiệm vụ liên kết",
+      value: doc.linkedTaskId ? (
+        <Link href={`/tasks/${doc.linkedTaskId}`} className="underline decoration-border underline-offset-3 hover:decoration-foreground">
+          Xem nhiệm vụ
+        </Link>
+      ) : null,
+    },
+    { label: "Kết quả giải quyết", value: detail.resolutionSummary },
+    { label: "Hồ sơ lưu", value: detail.dossierId, mono: true },
+  ];
+
+  const quotes = detail.directives.length
+    ? detail.directives.map((d) => ({ id: d.id, text: d.content, who: d.leader.name, at: d.issuedAt }))
+    : detail.leadershipInstruction
+    ? [{ id: "instruction", text: detail.leadershipInstruction, who: detail.leader?.name ?? "Lãnh đạo", at: detail.directedAt }]
+    : [];
 
   return (
-    <AnimatePresence mode="wait">
-      <m.div
-        key={detail.id}
-        variants={fadeVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={motionTransition}
-        className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 pb-6 md:pb-10 space-y-4"
-      >
-        {/* Back navigation */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/documents"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-          >
-            <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-            Văn bản &amp; Hồ sơ
-          </Link>
+    <div className="w-full" data-slot="incoming-document-detail">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 h-8 text-xs text-muted-foreground">
+        <Link href="/documents?type=inbox" className="hover:text-foreground transition-colors">Văn bản đến</Link>
+        <span aria-hidden>›</span>
+        <span className="font-medium text-foreground font-mono">
+          {regLabel ? `Số đến ${regLabel}${doc.issuedDate ? `/${doc.issuedDate.slice(0, 4)}` : ""}` : doc.originalNumber ?? "Chi tiết"}
+        </span>
+      </nav>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] rounded-xl overflow-hidden bg-card shadow-xs lg:h-[calc(100vh-7rem)]">
+        {/* Trình xem tệp */}
+        <div className="bg-muted/50 flex flex-col min-w-0 min-h-[320px]">
+          <div className="h-10 shrink-0 flex items-center gap-2 px-3 bg-card text-compact text-muted-foreground border-b border-border/50">
+            <Paperclip className="size-3.5 shrink-0" strokeWidth={1.5} />
+            {doc.attachments.length > 1 ? (
+              <select
+                aria-label="Chọn tệp đính kèm"
+                value={attachment?.id ?? ""}
+                onChange={(e) => setAttachmentId(e.target.value)}
+                className="h-7 max-w-[60%] rounded-md bg-transparent text-compact text-foreground font-medium outline-none hover:bg-muted/60 px-1"
+              >
+                {doc.attachments.map((a) => (
+                  <option key={a.id} value={a.id}>{a.fileName}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="truncate text-foreground font-medium">{attachment?.fileName ?? "Chưa có tệp đính kèm"}</span>
+            )}
+            {attachment?.fileSize ? (
+              <span className="text-xs text-muted-foreground/80 shrink-0">· {Math.max(1, Math.round(attachment.fileSize / 1024))} KB</span>
+            ) : null}
+          </div>
+          <div className="flex-1 min-h-0 p-3">
+            {attachment ? (
+              <DocumentPdfViewer
+                fileUrl={attachment.fileUrl}
+                fileName={attachment.fileName}
+                mimeType={attachment.mimeType ?? undefined}
+                className="h-full w-full"
+              />
+            ) : (
+              <div className="h-full grid place-items-center text-compact text-muted-foreground">Văn bản chưa có tệp đính kèm</div>
+            )}
+          </div>
         </div>
 
-        {/* Document header card */}
-        <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-muted text-foreground shrink-0 mt-0.5">
-              <FileText className="size-5" strokeWidth={1.5} />
+        {/* Sổ + luân chuyển */}
+        <aside className="min-w-0 overflow-y-auto px-5 pt-5 pb-6 space-y-5 border-t lg:border-t-0 lg:border-l border-border/50">
+          <header className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              {urgencyTag ? (
+                <>
+                  <b className={cn("font-bold tracking-wide", urgencyTag.tone === "danger" ? "text-rose-600" : "text-amber-600")}>{urgencyTag.label}</b>
+                  <span aria-hidden>·</span>
+                </>
+              ) : null}
+              <span>Văn bản đến</span>
+              {isConfidential ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>Độ mật: {SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}</span>
+                </>
+              ) : null}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                  Văn bản đến
-                </span>
-                {isUrgent && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 border border-amber-500/20">
-                    <Zap className="size-3" strokeWidth={1.5} />
-                    {URGENCY_LABEL[doc.urgency!] ?? doc.urgency}
-                  </span>
-                )}
-                {isConfidential && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 border border-rose-500/20">
-                    <Shield className="size-3" strokeWidth={1.5} />
-                    {SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60">
-                  <CheckCircle2 className="size-3" strokeWidth={1.5} />
-                  {STATUS_LABEL[detail.status] ?? detail.status}
-                </span>
-              </div>
+            <h1 className="text-sm font-semibold leading-snug tracking-tight text-foreground">{doc.summary || "Văn bản đến"}</h1>
+          </header>
 
-              <h1 className="text-base font-semibold text-foreground font-heading leading-snug">
-                {doc.summary || "Văn bản đến"}
-              </h1>
-
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                {doc.originalNumber && (
-                  <span className="inline-flex items-center gap-1 text-xs text-foreground">
-                    <Hash className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    <span className="font-mono font-medium">{doc.originalNumber}</span>
-                  </span>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/60 pl-3 pr-1.5 py-1.5">
+            <span className="text-compact text-foreground/90">
+              {sentence}
+              {deadline && !isDone ? (
+                <>
+                  {" · hạn "}
+                  <b className={cn("font-mono font-semibold", dueNote?.tone === "danger" ? "text-rose-600" : dueNote?.tone === "warning" ? "text-amber-600" : "")}>
+                    {formatDate(deadline).slice(0, 5)}
+                  </b>
+                  {dueNote ? <span className={cn("ml-1 font-medium", dueNote.tone === "danger" ? "text-rose-600" : dueNote.tone === "warning" ? "text-amber-600" : "text-muted-foreground")}>{dueNote.text.charAt(0).toLowerCase() + dueNote.text.slice(1)}</span> : null}
+                </>
+              ) : null}
+            </span>
+            <span className="flex-1" />
+            {actions.map((action, i) => (
+              <button
+                key={action.key}
+                type="button"
+                disabled={pendingAction !== null}
+                onClick={() => executeAction(action.key, action.body ?? {}, action.confirmMsg)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-compact font-medium transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed",
+                  action.variant === "destructive"
+                    ? "text-rose-600 hover:bg-rose-500/10"
+                    : i === actions.findIndex((a) => a.variant !== "destructive")
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-card text-foreground border border-border/70 hover:bg-muted/60"
                 )}
-                {doc.category && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Tag className="size-3.5" strokeWidth={1.5} />
-                    {doc.category}
-                  </span>
-                )}
-                {doc.issuedDate && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="size-3.5" strokeWidth={1.5} />
-                    {formatDate(doc.issuedDate)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main 2-col layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-          {/* Left: metadata + timeline */}
-          <div className="space-y-4 min-w-0">
-            {/* Document metadata */}
-            <section className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-              <h2 className="text-xs font-semibold text-foreground mb-3">
-                Thông tin văn bản
-              </h2>
-              <div className="space-y-2.5">
-                <MetaRow
-                  icon={Hash}
-                  label="Số văn bản"
-                  value={doc.originalNumber}
-                />
-                {doc.registrationNumber != null && (
-                  <MetaRow
-                    icon={Hash}
-                    label="Số vào sổ"
-                    value={`${doc.registrationNumber}`}
-                  />
-                )}
-                <MetaRow
-                  icon={Building2}
-                  label="Cơ quan ban hành"
-                  value={doc.issuingAuthority}
-                />
-                <MetaRow
-                  icon={Calendar}
-                  label="Ngày ban hành"
-                  value={formatDate(doc.issuedDate)}
-                />
-                <MetaRow
-                  icon={Calendar}
-                  label="Ngày đến"
-                  value={formatDate(doc.receivedDate)}
-                />
-                <MetaRow
-                  icon={Tag}
-                  label="Loại văn bản"
-                  value={doc.category}
-                />
-                {isUrgent && (
-                  <MetaRow
-                    icon={AlertTriangle}
-                    label="Mức độ khẩn"
-                    value={URGENCY_LABEL[doc.urgency!] ?? doc.urgency}
-                  />
-                )}
-                {isConfidential && (
-                  <MetaRow
-                    icon={Shield}
-                    label="Mức bảo mật"
-                    value={SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}
-                  />
-                )}
-                {doc.dueDate && (
-                  <MetaRow
-                    icon={Clock}
-                    label="Hạn xử lý"
-                    value={
-                      <span className="text-amber-700 font-medium">{formatDate(doc.dueDate)}</span>
-                    }
-                  />
-                )}
-                {doc.linkedTaskId && (
-                  <div className="flex items-start gap-2 text-xs">
-                    <ExternalLink
-                      className="size-3.5 text-muted-foreground shrink-0 mt-0.5"
-                      strokeWidth={1.5}
-                    />
-                    <span className="text-muted-foreground shrink-0">Nhiệm vụ liên kết:</span>
-                    <Link
-                      href={`/tasks/${doc.linkedTaskId}`}
-                      className="text-foreground font-medium hover:underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                    >
-                      Xem nhiệm vụ
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Audit timeline */}
-            <section className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-              <h2 className="text-xs font-semibold text-foreground mb-3">
-                Tiến trình luân chuyển
-              </h2>
-              <DocumentAuditTimeline documentId={doc.id} />
-            </section>
+              >
+                {pendingAction === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
+                {action.label}
+              </button>
+            ))}
           </div>
 
-          {/* Right: sticky sidebar */}
-          <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-            {/* Leadership directive (bút phê) */}
-            {detail.directives.length > 0 && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Bút phê BGH
-                </h2>
-                <div className="space-y-3">
-                  {detail.directives.map((directive) => (
-                    <div
-                      key={directive.id}
-                      className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5"
-                    >
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <User className="size-3.5" strokeWidth={1.5} />
-                        <span className="font-medium text-foreground">
-                          {directive.leader.name}
-                        </span>
-                        {directive.issuedAt && (
-                          <span className="ml-auto font-mono text-[11px]">
-                            {formatDateTime(directive.issuedAt)}
-                          </span>
-                        )}
-                      </div>
-                      {directive.content && (
-                        <p className="text-xs text-foreground leading-relaxed italic border-l-2 border-border pl-2.5">
-                          {directive.content}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {detail.directives.length === 0 && ["PRESENTED"].includes(detail.status) && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <p className="text-xs text-muted-foreground text-center py-2">Chưa có bút phê</p>
-              </section>
-            )}
-
-            {/* Attachments */}
-            {doc.attachments.length > 0 && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Tệp đính kèm ({doc.attachments.length})
-                </h2>
-                <div className="space-y-2">
-                  {doc.attachments.map((att) => (
-                    <a
-                      key={att.id}
-                      href={att.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border border-border/50 hover:bg-muted/30 transition-colors group focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <Paperclip className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{att.fileName}</p>
-                        {att.fileSize && (
-                          <p className="text-[11px] text-muted-foreground">
-                            {(att.fileSize / 1024).toFixed(0)} KB
-                          </p>
-                        )}
-                      </div>
-                      <Download className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Lead unit */}
-            {(detail.leadUnit || detail.leader) && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Đơn vị chủ trì
-                </h2>
-                <div className="space-y-2">
-                  {detail.leadUnit && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                      <span className="font-medium text-foreground">{detail.leadUnit.name}</span>
-                      <span className="text-muted-foreground font-mono text-[11px]">
-                        ({detail.leadUnit.code})
-                      </span>
-                    </div>
-                  )}
-                  {detail.leader && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <User className="size-3.5 shrink-0" strokeWidth={1.5} />
-                      <span className="text-foreground">{detail.leader.name}</span>
-                    </div>
-                  )}
-                  {detail.directedAt && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                      <span>{formatDateTime(detail.directedAt)}</span>
-                    </div>
-                  )}
-                  {detail.leadershipInstruction && (
-                    <div className="mt-2 p-2.5 rounded-lg bg-muted/40 border border-border/50 text-xs text-foreground leading-relaxed italic">
-                      {detail.leadershipInstruction}
-                    </div>
-                  )}
-                  {detail.deadline && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md font-mono">
-                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                      Hạn: {formatDate(detail.deadline)}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Unit assignments */}
-            {detail.unitAssignments.length > 0 && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Phân công ({detail.unitAssignments.length})
-                </h2>
-                <div className="space-y-3">
-                  {detail.unitAssignments.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="p-3 rounded-lg bg-muted/20 border border-border/50 space-y-1.5"
-                    >
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <User className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                        <span className="font-medium text-foreground">{assignment.driUser.name}</span>
-                        <span
-                          className={cn(
-                            "ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded border",
-                            assignment.status === "COMPLETED"
-                              ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                              : assignment.status === "IN_PROGRESS"
-                              ? "bg-blue-500/10 text-blue-700 border-blue-500/20"
-                              : "bg-muted text-muted-foreground border-border/60"
-                          )}
-                        >
-                          {assignment.status}
-                        </span>
-                      </div>
-                      {assignment.instruction && (
-                        <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-border pl-2.5">
-                          {assignment.instruction}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                        <span>Bởi: {assignment.assignedBy.name}</span>
-                        {assignment.deadline && (
-                          <span className="text-amber-700">Hạn: {formatDate(assignment.deadline)}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {detail.unitAssignments.length === 0 && ["DIRECTED"].includes(detail.status) && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <p className="text-xs text-muted-foreground text-center py-2">Chưa phân công xử lý</p>
-              </section>
-            )}
-
-            {/* Resolution */}
-            {detail.resolvedAt && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Kết quả giải quyết
-                </h2>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                    <span>{formatDateTime(detail.resolvedAt)}</span>
-                  </div>
-                  {detail.resolutionSummary && (
-                    <p className="text-xs text-foreground leading-relaxed">{detail.resolutionSummary}</p>
-                  )}
-                  {detail.resolutionDocUrl && (
-                    <a
-                      href={detail.resolutionDocUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-foreground hover:underline underline-offset-2 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <ExternalLink className="size-3.5" strokeWidth={1.5} />
-                      Văn bản kết quả
-                    </a>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Filing info */}
-            {detail.filedAt && (
-              <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-                <h2 className="text-xs font-semibold text-foreground mb-3">
-                  Lưu trữ hồ sơ
-                </h2>
-                <div className="space-y-2 text-xs">
-                  {detail.dossierId && (
-                    <div className="flex items-center gap-2">
-                      <Hash className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                      <span className="text-muted-foreground">Hồ sơ:</span>
-                      <span className="font-mono font-medium text-foreground">{detail.dossierId}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                    <span>{formatDateTime(detail.filedAt)}</span>
-                  </div>
-                  {detail.filingNotes && (
-                    <p className="text-muted-foreground leading-relaxed italic">{detail.filingNotes}</p>
-                  )}
-                </div>
-              </section>
-            )}
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        {actions.length > 0 && (
-          <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
-            <h2 className="text-xs font-semibold text-foreground mb-3">
-              Thao tác
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {actions.map((action) => (
-                <button
-                  key={action.key}
-                  disabled={pendingAction !== null}
-                  onClick={() =>
-                    executeAction(action.key, action.body ?? {}, action.confirmMsg)
-                  }
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1.5 rounded-lg text-xs font-medium transition-colors active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    action.variant === "destructive"
-                      ? "bg-red-500/10 text-red-700 hover:bg-red-500/20 border border-red-500/20"
-                      : "bg-foreground/5 text-foreground hover:bg-foreground/10 border border-border/60",
-                    pendingAction !== null && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  {pendingAction === action.key && (
-                    <Loader2 className="size-3 animate-spin" strokeWidth={1.5} />
-                  )}
-                  {action.label}
-                </button>
+          {quotes.length > 0 ? (
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold text-muted-foreground">Ý kiến chỉ đạo</h2>
+              {quotes.map((q) => (
+                <figure key={q.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
+                  {q.text ? <blockquote className="text-compact leading-relaxed text-foreground">“{q.text}”</blockquote> : null}
+                  <figcaption className="mt-1.5 text-xs text-muted-foreground">
+                    {q.who}
+                    {q.at ? <> · <span className="font-mono">{formatShortDateTime(q.at)}</span></> : null}
+                  </figcaption>
+                </figure>
               ))}
-            </div>
+            </section>
+          ) : null}
+
+          <dl className="grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2 text-compact">
+            {kv.filter((row) => row.value).map((row) => (
+              <React.Fragment key={row.label}>
+                <dt className="text-muted-foreground">{row.label}</dt>
+                <dd className={cn("min-w-0 break-words text-foreground", row.mono && "font-mono text-xs leading-[18px]")}>{row.value}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+
+          <section className="space-y-2.5">
+            <h2 className="text-xs font-semibold text-muted-foreground">Luân chuyển</h2>
+            <ol className="space-y-2">
+              {steps.map((st, i) => {
+                const done = Boolean(st.at);
+                const current = i === currentIdx;
+                return (
+                  <li key={st.id} className={cn("flex items-center gap-2.5 text-compact", !done && !current && "text-muted-foreground/70")}>
+                    <span
+                      className={cn(
+                        "grid size-4 shrink-0 place-items-center rounded-full border",
+                        done ? "border-foreground bg-foreground text-background" : current ? "border-foreground" : "border-border"
+                      )}
+                      aria-hidden
+                    >
+                      {done ? <Check className="size-2.5" strokeWidth={1.5} /> : current ? <span className="size-1.5 rounded-full bg-foreground" /> : null}
+                    </span>
+                    <span className={cn("flex-1 min-w-0 truncate", current && "font-medium text-foreground")}>{st.label}</span>
+                    {st.at ? <span className="shrink-0 font-mono text-xs text-muted-foreground/80">{formatShortDateTime(st.at)}</span> : null}
+                  </li>
+                );
+              })}
+            </ol>
           </section>
-        )}
-      </m.div>
-    </AnimatePresence>
+
+          <details className="group text-compact">
+            <summary className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground list-none">
+              Nhật ký hệ thống
+            </summary>
+            <div className="mt-2"><DocumentAuditTimeline documentId={doc.id} /></div>
+          </details>
+        </aside>
+      </div>
+    </div>
   );
 }

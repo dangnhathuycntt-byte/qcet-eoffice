@@ -120,7 +120,7 @@ export function getActionCardData(stats: ExecutiveActionStats) {
 const QUEUE_LENSES: { filter: ExecutiveFilter; label: string }[] = [
   { filter: "ALL", label: "Tất cả" },
   { filter: "PENDING_APPROVAL", label: "Chờ duyệt" },
-  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc & Quá hạn" },
+  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc & Trễ hạn" },
 ];
 
 /** Drill-down target that each parser really consumes (plan T08.1). */
@@ -394,7 +394,7 @@ export function ExecutiveActionCenter({
                                 ? "Chờ duyệt"
                                 : reason === "BLOCKED"
                                   ? "Vướng mắc"
-                                  : "Quá hạn"}
+                                  : "Trễ hạn"}
                             </span>
                           ))}
                           <h4

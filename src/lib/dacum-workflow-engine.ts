@@ -374,7 +374,7 @@ export function evaluateReviewEscalation(
         isEscalated: true,
         escalatedAt: now.toISOString(),
         escalatedToRole: "ADMIN",
-        escalationNote: `Quá hạn thẩm định ${slaHours} giờ tại cấp đơn vị. Đã tự động chuyển Ban Giám hiệu theo dõi.`,
+        escalationNote: `Trễ hạn thẩm định ${slaHours} giờ tại cấp đơn vị. Đã tự động chuyển Ban Giám hiệu theo dõi.`,
       },
       updatedAt: now.toISOString(),
     };

@@ -123,7 +123,7 @@ describe("Task 6 — Filter chip label rendering logic", () => {
       if (s === "ALL" || !s) return "";
       if (s === "IN_PROGRESS") return "Đang làm";
       if (s === "COMPLETED") return "Hoàn thành";
-      if (s === "OVERDUE") return "Quá hạn";
+      if (s === "OVERDUE") return "Trễ hạn";
       if (s === "NEEDS_REVIEW") return "Chờ duyệt";
       return s;
     }

@@ -56,7 +56,7 @@ export function computeDueStatus(
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { text: `Quá hạn ${Math.abs(diffDays)} ngày`, isOverdue: true };
+  if (diffDays < 0) return { text: `Trễ hạn ${Math.abs(diffDays)} ngày`, isOverdue: true };
   if (diffDays === 0) return { text: 'Hôm nay', isOverdue: false };
   if (diffDays === 1) return { text: 'Ngày mai', isOverdue: false };
   return { text: `Còn ${diffDays} ngày`, isOverdue: false };

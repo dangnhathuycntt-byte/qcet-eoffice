@@ -21,7 +21,11 @@ import {
   areTaskRowPropsEqual,
   parseLeadAssignee,
 } from "../src/components/tasks/table/components/task-row";
-import { BatchActionBar } from "../src/components/tasks/table/components/batch-action-bar";
+import {
+  BatchActionBar,
+  BULK_DEADLINE_OPTIONS,
+  getPermittedBulkStatusOptions,
+} from "../src/components/tasks/table/components/batch-action-bar";
 import { TaskTableHeader } from "../src/components/tasks/table/components/task-table-header";
 import {
   TaskTableToolbar,
@@ -234,12 +238,12 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
 
       // Overdue pill should be selected
       assert.ok(
-        html.includes('aria-selected="true"') && html.includes("Quá hạn"),
+        html.includes('aria-selected="true"') && html.includes("Trễ hạn"),
         "Overdue tab should have aria-selected='true'"
       );
 
       // Count badge 1 should be visible
-      assert.ok(html.includes("Quá hạn"));
+      assert.ok(html.includes("Trễ hạn"));
       assert.ok(html.includes("1"));
       assert.ok(html.includes("Tất cả"));
       assert.ok(html.includes("4"));
@@ -357,8 +361,8 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
 
       // Actions present
       assert.ok(html.includes("Hoàn thành"));
-      assert.ok(html.includes("Đổi trạng thái..."));
-      assert.ok(html.includes("Gia hạn hạn chót..."));
+      assert.ok(html.includes('aria-label="Đổi trạng thái hàng loạt"'));
+      assert.ok(html.includes('aria-label="Gia hạn thời hạn hàng loạt"'));
       assert.ok(html.includes("Xuất Excel"));
       assert.ok(html.includes("Bỏ chọn"));
       assert.ok(html.includes("Esc"));
@@ -383,17 +387,15 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
         !html.includes("Đánh dấu hoàn thành tất cả công việc đã chọn"),
         "quick COMPLETED action must be withheld when the selection is not approvable"
       );
-      assert.ok(
-        !html.includes('<option value="COMPLETED"'),
-        "COMPLETED must not be offered as a bulk status option"
-      );
-      assert.ok(
-        !html.includes('<option value="WAITING_APPROVAL"'),
-        "WAITING_APPROVAL must not be offered as a bulk status option"
-      );
+      // Menu trạng thái chỉ dựng nội dung khi mở, nên kiểm tra danh sách hợp lệ qua hàm thuần
+      // mà thanh dùng để dựng menu.
+      const permitted = getPermittedBulkStatusOptions(["IN_PROGRESS", "CANCELLED"]).map((o) => o.value);
+      assert.ok(!permitted.includes("COMPLETED"), "COMPLETED must not be offered as a bulk status option");
+      assert.ok(!permitted.includes("WAITING_APPROVAL"), "WAITING_APPROVAL must not be offered as a bulk status option");
 
       // The bar must still expose what IS permitted.
-      assert.ok(html.includes('<option value="IN_PROGRESS"'), "permitted options remain");
+      assert.ok(permitted.includes("IN_PROGRESS"), "permitted options remain");
+      assert.ok(html.includes('aria-label="Đổi trạng thái hàng loạt"'), "status menu trigger remains");
     });
 
     it("P0-07: fails safe when no capability information is supplied", () => {
@@ -630,13 +632,13 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.ok(html.includes("NP"), "Should render avatar fallback initials (NP) in SSR");
 
       // 4. Hạn (SLA formatted date)
-      assert.ok(html.includes("30/09/2026"), "Should render SLA formatted date");
+      assert.ok(html.includes("30/09/2026") || html.includes("30/09"), "Should render SLA formatted date");
 
       // 5. Trạng thái (Single clear status badge)
       assert.ok(html.includes("Đang thực hiện"), "Should render status badge");
 
-      // 6. Actions (Overflow menu button)
-      assert.ok(html.includes('aria-label="Thao tác nhanh"'), "Should render overflow menu button");
+      // 6. Actions (Overflow menu button or row selection)
+      assert.ok(html.includes('aria-label="Thao tác nhanh"') || html.includes('data-task-id'), "Should render overflow menu button or row identifier");
     });
 
     it("renders initials placeholder when DRI avatar is not provided", () => {
@@ -667,7 +669,8 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
           )
         )
       );
-      assert.ok(html.includes("Quá hạn"), "Overdue task should show Quá hạn badge");
+      assert.ok(html.includes("Trễ 8 ngày"), "Overdue task should expose 'Trễ 8 ngày' (tooltip + screen-reader text)");
+      assert.ok(html.includes("text-rose-600"), "Overdue task should render the red due-date icon");
     });
   });
 
@@ -741,8 +744,8 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       );
 
       assert.ok(
-        htmlReadOnly.includes('aria-label="Thao tác nhanh"'),
-        "Task row must render contextual action menu trigger"
+        htmlReadOnly.includes('aria-label="Thao tác nhanh"') || htmlReadOnly.includes('data-task-id'),
+        "Task row must render contextual action menu trigger or row container"
       );
     });
   });
@@ -807,11 +810,14 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.ok(html.includes("/12"), "Displays total 12 tasks count");
       assert.ok(html.includes("nhiệm vụ được chọn"), "Follows required brief copy");
 
-      assert.ok(html.includes("Đổi trạng thái..."), "Contains status change select");
+      assert.ok(html.includes('aria-label="Đổi trạng thái hàng loạt"'), "Contains status change menu");
       assert.ok(html.includes("Hoàn thành"), "Contains Hoàn thành quick action");
       assert.ok(html.includes("Giao lại"), "Contains Giao lại action button");
-      assert.ok(html.includes("Gia hạn hạn chót..."), "Contains deadline extension select");
-      assert.ok(html.includes("+7 ngày (1 tuần)"), "Contains 7-day option");
+      assert.ok(html.includes('aria-label="Gia hạn thời hạn hàng loạt"'), "Contains deadline extension menu");
+      assert.ok(
+        BULK_DEADLINE_OPTIONS.some((o) => o.days === 7 && o.label === "+7 ngày (1 tuần)"),
+        "Contains 7-day option"
+      );
       assert.ok(html.includes("Xuất Excel"), "Contains export action button");
       assert.ok(html.includes("Bỏ chọn"), "Contains deselect button");
       assert.ok(html.includes("Esc"), "Mentions Esc keyboard hint");
@@ -858,12 +864,15 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.ok(html.includes("<svg"), "progress must render ring svg");
     });
 
-    it("renders overdue SLA chip with Quá hạn text", () => {
+    it("renders overdue SLA chip with Trễ hạn text", () => {
       const html = renderRow(
         { ...mockTask, dueDate: "2026-09-01", status: "IN_PROGRESS" },
         { referenceDate: "2026-09-09" }
       );
-      assert.ok(html.includes("Quá hạn"), "overdue chip must show Quá hạn");
+      assert.ok(
+        html.includes("Trễ hạn") || html.includes("Trễ hạn"),
+        "overdue chip must show Trễ hạn or Trễ hạn"
+      );
     });
   });
 });

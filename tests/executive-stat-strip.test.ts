@@ -158,11 +158,11 @@ describe("ExecutiveStatStrip Helpers", () => {
     const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
     assert.ok(urgentCard, "urgent-tasks card must exist");
     assert.ok(
-      urgentCard.subtext.includes("3 quá hạn"),
+      urgentCard.subtext.includes("3 đã leo thang"),
       "urgent card must include escalated count in subtext"
     );
     assert.ok(
-      urgentCard.badge?.label.includes("quá hạn"),
+      urgentCard.badge?.label.includes("trễ hạn"),
       "urgent card badge must indicate overdue/escalated"
     );
   });
@@ -177,7 +177,7 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards.length, 4, "should always strictly maintain 4 cards");
     const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
     assert.ok(urgentCard.subtext.includes("chờ tiếp nhận"));
-    assert.ok(urgentCard.subtext.includes("quá hạn"));
+    assert.ok(urgentCard.subtext.includes("đã leo thang"));
   });
 
   test("omits triage and escalated text from urgent card when counts are 0 or absent", () => {
@@ -189,7 +189,7 @@ describe("ExecutiveStatStrip Helpers", () => {
       "triage text must not appear when count is 0/absent"
     );
     assert.equal(
-      urgentCard.subtext.includes("quá hạn"),
+      urgentCard.subtext.includes("đã leo thang"),
       false,
       "escalated text must not appear when count is 0/absent"
     );

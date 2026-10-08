@@ -20,7 +20,7 @@ export type TableDensity = "compact" | "comfortable";
 export type SmartFilterTab =
   | "all"        // Tất cả nhiệm vụ
   | "my_tasks"   // Nhiệm vụ phân công cho tôi (DRI hoặc việc con)
-  | "overdue"    // Nhiệm vụ quá hạn SLA
+  | "overdue"    // Nhiệm vụ trễ hạn SLA
   | "review"     // Chờ duyệt minh chứng / cần chỉnh sửa
   | "today"      // Hạn chót hôm nay theo ngày tham chiếu
   | "in_progress"// Đang thực hiện
@@ -154,12 +154,20 @@ export type FlattenedPersonalTask = (SchoolTask | StaffTask) & {
 };
 
 /**
- * Cấu hình hiển thị các cột tùy chọn trên bảng (Column Visibility)
+ * Cấu hình hiển thị các cột tùy chọn trên bảng (Column Visibility / Display properties)
  */
 export interface TableColumnVisibility {
-  priority?: boolean;
-  subtasks?: boolean;
-  progress?: boolean;
+  code?: boolean;        // Mã nhiệm vụ (ID)
+  department?: boolean;  // Đơn vị (Teams)
+  priority?: boolean;    // Ưu tiên (Priority)
+  leadAssignee?: boolean;// Phụ trách (Lead)
+  dueDate?: boolean;     // Hạn chót (Target date)
+  subtasks?: boolean;    // Việc con (Subtasks)
+  progress?: boolean;    // Tiến độ (Progress)
+  coAssignees?: boolean; // Phối hợp (Members)
+  status?: boolean;      // Trạng thái (Status)
+  createdAt?: boolean;   // Ngày tạo (Created)
+  category?: boolean;    // Danh mục (Labels)
 }
 
 /**

@@ -59,7 +59,7 @@ function formatHourLabel(hour: number): string {
 function getStatusLabel(state: CalendarAttentionState): string {
   switch (state) {
     case "overdue":
-      return "Quá hạn";
+      return "Trễ hạn";
     case "waiting":
       return "Chờ xét duyệt";
     case "due_today":
@@ -361,14 +361,14 @@ export function CalendarWeekView({
                       onOpenDaySheet(day.date);
                     }}
                     className="flex items-center gap-1 flex-wrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
-                    aria-label={`${totalCount} nhiệm vụ đến hạn ngày ${day.date}${overdueCount > 0 ? `, ${overdueCount} quá hạn` : ""}`}
+                    aria-label={`${totalCount} nhiệm vụ đến hạn ngày ${day.date}${overdueCount > 0 ? `, ${overdueCount} trễ hạn` : ""}`}
                   >
                     <span className="text-xs font-bold text-foreground tabular-nums">
                       {totalCount} việc
                     </span>
                     {overdueCount > 0 && (
                       <span className="text-xs font-semibold text-rose-600 tabular-nums">
-                        {overdueCount} quá hạn
+                        {overdueCount} trễ hạn
                       </span>
                     )}
                   </button>

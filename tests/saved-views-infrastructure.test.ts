@@ -66,11 +66,11 @@ describe("Saved Views Infrastructure", () => {
       assert.equal(highPriorityView?.criteria.priority, "HIGH");
     });
 
-    it("should provide exact Manager presets: Chờ tôi duyệt, Việc đơn vị, Quá hạn đơn vị", () => {
+    it("should provide exact Manager presets: Chờ tôi duyệt, Việc đơn vị, Trễ hạn đơn vị", () => {
       const names = MANAGER_PRESETS.map((p) => p.name);
       assert.ok(names.includes("Chờ tôi duyệt"));
       assert.ok(names.includes("Việc đơn vị"));
-      assert.ok(names.includes("Quá hạn đơn vị"));
+      assert.ok(names.includes("Trễ hạn đơn vị"));
 
       const pendingView = MANAGER_PRESETS.find((p) => p.name === "Chờ tôi duyệt");
       assert.equal(pendingView?.criteria.scope, "unit");
@@ -79,7 +79,7 @@ describe("Saved Views Infrastructure", () => {
       const unitTasks = MANAGER_PRESETS.find((p) => p.name === "Việc đơn vị");
       assert.equal(unitTasks?.criteria.scope, "unit");
 
-      const overdueUnit = MANAGER_PRESETS.find((p) => p.name === "Quá hạn đơn vị");
+      const overdueUnit = MANAGER_PRESETS.find((p) => p.name === "Trễ hạn đơn vị");
       assert.equal(overdueUnit?.criteria.scope, "unit");
       assert.equal(overdueUnit?.criteria.status, "overdue");
     });
@@ -144,12 +144,12 @@ describe("Saved Views Infrastructure", () => {
       assert.equal(byId?.name, "Chờ BGH duyệt");
 
       // Test backwards compatibility with legacy star prefix
-      const byLegacyName = findPresetByName("★ Quá hạn đơn vị");
+      const byLegacyName = findPresetByName("★ Trễ hạn đơn vị");
       assert.ok(byLegacyName);
       assert.equal(byLegacyName?.id, "mgr-unit-overdue");
 
       // Test clean name lookup
-      const byCleanName = findPresetByName("Quá hạn đơn vị");
+      const byCleanName = findPresetByName("Trễ hạn đơn vị");
       assert.ok(byCleanName);
       assert.equal(byCleanName?.id, "mgr-unit-overdue");
     });

@@ -37,6 +37,7 @@ export async function GET(req: Request) {
                   email: true,
                   role: true,
                   title: true,
+                  avatarUrl: true,
                 },
               },
             },
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
     });
 
     const mapped = units.map((u) => {
-      let personnel: Array<{ id: string; name: string; email: string; role: string; title: string | null }> | undefined;
+      let personnel: Array<{ id: string; name: string; email: string; role: string; title: string | null; avatarUrl: string | null }> | undefined;
       if (includePersonnel) {
         const seenUserIds = new Set<string>();
         personnel = [];
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
               email: pa.user.email,
               role: pa.user.role,
               title: pa.user.title,
+              avatarUrl: pa.user.avatarUrl ?? null,
             });
           }
         }

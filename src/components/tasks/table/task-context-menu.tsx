@@ -3,22 +3,14 @@
 import * as React from "react";
 import { Menu } from "@base-ui/react/menu";
 import {
-  Star,
-  Clock,
   CheckCircle2,
   AlertTriangle,
-  User,
-  Calendar,
-  Copy,
   ExternalLink,
-  Trash2,
   ChevronRight,
   Sparkles,
-  Signal,
   SignalHigh,
   SignalMedium,
   SignalLow,
-  Eye,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,14 +25,167 @@ import {
 } from "@/lib/tasks/task-actions";
 import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import {
-  PrioritySubUrgent,
-  PrioritySubHigh,
-  PrioritySubNormal,
-  PrioritySubLow,
-} from "@/components/dashboard/task-filter-icons";
-import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+  TaskIconStar,
+  TaskIconStatus,
+  TaskIconPriority,
+  TaskIconAssignee,
+  TaskIconDeadline,
+  TaskIconLink,
+  TaskIconCopy,
+  TaskIconView,
+  TaskIconTrash,
+  TaskIconPriorityUrgent,
+  TaskIconPriorityHigh,
+  TaskIconPriorityNormal,
+  TaskIconPriorityLow,
+} from "@/components/tasks/task-action-icons";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
 import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { UserAvatar } from "@/components/ui/user-avatar";
+
+const ROW =
+  "flex w-full items-center gap-2 px-2 h-7 rounded-md text-left text-xs text-foreground cursor-pointer transition-colors outline-none hover:bg-accent focus-visible:bg-accent";
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return <kbd className="font-sans text-xs tabular-nums text-muted-foreground/80">{children}</kbd>;
+}
+
+/** Hàng thao tác ở menu chính: icon · nhãn · phím tắt. */
+function MenuRow({
+  icon,
+  label,
+  shortcut,
+  onClick,
+  danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  shortcut?: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={cn(ROW, danger && "text-rose-600 hover:bg-rose-500/10 focus-visible:bg-rose-500/10")}
+    >
+      <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {shortcut ? <Kbd>{shortcut}</Kbd> : null}
+    </button>
+  );
+}
+
+/** Hàng mở menu con: icon · nhãn · phím tắt · mũi tên. */
+function SubmenuRow({
+  name,
+  icon,
+  label,
+  shortcut,
+  expanded,
+  onOpen,
+  onToggle,
+  onLeave,
+  panelClassName,
+  panelPlacementClass,
+  children,
+}: {
+  name: string;
+  icon: React.ReactNode;
+  label: string;
+  shortcut: string;
+  expanded: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+  onLeave: () => void;
+  panelClassName: string;
+  panelPlacementClass: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative" data-submenu={name} onMouseLeave={onLeave}>
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="true"
+        aria-expanded={expanded}
+        onMouseEnter={onOpen}
+        onClick={onToggle}
+        className={cn(ROW, expanded && "bg-accent")}
+      >
+        <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
+        <span className="flex-1 truncate">{label}</span>
+        <Kbd>{shortcut}</Kbd>
+        <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
+      </button>
+      {expanded ? (
+        <div
+          role="menu"
+          className={cn(
+            panelPlacementClass,
+            "rounded-lg border border-border/80 bg-popover p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50",
+            panelClassName
+          )}
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SubmenuTitle({ children }: { children: React.ReactNode }) {
+  return <div className="px-2 pt-1 pb-1 text-xs text-muted-foreground select-none">{children}</div>;
+}
+
+/** Hàng lựa chọn trong menu con: [leading] nhãn · gợi ý · dấu chọn. */
+function OptionRow({
+  leading,
+  label,
+  hint,
+  selected,
+  onClick,
+}: {
+  leading?: React.ReactNode;
+  label: React.ReactNode;
+  hint?: React.ReactNode;
+  selected?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      className={cn(ROW, selected && "bg-accent font-medium")}
+    >
+      {leading ? <span className="flex size-4 shrink-0 items-center justify-center">{leading}</span> : null}
+      <span className="flex-1 truncate">{label}</span>
+      {hint ? <span className="text-xs tabular-nums text-muted-foreground/80">{hint}</span> : null}
+      {selected ? <Check className="size-3.5 shrink-0 text-foreground" strokeWidth={1.5} /> : null}
+    </button>
+  );
+}
+
+/** Ngày hiện tại theo giờ Việt Nam + n ngày, dạng YYYY-MM-DD. */
+function vnDatePlus(days: number): string {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
+  const [y, m, d] = today.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+function vnEndOfMonth(): string {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
+  const [y, m] = today.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+}
+
+const shortDate = (ymd: string) => `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}`;
 
 export interface TaskContextMenuProps {
   task: SchoolTask | StaffTask | null;
@@ -74,7 +219,31 @@ export function TaskContextMenu({
   availableAssignees = [],
 }: TaskContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement>(null);
+  // Phím số 1-9 chọn nhanh mục trong menu con đang mở (như Linear)
+  const digitSelectRef = React.useRef<((digit: number) => void) | null>(null);
   const [activeSubmenu, setActiveSubmenu] = React.useState<ActiveSubmenu>(null);
+  // Hướng mở của menu con: tự lật trái/lên khi sát mép màn hình để không bị cắt
+  const [submenuPlacement, setSubmenuPlacement] = React.useState<{ side: "right" | "left"; align: "top" | "bottom" }>({
+    side: "right",
+    align: "top",
+  });
+
+  const toggleSubmenu = React.useCallback((name: Exclude<ActiveSubmenu, null>, mode: "open" | "toggle" = "toggle") => {
+    const item = menuRef.current?.querySelector<HTMLElement>(`[data-submenu="${name}"]`);
+    if (item && menuRef.current) {
+      const itemRect = item.getBoundingClientRect();
+      const menuRect = menuRef.current.getBoundingClientRect();
+      // Menu hạn hoàn thành có thêm cấp 3 (lịch) nên cần chừa nhiều chỗ hơn
+      const SUBMENU_WIDTH = name === "dueDate" ? 470 : 220;
+      const SUBMENU_HEIGHT = 280;
+      setSubmenuPlacement({
+        side: menuRect.right + SUBMENU_WIDTH + 8 > window.innerWidth ? "left" : "right",
+        align: itemRect.top + SUBMENU_HEIGHT > window.innerHeight ? "bottom" : "top",
+      });
+    }
+    setActiveSubmenu((prev) => (mode === "open" ? name : prev === name ? null : name));
+  }, []);
+  const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [copiedNotification, setCopiedNotification] = React.useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -89,24 +258,30 @@ export function TaskContextMenu({
   React.useEffect(() => {
     if (!isOpen) return;
     setActiveSubmenu(null);
+    setCalendarOpen(false);
     setShowDeleteConfirm(false);
     setIsDeleting(false);
   }, [isOpen, position]);
+
+  React.useEffect(() => {
+    if (activeSubmenu !== "dueDate") setCalendarOpen(false);
+  }, [activeSubmenu]);
 
   // ponytail: click-outside + Escape + focus trap → Base UI Popover
   React.useEffect(() => {
     if (!isOpen || !task) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (key === "s") { e.preventDefault(); setActiveSubmenu((p) => p === "status" ? null : "status"); }
-      else if (key === "p") { e.preventDefault(); setActiveSubmenu((p) => p === "priority" ? null : "priority"); }
-      else if (key === "a") { e.preventDefault(); setActiveSubmenu((p) => p === "assignee" ? null : "assignee"); }
-      else if (key === "d") { e.preventDefault(); setActiveSubmenu((p) => p === "dueDate" ? null : "dueDate"); }
+      if (key === "s") { e.preventDefault(); toggleSubmenu("status"); }
+      else if (key === "p") { e.preventDefault(); toggleSubmenu("priority"); }
+      else if (key === "a") { e.preventDefault(); toggleSubmenu("assignee"); }
+      else if (key === "d") { e.preventDefault(); toggleSubmenu("dueDate"); }
+      else if (/^[1-9]$/.test(e.key) && digitSelectRef.current) { digitSelectRef.current(Number(e.key)); }
       else if (e.key === "Enter") { e.preventDefault(); onClose(); onOpenDetail?.(task); }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, task, onOpenDetail]);
+  }, [isOpen, onClose, task, onOpenDetail, toggleSubmenu]);
 
   if (!isOpen || !task) {
     return null;
@@ -181,22 +356,7 @@ export function TaskContextMenu({
     onClose();
   };
 
-  const handleQuickDueDate = async (daysToAdd: number) => {
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + daysToAdd);
-    const dateStr = targetDate.toISOString().slice(0, 10);
-    if (onDueDateChange) {
-      await onDueDateChange(task.id, dateStr);
-    } else {
-      await updateTaskDueDate(task.id, dateStr);
-    }
-    onClose();
-  };
-
-  const handleEndOfMonthDueDate = async () => {
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const dateStr = lastDay.toISOString().slice(0, 10);
+  const handleSetDueDate = async (dateStr: string) => {
     if (onDueDateChange) {
       await onDueDateChange(task.id, dateStr);
     } else {
@@ -242,11 +402,27 @@ export function TaskContextMenu({
   };
 
   const PRIORITY_OPTIONS: Array<{ priority: TaskPriority; label: string; icon: React.ComponentType<any>; color: string }> = [
-    { priority: "URGENT", label: "Khẩn cấp", icon: PrioritySubUrgent, color: "text-foreground" },
-    { priority: "HIGH", label: "Ưu tiên cao", icon: PrioritySubHigh, color: "text-foreground/80" },
-    { priority: "NORMAL", label: "Bình thường", icon: PrioritySubNormal, color: "text-muted-foreground" },
-    { priority: "LOW", label: "Thấp", icon: PrioritySubLow, color: "text-muted-foreground/50" },
+    { priority: "URGENT", label: "Khẩn cấp", icon: TaskIconPriorityUrgent, color: "text-rose-500" },
+    { priority: "HIGH", label: "Ưu tiên cao", icon: TaskIconPriorityHigh, color: "text-foreground/70" },
+    { priority: "NORMAL", label: "Bình thường", icon: TaskIconPriorityNormal, color: "text-muted-foreground" },
+    { priority: "LOW", label: "Thấp", icon: TaskIconPriorityLow, color: "text-muted-foreground/50" },
   ];
+
+  digitSelectRef.current = (digit: number) => {
+    if (activeSubmenu === "status") {
+      const opt = CORE_STATUS_OPTIONS[digit - 1];
+      if (opt) handleStatusSelect(opt.value);
+    } else if (activeSubmenu === "priority") {
+      const opt = PRIORITY_OPTIONS[digit - 1];
+      if (opt) handlePrioritySelect(opt.priority);
+    }
+  };
+
+  const submenuClass = cn(
+    "absolute z-50 before:absolute before:inset-y-0 before:w-2 before:content-['']",
+    submenuPlacement.side === "right" ? "left-full ml-1 before:-left-2" : "right-full mr-1 before:-right-2",
+    submenuPlacement.align === "top" ? "-top-1" : "-bottom-1",
+  );
 
   return (
     <>
@@ -260,359 +436,195 @@ export function TaskContextMenu({
     <Menu.Popup
       ref={menuRef}
       aria-label="Thao tác nhanh nhiệm vụ"
-      style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
-      className="w-60 select-none rounded-lg border border-border/80 bg-white p-1 text-xs text-slate-800 shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
+      className="w-60 select-none rounded-lg border border-border/80 bg-popover p-1 text-xs text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95 duration-100"
     >
       {/* Copied Feedback Toast */}
       {copiedNotification && (
-        <div className="mb-1 rounded bg-slate-900 px-2 py-1 text-center font-medium text-white shadow-xs">
+        <div className="mb-1 rounded bg-foreground px-2 py-1 text-center font-medium text-background shadow-xs">
           {copiedNotification}
         </div>
       )}
 
-      {/* Task Header Preview */}
-      <div className="px-2.5 py-1.5 border-b border-border/40 mb-1">
-        <div className="font-mono text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          {taskCode}
-        </div>
-        <div className="font-medium text-foreground truncate max-w-[210px]" title={taskTitle}>
+      {/* Task header: mã + tiêu đề */}
+      <div className="px-2 pt-1 pb-1.5 mb-1 border-b border-border/40">
+        <div className="font-mono text-xs uppercase text-muted-foreground truncate">{taskCode}</div>
+        <div className="text-xs font-medium text-foreground truncate" title={taskTitle}>
           {taskTitle}
         </div>
       </div>
 
-      {/* Item 1: Toggle Priority / Star */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={handleToggleStar}
-        className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-      >
-        <span className="flex items-center gap-2">
-          <Star
-            className={cn(
-              "size-3.5",
-              currentPriority === "URGENT"
-                ? "text-amber-500 fill-amber-500"
-                : "text-slate-400"
-            )}
-            strokeWidth={1.5}
+      <MenuRow
+        icon={
+          <TaskIconStar
+            className={cn("size-4", currentPriority === "URGENT" ? "text-rose-500 fill-rose-500" : "text-muted-foreground")}
           />
-          <span>{currentPriority === "URGENT" ? "Bỏ ưu tiên khẩn cấp" : "Đánh dấu ưu tiên"}</span>
-        </span>
-      </button>
+        }
+        label={currentPriority === "URGENT" ? "Bỏ ưu tiên khẩn cấp" : "Đánh dấu khẩn cấp"}
+        onClick={handleToggleStar}
+      />
 
-      {/* Item 2: Change Status (S) */}
-      <div className="relative">
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="true"
-          aria-expanded={activeSubmenu === "status"}
-          onMouseEnter={() => setActiveSubmenu("status")}
-          onClick={() => setActiveSubmenu((prev) => (prev === "status" ? null : "status"))}
-          className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-        >
-          <span className="flex items-center gap-2">
-            <Clock className="size-3.5 text-blue-600" strokeWidth={1.5} />
-            <span>Đổi trạng thái...</span>
-          </span>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded">S</kbd>
-            <ChevronRight className="size-3" strokeWidth={1.5} />
-          </div>
-        </button>
+      <SubmenuRow
+        name="status"
+        icon={<TaskIconStatus className="size-4 text-muted-foreground" />}
+        label="Đổi trạng thái"
+        shortcut="S"
+        expanded={activeSubmenu === "status"}
+        onOpen={() => toggleSubmenu("status", "open")}
+        onToggle={() => toggleSubmenu("status")}
+        onLeave={() => setActiveSubmenu(null)}
+        panelClassName="w-48"
+        panelPlacementClass={submenuClass}
+      >
+        <SubmenuTitle>Trạng thái</SubmenuTitle>
+        {CORE_STATUS_OPTIONS.map((opt, index) => (
+          <OptionRow
+            key={opt.value}
+            leading={<TaskStatusCircle status={opt.value} />}
+            label={opt.label}
+            hint={index + 1}
+            selected={currentStatus === opt.value}
+            onClick={() => handleStatusSelect(opt.value)}
+          />
+        ))}
+      </SubmenuRow>
 
-        {activeSubmenu === "status" && (
-          <div
-            role="menu"
-            className="absolute left-full top-0 ml-1 w-44 rounded-lg border border-border/80 bg-white p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
-          >
-            {CORE_STATUS_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const isSelected = currentStatus === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleStatusSelect(opt.value)}
-                  className={cn(
-                    "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer",
-                    isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-slate-100/80 text-slate-700"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
-                    <span>{opt.label}</span>
-                  </span>
-                  {isSelected && <Check className="size-3 text-primary" strokeWidth={2} />}
-                </button>
-              );
-            })}
-          </div>
+      <SubmenuRow
+        name="priority"
+        icon={<TaskIconPriority className="size-4 text-muted-foreground" />}
+        label="Đặt độ ưu tiên"
+        shortcut="P"
+        expanded={activeSubmenu === "priority"}
+        onOpen={() => toggleSubmenu("priority", "open")}
+        onToggle={() => toggleSubmenu("priority")}
+        onLeave={() => setActiveSubmenu(null)}
+        panelClassName="w-48"
+        panelPlacementClass={submenuClass}
+      >
+        <SubmenuTitle>Độ ưu tiên</SubmenuTitle>
+        {PRIORITY_OPTIONS.map((opt, index) => {
+          const Icon = opt.icon;
+          return (
+            <OptionRow
+              key={opt.priority}
+              leading={<Icon className={cn("size-4", opt.color)} />}
+              label={opt.label}
+              hint={index + 1}
+              selected={currentPriority === opt.priority}
+              onClick={() => handlePrioritySelect(opt.priority)}
+            />
+          );
+        })}
+      </SubmenuRow>
+
+      <SubmenuRow
+        name="assignee"
+        icon={<TaskIconAssignee className="size-4 text-muted-foreground" />}
+        label="Gán người chủ trì"
+        shortcut="A"
+        expanded={activeSubmenu === "assignee"}
+        onOpen={() => toggleSubmenu("assignee", "open")}
+        onToggle={() => toggleSubmenu("assignee")}
+        onLeave={() => setActiveSubmenu(null)}
+        panelClassName="w-60 max-h-64 overflow-y-auto"
+        panelPlacementClass={submenuClass}
+      >
+        <SubmenuTitle>Người chủ trì (DRI)</SubmenuTitle>
+        {availableAssignees.length > 0 ? (
+          availableAssignees.map((person) => {
+            const currentLeadName = (task as SchoolTask).leadAssigneeName || (task as StaffTask).assigneeName;
+            return (
+              <OptionRow
+                key={person.id}
+                leading={<UserAvatar name={person.name} avatarUrl={person.avatar} size="sm" />}
+                label={person.name}
+                selected={currentLeadName === person.name}
+                onClick={() => handleAssigneeSelect(person.id, person.name)}
+              />
+            );
+          })
+        ) : (
+          <div className="px-2 py-1.5 text-muted-foreground text-center text-xs">Chưa có danh sách cán bộ / nhân sự</div>
         )}
-      </div>
+      </SubmenuRow>
 
-      {/* Item 3: Set Priority (P) */}
-      <div className="relative">
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="true"
-          aria-expanded={activeSubmenu === "priority"}
-          onMouseEnter={() => setActiveSubmenu("priority")}
-          onClick={() => setActiveSubmenu((prev) => (prev === "priority" ? null : "priority"))}
-          className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-        >
-          <span className="flex items-center gap-2">
-            <Signal className="size-3.5 text-amber-600" strokeWidth={1.5} />
-            <span>Đặt độ ưu tiên...</span>
-          </span>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded">P</kbd>
-            <ChevronRight className="size-3" strokeWidth={1.5} />
-          </div>
-        </button>
-
-        {activeSubmenu === "priority" && (
-          <div
-            role="menu"
-            className="absolute left-full top-0 ml-1 w-44 rounded-lg border border-border/80 bg-white p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
+      <SubmenuRow
+        name="dueDate"
+        icon={<TaskIconDeadline className="size-4 text-muted-foreground" />}
+        label="Đổi hạn hoàn thành"
+        shortcut="D"
+        expanded={activeSubmenu === "dueDate"}
+        onOpen={() => toggleSubmenu("dueDate", "open")}
+        onToggle={() => toggleSubmenu("dueDate")}
+        onLeave={() => setActiveSubmenu(null)}
+        panelClassName="w-52"
+        panelPlacementClass={submenuClass}
+      >
+        <SubmenuTitle>Hạn hoàn thành</SubmenuTitle>
+        {[
+          { label: "Hôm nay", date: vnDatePlus(0) },
+          { label: "Ngày mai", date: vnDatePlus(1) },
+          { label: "Tuần tới", date: vnDatePlus(7) },
+          { label: "Cuối tháng này", date: vnEndOfMonth() },
+        ].map((opt) => (
+          <OptionRow
+            key={opt.label}
+            label={opt.label}
+            hint={shortDate(opt.date)}
+            selected={task.dueDate?.slice(0, 10) === opt.date}
+            onClick={() => handleSetDueDate(opt.date)}
+          />
+        ))}
+        <div className="pt-1 mt-1 border-t border-border/40 relative">
+          <button
+            type="button"
+            role="menuitem"
+            aria-haspopup="dialog"
+            aria-expanded={calendarOpen}
+            onMouseEnter={() => setCalendarOpen(true)}
+            onClick={() => setCalendarOpen((v) => !v)}
+            className={cn(ROW, calendarOpen && "bg-accent")}
           >
-            {PRIORITY_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const isSelected = currentPriority === opt.priority;
-              return (
-                <button
-                  key={opt.priority}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handlePrioritySelect(opt.priority)}
-                  className={cn(
-                    "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer",
-                    isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-slate-100/80 text-slate-700"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className={cn("size-3.5", opt.color)} strokeWidth={1.5} />
-                    <span>{opt.label}</span>
-                  </span>
-                  {isSelected && <Check className="size-3 text-primary" strokeWidth={2} />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Item 4: Assign Lead (A) */}
-      <div className="relative">
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="true"
-          aria-expanded={activeSubmenu === "assignee"}
-          onMouseEnter={() => setActiveSubmenu("assignee")}
-          onClick={() => setActiveSubmenu((prev) => (prev === "assignee" ? null : "assignee"))}
-          className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-        >
-          <span className="flex items-center gap-2">
-            <User className="size-3.5 text-slate-600" strokeWidth={1.5} />
-            <span>Gán người chủ trì DRI...</span>
-          </span>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded">A</kbd>
-            <ChevronRight className="size-3" strokeWidth={1.5} />
-          </div>
-        </button>
-
-        {activeSubmenu === "assignee" && (
-          <div
-            role="menu"
-            className="absolute left-full top-0 ml-1 w-56 max-h-60 overflow-y-auto rounded-lg border border-border/80 bg-white p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
-          >
-            {availableAssignees.length > 0 ? (
-              availableAssignees.map((person) => {
-                const currentLeadName = (task as SchoolTask).leadAssigneeName || (task as StaffTask).assigneeName;
-                const isSelected = currentLeadName === person.name;
-                return (
-                  <button
-                    key={person.id}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => handleAssigneeSelect(person.id, person.name)}
-                    className={cn(
-                      "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer",
-                      isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-slate-100/80 text-slate-700"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="size-4.5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-semibold text-slate-700 shrink-0">
-                        {person.name.slice(0, 1)}
-                      </div>
-                      <span className="truncate">{person.name}</span>
-                    </div>
-                    {isSelected && <Check className="size-3 text-primary shrink-0" strokeWidth={2} />}
-                  </button>
-                );
-              })
-            ) : (
-              <div className="px-2 py-1.5 text-muted-foreground text-center text-[11px]">
-                Chưa có danh sách cán bộ / nhân sự
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Item 5: Change Due Date (D) */}
-      <div className="relative">
-        <button
-          type="button"
-          role="menuitem"
-          aria-haspopup="true"
-          aria-expanded={activeSubmenu === "dueDate"}
-          onMouseEnter={() => setActiveSubmenu("dueDate")}
-          onClick={() => setActiveSubmenu((prev) => (prev === "dueDate" ? null : "dueDate"))}
-          className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-        >
-          <span className="flex items-center gap-2">
-            <Calendar className="size-3.5 text-slate-600" strokeWidth={1.5} />
-            <span>Thay đổi hạn hoàn thành...</span>
-          </span>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded">D</kbd>
-            <ChevronRight className="size-3" strokeWidth={1.5} />
-          </div>
-        </button>
-
-        {activeSubmenu === "dueDate" && (
-          <div
-            role="menu"
-            className="absolute left-full top-0 ml-1 w-48 rounded-lg border border-border/80 bg-white p-1 text-xs shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50 space-y-0.5"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleQuickDueDate(0)}
-              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100/80 text-slate-700 text-left transition-colors cursor-pointer"
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              <TaskIconDeadline className="size-4 text-muted-foreground" />
+            </span>
+            <span className="flex-1 truncate">Chọn ngày khác</span>
+            <ChevronRight className="size-3 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />
+          </button>
+          {calendarOpen ? (
+            <div
+              role="dialog"
+              aria-label="Chọn ngày hoàn thành"
+              className={cn(
+                submenuClass,
+                "w-56 rounded-lg border border-border/80 bg-popover p-2 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50"
+              )}
             >
-              <span>Hôm nay</span>
-              <span className="text-[10px] text-muted-foreground font-mono">T+0</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleQuickDueDate(1)}
-              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100/80 text-slate-700 text-left transition-colors cursor-pointer"
-            >
-              <span>Ngày mai</span>
-              <span className="text-[10px] text-muted-foreground font-mono">T+1</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleQuickDueDate(7)}
-              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100/80 text-slate-700 text-left transition-colors cursor-pointer"
-            >
-              <span>Tuần tới (7 ngày)</span>
-              <span className="text-[10px] text-muted-foreground font-mono">T+7</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleEndOfMonthDueDate}
-              className="flex w-full items-center justify-between px-2 py-1.5 rounded-md hover:bg-slate-100/80 text-slate-700 text-left transition-colors cursor-pointer"
-            >
-              <span>Cuối tháng này</span>
-            </button>
-            <div className="pt-1 mt-1 border-t border-border/40 px-1">
-              <VietnameseDatePicker
+              <VietnameseDayCalendar
                 value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-                onChange={(val) => {
-                  if (val) {
-                    if (onDueDateChange) {
-                      onDueDateChange(task.id, val);
-                    } else {
-                      updateTaskDueDate(task.id, val);
-                    }
-                    onClose();
-                  }
-                }}
-                variant="input"
-                placeholder="Chọn ngày cụ thể..."
-                className="w-full"
+                onSelect={handleSetDueDate}
               />
             </div>
-          </div>
-        )}
-      </div>
+          ) : null}
+        </div>
+      </SubmenuRow>
 
       <div className="my-1 border-t border-border/40" />
 
-      {/* Item 6: Copy Link (⌘⇧C) */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={handleCopyLink}
-        className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-      >
-        <span className="flex items-center gap-2">
-          <Copy className="size-3.5 text-slate-500" strokeWidth={1.5} />
-          <span>Sao chép liên kết</span>
-        </span>
-        <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded text-muted-foreground">
-          ⌘⇧C
-        </kbd>
-      </button>
-
-      {/* Item 7: Copy Task Code (⌘⌥C) */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={handleCopyCode}
-        className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-      >
-        <span className="flex items-center gap-2">
-          <Copy className="size-3.5 text-slate-500" strokeWidth={1.5} />
-          <span>Sao chép mã nhiệm vụ</span>
-        </span>
-        <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded text-muted-foreground">
-          ⌘⌥C
-        </kbd>
-      </button>
-
-      {/* Item 8: View Detail (Enter) */}
-      <button
-        type="button"
-        role="menuitem"
+      <MenuRow icon={<TaskIconLink className="size-4 text-muted-foreground" />} label="Sao chép liên kết" shortcut="⌘⇧C" onClick={handleCopyLink} />
+      <MenuRow icon={<TaskIconCopy className="size-4 text-muted-foreground" />} label="Sao chép mã nhiệm vụ" shortcut="⌘⌥C" onClick={handleCopyCode} />
+      <MenuRow
+        icon={<TaskIconView className="size-4 text-muted-foreground" />}
+        label="Xem chi tiết"
+        shortcut="Enter"
         onClick={() => {
           onClose();
           onOpenDetail?.(task);
         }}
-        className="flex w-full items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-slate-100/80 transition-colors cursor-pointer text-left"
-      >
-        <span className="flex items-center gap-2">
-          <Eye className="size-3.5 text-slate-500" strokeWidth={1.5} />
-          <span>Xem chi tiết nhiệm vụ</span>
-        </span>
-        <kbd className="font-mono text-[10px] px-1 py-0.2 bg-slate-100 border border-slate-200 rounded text-muted-foreground">
-          Enter
-        </kbd>
-      </button>
+      />
 
       <div className="my-1 border-t border-border/40" />
 
-      {/* Item 9: Delete Task */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={handleDeleteTask}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
-      >
-        <Trash2 className="size-3.5" strokeWidth={1.5} />
-        <span>Xóa / Hủy nhiệm vụ...</span>
-      </button>
+      <MenuRow icon={<TaskIconTrash className="size-4" />} label="Xóa / Hủy nhiệm vụ" onClick={handleDeleteTask} danger />
 
     </Menu.Popup>
     </Menu.Positioner>

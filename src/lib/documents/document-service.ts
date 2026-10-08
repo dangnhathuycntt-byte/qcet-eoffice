@@ -20,6 +20,7 @@ import {
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
 import { NotFoundError, ValidationError } from "@/server/api/errors";
+import { buildDocumentBucketWhere, type DocumentBucket } from "./document-sidebar-buckets";
 
 export {
   buildDocumentReadWhere,
@@ -82,6 +83,8 @@ export interface ListDocumentsFilter {
   type?: DocumentType;
   documentYear?: number;
   status?: DocumentStatus;
+  /** Nhóm trạng thái của sidebar (cần kèm `type` là văn bản đến/đi). */
+  bucket?: DocumentBucket;
   urgency?: DocumentUrgency;
   securityLevel?: DocumentSecurityLevel;
   /** Lọc theo đơn vị chủ trì — canonical `OrganizationalUnit.id`. */
@@ -187,6 +190,8 @@ export function mapPrismaDocumentToItem(record: any): DocumentItem {
     leadUnitCode: record.incomingWorkflow?.leadUnit?.code || null,
     leadUserId: record.leadUserId || null,
     leadUserName: record.leadUser?.name || null,
+    workflowStatus:
+      (record.type === "VAN_BAN_DI" ? record.outgoingWorkflow?.status : record.incomingWorkflow?.status) ?? null,
 
     notes: record.notes || null,
     registeredById: record.registeredById,
@@ -380,6 +385,10 @@ export async function listDocuments(
   }
   if (filter.documentYear) {
     queryConditions.push({ documentYear: Number(filter.documentYear) });
+  }
+  if (filter.bucket && (filter.type === "VAN_BAN_DEN" || filter.type === "VAN_BAN_DI")) {
+    const bucketWhere = buildDocumentBucketWhere(filter.type, filter.bucket);
+    if (bucketWhere) queryConditions.push(bucketWhere);
   }
   if (filter.status) {
     queryConditions.push({ status: filter.status as any });

@@ -131,7 +131,7 @@ export function getRelativeDueTime(
 
   if (diffDays < 0) {
     return {
-      text: `Quá hạn ${Math.abs(diffDays)} ngày`,
+      text: `Trễ hạn ${Math.abs(diffDays)} ngày`,
       color: "border-red-500/30 bg-red-500/10 text-red-700",
     };
   }
@@ -523,7 +523,7 @@ function getRelativeTimeString(
     );
     if (diffDays < 0) {
       return {
-        text: `Quá hạn ${Math.abs(diffDays)} ngày`,
+        text: `Trễ hạn ${Math.abs(diffDays)} ngày`,
         color: "text-rose-600 bg-rose-500/10 border-rose-500/20 font-bold",
       };
     }
@@ -1064,7 +1064,7 @@ export function TaskDetailSideSheet({
                 )}
               />
               <span>
-                {isOverdue ? "Quá hạn" : statusConfig.label}
+                {isOverdue ? "Trễ hạn" : statusConfig.label}
               </span>
             </span>
           </div>

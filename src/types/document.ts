@@ -96,6 +96,8 @@ export interface DocumentItem {
   leadUnitCode?: string | null;
   leadUserId?: string | null;
   leadUserName?: string | null;
+  /** Trạng thái workflow chi tiết (IncomingDocumentStatus hoặc OutgoingDocumentStatus). */
+  workflowStatus?: string | null;
 
   notes?: string | null;
   registeredById: string;
@@ -125,6 +127,10 @@ export interface OfficialDocument {
   id: string;
   type: DocumentType;
   documentNumber: string;       // Số / Ký hiệu (vd: 128/TCGDNN-VP)
+  registrationNumber?: number;  // Số đến / Số đi trong sổ (cấp liên tục theo năm)
+  documentYear?: number;        // Năm của sổ
+  dueDate?: string;             // Hạn xử lý (YYYY-MM-DD)
+  workflowStatus?: string;      // Trạng thái workflow chi tiết (xem bản đồ hệ thống: Quy trình 6/7)
   issuedDate: string;           // Ngày ban hành (YYYY-MM-DD)
   receivedDate?: string;        // Ngày tiếp nhận vào sổ (YYYY-MM-DD)
   issuingAuthority: string;     // Cơ quan / Đơn vị ban hành

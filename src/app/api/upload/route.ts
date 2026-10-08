@@ -5,6 +5,10 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { assertCsrf } from "@/server/security/csrf";
 import { storeUploadedFile } from "@/lib/services/file-service";
+import { prisma } from "@/lib/prisma";
+import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
+import { ForbiddenError } from "@/server/api/errors";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export async function POST(req: NextRequest) {
@@ -25,12 +29,33 @@ export async function POST(req: NextRequest) {
       return apiError(`Tệp quá lớn (tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB)`, requestId);
     }
 
+    const taskId = formData.get("taskId");
+    let taskMetadata: { taskId: string } | undefined;
+    if (taskId && typeof taskId === "string" && taskId.trim().length > 0) {
+      const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), {
+        useCache: true,
+      });
+      const taskReadWhere = buildTaskReadWhere(authorizationContext);
+      const task = await prisma.task.findFirst({
+        where: {
+          id: taskId.trim(),
+          ...taskReadWhere,
+        },
+        select: { id: true },
+      });
+      if (!task) {
+        throw new ForbiddenError("Không có quyền truy cập nhiệm vụ để tải tệp");
+      }
+      taskMetadata = { taskId: task.id };
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const storedFile = await storeUploadedFile({
       uploadedById: authUser.id,
       originalName: file.name,
       declaredMimeType: file.type,
       bytes: buffer,
+      metadata: taskMetadata,
     });
     const fileUrl = `/api/file-objects/${storedFile.id}`;
 

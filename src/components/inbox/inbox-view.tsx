@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Inbox as InboxIcon,
@@ -10,36 +9,26 @@ import {
   Mail,
   MailOpen,
   RotateCcw,
-  Filter,
+  ListFilter,
   ArrowLeft,
-  ExternalLink,
-  Clock,
   AlertTriangle,
   FileText,
   ShieldCheck,
-  ChevronRight,
-  MoreHorizontal,
-  CheckCircle2,
-  Building2,
-  User,
-  Calendar,
-  Layers,
   ArrowUpRight,
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PropertyRow } from "@/components/ui/property-row";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
-import { useAuth } from "@/lib/auth-context";
 import {
   QCETNotification,
   NotificationTriageTab,
   filterNotificationsByTab,
   formatNotificationContent,
-  getDeterministicAvatarStyle,
-  getActorInitials,
-  getTypeBadge,
   mapDbNotification,
   formatRelativeTime,
 } from "@/lib/notification-triage";
@@ -62,7 +51,6 @@ export function InboxView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setBadgeCounts } = useSidebar();
-  const { user } = useAuth();
 
   const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
   const [activeTab, setActiveTab] = React.useState<"all" | "unread">(() => {
@@ -78,8 +66,6 @@ export function InboxView() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = React.useState(false);
-  const filterMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Task context cache when viewing an item
   const [taskContext, setTaskContext] = React.useState<SchoolTask | null>(null);
@@ -87,19 +73,6 @@ export function InboxView() {
 
   // Keep track of item that was read during the current unread-tab session so it doesn't suddenly disappear
   const readDuringSessionIdsRef = React.useRef<Set<string>>(new Set());
-
-  // Close filter menu when clicked outside
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as Node)) {
-        setIsFilterMenuOpen(false);
-      }
-    };
-    if (isFilterMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isFilterMenuOpen]);
 
   // Fetch notifications list
   const fetchNotifications = React.useCallback(async (showRefreshing = false) => {
@@ -313,226 +286,181 @@ export function InboxView() {
     return list;
   }, [notifications, categoryFilter, activeTab, searchQuery]);
 
+
+
+  // Điều hướng bàn phím trong danh sách: ↑/↓ chuyển và chọn hàng kề, Enter/Space chọn hàng hiện tại.
+  const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, item: QCETNotification) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleSelectItem(item);
+      return;
+    }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const sibling = (
+      e.key === "ArrowDown" ? e.currentTarget.nextElementSibling : e.currentTarget.previousElementSibling
+    ) as HTMLElement | null;
+    sibling?.focus();
+  };
+
+  const selectedContent = selectedNotification ? formatNotificationContent(selectedNotification) : null;
+  const selectedTitle =
+    selectedNotification?.targetTitle || selectedNotification?.title || "Thông báo hệ thống";
+
   return (
     <div
       data-slot="inbox-workspace"
-      className="flex flex-col h-[calc(100vh-56px)] md:h-[calc(100vh-24px)] rounded-2xl border border-border/70 bg-card overflow-hidden shadow-xs select-none"
+      className="flex h-[calc(100vh-56px)] md:h-[calc(100vh-24px)] flex-col overflow-hidden rounded-xl border border-border/70 bg-card select-none"
     >
-      {/* ========================================================= */}
-      {/* MAIN TWO-PANE BODY */}
-      {/* ========================================================= */}
-      <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        {/* ------------------------------------------------------- */}
-        {/* LEFT PANE: NOTIFICATIONS LIST (340px - 380px)           */}
-        {/* ------------------------------------------------------- */}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {/* Khung danh sách */}
         <aside
           data-slot="inbox-list-pane"
           className={cn(
-            "w-full md:w-[340px] lg:w-[380px] shrink-0 flex flex-col h-full border-r border-border/70 bg-background transition-all",
+            "h-full w-full shrink-0 flex-col border-r border-border/70 bg-background md:w-[320px] lg:w-[360px]",
             selectedId ? "hidden md:flex" : "flex"
           )}
         >
-          {/* Top Header of Left Pane */}
-          <div className="p-3 border-b border-border/60 bg-muted/20 space-y-2.5 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-foreground font-heading">
-                  Hộp thư
-                </h1>
-                {unreadCount > 0 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
-                    {unreadCount}
-                  </span>
-                )}
-              </div>
+          <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-3">
+            <div className="flex items-center gap-2">
+              <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
+              {unreadCount > 0 && (
+                <span className="text-xs tabular-nums text-muted-foreground">{unreadCount}</span>
+              )}
+            </div>
 
-              <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => fetchNotifications(true)}
+                disabled={isRefreshing}
+                title="Làm mới hộp thư"
+                aria-label="Làm mới"
+              >
+                <RotateCcw strokeWidth={1.5} className={cn(isRefreshing && "animate-spin")} />
+              </Button>
+
+              {unreadCount > 0 && (
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => fetchNotifications(true)}
-                  disabled={isRefreshing}
-                  title="Làm mới hộp thư"
-                  aria-label="Làm mới"
-                  className="size-7 text-muted-foreground hover:text-foreground"
+                  onClick={markAllAsRead}
+                  title="Đánh dấu tất cả là đã đọc"
+                  aria-label="Đánh dấu tất cả đã đọc"
                 >
-                  <RotateCcw
-                    size={14}
-                    strokeWidth={1.5}
-                    className={cn(isRefreshing && "animate-spin text-primary")}
-                  />
+                  <CheckCheck strokeWidth={1.5} />
                 </Button>
+              )}
 
-                {unreadCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={markAllAsRead}
-                    title="Đánh dấu tất cả là đã đọc"
-                    aria-label="Đánh dấu tất cả đã đọc"
-                    className="size-7 text-muted-foreground hover:text-foreground"
-                  >
-                    <CheckCheck size={14} strokeWidth={1.5} />
-                  </Button>
-                )}
-
-                {/* Filter categories dropdown */}
-                <div className="relative" ref={filterMenuRef}>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => setIsFilterMenuOpen((prev) => !prev)}
-                    title="Lọc theo loại thông báo"
-                    aria-label="Lọc theo loại"
-                    className={cn(
-                      "size-7 text-muted-foreground hover:text-foreground",
-                      categoryFilter !== "all" && "bg-accent/80 text-foreground border border-border/80"
-                    )}
-                  >
-                    <Filter size={14} strokeWidth={1.5} />
-                  </Button>
-
-                  {isFilterMenuOpen && (
-                    <div className="absolute right-0 mt-1 w-48 rounded-xl border border-border/80 bg-card p-1 shadow-dropdown z-50 animate-in fade-in zoom-in-95">
-                      <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground/80">
-                        Loại thông báo
-                      </div>
-                      {CATEGORY_OPTIONS.map((opt) => {
-                        const Icon = opt.icon;
-                        const isSelected = categoryFilter === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => {
-                              setCategoryFilter(opt.id);
-                              setIsFilterMenuOpen(false);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                              isSelected
-                                ? "bg-muted/80 font-medium text-foreground"
-                                : "text-foreground/80 hover:bg-accent hover:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Icon size={14} strokeWidth={1.5} className="shrink-0" />
-                              <span>{opt.label}</span>
-                            </div>
-                            <div
-                              className={cn(
-                                "size-3.5 rounded-[3px] border flex items-center justify-center transition-colors shrink-0 ml-2",
-                                isSelected
-                                  ? "bg-neutral-800 text-white border-neutral-800 shadow-2xs"
-                                  : "border-border/80 bg-background"
-                              )}
-                            >
-                              {isSelected && <Check className="size-2.5" strokeWidth={1.5} />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <MenuRoot>
+                <MenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      title="Lọc theo loại thông báo"
+                      aria-label="Lọc theo loại"
+                      className={cn(categoryFilter !== "all" && "bg-accent text-foreground")}
+                    />
+                  }
+                >
+                  <ListFilter strokeWidth={1.5} />
+                </MenuTrigger>
+                <MenuContent align="end" className="w-56">
+                  {CATEGORY_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    return (
+                      <MenuItem
+                        key={opt.id}
+                        onClick={() => setCategoryFilter(opt.id)}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs outline-none data-[highlighted]:bg-accent"
+                      >
+                        <Icon size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                        <span className="flex-1 truncate">{opt.label}</span>
+                        {categoryFilter === opt.id && <Check size={14} strokeWidth={1.5} className="shrink-0" />}
+                      </MenuItem>
+                    );
+                  })}
+                </MenuContent>
+              </MenuRoot>
             </div>
+          </div>
 
-            {/* Horizontal Segmented Control: Tất cả / Chưa đọc */}
-            <div
-              role="group"
-              aria-label="Lọc trạng thái đọc"
-              className="inline-flex h-7 w-full items-center rounded-md border border-border/80 bg-muted/30 p-0.5 text-xs shrink-0 select-none"
-            >
+          <div className="flex shrink-0 items-center gap-1 px-3 pb-2">
+            {(
+              [
+                { id: "all", label: "Tất cả", count: notifications.length },
+                { id: "unread", label: "Chưa đọc", count: unreadCount },
+              ] as const
+            ).map((tab) => (
               <button
+                key={tab.id}
                 type="button"
+                aria-pressed={activeTab === tab.id}
                 onClick={() => {
-                  setActiveTab("all");
-                  updateUrlParams(selectedId, "all");
+                  setActiveTab(tab.id);
+                  updateUrlParams(selectedId, tab.id);
                 }}
-                aria-pressed={activeTab === "all"}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                  activeTab === "all"
-                    ? "bg-background text-foreground shadow-2xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  activeTab === tab.id
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 )}
               >
-                <span>Tất cả</span>
-                <span className="text-[10px] font-mono tabular-nums text-muted-foreground/80">
-                  {notifications.length}
-                </span>
+                {tab.label}
+                {tab.count > 0 && <span className="tabular-nums text-muted-foreground">{tab.count}</span>}
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("unread");
-                  updateUrlParams(selectedId, "unread");
-                }}
-                aria-pressed={activeTab === "unread"}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 h-6 px-2 rounded-[4px] text-[11.5px] font-medium transition-colors cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                  activeTab === "unread"
-                    ? "bg-background text-foreground shadow-2xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                )}
-              >
-                <span>Chưa đọc</span>
-                {unreadCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[16px] h-3.5 px-1 rounded-full text-[10px] font-mono font-semibold bg-muted text-foreground/80 border border-border/80 tabular-nums leading-none">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Quick search input */}
-            <div className="relative">
+            ))}
+            <div className="relative ml-auto min-w-0 flex-1">
               <Search
-                className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+                className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
                 strokeWidth={1.5}
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm người gửi, nội dung..."
+                placeholder="Tìm kiếm"
                 aria-label="Tìm kiếm thông báo"
-                className="w-full h-7 pl-8 pr-2.5 rounded-md border border-border/80 bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                className="h-7 w-full rounded-md bg-secondary pl-7 pr-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           </div>
 
-          {/* List Content */}
-          <div className="flex-1 overflow-y-auto divide-y divide-border/40 thin-scrollbar">
+          <div
+            role="listbox"
+            aria-label="Danh sách thông báo"
+            className="thin-scrollbar flex-1 overflow-y-auto border-t border-border/60"
+          >
             {isLoading ? (
-              <div className="p-4 space-y-3">
+              <div className="space-y-1 p-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="animate-pulse space-y-2 p-2">
-                    <div className="flex items-center gap-2">
-                      <div className="size-7 rounded-full bg-muted" />
-                      <div className="h-3 w-28 bg-muted rounded" />
+                  <div key={i} className="flex animate-pulse items-start gap-2.5 px-1 py-1.5">
+                    <div className="size-6 rounded-full bg-muted" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-2/3 rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted/60" />
                     </div>
-                    <div className="h-3 w-full bg-muted/60 rounded" />
                   </div>
                 ))}
               </div>
             ) : error ? (
-              <div className="p-6 text-center space-y-2.5">
-                <AlertTriangle className="size-6 text-rose-500 mx-auto" strokeWidth={1.5} />
-                <p className="text-xs text-rose-600 font-medium">{error}</p>
-                <Button variant="outline" size="sm" onClick={() => fetchNotifications(false)} className="text-xs h-7">
+              <div className="space-y-2 p-6 text-center">
+                <AlertTriangle className="mx-auto size-5 text-destructive" strokeWidth={1.5} />
+                <p className="text-xs text-destructive">{error}</p>
+                <Button variant="outline" size="sm" onClick={() => fetchNotifications(false)}>
                   Thử lại
                 </Button>
               </div>
             ) : filteredNotifications.length === 0 ? (
-              <div className="p-8 text-center space-y-2">
-                <InboxIcon className="size-8 text-muted-foreground/40 mx-auto" strokeWidth={1.5} />
-                <p className="text-xs font-semibold text-foreground">
+              <div className="space-y-1 p-8 text-center">
+                <InboxIcon className="mx-auto mb-2 size-6 text-muted-foreground/50" strokeWidth={1.5} />
+                <p className="text-compact font-medium text-foreground">
                   {activeTab === "unread" ? "Không có thông báo chưa đọc" : "Hộp thư trống"}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {activeTab === "unread"
                     ? "Bạn đã xem hết tất cả thông báo mới."
                     : "Mọi thông báo và nhắc việc giao dịch sẽ xuất hiện ở đây."}
@@ -541,71 +469,47 @@ export function InboxView() {
             ) : (
               filteredNotifications.map((notif) => {
                 const formatted = formatNotificationContent(notif);
-                const avatar = getDeterministicAvatarStyle(notif.actorName);
-                const initials = getActorInitials(notif.actorName);
                 const isSelected = selectedId === notif.id;
 
                 return (
                   <div
                     key={notif.id}
-                    role="button"
+                    role="option"
+                    aria-selected={isSelected}
                     tabIndex={0}
                     onClick={() => handleSelectItem(notif)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSelectItem(notif);
-                      }
-                    }}
+                    onKeyDown={(e) => handleRowKeyDown(e, notif)}
                     className={cn(
-                      "p-3 flex items-start gap-2.5 cursor-pointer transition-colors text-left relative group select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                      isSelected
-                        ? "bg-primary/[0.08] border-l-[3px] border-primary font-medium"
-                        : notif.isRead
-                        ? "hover:bg-muted/40 text-muted-foreground hover:text-foreground"
-                        : "hover:bg-muted/60 text-foreground bg-background"
+                      "relative flex cursor-pointer items-start gap-2.5 py-2 pl-4 pr-3 text-left outline-none transition-colors focus-visible:bg-accent",
+                      isSelected ? "bg-accent" : "hover:bg-accent/60"
                     )}
                   >
-                    {/* Unread dot indicator */}
-                    {!notif.isRead ? (
-                      <span className="absolute left-1.5 top-4 size-1.5 rounded-full bg-primary ring-2 ring-primary/20" />
-                    ) : (
-                      <span className="w-1.5 shrink-0" />
+                    {!notif.isRead && (
+                      <span
+                        aria-label="Chưa đọc"
+                        className="absolute left-1.5 top-4 size-1.5 rounded-full bg-primary"
+                      />
                     )}
-
-                    {/* Sender Avatar */}
-                    <div
-                      className={cn(
-                        "size-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ring-1",
-                        avatar.bg,
-                        avatar.text,
-                        avatar.ring
-                      )}
-                    >
-                      {initials}
-                    </div>
-
-                    {/* Content preview */}
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-semibold text-foreground truncate">
-                          {notif.actorName}
+                    <UserAvatar name={notif.actorName} size="md" className="mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span
+                          className={cn(
+                            "truncate text-compact",
+                            notif.isRead ? "text-muted-foreground" : "font-medium text-foreground"
+                          )}
+                        >
+                          {formatted.targetTitle || notif.actorName}
                         </span>
-                        <span className="text-[10px] text-muted-foreground/70 shrink-0 font-mono">
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                           {formatRelativeTime(notif.createdAt || notif.timestamp)}
                         </span>
                       </div>
-
-                      <p className="text-xs text-foreground/90 line-clamp-1 leading-snug">
-                        <span className="text-muted-foreground">{formatted.actionText} </span>
-                        <span className="font-medium text-foreground">{formatted.targetTitle}</span>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {notif.actorName}
+                        {formatted.actionText ? ` · ${formatted.actionText}` : ""}
+                        {formatted.extraBadge ? ` · ${formatted.extraBadge}` : ""}
                       </p>
-
-                      {formatted.extraBadge && (
-                        <span className="inline-block text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/50">
-                          {formatted.extraBadge}
-                        </span>
-                      )}
                     </div>
                   </div>
                 );
@@ -614,218 +518,150 @@ export function InboxView() {
           </div>
         </aside>
 
-        {/* ------------------------------------------------------- */}
-        {/* RIGHT PANE: DETAIL VIEW (FLEX-1)                        */}
-        {/* ------------------------------------------------------- */}
+        {/* Khung chi tiết */}
         <section
           data-slot="inbox-detail-pane"
-          className={cn(
-            "flex-1 flex flex-col h-full bg-card/20 overflow-y-auto thin-scrollbar",
-            !selectedId ? "hidden md:flex" : "flex"
-          )}
+          className={cn("h-full min-w-0 flex-1 flex-col bg-card", !selectedId ? "hidden md:flex" : "flex")}
         >
-          {!selectedNotification ? (
-            /* Empty Selection State */
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-              <div className="size-16 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-center text-muted-foreground/50 mb-3 shadow-2xs">
-                <InboxIcon size={32} strokeWidth={1.5} />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">Chưa chọn thông báo nào</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                Chọn một thông báo từ danh sách bên trái để xem nội dung chi tiết, ý kiến chỉ đạo và ngữ cảnh xử lý nhiệm vụ.
+          {!selectedNotification || !selectedContent ? (
+            <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+              <InboxIcon className="mb-2 size-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <h3 className="text-compact font-medium text-foreground">Chưa chọn thông báo nào</h3>
+              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                Chọn một thông báo ở danh sách bên trái để xem nội dung, ý kiến chỉ đạo và nhiệm vụ liên quan.
               </p>
             </div>
           ) : (
-            /* Active Notification Detail Surface */
-            <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full">
-              {/* Mobile Back Button */}
-              <div className="flex md:hidden items-center justify-between pb-3 border-b border-border/50">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedId(null);
-                    updateUrlParams(null);
-                  }}
-                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground -ml-2"
-                >
-                  <ArrowLeft size={14} strokeWidth={1.5} />
-                  <span>Danh sách hộp thư</span>
-                </Button>
+            <>
+              <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="md:hidden"
+                    onClick={() => {
+                      setSelectedId(null);
+                      updateUrlParams(null);
+                    }}
+                    aria-label="Quay lại danh sách hộp thư"
+                  >
+                    <ArrowLeft strokeWidth={1.5} />
+                  </Button>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {selectedNotification.category || "Hệ thống"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">›</span>
+                  <span className="truncate text-xs text-foreground">{selectedTitle}</span>
+                </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => markAsRead(selectedNotification.id, !selectedNotification.isRead)}
-                  title={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
-                  className="size-8 text-muted-foreground hover:text-foreground"
-                >
-                  {selectedNotification.isRead ? <Mail size={16} strokeWidth={1.5} /> : <MailOpen size={16} strokeWidth={1.5} />}
-                </Button>
-              </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => markAsRead(selectedNotification.id, !selectedNotification.isRead)}
+                    title={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
+                    aria-label={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
+                  >
+                    {selectedNotification.isRead ? (
+                      <Mail strokeWidth={1.5} />
+                    ) : (
+                      <MailOpen strokeWidth={1.5} />
+                    )}
+                  </Button>
+                  {selectedNotification.linkHref && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(selectedNotification.linkHref || "/tasks")}
+                    >
+                      Mở nhiệm vụ
+                      <ArrowUpRight strokeWidth={1.5} />
+                    </Button>
+                  )}
+                </div>
+              </header>
 
-              {/* Header Details */}
-              <div className="space-y-3 pb-4 border-b border-border/60">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-xs font-medium">
-                        {selectedNotification.category || "Hệ thống"}
-                      </Badge>
+              <div className="thin-scrollbar flex-1 overflow-y-auto">
+                <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5 sm:px-6">
+                  <div className="space-y-3">
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">{selectedTitle}</h2>
+                    <div className="flex items-center gap-2">
+                      <UserAvatar name={selectedNotification.actorName} size="md" />
+                      <span className="text-compact font-medium text-foreground">
+                        {selectedNotification.actorName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {selectedNotification.timestamp || "Gần đây"}
+                      </span>
                       {selectedNotification.type && (
-                        <Badge variant="sapphire" className="text-xs font-mono">
-                          {selectedNotification.type.toUpperCase()}
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          {selectedNotification.type}
                         </Badge>
                       )}
                     </div>
-                    <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight text-foreground font-heading">
-                      {selectedNotification.targetTitle || selectedNotification.title || "Thông báo hệ thống"}
-                    </h2>
                   </div>
 
-                  {/* Desktop Action Controls */}
-                  <div className="hidden md:flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => markAsRead(selectedNotification.id, !selectedNotification.isRead)}
-                      className="gap-1.5 text-xs h-8"
-                    >
-                      {selectedNotification.isRead ? (
+                  <p className="whitespace-pre-wrap text-compact leading-relaxed text-foreground/90">
+                    {selectedNotification.action || selectedNotification.body || "Không có nội dung mô tả chi tiết."}
+                  </p>
+
+                  {selectedContent.directiveNote && (
+                    <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-amber-950">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-amber-900">
+                        <ShieldCheck size={14} strokeWidth={1.5} />
+                        <span>Ý kiến chỉ đạo / Ghi chú điều hành</span>
+                      </div>
+                      <p className="text-xs italic">&quot;{selectedContent.directiveNote}&quot;</p>
+                    </div>
+                  )}
+
+                  {(isLoadingTaskContext || taskContext) && (
+                    <div className="space-y-1 border-t border-border/60 pt-4">
+                      <div className="mb-1 text-xs font-medium text-muted-foreground">Nhiệm vụ liên quan</div>
+                      {taskContext ? (
                         <>
-                          <Mail size={14} strokeWidth={1.5} />
-                          <span>Đánh dấu chưa đọc</span>
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/tasks?taskId=${taskContext.id}`)}
+                            className="mb-1 block w-full cursor-pointer truncate rounded-md py-1 text-left text-compact font-medium text-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {taskContext.title}
+                          </button>
+                          <PropertyRow label="Trạng thái">
+                            <Badge variant={taskContext.status === "COMPLETED" ? "emerald" : "sapphire"}>
+                              {taskContext.status === "COMPLETED" ? "Đã hoàn thành" : "Đang thực hiện"}
+                            </Badge>
+                          </PropertyRow>
+                          {taskContext.dueDate && (
+                            <PropertyRow label="Hạn chót">
+                              <span className="text-xs tabular-nums text-foreground">
+                                {new Date(taskContext.dueDate).toLocaleDateString("vi-VN")}
+                              </span>
+                            </PropertyRow>
+                          )}
+                          {taskContext.leadAssigneeName && (
+                            <PropertyRow label="Phụ trách">
+                              <span className="flex items-center gap-1.5 text-xs text-foreground">
+                                <UserAvatar name={taskContext.leadAssigneeName} size="sm" />
+                                {taskContext.leadAssigneeName}
+                              </span>
+                            </PropertyRow>
+                          )}
+                          {taskContext.progressPercent !== undefined && (
+                            <PropertyRow label="Tiến độ">
+                              <span className="text-xs tabular-nums text-foreground">
+                                {taskContext.progressPercent}%
+                              </span>
+                            </PropertyRow>
+                          )}
                         </>
                       ) : (
-                        <>
-                          <MailOpen size={14} strokeWidth={1.5} />
-                          <span>Đã đọc</span>
-                        </>
+                        <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
                       )}
-                    </Button>
-
-                    {selectedNotification.linkHref && (
-                      <Button
-                        size="sm"
-                        onClick={() => router.push(selectedNotification.linkHref || "/tasks")}
-                        className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        <span>Mở nhiệm vụ</span>
-                        <ArrowUpRight size={14} strokeWidth={1.5} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sender Identity & Metadata */}
-                <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
-                  <div
-                    className={cn(
-                      "size-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ring-1",
-                      getDeterministicAvatarStyle(selectedNotification.actorName).bg,
-                      getDeterministicAvatarStyle(selectedNotification.actorName).text,
-                      getDeterministicAvatarStyle(selectedNotification.actorName).ring
-                    )}
-                  >
-                    {getActorInitials(selectedNotification.actorName)}
-                  </div>
-
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-foreground">
-                      {selectedNotification.actorName}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground/80">
-                      {selectedNotification.timestamp || "Gần đây"}
-                    </span>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Body Content */}
-              <div className="space-y-4 text-xs sm:text-sm text-foreground/90 leading-relaxed bg-muted/20 p-4 rounded-xl border border-border/40">
-                <div className="font-medium text-foreground whitespace-pre-wrap">
-                  {selectedNotification.action || selectedNotification.body || "Không có nội dung mô tả chi tiết."}
-                </div>
-
-                {formatNotificationContent(selectedNotification).directiveNote && (
-                  <div className="p-3.5 rounded-lg bg-amber-50/80 border border-amber-300 text-amber-950 space-y-1">
-                    <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                      <ShieldCheck size={14} strokeWidth={1.5} />
-                      <span>Ý kiến chỉ đạo / Ghi chú điều hành:</span>
-                    </div>
-                    <p className="text-xs italic">
-                      "{formatNotificationContent(selectedNotification).directiveNote}"
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Context Card: Linked Task Summary (if exists) */}
-              {taskContext && (
-                <div className="rounded-xl border border-border/80 bg-background p-4 space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Layers size={15} strokeWidth={1.5} className="text-muted-foreground" />
-                      <span className="text-xs font-bold text-muted-foreground">
-                        Nhiệm vụ liên quan
-                      </span>
-                    </div>
-                    <Badge variant={taskContext.status === "COMPLETED" ? "emerald" : "sapphire"}>
-                      {taskContext.status === "COMPLETED" ? "Đã hoàn thành" : "Đang thực hiện"}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {taskContext.title}
-                    </h4>
-                    {taskContext.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {taskContext.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-border/40 text-xs">
-                    {taskContext.dueDate && (
-                      <div>
-                        <span className="text-muted-foreground text-[11px] block">Hạn chót:</span>
-                        <span className="font-mono font-medium text-foreground">
-                          {new Date(taskContext.dueDate).toLocaleDateString("vi-VN")}
-                        </span>
-                      </div>
-                    )}
-                    {taskContext.leadAssigneeName && (
-                      <div>
-                        <span className="text-muted-foreground text-[11px] block">Người chịu trách nhiệm:</span>
-                        <span className="font-medium text-foreground truncate block">
-                          {taskContext.leadAssigneeName}
-                        </span>
-                      </div>
-                    )}
-                    {taskContext.progressPercent !== undefined && (
-                      <div>
-                        <span className="text-muted-foreground text-[11px] block">Tiến độ:</span>
-                        <span className="font-mono font-semibold text-primary">
-                          {taskContext.progressPercent}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => router.push(`/tasks?taskId=${taskContext.id}`)}
-                      className="text-xs h-7 gap-1"
-                    >
-                      <span>Xem toàn bộ nhiệm vụ</span>
-                      <ChevronRight size={14} strokeWidth={1.5} />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </section>
       </div>

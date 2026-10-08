@@ -9,6 +9,10 @@ import {
   Circle,
   Clock,
   MoreHorizontal,
+  Calendar,
+  CalendarCheck,
+  CalendarClock,
+  CalendarX2,
   Signal,
   SignalHigh,
   SignalMedium,
@@ -23,10 +27,13 @@ import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
 import type { TableDensity, TableColumnVisibility } from "../types";
 import {
   formatTableDate,
+  getDueIndicator,
   getSlaBadgeStatus,
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import { getTaskContentPreview } from "@/lib/task-content-preview";
+import { getCategoryBadgeConfig } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import {
@@ -57,6 +64,8 @@ export interface TaskRowProps {
   isExpanded?: boolean;
   isActive?: boolean;
   isPreviewing?: boolean;
+  /** Dòng đang là đích của menu chuột phải: giữ nền nổi bật khi menu mở */
+  isContextMenuTarget?: boolean;
   density?: TableDensity;
   visibleColumns?: TableColumnVisibility;
   showSelection?: boolean;
@@ -150,7 +159,7 @@ function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
     return (
       <div className="inline-flex items-center gap-1 text-rose-600" title="Độ ưu tiên: Khẩn cấp">
         <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
-        <span className="text-[11px] font-medium hidden lg:inline">Khẩn cấp</span>
+        <span className="text-xs font-medium hidden lg:inline">Khẩn cấp</span>
       </div>
     );
   }
@@ -158,20 +167,20 @@ function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
     return (
       <div className="inline-flex items-center gap-1 text-amber-600" title="Độ ưu tiên: Cao">
         <SignalHigh className="size-3.5 shrink-0" strokeWidth={1.5} />
-        <span className="text-[11px] font-medium hidden lg:inline">Cao</span>
+        <span className="text-xs font-medium hidden lg:inline">Cao</span>
       </div>
     );
   }
   if (p === "LOW") {
     return (
       <div className="inline-flex items-center text-slate-400" title="Độ ưu tiên: Thấp">
-        <span className="text-[11px] hidden lg:inline">Thấp</span>
+        <span className="text-xs hidden lg:inline">Thấp</span>
       </div>
     );
   }
   return (
     <div className="inline-flex items-center text-slate-500" title="Độ ưu tiên: Bình thường">
-      <span className="text-[11px] hidden lg:inline">Bình thường</span>
+      <span className="text-xs hidden lg:inline">Bình thường</span>
     </div>
   );
 }
@@ -191,7 +200,7 @@ function HealthIndicator({
 }) {
   if (status === "COMPLETED") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/80 font-medium">
+      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/80 font-medium">
         <StatusSubCompleted className="size-3.5 text-foreground/80 shrink-0" />
         <span>Hoàn thành</span>
       </div>
@@ -199,7 +208,7 @@ function HealthIndicator({
   }
   if (isOverdue) {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/90 font-medium">
+      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/90 font-medium">
         <HealthSubOverdue className="size-3.5 text-foreground/90 shrink-0" />
         <span>Trễ hạn</span>
       </div>
@@ -208,7 +217,7 @@ function HealthIndicator({
   if (isWaitingApproval || status === "WAITING_APPROVAL" || (status as string) === "NEEDS_REVIEW") {
     const label = (status as string) === "NEEDS_REVIEW" ? "Cần chỉnh sửa" : "Chờ duyệt";
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground/80 font-medium">
+      <div className="inline-flex items-center gap-1.5 text-xs text-foreground/80 font-medium">
         <StatusSubReview className="size-3.5 text-foreground/80 shrink-0" />
         <span>{label}</span>
       </div>
@@ -216,7 +225,7 @@ function HealthIndicator({
   }
   if (status === "IN_PROGRESS") {
     return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-foreground font-medium">
+      <div className="inline-flex items-center gap-1.5 text-xs text-foreground font-medium">
         <StatusSubInProgress className="size-3.5 text-foreground/80 shrink-0" />
         <span>Đang thực hiện</span>
       </div>
@@ -224,7 +233,7 @@ function HealthIndicator({
   }
   // Mới
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground font-normal">
+    <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
       <StatusSubNew className="size-3.5 text-muted-foreground/60 shrink-0" />
       <span>Mới</span>
     </div>
@@ -314,6 +323,7 @@ export function areTaskRowPropsEqual(
   if (prev.showTaskCode !== next.showTaskCode) return false;
   if (prev.selectionGroupPosition !== next.selectionGroupPosition) return false;
   if (prev.onContextMenu !== next.onContextMenu) return false;
+  if (prev.isContextMenuTarget !== next.isContextMenuTarget) return false;
   if (prev.task.viewerContext?.relation !== next.task.viewerContext?.relation) return false;
   if (prev.task.viewerContext?.matchedSubtaskCount !== next.task.viewerContext?.matchedSubtaskCount) return false;
   return true;
@@ -338,6 +348,7 @@ export const TaskRow = React.memo(function TaskRow({
   onToggleExpand,
   onClick,
   onContextMenu,
+  isContextMenuTarget = false,
   onStatusChange,
   onUrge,
   onAddSubTask,
@@ -364,24 +375,46 @@ export const TaskRow = React.memo(function TaskRow({
       ? task.department
       : (task.department as any)?.name || (task.department as any)?.code || driInfo.subtext;
 
-  const coAssigneesList: string[] = React.useMemo(() => {
-    const names = new Set<string>();
+  // Nhóm avatar "Phối hợp": ưu tiên người kèm ảnh đại diện thật (Google); chỉ khi thiếu ảnh mới hiện chữ cái
+  const coAssigneeEntries: Array<{ name: string; avatarUrl?: string }> = React.useMemo(() => {
+    const entries = new Map<string, { name: string; avatarUrl?: string }>();
+    const add = (name: unknown, avatarUrl?: string | null) => {
+      if (typeof name !== "string") return;
+      const clean = name.trim();
+      if (!clean || clean === "Chưa phân công") return;
+      const existing = entries.get(clean);
+      if (!existing) entries.set(clean, { name: clean, avatarUrl: avatarUrl || undefined });
+      else if (!existing.avatarUrl && avatarUrl) existing.avatarUrl = avatarUrl;
+    };
+    if (Array.isArray((task as any).coAssigneeUsers)) {
+      (task as any).coAssigneeUsers.forEach((u: any) => add(u?.name, u?.avatarUrl));
+    }
     if (Array.isArray((task as any).coAssignees)) {
-      (task as any).coAssignees.forEach((n: any) => {
-        if (typeof n === "string" && n.trim() && n.trim() !== driInfo.primaryName) {
-          names.add(n.trim());
-        }
-      });
+      (task as any).coAssignees.forEach((n: any) => add(typeof n === "string" ? n : n?.name, typeof n === "string" ? undefined : n?.avatarUrl));
     }
     if (Array.isArray(task.subTasks)) {
-      task.subTasks.forEach((st) => {
-        if (st.assigneeName && st.assigneeName.trim() && st.assigneeName.trim() !== driInfo.primaryName) {
-          names.add(st.assigneeName.trim());
-        }
-      });
+      task.subTasks.forEach((st) => add(st.assigneeName, (st as any).assigneeAvatar));
     }
-    return Array.from(names);
-  }, [task, driInfo.primaryName]);
+    return Array.from(entries.values());
+  }, [task]);
+  const coAssigneesList = React.useMemo(() => coAssigneeEntries.map((e) => e.name), [coAssigneeEntries]);
+
+  // Hạn: icon lịch đổi màu theo mức độ gấp (đỏ: trễ/hôm nay, cam: trong 7 ngày, xám: còn lại)
+  const dueIndicator = getDueIndicator({
+    status: task.status,
+    isOverdue: slaStatus.isOverdue,
+    isToday: slaStatus.isToday,
+    daysRemaining: slaStatus.daysRemaining,
+    label: slaStatus.label,
+  });
+  const dueTone = dueIndicator.tone;
+  const dueHint = dueIndicator.hint;
+  const DueIcon = {
+    closed: CalendarCheck,
+    overdue: CalendarX2,
+    soon: CalendarClock,
+    default: Calendar,
+  }[dueIndicator.icon];
 
   const isWaitingApproval =
     task.status === "WAITING_APPROVAL" ||
@@ -430,6 +463,7 @@ export const TaskRow = React.memo(function TaskRow({
 
   const rawCode = task.code || task.taskCode || `NV-${task.id.slice(0, 4)}`;
   const taskCode = rawCode.replace(/[–—–—]/g, "-");
+  const descriptionPreview = getTaskContentPreview(task.description).replace(/\s*\n\s*/g, " ");
   const statusLabel =
     task.status === "COMPLETED"
       ? "Hoàn thành"
@@ -454,7 +488,7 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-colors select-none text-foreground border-b border-border/70 last:border-b-0",
+        "group cursor-pointer transition-colors select-none text-foreground",
         rowHeightClass,
         // State 1: Hover on unselected row
         !isSelected && "hover:bg-muted/40",
@@ -466,85 +500,91 @@ export const TaskRow = React.memo(function TaskRow({
         isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
         // State 5: Opened / Active detail
         isActive && !isPreviewing && !isSelected && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
+        // State 6: Đích của menu chuột phải (giữ bôi nền khi menu mở, vì con trỏ đã rời dòng)
+        isContextMenuTarget && !isSelected && !isPreviewing && "bg-accent",
         isExpanded && "bg-muted/20",
         className
       )}
     >
-      {/* 1. Mã Column: Selector + Status Circle + Priority Signal Bars + Task Code */}
-      <td className="w-[195px] min-w-[180px] align-middle whitespace-nowrap pl-4 sm:pl-5 pr-2.5 py-2">
-        <div className="flex items-center gap-2">
-          {/* Integrated leading selector: Accessible keyboard + large hit area (~32px) */}
-          <div
-            role="checkbox"
-            aria-checked={isSelected}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
-              }
-            }}
-            className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
-            onClick={handleCheckboxClick}
-            title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
-          >
-            <input
-              type="checkbox"
-              checked={isSelected}
-              readOnly
-              className="sr-only"
-              aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
-              tabIndex={-1}
-            />
-            {isSelected ? (
-              <div
-                className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
-                aria-hidden="true"
-              >
-                <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-              </div>
-            ) : (
-              /* Minimalist Subtle Checkbox: Quiet and visible when idle, highlighted on hover */
-              <div
-                className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
-                aria-hidden="true"
-              />
-            )}
-          </div>
-
-          {/* Priority 3-bar signal indicator */}
-          <PrioritySignalBars priority={task.priority} />
-
-          {/* Task Code */}
-          <span
-            className="font-mono text-xs text-muted-foreground/80 tabular-nums shrink-0"
-            title={taskCode}
-          >
-            {taskCode}
-          </span>
-        </div>
-      </td>
-
-      {/* 2. Tên Column: Geometric Status Circle + Title + Inline Subtask Count */}
-      <td className="w-[38%] min-w-[240px] align-middle px-3 py-2">
+      {/* 1. Tên nhiệm vụ Column: Selector + Status Circle + Title + Code + Subtask Count */}
+      <td className="min-w-[280px] align-middle pl-4 sm:pl-5 pr-3 py-2">
         <div className="flex flex-col min-w-0 gap-0.5">
           <div className="flex items-center gap-2 min-w-0">
-            {/* Geometric Status Indicator Circle with accessible label (status bullet) */}
-            <div title={statusLabel} className="shrink-0 flex items-center">
-              <TaskStatusCircle status={task.status} />
-              <span className="sr-only">{statusLabel}</span>
+            {/* Integrated leading selector */}
+            <div
+              role="checkbox"
+              aria-checked={isSelected}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleSelect?.(task.id, e as unknown as React.MouseEvent);
+                }
+              }}
+              className="size-7 sm:size-8 -my-2 ml-0 shrink-0 flex items-center justify-center relative select-none cursor-pointer group/selector focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded"
+              onClick={handleCheckboxClick}
+              title={isSelected ? "Bỏ chọn (X)" : "Chọn nhiệm vụ (X)"}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                readOnly
+                className="sr-only"
+                aria-label={isSelected ? `Bỏ chọn nhiệm vụ ${task.title}` : `Chọn nhiệm vụ ${task.title}`}
+                tabIndex={-1}
+              />
+              {isSelected ? (
+                <div
+                  className="size-4 rounded-[4px] bg-primary text-primary-foreground flex items-center justify-center shadow-2xs hover:opacity-90 transition-all active:scale-[0.98] pointer-events-none"
+                  aria-hidden="true"
+                >
+                  <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+                </div>
+              ) : (
+                <div
+                  className="size-4 rounded-[4px] border border-border/70 bg-background/60 opacity-60 group-hover/selector:opacity-100 group-hover:opacity-100 group-hover:border-primary group-hover:bg-primary/5 group-hover:scale-105 flex items-center justify-center transition-all duration-150 ease-out active:scale-[0.98] shadow-2xs pointer-events-none"
+                  aria-hidden="true"
+                />
+              )}
             </div>
 
+            <span className="sr-only">{statusLabel}</span>
+
             <span
-              className="text-[13px] sm:text-[13.5px] font-medium text-foreground group-hover:text-primary transition-colors truncate"
+              className="text-compact font-medium text-foreground group-hover:text-primary transition-colors truncate"
               title={task.title}
             >
               {task.title}
             </span>
 
+            {/* Task Code */}
+            {visibleColumns?.code === true && (
+              <span
+                className="font-mono text-xs text-muted-foreground/60 tabular-nums shrink-0"
+                title={taskCode}
+              >
+                {taskCode}
+              </span>
+            )}
+
+            {/* Linear-style Category / Tag Pill */}
+            {task.category && !suppressCategory && visibleColumns?.category === true && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-muted/60 text-muted-foreground border border-border/40 shrink-0"
+                title={`Danh mục: ${getCategoryBadgeConfig(task.category).label}`}
+              >
+                <span
+                  className="size-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: getCategoryBadgeConfig(task.category).oklchColor }}
+                  aria-hidden="true"
+                />
+                <span>{getCategoryBadgeConfig(task.category).label}</span>
+              </span>
+            )}
+
             {/* Inline subtask counter matching Image #1 and qcet-nhiem-vu.html: e.g. 1/4 or 0/3 */}
-            {totalSubTasks > 0 && (
+            {totalSubTasks > 0 && visibleColumns?.subtasks !== false && (
               <span
                 className="text-xs text-muted-foreground/60 tabular-nums font-normal shrink-0"
                 title={`${completedSubTasks}/${totalSubTasks} việc con hoàn thành`}
@@ -557,7 +597,7 @@ export const TaskRow = React.memo(function TaskRow({
             {task.viewerContext?.relation === "SUBTASK_DRI" && (task.viewerContext.matchedSubtaskCount ?? 0) > 0 && (
               <span
                 data-slot="subtask-dri-badge"
-                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-[11px] font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
+                className="rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0 inline-flex items-center gap-1"
                 title={`Bạn phụ trách ${task.viewerContext.matchedSubtaskCount} việc con trong nhiệm vụ này`}
               >
                 Phụ trách {task.viewerContext.matchedSubtaskCount} việc con
@@ -567,97 +607,161 @@ export const TaskRow = React.memo(function TaskRow({
             {/* Due in month indicator */}
             {dueInMonthCount > 0 && (
               <span
-                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-[11px] font-semibold tabular-nums shrink-0"
+                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-xs font-semibold tabular-nums shrink-0"
                 title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
               >
                 Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
               </span>
             )}
           </div>
-        </div>
-      </td>
-
-      {/* 3. Đơn vị Column */}
-      <td className="w-[22%] min-w-[160px] align-middle whitespace-nowrap px-3 py-2">
-        <span className="text-xs text-muted-foreground truncate block" title={departmentName}>
-          {departmentName || "-"}
-        </span>
-      </td>
-
-      {/* 4. Phụ trách Column: Pastel Avatar + Name */}
-      <td className="w-[22%] min-w-[160px] align-middle whitespace-nowrap px-3 py-2">
-        <div
-          className="flex items-center gap-2 min-w-0"
-          title={`${driInfo.primaryName || "-"}${departmentName ? ` (${departmentName})` : ""}`}
-        >
-          {driInfo.primaryName ? (
-            <>
-              <UserAvatar
-                name={driInfo.primaryName}
-                avatarUrl={task.leadAssigneeAvatar}
-                size="sm"
-              />
-              <span className="text-xs font-medium text-foreground truncate">
-                {driInfo.primaryName}
-              </span>
-            </>
-          ) : (
-            <span className="text-muted-foreground/50 text-xs">-</span>
+          {descriptionPreview && (
+            <span
+              className="block truncate pl-8 sm:pl-10 text-xs font-normal text-muted-foreground"
+              title={descriptionPreview}
+            >
+              {descriptionPreview}
+            </span>
           )}
         </div>
       </td>
 
-      {/* 5. Hạn Column: DD/MM (bold red if overdue) + title with DD/MM/YYYY */}
-      <td className="w-[140px] min-w-[120px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-right relative group/due">
-        <div className="flex flex-col items-end gap-0.5">
-          {task.dueDate ? (
-            <>
+      {/* 3. Ưu tiên Column */}
+      {visibleColumns?.priority !== false && (
+        <td className="w-[84px] align-middle whitespace-nowrap px-3 py-2">
+          <div
+            className="inline-flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+            title="Nhấp để đổi độ ưu tiên"
+          >
+            <PrioritySignalBars priority={task.priority} />
+          </div>
+        </td>
+      )}
+
+      {/* 4. Phụ trách Column: Avatar + Name */}
+      {visibleColumns?.leadAssignee !== false && (
+        <td className="w-[170px] align-middle whitespace-nowrap px-3 py-2">
+          <div
+            className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Nhấp để đổi người phụ trách"
+          >
+            {driInfo.primaryName ? (
+              <>
+                <UserAvatar
+                  name={driInfo.primaryName}
+                  avatarUrl={task.leadAssigneeAvatar}
+                  size="sm"
+                />
+                <span className="text-xs font-medium text-foreground truncate">
+                  {driInfo.primaryName}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground/50 text-xs">-</span>
+            )}
+          </div>
+        </td>
+      )}
+
+      {/* 4b. Phối hợp Column */}
+      {visibleColumns?.coAssignees === true && (
+        <td className="w-[110px] align-middle whitespace-nowrap px-3 py-2">
+          {coAssigneesList.length > 0 && (
+            <div className="flex items-center -space-x-1" title={coAssigneesList.join(", ")}>
+              {coAssigneeEntries.slice(0, 3).map((entry) => (
+                <UserAvatar key={entry.name} name={entry.name} avatarUrl={entry.avatarUrl} size="sm" />
+              ))}
+              {coAssigneesList.length > 3 && (
+                <span className="ml-2.5 text-xs text-muted-foreground tabular-nums">
+                  +{coAssigneesList.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+        </td>
+      )}
+
+      {/* 2. Đơn vị Column */}
+      {visibleColumns?.department !== false && (
+        <td className="w-[170px] align-middle px-3 py-2">
+          <span
+            className="text-xs leading-snug text-muted-foreground line-clamp-2 break-words cursor-pointer hover:text-foreground transition-colors"
+            title={departmentName ? `${departmentName} · Nhấp để đổi đơn vị phụ trách` : "Nhấp để đổi đơn vị phụ trách"}
+          >
+            {departmentName || "-"}
+          </span>
+        </td>
+      )}
+
+      {/* 5. Hạn Column */}
+      {visibleColumns?.dueDate !== false && (
+        <td className="w-[110px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-right relative group/due">
+          <div
+            className="flex flex-col items-end gap-0.5 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Nhấp để đổi hạn hoàn thành"
+          >
+            {task.dueDate ? (
               <span
-                className={cn(
-                  "font-mono tabular-nums text-xs",
-                  slaStatus.isOverdue
-                    ? "text-rose-600 font-semibold"
-                    : slaStatus.isToday
-                    ? "text-amber-600 font-semibold"
-                    : "text-muted-foreground font-normal"
-                )}
-                title={formatTableDate(task.dueDate)}
+                className="inline-flex items-center gap-1.5 tabular-nums text-xs"
+                title={`${formatTableDate(task.dueDate)} · ${dueHint}`}
               >
-                {formatShortTableDate(task.dueDate)}
-              </span>
-              {slaStatus.isOverdue && (
+                <DueIcon
+                  className={cn(
+                    "size-3.5 shrink-0",
+                    dueTone === "danger"
+                      ? "text-rose-600"
+                      : dueTone === "warn"
+                      ? "text-amber-600"
+                      : "text-muted-foreground/70"
+                  )}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
                 <span
-                  className="inline-flex items-center text-[11px] font-semibold text-rose-600 leading-tight"
-                  title={slaStatus.label || "Trễ hạn"}
+                  className={cn(
+                    dueTone === "muted" ? "text-muted-foreground" : "text-foreground font-medium"
+                  )}
                 >
-                  {slaStatus.label || "Trễ hạn"}
+                  {formatShortTableDate(task.dueDate)}
                 </span>
-              )}
-              {!slaStatus.isOverdue && slaStatus.isToday && (
-                <span className="inline-flex items-center text-[11px] font-semibold text-amber-600 leading-tight">
-                  Hôm nay
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground/50 text-xs">-</span>
-          )}
-        </div>
+                <span className="sr-only">{dueHint}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground/50 text-xs">-</span>
+            )}
+          </div>
+        </td>
+      )}
 
-        {/* Quick Context Button on Hover without taking table column space */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onContextMenu?.(task, e);
-          }}
-          className="absolute right-1 top-1/2 -translate-y-1/2 size-6 inline-flex items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-foreground cursor-pointer transition-opacity opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none bg-background/90 shadow-2xs"
-          aria-label="Thao tác nhanh"
-          title="Thao tác nhanh (Chuột phải hoặc nhấp)"
-        >
-          <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
-        </button>
-      </td>
+      {/* 8. Ngày tạo Column */}
+      {visibleColumns?.createdAt === true && (
+        <td className="w-[96px] align-middle whitespace-nowrap px-3 py-2 text-right">
+          <span className="font-mono tabular-nums text-xs text-muted-foreground">
+            {task.createdAt ? formatShortTableDate(task.createdAt) : ""}
+          </span>
+        </td>
+      )}
+
+      {/* 7. Trạng thái Column */}
+      {visibleColumns?.status === true && (
+        <td className="w-[130px] align-middle whitespace-nowrap px-3 py-2">
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TaskStatusCircle status={task.status} />
+            <span className="truncate">{statusLabel}</span>
+          </span>
+        </td>
+      )}
+
+      {/* 6. Tiến độ Column (Linear Progress Ring) */}
+      {visibleColumns?.progress === true && (
+        <td className="w-[90px] align-middle whitespace-nowrap px-3 py-2 text-right">
+          <div
+            className="inline-flex items-center justify-end gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Nhấp để cập nhật tiến độ"
+          >
+            <CircularProgressRing percent={task.progressPercent ?? 0} />
+          </div>
+        </td>
+      )}
     </tr>
   );
 });

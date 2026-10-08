@@ -90,7 +90,7 @@ describe("Dashboard composition invariants", () => {
       React.createElement(DepartmentAttentionPreview, { departments: [] })
     );
     assert.ok(
-      html.includes("Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này"),
+      html.includes("Không có đơn vị có việc trễ hạn hoặc bị chặn trong phạm vi này"),
       "empty preview must describe only its own scope"
     );
   });

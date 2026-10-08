@@ -171,7 +171,7 @@ export function DashboardZone() {
           code: t.taskCode || t.code,
           title: t.title,
           reason: "OVERDUE",
-          reasonLabel: "Quá hạn",
+          reasonLabel: "Trễ hạn",
           badgeStyle: "bg-rose-50 text-rose-700 border-rose-200/80",
           departmentName: t.leadDepartment || t.department || t.departmentName,
           assigneeName: t.leadAssigneeName || t.assignedTo,

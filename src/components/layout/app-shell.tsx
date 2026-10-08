@@ -14,6 +14,7 @@ import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@/lib/login-helpers";
+import { cn } from "@/lib/utils";
 import * as m from "motion/react-m";
 import { useTransform } from "motion/react";
 
@@ -71,6 +72,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { sidebarWidth, sidebarWidthMotion } = useSidebarLayout();
   const pathname = usePathname();
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
+  // Danh sách và chi tiết nhiệm vụ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
+  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail;
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -149,7 +152,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <AppTopbar />
 
         {/* Desktop Top Header Bar (Matching sidebar top header) */}
-        <DesktopTopbar />
+        {!hideDesktopTopbar && <DesktopTopbar />}
 
         <OfflineBanner />
 
@@ -158,8 +161,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           id="main-content"
           tabIndex={-1}
           className={isTaskDetail
-            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:h-[calc(100dvh-44px)] outline-none overflow-hidden"
-            : "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden"}
+            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] outline-none overflow-hidden"
+            : cn(
+                "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
+                hideDesktopTopbar && "md:mt-2 md:min-h-[calc(100dvh-8px)]"
+              )}
         >
           <div
             className={

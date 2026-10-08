@@ -97,7 +97,7 @@ export const Q03_REVIEW_DUE_TOMORROW = baseSchoolTask({
 
 export const Q04_REVIEW_AND_OVERDUE = baseSchoolTask({
   id: "q04",
-  title: "q04 — hồ sơ chờ xem xét đã quá hạn",
+  title: "q04 — hồ sơ chờ xem xét đã trễ hạn",
   status: "PENDING_EXECUTIVE_APPROVAL",
   progressPercent: 100,
   priority: "HIGH",
@@ -117,7 +117,7 @@ export const Q05_BLOCKED_HIGH = baseSchoolTask({
 
 export const Q06_OVERDUE_URGENT = baseSchoolTask({
   id: "q06",
-  title: "q06 — quá hạn, ưu tiên khẩn cấp",
+  title: "q06 — trễ hạn, ưu tiên khẩn cấp",
   status: "IN_PROGRESS",
   progressPercent: 55,
   priority: "URGENT",
@@ -221,7 +221,7 @@ export const Q13_DUE_PLUS7 = baseSchoolTask({
 
 export const Q14_DUE_TODAY = baseSchoolTask({
   id: "q14",
-  title: "q14 — hạn đúng hôm nay, chưa quá hạn",
+  title: "q14 — hạn đúng hôm nay, chưa trễ hạn",
   status: "IN_PROGRESS",
   progressPercent: 80,
   priority: "HIGH",
@@ -408,7 +408,7 @@ function dept(
  */
 export const FIXTURE_DEPARTMENTS: FixtureDepartmentStats[] = [
   // --- 7 departments WITH a real problem ---
-  dept("A_OVERDUE_MOST", "Đơn vị quá hạn nhiều", { total: 20, completed: 4, inProgress: 12, overdue: 4, percent: 41 }),
+  dept("A_OVERDUE_MOST", "Đơn vị trễ hạn nhiều", { total: 20, completed: 4, inProgress: 12, overdue: 4, percent: 41 }),
   dept("B_BLOCKED_AND_OVERDUE", "Đơn vị vừa vướng vừa trễ", { total: 12, completed: 3, inProgress: 6, blocked: 3, overdue: 2, percent: 38 }),
   dept("C_BLOCKED_MOST", "Đơn vị vướng mắc nhiều", { total: 15, completed: 5, inProgress: 7, blocked: 3, percent: 44 }),
   dept("D_OVERDUE_MODERATE", "Đơn vị trễ hạn vừa", { total: 9, completed: 4, inProgress: 4, overdue: 1, percent: 55 }),

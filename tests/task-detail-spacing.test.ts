@@ -17,7 +17,8 @@ test('desktop task canvas uses flex layout', () => {
 
 test('sidebar sections have breathing room without additional shadows', () => {
   const sidebar = declarations(".workspace [data-slot='task-properties-sidebar']");
-  assert.ok(parseFloat(sidebar.gap) >= 16);
+  // Các khối là thẻ riêng trên khay xám nên khoảng cách nhỏ hơn (8px)
+  assert.ok(parseFloat(sidebar.gap) >= 8);
   assert.equal(declarations(".workspace [data-slot='task-properties-sidebar'] > div")['box-shadow'], 'none');
 });
 

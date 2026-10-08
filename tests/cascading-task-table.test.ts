@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TaskPaginationBar } from "../src/components/tasks/table/components/task-pagination-bar";
+import { TaskRow } from "../src/components/tasks/table/components/task-row";
 import {
   getCategoryBadgeConfig,
   getStatusBadgeConfig,
@@ -10,6 +11,8 @@ import {
   filterTasksForTable,
 } from "../src/components/dashboard/cascading-task-table";
 import { flattenPersonalTasks } from "../src/components/tasks/cascading-task-table";
+import { TaskTableHeader } from "../src/components/tasks/table/components/task-table-header";
+import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 import type { SchoolTask } from "../src/types/dashboard";
 
 describe("CascadingTaskTable Helpers", () => {
@@ -58,7 +61,7 @@ describe("CascadingTaskTable Helpers", () => {
     assert.ok(sDone.className.includes("text-emerald-700"));
 
     const sOverdue = getStatusBadgeConfig("OVERDUE");
-    assert.equal(sOverdue.label, "Quá hạn");
+    assert.equal(sOverdue.label, "Trễ hạn");
     assert.ok(sOverdue.className.includes("text-rose-700"));
   });
 
@@ -376,4 +379,357 @@ describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, comp
     assert.equal(htmlEmpty, "", "footer must return null when totalItems is 0");
   });
 });
+
+describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Removal", () => {
+  const sampleTask: SchoolTask = {
+    id: "task-test-01",
+    title: "Triển khai hệ thống xác thực tập trung SSO",
+    taskCode: "NV-CNTT-01",
+    category: "CNTT",
+    categoryLabel: "CNTT",
+    leadAssigneeName: "ThS. Đặng Nhật Huy",
+    leadAssigneeId: "user-staff-huy",
+    department: "Trung tâm Số và Truyền thông",
+    priority: "HIGH",
+    assignedDate: "2026-09-01",
+    dueDate: "2026-10-28",
+    status: "IN_PROGRESS",
+    progressPercent: 65,
+    subTasks: [],
+    totalSubTasks: 0,
+    completedSubTasks: 0,
+    coAssignees: [],
+  };
+
+  it("removes '...' (MoreHorizontal) button at end of row, preventing date text overlap", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(
+          "tbody",
+          null,
+          React.createElement(TaskRow, {
+            task: sampleTask,
+            visibleColumns: {
+              code: true,
+              department: true,
+              priority: true,
+              leadAssignee: true,
+              dueDate: true,
+              subtasks: true,
+              progress: true,
+            },
+          })
+        )
+      )
+    );
+
+    // Không còn nút MoreHorizontal (aria-label="Thao tác nhanh") đè lên cuối hàng
+    assert.ok(
+      !html.includes("Thao tác nhanh"),
+      "Row must not contain overlapping 'Thao tác nhanh' button at the end"
+    );
+    assert.ok(
+      !html.includes("MoreHorizontal"),
+      "MoreHorizontal button must be completely absent from the row"
+    );
+    // Vẫn hiển thị đầy đủ ngày hạn
+    assert.ok(
+      html.includes("28/10"),
+      "Due date text (28/10) must be clearly visible"
+    );
+  });
+
+  it("renders interactive triggers for inline editing: Priority, Department, Assignee, Due Date, and Progress", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(
+          "tbody",
+          null,
+          React.createElement(TaskRow, {
+            task: sampleTask,
+            visibleColumns: {
+              code: true,
+              department: true,
+              priority: true,
+              leadAssignee: true,
+              dueDate: true,
+              subtasks: true,
+              progress: true,
+            },
+          })
+        )
+      )
+    );
+
+    // 1. Priority trigger
+    assert.ok(
+      html.includes('title="Nhấp để đổi độ ưu tiên"'),
+      "Must render interactive trigger for priority"
+    );
+
+    // 2. Department trigger
+    assert.ok(
+      html.includes("Nhấp để đổi đơn vị phụ trách"),
+      "Must render interactive trigger for department"
+    );
+
+    // 3. Due Date trigger
+    assert.ok(
+      html.includes('title="Nhấp để đổi hạn hoàn thành"'),
+      "Must render interactive trigger for due date"
+    );
+
+    // 4. Progress trigger
+    assert.ok(
+      html.includes('title="Nhấp để cập nhật tiến độ"'),
+      "Must render interactive trigger for progress"
+    );
+  });
+
+  it("renders task description below task title when description exists (Linear Style)", () => {
+    const taskWithDesc: SchoolTask = {
+      ...sampleTask,
+      id: "task-desc-01",
+      title: "Chuẩn bị hội nghị viên chức",
+      description: "Thực hiện rà soát công tác chuẩn bị và chuẩn bị văn kiện",
+    };
+
+    const htmlWithDesc = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(
+          "tbody",
+          null,
+          React.createElement(TaskRow, {
+            task: taskWithDesc,
+          })
+        )
+      )
+    );
+
+    assert.ok(
+      htmlWithDesc.includes("Thực hiện rà soát công tác chuẩn bị và chuẩn bị văn kiện"),
+      "Must render description below title"
+    );
+
+    const taskWithoutDesc: SchoolTask = {
+      ...sampleTask,
+      id: "task-no-desc",
+      description: undefined,
+    };
+
+    const htmlWithoutDesc = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(
+          "tbody",
+          null,
+          React.createElement(TaskRow, {
+            task: taskWithoutDesc,
+          })
+        )
+      )
+    );
+
+    assert.ok(
+      !htmlWithoutDesc.includes("text-muted-foreground/75 truncate block mt-0.5"),
+      "Must not render description container when description is empty"
+    );
+  });
+});
+
+describe("Linear Table Redesign: Synchronized Table Headers & Column Alignment", () => {
+  it("renders 5 matching synchronized columns by default (Nhiệm vụ, Đơn vị, Ưu tiên, Phụ trách, Hạn)", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(TaskTableHeader, {
+          visibleColumns: {
+            department: true,
+            priority: true,
+            leadAssignee: true,
+            dueDate: true,
+            progress: false,
+          },
+        })
+      )
+    );
+
+    assert.ok(html.includes("Nhiệm vụ"), "Header must include 'Nhiệm vụ'");
+    assert.ok(html.includes("Đơn vị"), "Header must include 'Đơn vị'");
+    assert.ok(html.includes("Ưu tiên"), "Header must include 'Ưu tiên'");
+    assert.ok(html.includes("Phụ trách"), "Header must include 'Phụ trách'");
+    assert.ok(html.includes("Hạn"), "Header must include 'Hạn'");
+    assert.ok(!html.includes("Tiến độ"), "Header must not include 'Tiến độ' when disabled");
+  });
+
+  it("renders 6 columns when progress column is enabled", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(TaskTableHeader, {
+          visibleColumns: {
+            department: true,
+            priority: true,
+            leadAssignee: true,
+            dueDate: true,
+            progress: true,
+          },
+        })
+      )
+    );
+
+    assert.ok(html.includes("Tiến độ"), "Header must include 'Tiến độ' when progress: true");
+  });
+
+  it("dynamically hides optional columns when configured in visibleColumns", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(TaskTableHeader, {
+          visibleColumns: {
+            department: false,
+            priority: false,
+            leadAssignee: true,
+            dueDate: true,
+            progress: false,
+          },
+        })
+      )
+    );
+
+    assert.ok(html.includes("Nhiệm vụ"), "Must keep Nhiệm vụ");
+    assert.ok(!html.includes(">Đơn vị<"), "Must omit Đơn vị header");
+    assert.ok(!html.includes(">Ưu tiên<"), "Must omit Ưu tiên header");
+    assert.ok(html.includes("Phụ trách"), "Must keep Phụ trách");
+    assert.ok(html.includes("Hạn"), "Must keep Hạn");
+  });
+});
+
+describe("Linear Table Redesign: Collapsible Grouped Sections", () => {
+  const sampleGroupTasks: SchoolTask[] = [
+    {
+      id: "t-status-1",
+      title: "Nhiệm vụ Đang làm",
+      taskCode: "NV-01",
+      category: "CNTT",
+      categoryLabel: "CNTT",
+      leadAssigneeName: "Nguyễn Văn A",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+      department: "Khoa CNTT",
+      assignedDate: "2026-09-01",
+      dueDate: "2026-10-28",
+      progressPercent: 50,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      subTasks: [],
+      coAssignees: [],
+    },
+    {
+      id: "t-status-2",
+      title: "Nhiệm vụ Chờ duyệt",
+      taskCode: "NV-02",
+      category: "ATTT",
+      categoryLabel: "An toàn thông tin",
+      leadAssigneeName: "Trần Thị B",
+      status: "WAITING_APPROVAL",
+      priority: "URGENT",
+      department: "Phòng Đào tạo",
+      assignedDate: "2026-09-01",
+      dueDate: "2026-10-30",
+      progressPercent: 100,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      subTasks: [],
+      coAssignees: [],
+    },
+    {
+      id: "t-status-3",
+      title: "Nhiệm vụ Mới",
+      taskCode: "NV-03",
+      category: "CNTT",
+      categoryLabel: "CNTT",
+      leadAssigneeName: "Lê Văn C",
+      status: "NEW",
+      priority: "LOW",
+      department: "Khoa CNTT",
+      assignedDate: "2026-09-01",
+      dueDate: "2026-11-05",
+      progressPercent: 0,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      subTasks: [],
+      coAssignees: [],
+    },
+  ];
+
+  it("groups tasks by status with collapsible header rows, status glyphs, and count badges when groupingField='status'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: sampleGroupTasks,
+        groupingField: "status",
+        hideToolbar: false,
+      })
+    );
+
+    // Kiểm tra có các group header rows
+    assert.ok(html.includes('data-slot="group-header"'), "Must render group header rows");
+    assert.ok(html.includes("Đang thực hiện"), "Must render group header for 'Đang thực hiện'");
+    assert.ok(html.includes("Chờ duyệt"), "Must render group header for 'Chờ duyệt'");
+    assert.ok(html.includes("Mới"), "Must render group header for 'Mới'");
+  });
+
+  it("groups tasks by priority with priority signal bars and count badges when groupingField='priority'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: sampleGroupTasks,
+        groupingField: "priority",
+        hideToolbar: false,
+      })
+    );
+
+    assert.ok(html.includes('data-slot="group-header"'), "Must render group header rows");
+    assert.ok(html.includes("Khẩn cấp"), "Must render group header for 'Khẩn cấp'");
+    assert.ok(html.includes("Cao"), "Must render group header for 'Cao'");
+    assert.ok(html.includes("Thấp"), "Must render group header for 'Thấp'");
+  });
+
+  it("groups tasks by department with department icons and count badges when groupingField='department'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: sampleGroupTasks,
+        groupingField: "department",
+        hideToolbar: false,
+      })
+    );
+
+    assert.ok(html.includes('data-slot="group-header"'), "Must render group header rows");
+    assert.ok(html.includes("Khoa CNTT"), "Must render group header for 'Khoa CNTT'");
+    assert.ok(html.includes("Phòng Đào tạo"), "Must render group header for 'Phòng Đào tạo'");
+  });
+
+  it("renders clean flat table without group headers when groupingField='none'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: sampleGroupTasks,
+        groupingField: "none",
+        hideToolbar: false,
+      })
+    );
+
+    assert.ok(!html.includes('data-slot="group-header"'), "Must not render group headers when groupingField is 'none'");
+    assert.ok(html.includes("Nhiệm vụ Đang làm"), "Must render tasks in flat list");
+  });
+});
+
 

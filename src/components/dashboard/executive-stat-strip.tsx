@@ -118,7 +118,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
     urgentSubtextParts.push(`${formatNumber(triageCount)} chờ tiếp nhận`);
   }
   if (escalatedCount > 0) {
-    urgentSubtextParts.push(`${formatNumber(escalatedCount)} quá hạn`);
+    urgentSubtextParts.push(`${formatNumber(escalatedCount)} đã leo thang`);
   }
   const urgentSubtext = urgentSubtextParts.join(" · ");
 
@@ -127,7 +127,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
   if (escalatedCount > 0 || overdueCount > 0) {
     const totalOverdue = overdueCount + escalatedCount;
     urgentBadge = {
-      label: escalatedCount > 0 ? `${formatNumber(totalOverdue)} quá hạn` : `${formatNumber(overdueCount)} trễ hạn`,
+      label: escalatedCount > 0 ? `${formatNumber(totalOverdue)} trễ hạn` : `${formatNumber(overdueCount)} trễ hạn`,
       variant: "rose",
     };
   } else if (needsReviewCount > 0) {

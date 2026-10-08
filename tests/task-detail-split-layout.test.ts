@@ -11,12 +11,12 @@ test("open inspector renders fixed-width sidebar alongside main content", () => 
     children: "Main content",
     inspector: "Properties",
   }));
-  // Inspector uses fixed w-[300px] with spacing (no vertical divider line)
+  // Inspector uses fixed w-[340px] with spacing (no vertical divider line)
   assert.ok(html.includes("Main content"), "Main content must render");
   assert.ok(html.includes("Properties"), "Properties panel must render when open");
-  assert.ok(html.includes("w-[300px]"), "Inspector must use fixed 300px width");
+  assert.ok(html.includes("w-[340px]"), "Inspector must use fixed 340px width");
   assert.ok(!html.includes("w-px"), "No vertical divider line between content and inspector");
-  assert.ok(html.includes("pl-8"), "Inspector uses left padding for spacing");
+  assert.ok(html.includes('data-slot="task-detail-inspector"'), "Inspector column must be marked for canvas padding rules");
 });
 
 test("closed inspector leaves the full width for content", () => {
@@ -28,5 +28,5 @@ test("closed inspector leaves the full width for content", () => {
   }));
   assert.ok(html.includes("Main content"), "Main content must render");
   assert.ok(!html.includes("Properties"), "Properties panel must not render when closed");
-  assert.ok(!html.includes("w-[300px]"), "No fixed sidebar width when inspector is closed");
+  assert.ok(!html.includes("w-[340px]"), "No fixed sidebar width when inspector is closed");
 });

@@ -306,16 +306,12 @@ function extractLeadAssignee(raw: Record<string, any>): UserSummaryDTO | null {
  * - Khi tạo task con và giao cho B → B tự xuất hiện trong Phối hợp của task cha.
  * - Khi task con đổi DRI B → C → parent tự phản ánh C.
  * - Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần.
- * - Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp.
+ * - DRI task con trùng DRI task cha vẫn được ghi vào Phối hợp (người phụ trách chính cũng tham gia việc con).
  * - Khi task con bị cancel/archive/re-parent → recompute.
  * - Chỉ tính các task con còn active theo lifecycle canonical (status !== 'CANCELLED', !archivedAt).
  * - Không lưu một nguồn collaborator thủ công song song nếu có thể derive từ TaskActor/child relation.
  */
 export function extractDerivedCollaborators(raw: Record<string, any>): UserSummaryDTO[] {
-  const lead = extractLeadAssignee(raw);
-  const parentLeadId = lead?.id;
-  const parentLeadName = (lead?.name || '').trim().toLowerCase();
-
   const subTasks = Array.isArray(raw.subTasks) ? raw.subTasks : [];
   const activeSubTasks = subTasks.filter((st: any) => {
     if (!st || typeof st !== 'object') return false;
@@ -382,10 +378,6 @@ export function extractDerivedCollaborators(raw: Record<string, any>): UserSumma
     }
 
     if (!subLead || !subLead.name) continue;
-
-    // Rule: Nếu DRI task con trùng DRI task cha → không duplicate vào Phối hợp
-    if (parentLeadId && subLead.id === parentLeadId) continue;
-    if (parentLeadName && subLead.name.trim().toLowerCase() === parentLeadName) continue;
 
     // Rule: Nếu một người phụ trách nhiều task con → chỉ xuất hiện một lần
     const key = subLead.id || subLead.name.trim().toLowerCase();

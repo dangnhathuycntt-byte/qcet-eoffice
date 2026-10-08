@@ -423,6 +423,19 @@ describe("Task Table Engine - Foundations & Utilities", () => {
       assert.equal(sorted[2].priority, "NORMAL");
     });
 
+    it("sorts tasks by status with administrative urgency rank", () => {
+      const asc = sortTasks(sampleTasks, { column: "status", direction: "asc" });
+      // task-1 is overdue past reference date (rank 1)
+      // task-2 is WAITING_APPROVAL (rank 2)
+      // task-3 is COMPLETED (rank 6)
+      assert.equal(asc[0].id, "task-1");
+      assert.equal(asc[1].id, "task-2");
+      assert.equal(asc[2].id, "task-3");
+
+      const desc = sortTasks(sampleTasks, { column: "status", direction: "desc" });
+      assert.equal(desc[0].id, "task-3");
+    });
+
     it("paginates task array cleanly", () => {
       const page1 = paginateTasks(sampleTasks, 1, 2);
       assert.equal(page1.items.length, 2);
@@ -1185,7 +1198,7 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       const sla = getSlaBadgeStatus("2026-09-01", "IN_PROGRESS", "2026-09-09");
       assert.equal(sla.isOverdue, true);
       assert.equal(sla.isToday, false);
-      assert.ok(sla.label?.includes("Quá hạn"));
+      assert.ok(sla.label?.includes("Trễ hạn"));
     });
 
     it("evaluates due today SLA status accurately", () => {

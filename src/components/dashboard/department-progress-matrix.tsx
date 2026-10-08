@@ -609,7 +609,7 @@ export function DepartmentProgressMatrix({
                   title="Nhấn để sắp xếp theo số lượng trễ hạn"
                 >
                   <span className="inline-flex items-center gap-1">
-                    <span>Quá hạn</span>
+                    <span>Trễ hạn</span>
                     <ArrowUpDown className="size-3 text-muted-foreground" strokeWidth={1.5} />
                   </span>
                 </th>
@@ -691,7 +691,7 @@ export function DepartmentProgressMatrix({
                       </div>
                     </td>
 
-                    {/* Quá hạn */}
+                    {/* Trễ hạn */}
                     <td className="p-2.5 text-center whitespace-nowrap">
                       {overdueCount > 0 ? (
                         <Badge variant="rose" className="text-xs h-5 px-1.5 font-mono tabular-nums">

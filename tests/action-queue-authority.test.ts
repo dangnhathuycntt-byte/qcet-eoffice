@@ -355,7 +355,7 @@ describe("UniversalActionQueue Component", () => {
       })
     );
 
-    assert.ok(html.includes("Cảnh báo hạn chót khẩn cấp") || html.includes("quá hạn"), "Shows deadline warning banner");
+    assert.ok(html.includes("Cảnh báo hạn chót khẩn cấp") || html.includes("trễ hạn") || html.includes("trễ hạn"), "Shows deadline warning banner");
     assert.ok(html.includes("font-mono"), "Uses font-mono for numbers");
     assert.ok(html.includes("tabular-nums"), "Uses tabular-nums for numbers");
   });
