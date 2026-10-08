@@ -636,41 +636,52 @@ jobs:
           # Write INSERT SQL using printf with \x22 for literal double-quote chars
           # Avoids shell quoting issues with mixed-case quoted enum type names
           # Seeds uploaded_by_id from first user row (real FK value from backup)
-          printf 'INSERT INTO file_objects\n  (id, storage_key, storage_provider, original_name, mime_type, extension,\n   byte_size, content_hash, classification, scan_status, reference_count,\n   uploaded_by_id, is_archived, created_at, updated_at)\nSELECT\n  \x27test-rehearsal-fo-001\x27,\n  \x27rehearsal/test-file-hardened.txt\x27,\n  \x27LOCAL_DISK\x27::\x22StorageProvider\x22,\n  \x27test-file.txt\x27,\n  \x27text/plain\x27,\n  \x27txt\x27,\n  42,\n  \x27abc123def456abc123def456abc123def456abc123def456abc123def456abc1\x27,\n  \x27INTERNAL\x27::\x22FileClassification\x22,\n  \x27PENDING\x27::\x22FileScanStatus\x22,\n  1,\n  id,\n  false,\n  NOW(), NOW()\nFROM users LIMIT 1\nRETURNING id;\n' > "$WORK_DIR/rehearsal_insert.sql"
+          # NOTE: No RETURNING clause here — psql always emits "INSERT 0 1" command tag
+          # on STDOUT (not stderr) even with -t -A -X flags. We assert via a separate
+          # SELECT after INSERT to avoid the command tag contaminating ROW_COUNT.
+          printf 'INSERT INTO file_objects\n  (id, storage_key, storage_provider, original_name, mime_type, extension,\n   byte_size, content_hash, classification, scan_status, reference_count,\n   uploaded_by_id, is_archived, created_at, updated_at)\nSELECT\n  \x27test-rehearsal-fo-001\x27,\n  \x27rehearsal/test-file-hardened.txt\x27,\n  \x27LOCAL_DISK\x27::\x22StorageProvider\x22,\n  \x27test-file.txt\x27,\n  \x27text/plain\x27,\n  \x27txt\x27,\n  42,\n  \x27abc123def456abc123def456abc123def456abc123def456abc123def456abc1\x27,\n  \x27INTERNAL\x27::\x22FileClassification\x22,\n  \x27PENDING\x27::\x22FileScanStatus\x22,\n  1,\n  id,\n  false,\n  NOW(), NOW()\nFROM users LIMIT 1;\n' > "$WORK_DIR/rehearsal_insert.sql"
           chmod 600 "$WORK_DIR/rehearsal_insert.sql"
 
-          # Run INSERT via docker run -i --network bridge --env-file (stdin pipe — no volume mount needed)
-          # psql -t -A sends RETURNING row data to stdout; DML command tags (INSERT 0 1) to stderr.
-          # Redirect stderr to file for diagnostics on failure; capture only stdout data rows.
+          # Step 1: Run INSERT — verify exit 0 (no output capture needed)
+          # psql command tags (INSERT 0 N) go to stdout regardless of -t/-A/-X flags;
+          # we do not capture stdout here so command tags don't contaminate row count.
           INSERT_STDERR_FILE="$WORK_DIR/insert_stderr.txt"
           INSERT_EXIT=0
-          INSERT_OUTPUT=$(docker run --rm -i --network bridge \
+          docker run --rm -i --network bridge \
             --env-file "$WORK_DIR/pgenv_rehearsal" \
             postgres:16-alpine \
             psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
               -t -A -X -v ON_ERROR_STOP=1 -f - \
-            < "$WORK_DIR/rehearsal_insert.sql" 2>"$INSERT_STDERR_FILE") || INSERT_EXIT=$?
+            < "$WORK_DIR/rehearsal_insert.sql" >/dev/null 2>"$INSERT_STDERR_FILE" || INSERT_EXIT=$?
           if [ "$INSERT_EXIT" -ne 0 ]; then
             echo "ERROR: psql INSERT exited $INSERT_EXIT." >&2
             echo "--- psql stderr ---" >&2
             cat "$INSERT_STDERR_FILE" >&2
             exit 1
           fi
-          echo "INSERT RETURNING output: '$INSERT_OUTPUT'"
+          echo "INSERT executed: exit 0"
 
-          # Count non-empty lines returned by INSERT RETURNING id.
-          # psql -t -A outputs exactly one line per returned row (no header/footer).
-          # Must be exactly 1: if 0, users table is empty in backup (rehearsal invalid).
+          # Step 2: SELECT to assert exactly 1 row was inserted with correct id.
+          # SELECT only emits data rows on stdout with -t -A (no command tags).
+          INSERT_OUTPUT=$(docker run --rm --network bridge \
+            --env-file "$WORK_DIR/pgenv_rehearsal" \
+            postgres:16-alpine \
+            psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
+              -t -A -X -v ON_ERROR_STOP=1 \
+              -c "SELECT id FROM file_objects WHERE id='test-rehearsal-fo-001';" \
+            2>/dev/null)
+          echo "SELECT after INSERT output: '$INSERT_OUTPUT'"
+
+          # Count non-empty lines: must be exactly 1 (the inserted row id)
           ROW_COUNT=$(printf '%s\n' "$INSERT_OUTPUT" | grep -cE '\S' || true)
-          echo "Rows returned by INSERT RETURNING id: $ROW_COUNT"
+          echo "Rows found by SELECT after INSERT: $ROW_COUNT"
           if [ "$ROW_COUNT" -ne 1 ]; then
-            echo "ERROR: INSERT RETURNING returned $ROW_COUNT rows (expected exactly 1)." >&2
-            echo "  If 0: users table in backup may be empty — rehearsal invalid." >&2
-            echo "  If >1: LIMIT 1 clause failed — unexpected." >&2
-            echo "  Check backup contains at least one user row before retrying." >&2
+            echo "ERROR: SELECT returned $ROW_COUNT rows (expected exactly 1)." >&2
+            echo "  If 0: INSERT failed silently or users table in backup is empty." >&2
+            echo "  If >1: Duplicate rows in file_objects — unexpected." >&2
             exit 1
           fi
-          echo "INSERT row count assertion: PASS (exactly 1 row returned)"
+          echo "INSERT row count assertion: PASS (exactly 1 row found by SELECT)"
 
           echo ""
           echo "Ephemeral rehearsal: ALL GATES PASS"
