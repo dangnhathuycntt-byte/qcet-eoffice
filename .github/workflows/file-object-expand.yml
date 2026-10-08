@@ -618,23 +618,23 @@ jobs:
 
           # 5. Column data types on file_objects (pg_attribute) — full set
           echo "  --- Column type verification (file_objects) ---"
-          ID_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='id' AND a.attnum>0;" | tr -d '[:space:]')
+          ID_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='id' AND a.attnum>0;" | tr -d '\n\r' | xargs)
           echo "  file_objects.id type: $ID_TYPE"
           [ "$ID_TYPE" = "text" ] || { echo "ERROR: id not text, got '$ID_TYPE'." >&2; VERIFY_FAIL=1; }
 
-          BYTESIZE_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='byte_size' AND a.attnum>0;" | tr -d '[:space:]')
+          BYTESIZE_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='byte_size' AND a.attnum>0;" | tr -d '\n\r' | xargs)
           echo "  file_objects.byte_size type: $BYTESIZE_TYPE"
           [ "$BYTESIZE_TYPE" = "bigint" ] || { echo "ERROR: byte_size not bigint, got '$BYTESIZE_TYPE'." >&2; VERIFY_FAIL=1; }
 
-          METADATA_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='metadata' AND a.attnum>0;" | tr -d '[:space:]')
+          METADATA_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='metadata' AND a.attnum>0;" | tr -d '\n\r' | xargs)
           echo "  file_objects.metadata type: $METADATA_TYPE"
           [ "$METADATA_TYPE" = "jsonb" ] || { echo "ERROR: metadata not jsonb, got '$METADATA_TYPE'." >&2; VERIFY_FAIL=1; }
 
-          REFCOUNT_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='reference_count' AND a.attnum>0;" | tr -d '[:space:]')
+          REFCOUNT_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='reference_count' AND a.attnum>0;" | tr -d '\n\r' | xargs)
           echo "  file_objects.reference_count type: $REFCOUNT_TYPE"
           [ "$REFCOUNT_TYPE" = "integer" ] || { echo "ERROR: reference_count not integer, got '$REFCOUNT_TYPE'." >&2; VERIFY_FAIL=1; }
 
-          # Additional column types
+          # Additional column types — use tr -d '\n\r' | xargs to preserve internal spaces (e.g. "character varying")
           for COL_EXPECTED in \
             "storage_key:text" \
             "original_name:character varying" \
@@ -647,8 +647,8 @@ jobs:
             "updated_at:timestamp without time zone" \
             "scan_result:text"; do
             COL="${COL_EXPECTED%%:*}"; ETYPE="${COL_EXPECTED##*:}"
-            ATYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '[:space:]')
-            echo "  file_objects.${COL}: $ATYPE"
+            ATYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '\n\r' | xargs)
+            echo "  file_objects.${COL}: '$ATYPE'"
             [ "$ATYPE" = "$ETYPE" ] || { echo "ERROR: file_objects.${COL} expected '$ETYPE' got '$ATYPE'." >&2; VERIFY_FAIL=1; }
           done
 
@@ -670,11 +670,12 @@ jobs:
           fi
 
           # Verify unique index definition contains UNIQUE
-          UNIQ_DEF=$(run_ephem_psql "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '[:space:]')
+          UNIQ_DEF=$(run_ephem_psql "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '\n\r')
           echo "  file_objects_storage_key_key indexdef: $UNIQ_DEF"
           echo "$UNIQ_DEF" | grep -qi "UNIQUE" || { echo "ERROR: storage_key index definition does not contain UNIQUE." >&2; VERIFY_FAIL=1; }
 
-          # 7. FK constraints — count + semantic proof (ON DELETE RESTRICT, ON UPDATE CASCADE, validated)
+          # 7. FK constraints — count + semantic proof (ON DELETE RESTRICT=r, ON UPDATE CASCADE=c, validated=t)
+          # PostgreSQL confupdtype/confdeltype: a=NO ACTION, c=CASCADE, r=RESTRICT, n=SET NULL, d=SET DEFAULT
           echo "  --- FK constraint verification (with semantic proof) ---"
           FK_COUNT=$(run_ephem_psql "SELECT COUNT(*) FROM pg_constraint WHERE contype='f' AND conname IN ('file_objects_uploaded_by_id_fkey','task_deliverables_file_object_id_fkey','document_attachments_file_object_id_fkey','dossier_items_file_object_id_fkey','meetings_materials_file_object_id_fkey');" | tr -d '[:space:]')
           echo "  FK constraints found: $FK_COUNT (expected 5)"
@@ -684,7 +685,7 @@ jobs:
             VERIFY_FAIL=1
           fi
 
-          # Verify FK semantics: confupdtype=a (CASCADE), confdeltype=r (RESTRICT), convalidated=t
+          # Verify FK semantics: confupdtype=c (ON UPDATE CASCADE), confdeltype=r (ON DELETE RESTRICT), convalidated=t
           for FKNAME in \
             "file_objects_uploaded_by_id_fkey" \
             "task_deliverables_file_object_id_fkey" \
@@ -693,7 +694,7 @@ jobs:
             "meetings_materials_file_object_id_fkey"; do
             FK_ROW=$(run_ephem_psql "SELECT confupdtype, confdeltype, convalidated FROM pg_constraint WHERE conname='${FKNAME}' AND contype='f';" | tr -d '[:space:]')
             echo "  ${FKNAME}: confupdtype|confdeltype|validated = ${FK_ROW}"
-            echo "$FK_ROW" | grep -q "^a|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected a|r|t, got '${FK_ROW}')." >&2; VERIFY_FAIL=1; }
+            echo "$FK_ROW" | grep -q "^c|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected c|r|t for CASCADE/RESTRICT/validated, got '${FK_ROW}')." >&2; VERIFY_FAIL=1; }
           done
 
           [ "$VERIFY_FAIL" -eq 0 ] || { echo "ERROR: Ephemeral rehearsal verification failed." >&2; exit 1; }
@@ -908,8 +909,8 @@ jobs:
             "updated_at:timestamp without time zone" \
             "scan_result:text"; do
             COL="${COL_EXPECTED%%:*}"; EXPECTED_TYPE="${COL_EXPECTED##*:}"
-            ACTUAL_TYPE=$(run_psql_ta "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '[:space:]')
-            echo "  file_objects.${COL}: $ACTUAL_TYPE"
+            ACTUAL_TYPE=$(run_psql_ta "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '\n\r' | xargs)
+            echo "  file_objects.${COL}: '$ACTUAL_TYPE'"
             [ "$ACTUAL_TYPE" = "$EXPECTED_TYPE" ] || { echo "ERROR: file_objects.${COL} expected '$EXPECTED_TYPE' got '$ACTUAL_TYPE'." >&2; FAIL=1; }
           done
 
@@ -931,7 +932,7 @@ jobs:
           fi
 
           # Verify unique index on storage_key has UNIQUE in its definition
-          UNIQ_DEF=$(run_psql_ta "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '[:space:]')
+          UNIQ_DEF=$(run_psql_ta "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '\n\r')
           echo "  file_objects_storage_key_key indexdef: $UNIQ_DEF"
           echo "$UNIQ_DEF" | grep -qi "UNIQUE" || { echo "ERROR: storage_key index definition does not contain UNIQUE." >&2; FAIL=1; }
 
@@ -945,9 +946,8 @@ jobs:
             FAIL=1
           fi
 
-          # Verify FK semantics: confupdtype=a (CASCADE), confdeltype=r (RESTRICT), convalidated=t
-          # confupdtype: a=CASCADE, r=RESTRICT, c=SET NULL, n=SET DEFAULT, d=NO ACTION
-          # confdeltype: a=CASCADE, r=RESTRICT, c=SET NULL, n=SET DEFAULT, d=NO ACTION
+          # Verify FK semantics: confupdtype=c (ON UPDATE CASCADE), confdeltype=r (ON DELETE RESTRICT), convalidated=t
+          # PostgreSQL confupdtype/confdeltype: a=NO ACTION, c=CASCADE, r=RESTRICT, n=SET NULL, d=SET DEFAULT
           for FKNAME in \
             "file_objects_uploaded_by_id_fkey" \
             "task_deliverables_file_object_id_fkey" \
@@ -956,8 +956,8 @@ jobs:
             "meetings_materials_file_object_id_fkey"; do
             FK_ROW=$(run_psql_ta "SELECT confupdtype, confdeltype, convalidated FROM pg_constraint WHERE conname='${FKNAME}' AND contype='f';" | tr -d '[:space:]')
             echo "  ${FKNAME}: confupdtype|confdeltype|validated = ${FK_ROW}"
-            # Expected: a (CASCADE) | r (RESTRICT) | t (validated)
-            echo "$FK_ROW" | grep -q "^a|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected a|r|t, got '${FK_ROW}')." >&2; FAIL=1; }
+            # Expected: c (CASCADE) | r (RESTRICT) | t (validated)
+            echo "$FK_ROW" | grep -q "^c|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected c|r|t for CASCADE/RESTRICT/validated, got '${FK_ROW}')." >&2; FAIL=1; }
           done
 
           [ "$FAIL" -eq 0 ] || { echo "ERROR: Post-apply verification FAILED." >&2; exit 1; }
