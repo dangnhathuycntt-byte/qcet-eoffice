@@ -1047,33 +1047,26 @@ jobs:
           # The local workspace is mounted read-only at /app so node_modules/.bin/prisma is available.
           # prisma migrate resolve --applied sets applied_steps_count=0 (not 1 — confirmed on Prisma 6.19.3).
           #
-          # Bug 6 fix: Prisma detects openssl version by running `openssl version` in PATH.
-          # node:20-bookworm-slim does NOT include the openssl CLI binary — detection fails and Prisma
-          # defaults to "openssl-1.1.x", but the binary installed by npm ci on the Ubuntu runner is for
-          # "openssl-3.0.x" (Ubuntu 22.04+/Debian bookworm both ship openssl 3.x).
-          # Fix: detect the actual schema-engine binary on the runner and set PRISMA_SCHEMA_ENGINE_PATH
-          # explicitly so Prisma uses it directly without openssl-version detection.
-          SCHEMA_ENGINE_BIN=$(ls "${GITHUB_WORKSPACE}/node_modules/@prisma/engines/schema-engine-debian-openssl-"* 2>/dev/null | head -1 || true)
-          if [ -z "$SCHEMA_ENGINE_BIN" ]; then
-            echo "ERROR: No schema-engine-debian-openssl-* binary found in node_modules/@prisma/engines/ after npm ci." >&2
-            echo "  Searched: ${GITHUB_WORKSPACE}/node_modules/@prisma/engines/schema-engine-debian-openssl-*" >&2
-            ls "${GITHUB_WORKSPACE}/node_modules/@prisma/engines/" 2>&1 || true
-            exit 1
-          fi
-          SCHEMA_ENGINE_NAME=$(basename "$SCHEMA_ENGINE_BIN")
-          echo "Schema engine binary found: $SCHEMA_ENGINE_NAME"
+          # Bug 6 fix (final): Prisma detects openssl by running `openssl version` in PATH.
+          # node:20-bookworm-slim slim image does NOT include the openssl CLI binary — detection fails
+          # and Prisma defaults to "openssl-1.1.x", but the binary from npm ci on Ubuntu runner is
+          # "openssl-3.0.x". PRISMA_SCHEMA_ENGINE_PATH is only respected when detection SUCCEEDS.
+          # Fix: install the openssl CLI package inside the container before running Prisma so that
+          # `openssl version` works → detection succeeds → Prisma finds the 3.0.x binary automatically.
+          # Use --entrypoint bash to run apt-get && node in one shell invocation.
           echo ""
-          echo "Running: node_modules/.bin/prisma migrate resolve --applied ${MIG_NAME} (local CLI, lockfile-pinned 6.19.3, via Docker on qcet-network)..."
-          echo "  PRISMA_SCHEMA_ENGINE_PATH=/app/node_modules/@prisma/engines/${SCHEMA_ENGINE_NAME}"
+          echo "Running: node_modules/.bin/prisma migrate resolve --applied ${MIG_NAME} (local CLI, lockfile-pinned 6.19.3, via Docker on qcet-network, with openssl installed)..."
           RESOLVE_EXIT=0
           docker run --rm \
             --network "$DOCKER_NETWORK" \
             -v "${GITHUB_WORKSPACE}:/app:ro" \
             -w /app \
             -e DATABASE_URL="postgresql://$(cat $WORK_DIR/pg_user):$(cat $WORK_DIR/pg_pass)@$(cat $WORK_DIR/pg_host):$(cat $WORK_DIR/pg_port)/$(cat $WORK_DIR/pg_db)?schema=public" \
-            -e PRISMA_SCHEMA_ENGINE_PATH="/app/node_modules/@prisma/engines/${SCHEMA_ENGINE_NAME}" \
+            -e MIG_NAME="$MIG_NAME" \
+            --entrypoint bash \
             node:20-bookworm-slim \
-            node node_modules/.bin/prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
+            -c 'apt-get update -qq 2>&1 | tail -1 && apt-get install -y --no-install-recommends openssl 2>&1 | tail -3 && echo "openssl installed: $(openssl version)" && node node_modules/.bin/prisma migrate resolve --applied "$MIG_NAME"' \
+            2>&1 || RESOLVE_EXIT=$?
           if [ "$RESOLVE_EXIT" -ne 0 ]; then
             echo "WARNING: prisma migrate resolve --applied exited $RESOLVE_EXIT." >&2
             echo "  This may indicate the migration is already marked applied (Prisma returns 1 = P3008 already resolved)." >&2
