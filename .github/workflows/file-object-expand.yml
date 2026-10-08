@@ -98,6 +98,22 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
+      # ── 1a. Install Node deps (needed for node_modules/.bin/prisma in reconciliation) ──
+      - name: Install Node dependencies (npm ci)
+        run: |
+          set -euo pipefail
+          # Install with --ignore-scripts to avoid running arbitrary postinstall scripts.
+          # node_modules/.bin/prisma is required by the Prisma reconciliation step.
+          # Prisma version is locked at 6.19.3 via package-lock.json (npm ci respects lockfile).
+          npm ci --ignore-scripts 2>&1
+          if [ ! -x "node_modules/.bin/prisma" ]; then
+            echo "ERROR: node_modules/.bin/prisma not found after npm ci." >&2
+            exit 1
+          fi
+          PRISMA_VER=$(node_modules/.bin/prisma --version 2>&1 | head -1 || true)
+          echo "Prisma CLI available: $PRISMA_VER"
+          echo "node_modules/.bin/prisma: INSTALLED"
+
       # ── 2. Verify migration SQL SHA256 (tamper/drift detection) ──────────
       - name: Verify migration SQL SHA256
         run: |
