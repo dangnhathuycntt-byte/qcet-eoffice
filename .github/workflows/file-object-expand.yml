@@ -341,28 +341,16 @@ jobs:
 
           echo ""
           echo "=== Rehearsal: INSERT test row into file_objects ==="
-          # Insert a test row to verify constraints and FK work correctly
-          run_test_psql "INSERT INTO file_objects
-            (id, storage_key, storage_provider, original_name, mime_type, extension,
-             byte_size, content_hash, classification, scan_status, reference_count,
-             uploaded_by_id, is_archived, created_at, updated_at)
-          SELECT
-            'test-rehearsal-id-001',
-            'rehearsal/test-file.txt',
-            'LOCAL_DISK'::"StorageProvider",
-            'test-file.txt',
-            'text/plain',
-            'txt',
-            42,
-            'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
-            'INTERNAL'::"FileClassification",
-            'PENDING'::"FileScanStatus",
-            1,
-            id,
-            false,
-            NOW(), NOW()
-          FROM users LIMIT 1
-          RETURNING id;" || {
+          # Write INSERT SQL to temp file using printf + \x22 for double-quote chars.
+          # This sidesteps shell quoting of mixed-case quoted enum type names in -c args
+          # and avoids YAML column-0 parse issues from heredocs.
+          printf 'INSERT INTO file_objects\n  (id, storage_key, storage_provider, original_name, mime_type, extension,\n   byte_size, content_hash, classification, scan_status, reference_count,\n   uploaded_by_id, is_archived, created_at, updated_at)\nSELECT\n  '\''test-rehearsal-id-001'\'',\n  '\''rehearsal/test-file.txt'\'',\n  '\''LOCAL_DISK'\''::\x22StorageProvider\x22,\n  '\''test-file.txt'\'',\n  '\''text/plain'\'',\n  '\''txt'\'',\n  42,\n  '\''abc123def456abc123def456abc123def456abc123def456abc123def456abc1'\'',\n  '\''INTERNAL'\''::\x22FileClassification\x22,\n  '\''PENDING'\''::\x22FileScanStatus\x22,\n  1,\n  id,\n  false,\n  NOW(), NOW()\nFROM users LIMIT 1\nRETURNING id;\n' > "$WORK_DIR/rehearsal_insert.sql"
+          chmod 600 "$WORK_DIR/rehearsal_insert.sql"
+          docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv_test" \
+            -v "$WORK_DIR/rehearsal_insert.sql:/tmp/rehearsal_insert.sql:ro" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$TEST_DB" \
+              -X -v ON_ERROR_STOP=1 -f /tmp/rehearsal_insert.sql 2>&1 || {
             echo "ERROR: test INSERT into file_objects failed." >&2
             exit 1
           }
