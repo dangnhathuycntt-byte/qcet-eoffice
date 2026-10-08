@@ -1,0 +1,698 @@
+# Backfill ReBAC — task_assignees → task_actors one-time backfill
+#
+# Canonical role mapping (from src/lib/db/transactions.ts:229-231):
+#   PRIMARY_OWNER  → TaskActorRole.DRI  (is_primary_dri = true)
+#   COLLABORATOR   → TaskActorRole.COLLABORATOR
+#   SUPERVISOR     → FAIL: no canonical mapping; must be investigated before any permission grant
+#   (any other)    → FAIL: unknown role
+#
+# Security pattern: identical to migrate-production.yml.
+#   - Container pinned: exact name qcet-eoffice-app / network qcet-network
+#   - DATABASE_URL extracted via Python stdlib urlsplit/unquote (PY_URL_PARSER env)
+#   - ::add-mask:: on full URL and password immediately after extraction
+#   - All DB connection via --env-file (chmod 600); PGPASSWORD never in CLI args
+#   - PGPASSWORD never written to GITHUB_ENV
+#
+# Idempotency: WHERE NOT EXISTS guards the INSERT (no unique constraint on task_actors).
+# Asserts second-run inserts 0 rows.
+#
+# Dispatch:
+#   Dry-run (preview only):  gh workflow run backfill-rebac.yml
+#   Apply:                   gh workflow run backfill-rebac.yml -f confirm=backfill
+#
+# Prerequisites:
+#   - A verified backup must exist at /home/dnhhuy/migrate-backups/ newer than 24h
+#   - SUPERVISOR rows must be zero (else job fails with investigation required)
+
+name: Backfill ReBAC (task_assignees → task_actors)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'backfill' to apply writes; omit for dry-run"
+        required: false
+        default: ''
+
+concurrency:
+  group: backfill-rebac
+  cancel-in-progress: false
+
+env:
+  # stdlib Python URL parser (urlsplit + unquote). Identical to migrate-production.yml.
+  PY_URL_PARSER: >-
+    aW1wb3J0IG9zLCBzeXMKZnJvbSB1cmxsaWIucGFyc2UgaW1wb3J0IHVybHNwbGl0LCB1bnF1
+    b3RlCnVybCA9IG9zLmVudmlyb24uZ2V0KCJEQVRBQkFTRV9VUkwiLCAiIikKdSA9IHVybHNw
+    bGl0KHVybCkKdmFscyA9IFsKICAgIHVucXVvdGUodS51c2VybmFtZSBvciAiIiksCiAgICB1
+    bnF1b3RlKHUucGFzc3dvcmQgb3IgIiIpLAogICAgdW5xdW90ZSh1Lmhvc3RuYW1lIG9yICJs
+    b2NhbGhvc3QiKSwKICAgIHN0cih1LnBvcnQgb3IgNTQzMiksCiAgICB1bnF1b3RlKCh1LnBh
+    dGgubHN0cmlwKCIvIikuc3BsaXQoIj8iKVswXSBpZiB1LnBhdGggZWxzZSAicG9zdGdyZXMi
+    KSksCl0KZm9yIHBhdGgsIHZhbCBpbiB6aXAoc3lzLmFyZ3ZbMTpdLCB2YWxzKToKICAgIHdp
+    dGggb3BlbihwYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSh2YWwpCiAgICBvcy5j
+    aG1vZChwYXRoLCAwbzYwMCkK
+
+jobs:
+  backfill:
+    name: Backfill task_assignees → task_actors
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 10
+    steps:
+      - name: Validate confirm input
+        id: mode
+        run: |
+          set -euo pipefail
+          CONFIRM="${{ github.event.inputs.confirm }}"
+          if [ "$CONFIRM" = "backfill" ]; then
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+            echo "DRY_RUN=false" >> "$GITHUB_OUTPUT"
+            echo "MODE: APPLY — writes will be committed."
+          else
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+            echo "DRY_RUN=true" >> "$GITHUB_OUTPUT"
+            echo "MODE: DRY-RUN — no writes; showing preview only."
+          fi
+
+      - name: Gate — verify known pre-migrate backup (SHA256 + size bound)
+        run: |
+          set -euo pipefail
+          # Bind to the KNOWN verified backup from run 37567838096.
+          # SHA256: 61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42
+          # Size: 335908 bytes (332K). Any deviation = abort.
+          KNOWN_BACKUP="/home/dnhhuy/migrate-backups/qcet_eoffice_20261007T034055Z_premigrate.dump"
+          KNOWN_SHA="61e8d06b2b42f72ade90fc6f76aa0836150df65af3b1631ade67b87a18e47f42"
+          KNOWN_MIN_SIZE=320000   # 312K lower bound
+          KNOWN_MAX_SIZE=400000   # 390K upper bound
+
+          if [ ! -f "$KNOWN_BACKUP" ]; then
+            echo "ERROR: Known pre-migrate backup not found: $KNOWN_BACKUP" >&2
+            echo "       Backfill must use the verified pre-migrate backup, not an arbitrary file." >&2
+            ls -lh "$(dirname "$KNOWN_BACKUP")" >&2 || true
+            exit 1
+          fi
+
+          ACTUAL_SIZE=$(stat -c%s "$KNOWN_BACKUP" 2>/dev/null || stat -f%z "$KNOWN_BACKUP")
+          echo "Backup: $KNOWN_BACKUP"
+          echo "Size: $ACTUAL_SIZE bytes"
+          if [ "$ACTUAL_SIZE" -lt "$KNOWN_MIN_SIZE" ] || [ "$ACTUAL_SIZE" -gt "$KNOWN_MAX_SIZE" ]; then
+            echo "ERROR: Backup size $ACTUAL_SIZE outside expected range [$KNOWN_MIN_SIZE, $KNOWN_MAX_SIZE]." >&2
+            exit 1
+          fi
+
+          echo "Verifying SHA256..."
+          ACTUAL_SHA=$(sha256sum "$KNOWN_BACKUP" 2>/dev/null | cut -d' ' -f1 \
+            || shasum -a 256 "$KNOWN_BACKUP" | cut -d' ' -f1)
+          echo "Expected SHA256: $KNOWN_SHA"
+          echo "Actual   SHA256: $ACTUAL_SHA"
+          if [ "$ACTUAL_SHA" != "$KNOWN_SHA" ]; then
+            echo "ERROR: SHA256 mismatch — backup may be corrupted or tampered." >&2
+            exit 1
+          fi
+          echo "Backup gate: PASS (SHA256 verified, size within bounds)"
+
+      - name: Find app container and network
+        id: app
+        run: |
+          set -euo pipefail
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' >&2
+            exit 1
+          fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved container '$APP' ≠ expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: App container network '$DOCKER_NET' ≠ expected '${EXPECTED_NET}'." >&2
+            exit 1
+          fi
+
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+          echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "App: $APP  Network: $DOCKER_NET"
+
+      - name: Extract and mask DATABASE_URL
+        id: dburl
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          set -euo pipefail
+          WORK_DIR=$(mktemp -d /tmp/backfill-rebac.XXXXXX)
+          chmod 700 "$WORK_DIR"
+          echo "work_dir=$WORK_DIR" >> "$GITHUB_OUTPUT"
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DB_URL"
+
+          printf 'DATABASE_URL=%s\n' "$DB_URL" > "$WORK_DIR/dburl"
+          chmod 600 "$WORK_DIR/dburl"
+
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$WORK_DIR/parse.py"
+          chmod 600 "$WORK_DIR/parse.py"
+
+          DATABASE_URL="$DB_URL" python3 "$WORK_DIR/parse.py" \
+            "$WORK_DIR/pg_user" "$WORK_DIR/pg_pass" \
+            "$WORK_DIR/pg_host" "$WORK_DIR/pg_port" "$WORK_DIR/pg_db"
+
+          PG_PASS=$(cat "$WORK_DIR/pg_pass")
+          echo "::add-mask::$PG_PASS"
+
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$WORK_DIR/pgenv"
+          chmod 600 "$WORK_DIR/pgenv"
+
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          echo "DB target: host=$PG_HOST port=$PG_PORT db=$PG_DB user=$PG_USER"
+          if [ "$PG_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: DB name '$PG_DB' ≠ 'qcet_eoffice'. Aborting." >&2
+            exit 1
+          fi
+
+      - name: DB identity verification
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            # -X: no .psqlrc; -v ON_ERROR_STOP=1: SQL errors exit non-zero (not silently empty)
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          ACTUAL_DB=$(run_psql "SELECT current_database();" | tr -d '[:space:]')
+          echo "current_database(): $ACTUAL_DB"
+          if [ "$ACTUAL_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: Live DB is '$ACTUAL_DB', expected 'qcet_eoffice'. Aborting." >&2
+            exit 1
+          fi
+          echo "DB identity: PASS"
+
+      - name: Gate — SUPERVISOR rows must be zero
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # Check if task_assignees table exists at all
+          # Note: EXISTS()::text in psql -t -A returns 'true'/'false' (not 't'/'f')
+          TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TABLE_EXISTS" != "true" ]; then
+            echo "task_assignees table does not exist — backfill not needed."
+            echo "SUPERVISOR gate: N/A (table gone)"
+            exit 0
+          fi
+
+          SUPERVISOR_COUNT=$(run_psql "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text = 'SUPERVISOR';" | tr -d '[:space:]')
+          echo "SUPERVISOR rows in task_assignees: $SUPERVISOR_COUNT"
+          if [ "$SUPERVISOR_COUNT" != "0" ]; then
+            echo "ERROR: Found $SUPERVISOR_COUNT row(s) with role_in_task='SUPERVISOR'." >&2
+            echo "ERROR: SUPERVISOR has no canonical mapping in src/lib/db/transactions.ts." >&2
+            echo "ERROR: Mapping must be explicitly authorized before any permission grant." >&2
+            echo "ERROR: Inspect those rows manually, determine disposition, update Tracker." >&2
+            echo "" >&2
+            echo "Sample SUPERVISOR rows:" >&2
+            run_psql "SELECT task_id, user_id, role_in_task::text, assigned_at FROM task_assignees WHERE role_in_task::text = 'SUPERVISOR' LIMIT 5;" >&2
+            exit 1
+          fi
+          echo "SUPERVISOR gate: PASS (0 rows)"
+
+      - name: Gate — unknown roles must be zero
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TABLE_EXISTS" != "true" ]; then
+            echo "task_assignees table does not exist — unknown-role gate: N/A"
+            exit 0
+          fi
+
+          UNKNOWN_COUNT=$(run_psql "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR');" | tr -d '[:space:]')
+          echo "Unknown-role rows (not PRIMARY_OWNER or COLLABORATOR): $UNKNOWN_COUNT"
+          if [ "$UNKNOWN_COUNT" != "0" ]; then
+            echo "ERROR: Found $UNKNOWN_COUNT row(s) with roles outside canonical set." >&2
+            run_psql "SELECT role_in_task::text, COUNT(*) AS cnt FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR') GROUP BY role_in_task::text;" >&2
+            echo "ERROR: Do not grant arbitrary permissions. Investigate before proceeding." >&2
+            exit 1
+          fi
+          echo "Unknown-role gate: PASS"
+
+      - name: Preview — rows that would be inserted (dry-run and apply)
+        id: preview
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TABLE_EXISTS" != "true" ]; then
+            echo "task_assignees does not exist — 0 rows to backfill."
+            echo "pending_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PENDING=$(run_psql "SELECT COUNT(*)
+          FROM task_assignees ta
+          WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
+            AND NOT EXISTS (
+              SELECT 1 FROM task_actors act
+              WHERE act.task_id = ta.task_id
+                AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                AND act.role::text = CASE ta.role_in_task::text
+                  WHEN 'PRIMARY_OWNER' THEN 'DRI'
+                  WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
+                END
+            );" | tr -d '[:space:]')
+
+          echo "Rows pending backfill (unmigrated, canonical roles only): $PENDING"
+          echo "pending_count=$PENDING" >> "$GITHUB_OUTPUT"
+
+          if [ "$PENDING" = "0" ]; then
+            echo "No rows to backfill — already at parity."
+          else
+            echo ""
+            echo "=== Preview: role breakdown of rows to be inserted ==="
+            run_psql "SELECT ta.role_in_task::text AS assignee_role,
+              CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN 'DRI' ELSE 'COLLABORATOR' END AS target_actor_role,
+              COUNT(*) AS cnt
+            FROM task_assignees ta
+            WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR')
+              AND NOT EXISTS (
+                SELECT 1 FROM task_actors act
+                WHERE act.task_id = ta.task_id
+                  AND act.user_id IS NOT DISTINCT FROM ta.user_id
+                  AND act.role::text = CASE ta.role_in_task::text
+                    WHEN 'PRIMARY_OWNER' THEN 'DRI'
+                    WHEN 'COLLABORATOR'  THEN 'COLLABORATOR'
+                  END
+              )
+            GROUP BY ta.role_in_task::text ORDER BY cnt DESC;"
+          fi
+
+      - name: Apply backfill — INSERT task_actors
+        if: steps.mode.outputs.mode == 'apply' && steps.preview.outputs.pending_count != '0'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          echo "=== Inserting backfill rows ==="
+          echo "  Mapping: PRIMARY_OWNER->DRI (is_primary_dri=true), COLLABORATOR->COLLABORATOR (false)"
+          echo "  Idempotency: WHERE NOT EXISTS (no unique constraint — ON CONFLICT unavailable)"
+          echo "  Locking:"
+          echo "    1. pg_advisory_xact_lock (hashtext key) — prevents concurrent backfill dispatch"
+          echo "    2. LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE — blocks concurrent app INSERTs"
+          echo "       into task_actors for duration of backfill transaction, ensuring WHERE NOT EXISTS"
+          echo "       snapshot is stable. App reads unaffected (SRE mode allows concurrent SELECTs)."
+          echo "  Advisory lock: DO/PERFORM (no result row) — no output noise to strip"
+          echo "  Output: -q -A -t tuples-only; -q suppresses command tags (BEGIN/DO/LOCK TABLE/COMMIT)"
+          echo "  Timeouts: lock_timeout=5000ms (5s), statement_timeout=120000ms (120s) — avoids blocking production app"
+          echo "  Stderr: captured to separate file (not merged into stdout) to keep count capture clean"
+
+          # SQL written via printf to avoid heredoc-at-column-0 YAML parse conflict.
+          # -q flag: without it, psql emits command tags (BEGIN, DO, LOCK TABLE, COMMIT) even with
+          #   -A -t, making stdout "BEGIN\nDO\nLOCK TABLE\nN\nCOMMIT" — numeric assert fails.
+          # DO $$ BEGIN PERFORM pg_advisory_xact_lock(...); END $$; produces NO result row.
+          # LOCK TABLE ... IN SHARE ROW EXCLUSIVE MODE blocks concurrent app INSERTs for txn duration.
+          # lock_timeout=5000 (5s): LOCK TABLE aborts if blocked >5s instead of indefinitely blocking app.
+          # statement_timeout=120000 (120s): hard ceiling on total transaction duration.
+          # Note: SET LOCAL lock_timeout = 5000 (integer ms) avoids shell single-quote escaping pitfall
+          # where printf '...' with ''5s'' produces unquoted 5s → SQL syntax error.
+          # NULL dedup: WHERE NOT EXISTS uses IS NOT DISTINCT FROM for user_id (handles NULL=NULL).
+          printf '%s\n' \
+            'BEGIN;' \
+            'SET LOCAL lock_timeout = 5000;' \
+            'SET LOCAL statement_timeout = 120000;' \
+            'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
+            'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
+            'WITH inserted AS (' \
+            '  INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)' \
+            '  SELECT' \
+            '    gen_random_uuid()::text,' \
+            '    ta.task_id,' \
+            '    ta.user_id,' \
+            '    CASE ta.role_in_task::text' \
+            '      WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'::"TaskActorRole"' \
+            '      WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'::"TaskActorRole"' \
+            '    END,' \
+            '    CASE ta.role_in_task::text WHEN '"'"'PRIMARY_OWNER'"'"' THEN true ELSE false END,' \
+            '    NOW()' \
+            '  FROM task_assignees ta' \
+            '  WHERE ta.role_in_task::text IN ('"'"'PRIMARY_OWNER'"'"','"'"'COLLABORATOR'"'"')' \
+            '    AND NOT EXISTS (' \
+            '      SELECT 1 FROM task_actors act' \
+            '      WHERE act.task_id = ta.task_id' \
+            '        AND act.user_id IS NOT DISTINCT FROM ta.user_id' \
+            '        AND act.role::text = CASE ta.role_in_task::text' \
+            '          WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'' \
+            '          WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'' \
+            '        END' \
+            '    )' \
+            '  RETURNING id' \
+            ')' \
+            'SELECT COUNT(*) FROM inserted;' \
+            'COMMIT;' \
+            > "$WORK_DIR/backfill.sql"
+          chmod 600 "$WORK_DIR/backfill.sql"
+
+          # Validate SQL file is non-empty and starts correctly
+          HEAD=$(head -1 "$WORK_DIR/backfill.sql")
+          if [ "$HEAD" != "BEGIN;" ]; then
+            echo "ERROR: backfill.sql first line is not BEGIN; — got: '$HEAD'" >&2
+            exit 1
+          fi
+
+          # -q: suppress command tags (BEGIN/DO/LOCK TABLE/COMMIT); without -q stdout is polluted.
+          # -A -t: unaligned tuples-only — only the SELECT COUNT(*) row emitted to stdout.
+          # -X: skip .psqlrc  -v ON_ERROR_STOP=1: SQL errors cause psql exit 1.
+          # -f -: read SQL from stdin (avoids bind-mount exit 125 on self-hosted runner).
+          # Stderr to separate file (NOT 2>&1): mixing stderr into stdout contaminates count capture;
+          #   ON_ERROR_STOP=1 still causes psql exit 1 on SQL error, which propagates via $?.
+          PSQL_STDERR="$WORK_DIR/backfill_stderr.txt"
+          PSQL_EXIT=0
+          INSERTED=$(docker run --rm -i \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -q -A -t -X -v ON_ERROR_STOP=1 -f - \
+            < "$WORK_DIR/backfill.sql" 2>"$PSQL_STDERR" | tr -d '[:space:]') || PSQL_EXIT=$?
+          if [ -s "$PSQL_STDERR" ]; then
+            echo "=== psql stderr (backfill INSERT) ===" >&2
+            cat "$PSQL_STDERR" >&2
+          fi
+          if [ "$PSQL_EXIT" -ne 0 ]; then
+            echo "ERROR: psql exited $PSQL_EXIT during backfill INSERT." >&2
+            exit 1
+          fi
+
+          # Validate INSERTED is a non-negative integer (not an error message or empty)
+          if ! echo "$INSERTED" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: INSERT returned non-numeric output: '$INSERTED'" >&2
+            echo "  Expected single integer from SELECT COUNT(*) FROM inserted." >&2
+            exit 1
+          fi
+          echo "Inserted: $INSERTED row(s)"
+
+      - name: Skip apply — dry-run or already at parity
+        if: steps.mode.outputs.mode != 'apply' || steps.preview.outputs.pending_count == '0'
+        run: |
+          if [ "${{ steps.mode.outputs.mode }}" = "dry-run" ]; then
+            echo "DRY-RUN: No writes performed. Pending rows: ${{ steps.preview.outputs.pending_count }}"
+            echo "To apply, dispatch with confirm=backfill"
+          else
+            echo "Already at parity — no insert needed."
+          fi
+
+      - name: Assert idempotency — second INSERT must produce 0 rows and leave counts unchanged
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -A -t -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # Capture task_actors total count AND per-role/flag digest BEFORE second INSERT.
+          # Digest = "DRI:N|COLLABORATOR:M" — used to confirm content unchanged, not just count.
+          COUNT_BEFORE=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+          if ! echo "$COUNT_BEFORE" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: task_actors count before second INSERT non-numeric: '$COUNT_BEFORE'" >&2; exit 1
+          fi
+          DIGEST_BEFORE=$(run_psql "SELECT role::text || ':' || COUNT(*)::text FROM task_actors GROUP BY role::text ORDER BY role::text;" | tr '\n' '|' | sed 's/|$//')
+          echo "task_actors before second INSERT: count=$COUNT_BEFORE digest='$DIGEST_BEFORE'"
+
+          # Real second INSERT attempt — identical SQL to the first INSERT.
+          # DO/PERFORM advisory lock: no result row (unlike SELECT pg_advisory_xact_lock).
+          # LOCK TABLE: blocks concurrent app INSERTs for duration, making WHERE NOT EXISTS stable.
+          # Expected result: COUNT(*) FROM inserted = 0 because WHERE NOT EXISTS matches all rows.
+          printf '%s\n' \
+            'BEGIN;' \
+            'SET LOCAL lock_timeout = 5000;' \
+            'SET LOCAL statement_timeout = 120000;' \
+            'DO $$ BEGIN PERFORM pg_advisory_xact_lock(hashtext('"'"'backfill_task_actors'"'"')); END $$;' \
+            'LOCK TABLE task_actors IN SHARE ROW EXCLUSIVE MODE;' \
+            'WITH inserted AS (' \
+            '  INSERT INTO task_actors (id, task_id, user_id, role, is_primary_dri, appointed_at)' \
+            '  SELECT' \
+            '    gen_random_uuid()::text,' \
+            '    ta.task_id,' \
+            '    ta.user_id,' \
+            '    CASE ta.role_in_task::text' \
+            '      WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'::"TaskActorRole"' \
+            '      WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'::"TaskActorRole"' \
+            '    END,' \
+            '    CASE ta.role_in_task::text WHEN '"'"'PRIMARY_OWNER'"'"' THEN true ELSE false END,' \
+            '    NOW()' \
+            '  FROM task_assignees ta' \
+            '  WHERE ta.role_in_task::text IN ('"'"'PRIMARY_OWNER'"'"','"'"'COLLABORATOR'"'"')' \
+            '    AND NOT EXISTS (' \
+            '      SELECT 1 FROM task_actors act' \
+            '      WHERE act.task_id = ta.task_id' \
+            '        AND act.user_id IS NOT DISTINCT FROM ta.user_id' \
+            '        AND act.role::text = CASE ta.role_in_task::text' \
+            '          WHEN '"'"'PRIMARY_OWNER'"'"' THEN '"'"'DRI'"'"'' \
+            '          WHEN '"'"'COLLABORATOR'"'"'  THEN '"'"'COLLABORATOR'"'"'' \
+            '        END' \
+            '    )' \
+            '  RETURNING id' \
+            ')' \
+            'SELECT COUNT(*) FROM inserted;' \
+            'COMMIT;' \
+            > "$WORK_DIR/backfill2.sql"
+          chmod 600 "$WORK_DIR/backfill2.sql"
+
+          PSQL_STDERR2="$WORK_DIR/backfill2_stderr.txt"
+          PSQL_EXIT2=0
+          SECOND_INSERT=$(docker run --rm -i \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -q -A -t -X -v ON_ERROR_STOP=1 -f - \
+            < "$WORK_DIR/backfill2.sql" 2>"$PSQL_STDERR2" | tr -d '[:space:]') || PSQL_EXIT2=$?
+          if [ -s "$PSQL_STDERR2" ]; then
+            echo "=== psql stderr (second INSERT) ===" >&2
+            cat "$PSQL_STDERR2" >&2
+          fi
+          if [ "$PSQL_EXIT2" -ne 0 ]; then
+            echo "ERROR: psql exited $PSQL_EXIT2 during second INSERT." >&2
+            exit 1
+          fi
+
+          if ! echo "$SECOND_INSERT" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: Second INSERT returned non-numeric: '$SECOND_INSERT'" >&2; exit 1
+          fi
+          echo "Second INSERT row count (must be 0): $SECOND_INSERT"
+
+          # Capture count and digest AFTER second INSERT
+          COUNT_AFTER=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+          if ! echo "$COUNT_AFTER" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: task_actors count after second INSERT non-numeric: '$COUNT_AFTER'" >&2; exit 1
+          fi
+          DIGEST_AFTER=$(run_psql "SELECT role::text || ':' || COUNT(*)::text FROM task_actors GROUP BY role::text ORDER BY role::text;" | tr '\n' '|' | sed 's/|$//')
+          echo "task_actors after second INSERT:  count=$COUNT_AFTER digest='$DIGEST_AFTER'"
+
+          FAIL=0
+          if [ "$SECOND_INSERT" != "0" ]; then
+            echo "ERROR: Second INSERT produced $SECOND_INSERT row(s) — idempotency violated." >&2
+            echo "  WHERE NOT EXISTS predicate did not cover all inserted rows." >&2
+            FAIL=1
+          fi
+          if [ "$COUNT_AFTER" != "$COUNT_BEFORE" ]; then
+            echo "ERROR: task_actors count changed $COUNT_BEFORE -> $COUNT_AFTER — rows inserted." >&2
+            FAIL=1
+          fi
+          if [ "$DIGEST_AFTER" != "$DIGEST_BEFORE" ]; then
+            echo "ERROR: task_actors content digest changed." >&2
+            echo "  Before: '$DIGEST_BEFORE'" >&2
+            echo "  After:  '$DIGEST_AFTER'" >&2
+            FAIL=1
+          fi
+          if [ "$FAIL" = "1" ]; then exit 1; fi
+          echo "Idempotency assertion: PASS (second INSERT=0, count=$COUNT_AFTER stable, digest='$DIGEST_AFTER')"
+
+      - name: Assert duplicate-DRI invariant and is_primary_dri semantic parity
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # ── Duplicate DRI invariant ─────────────────────────────────────────────
+          # A task must have at most one actor with (role='DRI' AND is_primary_dri=true).
+          # The partial unique index task_actors_one_primary_dri_idx (migration 00005) enforces
+          # this AFTER that migration runs.  We verify it here so backfill failures surface
+          # clearly before any migration attempt.
+          #
+          # We check current state: tasks with >1 DRI where is_primary_dri=true.
+          # Pre-existing violations (from app writes before backfill) are reported as WARNING.
+          # Violations introduced by this backfill's WHERE NOT EXISTS predicate should be 0
+          # (predicate prevents duplicate insert for same task+user+role, but cannot prevent
+          #  two different users both mapped as DRI for the same task from task_assignees).
+
+          DUP_DRI=$(run_psql "SELECT COUNT(*) FROM (
+            SELECT task_id FROM task_actors
+            WHERE role::text = 'DRI' AND is_primary_dri = true
+            GROUP BY task_id HAVING COUNT(*) > 1
+          ) sub;" | tr -d '[:space:]')
+
+          if ! echo "$DUP_DRI" | grep -qE '^[0-9]+$'; then
+            echo "ERROR: duplicate DRI query returned non-numeric: '$DUP_DRI'" >&2
+            exit 1
+          fi
+
+          if [ "$DUP_DRI" != "0" ]; then
+            echo "ERROR: $DUP_DRI task(s) have >1 DRI actor with is_primary_dri=true — invariant violated." >&2
+            echo "  This means multiple PRIMARY_OWNER rows existed in task_assignees for the same task." >&2
+            echo "  Migration 20260923000005 partial-unique-index will FAIL unless resolved." >&2
+            echo "  Sample violating tasks:" >&2
+            run_psql "SELECT task_id, COUNT(*) AS dri_count
+              FROM task_actors WHERE role::text='DRI' AND is_primary_dri=true
+              GROUP BY task_id HAVING COUNT(*) > 1 LIMIT 5;" >&2
+            exit 1
+          fi
+          echo "Duplicate DRI invariant: PASS — no task has >1 primary DRI actor"
+
+          # ── is_primary_dri semantic parity ─────────────────────────────────────
+          # All DRI actors inserted by this backfill have is_primary_dri=true (PRIMARY_OWNER mapping).
+          # All non-DRI actors inserted have is_primary_dri=false (COLLABORATOR mapping).
+          # NOTE: This assertion covers ALL task_actors rows, including any pre-existing app-written rows.
+          # If the app has ever written DRI rows with is_primary_dri=false, this step will fail.
+          # That would indicate a schema/app invariant violation pre-existing this backfill.
+          DRI_NO_FLAG=$(run_psql "SELECT COUNT(*) FROM task_actors WHERE role::text='DRI' AND is_primary_dri=false;" | tr -d '[:space:]')
+          NONDRI_WITH_FLAG=$(run_psql "SELECT COUNT(*) FROM task_actors WHERE role::text<>'DRI' AND is_primary_dri=true;" | tr -d '[:space:]')
+
+          echo "DRI actors with is_primary_dri=false (must be 0): $DRI_NO_FLAG"
+          echo "Non-DRI actors with is_primary_dri=true (must be 0): $NONDRI_WITH_FLAG"
+
+          FAIL=0
+          if [ "$DRI_NO_FLAG" != "0" ]; then
+            echo "ERROR: $DRI_NO_FLAG DRI actor(s) have is_primary_dri=false — semantic parity violation." >&2
+            FAIL=1
+          fi
+          if [ "$NONDRI_WITH_FLAG" != "0" ]; then
+            echo "ERROR: $NONDRI_WITH_FLAG non-DRI actor(s) have is_primary_dri=true — semantic parity violation." >&2
+            FAIL=1
+          fi
+          if [ "$FAIL" = "1" ]; then exit 1; fi
+          echo "is_primary_dri semantic parity: PASS"
+
+      - name: Final parity report
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          TABLE_EXISTS=$(run_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+
+          # Note: EXISTS()::text in psql -t -A returns 'true'/'false' (full word), not 't'/'f'
+          if [ "$TABLE_EXISTS" = "true" ]; then
+            TOTAL_ASSIGNEES=$(run_psql "SELECT COUNT(*) FROM task_assignees;" | tr -d '[:space:]')
+            TOTAL_ACTORS=$(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')
+            PARITY=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE ta.role_in_task::text IN ('PRIMARY_OWNER','COLLABORATOR') AND NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id=ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text=CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN 'DRI' WHEN 'COLLABORATOR' THEN 'COLLABORATOR' END);" | tr -d '[:space:]')
+            echo "=== Final Report ==="
+            echo "  task_assignees total: $TOTAL_ASSIGNEES"
+            echo "  task_actors total:    $TOTAL_ACTORS"
+            echo "  Unmigrated (parity):  $PARITY"
+            echo ""
+            echo "IMPORTANT — Tracker 174 Stage gates remain:"
+            echo "  Stage B: requires real dual-write active evidence AND observation window"
+            echo "  Stage C: observation window not started"
+            echo "  This one-time backfill does NOT satisfy Stage B or C."
+            echo "  Backfill only repairs pre-dual-write rows — not a substitute for dual-write evidence."
+          else
+            echo "task_assignees does not exist. task_actors total: $(run_psql "SELECT COUNT(*) FROM task_actors;" | tr -d '[:space:]')"
+            echo "Parity trivially satisfied."
+          fi
+
+      - name: Cleanup temp dir
+        if: always()
+        run: rm -rf /tmp/backfill-rebac.* 2>/dev/null || true

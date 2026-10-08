@@ -1,0 +1,312 @@
+# Host Diagnostics — Read-Only Identity Verification
+#
+# Captures independently verified facts about the self-hosted runner environment.
+# Pinned target: qcet-eoffice-app on qcet-network. No fallback to other containers.
+# Rules:
+#   - Never prints DATABASE_URL, .env, or any secret value.
+#   - All env var inspection: key names only, values replaced with <REDACTED>.
+#   - No docker exec into app container.
+#   - ClamAV: TCP PING only (no exec, no definitions file read from container).
+# Dispatch: gh workflow run host-diagnostics.yml
+
+name: Host Diagnostics (Read-Only)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: host-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Collect Host Identity Evidence
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 8
+    steps:
+      - name: Host identity
+        run: |
+          set -euo pipefail
+          echo "=== HOSTNAME ===" && hostname -f
+          echo "=== KERNEL ===" && uname -r
+          echo "=== OS RELEASE ===" && grep -E "^(NAME|VERSION|ID)=" /etc/os-release || true
+          echo "=== RUNNER USER ===" && id
+          echo "=== DATE UTC ===" && date -u +'%Y-%m-%dT%H:%M:%SZ'
+
+      - name: Docker daemon version
+        run: |
+          set -euo pipefail
+          echo "Docker server: $(docker version --format '{{.Server.Version}}')"
+          echo "Docker API: $(docker version --format '{{.Server.APIVersion}}')"
+          echo "Docker client: $(docker version --format '{{.Client.Version}}')"
+
+      - name: Running containers (names, image, status)
+        run: |
+          echo "=== RUNNING CONTAINERS ==="
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.ID}}' || true
+
+      - name: App container — pinned identity check
+        id: app
+        run: |
+          set -euo pipefail
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            echo "Running containers:" >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}' >&2
+            exit 1
+          fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved name '$APP' != expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: App container network '$DOCKER_NET' != expected '${EXPECTED_NET}'." >&2
+            exit 1
+          fi
+
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "Pinned: container=$APP network=$DOCKER_NET"
+
+      - name: App container — image ID, digest, created timestamp
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+
+          echo "=== IMAGE ID (full sha256) ==="
+          # .Image field = sha256 content-addressable ID of the image layer
+          IMAGE_ID=$(docker inspect "$APP" --format '{{.Image}}')
+          echo "ImageID: $IMAGE_ID"
+
+          echo ""
+          echo "=== CONTAINER ID (short) ==="
+          docker inspect "$APP" --format 'ContainerID: {{slice .Id 0 12}}'
+
+          echo ""
+          echo "=== IMAGE RepoTags ==="
+          # Shows the :tag used at run time — not a digest (may be mutable tag)
+          docker inspect "$APP" --format '{{range .Config.Image}}{{.}}{{end}}' 2>/dev/null \
+            || docker inspect "$APP" --format 'Image tag: {{.Config.Image}}'
+
+          echo ""
+          echo "=== IMAGE RepoDigests (immutable digest if pushed from registry) ==="
+          # Digests are immutable: sha256:... pinned to exact pushed layer
+          # Empty if built locally and never pushed to a registry
+          DIGESTS=$(docker image inspect "$IMAGE_ID" --format '{{range .RepoDigests}}{{.}}{{"\n"}}{{end}}' 2>/dev/null || true)
+          if [ -z "$DIGESTS" ]; then
+            echo "(no registry digests — image built locally or not pushed)"
+          else
+            echo "$DIGESTS"
+          fi
+
+          echo ""
+          echo "=== IMAGE CREATED timestamp ==="
+          docker image inspect "$IMAGE_ID" --format 'Created: {{.Created}}' 2>/dev/null || true
+
+          echo ""
+          echo "=== CONTAINER CREATED / STARTED timestamps ==="
+          docker inspect "$APP" \
+            --format 'Created: {{.Created}} | Started: {{.State.StartedAt}} | Status: {{.State.Status}}'
+
+      - name: App container — revision labels (git SHA, build metadata)
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+          IMAGE_ID=$(docker inspect "$APP" --format '{{.Image}}')
+
+          echo "=== CONTAINER-LEVEL LABELS ==="
+          # Labels baked at build time via LABEL in Dockerfile
+          docker inspect "$APP" --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' \
+            | sort || echo "(no container labels)"
+
+          echo ""
+          echo "=== IMAGE-LEVEL LABELS (same Dockerfile LABEL; shown for completeness) ==="
+          docker image inspect "$IMAGE_ID" \
+            --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' \
+            2>/dev/null | sort || echo "(no image labels)"
+
+          echo ""
+          echo "=== GIT/REVISION LABELS ONLY ==="
+          docker inspect "$APP" --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' \
+            | grep -iE "git|sha|revision|commit|version|build|ref|branch|tag" \
+            || echo "(no git/build revision labels found — image may not embed OCI org.opencontainers.image.* labels)"
+
+      - name: App container — env var keys (values REDACTED)
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+          echo "=== ENV VAR KEYS in $APP (values redacted) ==="
+          docker inspect "$APP" --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' \
+            | sed 's/=.*/=<REDACTED>/' | sort
+
+      - name: App container — mounts and volumes
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+
+          echo "=== MOUNTS (source -> destination [mode]) ==="
+          docker inspect "$APP" \
+            --format '{{range .Mounts}}{{.Type}} | {{.Source}} -> {{.Destination}} [{{.Mode}}]{{"\n"}}{{end}}'
+
+          echo ""
+          echo "=== UPLOADS MOUNT CHECK ==="
+          UPLOADS_SRC=$(docker inspect "$APP" \
+            --format '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}')
+          if [ -z "$UPLOADS_SRC" ]; then
+            echo "WARNING: No bind-mount at /app/uploads in $APP"
+            echo "  Known mount destinations:"
+            docker inspect "$APP" --format '{{range .Mounts}}  {{.Destination}}{{"\n"}}{{end}}'
+          else
+            echo "Uploads mount source: $UPLOADS_SRC"
+            echo "Exists on host: $(test -d "$UPLOADS_SRC" && echo YES || echo NO)"
+            echo "Readable by runner: $(test -r "$UPLOADS_SRC" && echo YES || echo NO)"
+            # File count at top level only — no recursive listing, no filenames
+            echo "Top-level file count: $(find "$UPLOADS_SRC" -maxdepth 1 -type f 2>/dev/null | wc -l)"
+            echo "Top-level dir count:  $(find "$UPLOADS_SRC" -maxdepth 1 -type d 2>/dev/null | wc -l)"
+            echo "Total size (du): $(du -sh "$UPLOADS_SRC" 2>/dev/null | cut -f1 || echo unknown)"
+          fi
+
+      - name: App container — Prisma/source metadata from deployed image
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+          IMAGE_ID=$(docker inspect "$APP" --format '{{.Image}}')
+
+          echo "=== DEPLOYED IMAGE: Prisma schema presence check ==="
+          # Check if /app/prisma/schema.prisma exists in the image filesystem.
+          # Use 'docker run --rm' against the exact image ID (not mutable tag).
+          # This is read-only: no writes, no env injection.
+          # --entrypoint ls: overrides entrypoint; exits immediately after listing.
+          SCHEMA_CHECK=$(docker run --rm \
+            --entrypoint sh \
+            --network none \
+            "$IMAGE_ID" \
+            -c "test -f /app/prisma/schema.prisma && echo FOUND || echo ABSENT" 2>/dev/null \
+            || echo "ERROR_RUNNING")
+          echo "Prisma schema.prisma in image: $SCHEMA_CHECK"
+
+          echo ""
+          echo "=== DEPLOYED IMAGE: migration directories in /app/prisma/migrations ==="
+          MIG_LIST=$(docker run --rm \
+            --entrypoint sh \
+            --network none \
+            "$IMAGE_ID" \
+            -c "ls /app/prisma/migrations/ 2>/dev/null || echo '(not found)'" 2>/dev/null \
+            || echo "ERROR_RUNNING")
+          echo "$MIG_LIST"
+
+          echo ""
+          echo "=== DEPLOYED IMAGE: package.json name+version ==="
+          PKG=$(docker run --rm \
+            --entrypoint sh \
+            --network none \
+            "$IMAGE_ID" \
+            -c "cat /app/package.json 2>/dev/null | grep -E '\"(name|version)\"' | head -4" 2>/dev/null \
+            || echo "ERROR_RUNNING")
+          echo "$PKG"
+
+          echo ""
+          echo "=== DEPLOYED IMAGE: Next.js build ID (deployed build identity) ==="
+          BUILD_ID=$(docker run --rm \
+            --entrypoint sh \
+            --network none \
+            "$IMAGE_ID" \
+            -c "cat /app/.next/BUILD_ID 2>/dev/null || echo '(not found)'" 2>/dev/null \
+            || echo "ERROR_RUNNING")
+          echo "BUILD_ID: $BUILD_ID"
+
+      - name: App container — dual-write activity indicator (env key presence)
+        run: |
+          set -euo pipefail
+          APP="${{ steps.app.outputs.app }}"
+          echo "=== DUAL-WRITE env key presence (value REDACTED) ==="
+          # Checks for env keys indicating dual-write mode without exposing values.
+          # Presence of DUAL_WRITE_* or similar keys indicates Stage B active.
+          docker inspect "$APP" --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' \
+            | sed 's/=.*/=<REDACTED>/' \
+            | grep -iE "dual.?write|rebac|stage|actor|feature|flag" \
+            || echo "(no dual-write/feature-flag env keys found)"
+
+      - name: ClamAV — daemon health, PONG, definitions version
+        run: |
+          set -euo pipefail
+          EXPECTED_CLAM_PREFIX="clamav"
+
+          CLAM=$(docker ps --filter "name=${EXPECTED_CLAM_PREFIX}" --format '{{.Names}}' | head -1)
+          echo "ClamAV container: ${CLAM:-NOT FOUND}"
+          if [ -z "$CLAM" ]; then
+            echo "WARNING: No ClamAV container matching name prefix '${EXPECTED_CLAM_PREFIX}'."
+            exit 0
+          fi
+
+          echo "ClamAV status: $(docker ps --filter "name=^${CLAM}$" --format '{{.Status}}')"
+
+          # IP via network inspect — no fallback to 127.0.0.1
+          CLAM_IP=$(docker inspect "$CLAM" \
+            --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' \
+            | tr ' ' '\n' | grep -v '^$' | head -1)
+          echo "ClamAV IP: ${CLAM_IP:-NOT RESOLVED}"
+
+          if [ -z "$CLAM_IP" ]; then
+            echo "WARNING: Cannot resolve ClamAV container IP — skipping PING test."
+            exit 0
+          fi
+
+          # TCP PING test: clamd protocol (no exec into container)
+          RESPONSE=$(timeout 8 bash -c "echo 'PING' | nc -w 5 $CLAM_IP 3310" 2>/dev/null || true)
+          if echo "$RESPONSE" | grep -qi "PONG"; then
+            echo "ClamAV TCP:3310 HEALTHY — PONG received"
+          else
+            echo "ClamAV TCP:3310 UNHEALTHY — no PONG. Response: '${RESPONSE:-empty}'"
+          fi
+
+          # Definitions version via VERSION command (safe clamd protocol command)
+          VERSION_RESP=$(timeout 8 bash -c "echo 'VERSION' | nc -w 5 $CLAM_IP 3310" 2>/dev/null || true)
+          echo "ClamAV VERSION response: ${VERSION_RESP:-empty}"
+          # Format: ClamAV <version>/<defs_version>/<date>
+          # e.g.: ClamAV 1.3.1/27318/Tue Oct  7 08:14:00 2026
+          if echo "$VERSION_RESP" | grep -qE "^ClamAV [0-9]"; then
+            DEFS_VER=$(echo "$VERSION_RESP" | grep -oE "/[0-9]+/" | tr -d '/')
+            DEFS_DATE=$(echo "$VERSION_RESP" | grep -oE "/[A-Za-z]+ .+$" | sed 's|^/||')
+            echo "ClamAV definitions version number: ${DEFS_VER:-unknown}"
+            echo "ClamAV definitions date: ${DEFS_DATE:-unknown}"
+          fi
+
+      - name: Network topology (qcet-network members)
+        run: |
+          set -euo pipefail
+          echo "=== qcet-network containers ==="
+          docker network inspect qcet-network \
+            --format '{{range $k,$v := .Containers}}{{$v.Name}} ip={{$v.IPv4Address}}{{"\n"}}{{end}}' \
+            2>/dev/null || echo "WARNING: qcet-network not found or inspect failed"
+
+      - name: Production health endpoint
+        run: |
+          echo "=== qcet.dixxie.store/api/health ==="
+          curl -sf --max-time 10 https://qcet.dixxie.store/api/health 2>/dev/null \
+            || echo "Health endpoint unreachable or non-200"
+
+      - name: Evidence summary
+        if: always()
+        run: |
+          {
+            echo "### Host Diagnostics Complete"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo "- Runner: ${{ runner.name }}"
+            echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "- Branch/SHA: ${{ github.sha }}"
+            echo ""
+            echo "Evidence anchors:"
+            echo "  - Image ID (full sha256) in step 'App container — image ID, digest, created timestamp'"
+            echo "  - Revision labels in step 'App container — revision labels'"
+            echo "  - ClamAV defs version in step 'ClamAV — daemon health, PONG, definitions version'"
+            echo "  - Migration list in step 'App container — Prisma/source metadata'"
+          } >> "$GITHUB_STEP_SUMMARY"

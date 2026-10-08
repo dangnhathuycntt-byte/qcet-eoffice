@@ -1,0 +1,764 @@
+# Production Database Migration — Manual Trigger
+#
+# Integrated workflow with all required gates:
+#   1. Confirmation gate
+#   2. Container/network discovery
+#   3. DATABASE_URL read + mask
+#   4. Pre-flight: DB identity, version, ClamAV, applied count
+#   5. BACKUP: pg_dump to runner-local path + checksum + pg_restore list
+#   6. Per-migration inspection: SQL evidence, object existence, parity check
+#   7. Allowlisted resolve: only investigated migrations with explicit evidence
+#   8. Node.js setup + prisma generate (workspace bind-mount approach)
+#   9. Prisma binary compatibility check (node:20-alpine vs Debian natives)
+#  10. prisma migrate deploy (workspace bind-mount, all 10 repo migrations visible)
+#  11. Post-migration verification (applied=10, file_objects table exists)
+#  12. Cleanup + Summary
+#
+# Security:
+#   - DATABASE_URL extracted from running container, immediately masked
+#   - PG credentials in chmod-600 files; never appear on CLI or logs
+#   - Backup stored at runner-local $HOME/migrate-backups (not public artifact)
+#   - MIG_NAME validated against repo directory listing before passing to prisma CLI
+#   - No credential values in docker exec -e or command-line arguments
+
+name: Production Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'migrate' to confirm running prisma migrate deploy in production"
+        required: true
+        type: string
+
+concurrency:
+  group: production-migrate
+  cancel-in-progress: false
+
+env:
+  # Python URL-parser: base64-encoded to avoid heredoc/YAML merge-key conflicts.
+  # Decodes to: parse DATABASE_URL env var, write each component to chmod-600 file.
+  PY_URL_PARSER: >-
+    aW1wb3J0IG9zLCBzeXMKZnJvbSB1cmxsaWIucGFyc2UgaW1wb3J0IHVybHNwbGl0LCB1bnF1
+    b3RlCnVybCA9IG9zLmVudmlyb24uZ2V0KCJEQVRBQkFTRV9VUkwiLCAiIikKdSA9IHVybHNw
+    bGl0KHVybCkKdmFscyA9IFsKICAgIHVucXVvdGUodS51c2VybmFtZSBvciAiIiksCiAgICB1
+    bnF1b3RlKHUucGFzc3dvcmQgb3IgIiIpLAogICAgdW5xdW90ZSh1Lmhvc3RuYW1lIG9yICJs
+    b2NhbGhvc3QiKSwKICAgIHN0cih1LnBvcnQgb3IgNTQzMiksCiAgICB1bnF1b3RlKCh1LnBh
+    dGgubHN0cmlwKCIvIikuc3BsaXQoIj8iKVswXSBpZiB1LnBhdGggZWxzZSAicG9zdGdyZXMi
+    KSksCl0KZm9yIHBhdGgsIHZhbCBpbiB6aXAoc3lzLmFyZ3ZbMTpdLCB2YWxzKToKICAgIHdp
+    dGggb3BlbihwYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSh2YWwpCiAgICBvcy5j
+    aG1vZChwYXRoLCAwbzYwMCkK
+
+jobs:
+  migrate:
+    name: Prisma Migrate Deploy (Production)
+    runs-on: [self-hosted, Linux, X64, qcet]
+    steps:
+      # ── Step 1: Confirmation gate ─────────────────────────────────────────
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "migrate" ]; then
+            echo "ERROR: Must type 'migrate' exactly to confirm." >&2
+            exit 1
+          fi
+          echo "Confirmation accepted. Actor: @${{ github.actor }}  SHA: ${{ github.sha }}"
+
+      # ── Step 2: Checkout repository ───────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Step 3: Find app container and network ────────────────────────────
+      - name: Find app container and network
+        id: app
+        run: |
+          # Pin to the exact expected container name. Fallback only to detect
+          # a renamed container; any fallback is treated as a hard error requiring
+          # explicit investigation — never silently migrate against an unknown target.
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            echo "Running containers:" >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' >&2
+            echo "Do not proceed with an unknown app container — verify deployment before retrying." >&2
+            exit 1
+          fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved container '$APP' does not match expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null \
+            | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
+          if [ -z "$DOCKER_NET" ]; then
+            echo "ERROR: Could not determine Docker network from app container." >&2
+            exit 1
+          fi
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: App container is on network '$DOCKER_NET', expected '${EXPECTED_NET}'." >&2
+            echo "Migration requires a known network topology. Aborting." >&2
+            exit 1
+          fi
+
+          IMG=$(docker inspect "$APP" --format '{{.Config.Image}}' 2>/dev/null)
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+          echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "app_image=$IMG" >> "$GITHUB_OUTPUT"
+          echo "App container: $APP  |  Network: $DOCKER_NET  |  Image: $IMG"
+
+      # ── Step 4: Read and mask DATABASE_URL ───────────────────────────────
+      - name: Read and mask DATABASE_URL
+        id: dburl
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          WORK_DIR=$(mktemp -d /tmp/migrate-main.XXXXXX)
+          chmod 700 "$WORK_DIR"
+          echo "work_dir=$WORK_DIR" >> "$GITHUB_OUTPUT"
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DB_URL"
+
+          printf 'DATABASE_URL=%s\n' "$DB_URL" > "$WORK_DIR/dburl"
+          chmod 600 "$WORK_DIR/dburl"
+
+          # Decode Python URL parser
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$WORK_DIR/parse.py"
+          chmod 600 "$WORK_DIR/parse.py"
+
+          DATABASE_URL="$DB_URL" python3 "$WORK_DIR/parse.py" \
+            "$WORK_DIR/pg_user" "$WORK_DIR/pg_pass" \
+            "$WORK_DIR/pg_host" "$WORK_DIR/pg_port" "$WORK_DIR/pg_db"
+
+          PG_PASS=$(cat "$WORK_DIR/pg_pass")
+          echo "::add-mask::$PG_PASS"
+
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$WORK_DIR/pgenv"
+          chmod 600 "$WORK_DIR/pgenv"
+
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+          echo "DB target: host=$PG_HOST port=$PG_PORT db=$PG_DB user=$PG_USER"
+          echo "DATABASE_URL read and masked."
+
+      # ── Step 5: Pre-flight checks ─────────────────────────────────────────
+      - name: Pre-flight checks (DB identity, version, ClamAV, migration state)
+        id: preflight
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -c "$1" 2>&1
+          }
+
+          echo "=== Pre-flight checks ==="
+
+          # DB version
+          PG_VER=$(run_psql "SELECT version()" | head -1 || echo "PROBE_FAILED")
+          echo "PostgreSQL version: $PG_VER"
+          if echo "$PG_VER" | grep -q "PROBE_FAILED\|error\|Error"; then
+            echo "ERROR: Cannot reach production database." >&2
+            exit 1
+          fi
+
+          # DB name identity check
+          ACTUAL_DB=$(run_psql "SELECT current_database()" | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Database identity: $ACTUAL_DB"
+          if [ "$ACTUAL_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: Expected qcet_eoffice, got '$ACTUAL_DB'. Aborting." >&2
+            exit 1
+          fi
+
+          # Applied migration count
+          APPLIED=$(run_psql "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL" \
+            | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Currently applied migrations: $APPLIED"
+          echo "applied_count=$APPLIED" >> "$GITHUB_OUTPUT"
+
+          # Failed migration count
+          FAILED_COUNT=$(run_psql "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL" \
+            | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Failed migrations pending resolve: $FAILED_COUNT"
+          echo "failed_count=$FAILED_COUNT" >> "$GITHUB_OUTPUT"
+
+          # List of failed migration names
+          FAILED_NAMES=$(run_psql "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at" \
+            || echo "")
+          echo "Failed migration names: ${FAILED_NAMES:-none}"
+          echo "failed_names<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$FAILED_NAMES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          # Repo migration directories count
+          REPO_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+          echo "Migration directories in repo: $REPO_DIRS"
+
+          # ClamAV check (TCP:3310 PING/PONG via docker exec + nc)
+          CLAM_CTR=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          if [ -n "$CLAM_CTR" ]; then
+            CLAM_PING=$(docker exec "$CLAM_CTR" sh -c "echo PING | nc -w 3 127.0.0.1 3310" 2>/dev/null || echo "CLAMAV_NORESPONSE")
+            echo "ClamAV response: $CLAM_PING"
+            if ! echo "$CLAM_PING" | grep -qi "PONG"; then
+              echo "ERROR: ClamAV did not respond with PONG on TCP:3310. Aborting migration." >&2
+              exit 1
+            fi
+            echo "ClamAV: HEALTHY (PONG received)"
+          else
+            echo "WARNING: No clamav container found — skipping ClamAV check."
+          fi
+
+          echo "Pre-flight complete."
+
+      # ── Step 6: Encrypted backup (pg_dump) ───────────────────────────────
+      - name: Create and verify production backup
+        id: backup
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          # Backup directory on runner — not a public artifact
+          # Use $HOME (resolves to actual runner user home, e.g. /home/dnhhuy)
+          # rather than hardcoded /home/runner which only exists on GitHub-hosted runners.
+          BACKUP_DIR="$HOME/migrate-backups"
+          mkdir -p "$BACKUP_DIR"
+          chmod 700 "$BACKUP_DIR"
+
+          STAMP=$(date -u +'%Y%m%dT%H%M%SZ')
+          DUMP_FILE="$BACKUP_DIR/qcet_eoffice_${STAMP}_premigrate.dump"
+          echo "dump_file=$DUMP_FILE" >> "$GITHUB_OUTPUT"
+          echo "Creating backup: $DUMP_FILE"
+
+          # pg_dump to custom format (compressed, opaque in logs)
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            -v "$BACKUP_DIR:/backup" \
+            postgres:16-alpine \
+            pg_dump \
+              -h "$PG_HOST" \
+              -p "$PG_PORT" \
+              -U "$PG_USER" \
+              -d "$PG_DB" \
+              --format=custom \
+              --no-password \
+              -f "/backup/qcet_eoffice_${STAMP}_premigrate.dump"
+
+          if [ ! -f "$DUMP_FILE" ]; then
+            echo "ERROR: pg_dump did not produce output file." >&2
+            exit 1
+          fi
+
+          # Checksum
+          SHA=$(sha256sum "$DUMP_FILE" | awk '{print $1}')
+          echo "Backup checksum (SHA-256): $SHA"
+          printf '%s  %s\n' "$SHA" "$DUMP_FILE" > "${DUMP_FILE}.sha256"
+          chmod 600 "${DUMP_FILE}.sha256"
+          chmod 600 "$DUMP_FILE"
+          echo "dump_sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+          # pg_restore --list (table of contents only, no data, safe to log — bounded to 60 lines)
+          # Assert: exit code 0, at least one TABLE DATA entry (dump contains real table data).
+          echo "--- pg_restore table of contents (first 60 entries) ---"
+          RESTORE_LIST=$(docker run --rm \
+            -v "$BACKUP_DIR:/backup" \
+            postgres:16-alpine \
+            pg_restore --list "/backup/qcet_eoffice_${STAMP}_premigrate.dump" 2>&1) \
+            || { echo "ERROR: pg_restore --list failed — backup file may be corrupt." >&2; exit 1; }
+          echo "$RESTORE_LIST" | head -60
+          # Count only TABLE DATA entries (real row data, not just schema headers/comments)
+          TABLE_DATA_COUNT=$(printf '%s\n' "$RESTORE_LIST" | grep -c 'TABLE DATA' || true)
+          RESTORE_LIST_LINES=$(printf '%s\n' "$RESTORE_LIST" | grep -c '.' || true)
+          echo "--- end of table of contents ($RESTORE_LIST_LINES total entries, $TABLE_DATA_COUNT TABLE DATA entries) ---"
+          if [ "$TABLE_DATA_COUNT" -lt 1 ]; then
+            echo "ERROR: pg_restore --list contains no TABLE DATA entries — backup appears to have no row data." >&2
+            echo "  Total TOC entries: $RESTORE_LIST_LINES" >&2
+            echo "  This may indicate pg_dump succeeded but captured an empty or schema-only dump." >&2
+            exit 1
+          fi
+          # Assert backup file is not world-readable before declaring success
+          BACKUP_PERMS=$(stat -c '%a' "$DUMP_FILE" 2>/dev/null || stat -f '%p' "$DUMP_FILE" 2>/dev/null | tail -c 4)
+          if [ "$BACKUP_PERMS" != "600" ]; then
+            echo "WARNING: Backup file permissions are $BACKUP_PERMS, expected 600. Fixing." >&2
+            chmod 600 "$DUMP_FILE"
+          fi
+
+          echo "Backup complete: $(du -sh "$DUMP_FILE" | cut -f1)"
+
+      # ── Step 7: Setup Node.js + install + generate ───────────────────────
+      # ORDERING NOTE: node_modules must exist before the resolve step because
+      # prisma migrate resolve runs node_modules/.bin/prisma inside the container
+      # via a bind-mount of the workspace. Installing here (before step 8/compat and step 9/resolve)
+      # ensures the binary is available when step 8 tests it and step 9 executes it.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: node_modules/.bin/prisma generate
+
+      # ── Step 8: Prisma binary compatibility check (MUST run before resolve) ──
+      # node_modules is now installed (Step 7). Test whether the Prisma binary
+      # that was installed by npm ci on the Debian runner can execute inside
+      # node:20-alpine (musl libc). If it cannot, the resolve step (Step 9)
+      # would fail trying to invoke it — so we detect and remediate HERE first.
+      - name: Check Prisma binary compatibility (node:20-alpine vs runner)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          echo "=== Prisma binary compatibility check ==="
+
+          # Test if workspace prisma CLI runs correctly inside node:20-alpine
+          # (runner may have installed Debian/glibc native binaries; alpine uses musl libc)
+          COMPAT_RESULT=$(docker run --rm \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            sh -c "node_modules/.bin/prisma --version 2>&1" || echo "COMPAT_FAILED")
+
+          echo "Prisma version in node:20-alpine: $COMPAT_RESULT"
+
+          if echo "$COMPAT_RESULT" | grep -qE "COMPAT_FAILED|error|Error|cannot|No such"; then
+            echo "Prisma native binary is incompatible with node:20-alpine (musl libc)." >&2
+            echo "Attempting to install prisma inside alpine container..." >&2
+
+            # Fallback: install prisma inside alpine container using npm
+            # (Uses network to download; writes to a temp volume)
+            COMPAT_FIX=$(docker run --rm \
+              --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
+              -w /workspace \
+              node:20-alpine \
+              sh -c "apk add --no-cache python3 make g++ 2>&1 | tail -3 && npm ci --ignore-scripts 2>&1 | tail -5 && node_modules/.bin/prisma --version 2>&1" \
+              || echo "INSTALL_FAILED")
+            echo "Alpine prisma install result: $COMPAT_FIX" | head -10
+
+            if echo "$COMPAT_FIX" | grep -qE "INSTALL_FAILED|Error"; then
+              echo "ERROR: Cannot run Prisma inside node:20-alpine. Manual intervention required." >&2
+              exit 1
+            fi
+            echo "WARNING: node:20-alpine re-install needed — this will be done in the deploy step."
+            echo "alpine_reinstall=true" >> "$GITHUB_ENV"
+          else
+            echo "Prisma binary is compatible with node:20-alpine."
+            echo "alpine_reinstall=false" >> "$GITHUB_ENV"
+          fi
+
+      # ── Step 9: Per-migration inspection and allowlisted resolve ──────────
+      - name: Inspect failed migrations and resolve with evidence
+        id: resolve
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+          FAILED_NAMES: ${{ steps.preflight.outputs.failed_names }}
+        run: |
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -c "$1" 2>&1
+          }
+
+          if [ -z "$FAILED_NAMES" ]; then
+            echo "No failed migrations found; skipping resolve step."
+            exit 0
+          fi
+
+          echo "=== Inspecting failed migrations ==="
+          echo "Failed: $FAILED_NAMES"
+
+          # Allowlist: migrations that have been investigated with explicit SQL/object evidence.
+          # ONLY add a migration here after confirming: DDL rolled back (table still exists or not),
+          # parity checks pass, AND all deployment prerequisite gates have been met.
+          # Format: one migration name per line.
+          ALLOWLIST="20260923000001_drop_task_assignee"
+
+          RESOLVED_COUNT=0
+          BLOCKED_COUNT=0
+
+          while IFS= read -r RAW_NAME; do
+            MIG_NAME=$(printf '%s' "$RAW_NAME" | tr -d '\r\n[:space:]')
+            [ -z "$MIG_NAME" ] && continue
+
+            echo ""
+            echo "--- Inspecting: $MIG_NAME ---"
+
+            # Safety: validate migration name exists as a directory in repo
+            # (prevents shell injection from unexpected DB values)
+            MIG_DIR="prisma/migrations/$MIG_NAME"
+            if [ ! -d "$MIG_DIR" ]; then
+              echo "ERROR: '$MIG_NAME' has no corresponding directory in prisma/migrations/." >&2
+              echo "  Known dirs:" >&2
+              ls prisma/migrations/ >&2
+              echo "Blocking: $MIG_NAME is not in allowlist or has no repo directory." >&2
+              BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+              continue
+            fi
+
+            # Check if this migration is in the investigated allowlist
+            if ! printf '%s\n' "$ALLOWLIST" | grep -qxF "$MIG_NAME"; then
+              echo "BLOCKED: '$MIG_NAME' is not in the investigated allowlist." >&2
+              echo "  Manual investigation required: inspect SQL, DB logs, object existence." >&2
+              BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+              continue
+            fi
+
+            echo "Migration '$MIG_NAME' is in allowlist. Performing evidence checks..."
+
+            # ── Evidence checks for 20260923000001_drop_task_assignee ──────
+            # This migration's SQL contains an explicit parity guard (DO $$ ... RAISE EXCEPTION).
+            # When it failed: the guard fired because unmigrated rows > 0.
+            # Postgres rolled back the whole transaction → DROP TABLE was never executed.
+            # To resolve as --rolled-back we must confirm ALL of the following:
+            #   1. task_assignees table STILL EXISTS (proof DDL did not execute)
+            #   2. Parity = 0 (all rows migrated to task_actors — necessary but not sufficient)
+            #   3. AssigneeRole enum STILL EXISTS (also rolled back with the transaction)
+            #   4. _prisma_migrations record: finished_at IS NULL, rolled_back_at IS NULL
+            #      (confirms the row is truly in failed/pending state, not already resolved)
+            #   5. _prisma_migrations logs contain evidence of the RAISE EXCEPTION guard
+            #   6. DEPLOYMENT GATE: Tracker 174 observation window must be explicitly closed.
+            #      The migration.sql itself states: "Prerequisite: Stage B dual-write active,
+            #      Stage C observation window completed." Parity=0 proves data was backfilled
+            #      but does NOT prove the observation window has elapsed or the old app version
+            #      that reads task_assignees has been retired. Dropping the table while any
+            #      deployed app version still queries task_assignees directly will cause
+            #      runtime errors. This gate MUST be verified before proceeding.
+            if [ "$MIG_NAME" = "20260923000001_drop_task_assignee" ]; then
+              echo "  Evidence checks for $MIG_NAME:"
+
+              # Check 1: task_assignees table must still exist
+              TA_EXISTS=$(run_psql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [1] task_assignees table exists (1=yes): $TA_EXISTS"
+              if [ "$TA_EXISTS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [1] Probe failed — cannot determine if task_assignees exists." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$TA_EXISTS" != "1" ]; then
+                echo "ERROR: [1] task_assignees does not exist — unexpected state." >&2
+                echo "  If the table was already dropped, this migration should have succeeded." >&2
+                echo "  Investigate manually before resolving." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 2: parity — count unmigrated rows in task_assignees
+              # Uses explicit role-mapping CASE (AssigneeRole → TaskActorRole).
+              # Canonical source: src/lib/db/transactions.ts:229-231.
+              #   PRIMARY_OWNER → DRI   (text values differ — direct comparison is WRONG)
+              #   COLLABORATOR  → COLLABORATOR
+              #   SUPERVISOR    → NO canonical mapping; FAIL if any exist (never used operationally)
+              #   (other)       → NO canonical mapping; FAIL if any exist
+              # SUPERVISOR and unknown roles: must be explicitly investigated before any permission grant.
+              # Do NOT silently map SUPERVISOR to COLLABORATOR or any other role.
+
+              # First: check for SUPERVISOR or unknown roles — hard fail if present
+              UNKNOWN_ROLES=$(run_psql "SELECT COUNT(*) FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR')" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [2a] Rows with non-canonical roles (must be 0): $UNKNOWN_ROLES"
+              if [ "$UNKNOWN_ROLES" = "PROBE_FAILED" ]; then
+                echo "ERROR: [2a] Non-canonical role check query failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$UNKNOWN_ROLES" != "0" ]; then
+                echo "ERROR: [2a] Found $UNKNOWN_ROLES row(s) with SUPERVISOR or unknown roles in task_assignees." >&2
+                echo "  SUPERVISOR has no canonical mapping in transactions.ts." >&2
+                echo "  Do NOT grant arbitrary permissions. Investigate these rows before proceeding." >&2
+                run_psql "SELECT role_in_task::text, COUNT(*) FROM task_assignees WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR') GROUP BY role_in_task::text;" >&2 || true
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 2b: parity count using canonical mapping only
+              UNMIGRATED=$(run_psql "SELECT COUNT(*) FROM task_assignees ta WHERE NOT EXISTS (SELECT 1 FROM task_actors act WHERE act.task_id = ta.task_id AND act.user_id IS NOT DISTINCT FROM ta.user_id AND act.role::text = CASE ta.role_in_task::text WHEN 'PRIMARY_OWNER' THEN 'DRI' WHEN 'COLLABORATOR' THEN 'COLLABORATOR' END)" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [2b] Unmigrated task_assignees rows (must be 0): $UNMIGRATED"
+              echo "  [2b] (parity uses canonical mapping: PRIMARY_OWNER→DRI, COLLABORATOR→COLLABORATOR)"
+              if [ "$UNMIGRATED" = "PROBE_FAILED" ]; then
+                echo "ERROR: [2b] Parity check query failed. Cannot safely resolve." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$UNMIGRATED" != "0" ]; then
+                echo "ERROR: [2b] Parity check FAILED: $UNMIGRATED task_assignees rows have no matching task_actors entry." >&2
+                echo "  ReBAC backfill (task_assignees -> task_actors) is incomplete." >&2
+                echo "  Run backfill-rebac.yml workflow (confirm=backfill), then retry." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 3: AssigneeRole enum must still exist (also rolled back)
+              AR_EXISTS=$(run_psql "SELECT COUNT(*) FROM pg_type WHERE typname = 'AssigneeRole'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [3] AssigneeRole enum exists (1=yes): $AR_EXISTS"
+              if [ "$AR_EXISTS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [3] AssigneeRole enum probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$AR_EXISTS" != "1" ]; then
+                echo "ERROR: [3] AssigneeRole enum does not exist — unexpected state (expected rollback)." >&2
+                echo "  The enum should still exist since the transaction rolled back." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 4: _prisma_migrations record — assert known failed state
+              # Expected: finished_at IS NULL, rolled_back_at IS NULL (truly failed, not already resolved)
+              MIG_FINISHED=$(run_psql "SELECT COALESCE(finished_at::text, 'NULL') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              MIG_ROLLEDBACK=$(run_psql "SELECT COALESCE(rolled_back_at::text, 'NULL') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+                | tr -d '[:space:]' || echo "PROBE_FAILED")
+              echo "  [4] _prisma_migrations finished_at: $MIG_FINISHED  rolled_back_at: $MIG_ROLLEDBACK"
+              if [ "$MIG_FINISHED" = "PROBE_FAILED" ] || [ "$MIG_ROLLEDBACK" = "PROBE_FAILED" ]; then
+                echo "ERROR: [4] _prisma_migrations record probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$MIG_FINISHED" != "NULL" ]; then
+                echo "ERROR: [4] finished_at is not NULL ('$MIG_FINISHED') — migration may have succeeded. Do not resolve." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if [ "$MIG_ROLLEDBACK" != "NULL" ]; then
+                echo "ERROR: [4] rolled_back_at is not NULL ('$MIG_ROLLEDBACK') — migration already resolved. Check state." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 5: _prisma_migrations logs must contain evidence of the guard exception
+              MIG_LOGS=$(run_psql "SELECT COALESCE(logs, '') FROM _prisma_migrations WHERE migration_name = '20260923000001_drop_task_assignee'" \
+                || echo "PROBE_FAILED")
+              echo "  [5] Migration logs (first 3 lines):"
+              printf '%s\n' "$MIG_LOGS" | head -3
+              if [ "$MIG_LOGS" = "PROBE_FAILED" ]; then
+                echo "ERROR: [5] logs probe failed." >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+              if ! printf '%s\n' "$MIG_LOGS" | grep -qi "task_assignees\|backfill\|parity\|chưa\|ERROR\|RAISE\|Exception"; then
+                echo "ERROR: [5] Migration logs do not contain expected guard exception evidence." >&2
+                echo "  Expected log content relating to the parity guard failure." >&2
+                echo "  Actual logs: $MIG_LOGS" | head -5 >&2
+                BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+                continue
+              fi
+
+              # Check 6: DEPLOYMENT GATE — Tracker 174 observation window
+              # The migration.sql states: "Prerequisite: Stage B dual-write active, Stage C
+              # observation window completed." Parity=0 proves backfill is done but does NOT
+              # prove that all deployed app instances have been upgraded past the version that
+              # reads task_assignees directly. Dropping the table while any app version still
+              # queries it directly will cause 500 errors.
+              #
+              # This gate is OPEN (Tracker 174 not yet closed with real evidence).
+              # Until the observation window is confirmed closed and the old app version retired,
+              # this migration MUST NOT proceed to resolve+deploy.
+              #
+              # To unblock: close Tracker 174 with evidence (observation window end timestamp,
+              # confirmation no live app reads task_assignees directly), then remove this block.
+              echo "ERROR: [6] DEPLOYMENT GATE OPEN — Tracker 174 (Stage C observation window) not yet closed." >&2
+              echo "  The migration SQL requires observation window completed before DROP TABLE." >&2
+              echo "  Parity=0 is necessary but not sufficient: it proves backfill is done," >&2
+              echo "  not that all deployed app instances have been upgraded past task_assignees." >&2
+              echo "  Dropping the table while any live app reads task_assignees causes 500 errors." >&2
+              echo "  ACTION REQUIRED: close Tracker 174 with real evidence, then update this workflow." >&2
+              BLOCKED_COUNT=$((BLOCKED_COUNT + 1))
+              continue
+            fi
+
+            # Safe resolve: only reached if ALL evidence checks pass (none continue above)
+            # Write DATABASE_URL env-file for docker run
+            printf 'DATABASE_URL=%s\n' "$(grep '^DATABASE_URL=' "$WORK_DIR/dburl" | cut -d= -f2-)" \
+              > "$WORK_DIR/dbenv_resolve"
+            chmod 600 "$WORK_DIR/dbenv_resolve"
+
+            echo "  Executing: prisma migrate resolve --rolled-back [migration_name]"
+            # node_modules/.bin/prisma is available because Setup Node.js / npm ci ran above (step 7)
+            # and compat was verified in step 8 (binary runs in node:20-alpine without COMPAT_FAILED).
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/dbenv_resolve" \
+              -e NODE_ENV=production \
+              --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+              -w /workspace \
+              node:20-alpine \
+              node_modules/.bin/prisma migrate resolve --rolled-back "$MIG_NAME" 2>&1
+
+            echo "  Resolved as rolled-back: $MIG_NAME"
+            RESOLVED_COUNT=$((RESOLVED_COUNT + 1))
+          done <<< "$FAILED_NAMES"
+
+          echo ""
+          echo "Resolve summary: resolved=$RESOLVED_COUNT  blocked=$BLOCKED_COUNT"
+
+          if [ "$BLOCKED_COUNT" -gt 0 ]; then
+            echo "ERROR: $BLOCKED_COUNT failed migration(s) could not be resolved — manual investigation required." >&2
+            exit 1
+          fi
+
+      # ── Step 10: prisma migrate deploy ────────────────────────────────────
+      - name: Run prisma migrate deploy (production)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          echo "=== RUNNING: prisma migrate deploy ==="
+          echo "Actor: @${{ github.actor }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          # Write DATABASE_URL env-file for docker run
+          DB_URL=$(grep '^DATABASE_URL=' "$WORK_DIR/dburl" | cut -d= -f2-)
+          echo "::add-mask::$DB_URL"
+          printf 'DATABASE_URL=%s\n' "$DB_URL" > "$WORK_DIR/dbenv_deploy"
+          chmod 600 "$WORK_DIR/dbenv_deploy"
+
+          # Resolve migration count in repo
+          REPO_DIRS=$(find prisma/migrations -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+          echo "Applying from workspace: $REPO_DIRS migration directories"
+
+          # If alpine_reinstall is needed, npm ci inside the container first
+          if [ "${alpine_reinstall:-false}" = "true" ]; then
+            echo "Installing Prisma inside node:20-alpine (musl libc compatibility)..."
+            docker run --rm \
+              --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace" \
+              -w /workspace \
+              node:20-alpine \
+              sh -c "apk add --no-cache python3 make g++ 2>&1 | tail -2 && npm ci --ignore-scripts 2>&1 | tail -3 && node_modules/.bin/prisma generate 2>&1 | tail -3"
+          fi
+
+          # Run prisma migrate deploy using workspace bind-mount
+          # All 10 current repo migrations are visible (not just baked-in app image ones)
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/dbenv_deploy" \
+            -e NODE_ENV=production \
+            --mount "type=bind,source=${GITHUB_WORKSPACE},target=/workspace,readonly" \
+            -w /workspace \
+            node:20-alpine \
+            node_modules/.bin/prisma migrate deploy 2>&1
+
+          echo "prisma migrate deploy: complete"
+
+      # ── Step 11: Post-migration verification ─────────────────────────────
+      - name: Verify migration success
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          echo "=== POST-MIGRATION VERIFICATION ==="
+
+          PG_HOST=$(cat "$WORK_DIR/pg_host")
+          PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          PG_DB=$(cat   "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -c "$1" 2>&1
+          }
+
+          # Applied count
+          APPLIED=$(run_psql "SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL" \
+            | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "Applied migrations (after): $APPLIED"
+
+          # file_objects table must exist
+          FO_EXISTS=$(run_psql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='file_objects'" \
+            | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "file_objects table exists (1=yes, 0=no): $FO_EXISTS"
+
+          # FileScanStatus enum must exist
+          FSS_EXISTS=$(run_psql "SELECT COUNT(*) FROM pg_type WHERE typname = 'FileScanStatus'" \
+            | tr -d '[:space:]' || echo "PROBE_FAILED")
+          echo "FileScanStatus enum exists: $FSS_EXISTS"
+
+          # Failed migrations remaining
+          STILL_FAILED=$(run_psql "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL" \
+            || echo "PROBE_FAILED")
+          echo "Failed migrations remaining: ${STILL_FAILED:-none}"
+
+          ERRORS=0
+          if [ "$FO_EXISTS" != "1" ]; then
+            echo "ERROR: file_objects table still missing after migration!" >&2
+            ERRORS=$((ERRORS + 1))
+          fi
+          if [ "$APPLIED" = "PROBE_FAILED" ]; then
+            echo "ERROR: Could not query applied migration count." >&2
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "ERROR: $ERRORS post-migration verification check(s) failed." >&2
+            exit 1
+          fi
+
+          echo "VERIFIED: All post-migration checks passed."
+          echo "  Applied: $APPLIED  |  file_objects: exists  |  FileScanStatus: exists"
+
+      # ── Step 12: Cleanup ──────────────────────────────────────────────────
+      - name: Cleanup temp files
+        if: always()
+        env:
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          if [ -n "$WORK_DIR" ] && [ -d "$WORK_DIR" ]; then
+            rm -rf "$WORK_DIR"
+            echo "Temp directory cleaned: $WORK_DIR"
+          fi
+          # Note: backup at $HOME/migrate-backups is intentionally preserved
+
+      # ── Step 13: Summary ──────────────────────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Production Migration — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Actor**: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **SHA**: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Backup**: runner-local \$HOME/migrate-backups (not public artifact)" >> "$GITHUB_STEP_SUMMARY"

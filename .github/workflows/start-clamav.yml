@@ -1,0 +1,210 @@
+# Start ClamAV service on production runner via Compose
+#
+# Uses the existing docker-compose.yml on the runner host.
+# Preserves all named volumes and existing containers.
+# No blind config overwrites, no volume deletion.
+#
+# After starting, verifies:
+#   1. Container is running and healthy (or starting)
+#   2. ClamAV responds PONG on TCP:3310
+#   3. Virus definitions freshness (last updated timestamp)
+#
+# Usage:
+#   gh workflow run start-clamav.yml
+
+name: Start ClamAV (Production)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  start-clamav:
+    name: Start ClamAV via Compose
+    runs-on: [self-hosted, Linux, X64, qcet]
+    steps:
+      - name: Detect Compose working directory
+        id: compose_dir
+        run: |
+          # Find the compose project directory from the running app container.
+          # The uploads bind-mount source gives us the project root.
+          APP=$(docker ps --filter "name=qcet-app" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            APP=$(docker ps --filter "name=qcet" --format '{{.Names}}' | grep -v "db\|clamav\|cloudflared\|tunnel" | head -1)
+          fi
+          if [ -z "$APP" ]; then
+            echo "ERROR: No qcet app container running; cannot detect compose directory." >&2
+            exit 1
+          fi
+
+          # Get compose working directory from container label
+          COMPOSE_DIR=$(docker inspect "$APP" --format \
+            '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null)
+
+          if [ -z "$COMPOSE_DIR" ]; then
+            # Fallback: derive from uploads mount source parent
+            UPLOADS_SRC=$(docker inspect "$APP" --format \
+              '{{range .Mounts}}{{if eq .Destination "/app/uploads"}}{{.Source}}{{end}}{{end}}' 2>/dev/null)
+            if [ -n "$UPLOADS_SRC" ]; then
+              COMPOSE_DIR=$(dirname "$UPLOADS_SRC")
+            fi
+          fi
+
+          if [ -z "$COMPOSE_DIR" ] || [ ! -f "$COMPOSE_DIR/docker-compose.yml" ]; then
+            echo "ERROR: Could not locate docker-compose.yml." >&2
+            echo "       Detected dir: '${COMPOSE_DIR:-<empty>}'" >&2
+            exit 1
+          fi
+
+          echo "Detected compose directory: $COMPOSE_DIR"
+          echo "compose_dir=$COMPOSE_DIR" >> "$GITHUB_OUTPUT"
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Check ClamAV service definition in compose file
+        env:
+          COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
+        run: |
+          if ! grep -q "clamav" "$COMPOSE_DIR/docker-compose.yml"; then
+            echo "ERROR: No 'clamav' service found in $COMPOSE_DIR/docker-compose.yml." >&2
+            exit 1
+          fi
+          echo "ClamAV service definition found in compose file."
+          # Show just the clamav section (grep context, no env interpolation needed)
+          echo "=== ClamAV service config (raw) ==="
+          awk '/^  clamav:/,/^  [a-z]/' "$COMPOSE_DIR/docker-compose.yml" | head -20
+
+      - name: Check existing ClamAV state
+        run: |
+          CLAM=$(docker ps -a --filter "name=clamav" --format '{{.Names}}\t{{.Status}}' | head -3)
+          if [ -n "$CLAM" ]; then
+            echo "Existing ClamAV containers: $CLAM"
+          else
+            echo "No existing ClamAV containers found — will create fresh."
+          fi
+
+      - name: Start ClamAV via Compose (preserve volumes, no force-recreate)
+        env:
+          COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
+        run: |
+          echo "Starting ClamAV service..."
+          # Docker Compose interpolates ALL service variables when parsing the compose
+          # file, even for services not being started. Supply placeholders for required
+          # variables belonging to the app/db services so the parser does not fail.
+          # The clamav service itself uses none of these variables.
+          TEMP_ENV=$(mktemp /tmp/clamav-compose-env.XXXXX)
+          # Start with existing .env if present (inherits real non-secret values)
+          if [ -f "$COMPOSE_DIR/.env" ]; then
+            cp "$COMPOSE_DIR/.env" "$TEMP_ENV"
+          fi
+          # Append placeholder values for any required vars not in .env
+          printf 'APP_DATABASE_URL=placeholder://localhost/placeholder\n' >> "$TEMP_ENV"
+          printf 'POSTGRES_PASSWORD=placeholder\n' >> "$TEMP_ENV"
+          printf 'POSTGRES_DB=placeholder\n' >> "$TEMP_ENV"
+          printf 'UPLOADS_HOST_PATH=/tmp/placeholder\n' >> "$TEMP_ENV"
+          printf 'NEXTAUTH_SECRET=placeholder\n' >> "$TEMP_ENV"
+          printf 'NEXTAUTH_URL=http://localhost:3000\n' >> "$TEMP_ENV"
+          printf 'TUNNEL_TOKEN=placeholder\n' >> "$TEMP_ENV"
+          docker compose -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$TEMP_ENV" up -d --no-recreate clamav
+          EXIT=$?
+          rm -f "$TEMP_ENV"
+          if [ $EXIT -ne 0 ]; then
+            echo "ERROR: docker compose up clamav failed with exit $EXIT" >&2
+            exit $EXIT
+          fi
+          echo "ClamAV start command completed."
+
+      - name: Wait for ClamAV to become ready (up to 300s)
+        env:
+          COMPOSE_DIR: ${{ steps.compose_dir.outputs.compose_dir }}
+        run: |
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          if [ -z "$CLAM" ]; then
+            echo "ERROR: ClamAV container not running after compose up." >&2
+            exit 1
+          fi
+          echo "ClamAV container: $CLAM"
+          echo "Waiting for PONG on TCP:3310 (max 300s — first-run definition download)..."
+
+          CLAM_IP=$(docker inspect "$CLAM" --format \
+            '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -1)
+          echo "ClamAV IP: ${CLAM_IP:-<detecting...>}"
+
+          for i in $(seq 1 60); do
+            # Try multiple methods to send PING and get PONG:
+            # 1. docker exec (most reliable — avoids nc availability issues)
+            # 2. nc with -q flag (GNU netcat)
+            # 3. nc without -q (BSD netcat)
+            RESPONSE=""
+            if command -v docker >/dev/null 2>&1; then
+              RESPONSE=$(docker exec "$CLAM" sh -c "echo PING | nc -w 3 127.0.0.1 3310" 2>/dev/null || \
+                         docker exec "$CLAM" sh -c "printf 'nZPING\0' | nc -w 3 -q1 127.0.0.1 3310" 2>/dev/null || true)
+            fi
+            # Fallback: try from runner host
+            if [ -z "$RESPONSE" ] && [ -n "$CLAM_IP" ]; then
+              RESPONSE=$(echo 'PING' | nc -w 3 "$CLAM_IP" 3310 2>/dev/null || \
+                         echo 'PING' | timeout 4 ncat "$CLAM_IP" 3310 2>/dev/null || true)
+            fi
+
+            if echo "$RESPONSE" | grep -qi "PONG"; then
+              echo "ClamAV TCP:3310 → PONG received (attempt $i)"
+              break
+            fi
+
+            if [ $i -eq 60 ]; then
+              echo "ERROR: ClamAV did not respond with PONG after 300s." >&2
+              echo "Last response: ${RESPONSE:-<empty>}" >&2
+              docker logs --tail 40 "$CLAM" >&2 || true
+              exit 1
+            fi
+            echo "Attempt $i/60: no PONG yet. Waiting 5s..."
+            sleep 5
+          done
+
+      - name: Inspect ClamAV virus definitions
+        run: |
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          # Check freshclam/signature version inside container
+          echo "=== ClamAV version and signature info ==="
+          docker exec "$CLAM" clamscan --version 2>/dev/null || \
+            docker exec "$CLAM" sh -c "clamscan --version" 2>/dev/null || \
+            echo "clamscan not accessible directly"
+
+          echo "=== Signature files ==="
+          docker exec "$CLAM" ls -la /var/lib/clamav/ 2>/dev/null || \
+            echo "Could not list signature directory"
+
+      - name: Verify app can reach ClamAV on internal network
+        env:
+          APP_CONTAINER: ${{ steps.compose_dir.outputs.app_container }}
+        run: |
+          # Check ClamAV is on the qcet-internal network that app uses
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          CLAM_NETS=$(docker inspect "$CLAM" --format \
+            '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null)
+          APP_NETS=$(docker inspect "$APP_CONTAINER" --format \
+            '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null)
+          echo "ClamAV networks: $CLAM_NETS"
+          echo "App networks:    $APP_NETS"
+
+          # Try reaching ClamAV from app container via hostname 'clamav'
+          RESPONSE=$(docker exec "$APP_CONTAINER" sh -c \
+            "echo 'PING' | nc -w 3 clamav 3310" 2>/dev/null || \
+            docker exec "$APP_CONTAINER" sh -c \
+            "printf 'PING\n' > /dev/tcp/clamav/3310 && cat /dev/tcp/clamav/3310" 2>/dev/null || \
+            echo "UNREACHABLE")
+
+          if echo "$RESPONSE" | grep -qi "PONG"; then
+            echo "App → ClamAV (hostname:clamav port:3310): REACHABLE (PONG)"
+          else
+            echo "WARNING: App container could not reach ClamAV via hostname 'clamav'."
+            echo "         Response: ${RESPONSE:-<empty>}"
+            echo "         Check CLAMAV_HOST env and shared network membership."
+          fi
+
+      - name: Summary
+        run: |
+          CLAM=$(docker ps --filter "name=clamav" --format '{{.Names}}' | head -1)
+          echo "### ClamAV Start Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Container: $CLAM" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run ID: ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: Running and responding to PING" >> "$GITHUB_STEP_SUMMARY"

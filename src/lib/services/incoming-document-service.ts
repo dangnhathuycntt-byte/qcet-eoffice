@@ -18,7 +18,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma, Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { Document, DocumentIncomingWorkflow, UnitWorkAssignment } from "@prisma/client";
 import {
   IncomingDocumentStatus,
   DocumentType,
@@ -819,7 +820,8 @@ export async function assignUnitWork(
 
   const deadline = input.deadline ? new Date(input.deadline) : doc.incomingWorkflow.deadline;
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(
+    async (tx) => {
     let createdTaskId: string | null = null;
 
     if (input.createTask && doc.linkedTaskId) {
@@ -829,12 +831,60 @@ export async function assignUnitWork(
       );
     }
 
+    // Lock the workflow row with SELECT FOR UPDATE.  Under READ COMMITTED,
+    // SELECT FOR UPDATE sees the latest committed row — so after acquiring the
+    // lock we get the true current status rather than the stale pre-transaction
+    // snapshot stored in `currentStatus`.  If a concurrent winner already
+    // transitioned the workflow, `lockedStatus` will differ from `currentStatus`
+    // and we reject immediately (see check below).
+    const locked = await tx.$queryRaw<{ id: string; status: string }[]>`
+      SELECT id, status FROM document_incoming_workflows
+      WHERE id = ${doc.incomingWorkflow!.id}
+      FOR UPDATE
+    `;
+    if (!locked.length) {
+      throw new ConflictError(
+        "Không tìm thấy quy trình văn bản để khoá.",
+        "DOCUMENT_WORKFLOW_NOT_FOUND"
+      );
+    }
+
+    // Use the committed (locked) status as the authoritative current status.
+    // This is the root fix for the concurrent-assignment race: the pre-tx read
+    // of `doc` may be stale when two requests race.  After acquiring the
+    // exclusive lock, `lockedStatus` reflects the true committed state.  If
+    // a concurrent transaction already transitioned the workflow, `lockedStatus`
+    // will differ from `currentStatus` and we reject immediately rather than
+    // relying solely on the CAS count check below.
+    const lockedStatus = locked[0].status as IncomingDocumentStatus;
+    if (lockedStatus !== currentStatus) {
+      throw new ConflictError(
+        "Quy trình văn bản đã được giao việc bởi yêu cầu khác. Hãy tải lại để xem trạng thái mới.",
+        "DOCUMENT_WORKFLOW_CONFLICT"
+      );
+    }
+
+    // Also re-check linkedTaskId inside the transaction using the locked document
+    // row so that a concurrent winner's Task creation is visible here.
+    if (input.createTask) {
+      const lockedDoc = await tx.document.findUnique({
+        where: { id: input.documentId },
+        select: { linkedTaskId: true },
+      });
+      if (lockedDoc?.linkedTaskId) {
+        throw new ConflictError(
+          "Văn bản này đã được liên kết với một nhiệm vụ.",
+          "DOCUMENT_TASK_ALREADY_LINKED"
+        );
+      }
+    }
+
     // Compare-and-swap the workflow before creating any related records. The
     // transaction rolls back the claim together with Task/assignment/audit if a
     // later write fails, while a concurrent request can no longer claim the same
     // transition and create a second Task.
     const claim = await tx.documentIncomingWorkflow.updateMany({
-      where: { id: doc.incomingWorkflow!.id, status: currentStatus },
+      where: { id: doc.incomingWorkflow!.id, status: lockedStatus },
       data: { status: targetStatus },
     });
     if (claim.count !== 1) {
@@ -978,7 +1028,27 @@ export async function assignUnitWork(
       assignment: assignmentWithCompat,
       workflow: workflowWithCompat,
     };
-  });
+  },
+  {
+    // READ COMMITTED isolation is required here, not Serializable.
+    //
+    // Under Postgres SSI (Serializable Snapshot Isolation), each transaction
+    // takes a snapshot at START and does not see commits from concurrent
+    // transactions within its own snapshot — even after acquiring a FOR UPDATE
+    // lock.  This means:
+    //   Tx A and Tx B both start → both snapshot status=DIRECTED
+    //   Tx A acquires FOR UPDATE lock, updates → commits
+    //   Tx B unblocks from FOR UPDATE but still sees status=DIRECTED in its
+    //     snapshot → updateMany WHERE status=DIRECTED → count=1 → both succeed
+    //
+    // Under READ COMMITTED (Postgres default), each *statement* re-evaluates
+    // with the latest committed data.  When Tx B unblocks after Tx A commits,
+    // Tx B's updateMany sees status=IN_PROGRESS → count=0 → ConflictError.
+    //
+    // Therefore: use READ COMMITTED (the Postgres default).
+    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+  }
+);
 }
 
 /**
