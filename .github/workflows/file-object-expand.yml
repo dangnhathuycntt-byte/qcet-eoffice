@@ -1042,12 +1042,20 @@ jobs:
           # Authoritative Prisma reconciliation path: local node_modules/.bin/prisma migrate resolve --applied
           # Must NOT use docker exec <app-container> npx prisma — that downloads arbitrary Prisma version from npm.
           # Must use the checked-out local CLI (Prisma 6.19.3 as pinned in package-lock.json) with DATABASE_URL.
+          # Run via Docker on qcet-network so that 'qcet-db:5432' hostname is reachable.
+          # Use node:20-bookworm-slim (glibc/Debian) — compatible with Ubuntu runner Prisma binaries.
+          # The local workspace is mounted read-only at /app so node_modules/.bin/prisma is available.
           # prisma migrate resolve --applied sets applied_steps_count=0 (not 1 — confirmed on Prisma 6.19.3).
           echo ""
-          echo "Running: node_modules/.bin/prisma migrate resolve --applied ${MIG_NAME} (local CLI, lockfile-pinned 6.19.3)..."
+          echo "Running: node_modules/.bin/prisma migrate resolve --applied ${MIG_NAME} (local CLI, lockfile-pinned 6.19.3, via Docker on qcet-network)..."
           RESOLVE_EXIT=0
-          DATABASE_URL="postgresql://$(cat $WORK_DIR/pg_user):$(cat $WORK_DIR/pg_pass)@$(cat $WORK_DIR/pg_host):$(cat $WORK_DIR/pg_port)/$(cat $WORK_DIR/pg_db)?schema=public" \
-            node_modules/.bin/prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            -v "${GITHUB_WORKSPACE}:/app:ro" \
+            -w /app \
+            -e DATABASE_URL="postgresql://$(cat $WORK_DIR/pg_user):$(cat $WORK_DIR/pg_pass)@$(cat $WORK_DIR/pg_host):$(cat $WORK_DIR/pg_port)/$(cat $WORK_DIR/pg_db)?schema=public" \
+            node:20-bookworm-slim \
+            node node_modules/.bin/prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
           if [ "$RESOLVE_EXIT" -ne 0 ]; then
             echo "WARNING: prisma migrate resolve --applied exited $RESOLVE_EXIT." >&2
             echo "  This may indicate the migration is already marked applied (Prisma returns 1 = P3008 already resolved)." >&2
