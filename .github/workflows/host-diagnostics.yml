@@ -113,10 +113,8 @@ jobs:
 
           echo ""
           echo "=== CONTAINER CREATED / STARTED timestamps ==="
-          docker inspect "$APP" --format \
-            'Created: {{.Created}}
-Started: {{.State.StartedAt}}
-Status:  {{.State.Status}}'
+          docker inspect "$APP" \
+            --format 'Created: {{.Created}} | Started: {{.State.StartedAt}} | Status: {{.State.Status}}'
 
       - name: App container — revision labels (git SHA, build metadata)
         run: |
