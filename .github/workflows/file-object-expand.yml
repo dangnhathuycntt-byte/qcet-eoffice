@@ -379,7 +379,7 @@ jobs:
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
             pg_restore --list < "$BACKUP_FILE" 2>&1)
-          echo "$RESTORE_LIST" | head -40
+          echo "$RESTORE_LIST" | head -40 || true  # head may close pipe early (SIGPIPE) — || true prevents set -e exit
 
           TABLE_COUNT=$(echo "$RESTORE_LIST" | grep -c '^[0-9].*TABLE DATA\|^[0-9].*TABLE ' || true)
           echo "Table entries in dump TOC: $TABLE_COUNT"
