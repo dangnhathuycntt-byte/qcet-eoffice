@@ -471,11 +471,11 @@ jobs:
             docker run --rm --network bridge \
               --env-file "$WORK_DIR/pgenv_rehearsal" \
               postgres:16-alpine \
-              psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_eoffice \
+              psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
                 -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
           }
 
-          # Restore production backup into ephemeral container as qcet_eoffice
+          # Restore production backup into ephemeral container as qcet_test
           echo "=== Restoring production backup into ephemeral container ==="
           # First create the database
           docker run --rm --network bridge \
@@ -483,7 +483,7 @@ jobs:
             postgres:16-alpine \
             psql -h "$EPHEM_IP" -p 5432 -U postgres -d postgres \
               -t -A -X -v ON_ERROR_STOP=1 \
-              -c "CREATE DATABASE qcet_eoffice OWNER postgres;" 2>&1
+              -c "CREATE DATABASE qcet_test OWNER postgres;" 2>&1
 
           # Restore backup by piping dump file via stdin to pg_restore.
           # Using docker run with --network bridge + -i for stdin (no volume mount needed).
@@ -494,11 +494,12 @@ jobs:
           docker run --rm -i --network bridge \
             --env-file "$WORK_DIR/pgenv_rehearsal" \
             postgres:16-alpine \
-            pg_restore -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_eoffice \
+            pg_restore -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
               --no-owner --no-acl --exit-on-error \
             < "$REHEARSAL_DUMP" 2>&1 || RESTORE_EXIT=$?
           if [ "$RESTORE_EXIT" -ne 0 ]; then
-            echo "WARNING: pg_restore exited $RESTORE_EXIT — checking if tables exist..."
+            echo "ERROR: pg_restore exited $RESTORE_EXIT — backup snapshot integrity failed. Aborting rehearsal." >&2
+            exit 1
           fi
 
           # Verify restore produced a usable schema (must have users table at minimum)
@@ -532,7 +533,7 @@ jobs:
             docker run --rm -i --network bridge \
               --env-file "$WORK_DIR/pgenv_rehearsal" \
               postgres:16-alpine \
-              psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_eoffice \
+              psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
                 -X -v ON_ERROR_STOP=1 -f - \
               < "$WORK_DIR/rehearsal_wrapped.sql" 2>&1 || REHEARSAL_EXIT=$?
 
@@ -639,12 +640,22 @@ jobs:
           chmod 600 "$WORK_DIR/rehearsal_insert.sql"
 
           # Run INSERT via docker run -i --network bridge --env-file (stdin pipe — no volume mount needed)
+          # psql -t -A sends RETURNING row data to stdout; DML command tags (INSERT 0 1) to stderr.
+          # Redirect stderr to file for diagnostics on failure; capture only stdout data rows.
+          INSERT_STDERR_FILE="$WORK_DIR/insert_stderr.txt"
+          INSERT_EXIT=0
           INSERT_OUTPUT=$(docker run --rm -i --network bridge \
             --env-file "$WORK_DIR/pgenv_rehearsal" \
             postgres:16-alpine \
-            psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_eoffice \
+            psql -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_test \
               -t -A -X -v ON_ERROR_STOP=1 -f - \
-            < "$WORK_DIR/rehearsal_insert.sql" 2>&1)
+            < "$WORK_DIR/rehearsal_insert.sql" 2>"$INSERT_STDERR_FILE") || INSERT_EXIT=$?
+          if [ "$INSERT_EXIT" -ne 0 ]; then
+            echo "ERROR: psql INSERT exited $INSERT_EXIT." >&2
+            echo "--- psql stderr ---" >&2
+            cat "$INSERT_STDERR_FILE" >&2
+            exit 1
+          fi
           echo "INSERT RETURNING output: '$INSERT_OUTPUT'"
 
           # Count non-empty lines returned by INSERT RETURNING id.
@@ -853,25 +864,17 @@ jobs:
           if [ "$PM_STATUS" = "APPLIED" ]; then
             echo "Prisma row already APPLIED — no insertion needed."
           elif [ "$PM_STATUS" = "ABSENT" ]; then
-            echo "Inserting _prisma_migrations row (WHERE NOT EXISTS guard — no ON CONFLICT)..."
-            # INSERT with WHERE NOT EXISTS guard: safe if row was added concurrently
-            # No ON CONFLICT because migration_name has no unique constraint (only id is unique)
-            INSERT_RESULT=$(run_psql_ta "INSERT INTO _prisma_migrations (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count) SELECT gen_random_uuid()::text, '${CHECKSUM}', NOW(), '${MIG_NAME}', NULL, NULL, NOW(), 1 WHERE NOT EXISTS (SELECT 1 FROM _prisma_migrations WHERE migration_name='${MIG_NAME}') RETURNING migration_name;" | tr -d '[:space:]')
-            echo "INSERT result: '$INSERT_RESULT'"
-            if [ -z "$INSERT_RESULT" ]; then
-              echo "NOTE: INSERT returned no rows — row may have been inserted concurrently. Re-checking..."
-              PM_RECHECK=$(run_psql_ta "SELECT CASE WHEN finished_at IS NOT NULL THEN 'APPLIED' ELSE 'OTHER' END FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
-              echo "  Re-check status: $PM_RECHECK"
-              [ "$PM_RECHECK" = "APPLIED" ] || { echo "ERROR: Could not confirm _prisma_migrations row written." >&2; exit 1; }
-            fi
+            echo "Prisma row ABSENT after DDL apply — proceeding to prisma migrate resolve --applied."
+            echo "NOTE: Manual INSERT into _prisma_migrations is prohibited (no unique constraint on migration_name)."
+            echo "      Using prisma migrate resolve --applied CLI only."
           else
-            echo "WARNING: Prisma row is FAILED/PENDING — not overwriting (no ON CONFLICT update)."
-            echo "  Use 'prisma migrate resolve --applied ${MIG_NAME}' to resolve the failed row."
-            echo "  Proceeding to prisma migrate resolve --applied..."
+            echo "Prisma row is FAILED/PENDING — not overwriting existing row (immutable failed history preserved)."
+            echo "  Proceeding to prisma migrate resolve --applied to reconcile..."
           fi
 
-          # Use prisma migrate resolve --applied via app container CLI
-          # This is the authoritative Prisma-managed path for reconciliation
+          # Authoritative Prisma reconciliation path: prisma migrate resolve --applied
+          # This is the only safe path; it correctly sets checksum, finished_at, applied_steps_count.
+          # No manual INSERT — migration_name has no unique constraint and manual rows may clash.
           echo ""
           echo "Running: prisma migrate resolve --applied ${MIG_NAME} via app container..."
           RESOLVE_EXIT=0
@@ -879,19 +882,58 @@ jobs:
             npx prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
           if [ "$RESOLVE_EXIT" -ne 0 ]; then
             echo "WARNING: prisma migrate resolve --applied exited $RESOLVE_EXIT." >&2
-            echo "  This may indicate the migration is already marked applied (exit 1 = already resolved)." >&2
-            echo "  Verifying final _prisma_migrations state..."
+            echo "  This may indicate the migration is already marked applied (Prisma returns 1 = already resolved)." >&2
+            echo "  Verifying final _prisma_migrations state..." >&2
           fi
 
-          # Verify final state
-          FINAL_STATUS=$(run_psql_ta "SELECT CASE WHEN finished_at IS NOT NULL THEN 'APPLIED' WHEN started_at IS NOT NULL THEN 'FAILED/PENDING' ELSE 'ABSENT' END FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
-          FINAL_STATUS="${FINAL_STATUS:-ABSENT}"
-          echo "Final _prisma_migrations status: $FINAL_STATUS"
-          if [ "$FINAL_STATUS" != "APPLIED" ]; then
-            echo "ERROR: _prisma_migrations row not APPLIED after reconciliation." >&2
+          # Full Prisma migration history validation:
+          # Must confirm checksum, applied_steps_count, rolled_back_at=NULL, finished_at IS NOT NULL
+          # (not just checking finished_at = APPLIED — full invariants required)
+          FINAL_ROW=$(run_psql_ta "SELECT checksum, applied_steps_count, rolled_back_at IS NOT NULL AS rolled_back, finished_at IS NOT NULL AS finished FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+          if [ -z "$FINAL_ROW" ]; then
+            echo "ERROR: _prisma_migrations row absent after resolve — reconciliation failed." >&2
             exit 1
           fi
-          echo "Prisma reconciliation: VERIFIED APPLIED"
+          echo "Final _prisma_migrations row (checksum|steps|rolled_back|finished): $FINAL_ROW"
+
+          # Parse fields: psql -A outputs |-separated fields in -t mode when multiple columns
+          # Use psql per-field queries for precision
+          FINAL_CHECKSUM=$(run_psql_ta "SELECT checksum FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+          FINAL_STEPS=$(run_psql_ta "SELECT applied_steps_count FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+          FINAL_ROLLED=$(run_psql_ta "SELECT rolled_back_at IS NOT NULL FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+          FINAL_FINISHED=$(run_psql_ta "SELECT finished_at IS NOT NULL FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+          FINAL_COUNT=$(run_psql_ta "SELECT COUNT(*) FROM _prisma_migrations WHERE migration_name='${MIG_NAME}';" | tr -d '[:space:]')
+
+          echo "  checksum:           $FINAL_CHECKSUM"
+          echo "  applied_steps_count:$FINAL_STEPS"
+          echo "  rolled_back_at NULL:$([ "$FINAL_ROLLED" = "f" ] && echo "true" || echo "false (ERROR)")"
+          echo "  finished_at set:    $FINAL_FINISHED"
+          echo "  row count:          $FINAL_COUNT"
+
+          # Assert all invariants
+          PRISMA_FAIL=0
+          [ "$FINAL_CHECKSUM" = "$CHECKSUM" ] || {
+            echo "ERROR: checksum mismatch. Got='$FINAL_CHECKSUM' expected='$CHECKSUM'" >&2
+            PRISMA_FAIL=1
+          }
+          [ "$FINAL_STEPS" = "1" ] || {
+            echo "ERROR: applied_steps_count expected 1, got '$FINAL_STEPS'" >&2
+            PRISMA_FAIL=1
+          }
+          [ "$FINAL_ROLLED" = "f" ] || {
+            echo "ERROR: rolled_back_at is NOT NULL — migration appears rolled back." >&2
+            PRISMA_FAIL=1
+          }
+          [ "$FINAL_FINISHED" = "t" ] || {
+            echo "ERROR: finished_at is NULL — migration not marked finished." >&2
+            PRISMA_FAIL=1
+          }
+          [ "$FINAL_COUNT" = "1" ] || {
+            echo "ERROR: expected exactly 1 _prisma_migrations row for '${MIG_NAME}', got $FINAL_COUNT" >&2
+            PRISMA_FAIL=1
+          }
+          [ "$PRISMA_FAIL" -eq 0 ] || { echo "ERROR: _prisma_migrations invariants failed." >&2; exit 1; }
+          echo "Prisma reconciliation: VERIFIED APPLIED (checksum, steps, rolled_back_at, finished_at, cardinality all pass)"
 
           # Write audited ops ledger
           LEDGER_DIR="/home/dnhhuy/migrate-backups"
@@ -909,7 +951,7 @@ jobs:
             echo "db_host:       $(cat $WORK_DIR/pg_host)"
             echo "db_name:       $(cat $WORK_DIR/pg_db)"
             echo "db_user:       $(cat $WORK_DIR/pg_user)"
-            echo "prisma_status: $FINAL_STATUS"
+            echo "prisma_status: APPLIED (checksum=$FINAL_CHECKSUM, steps=$FINAL_STEPS, finished=$FINAL_FINISHED, rolled_back=$FINAL_ROLLED)"
             echo "app_container: $APP_CONTAINER"
           } > "$LEDGER_FILE"
           chmod 600 "$LEDGER_FILE"
