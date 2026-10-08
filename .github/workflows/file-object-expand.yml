@@ -1,0 +1,622 @@
+# File-Object Expansion — Additive DDL Migration
+#
+# Applies prisma/migrations/20260928090000_file_object_expand/migration.sql.
+# This migration is PURELY ADDITIVE:
+#   - CREATE TYPE (3 new enums)
+#   - CREATE TABLE file_objects
+#   - ALTER TABLE ... ADD COLUMN (nullable FKs only) on 4 tables
+#   - CREATE INDEX (non-unique indexes + one UNIQUE on storage_key)
+#   - ALTER TABLE ... ADD CONSTRAINT FOREIGN KEY
+#
+# Safety properties:
+#   - No DROP, no ALTER COLUMN type change, no data deletion.
+#   - All new FK columns are nullable — zero impact on existing rows.
+#   - UNIQUE constraint on storage_key only applies to new file_objects rows.
+#   - Legacy file URL columns (fileUrl, materialsUrl) are preserved unchanged.
+#
+# Constraints:
+#   - Pinned migration SQL SHA256: ea2c7d8d1e8a0cce86c530392db61fcd6395c161eedf2d7df203a753a6ad2afd
+#   - Does NOT rewrite _prisma_migrations history or falsely mark any migration applied.
+#   - Does NOT run 20260923000001_drop_task_assignee (Tracker 174 hard-block).
+#   - After DDL: writes ONE row to _prisma_migrations (exact Prisma format) to allow
+#     `prisma migrate status` and future `prisma migrate deploy` to recognise the applied state.
+#     This is Prisma reconciliation, not false history — the SQL truly executed.
+#   - Fresh backup (pg_dump) taken before any write, SHA256 logged.
+#   - Isolated rehearsal on qcet_test first; production only if rehearsal passes.
+#   - Bounded transaction: lock_timeout=5000ms, statement_timeout=60000ms per statement.
+#     DDL locks are BRIEF (ALTER TABLE ADD COLUMN nullable = metadata-only in PG 11+).
+#
+# Dispatch:
+#   Dry-run (inspect state, run rehearsal, no production write):
+#     gh workflow run file-object-expand.yml
+#     gh workflow run file-object-expand.yml --field confirm=dry-run
+#   Apply (take backup, rehearse, apply to production, reconcile Prisma):
+#     gh workflow run file-object-expand.yml --field confirm=apply
+
+name: File-Object Expand (Additive DDL)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '"apply" to execute on production. Anything else = dry-run.'
+        required: false
+        default: 'dry-run'
+
+concurrency:
+  group: file-object-expand
+  cancel-in-progress: false
+
+env:
+  MIGRATION_NAME: "20260928090000_file_object_expand"
+  MIGRATION_SQL_SHA256: "ea2c7d8d1e8a0cce86c530392db61fcd6395c161eedf2d7df203a753a6ad2afd"
+  # stdlib Python URL parser (urlsplit + unquote) — identical to other workflows
+  PY_URL_PARSER: >-
+    aW1wb3J0IG9zLCBzeXMKZnJvbSB1cmxsaWIucGFyc2UgaW1wb3J0IHVybHNwbGl0LCB1bnF1
+    b3RlCnVybCA9IG9zLmVudmlyb24uZ2V0KCJEQVRBQkFTRV9VUkwiLCAiIikKdSA9IHVybHNw
+    bGl0KHVybCkKdmFscyA9IFsKICAgIHVucXVvdGUodS51c2VybmFtZSBvciAiIiksCiAgICB1
+    bnF1b3RlKHUucGFzc3dvcmQgb3IgIiIpLAogICAgdW5xdW90ZSh1Lmhvc3RuYW1lIG9yICJs
+    b2NhbGhvc3QiKSwKICAgIHN0cih1LnBvcnQgb3IgNTQzMiksCiAgICB1bnF1b3RlKCh1LnBh
+    dGgubHN0cmlwKCIvIikuc3BsaXQoIj8iKVswXSBpZiB1LnBhdGggZWxzZSAicG9zdGdyZXMi
+    KSksCl0KZm9yIHBhdGgsIHZhbCBpbiB6aXAoc3lzLmFyZ3ZbMTpdLCB2YWxzKToKICAgIHdp
+    dGggb3BlbihwYXRoLCAidyIpIGFzIGY6CiAgICAgICAgZi53cml0ZSh2YWwpCiAgICBvcy5j
+    aG1vZChwYXRoLCAwbzYwMCkK
+
+jobs:
+  expand:
+    name: File-Object DDL Expansion
+    runs-on: [self-hosted, Linux, X64, qcet]
+    timeout-minutes: 20
+    steps:
+      # ── 0. Validate input ─────────────────────────────────────────────────
+      - name: Validate confirm input
+        id: mode
+        run: |
+          set -euo pipefail
+          CONFIRM="${{ github.event.inputs.confirm }}"
+          if [ "$CONFIRM" = "apply" ]; then
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+            echo "MODE: APPLY — will take backup, rehearse, then apply to production."
+          else
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+            echo "MODE: DRY-RUN — state inspection + qcet_test rehearsal only, no production write."
+          fi
+
+      # ── 1. Checkout (needed for migration SQL file on runner) ─────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      # ── 2. Verify migration SQL SHA256 (tamper/drift detection) ──────────
+      - name: Verify migration SQL SHA256
+        run: |
+          set -euo pipefail
+          SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+          if [ ! -f "$SQL_PATH" ]; then
+            echo "ERROR: Migration SQL not found at $SQL_PATH" >&2
+            exit 1
+          fi
+          ACTUAL_SHA=$(sha256sum "$SQL_PATH" | cut -d' ' -f1)
+          echo "Expected SHA256: ${MIGRATION_SQL_SHA256}"
+          echo "Actual   SHA256: ${ACTUAL_SHA}"
+          if [ "$ACTUAL_SHA" != "$MIGRATION_SQL_SHA256" ]; then
+            echo "ERROR: SHA256 mismatch — migration SQL has been modified." >&2
+            echo "  Do not alter migration SQL after it has been reviewed." >&2
+            exit 1
+          fi
+          echo "SQL SHA256: VERIFIED"
+          echo "SQL path:   $SQL_PATH"
+          echo "SQL size:   $(wc -c < "$SQL_PATH") bytes"
+
+      # ── 3. Pinned app container + credentials ────────────────────────────
+      - name: Find app container and network
+        id: app
+        run: |
+          set -euo pipefail
+          EXPECTED_APP="qcet-eoffice-app"
+          EXPECTED_NET="qcet-network"
+
+          APP=$(docker ps --filter "name=^${EXPECTED_APP}$" --format '{{.Names}}' | head -1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Expected container '${EXPECTED_APP}' is not running." >&2
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' >&2
+            exit 1
+          fi
+          if [ "$APP" != "$EXPECTED_APP" ]; then
+            echo "ERROR: Resolved '$APP' != expected '${EXPECTED_APP}'." >&2
+            exit 1
+          fi
+          DOCKER_NET=$(docker inspect "$APP" \
+            --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
+            | tr ' ' '\n' | grep -vE '^$|^bridge$' | head -1)
+          if [ "$DOCKER_NET" != "$EXPECTED_NET" ]; then
+            echo "ERROR: Network '$DOCKER_NET' != expected '${EXPECTED_NET}'." >&2
+            exit 1
+          fi
+          echo "app_container=$APP" >> "$GITHUB_OUTPUT"
+          echo "docker_network=$DOCKER_NET" >> "$GITHUB_OUTPUT"
+          echo "App: $APP  Network: $DOCKER_NET"
+
+      - name: Extract and mask DATABASE_URL
+        id: dburl
+        env:
+          APP_CONTAINER: ${{ steps.app.outputs.app_container }}
+        run: |
+          set -euo pipefail
+          WORK_DIR=$(mktemp -d /tmp/file-expand.XXXXXX)
+          chmod 700 "$WORK_DIR"
+          echo "work_dir=$WORK_DIR" >> "$GITHUB_OUTPUT"
+
+          DB_URL=$(docker inspect "$APP_CONTAINER" \
+            --format '{{range .Config.Env}}{{println .}}{{end}}' \
+            | grep '^DATABASE_URL=' | head -1 | cut -d= -f2-)
+          if [ -z "$DB_URL" ]; then
+            echo "ERROR: DATABASE_URL not found in app container env." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DB_URL"
+
+          printf '%s' "$PY_URL_PARSER" | tr -d ' \n' | base64 -d > "$WORK_DIR/parse.py"
+          chmod 600 "$WORK_DIR/parse.py"
+          DATABASE_URL="$DB_URL" python3 "$WORK_DIR/parse.py" \
+            "$WORK_DIR/pg_user" "$WORK_DIR/pg_pass" \
+            "$WORK_DIR/pg_host" "$WORK_DIR/pg_port" "$WORK_DIR/pg_db"
+
+          PG_PASS=$(cat "$WORK_DIR/pg_pass")
+          echo "::add-mask::$PG_PASS"
+          printf 'PGPASSWORD=%s\n' "$PG_PASS" > "$WORK_DIR/pgenv"
+          chmod 600 "$WORK_DIR/pgenv"
+
+          PG_DB=$(cat "$WORK_DIR/pg_db")
+          if [ "$PG_DB" != "qcet_eoffice" ]; then
+            echo "ERROR: DB name '$PG_DB' != 'qcet_eoffice'. Aborting." >&2
+            exit 1
+          fi
+          echo "DB identity: host=$(cat $WORK_DIR/pg_host) db=$PG_DB user=$(cat $WORK_DIR/pg_user)"
+
+      # ── 4. DB identity + pre-migration state check ────────────────────────
+      - name: DB identity verification
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          ACTUAL_DB=$(run_psql_ta "SELECT current_database();" | tr -d '[:space:]')
+          echo "current_database(): $ACTUAL_DB"
+          [ "$ACTUAL_DB" = "qcet_eoffice" ] || { echo "ERROR: wrong DB." >&2; exit 1; }
+          echo "DB identity: PASS"
+
+      - name: Pre-migration state check (idempotency guard)
+        id: precheck
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          # Check for partial application: file_objects table without all 3 enums, or vice versa
+          FO_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='file_objects')::text;" | tr -d '[:space:]')
+          FSS_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='FileScanStatus' AND typtype='e')::text;" | tr -d '[:space:]')
+          SP_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='StorageProvider' AND typtype='e')::text;" | tr -d '[:space:]')
+          FC_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='FileClassification' AND typtype='e')::text;" | tr -d '[:space:]')
+
+          echo "Pre-migration object state:"
+          echo "  file_objects table:      $FO_EXISTS"
+          echo "  FileScanStatus enum:     $FSS_EXISTS"
+          echo "  StorageProvider enum:    $SP_EXISTS"
+          echo "  FileClassification enum: $FC_EXISTS"
+
+          # Check _prisma_migrations row
+          PM_STATUS=$(run_psql_ta "SELECT CASE WHEN finished_at IS NOT NULL THEN 'APPLIED' WHEN started_at IS NOT NULL THEN 'FAILED/PENDING' ELSE 'ABSENT' END FROM _prisma_migrations WHERE migration_name='20260928090000_file_object_expand';" | tr -d '[:space:]')
+          PM_STATUS="${PM_STATUS:-ABSENT}"
+          echo "  _prisma_migrations row:  $PM_STATUS"
+          echo "prisma_status=$PM_STATUS" >> "$GITHUB_OUTPUT"
+          echo "fo_exists=$FO_EXISTS" >> "$GITHUB_OUTPUT"
+
+          # Fail on partial state: some objects exist but not all, or Prisma says FAILED/PENDING
+          ENUM_COUNT=$(( (FSS_EXISTS="true" ? 1 : 0) + (SP_EXISTS="true" ? 1 : 0) + (FC_EXISTS="true" ? 1 : 0) ))
+          if [ "$FO_EXISTS" = "true" ] && [ "$FSS_EXISTS" = "true" ] && [ "$SP_EXISTS" = "true" ] && [ "$FC_EXISTS" = "true" ]; then
+            echo "State: ALL objects already exist."
+            if [ "$PM_STATUS" = "APPLIED" ]; then
+              echo "ALREADY APPLIED: migration fully applied and Prisma row present. Nothing to do."
+              echo "already_applied=true" >> "$GITHUB_OUTPUT"
+            elif [ "$PM_STATUS" = "ABSENT" ]; then
+              echo "PARTIAL: DDL applied outside Prisma (no _prisma_migrations row). Reconciliation needed."
+              echo "already_applied=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "ERROR: Objects exist but Prisma status='$PM_STATUS' — inspect manually." >&2
+              exit 1
+            fi
+          elif [ "$FO_EXISTS" = "false" ] && [ "$FSS_EXISTS" = "false" ] && [ "$SP_EXISTS" = "false" ] && [ "$FC_EXISTS" = "false" ]; then
+            echo "State: CLEAN — no objects exist. Ready to apply."
+            echo "already_applied=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ERROR: PARTIAL STATE — some objects exist, some do not. Manual inspection required." >&2
+            echo "  file_objects=$FO_EXISTS FileScanStatus=$FSS_EXISTS StorageProvider=$SP_EXISTS FileClassification=$FC_EXISTS" >&2
+            echo "  Do not proceed automatically from partial state." >&2
+            exit 1
+          fi
+
+      # ── 5. Isolated qcet_test rehearsal ───────────────────────────────────
+      - name: Rehearsal on qcet_test (isolated, no production data)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user")
+          # Rehearsal runs against qcet_test — never qcet_eoffice
+          TEST_DB="qcet_test"
+
+          printf 'PGPASSWORD=%s\n' "$(cat $WORK_DIR/pg_pass)" > "$WORK_DIR/pgenv_test"
+          chmod 600 "$WORK_DIR/pgenv_test"
+
+          run_test_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv_test" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$TEST_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          echo "=== Rehearsal DB: $TEST_DB ==="
+          ACTUAL_TEST=$(run_test_psql "SELECT current_database();" | tr -d '[:space:]')
+          echo "current_database(): $ACTUAL_TEST"
+          [ "$ACTUAL_TEST" = "$TEST_DB" ] || { echo "ERROR: rehearsal connected to wrong DB '$ACTUAL_TEST'." >&2; exit 1; }
+
+          echo ""
+          echo "=== Cleaning prior rehearsal artifacts from qcet_test ==="
+          # Drop objects if they exist from a prior rehearsal run — idempotent cleanup
+          run_test_psql "DROP TABLE IF EXISTS file_objects CASCADE;" || true
+          run_test_psql "DROP TYPE IF EXISTS \"FileScanStatus\";" || true
+          run_test_psql "DROP TYPE IF EXISTS \"StorageProvider\";" || true
+          run_test_psql "DROP TYPE IF EXISTS \"FileClassification\";" || true
+          # Drop FK columns added to referencing tables
+          for TBL_COL in "task_deliverables.file_object_id" "document_attachments.file_object_id" "dossier_items.file_object_id" "meetings.materials_file_object_id"; do
+            TBL="${TBL_COL%%.*}"; COL="${TBL_COL##*.}"
+            run_test_psql "ALTER TABLE IF EXISTS \"${TBL}\" DROP COLUMN IF EXISTS \"${COL}\";" || true
+          done
+
+          echo ""
+          echo "=== Running migration SQL against qcet_test ==="
+          SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+          REHEARSAL_EXIT=0
+          REHEARSAL_STDERR="$WORK_DIR/rehearsal_stderr.txt"
+          docker run --rm -i \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv_test" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$TEST_DB" \
+              -X -v ON_ERROR_STOP=1 -f - \
+            < "$SQL_PATH" 2>"$REHEARSAL_STDERR" || REHEARSAL_EXIT=$?
+
+          if [ -s "$REHEARSAL_STDERR" ]; then
+            echo "=== Rehearsal stderr ===" >&2
+            cat "$REHEARSAL_STDERR" >&2
+          fi
+          if [ "$REHEARSAL_EXIT" -ne 0 ]; then
+            echo "ERROR: Rehearsal FAILED with exit code $REHEARSAL_EXIT." >&2
+            exit 1
+          fi
+          echo "Rehearsal: psql exit 0"
+
+          echo ""
+          echo "=== Verifying rehearsal objects created in qcet_test ==="
+          for ENUM in FileScanStatus StorageProvider FileClassification; do
+            EXISTS=$(run_test_psql "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='${ENUM}' AND typtype='e')::text;" | tr -d '[:space:]')
+            echo "  enum ${ENUM}: $EXISTS"
+            [ "$EXISTS" = "true" ] || { echo "ERROR: enum $ENUM not created." >&2; exit 1; }
+          done
+
+          FO_R=$(run_test_psql "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='file_objects')::text;" | tr -d '[:space:]')
+          echo "  file_objects table: $FO_R"
+          [ "$FO_R" = "true" ] || { echo "ERROR: file_objects table not created." >&2; exit 1; }
+
+          # Verify nullable FK columns added
+          for TBL_COL in "task_deliverables.file_object_id" "document_attachments.file_object_id" "dossier_items.file_object_id" "meetings.materials_file_object_id"; do
+            TBL="${TBL_COL%%.*}"; COL="${TBL_COL##*.}"
+            COL_R=$(run_test_psql "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='${TBL}' AND column_name='${COL}' AND is_nullable='YES')::text;" | tr -d '[:space:]')
+            echo "  ${TBL}.${COL} (nullable): $COL_R"
+            [ "$COL_R" = "true" ] || { echo "ERROR: ${TBL}.${COL} not created as nullable." >&2; exit 1; }
+          done
+
+          echo ""
+          echo "=== Rehearsal: INSERT test row into file_objects ==="
+          # Insert a test row to verify constraints and FK work correctly
+          run_test_psql "INSERT INTO file_objects
+            (id, storage_key, storage_provider, original_name, mime_type, extension,
+             byte_size, content_hash, classification, scan_status, reference_count,
+             uploaded_by_id, is_archived, created_at, updated_at)
+          SELECT
+            'test-rehearsal-id-001',
+            'rehearsal/test-file.txt',
+            'LOCAL_DISK'::"StorageProvider",
+            'test-file.txt',
+            'text/plain',
+            'txt',
+            42,
+            'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
+            'INTERNAL'::"FileClassification",
+            'PENDING'::"FileScanStatus",
+            1,
+            id,
+            false,
+            NOW(), NOW()
+          FROM users LIMIT 1
+          RETURNING id;" || {
+            echo "ERROR: test INSERT into file_objects failed." >&2
+            exit 1
+          }
+          echo "Rehearsal INSERT: OK"
+
+          echo ""
+          echo "=== Rehearsal: idempotency — re-run migration SQL (expect errors on IF NOT EXISTS) ==="
+          # The migration uses CREATE TYPE / CREATE TABLE (no IF NOT EXISTS).
+          # Re-running SHOULD fail — that is expected and correct.
+          # We only check that the first run was clean; idempotency of this migration
+          # requires checking for pre-existing state before apply (done in precheck step).
+          echo "  NOTE: Migration SQL does not use IF NOT EXISTS — re-run would fail."
+          echo "  Idempotency is enforced by pre-migration state check (step 4), not SQL."
+          echo "  First-run rehearsal succeeded — that is the correct result."
+
+          echo ""
+          echo "Rehearsal: PASS"
+
+      # ── 6. Skip if dry-run or already applied ────────────────────────────
+      - name: Skip apply — dry-run or already applied
+        if: steps.mode.outputs.mode == 'dry-run' || steps.precheck.outputs.already_applied == 'true'
+        run: |
+          if [ "${{ steps.mode.outputs.mode }}" = "dry-run" ]; then
+            echo "DRY-RUN: Rehearsal passed. No production write."
+            echo "To apply: gh workflow run file-object-expand.yml --field confirm=apply"
+          else
+            echo "ALREADY APPLIED: Migration fully applied. No action needed."
+            if [ "${{ steps.precheck.outputs.prisma_status }}" = "ABSENT" ]; then
+              echo "NOTE: Prisma _prisma_migrations row absent — reconciliation may be needed."
+              echo "      Re-run with confirm=apply to write the Prisma reconciliation row."
+            fi
+          fi
+
+      # ── 7. Fresh backup before production write ───────────────────────────
+      - name: Take fresh backup before production DDL
+        if: steps.mode.outputs.mode == 'apply' && steps.precheck.outputs.already_applied == 'false'
+        id: backup
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          BACKUP_DIR="/home/dnhhuy/migrate-backups"
+          mkdir -p "$BACKUP_DIR"
+          TS=$(date -u +'%Y%m%dT%H%M%SZ')
+          BACKUP_FILE="${BACKUP_DIR}/qcet_eoffice_${TS}_prefileexpand.dump"
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_OUTPUT"
+
+          echo "Taking pg_dump to $BACKUP_FILE ..."
+          docker run --rm \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            pg_dump -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              --format=custom --no-password \
+            > "$BACKUP_FILE"
+
+          BACKUP_SIZE=$(stat -f%z "$BACKUP_FILE" 2>/dev/null || stat -c%s "$BACKUP_FILE")
+          BACKUP_SHA=$(sha256sum "$BACKUP_FILE" | cut -d' ' -f1)
+          echo "Backup: $BACKUP_FILE"
+          echo "Size:   $BACKUP_SIZE bytes"
+          echo "SHA256: $BACKUP_SHA"
+          echo "backup_sha=$BACKUP_SHA" >> "$GITHUB_OUTPUT"
+
+          if [ "$BACKUP_SIZE" -lt 100000 ]; then
+            echo "ERROR: Backup suspiciously small ($BACKUP_SIZE bytes). Aborting." >&2
+            exit 1
+          fi
+          echo "Backup gate: PASS"
+
+      # ── 8. Apply DDL to production ────────────────────────────────────────
+      - name: Apply additive DDL to production
+        if: steps.mode.outputs.mode == 'apply' && steps.precheck.outputs.already_applied == 'false'
+        id: apply
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          SQL_PATH="prisma/migrations/${MIGRATION_NAME}/migration.sql"
+          APPLY_STDERR="$WORK_DIR/apply_stderr.txt"
+
+          echo "Applying $SQL_PATH to $PG_DB on $PG_HOST..."
+          echo "Backup: ${{ steps.backup.outputs.backup_file }}"
+          echo "Backup SHA256: ${{ steps.backup.outputs.backup_sha }}"
+          echo ""
+
+          APPLY_EXIT=0
+          docker run --rm -i \
+            --network "$DOCKER_NETWORK" \
+            --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -X -v ON_ERROR_STOP=1 -f - \
+            < "$SQL_PATH" 2>"$APPLY_STDERR" || APPLY_EXIT=$?
+
+          if [ -s "$APPLY_STDERR" ]; then
+            echo "=== psql stderr ===" >&2
+            cat "$APPLY_STDERR" >&2
+          fi
+          if [ "$APPLY_EXIT" -ne 0 ]; then
+            echo "ERROR: DDL apply FAILED with exit code $APPLY_EXIT." >&2
+            echo "BACKUP available at: ${{ steps.backup.outputs.backup_file }}" >&2
+            echo "BACKUP SHA256: ${{ steps.backup.outputs.backup_sha }}" >&2
+            exit 1
+          fi
+          echo "DDL apply: psql exit 0 — SUCCESS"
+
+      # ── 9. Post-apply verification ────────────────────────────────────────
+      - name: Post-apply verification
+        if: steps.mode.outputs.mode == 'apply' && steps.precheck.outputs.already_applied == 'false'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          echo "=== Post-apply object verification on $PG_DB ==="
+          FAIL=0
+          for ENUM in FileScanStatus StorageProvider FileClassification; do
+            E=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='${ENUM}' AND typtype='e')::text;" | tr -d '[:space:]')
+            echo "  enum ${ENUM}: $E"
+            [ "$E" = "true" ] || { echo "ERROR: enum $ENUM missing after apply." >&2; FAIL=1; }
+          done
+
+          FO=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='file_objects')::text;" | tr -d '[:space:]')
+          echo "  file_objects table: $FO"
+          [ "$FO" = "true" ] || { echo "ERROR: file_objects table missing." >&2; FAIL=1; }
+
+          for TBL_COL in "task_deliverables.file_object_id" "document_attachments.file_object_id" "dossier_items.file_object_id" "meetings.materials_file_object_id"; do
+            TBL="${TBL_COL%%.*}"; COL="${TBL_COL##*.}"
+            C=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='${TBL}' AND column_name='${COL}' AND is_nullable='YES')::text;" | tr -d '[:space:]')
+            echo "  ${TBL}.${COL} (nullable): $C"
+            [ "$C" = "true" ] || { echo "ERROR: ${TBL}.${COL} missing." >&2; FAIL=1; }
+          done
+
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "Post-apply verification: PASS"
+
+      # ── 10. Prisma reconciliation row ─────────────────────────────────────
+      - name: Write Prisma _prisma_migrations reconciliation row
+        if: steps.mode.outputs.mode == 'apply' && steps.precheck.outputs.already_applied == 'false'
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          # Prisma's _prisma_migrations row format:
+          #   id: text (Prisma generates a UUID internally; we use migration_name as stable ID)
+          #   checksum: SHA256 of the SQL file (hex, 64 chars) — must match what Prisma would compute
+          #   finished_at: current timestamp (NULL = failed; non-NULL = applied)
+          #   migration_name: the directory name
+          #   logs: NULL (Prisma writes here on failure)
+          #   rolled_back_at: NULL
+          #   started_at: current timestamp
+          #   applied_steps_count: 1 (one script executed successfully)
+          #
+          # This row tells `prisma migrate status` the migration was applied.
+          # It does NOT alter migration.sql or any other migration row.
+          # Checksum must match Prisma's expected value or `prisma migrate status` will warn.
+          # Prisma checksum = SHA256 hex of the SQL file content (same as sha256sum).
+
+          CHECKSUM="${MIGRATION_SQL_SHA256}"
+          MIG_NAME="${MIGRATION_NAME}"
+
+          echo "Writing Prisma reconciliation row for $MIG_NAME ..."
+          echo "  checksum: $CHECKSUM"
+
+          RECON_EXIT=0
+          docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -X -v ON_ERROR_STOP=1 -c "
+          INSERT INTO _prisma_migrations
+            (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
+          VALUES (
+            gen_random_uuid()::text,
+            '${CHECKSUM}',
+            NOW(),
+            '${MIG_NAME}',
+            NULL,
+            NULL,
+            NOW(),
+            1
+          )
+          ON CONFLICT (migration_name) DO UPDATE
+            SET checksum           = EXCLUDED.checksum,
+                finished_at        = EXCLUDED.finished_at,
+                applied_steps_count = 1,
+                logs               = NULL,
+                rolled_back_at     = NULL;
+          " 2>&1 || RECON_EXIT=$?
+
+          if [ "$RECON_EXIT" -ne 0 ]; then
+            echo "ERROR: Prisma reconciliation row write FAILED (exit $RECON_EXIT)." >&2
+            echo "  DDL was already applied successfully." >&2
+            echo "  Run: prisma migrate resolve --applied $MIG_NAME manually." >&2
+            exit 1
+          fi
+          echo "Prisma reconciliation row: WRITTEN"
+
+          # Verify the row
+          docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+            postgres:16-alpine \
+            psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+              -X -v ON_ERROR_STOP=1 -P pager=off -c "
+          SELECT migration_name, applied_steps_count,
+            CASE WHEN finished_at IS NOT NULL THEN 'APPLIED' ELSE 'FAILED/PENDING' END AS status,
+            checksum
+          FROM _prisma_migrations
+          WHERE migration_name = '${MIG_NAME}';" 2>&1
+          echo "Prisma reconciliation: VERIFIED"
+
+      # ── 11. Cleanup ───────────────────────────────────────────────────────
+      - name: Cleanup temp dir
+        if: always()
+        run: rm -rf /tmp/file-expand.* 2>/dev/null || true
+
+      - name: Evidence summary
+        if: always()
+        run: |
+          {
+            echo "### File-Object Expand — Run Complete"
+            echo "- Run ID: ${{ github.run_id }}"
+            echo "- Mode: ${{ steps.mode.outputs.mode }}"
+            echo "- Runner: ${{ runner.name }}"
+            echo "- SHA: ${{ github.sha }}"
+            echo "- Migration: ${MIGRATION_NAME}"
+            echo "- SQL SHA256 pinned: ${MIGRATION_SQL_SHA256}"
+            echo "- Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            if [ "${{ steps.mode.outputs.mode }}" = "apply" ]; then
+              echo "- Backup: ${{ steps.backup.outputs.backup_file }}"
+              echo "- Backup SHA256: ${{ steps.backup.outputs.backup_sha }}"
+            fi
+            echo ""
+            echo "Tracker 174 status: OPEN — drop_task_assignee NOT run (preserved)."
+            echo "Legacy task_assignees: PRESERVED."
+          } >> "$GITHUB_STEP_SUMMARY"

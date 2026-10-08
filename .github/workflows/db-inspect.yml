@@ -341,6 +341,297 @@ jobs:
           echo "=== _prisma_migrations full status ==="
           run_psql "SELECT migration_name, applied_steps_count, CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK' WHEN finished_at IS NULL THEN 'FAILED/PENDING' ELSE 'APPLIED' END AS status, started_at FROM _prisma_migrations ORDER BY started_at;"
 
+      - name: task_assignees — NULL-aware duplicate groups (GROUP BY/HAVING)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          TA_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TA_EXISTS" != "true" ]; then
+            echo "(task_assignees does not exist — no duplicate check needed)"
+            exit 0
+          fi
+
+          echo "=== task_assignees: duplicate (task_id, user_id, role_in_task) groups ==="
+          echo "    NULL-aware: user_id IS NOT DISTINCT FROM handles NULL=NULL correctly."
+          echo "    HAVING COUNT(*) > 1 shows only groups with genuine duplicates."
+          # NOTE: Standard GROUP BY treats NULL as distinct group; we use
+          # COALESCE on user_id to group NULLs together (NULL-aware dedup).
+          run_psql "SELECT
+            task_id,
+            COALESCE(user_id, '<NULL>') AS user_id_display,
+            role_in_task::text          AS role,
+            COUNT(*)                    AS dup_count
+          FROM task_assignees
+          GROUP BY task_id, COALESCE(user_id, '<NULL>'), role_in_task::text
+          HAVING COUNT(*) > 1
+          ORDER BY dup_count DESC, task_id, role
+          LIMIT 20;"
+
+          echo ""
+          echo "=== Total duplicate groups count ==="
+          run_psql "SELECT COUNT(*) AS duplicate_group_count
+          FROM (
+            SELECT task_id, COALESCE(user_id, '<NULL>'), role_in_task::text
+            FROM task_assignees
+            GROUP BY task_id, COALESCE(user_id, '<NULL>'), role_in_task::text
+            HAVING COUNT(*) > 1
+          ) sub;"
+
+          echo ""
+          echo "=== Total excess rows from duplicates ==="
+          run_psql "SELECT COALESCE(SUM(cnt - 1), 0) AS excess_rows_from_duplicates
+          FROM (
+            SELECT COUNT(*) AS cnt
+            FROM task_assignees
+            GROUP BY task_id, COALESCE(user_id, '<NULL>'), role_in_task::text
+            HAVING COUNT(*) > 1
+          ) sub;"
+
+      - name: task_actors — NULL-aware duplicate groups (GROUP BY/HAVING)
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== task_actors: duplicate (task_id, user_id, role) groups ==="
+          echo "    NULL-aware: COALESCE(user_id,'<NULL>') for grouping."
+          echo "    task_actors.user_id FK references users.id (NOT NULL in schema)."
+          echo "    Showing duplicates regardless — covers any schema drift."
+          run_psql "SELECT
+            task_id,
+            COALESCE(user_id, '<NULL>') AS user_id_display,
+            role::text                  AS role,
+            COUNT(*)                    AS dup_count
+          FROM task_actors
+          GROUP BY task_id, COALESCE(user_id, '<NULL>'), role::text
+          HAVING COUNT(*) > 1
+          ORDER BY dup_count DESC, task_id, role
+          LIMIT 20;"
+
+          echo ""
+          echo "=== Total duplicate groups count ==="
+          run_psql "SELECT COUNT(*) AS duplicate_group_count
+          FROM (
+            SELECT task_id, COALESCE(user_id, '<NULL>'), role::text
+            FROM task_actors
+            GROUP BY task_id, COALESCE(user_id, '<NULL>'), role::text
+            HAVING COUNT(*) > 1
+          ) sub;"
+
+      - name: task_actors — primary DRI count and invariant
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+
+          echo "=== task_actors: is_primary_dri distribution ==="
+          echo "    is_primary_dri=true should only appear on role=DRI rows."
+          echo "    Cross-tab: role x is_primary_dri shows any invariant violations."
+          run_psql "SELECT
+            role::text      AS role,
+            is_primary_dri,
+            COUNT(*)        AS cnt
+          FROM task_actors
+          GROUP BY role::text, is_primary_dri
+          ORDER BY role::text, is_primary_dri;"
+
+          echo ""
+          echo "=== Tasks with MORE THAN ONE primary DRI (invariant violation check) ==="
+          echo "    Migration 20260923000005_task_actor_single_primary_dri enforces max-1."
+          run_psql "SELECT
+            task_id,
+            COUNT(*) AS primary_dri_count
+          FROM task_actors
+          WHERE is_primary_dri = true
+          GROUP BY task_id
+          HAVING COUNT(*) > 1
+          ORDER BY primary_dri_count DESC
+          LIMIT 10;"
+
+          echo ""
+          echo "=== Tasks with role=DRI but is_primary_dri=false (orphan DRI check) ==="
+          run_psql "SELECT COUNT(*) AS dri_not_primary
+          FROM task_actors
+          WHERE role::text = 'DRI' AND is_primary_dri = false;"
+
+      - name: task_assignees + task_actors — true unknown roles
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          echo "=== task_assignees: roles OUTSIDE canonical backfill set ==="
+          echo "    Canonical: PRIMARY_OWNER, COLLABORATOR."
+          echo "    Anything else = unknown/unmapped — blocks APPLY if count > 0."
+          TA_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_assignees')::text;" | tr -d '[:space:]')
+          if [ "$TA_EXISTS" = "true" ]; then
+            run_psql "SELECT
+              role_in_task::text AS role,
+              COUNT(*)           AS cnt
+            FROM task_assignees
+            WHERE role_in_task::text NOT IN ('PRIMARY_OWNER','COLLABORATOR')
+            GROUP BY role_in_task::text
+            ORDER BY cnt DESC;"
+
+            echo ""
+            echo "=== task_assignees: SUPERVISOR count specifically ==="
+            run_psql "SELECT COUNT(*) AS supervisor_count
+            FROM task_assignees
+            WHERE role_in_task::text = 'SUPERVISOR';"
+          else
+            echo "(task_assignees absent)"
+          fi
+
+          echo ""
+          echo "=== task_actors: roles OUTSIDE canonical actor set ==="
+          echo "    Canonical: DRI, COLLABORATOR, ASSIGNER, LEAD_UNIT."
+          run_psql "SELECT
+            role::text AS role,
+            COUNT(*)   AS cnt
+          FROM task_actors
+          WHERE role::text NOT IN ('DRI','COLLABORATOR','ASSIGNER','LEAD_UNIT')
+          GROUP BY role::text
+          ORDER BY cnt DESC;"
+
+      - name: file_objects expansion prerequisites — schema checks
+        env:
+          DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          set -euo pipefail
+          PG_HOST=$(cat "$WORK_DIR/pg_host"); PG_PORT=$(cat "$WORK_DIR/pg_port")
+          PG_USER=$(cat "$WORK_DIR/pg_user"); PG_DB=$(cat "$WORK_DIR/pg_db")
+
+          run_psql() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -X -v ON_ERROR_STOP=1 -P pager=off -c "$1" 2>&1
+          }
+          run_psql_ta() {
+            docker run --rm --network "$DOCKER_NETWORK" --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+                -t -A -X -v ON_ERROR_STOP=1 -c "$1" 2>&1
+          }
+
+          echo "=== PRE-MIGRATION STATE: enums to be created ==="
+          echo "    Migration 20260928090000 creates: FileScanStatus, StorageProvider, FileClassification."
+          echo "    If already present = migration was partially applied or DDL ran outside Prisma."
+          for ENUM in FileScanStatus StorageProvider FileClassification; do
+            EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname='${ENUM}' AND typtype='e')::text;" | tr -d '[:space:]')
+            echo "  enum ${ENUM}: ${EXISTS}"
+          done
+
+          echo ""
+          echo "=== PRE-MIGRATION STATE: file_objects table ==="
+          FO_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='file_objects')::text;" | tr -d '[:space:]')
+          echo "  file_objects table exists: ${FO_EXISTS}"
+          if [ "$FO_EXISTS" = "true" ]; then
+            echo "  --- file_objects columns ---"
+            run_psql "SELECT column_name, data_type, is_nullable, column_default
+              FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='file_objects'
+              ORDER BY ordinal_position;"
+            echo "  --- file_objects row count ---"
+            run_psql_ta "SELECT COUNT(*) FROM file_objects;" | tr -d '[:space:]' | xargs echo "    row_count:"
+          fi
+
+          echo ""
+          echo "=== PRE-MIGRATION STATE: nullable FK columns on target tables ==="
+          echo "    Migration adds: file_object_id (nullable) to task_deliverables,"
+          echo "    document_attachments, dossier_items, meetings."
+          for TABLE in task_deliverables document_attachments dossier_items; do
+            COL_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='${TABLE}' AND column_name='file_object_id')::text;" | tr -d '[:space:]')
+            echo "  ${TABLE}.file_object_id exists: ${COL_EXISTS}"
+          done
+          MEET_COL=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='meetings' AND column_name='materials_file_object_id')::text;" | tr -d '[:space:]')
+          echo "  meetings.materials_file_object_id exists: ${MEET_COL}"
+
+          echo ""
+          echo "=== PRE-MIGRATION STATE: required base tables existence ==="
+          for TABLE in users task_deliverables document_attachments dossier_items meetings; do
+            TB_EXISTS=$(run_psql_ta "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${TABLE}')::text;" | tr -d '[:space:]')
+            echo "  ${TABLE}: ${TB_EXISTS}"
+          done
+
+          echo ""
+          echo "=== _prisma_migrations: 20260928090000_file_object_expand state ==="
+          run_psql "SELECT migration_name, applied_steps_count,
+            CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK'
+                 WHEN finished_at IS NULL THEN 'FAILED/PENDING'
+                 ELSE 'APPLIED' END AS status,
+            started_at, finished_at,
+            CASE WHEN logs IS NULL THEN '(no logs)' ELSE left(logs,300) END AS logs_excerpt
+          FROM _prisma_migrations
+          WHERE migration_name = '20260928090000_file_object_expand';" \
+            || echo "  (no _prisma_migrations row for 20260928090000_file_object_expand)"
+
+          echo ""
+          echo "=== _prisma_migrations: 20260928093000_ensure_fts_trgm_indexes state ==="
+          run_psql "SELECT migration_name, applied_steps_count,
+            CASE WHEN rolled_back_at IS NOT NULL THEN 'ROLLED_BACK'
+                 WHEN finished_at IS NULL THEN 'FAILED/PENDING'
+                 ELSE 'APPLIED' END AS status,
+            started_at, finished_at
+          FROM _prisma_migrations
+          WHERE migration_name = '20260928093000_ensure_fts_trgm_indexes';" \
+            || echo "  (no row for 20260928093000_ensure_fts_trgm_indexes)"
+
       - name: Cleanup temp dir
         if: always()
         run: rm -rf /tmp/db-inspect.* 2>/dev/null || true
