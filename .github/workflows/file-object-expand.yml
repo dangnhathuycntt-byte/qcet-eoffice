@@ -234,7 +234,6 @@ jobs:
           echo "fo_exists=$FO_EXISTS" >> "$GITHUB_OUTPUT"
 
           # Fail on partial state: some objects exist but not all, or Prisma says FAILED/PENDING
-          ENUM_COUNT=$(( (FSS_EXISTS="true" ? 1 : 0) + (SP_EXISTS="true" ? 1 : 0) + (FC_EXISTS="true" ? 1 : 0) ))
           if [ "$FO_EXISTS" = "true" ] && [ "$FSS_EXISTS" = "true" ] && [ "$SP_EXISTS" = "true" ] && [ "$FC_EXISTS" = "true" ]; then
             echo "State: ALL objects already exist."
             if [ "$PM_STATUS" = "APPLIED" ]; then
