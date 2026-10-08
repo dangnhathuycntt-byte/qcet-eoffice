@@ -244,7 +244,22 @@ jobs:
           if [ "$FO_EXISTS" = "true" ] && [ "$FSS_EXISTS" = "true" ] && [ "$SP_EXISTS" = "true" ] && [ "$FC_EXISTS" = "true" ]; then
             echo "State: ALL objects already exist."
             if [ "$PM_STATUS" = "APPLIED" ]; then
-              echo "ALREADY APPLIED: migration fully applied and Prisma row present."
+              # Full invariant check — not just finished_at. Verify checksum, applied_steps_count=0
+              # (resolve --applied sets applied_steps_count=0, not 1), rolled_back_at NULL, cardinality=1.
+              PC_CHECKSUM=$(run_psql_ta "SELECT checksum FROM _prisma_migrations WHERE migration_name='20260928090000_file_object_expand';" | tr -d '[:space:]')
+              PC_STEPS=$(run_psql_ta "SELECT applied_steps_count FROM _prisma_migrations WHERE migration_name='20260928090000_file_object_expand';" | tr -d '[:space:]')
+              PC_ROLLED=$(run_psql_ta "SELECT rolled_back_at IS NOT NULL FROM _prisma_migrations WHERE migration_name='20260928090000_file_object_expand';" | tr -d '[:space:]')
+              PC_COUNT=$(run_psql_ta "SELECT COUNT(*) FROM _prisma_migrations WHERE migration_name='20260928090000_file_object_expand';" | tr -d '[:space:]')
+              echo "  checksum:            $PC_CHECKSUM"
+              echo "  applied_steps_count: $PC_STEPS  (expected 0 — resolve --applied sets 0)"
+              echo "  rolled_back_at NULL: $([ "$PC_ROLLED" = "f" ] && echo "true" || echo "false (ERROR)")"
+              echo "  row count:           $PC_COUNT"
+              PC_FAIL=0
+              [ "$PC_CHECKSUM" = "${MIGRATION_SQL_SHA256}" ] || { echo "ERROR: precheck checksum mismatch (got '$PC_CHECKSUM')." >&2; PC_FAIL=1; }
+              [ "$PC_ROLLED" = "f" ] || { echo "ERROR: precheck rolled_back_at is NOT NULL." >&2; PC_FAIL=1; }
+              [ "$PC_COUNT" = "1" ] || { echo "ERROR: precheck cardinality not 1 (got $PC_COUNT)." >&2; PC_FAIL=1; }
+              [ "$PC_FAIL" -eq 0 ] || exit 1
+              echo "ALREADY APPLIED: migration fully applied and Prisma invariants verified."
               echo "already_applied=true" >> "$GITHUB_OUTPUT"
             elif [ "$PM_STATUS" = "ABSENT" ]; then
               echo "PARTIAL: DDL applied outside Prisma (no _prisma_migrations row). Reconciliation needed."
@@ -420,6 +435,23 @@ jobs:
               echo "ERROR: Rehearsal dump too small ($DUMP_SIZE bytes)." >&2
               exit 1
             fi
+            # pg_restore --list content proof (same gate as apply-mode backup)
+            REHEARSAL_LIST=$(docker run --rm -i \
+              --network "$DOCKER_NETWORK" \
+              --env-file "$WORK_DIR/pgenv" \
+              postgres:16-alpine \
+              pg_restore --list < "$REHEARSAL_DUMP" 2>&1)
+            REHEARSAL_TABLE_COUNT=$(echo "$REHEARSAL_LIST" | grep -c '^[0-9].*TABLE DATA\|^[0-9].*TABLE ' || true)
+            echo "Rehearsal dump TOC table entries: $REHEARSAL_TABLE_COUNT"
+            if [ "$REHEARSAL_TABLE_COUNT" -lt 5 ]; then
+              echo "ERROR: Rehearsal dump shows only $REHEARSAL_TABLE_COUNT table entries — backup appears incomplete." >&2
+              exit 1
+            fi
+            if ! echo "$REHEARSAL_LIST" | grep -qE 'SCHEMA|DATABASE|TABLE DATA'; then
+              echo "ERROR: Rehearsal dump TOC shows no SCHEMA/DATABASE/TABLE DATA markers." >&2
+              exit 1
+            fi
+            echo "Rehearsal dump content proof: PASS (size + pg_restore TOC verified)"
           fi
 
           # Launch ephemeral postgres container on a private bridge (isolated from production)
@@ -584,7 +616,7 @@ jobs:
             [ "$COL_R" = "true" ] || { echo "ERROR: ${TBL}.${COL} missing as nullable." >&2; VERIFY_FAIL=1; }
           done
 
-          # 5. Column data types on file_objects (pg_attribute)
+          # 5. Column data types on file_objects (pg_attribute) — full set
           echo "  --- Column type verification (file_objects) ---"
           ID_TYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='id' AND a.attnum>0;" | tr -d '[:space:]')
           echo "  file_objects.id type: $ID_TYPE"
@@ -602,24 +634,48 @@ jobs:
           echo "  file_objects.reference_count type: $REFCOUNT_TYPE"
           [ "$REFCOUNT_TYPE" = "integer" ] || { echo "ERROR: reference_count not integer, got '$REFCOUNT_TYPE'." >&2; VERIFY_FAIL=1; }
 
-          # 6. Indexes (pg_indexes) — 10 expected
-          echo "  --- Index verification ---"
+          # Additional column types
+          for COL_EXPECTED in \
+            "storage_key:text" \
+            "original_name:character varying" \
+            "mime_type:character varying" \
+            "extension:character varying" \
+            "content_hash:character varying" \
+            "is_archived:boolean" \
+            "uploaded_by_id:text" \
+            "created_at:timestamp without time zone" \
+            "updated_at:timestamp without time zone" \
+            "scan_result:text"; do
+            COL="${COL_EXPECTED%%:*}"; ETYPE="${COL_EXPECTED##*:}"
+            ATYPE=$(run_ephem_psql "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '[:space:]')
+            echo "  file_objects.${COL}: $ATYPE"
+            [ "$ATYPE" = "$ETYPE" ] || { echo "ERROR: file_objects.${COL} expected '$ETYPE' got '$ATYPE'." >&2; VERIFY_FAIL=1; }
+          done
+
+          # Verify nullable columns (scan_result, metadata)
+          for NULLABLE_COL in "scan_result" "metadata"; do
+            NULLOK=$(run_ephem_psql "SELECT a.attnotnull FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${NULLABLE_COL}' AND a.attnum>0;" | tr -d '[:space:]')
+            echo "  file_objects.${NULLABLE_COL} attnotnull: $NULLOK (expected f = nullable)"
+            [ "$NULLOK" = "f" ] || { echo "ERROR: file_objects.${NULLABLE_COL} expected nullable, got '$NULLOK'." >&2; VERIFY_FAIL=1; }
+          done
+
+          # 6. Indexes (pg_indexes) — 11 expected (pkey + 10 created)
+          echo "  --- Index verification (with definition proof) ---"
           IDX_COUNT=$(run_ephem_psql "SELECT COUNT(*) FROM pg_indexes WHERE schemaname='public' AND indexname IN ('file_objects_pkey','file_objects_storage_key_key','file_objects_content_hash_idx','file_objects_uploaded_by_id_idx','file_objects_mime_type_idx','file_objects_classification_idx','file_objects_scan_status_idx','task_deliverables_file_object_id_idx','document_attachments_file_object_id_idx','dossier_items_file_object_id_idx','meetings_materials_file_object_id_idx');" | tr -d '[:space:]')
           echo "  file_object related indexes found: $IDX_COUNT (expected 11 incl pkey)"
-          if [ "$IDX_COUNT" -lt 10 ]; then
+          if [ "$IDX_COUNT" -lt 11 ]; then
             echo "ERROR: Only $IDX_COUNT of expected 11 indexes found." >&2
-            # List what exists
             run_ephem_psql "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename IN ('file_objects','task_deliverables','document_attachments','dossier_items','meetings') ORDER BY indexname;" 2>&1 || true
             VERIFY_FAIL=1
           fi
 
-          # Verify unique index on storage_key
-          UNIQ_IDX=$(run_ephem_psql "SELECT COUNT(*) FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '[:space:]')
-          echo "  file_objects_storage_key_key (unique): $UNIQ_IDX"
-          [ "$UNIQ_IDX" = "1" ] || { echo "ERROR: unique index on storage_key missing." >&2; VERIFY_FAIL=1; }
+          # Verify unique index definition contains UNIQUE
+          UNIQ_DEF=$(run_ephem_psql "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '[:space:]')
+          echo "  file_objects_storage_key_key indexdef: $UNIQ_DEF"
+          echo "$UNIQ_DEF" | grep -qi "UNIQUE" || { echo "ERROR: storage_key index definition does not contain UNIQUE." >&2; VERIFY_FAIL=1; }
 
-          # 7. FK constraints (pg_constraint) — 5 expected
-          echo "  --- FK constraint verification ---"
+          # 7. FK constraints — count + semantic proof (ON DELETE RESTRICT, ON UPDATE CASCADE, validated)
+          echo "  --- FK constraint verification (with semantic proof) ---"
           FK_COUNT=$(run_ephem_psql "SELECT COUNT(*) FROM pg_constraint WHERE contype='f' AND conname IN ('file_objects_uploaded_by_id_fkey','task_deliverables_file_object_id_fkey','document_attachments_file_object_id_fkey','dossier_items_file_object_id_fkey','meetings_materials_file_object_id_fkey');" | tr -d '[:space:]')
           echo "  FK constraints found: $FK_COUNT (expected 5)"
           if [ "$FK_COUNT" -lt 5 ]; then
@@ -627,6 +683,18 @@ jobs:
             run_ephem_psql "SELECT conname, contype FROM pg_constraint WHERE conname LIKE '%file_object%';" 2>&1 || true
             VERIFY_FAIL=1
           fi
+
+          # Verify FK semantics: confupdtype=a (CASCADE), confdeltype=r (RESTRICT), convalidated=t
+          for FKNAME in \
+            "file_objects_uploaded_by_id_fkey" \
+            "task_deliverables_file_object_id_fkey" \
+            "document_attachments_file_object_id_fkey" \
+            "dossier_items_file_object_id_fkey" \
+            "meetings_materials_file_object_id_fkey"; do
+            FK_ROW=$(run_ephem_psql "SELECT confupdtype, confdeltype, convalidated FROM pg_constraint WHERE conname='${FKNAME}' AND contype='f';" | tr -d '[:space:]')
+            echo "  ${FKNAME}: confupdtype|confdeltype|validated = ${FK_ROW}"
+            echo "$FK_ROW" | grep -q "^a|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected a|r|t, got '${FK_ROW}')." >&2; VERIFY_FAIL=1; }
+          done
 
           [ "$VERIFY_FAIL" -eq 0 ] || { echo "ERROR: Ephemeral rehearsal verification failed." >&2; exit 1; }
           echo "Ephemeral object verification: ALL PASS"
@@ -756,7 +824,7 @@ jobs:
 
       # ── 10. Post-apply verification (full: enum values, indexes, FKs, types) ──
       - name: Post-apply verification (full schema gates)
-        if: steps.mode.outputs.mode == 'apply' && (steps.precheck.outputs.already_applied == 'false' || steps.precheck.outputs.already_applied == 'ddl_only')
+        if: steps.mode.outputs.mode == 'apply'
         env:
           DOCKER_NETWORK: ${{ steps.app.outputs.docker_network }}
           WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
@@ -823,8 +891,37 @@ jobs:
           echo "  file_objects.metadata: $METADATA_TYPE"
           [ "$METADATA_TYPE" = "jsonb" ] || { echo "ERROR: metadata type wrong (got '$METADATA_TYPE')." >&2; FAIL=1; }
 
-          # 6. Indexes (pg_indexes) — all 10 CREATE INDEX + pkey
-          echo "  --- Indexes (pg_indexes) ---"
+          # Additional column types: storage_provider (enum), scan_status (enum), classification (enum),
+          # storage_key (text), original_name (varchar), mime_type (varchar), extension (varchar),
+          # content_hash (varchar), scan_result (text nullable), is_archived (bool), reference_count (int),
+          # uploaded_by_id (text), created_at (timestamp), updated_at (timestamp)
+          for COL_EXPECTED in \
+            "storage_key:text" \
+            "original_name:character varying" \
+            "mime_type:character varying" \
+            "extension:character varying" \
+            "content_hash:character varying" \
+            "is_archived:boolean" \
+            "reference_count:integer" \
+            "uploaded_by_id:text" \
+            "created_at:timestamp without time zone" \
+            "updated_at:timestamp without time zone" \
+            "scan_result:text"; do
+            COL="${COL_EXPECTED%%:*}"; EXPECTED_TYPE="${COL_EXPECTED##*:}"
+            ACTUAL_TYPE=$(run_psql_ta "SELECT a.atttypid::regtype::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${COL}' AND a.attnum>0;" | tr -d '[:space:]')
+            echo "  file_objects.${COL}: $ACTUAL_TYPE"
+            [ "$ACTUAL_TYPE" = "$EXPECTED_TYPE" ] || { echo "ERROR: file_objects.${COL} expected '$EXPECTED_TYPE' got '$ACTUAL_TYPE'." >&2; FAIL=1; }
+          done
+
+          # Verify scan_result and metadata are nullable (no NOT NULL constraint)
+          for NULLABLE_COL in "scan_result" "metadata"; do
+            NULLOK=$(run_psql_ta "SELECT a.attnotnull FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname='file_objects' AND a.attname='${NULLABLE_COL}' AND a.attnum>0;" | tr -d '[:space:]')
+            echo "  file_objects.${NULLABLE_COL} attnotnull: $NULLOK (expected f = nullable)"
+            [ "$NULLOK" = "f" ] || { echo "ERROR: file_objects.${NULLABLE_COL} expected nullable (attnotnull=f), got '$NULLOK'." >&2; FAIL=1; }
+          done
+
+          # 6. Indexes (pg_indexes) — all 10 CREATE INDEX + pkey, with indexdef expression proof
+          echo "  --- Indexes (pg_indexes) with definition proof ---"
           IDX_COUNT=$(run_psql_ta "SELECT COUNT(*) FROM pg_indexes WHERE schemaname='public' AND indexname IN ('file_objects_pkey','file_objects_storage_key_key','file_objects_content_hash_idx','file_objects_uploaded_by_id_idx','file_objects_mime_type_idx','file_objects_classification_idx','file_objects_scan_status_idx','task_deliverables_file_object_id_idx','document_attachments_file_object_id_idx','dossier_items_file_object_id_idx','meetings_materials_file_object_id_idx');" | tr -d '[:space:]')
           echo "  file_object indexes found: $IDX_COUNT (expected 11)"
           if [ "$IDX_COUNT" -lt 11 ]; then
@@ -833,8 +930,13 @@ jobs:
             FAIL=1
           fi
 
-          # 7. FK constraints (pg_constraint) — 5 expected
-          echo "  --- FK constraints (pg_constraint) ---"
+          # Verify unique index on storage_key has UNIQUE in its definition
+          UNIQ_DEF=$(run_psql_ta "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='file_objects_storage_key_key';" | tr -d '[:space:]')
+          echo "  file_objects_storage_key_key indexdef: $UNIQ_DEF"
+          echo "$UNIQ_DEF" | grep -qi "UNIQUE" || { echo "ERROR: storage_key index definition does not contain UNIQUE." >&2; FAIL=1; }
+
+          # 7. FK constraints — verify reference target, ON DELETE RESTRICT, ON UPDATE CASCADE, validated
+          echo "  --- FK constraints with full predicate proof ---"
           FK_COUNT=$(run_psql_ta "SELECT COUNT(*) FROM pg_constraint WHERE contype='f' AND conname IN ('file_objects_uploaded_by_id_fkey','task_deliverables_file_object_id_fkey','document_attachments_file_object_id_fkey','dossier_items_file_object_id_fkey','meetings_materials_file_object_id_fkey');" | tr -d '[:space:]')
           echo "  FK constraints found: $FK_COUNT (expected 5)"
           if [ "$FK_COUNT" -lt 5 ]; then
@@ -842,6 +944,21 @@ jobs:
             run_psql_ta "SELECT conname FROM pg_constraint WHERE contype='f' AND conname LIKE '%file_object%';" 2>&1 || true
             FAIL=1
           fi
+
+          # Verify FK semantics: confupdtype=a (CASCADE), confdeltype=r (RESTRICT), convalidated=t
+          # confupdtype: a=CASCADE, r=RESTRICT, c=SET NULL, n=SET DEFAULT, d=NO ACTION
+          # confdeltype: a=CASCADE, r=RESTRICT, c=SET NULL, n=SET DEFAULT, d=NO ACTION
+          for FKNAME in \
+            "file_objects_uploaded_by_id_fkey" \
+            "task_deliverables_file_object_id_fkey" \
+            "document_attachments_file_object_id_fkey" \
+            "dossier_items_file_object_id_fkey" \
+            "meetings_materials_file_object_id_fkey"; do
+            FK_ROW=$(run_psql_ta "SELECT confupdtype, confdeltype, convalidated FROM pg_constraint WHERE conname='${FKNAME}' AND contype='f';" | tr -d '[:space:]')
+            echo "  ${FKNAME}: confupdtype|confdeltype|validated = ${FK_ROW}"
+            # Expected: a (CASCADE) | r (RESTRICT) | t (validated)
+            echo "$FK_ROW" | grep -q "^a|r|t$" || { echo "ERROR: FK ${FKNAME} semantics wrong (expected a|r|t, got '${FK_ROW}')." >&2; FAIL=1; }
+          done
 
           [ "$FAIL" -eq 0 ] || { echo "ERROR: Post-apply verification FAILED." >&2; exit 1; }
           echo "Post-apply verification: ALL GATES PASS"
@@ -883,17 +1000,41 @@ jobs:
             echo "  Proceeding to prisma migrate resolve --applied to reconcile..."
           fi
 
-          # Authoritative Prisma reconciliation path: prisma migrate resolve --applied
-          # This is the only safe path; it correctly sets checksum, finished_at, applied_steps_count.
-          # No manual INSERT — migration_name has no unique constraint and manual rows may clash.
+          # Write ops ledger at DDL-commit point (BEFORE reconciliation)
+          # This ensures evidence persists even if reconciliation fails after DDL commits.
+          LEDGER_DIR="/home/dnhhuy/migrate-backups"
+          umask 077
+          LEDGER_FILE="${LEDGER_DIR}/ops-ledger-${MIGRATION_NAME}-$(date -u +'%Y%m%dT%H%M%SZ').txt"
+          {
+            echo "=== File-Object Expand Ops Ledger ==="
+            echo "timestamp:     $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "run_id:        ${{ github.run_id }}"
+            echo "workflow_sha:  ${{ github.sha }}"
+            echo "migration:     ${MIG_NAME}"
+            echo "sql_sha256:    ${CHECKSUM}"
+            echo "backup_file:   ${{ steps.backup.outputs.backup_file }}"
+            echo "backup_sha256: ${{ steps.backup.outputs.backup_sha }}"
+            echo "db_host:       $(cat $WORK_DIR/pg_host)"
+            echo "db_name:       $(cat $WORK_DIR/pg_db)"
+            echo "db_user:       $(cat $WORK_DIR/pg_user)"
+            echo "app_container: $APP_CONTAINER"
+            echo "ledger_status: DDL_COMMITTED — reconciliation not yet attempted"
+          } > "$LEDGER_FILE"
+          chmod 600 "$LEDGER_FILE"
+          echo "Ops ledger written (DDL-commit point): $LEDGER_FILE"
+
+          # Authoritative Prisma reconciliation path: local node_modules/.bin/prisma migrate resolve --applied
+          # Must NOT use docker exec <app-container> npx prisma — that downloads arbitrary Prisma version from npm.
+          # Must use the checked-out local CLI (Prisma 6.19.3 as pinned in package-lock.json) with DATABASE_URL.
+          # prisma migrate resolve --applied sets applied_steps_count=0 (not 1 — confirmed on Prisma 6.19.3).
           echo ""
-          echo "Running: prisma migrate resolve --applied ${MIG_NAME} via app container..."
+          echo "Running: node_modules/.bin/prisma migrate resolve --applied ${MIG_NAME} (local CLI, lockfile-pinned 6.19.3)..."
           RESOLVE_EXIT=0
-          docker exec "$APP_CONTAINER" \
-            npx prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
+          DATABASE_URL="postgresql://$(cat $WORK_DIR/pg_user):$(cat $WORK_DIR/pg_pass)@$(cat $WORK_DIR/pg_host):$(cat $WORK_DIR/pg_port)/$(cat $WORK_DIR/pg_db)?schema=public" \
+            node_modules/.bin/prisma migrate resolve --applied "$MIG_NAME" 2>&1 || RESOLVE_EXIT=$?
           if [ "$RESOLVE_EXIT" -ne 0 ]; then
             echo "WARNING: prisma migrate resolve --applied exited $RESOLVE_EXIT." >&2
-            echo "  This may indicate the migration is already marked applied (Prisma returns 1 = already resolved)." >&2
+            echo "  This may indicate the migration is already marked applied (Prisma returns 1 = P3008 already resolved)." >&2
             echo "  Verifying final _prisma_migrations state..." >&2
           fi
 
@@ -927,8 +1068,8 @@ jobs:
             echo "ERROR: checksum mismatch. Got='$FINAL_CHECKSUM' expected='$CHECKSUM'" >&2
             PRISMA_FAIL=1
           }
-          [ "$FINAL_STEPS" = "1" ] || {
-            echo "ERROR: applied_steps_count expected 1, got '$FINAL_STEPS'" >&2
+          [ "$FINAL_STEPS" = "0" ] || {
+            echo "ERROR: applied_steps_count expected 0 (prisma migrate resolve --applied sets 0, not 1), got '$FINAL_STEPS'" >&2
             PRISMA_FAIL=1
           }
           [ "$FINAL_ROLLED" = "f" ] || {
@@ -946,32 +1087,28 @@ jobs:
           [ "$PRISMA_FAIL" -eq 0 ] || { echo "ERROR: _prisma_migrations invariants failed." >&2; exit 1; }
           echo "Prisma reconciliation: VERIFIED APPLIED (checksum, steps, rolled_back_at, finished_at, cardinality all pass)"
 
-          # Write audited ops ledger
-          LEDGER_DIR="/home/dnhhuy/migrate-backups"
-          umask 077
-          LEDGER_FILE="${LEDGER_DIR}/ops-ledger-${MIGRATION_NAME}-$(date -u +'%Y%m%dT%H%M%SZ').txt"
+          # Update ops ledger to APPLIED status (reconciliation succeeded)
           {
-            echo "=== File-Object Expand Ops Ledger ==="
-            echo "timestamp:     $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "run_id:        ${{ github.run_id }}"
-            echo "workflow_sha:  ${{ github.sha }}"
-            echo "migration:     ${MIG_NAME}"
-            echo "sql_sha256:    ${CHECKSUM}"
-            echo "backup_file:   ${{ steps.backup.outputs.backup_file }}"
-            echo "backup_sha256: ${{ steps.backup.outputs.backup_sha }}"
-            echo "db_host:       $(cat $WORK_DIR/pg_host)"
-            echo "db_name:       $(cat $WORK_DIR/pg_db)"
-            echo "db_user:       $(cat $WORK_DIR/pg_user)"
+            echo ""
+            echo "=== Reconciliation Status Update ==="
+            echo "resolved_at:   $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo "prisma_status: APPLIED (checksum=$FINAL_CHECKSUM, steps=$FINAL_STEPS, finished=$FINAL_FINISHED, rolled_back=$FINAL_ROLLED)"
-            echo "app_container: $APP_CONTAINER"
-          } > "$LEDGER_FILE"
-          chmod 600 "$LEDGER_FILE"
-          echo "Ops ledger written: $LEDGER_FILE"
+            echo "resolve_exit:  $RESOLVE_EXIT"
+          } >> "$LEDGER_FILE"
+          echo "Ops ledger updated (reconciliation complete): $LEDGER_FILE"
 
       # ── 12. Cleanup ───────────────────────────────────────────────────────
       - name: Cleanup temp dir
         if: always()
-        run: rm -rf /tmp/file-expand.* 2>/dev/null || true
+        env:
+          WORK_DIR: ${{ steps.dburl.outputs.work_dir }}
+        run: |
+          # Clean ONLY this run's WORK_DIR — do NOT glob /tmp/file-expand.*
+          # which would delete concurrent run evidence and credentials.
+          if [ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ]; then
+            rm -rf "$WORK_DIR" 2>/dev/null || true
+            echo "Cleaned up: $WORK_DIR"
+          fi
 
       - name: Evidence summary
         if: always()
