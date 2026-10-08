@@ -363,7 +363,7 @@ jobs:
             --network "$DOCKER_NETWORK" \
             --env-file "$WORK_DIR/pgenv" \
             postgres:16-alpine \
-            pg_restore --list -F c - < "$BACKUP_FILE" 2>&1)
+            pg_restore --list < "$BACKUP_FILE" 2>&1)
           echo "$RESTORE_LIST" | head -40
 
           TABLE_COUNT=$(echo "$RESTORE_LIST" | grep -c '^[0-9].*TABLE DATA\|^[0-9].*TABLE ' || true)
@@ -487,14 +487,15 @@ jobs:
 
           # Restore backup by piping dump file via stdin to pg_restore.
           # Using docker run with --network bridge + -i for stdin (no volume mount needed).
-          # pg_restore reads from stdin when no input file arg is given (custom format requires -F c -).
+          # pg_restore (custom format) reads stdin when no filename is given.
+          # Do NOT pass '-' as filename — pg_restore custom format does not treat '-' as stdin.
           # --no-owner --no-acl: avoid role conflicts in ephemeral env (user is 'postgres')
           RESTORE_EXIT=0
           docker run --rm -i --network bridge \
             --env-file "$WORK_DIR/pgenv_rehearsal" \
             postgres:16-alpine \
             pg_restore -h "$EPHEM_IP" -p 5432 -U postgres -d qcet_eoffice \
-              --no-owner --no-acl --exit-on-error -F c - \
+              --no-owner --no-acl --exit-on-error \
             < "$REHEARSAL_DUMP" 2>&1 || RESTORE_EXIT=$?
           if [ "$RESTORE_EXIT" -ne 0 ]; then
             echo "WARNING: pg_restore exited $RESTORE_EXIT — checking if tables exist..."
