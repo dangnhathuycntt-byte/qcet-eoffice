@@ -1412,14 +1412,28 @@ function FloatingToolbar({ editor }: { editor: any }) {
   React.useEffect(() => {
     if (readOnly) { setVisible(false); return; }
 
+    // Đang kéo khối (ảnh, video...) thì không hiện thanh định dạng
+    let dragging = false;
+    const onDragStart = () => { dragging = true; setVisible(false); };
+    const onDragEnd = () => { dragging = false; };
+    document.addEventListener("dragstart", onDragStart, true);
+    document.addEventListener("dragend", onDragEnd, true);
+    document.addEventListener("drop", onDragEnd, true);
+
     const handleSelectionChange = () => {
       const sel = editor.selection;
-      if (!sel || editor.api.isCollapsed?.(sel)) {
+      if (dragging || !sel || editor.api.isCollapsed?.(sel)) {
         setVisible(false);
         return;
       }
       const domSel = window.getSelection();
       if (!domSel || domSel.rangeCount === 0) {
+        setVisible(false);
+        return;
+      }
+      // Chỉ hiện khi chọn chữ: vùng không chỉnh sửa được (khối ảnh, video) không có định dạng
+      const anchorEl = domSel.anchorNode instanceof Element ? domSel.anchorNode : domSel.anchorNode?.parentElement;
+      if (anchorEl?.closest('[contenteditable="false"]')) {
         setVisible(false);
         return;
       }
@@ -1436,7 +1450,12 @@ function FloatingToolbar({ editor }: { editor: any }) {
     };
 
     document.addEventListener("selectionchange", handleSelectionChange);
-    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("dragstart", onDragStart, true);
+      document.removeEventListener("dragend", onDragEnd, true);
+      document.removeEventListener("drop", onDragEnd, true);
+    };
   }, [editor, readOnly, refs]);
 
   if (!visible || typeof document === "undefined") return null;

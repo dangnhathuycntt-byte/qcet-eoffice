@@ -418,6 +418,16 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
     });
   });
 
+  describe("4e2. Floating format toolbar while dragging blocks", () => {
+    it("hides the floating format toolbar during drag and inside non-editable blocks", () => {
+      assert.ok(
+        componentContent.includes('document.addEventListener("dragstart", onDragStart, true)') &&
+          componentContent.includes('closest(\'[contenteditable="false"]\')'),
+        "FloatingToolbar must ignore selections while dragging and inside contentEditable=false blocks"
+      );
+    });
+  });
+
   describe("4f. Autoformat input rules", () => {
     it("wires heading, blockquote, hr, list, and mark input rules", () => {
       assert.ok(
