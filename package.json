@@ -20,6 +20,7 @@
     "test:gate0": "node scripts/run-gate0.mjs",
     "test:sprint2": "node scripts/run-sprint2.mjs",
     "test:sprint3": "node scripts/run-sprint3.mjs",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test",
     "db:seed": "tsx prisma/seed.ts",
@@ -68,6 +69,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0",
+    "react-pdf": "^11.0.0",
     "react-resizable-panels": "^4.12.4",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.0.2",
@@ -77,6 +79,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.0.9",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",

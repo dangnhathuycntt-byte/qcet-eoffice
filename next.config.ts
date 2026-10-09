@@ -6,6 +6,8 @@ const isProduction = process.env.NODE_ENV === "production";
 const securityHeaders = getNextSecurityHeaders(isProduction);
 
 const nextConfig: NextConfig = {
+  // E2E chạy server riêng với NEXT_DIST_DIR khác để không đụng .next của dev server đang mở
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
   serverExternalPackages: ["web-push"],
   outputFileTracingRoot: path.resolve(__dirname),

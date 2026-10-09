@@ -91,3 +91,11 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 
+
+# Playwright E2E
+/.next-e2e/
+/e2e/.tmp/
+/playwright/.auth/
+/test-results/
+/playwright-report/
+/.next-build/
