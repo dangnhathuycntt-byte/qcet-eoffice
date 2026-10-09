@@ -252,10 +252,15 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Canonical properties sidebar must expose the start-date picker"
     );
 
-    // Must have due date picker support with 'Hạn chót' placeholder
+    // Ngày bắt đầu → hạn chót dùng chung TaskDateRange (placeholder 'Hạn chót' nằm ở đó)
+    const controlsContent = fs.readFileSync(
+      path.join(process.cwd(), "src/components/tasks/detail/task-property-controls.tsx"),
+      "utf-8"
+    );
+    assert.ok(content.includes("<TaskDateRange"), "Properties line must reuse TaskDateRange for dates");
     assert.ok(
-      content.includes('placeholder="Hạn chót"'),
-      "Properties line must allow picking due date with 'Hạn chót'"
+      controlsContent.includes('placeholder="Hạn chót"'),
+      "TaskDateRange must allow picking due date with 'Hạn chót'"
     );
 
     // Must support onStartDateChange
@@ -315,30 +320,10 @@ describe("Direct Inline Editor UX — Exact Caret Placement & IME Suite", () => 
       "Copy link must be accessible"
     );
 
-    // 4. TaskDetailPage Space keyboard shortcut logic
+    // 4. Phím Space không còn điều khiển inspector (chặn cuộn trang); Cmd+I cũng đã gỡ
     assert.ok(
-      detailContent.includes('e.code === "Space" || e.key === " "'),
-      "TaskDetailPage must listen to Space key"
-    );
-    assert.ok(
-      detailContent.includes("if (e.repeat) return;"),
-      "TaskDetailPage must ignore key repeat on Space"
-    );
-    assert.ok(
-      detailContent.includes("isEditable(target)"),
-      "TaskDetailPage must ignore Space when editing text/inputs"
-    );
-    assert.ok(
-      detailContent.includes("isInteractiveControl(target)"),
-      "TaskDetailPage must ignore Space when focus is on another interactive control"
-    );
-    assert.ok(
-      detailContent.includes("isDialogOpen()"),
-      "TaskDetailPage must ignore Space when dialog/popover is open"
-    );
-    assert.ok(
-      detailContent.includes("e.preventDefault();\n        handleToggleInspector();"),
-      "TaskDetailPage must only call preventDefault when actively handling the Space shortcut"
+      !detailContent.includes('e.code === "Space"') && !detailContent.includes("handleToggleInspector"),
+      "TaskDetailPage must not bind Space or any inspector toggle"
     );
   });
 });

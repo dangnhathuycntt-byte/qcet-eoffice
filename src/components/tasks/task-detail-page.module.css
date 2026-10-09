@@ -218,13 +218,14 @@
 }
 .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  /* 96px: nhãn dài nhất ("Hạn hoàn thành") không tràn sang cột giá trị */
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: flex-start;
+  /* Hàng 28px + padding 2px mỗi phía = nhịp 32px (các hàng liền nhau, quy chuẩn ≤ 32px) */
   min-height: 28px;
   padding-block: 2px;
 }
 .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div > :first-child {
-  padding-top: 2px;
   white-space: nowrap;
 }
 .workspace [data-slot='task-properties-sidebar'] > div:first-child > div:nth-child(2) > div > :last-child {

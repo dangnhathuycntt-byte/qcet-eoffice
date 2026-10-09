@@ -51,7 +51,7 @@ function SubtaskRow({
         type="button"
         onClick={() => onSelect(subtask)}
         className={cn(
-          "w-full group/sub flex items-center gap-2.5 min-h-9 px-2 py-1.5 rounded-lg text-left text-compact leading-snug transition-colors cursor-pointer hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
+          "w-full group/sub flex items-center gap-2.5 min-h-8 px-2 py-1 rounded-lg text-left text-compact leading-snug transition-colors cursor-pointer hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
           isActive ? "bg-muted/40 ring-1 ring-inset ring-border/60" : ""
         )}
         title={subtask.title}
@@ -77,23 +77,23 @@ function SubtaskRow({
           {subtask.title}
         </span>
 
-        {/* 3. Hạn hoàn thành: DD/MM (đỏ khi trễ hạn) */}
+        {/* 3. Người phụ trách */}
+        <div className="shrink-0">
+          <UserAvatar avatarUrl={subtask.assigneeAvatar} name={subtask.assigneeName} size="sm" />
+        </div>
+
+        {/* 4. Hạn hoàn thành: DD/MM (đỏ khi trễ hạn) */}
         {formattedDueDate && (
           <span
             className={cn(
               "shrink-0 text-xs tabular-nums",
-              due.tone === "danger" ? "text-destructive font-medium" : "text-muted-foreground"
+              due.tone === "danger" ? "text-destructive" : "text-muted-foreground"
             )}
             title={`Hạn hoàn thành: ${formatDisplayDate(subtask.dueDate)}`}
           >
             {formattedDueDate}
           </span>
         )}
-
-        {/* 4. Người phụ trách */}
-        <div className="shrink-0">
-          <UserAvatar avatarUrl={subtask.assigneeAvatar} name={subtask.assigneeName} size="sm" />
-        </div>
       </button>
     </m.div>
   );

@@ -97,14 +97,17 @@ export function TaskAssigneePicker({ items, assigneeId, assigneeName, assigneeAv
         const normalized = query.trim().toLocaleLowerCase("vi");
         return !normalized || [person.name, person.email, person.departmentName].some((text) => text?.toLocaleLowerCase("vi").includes(normalized));
       }} autoHighlight disabled={disabled || pending}>
-      <Combobox.Trigger aria-label={`Người phụ trách: ${displayName}`} className={propertyTriggerVariants({ variant: "muted" })} style={propertyMotionStyle}>
-        {pending ? (
-          <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
-        ) : selected || assigneeName ? (
-          <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
-        ) : (
-          <TaskIconAssignee className="size-4 shrink-0" />
-        )}
+      <Combobox.Trigger aria-label={`Người phụ trách: ${displayName}`} className={propertyTriggerVariants()} style={propertyMotionStyle}>
+        {/* Ô 16px cố định như các icon thuộc tính khác để chữ bắt đầu cùng một mép */}
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          {pending ? (
+            <Loader2 className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+          ) : selected || assigneeName ? (
+            <UserAvatar name={selected?.name ?? assigneeName} avatarUrl={selected?.avatarUrl ?? assigneeAvatarUrl} size="sm" />
+          ) : (
+            <TaskIconAssignee className="size-4 shrink-0" />
+          )}
+        </span>
         <span className="truncate font-normal">{displayName}</span>
       </Combobox.Trigger>
       <Combobox.Portal>

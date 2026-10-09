@@ -7,7 +7,8 @@ const MOBILE_BREAKPOINT = 1024;
 
 interface TaskDetailSplitLayoutProps {
   inspectorOpen: boolean;
-  onToggleInspector: () => void;
+  /** Không còn nút thu gọn ở trang chi tiết; giữ tùy chọn để tương thích với nơi khác */
+  onToggleInspector?: () => void;
   children: React.ReactNode;
   inspector: React.ReactNode;
   className?: string;

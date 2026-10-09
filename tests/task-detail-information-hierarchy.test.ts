@@ -265,10 +265,10 @@ describe("Task Detail Information Hierarchy & Duplication Audit Suite", () => {
     );
     const cssContent = fs.readFileSync(cssFile, "utf-8");
 
-    it("narrows label column to 88px to allocate maximum space for value column", () => {
+    it("keeps label column at 96px so the longest label (Hạn hoàn thành) does not overflow", () => {
       assert.ok(
-        cssContent.includes("grid-template-columns: 88px minmax(0, 1fr)"),
-        "Label column must be narrowed to 88px, expanding value column width"
+        cssContent.includes("grid-template-columns: 96px minmax(0, 1fr)"),
+        "Label column must be 96px: 88px made 'Hạn hoàn thành' spill into the value column"
       );
     });
 

@@ -94,6 +94,37 @@ describe("Hợp đồng source của trang chi tiết", () => {
     assert.ok(!/previousDeliverables = prev;/.test(pageSource));
   });
 
+  it("sidebar thuộc tính: loại người phụ trách khỏi Phối hợp, không có chevron trang trí", () => {
+    const sidebar = readFileSync("src/components/tasks/detail/task-properties-sidebar.tsx", "utf8");
+    assert.ok(sidebar.includes("const collaborators = React.useMemo"), "collaborators phải là danh sách đã lọc");
+    assert.ok(sidebar.includes("leadKeys.has("), "phải loại người phụ trách khỏi Phối hợp");
+    assert.ok(!sidebar.includes("ChevronDown"), "chevron không có hành vi thu gọn nên phải bỏ");
+  });
+
+  it("người phụ trách dùng màu foreground và ô icon 16px để căn mép chữ", () => {
+    const controls = readFileSync("src/components/tasks/detail/task-property-controls.tsx", "utf8");
+    assert.ok(!controls.includes('propertyTriggerVariants({ variant: "muted" })'));
+    assert.ok(controls.includes("flex size-4 shrink-0 items-center justify-center"));
+  });
+
+  it("hàng việc con không cao hơn 32px và ngày trễ hạn không in đậm", () => {
+    const section = readFileSync("src/components/tasks/detail/task-subtasks-sidebar-section.tsx", "utf8");
+    assert.ok(section.includes("min-h-8") && !section.includes("min-h-9"));
+    assert.ok(!section.includes("text-destructive font-medium"));
+  });
+
+  it("không còn nút thu gọn cột thuộc tính và phím Cmd+I", () => {
+    assert.ok(!pageSource.includes("onToggleInspector={handleToggleInspector}"), "header/split layout không được nhận nút thu gọn");
+    assert.ok(!pageSource.includes("handleToggleInspector"), "không còn handler thu gọn");
+    assert.ok(!pageSource.includes('e.key.toLowerCase() === "i"'), "phím Cmd+I đã bỏ");
+    assert.ok(pageSource.includes("const showInspector = !activeSubtask;"), "cột thuộc tính chỉ ẩn khi drawer việc con mở");
+  });
+
+  it("việc con chỉ hiện trong cột thuộc tính, không có khối dự phòng ở nội dung chính", () => {
+    assert.ok(!pageSource.includes("{!showInspector && ("), "khối dự phòng đã gỡ");
+    assert.ok(!pageSource.includes("<TaskSubtasksSidebarSection"), "trang chi tiết không render danh sách trực tiếp");
+  });
+
   it("lead name không phụ thuộc isSchool heuristic", () => {
     assert.ok(pageSource.includes("(task as any).leadAssigneeName || (task as any).assigneeName"));
   });

@@ -89,8 +89,6 @@ export function TaskDetailPage({
   const taskSnapshotRef = React.useRef(task);
   taskSnapshotRef.current = task;
 
-  // Inspector visibility state
-  const [inspectorExpanded, setShowInspector] = React.useState(true);
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false);
 
   // Aria-live status announcement (Fix #15)
@@ -195,48 +193,9 @@ export function TaskDetailPage({
     updateSubtaskUrl(null);
   }, [updateSubtaskUrl]);
 
-  // Handler toggle Inspector dùng chung cho cả nút bấm và phím tắt
-  const handleToggleInspector = React.useCallback(() => {
-    setShowInspector((prev) => !prev);
-  }, []);
-
   // Create subtask modal state
   const [isCreateSubtaskOpen, setIsCreateSubtaskOpen] = React.useState(false);
   const handleAddSubtask = React.useCallback(() => setIsCreateSubtaskOpen(true), []);
-
-  // Keyboard shortcut: Cmd/Ctrl + I để thu gọn/mở Inspector sidebar
-  React.useEffect(() => {
-    const isEditable = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      const tagName = el.tagName?.toLowerCase();
-      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
-        return true;
-      }
-      if (el.isContentEditable) {
-        return true;
-      }
-      return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const focused = document.activeElement as HTMLElement | null;
-      const target = e.target as HTMLElement | null;
-      if (
-        e.defaultPrevented || e.isComposing || e.keyCode === 229 ||
-        isEditable(target) || isEditable(focused) ||
-        target?.closest?.('[data-slot="task-block-editor"]')
-      ) return;
-
-      // Phím Cmd/Ctrl + I
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
-        if (e.repeat) return;
-        e.preventDefault();
-        handleToggleInspector();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleToggleInspector]);
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
@@ -308,7 +267,8 @@ export function TaskDetailPage({
     return subTasks.find((st) => st.id === selectedSubtaskId) || null;
   }, [selectedSubtaskId, subTasks]);
 
-  const showInspector = inspectorExpanded && !activeSubtask;
+  // Cột thuộc tính luôn hiện, trừ khi drawer việc con đang mở (drawer thay vào chỗ đó)
+  const showInspector = !activeSubtask;
 
   const handleSubtaskUpdated = React.useCallback((updated: StaffTask) => {
     setTask((prev) => {
@@ -833,8 +793,6 @@ export function TaskDetailPage({
           {/* Header Navigation Bar */}
           <TaskDetailHeaderNav
             taskId={task.id}
-            showInspector={showInspector}
-            onToggleInspector={handleToggleInspector}
             isDrawerOpen={Boolean(activeSubtask)}
             onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
             leading={
@@ -865,7 +823,6 @@ export function TaskDetailPage({
           >
             <TaskDetailSplitLayout
               inspectorOpen={showInspector}
-              onToggleInspector={handleToggleInspector}
               inspector={
                 <aside aria-label="Cột thuộc tính nhiệm vụ" className={styles.inspector} style={{ overflow: "hidden", minWidth: 0, width: "100%" }}>
               <TaskPropertiesSidebar
@@ -912,6 +869,7 @@ export function TaskDetailPage({
                 onDeleteDeliverable={handleDeleteDeliverable}
                 showInlineProperties={!showInspector}
               />
+
 
               {isSchoolTask(task) && (task as any).sourceDocument && (
                 <div className="px-4 pb-3">

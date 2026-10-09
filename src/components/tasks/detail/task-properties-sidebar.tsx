@@ -8,7 +8,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ChevronDown,
   Check,
   Signal,
   UserPlus,
@@ -36,7 +35,7 @@ import { CORE_STATUS_OPTIONS, PRIORITY_DISPLAY_CONFIG, getStatusDisplay, getPrio
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { TaskStatusSelect, TaskAssigneePicker, TaskPrioritySelect } from "./task-property-controls";
 import { PropertyRow } from "@/components/ui/property-row";
-import { UserAvatarGroup } from "@/components/ui/user-avatar";
+import { UserAvatar, UserAvatarGroup } from "@/components/ui/user-avatar";
 import { TaskSubtasksSidebarSection } from "./task-subtasks-sidebar-section";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
 import { useFeedback } from "@/components/ui/feedback-layer";
@@ -241,7 +240,7 @@ export function TaskPropertiesSidebar({
   }, [leadName, departmentName, personnelList]);
 
   // Members / Collaborators: strictly read-only derived data from server truth (Rule 2)
-  const collaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
+  const allCollaborators: Array<{ id: string; name: string; avatarUrl?: string }> = React.useMemo(() => {
     // Nhiệm vụ đơn vị có mảng subTasks nên có thể bị nhận nhầm là cấp trường (isSchool):
     // đọc cả hai nguồn thay vì dựa vào phân loại.
     const anyTask = task as any;
@@ -271,6 +270,16 @@ export function TaskPropertiesSidebar({
     }
     return list.filter((c) => c.name);
   }, [task]);
+
+  // Người phụ trách chính đã hiện ở hàng "Phụ trách": không lặp lại trong "Phối hợp"
+  const collaborators = React.useMemo(() => {
+    const leadId: string | undefined = anyTask.leadAssigneeId || anyTask.assigneeId;
+    // So khớp cả tên đầy đủ (có chức danh) và tên đã tách chức danh
+    const leadKeys = new Set([leadName, leadParsed.displayName].map((n) => n.trim().toLocaleLowerCase("vi")));
+    return allCollaborators.filter(
+      (c) => !(leadId && c.id === leadId) && !leadKeys.has(c.name.trim().toLocaleLowerCase("vi")),
+    );
+  }, [allCollaborators, anyTask.leadAssigneeId, anyTask.assigneeId, leadName, leadParsed.displayName]);
 
   // Dates — use extractDateIso for ICT-safe date extraction (replaces inline typeof + slice)
   const rawStartDate = isSchool ? schoolTask?.startDate : (task as any).startDate;
@@ -376,14 +385,11 @@ export function TaskPropertiesSidebar({
       <div className="space-y-3 rounded-lg border border-border/70 bg-card p-3 shadow-2xs">
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <span>Thuộc tính</span>
-            <ChevronDown className="size-3 text-muted-foreground" />
-          </span>
+          <span className="text-xs font-semibold text-foreground">Thuộc tính</span>
         </div>
 
         {/* 2-Column Key-Value Table */}
-        <div className="space-y-1 text-xs">
+        <div className="text-xs">
           {/* Status Row — @base-ui Select via TaskStatusSelect */}
           <PropertyRow label="Trạng thái" interactive={canEdit}>
             <TaskStatusSelect
@@ -423,7 +429,17 @@ export function TaskPropertiesSidebar({
           {/* Members / Collaborators Row: strictly read-only derived data from active subtasks (Rule 2) */}
           <PropertyRow label="Phối hợp">
             <div className="relative">
-              {collaborators.length > 0 ? (
+              {collaborators.length === 1 ? (
+                <div
+                  className="inline-flex h-7 items-center gap-1.5 px-1.5 text-xs text-foreground select-none"
+                  title={collaborators[0].name}
+                >
+                  <span className="flex size-4 shrink-0 items-center justify-center">
+                    <UserAvatar name={collaborators[0].name} avatarUrl={collaborators[0].avatarUrl} size="sm" />
+                  </span>
+                  <span className="truncate font-normal">{collaborators[0].name}</span>
+                </div>
+              ) : collaborators.length > 1 ? (
                 <UserAvatarGroup
                   users={collaborators}
                   max={3}
@@ -460,7 +476,7 @@ export function TaskPropertiesSidebar({
               ) : (
                 <div
                   title="Ngày bắt đầu"
-                  className="inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
+                  className="inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs text-foreground select-none"
                 >
                   <div className="size-4 shrink-0 flex items-center justify-center">
                     <TaskIconDeadline className="size-4 text-muted-foreground" />
@@ -505,7 +521,7 @@ export function TaskPropertiesSidebar({
                 <div
                   title="Hạn hoàn thành"
                   className={cn(
-                    "inline-flex items-center gap-2 py-0.5 px-1.5 rounded text-xs select-none",
+                    "inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded text-xs select-none",
                     dueStatus.isOverdue && normalizedStatus !== "COMPLETED"
                       ? "text-destructive font-normal"
                       : "text-foreground font-normal"
@@ -532,7 +548,7 @@ export function TaskPropertiesSidebar({
           {/* Row 7: Department */}
           <PropertyRow label="Đơn vị" interactive>
             <div
-              className="inline-flex items-start gap-2 px-1.5 py-0.5 rounded min-w-0 text-foreground text-xs leading-snug"
+              className="inline-flex items-start gap-1.5 px-1.5 py-0.5 rounded min-w-0 text-foreground text-xs leading-snug"
               style={{
                 minWidth: 0,
                 whiteSpace: "normal",

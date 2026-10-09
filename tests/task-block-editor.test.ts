@@ -301,10 +301,6 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "TaskBlockEditor must connect to handleSaveDescription for real persistence"
       );
       assert.ok(
-        detailPageContent.includes("isEditable(target) || isEditable(focused)"),
-        "Panel shortcuts must ignore both editable event targets and focused inputs"
-      );
-      assert.ok(
         !detailPageContent.includes('e.code === "Space"'),
         "Space must not toggle the inspector: it would block native page scrolling"
       );
