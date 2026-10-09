@@ -27,3 +27,17 @@ describe("Hiển thị người phụ trách", () => {
     );
   });
 });
+
+describe("Dropdown trạng thái việc con", () => {
+  it("không thêm mục trùng khi mapper trả về NEW cho NOT_STARTED", () => {
+    const src = readFileSync("src/components/tasks/detail/subtask-detail-drawer.tsx", "utf8");
+    assert.ok(
+      !src.includes("[...STATUS_OPTIONS, getStatusDisplay(current)]"),
+      "không được nối trạng thái hiện tại vào cuối danh sách"
+    );
+    assert.ok(
+      src.includes("normalizeDisplayStatus(subtask.status)") && src.includes("value={currentStatusValue}"),
+      "trạng thái hiện tại phải được chuẩn hóa trước khi so khớp và hiển thị"
+    );
+  });
+});

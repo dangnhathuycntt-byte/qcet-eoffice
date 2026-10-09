@@ -9,7 +9,8 @@ import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-prop
 import { cn } from "@/lib/utils";
 import type { StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
-import { STATUS_OPTIONS, getStatusDisplay } from "@/domain/tasks/display-config";
+import { STATUS_OPTIONS } from "@/domain/tasks/display-config";
+import { normalizeDisplayStatus } from "@/domain/tasks/canonical-semantics";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { formatDisplayDate } from "@/lib/format/date";
@@ -91,16 +92,16 @@ export function SubtaskDetailDrawer({
     return map;
   }, [allowedTransitions]);
 
+  // Mapper việc con trả về "NEW" cho NOT_STARTED: chuẩn hóa về bộ 4 trạng thái của dropdown
+  // để không thêm nhầm một mục "Mới" thứ hai vào cuối danh sách.
+  const currentStatusValue = subtask ? normalizeDisplayStatus(subtask.status) : "NOT_STARTED";
+
   const statusChoices = React.useMemo(() => {
-    // Trạng thái hiện tại có thể nằm ngoài danh sách chọn (vd. NEEDS_REVIEW): vẫn hiện nhãn tiếng Việt
-    const current = subtask?.status;
-    const options =
-      current && !STATUS_OPTIONS.some((o) => o.value === current)
-        ? [...STATUS_OPTIONS, getStatusDisplay(current)]
-        : STATUS_OPTIONS;
+    const current = currentStatusValue;
+    const options = STATUS_OPTIONS;
     return options.map((option) => {
         const check = allowedStatusMap.get(option.value === "NOT_STARTED" ? "NEW" : option.value) || { allowed: true, reason: undefined };
-        const isCurrent = option.value === (subtask?.status || "NOT_STARTED");
+        const isCurrent = option.value === current;
         return {
           value: option.value,
           label: option.label,
@@ -110,7 +111,7 @@ export function SubtaskDetailDrawer({
           reason: !isCurrent && !check.allowed ? check.reason : undefined,
         };
     });
-  }, [allowedStatusMap, subtask?.status]);
+  }, [allowedStatusMap, currentStatusValue]);
 
   // Dọn sự kiện kéo cả khi pane đóng hoặc cửa sổ mất focus.
   const stopResizeRef = React.useRef<(() => void) | null>(null);
@@ -499,7 +500,7 @@ export function SubtaskDetailDrawer({
 
           <section aria-label="Thuộc tính việc thành phần" className="mt-3 flex items-center gap-3 flex-wrap text-xs text-muted-foreground font-normal select-none">
             <TaskStatusSelect
-              value={subtask.status}
+              value={currentStatusValue}
               options={statusChoices}
               disabled={!canEdit}
               onValueChange={(value) => void handleStatusChange(value)}
