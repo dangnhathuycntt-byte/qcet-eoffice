@@ -5,7 +5,7 @@ import { MOCK_DOCUMENTS, getDocumentStats } from "./fixtures/document-fixtures";
 import {
   getUrgencyBadgeConfig,
   getStatusBadgeConfig,
-} from "../src/components/documents/document-detail-dialog";
+} from "../src/components/documents/document-badges";
 
 describe("Official Documents & Dispatches Test Suite (Decree 30/2020/ND-CP)", () => {
   describe("Data Model & Mock Data Integrity", () => {

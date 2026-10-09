@@ -188,7 +188,7 @@ export const DocumentPagination = React.memo(function DocumentPagination({
                     aria-label="Chọn số lượng văn bản mỗi trang"
                     className="min-w-[130px] rounded-xl border border-border/80 bg-popover/95 p-1 text-xs text-popover-foreground shadow-lg shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-100"
                   >
-                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/40 mb-1">
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/40 mb-1">
                       Kích thước trang
                     </div>
                     {effectivePageSizeOptions.map((size) => {

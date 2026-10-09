@@ -87,6 +87,12 @@ export default async function IncomingDocumentDetailPage({ params }: PageParams)
     notFound();
   }
 
+  // getIncomingDocument không nạp tệp đính kèm: lấy riêng sau khi đã qua kiểm tra quyền
+  const attachments = await prisma.documentAttachment.findMany({
+    where: { documentId: rawWorkflow.document.id },
+    orderBy: [{ isOriginal: "desc" }, { createdAt: "asc" }],
+  });
+
   const currentUser = {
     id: sessionUser.id,
     name: sessionUser.name,
@@ -146,14 +152,24 @@ export default async function IncomingDocumentDetailPage({ params }: PageParams)
       receivedDate: (rawWorkflow.document as any).receivedDate?.toISOString() ?? null,
       dueDate: rawWorkflow.document.dueDate?.toISOString() ?? null,
       linkedTaskId: rawWorkflow.document.linkedTaskId ?? null,
-      attachments: (rawWorkflow.document as any).attachments?.map((a: any) => ({
+      linkedTask: linkedTask
+        ? {
+            id: linkedTask.id,
+            code: linkedTask.code,
+            title: linkedTask.title,
+            status: linkedTask.status as string,
+            dueDate: linkedTask.dueDate?.toISOString() ?? null,
+            progressPercent: linkedTask.progressPercent,
+          }
+        : null,
+      attachments: attachments.map((a) => ({
         id: a.id,
         fileName: a.fileName,
         fileUrl: a.fileUrl,
         fileSize: a.fileSize ? Number(a.fileSize) : null,
         mimeType: a.mimeType ?? null,
         isOriginal: a.isOriginal ?? false,
-      })) ?? [],
+      })),
     },
   };
 

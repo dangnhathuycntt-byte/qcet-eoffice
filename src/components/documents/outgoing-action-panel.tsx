@@ -13,10 +13,12 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  ChevronRight,
 } from "lucide-react";
-import { Dialog } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
+import { StandardDialog } from "@/components/ui/dialog";
 import type { OutgoingDocumentStatus } from "@/contracts/documents";
 
 interface ActionDef {
@@ -174,80 +176,61 @@ export function OutgoingActionPanel({
   if (actions.length === 0) {
     if (status === "ISSUED") {
       return (
-        <div
-          className={cn(
-            "rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-center",
-            className
-          )}
-        >
-          <CheckCircle2 className="mx-auto size-8 text-emerald-500 mb-2" strokeWidth={1.5} />
-          <p className="text-sm font-semibold text-emerald-800">Văn bản đã phát hành</p>
-          <p className="mt-1 text-xs text-emerald-600">Quy trình xử lý hoàn tất.</p>
-        </div>
+        <p className={cn("flex items-center gap-1.5 text-compact text-muted-foreground", className)}>
+          <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
+          Văn bản đã phát hành · quy trình xử lý hoàn tất
+        </p>
       );
     }
     return null;
   }
 
   return (
-    <div className={cn("rounded-xl border border-border/70 bg-card p-4 shadow-xs", className)}>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-        Hành động
-      </h3>
+    <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
+      <h3 className="text-xs font-semibold text-muted-foreground mb-2">Hành động</h3>
 
-      <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         {actions.map((actionDef) => {
-          const Icon = actionDef.icon;
           const isLoading = pending === actionDef.action;
 
           return (
-            <button
+            <Button
               key={actionDef.action}
               type="button"
+              size="sm"
+              variant={actionDef.variant === "primary" ? "default" : "ghost"}
               disabled={!!pending}
               onClick={() => handleActionClick(actionDef)}
-              className={cn(
-                "w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
-                actionDef.variant === "primary"
-                  ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 active:scale-[0.98]"
-                  : actionDef.variant === "danger"
-                    ? "border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10 active:scale-[0.98]"
-                    : "border-border bg-muted/50 text-foreground hover:bg-muted active:scale-[0.98]"
-              )}
+              title={actionDef.description}
+              aria-description={actionDef.description}
+              className={cn("text-compact", actionDef.variant === "danger" && "text-destructive hover:text-destructive")}
             >
               {isLoading ? (
-                <Loader2 className="size-4 shrink-0 animate-spin" strokeWidth={1.5} />
-              ) : (
-                <Icon className="size-4 shrink-0" strokeWidth={1.5} />
-              )}
-              <div className="flex-1 min-w-0">
-                <div>{actionDef.label}</div>
-                <div className="text-[10px] font-normal opacity-70 leading-snug mt-0.5">
-                  {actionDef.description}
-                </div>
-              </div>
-              <ChevronRight className="size-3.5 shrink-0 opacity-40" strokeWidth={1.5} />
-            </button>
+                <Loader2 className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />
+              ) : null}
+              {actionDef.label}
+            </Button>
           );
         })}
       </div>
 
       {error && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-destructive/5 border border-destructive/20 p-2.5 text-xs text-destructive">
-          <AlertCircle className="size-3.5 shrink-0 mt-0.5" strokeWidth={1.5} />
+        <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-md bg-danger-soft p-2 text-xs text-destructive">
+          <AlertCircle className="size-3.5 shrink-0 mt-px" strokeWidth={1.5} />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-700">
-          <CheckCircle2 className="size-3.5 shrink-0 mt-0.5" strokeWidth={1.5} />
+        <div role="status" className="mt-2 flex items-start gap-1.5 rounded-md bg-emerald-500/10 p-2 text-xs text-emerald-700">
+          <CheckCircle2 className="size-3.5 shrink-0 mt-px" strokeWidth={1.5} />
           <span>{success}</span>
         </div>
       )}
 
       {/* Confirmation Dialog */}
-      <Dialog.Root
+      <StandardDialog
+      compact
         open={!!confirmAction}
         onOpenChange={(open) => {
           if (!open) {
@@ -255,82 +238,47 @@ export function OutgoingActionPanel({
             setNote("");
           }
         }}
+        title={confirmAction?.label ?? "Xác nhận thao tác"}
+        description={confirmAction?.description}
+        size="sm"
       >
-        <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" />
-          <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-xl">
-              {confirmAction && (
-                <>
-                  <div className="flex items-center gap-2 mb-3">
-                    {React.createElement(confirmAction.icon, {
-                      className: cn(
-                        "size-4 shrink-0",
-                        confirmAction.variant === "danger"
-                          ? "text-destructive"
-                          : "text-primary"
-                      ),
-                      strokeWidth: 1.5,
-                    })}
-                    <Dialog.Title className="text-sm font-semibold text-foreground">
-                      {confirmAction.label}
-                    </Dialog.Title>
-                  </div>
-                  <Dialog.Description className="text-xs text-muted-foreground mb-4">
-                    {confirmAction.description}
-                  </Dialog.Description>
+        {confirmAction && (
+          <div className="space-y-3">
+            {confirmAction.requiresNote && (
+              <FormField label="Ghi chú / lý do">
+                <Textarea
+                  compact
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  placeholder="Nhập lý do hoặc ghi chú..."
+                  className="resize-none"
+                />
+              </FormField>
+            )}
 
-                  {confirmAction.requiresNote && (
-                    <div className="mb-4">
-                      <label className="text-xs font-medium text-foreground mb-1.5 block">
-                        Ghi chú / Lý do <span className="text-destructive">*</span>
-                      </label>
-                      <textarea
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={3}
-                        placeholder="Nhập lý do hoặc ghi chú..."
-                        className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 justify-end">
-                    <Dialog.Close
-                      render={
-                        <button
-                          type="button"
-                          className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-                        />
-                      }
-                    >
-                      Hủy
-                    </Dialog.Close>
-                    <button
-                      type="button"
-                      disabled={confirmAction.requiresNote && !note.trim()}
-                      onClick={() => executeAction(confirmAction, note || undefined)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50 disabled:pointer-events-none",
-                        confirmAction.variant === "danger"
-                          ? "bg-destructive hover:bg-destructive/90"
-                          : "bg-primary hover:bg-primary/90"
-                      )}
-                    >
-                      {pending ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <Send className="size-3" strokeWidth={2} />
-                      )}
-                      Xác nhận
-                    </button>
-                  </div>
-                </>
-              )}
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={() => { setConfirmAction(null); setNote(""); }}>
+                Hủy
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={confirmAction.variant === "danger" ? "destructive" : "default"}
+                disabled={(confirmAction.requiresNote && !note.trim()) || !!pending}
+                onClick={() => executeAction(confirmAction, note || undefined)}
+              >
+                {pending ? (
+                  <Loader2 className="animate-spin" strokeWidth={1.5} />
+                ) : (
+                  <Send strokeWidth={1.5} />
+                )}
+                Xác nhận
+              </Button>
             </div>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </div>
+        )}
+      </StandardDialog>
     </div>
   );
 }

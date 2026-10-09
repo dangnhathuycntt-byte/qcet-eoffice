@@ -26,56 +26,24 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import { staggerContainerVariants, listItemVariants } from "@/lib/motion/variants";
 import { motionTransition } from "@/lib/motion/tokens";
 import { OfficialDocument } from "@/types/document";
+import type { DocumentAuditApiResponse, DocumentTimelineStep } from "@/types/document-audit";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { fetchDocumentAuditTimeline, isEmptyTimeline } from "@/lib/documents/audit-timeline-client";
 
-export interface DocumentTimelineStep {
-  id: string;
-  stepNumber: number;
-  key: string;
-  title: string;
-  subtitle: string;
-  status: "completed" | "current" | "pending" | "rejected";
-  actorName?: string | null;
-  actorRole?: string | null;
-  actorTitle?: string | null;
-  actorAvatar?: string | null;
-  timestamp?: string | null;
-  notes?: string | null;
-  departmentName?: string | null;
-  assignedToName?: string | null;
-  deadline?: string | null;
-}
-
-export interface DocumentAuditLogItem {
-  id: string;
-  action: string;
-  actionLabel: string;
-  actorName: string;
-  actorRole?: string | null;
-  actorTitle?: string | null;
-  actorAvatar?: string | null;
-  timestamp: string;
-  notes?: string | null;
-  metadata?: Record<string, unknown> | null;
-}
-
-export interface DocumentAuditApiResponse {
-  success?: boolean;
-  documentId: string;
-  documentNumber: string;
-  type: string;
-  progressPercent: number;
-  completedCount: number;
-  totalSteps: number;
-  currentStep?: DocumentTimelineStep;
-  steps: DocumentTimelineStep[];
-  auditLogs: DocumentAuditLogItem[];
-}
+export type {
+  DocumentTimelineStep,
+  DocumentAuditLogItem,
+  DocumentAuditApiResponse,
+} from "@/types/document-audit";
 
 export interface DocumentAuditTimelineProps {
   documentId: string;
+  /** Giữ để tương thích; không dùng để dựng lịch sử. Lịch sử chỉ lấy từ API. */
   initialDoc?: OfficialDocument | null;
   className?: string;
+  /** Ẩn tiêu đề lớn khi timeline nằm trong một phân mục đã có tiêu đề riêng. */
+  bare?: boolean;
 }
 
 /**
@@ -124,195 +92,39 @@ function getStepIcon(stepNumber: number, key: string, status: DocumentTimelineSt
 
 export function DocumentAuditTimeline({
   documentId,
-  initialDoc,
   className,
+  bare = false,
 }: DocumentAuditTimelineProps) {
   const [timelineData, setTimelineData] = React.useState<DocumentAuditApiResponse | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   const [showDetailedLogs, setShowDetailedLogs] = React.useState<boolean>(false);
 
+  const abortRef = React.useRef<AbortController | null>(null);
+
   const fetchTimeline = React.useCallback(async () => {
     if (!documentId) return;
+    // Hủy yêu cầu trước để kết quả cũ không ghi đè lịch sử của văn bản/lần thử mới.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/documents/${encodeURIComponent(documentId)}/audit-logs`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        // Build graceful fallback if endpoint returns 404/synthetic
-        if (res.status === 404 && initialDoc) {
-          const fallbackData = buildFallbackTimeline(initialDoc);
-          setTimelineData(fallbackData);
-          return;
-        }
-        throw new Error(`Không thể tải dữ liệu lịch sử luân chuyển (HTTP ${res.status})`);
-      }
-
-      const json = await res.json();
-      const payload = json.data || json;
-      setTimelineData(payload);
-    } catch (err: unknown) {
-      if (initialDoc) {
-        setTimelineData(buildFallbackTimeline(initialDoc));
-      } else {
-        setError(err instanceof Error ? err.message : "Lỗi khi tải lịch sử luân chuyển.");
-      }
-    } finally {
-      setLoading(false);
+    setTimelineData(null);
+    const result = await fetchDocumentAuditTimeline(documentId, fetch, controller.signal);
+    if (controller.signal.aborted) return;
+    if (result.ok) {
+      setTimelineData(result.data);
+    } else {
+      setError(result.error);
     }
-  }, [documentId, initialDoc]);
+    setLoading(false);
+  }, [documentId]);
 
   React.useEffect(() => {
     fetchTimeline();
+    return () => abortRef.current?.abort();
   }, [fetchTimeline]);
-
-  // Fallback builder for offline or mock documents
-  function buildFallbackTimeline(doc: OfficialDocument): DocumentAuditApiResponse {
-    const isCompleted = doc.status === "completed" || doc.status === "DA_HOAN_THANH";
-    const isDelegated = doc.status === "delegated" || Boolean(doc.linkedTaskId);
-    const isProcessing = doc.status === "processing" || isDelegated || isCompleted;
-    const isPresented = isProcessing || isCompleted;
-
-    const steps: DocumentTimelineStep[] = [
-      {
-        id: "step-1",
-        stepNumber: 1,
-        key: "RECEIVED",
-        title: "Tiếp nhận & Vào sổ",
-        subtitle: "Văn thư tiếp nhận và cấp số đến",
-        status: "completed",
-        actorName: "Văn thư Trường",
-        actorRole: "VAN_THU",
-        actorTitle: "Văn thư cơ quan",
-        timestamp: doc.receivedDate ? `${doc.receivedDate}T08:00:00Z` : new Date().toISOString(),
-        notes: `Số vào sổ: ${doc.documentNumber} • Cơ quan ban hành: ${doc.issuingAuthority}`,
-      },
-      {
-        id: "step-2",
-        stepNumber: 2,
-        key: "PRESENTED",
-        title: "Trình Ban Giám Hiệu",
-        subtitle: "Lập phiếu trình Ban Giám Hiệu xem xét",
-        status: isPresented ? "completed" : "current",
-        actorName: "Văn thư Trường",
-        actorRole: "VAN_THU",
-        timestamp: doc.receivedDate ? `${doc.receivedDate}T09:30:00Z` : null,
-        notes: "Đã lập phiếu trình và chuyển văn bản tới Ban Giám Hiệu",
-      },
-      {
-        id: "step-3",
-        stepNumber: 3,
-        key: "DIRECTED",
-        title: "Chỉ đạo & Bút phê BGH",
-        subtitle: "Lãnh đạo Trường phê duyệt và phân công",
-        status: isProcessing || isCompleted ? "completed" : isPresented ? "current" : "pending",
-        actorName: doc.signatory || "Ban Giám Hiệu",
-        actorRole: "BAN_GIAM_HIEU",
-        actorTitle: "Lãnh đạo Ban Giám Hiệu",
-        departmentName: doc.leadDepartment,
-        timestamp: isProcessing ? `${doc.issuedDate}T14:00:00Z` : null,
-        notes: `Giao ${doc.leadDepartment} chủ trì thực hiện theo đúng thẩm quyền và thời hạn quy định.`,
-      },
-      {
-        id: "step-4",
-        stepNumber: 4,
-        key: "UNIT_ASSIGNED",
-        title: "Giao đơn vị & Phân công DRI",
-        subtitle: "Trưởng đơn vị giao chuyên viên chủ trì",
-        status: isDelegated || isCompleted ? "completed" : isProcessing ? "current" : "pending",
-        actorName: "Trưởng đơn vị",
-        actorRole: "TRUONG_PHONG",
-        departmentName: doc.leadDepartment,
-        timestamp: isDelegated ? `${doc.issuedDate}T16:30:00Z` : null,
-        notes: doc.linkedTaskId
-          ? `Đã liên thông nhiệm vụ: ${doc.linkedTaskId} (${doc.linkedTaskTitle || "Nhiệm vụ trực tiếp giao từ văn bản"})`
-          : `Phân công chuyên viên phòng/khoa thụ lý triển khai`,
-      },
-      {
-        id: "step-5",
-        stepNumber: 5,
-        key: "COMPLETED",
-        title: "Giải quyết & Lưu trữ hồ sơ",
-        subtitle: "Báo cáo kết quả và lập hồ sơ công việc",
-        status: isCompleted ? "completed" : isDelegated ? "current" : "pending",
-        actorName: isCompleted ? "Chuyên viên thụ lý & Văn thư" : null,
-        timestamp: isCompleted ? new Date().toISOString() : null,
-        notes: isCompleted
-          ? "Đã hoàn thành xử lý nội dung văn bản và lưu trữ hồ sơ theo Nghị định 30/2020."
-          : "Đang tiến hành thực hiện nhiệm vụ",
-      },
-    ];
-
-    const completedCount = steps.filter((s) => s.status === "completed").length;
-
-    return {
-      documentId: doc.id,
-      documentNumber: doc.documentNumber,
-      type: doc.type,
-      progressPercent: Math.round((completedCount / steps.length) * 100),
-      completedCount,
-      totalSteps: steps.length,
-      currentStep: steps.find((s) => s.status === "current") || steps[steps.length - 1],
-      steps,
-      auditLogs: [
-        {
-          id: "log-1",
-          action: "DOCUMENT_CREATED",
-          actionLabel: "Tiếp nhận & Vào sổ văn bản",
-          actorName: "Văn thư Trường",
-          actorRole: "VAN_THU",
-          timestamp: doc.receivedDate ? `${doc.receivedDate}T08:00:00Z` : new Date().toISOString(),
-          notes: `Đăng ký văn bản số ${doc.documentNumber} từ ${doc.issuingAuthority}`,
-        },
-        ...(isPresented
-          ? [
-              {
-                id: "log-2",
-                action: "DOCUMENT_PRESENTED",
-                actionLabel: "Trình Ban Giám Hiệu xem xét",
-                actorName: "Văn thư Trường",
-                actorRole: "VAN_THU",
-                timestamp: `${doc.issuedDate}T09:30:00Z`,
-                notes: "Chuyển văn bản tới BGH để xin ý kiến chỉ đạo",
-              },
-            ]
-          : []),
-        ...(isProcessing
-          ? [
-              {
-                id: "log-3",
-                action: "DOCUMENT_DIRECTED",
-                actionLabel: "Lãnh đạo BGH cho ý kiến chỉ đạo / Bút phê",
-                actorName: doc.signatory || "Ban Giám Hiệu",
-                actorRole: "BAN_GIAM_HIEU",
-                timestamp: `${doc.issuedDate}T14:00:00Z`,
-                notes: `Chuyển ${doc.leadDepartment} chủ trì triển khai`,
-              },
-            ]
-          : []),
-        ...(isDelegated
-          ? [
-              {
-                id: "log-4",
-                action: "DOCUMENT_UNIT_ASSIGNED",
-                actionLabel: "Phân công tác nghiệp cho đơn vị & chuyên viên",
-                actorName: "Trưởng đơn vị",
-                actorRole: "TRUONG_PHONG",
-                timestamp: `${doc.issuedDate}T16:30:00Z`,
-                notes: doc.linkedTaskId ? `Tạo nhiệm vụ ${doc.linkedTaskId}` : "Giao chuyên viên",
-              },
-            ]
-          : []),
-      ],
-    };
-  }
 
   const steps = timelineData?.steps || [];
   const auditLogs = timelineData?.auditLogs || [];
@@ -320,23 +132,21 @@ export function DocumentAuditTimeline({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/70 bg-card p-4 sm:p-5 shadow-xs space-y-4",
+        "space-y-3",
         className
       )}
       data-slot="document-audit-timeline"
     >
       {/* Header & Progress Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 border border-primary/20">
-            <History className="size-4" strokeWidth={1.5} />
-          </div>
+      <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-3", bare ? "" : "pb-3 border-b border-border/50")}>
+        {bare ? null : <div className="flex items-start gap-2.5">
+          <History className="mt-0.5 size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-foreground">
+              <h3 className="text-compact font-semibold text-foreground">
                 Tiến trình Phê duyệt & Lịch sử Luân chuyển
               </h3>
-              <span className="text-[11px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-mono font-medium">
+              <span className="font-mono text-xs text-muted-foreground">
                 Nghị định 30/2020
               </span>
             </div>
@@ -344,39 +154,40 @@ export function DocumentAuditTimeline({
               Quy trình luân chuyển tác nghiệp 2 cấp: BGH chỉ đạo & Đơn vị thực thi
             </p>
           </div>
-        </div>
+        </div>}
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {timelineData && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/60 border border-border/60 text-xs font-semibold text-foreground">
+          {timelineData && !isEmptyTimeline(timelineData) && (
+            <div className="flex items-center gap-1.5 text-xs text-foreground">
               <span className="text-muted-foreground">Tiến độ:</span>
-              <span className="font-mono text-primary font-bold">
+              <span className="font-mono font-semibold text-foreground">
                 {timelineData.progressPercent}%
               </span>
-              <span className="text-muted-foreground text-[11px]">
+              <span className="text-muted-foreground text-xs">
                 ({timelineData.completedCount}/{timelineData.totalSteps} bước)
               </span>
             </div>
           )}
 
-          <button
+          <Button
             type="button"
+            variant={bare ? "ghost" : "outline"}
+            size="icon-sm"
             onClick={fetchTimeline}
             disabled={loading}
             aria-label="Làm mới tiến trình"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-border/60 bg-background hover:bg-muted active:scale-[0.98] text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={cn("size-4", loading && "animate-spin text-primary")} strokeWidth={1.5} />
-          </button>
+            <RefreshCw className={cn("size-3.5", loading && "animate-spin motion-reduce:animate-none text-primary")} strokeWidth={1.5} />
+          </Button>
         </div>
       </div>
 
       {/* Loading Skeleton */}
       {loading && !timelineData && (
-        <div className="py-6 space-y-4 animate-pulse">
+        <div className="py-4 space-y-3 motion-safe:animate-pulse">
           {[1, 2, 3, 4, 5].map((idx) => (
-            <div key={idx} className="flex items-start gap-3.5">
-              <div className="size-8 rounded-full bg-muted shrink-0" />
+            <div key={idx} className="flex items-start gap-3">
+              <div className="size-6 rounded-full bg-muted shrink-0" />
               <div className="flex-1 space-y-2 py-1">
                 <div className="h-4 bg-muted rounded-md w-1/3" />
                 <div className="h-3 bg-muted/60 rounded-md w-2/3" />
@@ -388,20 +199,20 @@ export function DocumentAuditTimeline({
 
       {/* Error state */}
       {error && !timelineData && (
-        <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-xs flex items-start gap-2.5">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
+        <div className="flex items-start gap-2 text-xs">
+          <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-destructive" strokeWidth={1.5} />
           <div className="flex-1">
-            <p className="font-semibold">Lỗi tải dữ liệu</p>
-            <p className="text-muted-foreground mt-0.5">{error}</p>
-            <button
-              type="button"
-              onClick={fetchTimeline}
-              className="min-h-[44px] mt-2 px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground font-semibold hover:opacity-90 active:scale-[0.98] cursor-pointer"
-            >
+            <p className="font-medium text-destructive">Lỗi tải dữ liệu</p>
+            <p className="mt-0.5 text-muted-foreground">{error}</p>
+            <Button type="button" variant="ghost" size="sm" onClick={fetchTimeline} className="mt-1.5 -ml-2">
               Thử lại
-            </button>
+            </Button>
           </div>
         </div>
+      )}
+
+      {timelineData && isEmptyTimeline(timelineData) && (
+        <p className="py-4 text-center text-compact text-muted-foreground">Chưa có lịch sử luân chuyển.</p>
       )}
 
       {/* Timeline Steps (5 Canonical Stages) */}
@@ -422,13 +233,13 @@ export function DocumentAuditTimeline({
               <m.div
                 key={step.id || step.key}
                 variants={listItemVariants}
-                className="relative flex items-start gap-3.5 group pb-4 last:pb-0"
+                className="relative flex items-start gap-3 group pb-3 last:pb-0"
               >
                 {/* Connecting Line */}
                 {!isLast && (
                   <div
                     className={cn(
-                      "absolute left-4 top-8 -bottom-1 w-0.5 -translate-x-1/2 transition-colors",
+                      "absolute left-3 top-6 -bottom-1 w-px -translate-x-1/2 transition-colors",
                       isCompleted
                         ? "bg-primary/40"
                         : isCurrent
@@ -443,42 +254,38 @@ export function DocumentAuditTimeline({
                 <div className="relative z-10 shrink-0">
                   <div
                     className={cn(
-                      "size-8 rounded-full flex items-center justify-center transition-all border",
+                      "size-6 rounded-full flex items-center justify-center transition-colors border",
                       isCompleted
-                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        ? "bg-primary text-primary-foreground border-primary"
                         : isCurrent
-                          ? "bg-primary/10 text-primary border-primary ring-4 ring-primary/15 animate-pulse"
+                          ? "bg-primary/10 text-primary border-primary ring-2 ring-primary/15 motion-safe:animate-pulse"
                           : "bg-muted text-muted-foreground border-border/70"
                     )}
                   >
-                    <StepIcon className="size-4" strokeWidth={1.5} />
+                    <StepIcon className="size-3.5" strokeWidth={1.5} />
                   </div>
                 </div>
 
                 {/* Step Card Content */}
                 <div
                   className={cn(
-                    "flex-1 min-w-0 p-3.5 rounded-xl border transition-all text-xs",
-                    isCurrent
-                      ? "bg-primary/5 border-primary/30 shadow-xs ring-1 ring-primary/10"
-                      : isCompleted
-                        ? "bg-card border-border/60 hover:border-border"
-                        : "bg-muted/20 border-border/40 opacity-70"
+                    "flex-1 min-w-0 py-2.5 text-xs",
+                    !isCurrent && !isCompleted && "opacity-60"
                   )}
                 >
                   {/* Step Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-foreground">
+                      <span className="font-semibold text-compact text-foreground">
                         {step.stepNumber}. {step.title}
                       </span>
                       {isCurrent && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary text-primary-foreground animate-pulse">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-primary motion-safe:animate-pulse">
                           Đang thực hiện
                         </span>
                       )}
                       {isCompleted && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <CheckCircle2 className="size-3" strokeWidth={1.5} />
                           Đã hoàn thành
                         </span>
@@ -486,7 +293,7 @@ export function DocumentAuditTimeline({
                     </div>
 
                     {step.timestamp && (
-                      <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                      <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">
                         <Clock className="size-3 text-muted-foreground/80" strokeWidth={1.5} />
                         {formatVietnameseDateTime(step.timestamp)}
                       </span>
@@ -502,15 +309,15 @@ export function DocumentAuditTimeline({
                   {(step.actorName || step.departmentName || step.assignedToName) && (
                     <div className="flex items-center gap-2 flex-wrap text-xs pt-1.5 border-t border-border/40">
                       {step.actorName && (
-                        <div className="flex items-center gap-1.5 font-medium text-foreground bg-muted/50 px-2 py-1 rounded-md">
-                          <Avatar.Root className="size-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[10px] shrink-0">
+                        <div className="flex items-center gap-1.5 font-medium text-foreground">
+                          <Avatar.Root className="size-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs shrink-0">
                             <Avatar.Fallback>
                               {step.actorName.charAt(0).toUpperCase()}
                             </Avatar.Fallback>
                           </Avatar.Root>
                           <span className="truncate">{step.actorName}</span>
                           {step.actorTitle && (
-                            <span className="text-muted-foreground text-[11px] font-normal">
+                            <span className="text-muted-foreground text-xs font-normal">
                               ({step.actorTitle})
                             </span>
                           )}
@@ -518,21 +325,21 @@ export function DocumentAuditTimeline({
                       )}
 
                       {step.departmentName && (
-                        <div className="flex items-center gap-1 text-muted-foreground bg-muted/40 px-2 py-1 rounded-md">
+                        <div className="flex items-center gap-1 text-muted-foreground">
                           <Building2 className="size-3.5 text-primary/70 shrink-0" strokeWidth={1.5} />
                           <span>{step.departmentName}</span>
                         </div>
                       )}
 
                       {step.assignedToName && (
-                        <div className="flex items-center gap-1 text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md font-medium">
+                        <div className="flex items-center gap-1 font-medium text-foreground">
                           <User className="size-3.5 shrink-0" strokeWidth={1.5} />
                           <span>Chuyên viên chủ trì (DRI): {step.assignedToName}</span>
                         </div>
                       )}
 
                       {step.deadline && (
-                        <div className="flex items-center gap-1 text-amber-700 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md font-mono">
+                        <div className="flex items-center gap-1 font-mono text-amber-700">
                           <Calendar className="size-3.5 shrink-0" strokeWidth={1.5} />
                           <span>Hạn xử lý: {formatVietnameseDateTime(step.deadline)}</span>
                         </div>
@@ -565,7 +372,7 @@ export function DocumentAuditTimeline({
 
       {/* Collapsible Detailed Audit Trail Section */}
       {auditLogs.length > 0 && (
-        <div className="pt-2 border-t border-border/60">
+        <div className="pt-3 border-t border-border/50">
           <Collapsible.Root
             open={showDetailedLogs}
             onOpenChange={setShowDetailedLogs}
@@ -573,7 +380,7 @@ export function DocumentAuditTimeline({
           >
             <Collapsible.Trigger
               type="button"
-              className="min-h-[44px] w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/60 text-xs font-semibold text-foreground transition-all cursor-pointer active:scale-[0.99]"
+              className="min-h-11 sm:min-h-7 w-full flex items-center justify-between rounded-md px-1 py-1 hover:bg-muted/50 text-xs font-medium text-foreground transition-colors motion-reduce:transition-none cursor-pointer outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
             >
               <div className="flex items-center gap-2">
                 <History className="size-3.5 text-primary" strokeWidth={1.5} />
@@ -581,7 +388,7 @@ export function DocumentAuditTimeline({
               </div>
               <ChevronDown
                 className={cn(
-                  "size-4 text-muted-foreground transition-transform duration-200",
+                  "size-3.5 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
                   showDetailedLogs && "rotate-180"
                 )}
                 strokeWidth={1.5}
@@ -589,30 +396,28 @@ export function DocumentAuditTimeline({
             </Collapsible.Trigger>
 
             <Collapsible.Panel className="space-y-2 pt-2 animate-in fade-in duration-200">
-              <div className="rounded-xl border border-border/60 bg-muted/10 divide-y divide-border/40 overflow-hidden">
+              <div className="divide-y divide-border/40">
                 {auditLogs.map((log) => (
                   <div key={log.id} className="p-3 text-xs flex items-start gap-2.5 hover:bg-muted/20 transition-colors">
-                    <div className="p-1.5 rounded-lg bg-muted text-foreground shrink-0 mt-0.5">
-                      <FileBadge2 className="size-3.5 text-primary" strokeWidth={1.5} />
-                    </div>
+                    <FileBadge2 className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-0.5">
                         <span className="font-semibold text-foreground">
                           {log.actionLabel}
                         </span>
-                        <span className="text-[11px] font-mono text-muted-foreground">
+                        <span className="text-xs font-mono text-muted-foreground">
                           {formatVietnameseDateTime(log.timestamp)}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                         <User className="size-3" strokeWidth={1.5} />
                         <span className="font-medium text-foreground">{log.actorName}</span>
                         {log.actorTitle && <span>({log.actorTitle})</span>}
                       </div>
 
                       {log.notes && (
-                        <p className="mt-1 text-muted-foreground italic text-[11px] bg-background/60 p-1.5 rounded border border-border/40">
+                        <p className="mt-1 border-l-2 border-border pl-2 text-xs italic text-muted-foreground">
                           {log.notes}
                         </p>
                       )}

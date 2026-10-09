@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import {
   getUrgencyBadgeConfig,
   getStatusBadgeConfig,
-} from "../document-detail-dialog";
+} from "../document-badges";
 
 export interface DocumentTableProps {
   documents: OfficialDocument[];
@@ -249,7 +249,7 @@ export function DocumentTable({
           strokeWidth={1.5}
         />
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-compact font-semibold text-foreground">
             Không thể tải dữ liệu văn bản
           </p>
           <p className="text-xs text-muted-foreground">{error}</p>
@@ -277,7 +277,7 @@ export function DocumentTable({
         data-slot="document-table"
       >
         <FileText className="size-8 mx-auto mb-2 opacity-50" strokeWidth={1.5} />
-        <p className="text-sm font-medium text-foreground">{emptyTitle}</p>
+        <p className="text-compact font-medium text-foreground">{emptyTitle}</p>
         <p className="text-xs mt-1">{emptyDescription}</p>
       </div>
     );
@@ -371,7 +371,7 @@ export function DocumentTable({
 
                 {/* Số / Ký hiệu & Loại */}
                 <td className="py-3 px-4 table-cell-dense">
-                  <span className="font-mono text-xs md:text-[13px] font-semibold text-primary block group-hover:text-primary/80 transition-colors">
+                  <span className="font-mono text-xs md:text-compact font-semibold text-primary block group-hover:text-primary/80 transition-colors">
                     {doc.documentNumber}
                   </span>
                   <span className="text-xs text-muted-foreground">
@@ -404,7 +404,7 @@ export function DocumentTable({
                 {/* Trích yếu nội dung */}
                 <td className="py-3 px-4 table-cell-dense">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground line-clamp-2 leading-relaxed" title={doc.summary}>
+                    <p className="text-compact font-medium text-foreground line-clamp-2 leading-relaxed" title={doc.summary}>
                       {doc.summary}
                     </p>
                     <div className="flex items-center gap-1.5 flex-wrap">

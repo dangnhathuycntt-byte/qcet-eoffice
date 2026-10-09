@@ -11,10 +11,13 @@ import {
   CheckSquare,
   Loader2,
   AlertCircle,
-  Clock,
 } from "lucide-react";
-import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
+import { StandardDialog } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
+import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { motionSpring, motionDuration, motionEase } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
@@ -73,6 +76,7 @@ export function DocumentBulkToolbar({
 
   // Form states cho từng loại modal
   const [selectedUnitId, setSelectedUnitId] = React.useState("");
+  const unitFieldRef = React.useRef<HTMLDivElement>(null);
   const [instruction, setInstruction] = React.useState("");
   const [deadline, setDeadline] = React.useState("");
   const [resolutionSummary, setResolutionSummary] = React.useState("");
@@ -130,6 +134,7 @@ export function DocumentBulkToolbar({
     // Validate theo từng loại hành động
     if (modalState.type === "assign-unit" && !selectedUnitId) {
       setErrorMessage("Vui lòng chọn đơn vị chủ trì thực hiện.");
+      unitFieldRef.current?.querySelector("button")?.focus();
       return;
     }
 
@@ -233,12 +238,12 @@ export function DocumentBulkToolbar({
               className
             )}
           >
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/80 bg-background/95 backdrop-blur-md px-3 py-2 shadow-2xl text-foreground ring-1 ring-border/20">
+            <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-card px-2 py-1 shadow-lg text-foreground">
               {/* Badge hiển thị số lượng */}
-              <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-xs font-medium text-foreground whitespace-nowrap">
+              <div className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 text-compact font-medium text-foreground whitespace-nowrap">
                 <CheckSquare
-                  className="size-4 text-primary shrink-0"
-                  strokeWidth={1.75}
+                  className="size-3.5 text-primary shrink-0"
+                  strokeWidth={1.5}
                 />
                 <span className="flex items-center gap-1">
                   Đã chọn{" "}
@@ -260,55 +265,46 @@ export function DocumentBulkToolbar({
               />
 
               {/* [Nút Giao đơn vị] */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => openModal("assign-unit")}
                 disabled={isLoading || isSubmitting}
-                className={cn(
-                  "h-8 px-2.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer",
-                  "text-foreground hover:bg-primary/10 hover:text-primary active:scale-[0.98]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
+                className="text-foreground"
                 title="Giao đơn vị chủ trì xử lý các văn bản đã chọn"
               >
-                <Building2 className="size-3.5 text-primary shrink-0" />
+                <Building2 className="text-primary" strokeWidth={1.5} />
                 <span>Giao đơn vị</span>
-              </button>
+              </Button>
 
               {/* [Nút Hoàn tất] */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => openModal("resolve")}
                 disabled={isLoading || isSubmitting}
-                className={cn(
-                  "h-8 px-2.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer",
-                  "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 active:scale-[0.98]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
+                className="text-foreground"
                 title="Đánh dấu hoàn tất xử lý các văn bản đã chọn"
               >
-                <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <CheckCircle2 className="text-emerald-600" strokeWidth={1.5} />
                 <span>Hoàn tất</span>
-              </button>
+              </Button>
 
               {/* [Nút Lưu hồ sơ] */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => openModal("file")}
                 disabled={isLoading || isSubmitting}
-                className={cn(
-                  "h-8 px-2.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer",
-                  "text-sky-700 dark:text-sky-400 hover:bg-sky-500/10 active:scale-[0.98]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
+                className="text-foreground"
                 title="Lập hồ sơ và đưa vào lưu trữ theo dõi"
               >
-                <Archive className="size-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+                <Archive className="text-primary" strokeWidth={1.5} />
                 <span>Lưu hồ sơ</span>
-              </button>
+              </Button>
 
               <div
                 className="h-4 w-px bg-border/80 mx-0.5 shrink-0"
@@ -316,285 +312,173 @@ export function DocumentBulkToolbar({
               />
 
               {/* [Nút Bỏ chọn (ESC)] */}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onClearSelection}
                 disabled={isLoading || isSubmitting}
-                className={cn(
-                  "h-8 pl-2 pr-1.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer",
-                  "text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.98]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
                 aria-label="Bỏ chọn tất cả văn bản"
                 title="Bỏ chọn (Esc)"
               >
-                <X className="size-3.5 shrink-0" />
+                <X strokeWidth={1.5} />
                 <span className="hidden sm:inline">Bỏ chọn</span>
-                <kbd className="inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 py-0.2 font-mono text-[10px] text-muted-foreground leading-none font-medium">
+                <kbd className="inline-flex items-center rounded border border-border/80 bg-muted/80 px-1 font-mono text-xs text-muted-foreground leading-none font-medium">
                   Esc
                 </kbd>
-              </button>
+              </Button>
             </div>
           </m.aside>
         )}
       </AnimatePresence>
 
-      {/* Dialog xác nhận hành động dùng @base-ui/react/dialog */}
-      <BaseDialog.Root
+      {/* Dialog xác nhận hành động hàng loạt */}
+      <StandardDialog
+      compact
         open={modalState.isOpen}
         onOpenChange={(open) => {
           if (!open) closeModal();
         }}
+        title={
+          modalState.type === "assign-unit"
+            ? "Giao đơn vị chủ trì"
+            : modalState.type === "resolve"
+            ? "Xác nhận hoàn tất văn bản"
+            : "Lưu trữ hồ sơ văn bản"
+        }
+        description={`Áp dụng đồng loạt cho ${effectiveCount} văn bản đã chọn`}
+        size="md"
       >
-        <BaseDialog.Portal>
-          <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-150 motion-safe:transition-opacity motion-safe:duration-150" />
-          <BaseDialog.Popup
-            className={cn(
-              "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 outline-none",
-              "rounded-2xl border border-border bg-card p-6 shadow-2xl text-foreground",
-              "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 duration-200"
-            )}
-          >
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-border/60">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={cn(
-                    "size-9 rounded-xl flex items-center justify-center shrink-0",
-                    modalState.type === "assign-unit" &&
-                      "bg-primary/10 text-primary border border-primary/20",
-                    modalState.type === "resolve" &&
-                      "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20",
-                    modalState.type === "file" &&
-                      "bg-sky-500/10 text-sky-600 border border-sky-500/20"
-                  )}
-                >
-                  {modalState.type === "assign-unit" && (
-                    <Building2 className="size-5" />
-                  )}
-                  {modalState.type === "resolve" && (
-                    <CheckCircle2 className="size-5" />
-                  )}
-                  {modalState.type === "file" && <Archive className="size-5" />}
-                </div>
-                <div>
-                  <BaseDialog.Title className="text-base font-semibold text-foreground">
-                    {modalState.type === "assign-unit" && "Giao đơn vị chủ trì"}
-                    {modalState.type === "resolve" &&
-                      "Xác nhận hoàn tất văn bản"}
-                    {modalState.type === "file" && "Lưu trữ hồ sơ văn bản"}
-                  </BaseDialog.Title>
-                  <BaseDialog.Description className="text-xs text-muted-foreground mt-0.5">
-                    Áp dụng đồng loạt cho{" "}
-                    <strong className="text-foreground font-semibold">
-                      {effectiveCount}
-                    </strong>{" "}
-                    văn bản đã chọn
-                  </BaseDialog.Description>
-                </div>
+        {errorMessage && (
+          <div role="alert" className="mb-3 flex items-center gap-1.5 rounded-md bg-danger-soft px-2.5 py-1.5 text-xs text-destructive">
+            <AlertCircle className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleExecuteBatch} noValidate className="space-y-3">
+          {/* Nội dung Form: Giao đơn vị */}
+          {modalState.type === "assign-unit" && (
+            <div className="space-y-3">
+              <div ref={unitFieldRef}>
+              <FormField label="Đơn vị chủ trì thực hiện">
+                <Select
+                  compact
+                  positionerClassName="z-50"
+                  placeholder="Chọn đơn vị tiếp nhận chủ trì"
+                  options={departments.map((dept) => ({ value: dept.id, label: `${dept.name} (${dept.code})` }))}
+                  value={selectedUnitId || null}
+                  onValueChange={(v) => setSelectedUnitId(v ?? "")}
+                  disabled={isSubmitting || isLoadingDepts}
+                  required
+                />
+              </FormField>
               </div>
 
-              <BaseDialog.Close
-                disabled={isSubmitting}
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label="Đóng"
-              >
-                <X className="size-4" />
-              </BaseDialog.Close>
+              <FormField label="Ý kiến chỉ đạo / yêu cầu xử lý" optional>
+                <Textarea
+                  compact
+                  value={instruction}
+                  onChange={(e) => setInstruction(e.target.value)}
+                  disabled={isSubmitting}
+                  rows={3}
+                  placeholder="Nhập nội dung chỉ đạo hoặc phân công nhiệm vụ..."
+                  className="resize-none"
+                />
+              </FormField>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="bulk-deadline" className="text-xs font-medium text-foreground">
+                  Thời hạn hoàn thành
+                  <span className="ml-1.5 font-normal text-muted-foreground">(không bắt buộc)</span>
+                </label>
+                <VietnameseDatePicker
+                  id="bulk-deadline"
+                  variant="input"
+                  value={deadline}
+                  onChange={(val) => setDeadline(val)}
+                  disabled={isSubmitting}
+                  triggerClassName="h-11 sm:h-7 rounded-md px-2"
+                  className="w-full"
+                />
+              </div>
             </div>
+          )}
 
-            {errorMessage && (
-              <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">
-                <AlertCircle className="size-4 shrink-0" />
-                <span>{errorMessage}</span>
+          {/* Nội dung Form: Hoàn tất */}
+          {modalState.type === "resolve" && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">
+                  Bạn đang thao tác đánh dấu hoàn tất xử lý cho {effectiveCount} văn bản.
+                </p>
+                <p>
+                  Trạng thái các văn bản sẽ được chuyển sang{" "}
+                  <span className="font-semibold text-emerald-700">Đã hoàn thành (DA_HOAN_THANH)</span>.
+                </p>
               </div>
-            )}
 
-            <form onSubmit={handleExecuteBatch} className="mt-4 space-y-4">
-              {/* Nội dung Form: Giao đơn vị */}
-              {modalState.type === "assign-unit" && (
-                <div className="space-y-3.5">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="bulk-lead-unit"
-                      className="text-xs font-semibold text-foreground flex items-center gap-1"
-                    >
-                      Đơn vị chủ trì thực hiện{" "}
-                      <span className="text-destructive">*</span>
-                    </label>
-                    <select
-                      id="bulk-lead-unit"
-                      value={selectedUnitId}
-                      onChange={(e) => setSelectedUnitId(e.target.value)}
-                      disabled={isSubmitting || isLoadingDepts}
-                      required
-                      className="w-full h-9.5 px-3 text-xs rounded-xl border border-border/80 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      <option value="" disabled>
-                        -- Chọn đơn vị tiếp nhận chủ trì --
-                      </option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name} ({dept.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="bulk-instruction"
-                      className="text-xs font-semibold text-foreground"
-                    >
-                      Ý kiến chỉ đạo / Yêu cầu xử lý
-                    </label>
-                    <textarea
-                      id="bulk-instruction"
-                      value={instruction}
-                      onChange={(e) => setInstruction(e.target.value)}
-                      disabled={isSubmitting}
-                      rows={3}
-                      placeholder="Nhập nội dung chỉ đạo hoặc phân công nhiệm vụ..."
-                      className="w-full p-2.5 text-xs rounded-xl border border-border/80 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="bulk-deadline"
-                      className="text-xs font-semibold text-foreground flex items-center gap-1"
-                    >
-                      <Clock className="size-3.5 text-muted-foreground" />
-                      Thời hạn hoàn thành
-                    </label>
-                    <input
-                      type="date"
-                      id="bulk-deadline"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      disabled={isSubmitting}
-                      className="w-full h-9.5 px-3 text-xs rounded-xl border border-border/80 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Nội dung Form: Hoàn tất */}
-              {modalState.type === "resolve" && (
-                <div className="space-y-3.5">
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium text-foreground">
-                      Bạn đang thao tác đánh dấu hoàn tất xử lý cho{" "}
-                      {effectiveCount} văn bản.
-                    </p>
-                    <p>
-                      Trạng thái các văn bản sẽ được chuyển sang{" "}
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                        Đã hoàn thành (DA_HOAN_THANH)
-                      </span>
-                      .
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="bulk-resolution"
-                      className="text-xs font-semibold text-foreground"
-                    >
-                      Tóm tắt kết quả giải quyết (tùy chọn)
-                    </label>
-                    <textarea
-                      id="bulk-resolution"
-                      value={resolutionSummary}
-                      onChange={(e) => setResolutionSummary(e.target.value)}
-                      disabled={isSubmitting}
-                      rows={3}
-                      placeholder="Ghi chú kết quả thực hiện, văn bản phúc đáp hoặc căn cứ hoàn thành..."
-                      className="w-full p-2.5 text-xs rounded-xl border border-border/80 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Nội dung Form: Lưu hồ sơ */}
-              {modalState.type === "file" && (
-                <div className="space-y-3.5">
-                  <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-800 dark:text-sky-300 space-y-1">
-                    <p className="font-medium">
-                      Lập hồ sơ lưu trữ cho {effectiveCount} văn bản đã chọn.
-                    </p>
-                    <p className="text-[11px] opacity-90">
-                      Văn bản sẽ được đánh dấu lưu theo dõi và đưa vào danh mục
-                      hồ sơ lưu trữ theo chuẩn quy định.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="bulk-filing-notes"
-                      className="text-xs font-semibold text-foreground"
-                    >
-                      Ghi chú lưu hồ sơ / Vị trí lưu
-                    </label>
-                    <textarea
-                      id="bulk-filing-notes"
-                      value={filingNotes}
-                      onChange={(e) => setFilingNotes(e.target.value)}
-                      disabled={isSubmitting}
-                      rows={3}
-                      placeholder="Ghi chú nơi lưu trữ, tập hồ sơ số..."
-                      className="w-full p-2.5 text-xs rounded-xl border border-border/80 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    />
-                  </div>
-
-                </div>
-              )}
-
-              {/* Footer hành động của Dialog */}
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/60">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={closeModal}
+              <FormField label="Tóm tắt kết quả giải quyết" optional>
+                <Textarea
+                  compact
+                  value={resolutionSummary}
+                  onChange={(e) => setResolutionSummary(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-9 px-4 text-xs rounded-xl"
-                >
-                  Hủy bỏ
-                </Button>
+                  rows={3}
+                  placeholder="Ghi chú kết quả thực hiện, văn bản phúc đáp hoặc căn cứ hoàn thành..."
+                  className="resize-none"
+                />
+              </FormField>
+            </div>
+          )}
 
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className={cn(
-                    "h-9 px-4 text-xs font-semibold rounded-xl inline-flex items-center gap-1.5 shadow-sm cursor-pointer",
-                    modalState.type === "assign-unit" &&
-                      "bg-primary text-primary-foreground hover:bg-primary/90",
-                    modalState.type === "resolve" &&
-                      "bg-emerald-600 text-white hover:bg-emerald-700",
-                    modalState.type === "file" &&
-                      "bg-sky-600 text-white hover:bg-sky-700"
-                  )}
-                >
-                  {isSubmitting && (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  )}
-                  <span>
-                    {isSubmitting
-                      ? "Đang xử lý..."
-                      : modalState.type === "assign-unit"
-                      ? "Xác nhận giao việc"
-                      : modalState.type === "resolve"
-                      ? "Xác nhận hoàn tất"
-                      : "Lưu hồ sơ"}
-                  </span>
-                </Button>
+          {/* Nội dung Form: Lưu hồ sơ */}
+          {modalState.type === "file" && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">
+                  Lập hồ sơ lưu trữ cho {effectiveCount} văn bản đã chọn.
+                </p>
+                <p>
+                  Văn bản sẽ được đánh dấu lưu theo dõi và đưa vào danh mục hồ sơ lưu trữ theo chuẩn quy định.
+                </p>
               </div>
-            </form>
-          </BaseDialog.Popup>
-        </BaseDialog.Portal>
-      </BaseDialog.Root>
+
+              <FormField label="Ghi chú lưu hồ sơ / vị trí lưu" optional>
+                <Textarea
+                  compact
+                  value={filingNotes}
+                  onChange={(e) => setFilingNotes(e.target.value)}
+                  disabled={isSubmitting}
+                  rows={3}
+                  placeholder="Ghi chú nơi lưu trữ, tập hồ sơ số..."
+                  className="resize-none"
+                />
+              </FormField>
+            </div>
+          )}
+
+          {/* Footer hành động của Dialog */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={isSubmitting}>
+              Hủy bỏ
+            </Button>
+
+            <Button type="submit" size="sm" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin motion-reduce:animate-none" strokeWidth={1.5} />}
+              <span>
+                {isSubmitting
+                  ? "Đang xử lý..."
+                  : modalState.type === "assign-unit"
+                  ? "Xác nhận giao việc"
+                  : modalState.type === "resolve"
+                  ? "Xác nhận hoàn tất"
+                  : "Lưu hồ sơ"}
+              </span>
+            </Button>
+          </div>
+        </form>
+      </StandardDialog>
     </>
   );
 }

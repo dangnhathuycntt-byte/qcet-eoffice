@@ -282,7 +282,7 @@ export function DirectiveActionPanel({
             <PenTool className="size-4" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-compact font-semibold text-foreground">
               Hộp Bút phê BGH 1-chạm
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -366,7 +366,7 @@ export function DirectiveActionPanel({
               setErrorMessage(null);
             }}
             placeholder="Ghi ý kiến chỉ đạo của Ban Giám hiệu (Ví dụ: Giao Phòng Đào tạo chủ trì, rà soát chương trình đào tạo nghề trọng điểm trước ngày 15/09...)"
-            className="mt-1.5 w-full rounded-xl border border-border/70 bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all"
+            className="mt-1.5 w-full rounded-xl border border-border/70 bg-card p-3 text-compact text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all"
             required
           />
         </div>
@@ -388,7 +388,7 @@ export function DirectiveActionPanel({
                 // Remove from collaborators if previously checked
                 setCollaboratorIds((prev) => prev.filter((id) => id !== newDept));
               }}
-              className="mt-1.5 w-full rounded-xl border border-border/70 bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+              className="mt-1.5 w-full rounded-xl border border-border/70 bg-card px-3 py-2 text-compact text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
             >
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
@@ -483,7 +483,7 @@ export function DirectiveActionPanel({
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-[44px] sm:min-h-9 rounded-xl border border-border/70 bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 rounded-xl border border-border/70 bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all cursor-pointer"
             >
               Hủy bỏ
             </button>
@@ -492,7 +492,7 @@ export function DirectiveActionPanel({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex min-h-[44px] sm:min-h-9 items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="inline-flex min-h-[44px] sm:min-h-7 sm:h-7 items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (
               <>

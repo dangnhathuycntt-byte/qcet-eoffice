@@ -1,21 +1,24 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
-import { Check, Loader2, Paperclip } from "lucide-react";
-import Link from "next/link";
+import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DocumentAuditTimeline } from "@/components/documents/document-audit-timeline";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { getLedgerDueNote, getLedgerUrgencyTag, todayInVietnam } from "@/lib/documents/document-ledger-format";
-
-const DocumentPdfViewer = dynamic(
-  () => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer),
-  {
-    ssr: false,
-    loading: () => <div role="status" className="p-8 text-center text-xs text-muted-foreground animate-pulse">Đang tải trình xem tệp…</div>,
-  }
-);
+import {
+  CollapsibleSection,
+  DocumentTitleBlock,
+  InspectorCard,
+  InspectorRow,
+  LinkedTaskRow,
+  MetaInline,
+  type LinkedTaskSummary,
+} from "./document-detail-parts";
+import { DocumentFullPage } from "./workspace/document-full-page";
+import type { DocumentFile } from "./document-file-viewer";
+import { sortDocumentFiles } from "@/lib/documents/file-viewer-state";
 
 // Serializable shape passed from server component
 export interface IncomingDocumentDetail {
@@ -72,6 +75,7 @@ export interface IncomingDocumentDetail {
     receivedDate?: string | null;
     dueDate?: string | null;
     linkedTaskId?: string | null;
+    linkedTask?: LinkedTaskSummary | null;
     attachments: {
       id: string;
       fileName: string;
@@ -263,9 +267,6 @@ export function IncomingDocumentDetailView({
   const deadline = detail.deadline ?? doc.dueDate ?? null;
   const dueNote = getLedgerDueNote(deadline?.slice(0, 10), isDone, todayInVietnam());
 
-  const [attachmentId, setAttachmentId] = React.useState<string | null>(doc.attachments[0]?.id ?? null);
-  const attachment = doc.attachments.find((a) => a.id === attachmentId) ?? doc.attachments[0] ?? null;
-
   const regLabel =
     doc.registrationNumber != null ? String(doc.registrationNumber).padStart(4, "0") : null;
 
@@ -284,6 +285,7 @@ export function IncomingDocumentDetailView({
     { id: "filed", label: "Lập hồ sơ, lưu", at: detail.filedAt },
   ];
   const currentIdx = steps.findIndex((st) => !st.at);
+  const doneCount = steps.filter((st) => st.at).length;
 
   const sentence = isDone
     ? STATUS_LABEL[status] ?? status
@@ -291,25 +293,7 @@ export function IncomingDocumentDetailView({
     ? `${leadName} đang xử lý`
     : STATUS_LABEL[status] ?? status;
 
-  const kv: { label: string; value: React.ReactNode; mono?: boolean }[] = [
-    { label: "Số, ký hiệu", value: doc.originalNumber, mono: true },
-    { label: "Ngày văn bản", value: formatDate(doc.issuedDate), mono: true },
-    { label: "Cơ quan ban hành", value: doc.issuingAuthority },
-    { label: "Loại văn bản", value: doc.category },
-    { label: "Ngày đến", value: formatDate(doc.receivedDate), mono: true },
-    { label: "Chủ trì", value: leadName },
-    { label: "Người phụ trách", value: detail.unitAssignments.map((a) => a.driUser.name).join(", ") },
-    {
-      label: "Nhiệm vụ liên kết",
-      value: doc.linkedTaskId ? (
-        <Link href={`/tasks/${doc.linkedTaskId}`} className="underline decoration-border underline-offset-3 hover:decoration-foreground">
-          Xem nhiệm vụ
-        </Link>
-      ) : null,
-    },
-    { label: "Kết quả giải quyết", value: detail.resolutionSummary },
-    { label: "Hồ sơ lưu", value: detail.dossierId, mono: true },
-  ];
+  const assignees = detail.unitAssignments.map((a) => a.driUser.name).join(", ");
 
   const quotes = detail.directives.length
     ? detail.directives.map((d) => ({ id: d.id, text: d.content, who: d.leader.name, at: d.issuedAt }))
@@ -317,166 +301,156 @@ export function IncomingDocumentDetailView({
     ? [{ id: "instruction", text: detail.leadershipInstruction, who: detail.leader?.name ?? "Lãnh đạo", at: detail.directedAt }]
     : [];
 
+  const primaryActionIdx = actions.findIndex((a) => a.variant !== "destructive");
+  const linkedTask = doc.linkedTask ?? (doc.linkedTaskId ? { id: doc.linkedTaskId } : null);
+
+  const files: DocumentFile[] = sortDocumentFiles(doc.attachments).map((a) => ({
+    id: a.id,
+    name: a.fileName,
+    url: a.fileUrl,
+    sizeBytes: a.fileSize ?? null,
+    mimeType: a.mimeType ?? null,
+  }));
+
   return (
-    <div className="w-full" data-slot="incoming-document-detail">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 h-8 text-xs text-muted-foreground">
-        <Link href="/documents?type=inbox" className="hover:text-foreground transition-colors">Văn bản đến</Link>
-        <span aria-hidden>›</span>
-        <span className="font-medium text-foreground font-mono">
-          {regLabel ? `Số đến ${regLabel}${doc.issuedDate ? `/${doc.issuedDate.slice(0, 4)}` : ""}` : doc.originalNumber ?? "Chi tiết"}
-        </span>
-      </nav>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] rounded-xl overflow-hidden bg-card shadow-xs lg:h-[calc(100vh-7rem)]">
-        {/* Trình xem tệp */}
-        <div className="bg-muted/50 flex flex-col min-w-0 min-h-[320px]">
-          <div className="h-10 shrink-0 flex items-center gap-2 px-3 bg-card text-compact text-muted-foreground border-b border-border/50">
-            <Paperclip className="size-3.5 shrink-0" strokeWidth={1.5} />
-            {doc.attachments.length > 1 ? (
-              <select
-                aria-label="Chọn tệp đính kèm"
-                value={attachment?.id ?? ""}
-                onChange={(e) => setAttachmentId(e.target.value)}
-                className="h-7 max-w-[60%] rounded-md bg-transparent text-compact text-foreground font-medium outline-none hover:bg-muted/60 px-1"
-              >
-                {doc.attachments.map((a) => (
-                  <option key={a.id} value={a.id}>{a.fileName}</option>
-                ))}
-              </select>
-            ) : (
-              <span className="truncate text-foreground font-medium">{attachment?.fileName ?? "Chưa có tệp đính kèm"}</span>
-            )}
-            {attachment?.fileSize ? (
-              <span className="text-xs text-muted-foreground/80 shrink-0">· {Math.max(1, Math.round(attachment.fileSize / 1024))} KB</span>
+    <DocumentFullPage
+      docId={doc.id}
+      breadcrumb={{
+        href: "/documents?type=inbox",
+        label: "Văn bản đến",
+        current: regLabel ? `Số đến ${regLabel}${doc.issuedDate ? `/${doc.issuedDate.slice(0, 4)}` : ""}` : doc.originalNumber ?? "Chi tiết",
+      }}
+      header={
+        <DocumentTitleBlock
+          title={doc.summary || "Văn bản đến"}
+          eyebrow={
+            <MetaInline
+              items={[
+                urgencyTag ? (
+                  <span className={cn("font-medium", urgencyTag.tone === "danger" ? "text-destructive" : "text-foreground")}>
+                    {URGENCY_LABEL[doc.urgency!] ?? urgencyTag.label}
+                  </span>
+                ) : null,
+                isConfidential ? `Độ mật: ${SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}` : null,
+              ]}
+            />
+          }
+          meta={
+            <MetaInline
+              items={[
+                doc.originalNumber ? <span className="font-mono">{doc.originalNumber}</span> : null,
+                doc.issuingAuthority,
+                doc.issuedDate ? `Ngày ${formatDate(doc.issuedDate)}` : null,
+              ]}
+            />
+          }
+        />
+      }
+      actions={
+        // Trạng thái + thao tác: chỉ thao tác chính dùng màu nhấn
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="min-w-0 flex-1 text-compact text-foreground">
+            {sentence}
+            {deadline && !isDone ? (
+              <span className="text-muted-foreground">
+                {" · hạn "}
+                <span className="tabular-nums text-foreground">{formatDate(deadline).slice(0, 5)}</span>
+                {dueNote ? (
+                  <span className={cn("ml-1", dueNote.tone === "danger" ? "text-destructive" : "text-muted-foreground")}>
+                    {dueNote.text.charAt(0).toLowerCase() + dueNote.text.slice(1)}
+                  </span>
+                ) : null}
+              </span>
             ) : null}
-          </div>
-          <div className="flex-1 min-h-0 p-3">
-            {attachment ? (
-              <DocumentPdfViewer
-                fileUrl={attachment.fileUrl}
-                fileName={attachment.fileName}
-                mimeType={attachment.mimeType ?? undefined}
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="h-full grid place-items-center text-compact text-muted-foreground">Văn bản chưa có tệp đính kèm</div>
-            )}
-          </div>
-        </div>
-
-        {/* Sổ + luân chuyển */}
-        <aside className="min-w-0 overflow-y-auto px-5 pt-5 pb-6 space-y-5 border-t lg:border-t-0 lg:border-l border-border/50">
-          <header className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              {urgencyTag ? (
-                <>
-                  <b className={cn("font-bold tracking-wide", urgencyTag.tone === "danger" ? "text-rose-600" : "text-amber-600")}>{urgencyTag.label}</b>
-                  <span aria-hidden>·</span>
-                </>
-              ) : null}
-              <span>Văn bản đến</span>
-              {isConfidential ? (
-                <>
-                  <span aria-hidden>·</span>
-                  <span>Độ mật: {SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}</span>
-                </>
-              ) : null}
+          </p>
+          {actions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {actions.map((action, i) => (
+                <Button
+                  key={action.key}
+                  size="sm"
+                  variant={i === primaryActionIdx ? "default" : "ghost"}
+                  className={cn(action.variant === "destructive" && "text-destructive hover:text-destructive")}
+                  disabled={pendingAction !== null}
+                  onClick={() => executeAction(action.key, action.body ?? {}, action.confirmMsg)}
+                >
+                  {pendingAction === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
+                  {action.label}
+                </Button>
+              ))}
             </div>
-            <h1 className="text-sm font-semibold leading-snug tracking-tight text-foreground">{doc.summary || "Văn bản đến"}</h1>
-          </header>
+          ) : null}
+        </div>
+      }
+      files={files}
+      panel={
+        <>
+          <InspectorCard title="Thuộc tính">
+            {regLabel ? <InspectorRow label="Số đến" mono>{regLabel}</InspectorRow> : null}
+            {doc.receivedDate ? <InspectorRow label="Ngày đến" mono>{formatDate(doc.receivedDate)}</InspectorRow> : null}
+            {doc.category ? <InspectorRow label="Loại văn bản">{doc.category}</InspectorRow> : null}
+            {deadline ? <InspectorRow label="Hạn xử lý" mono>{formatDate(deadline)}</InspectorRow> : null}
+            {leadName ? <InspectorRow label="Chủ trì">{leadName}</InspectorRow> : null}
+            {assignees ? <InspectorRow label="Phụ trách">{assignees}</InspectorRow> : null}
+            {detail.resolutionSummary ? <InspectorRow label="Kết quả">{detail.resolutionSummary}</InspectorRow> : null}
+            {detail.dossierId ? <InspectorRow label="Hồ sơ lưu" mono>{detail.dossierId}</InspectorRow> : null}
+          </InspectorCard>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/60 pl-3 pr-1.5 py-1.5">
-            <span className="text-compact text-foreground/90">
-              {sentence}
-              {deadline && !isDone ? (
-                <>
-                  {" · hạn "}
-                  <b className={cn("font-mono font-semibold", dueNote?.tone === "danger" ? "text-rose-600" : dueNote?.tone === "warning" ? "text-amber-600" : "")}>
-                    {formatDate(deadline).slice(0, 5)}
-                  </b>
-                  {dueNote ? <span className={cn("ml-1 font-medium", dueNote.tone === "danger" ? "text-rose-600" : dueNote.tone === "warning" ? "text-amber-600" : "text-muted-foreground")}>{dueNote.text.charAt(0).toLowerCase() + dueNote.text.slice(1)}</span> : null}
-                </>
-              ) : null}
-            </span>
-            <span className="flex-1" />
-            {actions.map((action, i) => (
-              <button
-                key={action.key}
-                type="button"
-                disabled={pendingAction !== null}
-                onClick={() => executeAction(action.key, action.body ?? {}, action.confirmMsg)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-compact font-medium transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed",
-                  action.variant === "destructive"
-                    ? "text-rose-600 hover:bg-rose-500/10"
-                    : i === actions.findIndex((a) => a.variant !== "destructive")
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-card text-foreground border border-border/70 hover:bg-muted/60"
-                )}
-              >
-                {pendingAction === action.key ? <Loader2 className="size-3 animate-spin" strokeWidth={1.5} /> : null}
-                {action.label}
-              </button>
-            ))}
-          </div>
+          <InspectorCard title="Nhiệm vụ liên kết" count={linkedTask ? 1 : 0}>
+            {linkedTask ? (
+              <LinkedTaskRow task={linkedTask} />
+            ) : (
+              <p className="py-1 text-xs text-muted-foreground">Chưa gán nhiệm vụ trong Kho việc.</p>
+            )}
+          </InspectorCard>
 
           {quotes.length > 0 ? (
-            <section className="space-y-2">
-              <h2 className="text-xs font-semibold text-muted-foreground">Ý kiến chỉ đạo</h2>
-              {quotes.map((q) => (
-                <figure key={q.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
-                  {q.text ? <blockquote className="text-compact leading-relaxed text-foreground">“{q.text}”</blockquote> : null}
-                  <figcaption className="mt-1.5 text-xs text-muted-foreground">
-                    {q.who}
-                    {q.at ? <> · <span className="font-mono">{formatShortDateTime(q.at)}</span></> : null}
-                  </figcaption>
-                </figure>
-              ))}
-            </section>
+            <InspectorCard title="Ý kiến chỉ đạo" count={quotes.length}>
+              <div className="space-y-3 pt-1">
+                {quotes.map((q) => (
+                  <figure key={q.id} className="border-l-2 border-border pl-3">
+                    {q.text ? <blockquote className="text-compact leading-relaxed text-foreground">{q.text}</blockquote> : null}
+                    <figcaption className="mt-1 text-xs text-muted-foreground">
+                      {q.who}
+                      {q.at ? <> · <span className="tabular-nums">{formatShortDateTime(q.at)}</span></> : null}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </InspectorCard>
           ) : null}
 
-          <dl className="grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2 text-compact">
-            {kv.filter((row) => row.value).map((row) => (
-              <React.Fragment key={row.label}>
-                <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className={cn("min-w-0 break-words text-foreground", row.mono && "font-mono text-xs leading-[18px]")}>{row.value}</dd>
-              </React.Fragment>
-            ))}
-          </dl>
+          <div className="space-y-1">
+            <CollapsibleSection title="Luân chuyển" summary={`${doneCount}/${steps.length} bước`}>
+              <ol className="space-y-2 pb-2">
+                {steps.map((st, i) => {
+                  const done = Boolean(st.at);
+                  const current = i === currentIdx;
+                  return (
+                    <li key={st.id} className={cn("flex items-center gap-2.5 text-compact", !done && !current && "text-muted-foreground/70")}>
+                      <span
+                        className={cn(
+                          "grid size-4 shrink-0 place-items-center rounded-full border",
+                          done ? "border-foreground bg-foreground text-background" : current ? "border-foreground" : "border-border"
+                        )}
+                        aria-hidden
+                      >
+                        {done ? <Check className="size-2.5" strokeWidth={1.5} /> : current ? <span className="size-1.5 rounded-full bg-foreground" /> : null}
+                      </span>
+                      <span className={cn("min-w-0 flex-1 truncate", current && "font-medium text-foreground")}>{st.label}</span>
+                      {st.at ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatShortDateTime(st.at)}</span> : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            </CollapsibleSection>
 
-          <section className="space-y-2.5">
-            <h2 className="text-xs font-semibold text-muted-foreground">Luân chuyển</h2>
-            <ol className="space-y-2">
-              {steps.map((st, i) => {
-                const done = Boolean(st.at);
-                const current = i === currentIdx;
-                return (
-                  <li key={st.id} className={cn("flex items-center gap-2.5 text-compact", !done && !current && "text-muted-foreground/70")}>
-                    <span
-                      className={cn(
-                        "grid size-4 shrink-0 place-items-center rounded-full border",
-                        done ? "border-foreground bg-foreground text-background" : current ? "border-foreground" : "border-border"
-                      )}
-                      aria-hidden
-                    >
-                      {done ? <Check className="size-2.5" strokeWidth={1.5} /> : current ? <span className="size-1.5 rounded-full bg-foreground" /> : null}
-                    </span>
-                    <span className={cn("flex-1 min-w-0 truncate", current && "font-medium text-foreground")}>{st.label}</span>
-                    {st.at ? <span className="shrink-0 font-mono text-xs text-muted-foreground/80">{formatShortDateTime(st.at)}</span> : null}
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-
-          <details className="group text-compact">
-            <summary className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground list-none">
-              Nhật ký hệ thống
-            </summary>
-            <div className="mt-2"><DocumentAuditTimeline documentId={doc.id} /></div>
-          </details>
-        </aside>
-      </div>
-    </div>
+            <CollapsibleSection title="Nhật ký hệ thống">
+              <DocumentAuditTimeline documentId={doc.id} bare />
+            </CollapsibleSection>
+          </div>
+        </>
+      }
+    />
   );
 }

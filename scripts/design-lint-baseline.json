@@ -753,16 +753,6 @@
     },
     {
       "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/documents/document-detail-dialog.tsx",
-      "text": "className: \"bg-zinc-500/10 text-zinc-700 border-zinc-500/20\","
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
-      "file": "src/components/documents/document-pdf-viewer.tsx",
-      "text": "<div className=\"relative flex-1 bg-zinc-100 overflow-auto flex items-center justify-center p-2 min-h-[440px]\">"
-    },
-    {
-      "ruleId": "no-raw-neutral-palette",
       "file": "src/components/inbox/inbox-view.tsx",
       "text": "? \"bg-neutral-800 text-white border-neutral-800 shadow-2xs\""
     },

@@ -1,58 +1,75 @@
 "use client";
 
 import * as React from "react";
-import {
-  FileText,
-  Download,
-  ExternalLink,
-  ZoomIn,
-  ZoomOut,
-  FileQuestion,
-} from "lucide-react";
+import dynamic from "next/dynamic";
+import { Download, FileQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isSafeUrl } from "@/lib/url-utils";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DocumentViewerRail } from "./document-viewer-rail";
+import type { PdfCanvasController, PdfPosition } from "./pdf-document-canvas";
+import { isSafeUrl, toServedFileUrl } from "@/lib/url-utils";
+
+// pdf.js cần API trình duyệt: chỉ nạp ở client, tách chunk riêng
+const PdfDocumentCanvas = dynamic(() => import("./pdf-document-canvas"), {
+  ssr: false,
+  loading: () => <p role="status" className="py-10 text-center text-xs text-muted-foreground">Đang tải trình xem tệp…</p>,
+});
+
+function getPreviewKind(mimeType: string | undefined, fileName: string): "pdf" | "image" | "other" {
+  const mime = (mimeType || "").toLowerCase();
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (mime === "application/pdf" || ext === "pdf") return "pdf";
+  if (mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return "image";
+  return "other";
+}
 
 export interface DocumentPdfViewerProps {
   fileUrl?: string | null;
   fileName?: string;
-  fileSize?: number | string;
   mimeType?: string;
   className?: string;
   onDownload?: () => void;
-}
-
-function formatFileSize(bytes?: number | string): string {
-  if (bytes === undefined || bytes === null || bytes === "") return "";
-  if (typeof bytes === "string") {
-    if (isNaN(Number(bytes))) return bytes;
-    bytes = Number(bytes);
-  }
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  /**
+   * Layout `flow`: dự phòng khi thiết bị không hỗ trợ Fullscreen API (ví dụ iPhone Safari).
+   * Có Fullscreen API thì viewer tự phóng to đúng phần tử của mình, không đổi tệp/zoom/trang.
+   */
+  onFullscreen?: () => void;
+  /** Nhóm bổ sung cuối rail (ví dụ mở panel thông tin ở Full Page). */
+  railExtra?: React.ReactNode;
+  /** Vị trí đọc khôi phục khi mở tệp, và callback khi vị trí đổi. */
+  initialPosition?: PdfPosition;
+  onPositionChange?: (position: PdfPosition) => void;
+  /** Nhóm tệp đặt cuối rail (xem `DocumentFilesRail`). */
+  railFiles?: React.ReactNode;
+  /** Thu phóng do cha giữ (để nhớ riêng từng tệp). Bỏ trống thì tự quản. */
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  /** Gọi khi biết số trang của tệp PDF đang xem. */
+  onPageCount?: (count: number) => void;
+  /** Thuộc tính cho vùng xem (ví dụ role="tabpanel" khi toolbar chứa thanh chuyển tệp). */
+  viewportProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export function DocumentPdfViewer({
-  fileUrl,
+  fileUrl: rawFileUrl,
   fileName = "document.pdf",
-  fileSize,
   mimeType = "application/pdf",
   className = "",
   onDownload,
+  onFullscreen,
+  railExtra,
+  initialPosition,
+  onPositionChange,
+  railFiles,
+  zoom,
+  onZoomChange,
+  onPageCount,
+  viewportProps,
 }: DocumentPdfViewerProps) {
-  const [zoomLevel, setZoomLevel] = React.useState<number>(100);
-
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 15, 200));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev - 15, 50));
-  };
-
-  const handleZoomReset = () => {
-    setZoomLevel(100);
-  };
+  const fileUrl = toServedFileUrl(rawFileUrl);
+  const [localZoom, setLocalZoom] = React.useState<number>(100);
+  const zoomLevel = zoom ?? localZoom;
+  const setZoomLevel = (value: number) => (onZoomChange ? onZoomChange(value) : setLocalZoom(value));
 
   const handleDefaultDownload = () => {
     if (onDownload) {
@@ -71,148 +88,136 @@ export function DocumentPdfViewer({
     }
   };
 
-  const formattedSize = formatFileSize(fileSize);
-
   const isSafe = React.useMemo(() => isSafeUrl(fileUrl), [fileUrl]);
+  const kind = getPreviewKind(mimeType, fileName);
+  const [pageCount, setPageCount] = React.useState<number | null>(null);
+  // Đổi tệp thì số trang cũ không còn đúng
+  React.useEffect(() => setPageCount(null), [fileUrl]);
+  const handlePageCount = React.useCallback(
+    (count: number) => {
+      setPageCount(count);
+      onPageCount?.(count);
+    },
+    [onPageCount],
+  );
+
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const controllerRef = React.useRef<PdfCanvasController | null>(null);
+  const [position, setPosition] = React.useState<PdfPosition>({ page: initialPosition?.page ?? 1, ratio: 0 });
+  React.useEffect(() => setPosition({ page: initialPosition?.page ?? 1, ratio: 0 }), [fileUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handlePosition = React.useCallback(
+    (next: PdfPosition) => {
+      setPosition(next);
+      onPositionChange?.(next);
+    },
+    [onPositionChange],
+  );
+
+  // Toàn màn hình bằng Fullscreen API trên chính phần tử viewer: không remount nên giữ nguyên tệp/zoom/trang
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  React.useEffect(() => {
+    const sync = () => setIsFullscreen(document.fullscreenElement === rootRef.current);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  const toggleFullscreen = React.useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.();
+    } else if (document.fullscreenEnabled && root.requestFullscreen) {
+      void root.requestFullscreen().catch(() => onFullscreen?.());
+    } else {
+      onFullscreen?.();
+    }
+  }, [onFullscreen]);
+  const canFullscreen = Boolean(onFullscreen) || (typeof document !== "undefined" && document.fullscreenEnabled);
+
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchTotal, setSearchTotal] = React.useState(0);
+  const [activeMatch, setActiveMatch] = React.useState(0);
+  const handleSearchQuery = React.useCallback((value: string) => {
+    setSearchQuery(value);
+    setActiveMatch(0);
+  }, []);
+  // Đổi tệp thì từ khóa và kết quả của tệp cũ không còn đúng
+  React.useEffect(() => {
+    setSearchQuery("");
+    setSearchTotal(0);
+    setActiveMatch(0);
+  }, [fileUrl]);
 
   if (!fileUrl || !isSafe) {
     return (
-      <div
-        className={`flex flex-col items-center justify-center p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/80 min-h-[420px] ${className}`}
-      >
-        <div className="p-4 rounded-2xl bg-muted/60 text-muted-foreground mb-3">
-          <FileQuestion className="size-8" strokeWidth={1.5} />
-        </div>
-        <h4 className="text-sm font-semibold text-foreground mb-1">
-          {!fileUrl ? "Chưa có bản scan PDF" : "Đường dẫn tệp không an toàn hoặc không hợp lệ"}
-        </h4>
-        <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-          {!fileUrl
+      <EmptyState
+        density="compact"
+        icon={<FileQuestion strokeWidth={1.5} />}
+        title={!fileUrl ? "Chưa có bản scan PDF" : "Đường dẫn tệp không an toàn hoặc không hợp lệ"}
+        description={
+          !fileUrl
             ? "Văn bản này hiện chưa được số hóa hoặc chưa tải lên tệp PDF scan có dấu đỏ lưu trữ."
-            : "Chỉ hỗ trợ giao thức HTTP, HTTPS hoặc Blob an toàn."}
-        </p>
-      </div>
+            : "Chỉ hỗ trợ giao thức HTTP, HTTPS hoặc Blob an toàn."
+        }
+        className={`justify-center bg-muted/20 rounded-lg border border-dashed border-border min-h-[420px] ${className}`}
+      />
     );
   }
 
+  const content =
+    kind === "pdf" ? (
+      <PdfDocumentCanvas
+        key={fileUrl}
+        fileUrl={fileUrl}
+        zoom={zoomLevel / 100}
+        onPageCount={handlePageCount}
+        searchQuery={searchQuery}
+        activeMatch={activeMatch}
+        onSearchTotal={setSearchTotal}
+        initialPosition={initialPosition ?? { page: 1, ratio: 0 }}
+        onPositionChange={handlePosition}
+        controllerRef={controllerRef}
+      />
+    ) : kind === "image" ? (
+      // eslint-disable-next-line @next/next/no-img-element -- tệp nội bộ có xác thực, không qua next/image
+      <img
+        src={fileUrl}
+        alt={fileName}
+        className="mx-auto rounded-sm bg-card shadow-xs"
+        style={{ width: `${zoomLevel}%`, maxWidth: "none" }}
+      />
+    ) : (
+      <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center">
+        <p className="text-compact text-muted-foreground">Không xem trước được loại tệp này.</p>
+        <Button variant="outline" size="sm" onClick={handleDefaultDownload}>
+          <Download strokeWidth={1.5} />
+          Tải về để xem
+        </Button>
+      </div>
+    );
+
   return (
-    <div
-      className={`flex flex-col bg-card rounded-2xl border border-border/70 overflow-hidden shadow-xs h-full min-h-[500px] ${className}`}
-    >
-      {/* Top Toolbar */}
-      <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/30 border-b border-border/60 gap-2 flex-wrap sm:flex-nowrap">
-        {/* Document Title & File Info */}
-        <div className="flex items-center gap-2 min-w-0 pr-2">
-          <div className="p-1.5 rounded-lg bg-red-500/10 text-red-600 shrink-0">
-            <FileText className="size-4" strokeWidth={1.5} />
-          </div>
-          <div className="min-w-0">
-            <p
-              className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-[240px]"
-              title={fileName}
-            >
-              {fileName}
-            </p>
-            {formattedSize && (
-              <span className="text-xs font-mono text-muted-foreground tabular-nums">
-                {formattedSize}
-              </span>
-            )}
-          </div>
+      <div
+        ref={rootRef}
+        className={`flex min-h-0 items-stretch bg-muted/50 [&:fullscreen]:h-full [&:fullscreen]:overflow-y-auto [&:fullscreen]:bg-background ${className}`}
+        data-slot="document-file-viewer"
+      >
+        <div {...viewportProps} data-pdf-no-scroll="" className="min-w-0 flex-1 overflow-x-auto p-2 @lg/doc:p-3">
+          {content}
         </div>
-
-        {/* Toolbar Controls */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto">
-          {/* Zoom Controls */}
-          <div className="flex items-center bg-background rounded-lg border border-border/60 p-0.5">
-            <button
-              type="button"
-              onClick={handleZoomOut}
-              disabled={zoomLevel <= 50}
-              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 transition-colors cursor-pointer"
-              title="Thu nhỏ"
-              aria-label="Thu nhỏ"
-            >
-              <ZoomOut className="size-3.5" strokeWidth={1.5} />
-            </button>
-            <button
-              type="button"
-              onClick={handleZoomReset}
-              className="px-1.5 py-0.5 text-xs font-mono font-medium text-foreground hover:bg-muted/80 rounded transition-colors tabular-nums"
-              title="Đặt lại 100%"
-            >
-              {zoomLevel}%
-            </button>
-            <button
-              type="button"
-              onClick={handleZoomIn}
-              disabled={zoomLevel >= 200}
-              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 transition-colors cursor-pointer"
-              title="Phóng to"
-              aria-label="Phóng to"
-            >
-              <ZoomIn className="size-3.5" strokeWidth={1.5} />
-            </button>
-          </div>
-
-          {/* Open in New Tab */}
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer inline-flex items-center"
-            title="Mở trong tab mới"
-            aria-label="Mở trong tab mới"
-          >
-            <ExternalLink className="size-3.5" strokeWidth={1.5} />
-          </a>
-
-          {/* Download Action */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDefaultDownload}
-            className="h-7 px-2.5 text-xs rounded-lg gap-1 font-medium"
-            title="Tải về tệp PDF"
-          >
-            <Download className="size-3.5" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Tải về</span>
-          </Button>
-        </div>
+        <DocumentViewerRail
+          fileUrl={fileUrl}
+          fileName={fileName}
+          kind={kind}
+          zoom={zoomLevel}
+          onZoomChange={setZoomLevel}
+          search={{ query: searchQuery, onQueryChange: handleSearchQuery, total: searchTotal, active: activeMatch, onActiveChange: setActiveMatch }}
+          pages={pageCount ? { current: position.page, total: pageCount, onGoto: (page) => controllerRef.current?.scrollToPage(page, 0) } : undefined}
+          fullscreen={isFullscreen}
+          onFullscreen={canFullscreen ? toggleFullscreen : undefined}
+          onDownload={handleDefaultDownload}
+          files={railFiles}
+          extra={railExtra}
+        />
       </div>
-
-      {/* PDF Viewport */}
-      <div className="relative flex-1 bg-zinc-100 overflow-auto flex items-center justify-center p-2 min-h-[440px]">
-        <div
-          className="w-full h-full flex flex-col transition-transform duration-150 origin-top"
-          style={{ transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined }}
-        >
-          <iframe
-            src={`${fileUrl}#toolbar=0&navpanes=0`}
-            title={fileName}
-            className="w-full h-full min-h-[440px] flex-1 rounded-lg border border-border/40 bg-background shadow-xs"
-          >
-            <object
-              data={fileUrl}
-              type={mimeType}
-              className="w-full h-full min-h-[440px]"
-            >
-              <div className="flex flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground h-full space-y-2">
-                <p>Trình duyệt không hỗ trợ xem trước trực tiếp.</p>
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary font-semibold hover:underline inline-flex items-center gap-1"
-                >
-                  <ExternalLink className="size-3.5" strokeWidth={1.5} />
-                  <span>Mở xem trong tab mới</span>
-                </a>
-              </div>
-            </object>
-          </iframe>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

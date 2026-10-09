@@ -1,23 +1,21 @@
 "use client";
 
 import * as React from "react";
-import * as m from "motion/react-m";
-import { AnimatePresence } from "motion/react";
-import {
-  FileText,
-  Calendar,
-  Hash,
-  Tag,
-  Shield,
-  Zap,
-  ArrowLeft,
-} from "lucide-react";
-import Link from "next/link";
-import { fadeVariants } from "@/lib/motion/variants";
+import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { getLedgerStepLabel } from "@/lib/documents/document-ledger-format";
 import { OutgoingWorkflowStepper } from "./outgoing-workflow-stepper";
 import { OutgoingActionPanel } from "./outgoing-action-panel";
 import { OutgoingRecipientList } from "./outgoing-recipient-list";
-import { DocumentPdfViewer } from "./document-pdf-viewer";
+import {
+  CollapsibleSection,
+  DocumentTitleBlock,
+  InspectorCard,
+  InspectorRow,
+  MetaInline,
+} from "./document-detail-parts";
+import { DocumentFullPage } from "./workspace/document-full-page";
+import type { DocumentFile } from "./document-file-viewer";
+import { sortDocumentFiles } from "@/lib/documents/file-viewer-state";
 import type { OutgoingDocumentStatus } from "@/contracts/documents";
 
 // Serializable subset of DocumentOutgoingWorkflow + relations
@@ -85,6 +83,8 @@ const URGENCY_LABEL: Record<string, string> = {
   EXPRESS: "Hỏa tốc",
 };
 
+const STEP_STATUS = { new: "NOT_STARTED", progress: "IN_PROGRESS", review: "WAITING_APPROVAL", done: "COMPLETED" } as const;
+
 function formatDate(raw: string | null | undefined): string {
   if (!raw) return "";
   const d = new Date(raw);
@@ -108,121 +108,81 @@ export function OutgoingDocumentDetailView({
 }: OutgoingDocumentDetailViewProps) {
   const doc = workflow.document;
 
-  // Pick primary attachment for PDF viewer (prefer isOriginal)
-  const primaryAttachment =
-    doc.attachments.find((a) => a.isOriginal) ?? doc.attachments[0] ?? null;
+  const toBytes = (size?: bigint | number | null) =>
+    size ? (typeof size === "bigint" ? Number(size) : size) : undefined;
+  // Bản gốc đứng đầu để mở đầu tiên
+  const files: DocumentFile[] = sortDocumentFiles(doc.attachments).map((a) => ({
+    id: a.id,
+    name: a.fileName,
+    url: a.fileUrl,
+    sizeBytes: toBytes(a.fileSize) ?? null,
+    mimeType: a.mimeType ?? null,
+  }));
 
-  const fileSize = primaryAttachment?.fileSize
-    ? typeof primaryAttachment.fileSize === "bigint"
-      ? Number(primaryAttachment.fileSize)
-      : primaryAttachment.fileSize
-    : undefined;
+  const step = getLedgerStepLabel("DANG_XU_LY", workflow.status, "outbox");
+  const issued = formatDate(doc.issuedDate ?? workflow.issuedAt);
+  const isConfidential = doc.securityLevel && doc.securityLevel !== "PUBLIC";
+  const isUrgent = doc.urgency && doc.urgency !== "NORMAL";
 
   return (
-    <AnimatePresence mode="wait">
-      <m.div
-        key={workflow.id}
-        variants={fadeVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 pb-6 md:pb-10 space-y-4"
-      >
-        {/* Back navigation */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/documents"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-            Văn bản &amp; Hồ sơ
-          </Link>
-        </div>
-
-        {/* Document header */}
-        <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
-              <FileText className="size-5" strokeWidth={1.5} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base font-semibold text-foreground font-heading leading-snug">
-                {doc.summary || "Văn bản đi"}
-              </h1>
-              {doc.summary && (
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                  {doc.summary}
-                </p>
-              )}
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                {workflow.outgoingNumberStr && (
-                  <span className="inline-flex items-center gap-1 text-xs text-foreground">
-                    <Hash className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    <span className="font-mono font-medium">{workflow.outgoingNumberStr}</span>
-                  </span>
-                )}
-                {doc.category && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Tag className="size-3.5" strokeWidth={1.5} />
-                    {doc.category}
-                  </span>
-                )}
-                {doc.urgency && doc.urgency !== "NORMAL" && (
-                  <span className="inline-flex items-center gap-1 text-xs text-amber-600">
-                    <Zap className="size-3.5" strokeWidth={1.5} />
-                    {URGENCY_LABEL[doc.urgency] ?? doc.urgency}
-                  </span>
-                )}
-                {doc.securityLevel && doc.securityLevel !== "PUBLIC" && (
-                  <span className="inline-flex items-center gap-1 text-xs text-rose-600">
-                    <Shield className="size-3.5" strokeWidth={1.5} />
-                    {SECURITY_LABEL[doc.securityLevel] ?? doc.securityLevel}
-                  </span>
-                )}
-                {(doc.issuedDate || workflow.issuedAt) && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="size-3.5" strokeWidth={1.5} />
-                    {formatDate(doc.issuedDate ?? workflow.issuedAt)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main 2-col layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-          {/* Left: PDF viewer */}
-          <div className="min-w-0">
-            <DocumentPdfViewer
-              fileUrl={primaryAttachment?.fileUrl}
-              fileName={primaryAttachment?.fileName}
-              fileSize={fileSize}
-              mimeType={primaryAttachment?.mimeType ?? undefined}
-              className="h-full min-h-[500px]"
+    <DocumentFullPage
+      docId={doc.id}
+      breadcrumb={{ href: "/documents?type=outbox", label: "Văn bản đi", current: workflow.outgoingNumberStr ?? "Chưa cấp số" }}
+      header={
+        <DocumentTitleBlock
+          title={doc.summary || "Văn bản đi"}
+          eyebrow={
+            <MetaInline
+              items={[
+                isUrgent ? <span className="font-medium text-foreground">{URGENCY_LABEL[doc.urgency!] ?? doc.urgency}</span> : null,
+                isConfidential ? `Độ mật: ${SECURITY_LABEL[doc.securityLevel!] ?? doc.securityLevel}` : null,
+              ]}
             />
-          </div>
-
-          {/* Right: sticky sidebar */}
-          <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-            <OutgoingWorkflowStepper workflow={workflow} />
-
-            {currentUser && (
-              <OutgoingActionPanel
-                documentId={workflow.documentId}
-                status={workflow.status}
-                currentUserId={currentUser.id}
-              />
-            )}
-
-            <OutgoingRecipientList
-              recipientList={workflow.recipientList}
-              status={workflow.status}
-              issuedAt={workflow.issuedAt}
+          }
+          meta={
+            <MetaInline
+              items={[
+                workflow.outgoingNumberStr ? <span className="font-mono">{workflow.outgoingNumberStr}</span> : "Chưa cấp số",
+                doc.category,
+                issued ? `Ban hành ${issued}` : null,
+              ]}
             />
-          </div>
-        </div>
-      </m.div>
-    </AnimatePresence>
+          }
+        />
+      }
+      actions={
+        currentUser ? (
+          <OutgoingActionPanel
+            documentId={workflow.documentId}
+            status={workflow.status}
+            currentUserId={currentUser.id}
+            className="border-0 bg-transparent p-0 [&>h3]:sr-only"
+          />
+        ) : null
+      }
+      files={files}
+      panel={
+        <>
+          <InspectorCard title="Thuộc tính">
+            <InspectorRow label="Trạng thái">
+              <span className="inline-flex items-center gap-1.5">
+                <TaskStatusCircle status={STEP_STATUS[step.kind]} />
+                {step.label}
+              </span>
+            </InspectorRow>
+            {workflow.currentVersion ? <InspectorRow label="Phiên bản" mono>v{workflow.currentVersion}</InspectorRow> : null}
+            {workflow.authorizedSigner ? <InspectorRow label="Người ký">{workflow.authorizedSigner.name}</InspectorRow> : null}
+            {workflow.issuer ? <InspectorRow label="Phát hành">{workflow.issuer.name}</InspectorRow> : null}
+            {workflow.issuedAt ? <InspectorRow label="Ngày phát hành" mono>{formatDate(workflow.issuedAt)}</InspectorRow> : null}
+          </InspectorCard>
+
+          <OutgoingRecipientList recipientList={workflow.recipientList} status={workflow.status} issuedAt={workflow.issuedAt} />
+
+          <CollapsibleSection title="Quy trình xử lý" summary={step.label}>
+            <OutgoingWorkflowStepper workflow={workflow} className="border-0 bg-transparent p-0 [&>h3]:sr-only" />
+          </CollapsibleSection>
+        </>
+      }
+    />
   );
 }

@@ -151,7 +151,17 @@ export interface OfficialDocument {
     size: string;
     url?: string;
   };
+  /** Toàn bộ tệp đính kèm (`fileAttachment` luôn là tệp đầu tiên). */
+  attachments?: OfficialDocumentFile[];
   signatures?: any[];
+}
+
+export interface OfficialDocumentFile {
+  id: string;
+  name: string;
+  url?: string;
+  sizeBytes?: number;
+  mimeType?: string;
 }
 
 export interface DocumentStats {

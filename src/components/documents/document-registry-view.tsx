@@ -1,26 +1,25 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Stamp } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@/types/document";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";
-import { DocumentLedgerToolbar, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, type DocumentStatsData } from "./registry";
-import { DocumentDetailDialog } from "./document-detail-dialog";
-import { DocumentOutgoingDetailView } from "./document-outgoing-detail-view";
+import { useDocumentPane } from "@/hooks/use-document-pane";
+import { PaneResizeHandle } from "@/components/ui/pane-resize-handle";
+import { readScroll, writeScroll } from "@/lib/documents/list-scroll-memory";
+import { PANE_DEFAULT, PANE_MAX, PANE_MIN, nextWidthForKey, parseStoredPaneWidth, resolvePaneLayout, type PaneMode } from "@/lib/documents/document-pane-layout";
+import { DocumentLedgerToolbar, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, DEFAULT_LEDGER_COLUMNS, getLedgerEmptyCopy, type LedgerColumnVisibility } from "./registry";
+import { useDepartmentList } from "@/hooks/use-department-list";
+import { DocumentQuickView } from "./workspace/document-quick-view";
 import { CreateDocumentModal } from "./create-document-modal";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
 import { DigitalSignatureDialog } from "./digital-signature-dialog";
 import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagination-bar";
 import { InboundDocumentFeatureGuide } from "@/components/feature-guide/feature-guide";
 
-const DocumentPdfViewer = dynamic(() => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer), {
-  ssr: false,
-  loading: () => <div role="status" className="p-8 text-center text-sm text-muted-foreground animate-pulse">Đang tải trình xem PDF...</div>,
-});
+const PANE_WIDTH_KEY = "qcet_document_pane_width";
 
 interface ApiDoc {
   id: string; type: string; urgency: string; status: string;
@@ -32,7 +31,7 @@ interface ApiDoc {
   linkedTaskId?: string | null;
   linkedTask?: { id: string; code?: string; title: string; status: string; progressPercent: number; dueDate?: string | null } | null;
   signatures?: Array<unknown> | null;
-  attachments?: Array<{ fileName: string; fileSize?: number; fileUrl?: string }> | null;
+  attachments?: Array<{ id?: string; fileName: string; fileSize?: number; fileUrl?: string; mimeType?: string }> | null;
   fileAttachment?: { name: string; size: string; url?: string } | null;
 }
 
@@ -48,7 +47,7 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
   const docNumber = item.originalNumber || item.documentNumber || (item.registrationNumber ? `${item.registrationNumber}/${item.documentYear || new Date().getFullYear()}` : item.id);
   const fileAttachment = item.attachments && item.attachments.length > 0 ? {
     name: item.attachments[0].fileName,
-    size: `${Math.max(1, Math.round((item.attachments[0].fileSize || 1024) / 1024))} KB`,
+    size: item.attachments[0].fileSize != null ? `${Math.round(item.attachments[0].fileSize / 1024)} KB` : "Chưa rõ dung lượng",
     url: item.attachments[0].fileUrl,
   } : item.fileAttachment || undefined;
 
@@ -62,28 +61,37 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
     workflowStatus: item.workflowStatus || undefined,
     issuedDate: formatDate(item.issuedDate),
     receivedDate: formatDate(item.registeredDate) || item.receivedDate || undefined,
-    issuingAuthority: item.issuingAuthority || "Cơ quan ban hành",
+    issuingAuthority: item.issuingAuthority || "",
     summary: item.summary || "",
     urgency: urgencyMap[item.urgency] || "normal",
     status,
     leadDepartment: item.leadUnitName || item.leadDepartmentName || item.leadDepartment || item.draftingDeptName || "Chưa phân công",
-    signatory: item.signerName ? `${item.signerName}${item.signerTitle ? ` (${item.signerTitle})` : ""}` : item.signatory || "Lãnh đạo đơn vị",
+    signatory: item.signerName ? `${item.signerName}${item.signerTitle ? ` (${item.signerTitle})` : ""}` : item.signatory || "",
     linkedTaskId: item.linkedTaskId || undefined,
     linkedTaskTitle: item.linkedTask?.title || (item.linkedTaskId ? `Nhiệm vụ #${item.linkedTaskId}` : undefined),
     linkedTaskStatus: item.linkedTask?.status,
     linkedTaskProgressPercent: item.linkedTask?.progressPercent,
     linkedTaskDueDate: item.linkedTask?.dueDate,
     fileAttachment,
+    attachments: item.attachments?.map((a, i) => ({
+      id: a.id || `att-${i}`,
+      name: a.fileName,
+      url: a.fileUrl,
+      sizeBytes: a.fileSize ?? undefined,
+      mimeType: a.mimeType,
+    })),
     signatures: item.signatures || undefined,
   };
 }
 
 export function DocumentRegistryView() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const pane = useDocumentPane();
 
   // URL state management
-  const { filters, setFilter, setFilters, resetFilters, searchInputValue, setSearchInputValue } = useDocumentUrlFilters();
+  const { filters, isResultFiltered, setFilter, setFilters, resetFilters, searchInputValue, setSearchInputValue } = useDocumentUrlFilters();
+  // Đơn vị chủ trì: cùng nguồn danh sách đơn vị đang dùng ở form vào sổ (mọi người dùng đã đăng nhập đọc được)
+  const { departments, isLoading: isDepartmentsLoading } = useDepartmentList();
 
   // Data & Pagination state
   const [documents, setDocuments] = React.useState<OfficialDocument[]>([]);
@@ -92,48 +100,32 @@ export function DocumentRegistryView() {
   const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [isExporting, setIsExporting] = React.useState<boolean>(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  // Cột tùy chọn chỉ là trình bày, không đi vào query; giữ theo vòng đời trang
+  const [visibleColumns, setVisibleColumns] = React.useState<LedgerColumnVisibility>(DEFAULT_LEDGER_COLUMNS);
 
-  // Statistics
-  const [buckets, setBuckets] = React.useState<Record<string, number>>({});
-  const [stats, setStats] = React.useState<DocumentStatsData>({
-    total: 0, totalInbox: 0, totalOutbox: 0, totalSubmissions: 0,
-    pending: 0, processing: 0, urgent: 0, overdue: 0, completed: 0, linkedTasks: 0,
-  });
 
   // Modals & Dialogs
-  const [selectedDocument, setSelectedDocument] = React.useState<OfficialDocument | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [isQuickEntryOpen, setIsQuickEntryOpen] = React.useState(false);
-  const [fullscreenPdfDoc, setFullscreenPdfDoc] = React.useState<OfficialDocument | null>(null);
-  const [outgoingDetailDocId, setOutgoingDetailDocId] = React.useState<string | null>(null);
-  const [outgoingDetailDoc, setOutgoingDetailDoc] = React.useState<DocumentItem | null>(null);
   const [signatureDoc, setSignatureDoc] = React.useState<OfficialDocument | null>(null);
   const [isSignatureOpen, setIsSignatureOpen] = React.useState(false);
 
-  // Fetch document stats
-  const fetchStats = React.useCallback(async (signal?: AbortSignal) => {
-    try {
-      const typeQs = filters.type === "all" ? "" : `?type=${filters.type}`;
-      const res = await fetch(`/api/documents/stats${typeQs}`, { signal });
-      if (!res.ok) return;
-      const json = await res.json();
-      if (json.success && json.data) {
-        setBuckets(json.data.buckets ?? {});
-        setStats({
-          total: json.data.total ?? (json.data.incoming ?? 0) + (json.data.outgoing ?? 0) + (json.data.internal ?? 0),
-          totalInbox: json.data.incoming ?? 0, totalOutbox: json.data.outgoing ?? 0, totalSubmissions: json.data.internal ?? 0,
-          urgent: json.data.urgent ?? 0, overdue: json.data.overdue ?? 0, processing: json.data.processing ?? 0,
-          pending: json.data.pending ?? 0, completed: json.data.completed ?? 0, linkedTasks: json.data.linkedTasks ?? 0,
-        });
-      }
-    } catch (err: unknown) {
-      if ((err as { name?: string })?.name !== "AbortError") console.error("Stats fetch error:", err);
-    }
-  }, [filters.type]);
+  // Quick View: bố cục theo độ rộng thực của vùng workspace (danh sách + pane)
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const [workspaceWidth, setWorkspaceWidth] = React.useState(0);
+  const [preferredWidth, setPreferredWidth] = React.useState(PANE_DEFAULT);
+  const modeRef = React.useRef<PaneMode | undefined>(undefined);
+  const [focusToken, setFocusToken] = React.useState(0);
+
+  // Danh sách chỉ tải lại khi bộ lọc thật sự đổi: mở/đóng Quick View (docId, file) đổi URL nhưng không được làm danh sách nháy
+  const filtersKey = JSON.stringify(filters);
+  const filtersRef = React.useRef(filters);
+  filtersRef.current = filters;
 
   // Fetch documents matching filters
   const fetchDocuments = React.useCallback(async (signal?: AbortSignal) => {
+    const filters = filtersRef.current;
     setIsLoading(true);
     setFetchError(null);
     try {
@@ -174,7 +166,8 @@ export function DocumentRegistryView() {
     } finally {
       if (!signal?.aborted) setIsLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   React.useEffect(() => {
     const ctrl = new AbortController();
@@ -183,19 +176,100 @@ export function DocumentRegistryView() {
   }, [fetchDocuments]);
 
   React.useEffect(() => {
-    const ctrl = new AbortController();
-    fetchStats(ctrl.signal);
-    return () => ctrl.abort();
-  }, [fetchStats]);
-
-  // Deep-link selection
-  const docIdParam = searchParams.get("docId");
+    try {
+      setPreferredWidth(parseStoredPaneWidth(localStorage.getItem(PANE_WIDTH_KEY)));
+    } catch {
+      // Không đọc được lựa chọn cũ: dùng độ rộng mặc định
+    }
+  }, []);
   React.useEffect(() => {
-    if (!docIdParam || documents.length === 0) return;
-    const cleanId = decodeURIComponent(docIdParam).toLowerCase().trim();
-    const matched = documents.find((d) => d.id.toLowerCase() === cleanId || d.documentNumber?.toLowerCase().includes(cleanId) || d.summary?.toLowerCase().includes(cleanId));
-    if (matched) handleOpenDetail(matched);
-  }, [docIdParam, documents]);
+    const el = workspaceRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setWorkspaceWidth(Math.floor(entry.contentRect.width)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const layout = resolvePaneLayout(workspaceWidth, preferredWidth, modeRef.current);
+  modeRef.current = workspaceWidth > 0 ? layout.mode : undefined;
+  const handleResize = React.useCallback((width: number) => {
+    const next = Math.min(PANE_MAX, Math.max(PANE_MIN, Math.round(width)));
+    setPreferredWidth(next);
+    try {
+      localStorage.setItem(PANE_WIDTH_KEY, String(next));
+    } catch {
+      // Không lưu được: vẫn dùng trong phiên này
+    }
+  }, []);
+
+  // Đóng pane (nút, Esc hoặc Back): trả focus về dòng vừa xem nếu còn trong danh sách
+  const lastDocIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const previous = lastDocIdRef.current;
+    lastDocIdRef.current = pane.docId;
+    if (previous && !pane.docId) {
+      const row = listRef.current?.querySelector<HTMLElement>(`[data-doc-id="${CSS.escape(previous)}"]`);
+      (row ?? listRef.current)?.focus();
+    }
+  }, [pane.docId]);
+
+  // Vị trí cuộn của danh sách: nhớ theo bộ lọc, khôi phục sau lần tải đầu (quay lại từ Full Page)
+  const scrollRestoredFor = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const save = () => {
+      try {
+        writeScroll(sessionStorage, filtersKey, el.scrollTop);
+      } catch {
+        // sessionStorage không dùng được
+      }
+    };
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(save, 80);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [filtersKey]);
+  React.useEffect(() => {
+    if (isLoading || fetchError || documents.length === 0) return;
+    if (scrollRestoredFor.current === filtersKey) return;
+    scrollRestoredFor.current = filtersKey;
+    const el = listRef.current;
+    if (!el) return;
+    let saved = 0;
+    try {
+      saved = readScroll(sessionStorage, filtersKey);
+    } catch {
+      // không có vị trí đã lưu
+    }
+    el.scrollTop = saved;
+    // Quick View đang mở: đảm bảo dòng của văn bản đó nằm trong tầm nhìn
+    if (pane.docId) {
+      el.querySelector<HTMLElement>(`[data-doc-id="${CSS.escape(pane.docId)}"]`)?.scrollIntoView({ block: "nearest" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, fetchError, documents, filtersKey]);
+
+  const paneDoc = pane.docId ? documents.find((d) => d.id === pane.docId) ?? null : null;
+
+  // Chọn nhiều chỉ áp dụng cho các dòng đang xem: đổi loại, bộ lọc, từ khóa hoặc trang thì bỏ chọn
+  const listKey = [filters.type, filters.search, filters.status, filters.bucket, filters.urgency, filters.leadUnitId, filters.documentYear ?? "", filters.page, filters.pageSize].join("|");
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [listKey]);
+  React.useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(documents.map((d) => d.id));
+      const next = new Set(Array.from(prev).filter((id) => visible.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [documents]);
 
   // Multi-selection handlers
   const handleToggleSelect = React.useCallback((docId: string) => {
@@ -210,19 +284,16 @@ export function DocumentRegistryView() {
   }, [selectedIds.size, documents]);
   const handleClearSelection = React.useCallback(() => setSelectedIds(new Set()), []);
 
-  // Open detail dialog
+  // Mở Quick View từ danh sách (click dòng / Enter): focus về nút Đóng của pane
   const handleOpenDetail = React.useCallback((doc: OfficialDocument) => {
-    if (doc.type === "outbox" || doc.type === "VAN_BAN_DI") {
-      setOutgoingDetailDocId(doc.id);
-      fetch(`/api/documents/${doc.id}`).then((r) => r.json()).then((json) => {
-        const item = json?.data ?? json;
-        if (item?.id) setOutgoingDetailDoc(item);
-      }).catch(() => {});
-    } else {
-      setSelectedDocument(doc);
-      setIsDetailOpen(true);
-    }
-  }, []);
+    pane.open(doc.id);
+    setFocusToken((n) => n + 1);
+  }, [pane]);
+
+  // Chuyển dòng bằng bàn phím trong danh sách: pane đang mở thì đổi văn bản theo, focus ở lại danh sách
+  const handleNavigate = React.useCallback((doc: OfficialDocument) => {
+    if (pane.docId) pane.switchDocument(doc.id);
+  }, [pane]);
 
   // Excel / CSV Export handler (NĐ 30/2020)
   const handleExportExcel = React.useCallback(async () => {
@@ -269,37 +340,60 @@ export function DocumentRegistryView() {
     ? { label: "Vào sổ văn bản đến", run: () => setIsQuickEntryOpen(true) }
     : { label: filters.type === "submission" ? "Soạn tờ trình" : "Soạn văn bản", run: () => setIsCreateOpen(true) };
 
-  const toggleBucket = (b: string) => setFilter("bucket", filters.bucket === b ? "" : b);
-  const bucketCount = (b: string, label: string, tone: "warning" | "default", key: string) => ({
-    id: `bucket-${b}`, count: buckets[key] ?? 0, label, tone, active: filters.bucket === b, onSelect: () => toggleBucket(b),
-  });
-  // Nhóm trạng thái bám theo workflow (Quy trình 6/7) để khớp cột "Bước" và sidebar.
-  const stateCounts =
-    filters.type === "inbox"
-      ? [bucketCount("pending", "chờ xử lý", "warning", "incomingPending"), bucketCount("done", "đã xử lý", "default", "incomingDone")]
-      : filters.type === "outbox"
-      ? [bucketCount("pending", "chờ xử lý", "warning", "outgoingPending"), bucketCount("done", "đã xử lý", "default", "outgoingDone"), bucketCount("issued", "đã phát hành", "default", "outgoingIssued")]
-      : [
-          { id: "pending", count: stats.pending ?? 0, label: "chờ bút phê", tone: "warning" as const, active: filters.status === "pending_assignment", onSelect: () => setFilter("status", filters.status === "pending_assignment" ? "ALL" : "pending_assignment") },
-          { id: "processing", count: stats.processing ?? 0, label: "đang xử lý", tone: "default" as const, active: filters.status === "processing", onSelect: () => setFilter("status", filters.status === "processing" ? "ALL" : "processing") },
-        ];
-  const quickCounts = [
-    ...stateCounts,
-    ...((stats.urgent ?? 0) > 0 ? [{ id: "urgent", count: stats.urgent ?? 0, label: "khẩn", tone: "warning" as const }] : []),
-    ...((stats.overdue ?? 0) > 0 ? [{ id: "overdue", count: stats.overdue ?? 0, label: "trễ hạn xử lý", tone: "danger" as const }] : []),
-  ];
+  const leadUnitName = filters.leadUnitId
+    ? departments.find((d) => d.id === filters.leadUnitId)?.name ?? (isDepartmentsLoading ? "Đang tải…" : "Không rõ đơn vị")
+    : undefined;
+  const leadUnitOptions = isDepartmentsLoading ? [] : departments.map((d) => ({ value: d.id, label: d.name }));
 
   const activeFilters = [
     ...(filters.bucket ? [{ id: "bucket", label: "Nhóm", value: bucketLabels[filters.bucket] ?? filters.bucket, onClear: () => setFilter("bucket", "") }] : []),
     ...(filters.status && filters.status !== "ALL" ? [{ id: "status", label: "Trạng thái", value: statusLabels[filters.status] ?? filters.status, onClear: () => setFilter("status", "ALL") }] : []),
     ...(filters.urgency && filters.urgency !== "ALL" ? [{ id: "urgency", label: "Mức khẩn", value: urgencyLabels[filters.urgency] ?? filters.urgency, onClear: () => setFilter("urgency", "ALL") }] : []),
+    ...(filters.leadUnitId ? [{ id: "leadUnit", label: "Đơn vị chủ trì", value: leadUnitName ?? filters.leadUnitId, onClear: () => setFilter("leadUnitId", "") }] : []),
+    ...(filters.documentYear ? [{ id: "year", label: "Năm", value: String(filters.documentYear), onClear: () => setFilter("documentYear", undefined) }] : []),
   ];
+  // Xóa bộ lọc giữ loại sổ, từ khóa và tham số không thuộc bộ lọc; resetFilters sẽ đưa loại về "Tất cả"
+  const clearFilters = () => setFilters({ bucket: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined });
+  const emptyCopy = getLedgerEmptyCopy(isResultFiltered);
+  const emptyAction = isResultFiltered ? (
+    <Button size="sm" variant="outline" onClick={() => setFilters({ search: "", bucket: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined })}>
+      Xóa bộ lọc và từ khóa
+    </Button>
+  ) : (
+    <Button size="sm" variant="outline" onClick={primaryAction.run}>{primaryAction.label}</Button>
+  );
+
+  const quickViewProps = pane.docId
+    ? {
+        docId: pane.docId,
+        fileId: pane.fileId,
+        seed: paneDoc,
+        onClose: pane.close,
+        onFileChange: pane.selectFile,
+        onWorkflowUpdate: () => {
+          fetchDocuments();
+        },
+        onViewSignature: (item: DocumentItem | null) => {
+          setSignatureDoc(item ? mapApiDocumentToOfficial(item as unknown as ApiDoc) : paneDoc);
+          setIsSignatureOpen(true);
+        },
+        focusToken,
+      }
+    : null;
+  const paneVisible = Boolean(quickViewProps) && workspaceWidth > 0 && layout.mode === "pane";
+  const overlayVisible = Boolean(quickViewProps) && workspaceWidth > 0 && layout.mode === "overlay";
 
   return (
-    <div className="w-full pb-6 md:pb-10" data-slot="document-registry-view">
+    <div ref={workspaceRef} className="flex min-h-0 w-full flex-1 md:flex-row" data-slot="document-registry-view">
+      <div
+        ref={listRef}
+        tabIndex={-1}
+        data-slot="document-list-region"
+        className="min-w-0 flex-1 pb-6 outline-none md:overflow-y-auto md:p-6 md:pb-10"
+      >
       <DocumentLedgerToolbar
         title={typeTitle[filters.type] ?? "Sổ văn bản"}
-        total={totalCount}
+        total={isLoading || fetchError ? null : totalCount}
         searchValue={searchInputValue}
         onSearchChange={setSearchInputValue}
         urgency={filters.urgency}
@@ -310,110 +404,89 @@ export function DocumentRegistryView() {
         onYearChange={(y) => setFilter("documentYear", y)}
         primaryActionLabel={primaryAction.label}
         onPrimaryAction={primaryAction.run}
-        quickCounts={quickCounts}
         activeFilters={activeFilters}
+        onClearFilters={clearFilters}
+        leadUnitId={filters.leadUnitId}
+        leadUnitLabel={leadUnitName}
+        leadUnitOptions={leadUnitOptions}
+        onLeadUnitChange={(id) => setFilter("leadUnitId", id)}
+        visibleColumns={visibleColumns}
+        onVisibleColumnsChange={setVisibleColumns}
       />
 
       <InboundDocumentFeatureGuide>
         <div className="mt-2">
           <div className="hidden sm:block">
             <DocumentLedgerTable
-              documents={documents} selectedIds={selectedIds} selectedDocumentId={selectedDocument?.id}
+              documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
               numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
+              visibleColumns={visibleColumns} isFiltered={isResultFiltered}
+              emptyAction={emptyAction}
               isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
-              onOpen={handleOpenDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
+              onOpen={handleOpenDetail} onNavigate={handleNavigate} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
             />
           </div>
           <div className="block sm:hidden">
             <DocumentCardList
-              documents={documents} selectedDocument={selectedDocument} selectedIds={selectedIds}
-              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={(doc) => setFullscreenPdfDoc(doc)}
+              documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
+              emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description}
+              emptyAction={emptyAction}
+              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={handleOpenDetail}
               isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
             />
           </div>
           <TaskPaginationBar
+            itemLabel="văn bản"
             currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
             onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
           />
-          {filters.type === "inbox" || filters.type === "outbox" ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              {filters.type === "inbox" ? "Số đến" : "Số đi"} cấp liên tục từ 01/01 đến 31/12 hằng năm (Nghị định 30/2020/NĐ-CP).
-            </p>
-          ) : null}
         </div>
       </InboundDocumentFeatureGuide>
+      </div>
+
+      {/* Quick View không modal: danh sách bên cạnh vẫn cuộn, chọn, lọc được */}
+      {paneVisible && quickViewProps ? (
+        <>
+          <PaneResizeHandle
+            value={layout.width}
+            min={PANE_MIN}
+            max={layout.max}
+            onResize={handleResize}
+            onKey={(key, current) => nextWidthForKey(key, current, layout)}
+            onReset={() => handleResize(PANE_DEFAULT)}
+          />
+          <div style={{ width: layout.width }} className="flex h-full min-h-0 shrink-0 flex-col bg-card" data-slot="document-quick-view-pane">
+            <DocumentQuickView {...quickViewProps} mode="pane" />
+          </div>
+        </>
+      ) : null}
+      {overlayVisible && quickViewProps ? <DocumentQuickView {...quickViewProps} mode="overlay" /> : null}
 
       {/* 6. Floating Bulk Action Toolbar */}
       <DocumentBulkToolbar
         selectedCount={selectedIds.size} selectedIds={selectedIds} totalCount={totalCount}
-        onClearSelection={handleClearSelection} onRefresh={() => { fetchDocuments(); fetchStats(); }}
-        onSuccess={() => { setSelectedIds(new Set()); fetchDocuments(); fetchStats(); }}
-      />
-
-      {/* 7. Modals & Dialogs */}
-      <DocumentDetailDialog document={selectedDocument} isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} onViewPdf={(doc) => setFullscreenPdfDoc(doc)} />
-
-      <DocumentOutgoingDetailView
-        document={outgoingDetailDoc} isOpen={Boolean(outgoingDetailDocId)}
-        onClose={() => { setOutgoingDetailDocId(null); setOutgoingDetailDoc(null); }}
-        onWorkflowUpdate={() => {
-          if (outgoingDetailDocId) {
-            fetch(`/api/documents/${outgoingDetailDocId}`).then((r) => r.json()).then((json) => {
-              const item = json?.data ?? json;
-              if (item?.id) setOutgoingDetailDoc(item);
-            }).catch(() => {});
-          }
-          fetchDocuments(); fetchStats();
-        }}
+        onClearSelection={handleClearSelection} onRefresh={() => { fetchDocuments(); }}
+        onSuccess={() => { setSelectedIds(new Set()); fetchDocuments(); }}
       />
 
       <CreateDocumentModal
         isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)}
-        onSubmit={async (newDoc) => { setDocuments((prev) => [newDoc, ...prev]); setSelectedDocument(newDoc); setIsDetailOpen(true); fetchStats(); }}
+        onSubmit={async (newDoc) => { pane.open(newDoc.id); fetchDocuments(); }}
       />
 
       <DocumentQuickEntryModal
         isOpen={isQuickEntryOpen} onClose={() => setIsQuickEntryOpen(false)}
-        onSuccess={(_newDoc) => { setIsQuickEntryOpen(false); fetchDocuments(); fetchStats(); }}
-        defaultType={filters.type === "all" ? "inbox" : filters.type}
+        onSuccess={(_newDoc) => { setIsQuickEntryOpen(false); fetchDocuments(); }}
+        defaultType={filters.type === "outbox" ? "VAN_BAN_DI" : filters.type === "submission" ? "TO_TRINH_NOI_BO" : "VAN_BAN_DEN"}
       />
 
       <DigitalSignatureDialog
         open={isSignatureOpen} onOpenChange={setIsSignatureOpen}
-        documentData={signatureDoc || selectedDocument}
-        documentNumber={signatureDoc?.documentNumber || selectedDocument?.documentNumber}
-        documentTitle={signatureDoc?.summary || selectedDocument?.summary}
-        existingSignature={((signatureDoc || selectedDocument)?.signatures?.[0] as any) || null}
+        documentData={signatureDoc}
+        documentNumber={signatureDoc?.documentNumber}
+        documentTitle={signatureDoc?.summary}
+        existingSignature={(signatureDoc?.signatures?.[0] as any) || null}
       />
-
-      {/* 8. Fullscreen PDF Viewer */}
-      {fullscreenPdfDoc && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-150" role="dialog" aria-modal="true" aria-label="Xem tệp PDF toàn màn hình" data-slot="fullscreen-pdf-viewer">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/70 bg-card shrink-0">
-            <div className="flex items-center gap-3 min-w-0 pr-2">
-              <button type="button" onClick={() => setFullscreenPdfDoc(null)} aria-label="Đóng và quay lại" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-border/70 bg-background text-foreground hover:bg-secondary active:bg-secondary/80 cursor-pointer">
-                <ArrowLeft strokeWidth={1.5} className="size-5" />
-              </button>
-              <div className="truncate">
-                <p className="text-xs font-bold text-foreground font-mono tabular-nums truncate">{fullscreenPdfDoc.documentNumber || fullscreenPdfDoc.id}</p>
-                <p className="text-xs text-muted-foreground truncate">{fullscreenPdfDoc.fileAttachment?.name || fullscreenPdfDoc.summary}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={() => { setSignatureDoc(fullscreenPdfDoc); setIsSignatureOpen(true); }} className="min-h-[44px] px-3 text-xs rounded-xl border-border/70 font-semibold cursor-pointer">
-                <Stamp className="size-3.5 mr-1.5 text-primary" strokeWidth={1.5} />
-                <span>Xem chữ ký số</span>
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setFullscreenPdfDoc(null)} className="min-h-[44px] px-4 text-xs font-semibold rounded-xl cursor-pointer">
-                Đóng
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden p-2 sm:p-4 bg-muted/20">
-            <DocumentPdfViewer fileUrl={fullscreenPdfDoc.fileAttachment?.url || ""} fileName={fullscreenPdfDoc.fileAttachment?.name || `${fullscreenPdfDoc.documentNumber || "van-ban"}.pdf`} fileSize={fullscreenPdfDoc.fileAttachment?.size} className="h-full w-full" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

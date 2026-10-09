@@ -3,7 +3,7 @@
 import * as React from "react";
 import { StandardDialog } from "@/components/ui/dialog";
 import { useModalDirtyGuard } from "@/hooks/use-modal-dirty-guard";
-import { Select } from "@base-ui/react/select";
+import { Select } from "@/components/ui/select";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -14,9 +14,6 @@ import {
   UploadCloud,
   File,
   Send,
-  ChevronDown,
-  Check,
-  Loader2,
 } from "lucide-react";
 import type {
   DocumentType,
@@ -27,7 +24,12 @@ import type {
 import { useAuth } from "@/lib/auth-context";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
 import { formatIsoDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
@@ -64,6 +66,8 @@ const URGENCY_CHOICES: { value: DocumentUrgency; label: string }[] = [
   { value: "THUONG_KHAN", label: "Thượng khẩn" },
   { value: "HOA_TOC", label: "Hỏa tốc / Hẹn giờ" },
 ];
+
+type QuickEntryFieldErrors = Partial<Record<"originalNumber" | "issuingAuthority" | "summary", string>>;
 
 export function DocumentQuickEntryModal({
   isOpen,
@@ -112,6 +116,11 @@ export function DocumentQuickEntryModal({
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
 
   const firstInputRef = React.useRef<HTMLInputElement>(null);
+  const issuingAuthorityRef = React.useRef<HTMLInputElement>(null);
+  const summaryRef = React.useRef<HTMLTextAreaElement>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<QuickEntryFieldErrors>({});
+  const clearFieldError = (key: keyof QuickEntryFieldErrors) =>
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
 
   const isDirty = Boolean(
     originalNumber.trim() ||
@@ -144,6 +153,7 @@ export function DocumentQuickEntryModal({
       setDocType(defaultType);
       setErrorMessage(null);
       setSuccessMessage(null);
+      setFieldErrors({});
       const timer = setTimeout(() => {
         firstInputRef.current?.focus();
       }, 50);
@@ -171,22 +181,23 @@ export function DocumentQuickEntryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
-    if (!originalNumber.trim()) {
-      setErrorMessage("Vui lòng nhập Số ký hiệu văn bản gốc.");
-      firstInputRef.current?.focus();
+    // Kiểm tra theo đúng thứ tự cũ; báo lỗi cạnh từng trường và đưa focus về trường đầu tiên còn thiếu
+    const errors: QuickEntryFieldErrors = {};
+    if (!originalNumber.trim()) errors.originalNumber = "Vui lòng nhập Số ký hiệu văn bản gốc.";
+    if (!issuingAuthority.trim()) errors.issuingAuthority = "Vui lòng nhập Cơ quan ban hành.";
+    if (!summary.trim()) errors.summary = "Vui lòng nhập Trích yếu nội dung văn bản.";
+    const firstError = errors.originalNumber ?? errors.issuingAuthority ?? errors.summary;
+    if (firstError) {
+      setFieldErrors(errors);
+      setErrorMessage(firstError);
+      if (errors.originalNumber) firstInputRef.current?.focus();
+      else if (errors.issuingAuthority) issuingAuthorityRef.current?.focus();
+      else summaryRef.current?.focus();
       return;
     }
-
-    if (!issuingAuthority.trim()) {
-      setErrorMessage("Vui lòng nhập Cơ quan ban hành.");
-      return;
-    }
-
-    if (!summary.trim()) {
-      setErrorMessage("Vui lòng nhập Trích yếu nội dung văn bản.");
-      return;
-    }
+    setFieldErrors({});
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -244,6 +255,7 @@ export function DocumentQuickEntryModal({
 
   return (
     <StandardDialog
+      compact
       open={isOpen}
       onOpenChange={handleOpenChange}
       title="Vào sổ văn bản cấp tốc (<60s)"
@@ -251,7 +263,7 @@ export function DocumentQuickEntryModal({
       size="lg"
       className="max-h-[90vh] flex flex-col overflow-hidden sm:max-w-2xl"
     >
-      <div className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col flex-1 min-h-0 -mx-6 -mb-6 mt-2">
         {/* Modal Scrollable Body */}
         <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
           {/* Document Type Toggle */}
@@ -260,73 +272,74 @@ export function DocumentQuickEntryModal({
               Loại sổ văn bản
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant={docType === "VAN_BAN_DEN" ? "secondary" : "ghost"}
+                aria-pressed={docType === "VAN_BAN_DEN"}
                 onClick={() => setDocType("VAN_BAN_DEN")}
-                className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors cursor-pointer ${
-                  docType === "VAN_BAN_DEN"
-                    ? "border-sky-500 bg-sky-500/10 text-sky-700 font-semibold"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted"
-                }`}
+                className={cn(docType === "VAN_BAN_DEN" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <ArrowDownLeft className="h-4 w-4 shrink-0 text-sky-500" strokeWidth={1.5} />
+                <ArrowDownLeft className="text-sky-600" strokeWidth={1.5} />
                 <span>Văn bản đến</span>
-              </button>
-
-              <button
+              </Button>
+              <Button
                 type="button"
+                size="sm"
+                variant={docType === "VAN_BAN_DI" ? "secondary" : "ghost"}
+                aria-pressed={docType === "VAN_BAN_DI"}
                 onClick={() => setDocType("VAN_BAN_DI")}
-                className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors cursor-pointer ${
-                  docType === "VAN_BAN_DI"
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 font-semibold"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted"
-                }`}
+                className={cn(docType === "VAN_BAN_DI" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={1.5} />
+                <ArrowUpRight className="text-emerald-600" strokeWidth={1.5} />
                 <span>Văn bản đi</span>
-              </button>
-
-              <button
+              </Button>
+              <Button
                 type="button"
+                size="sm"
+                variant={docType === "TO_TRINH_NOI_BO" ? "secondary" : "ghost"}
+                aria-pressed={docType === "TO_TRINH_NOI_BO"}
                 onClick={() => setDocType("TO_TRINH_NOI_BO")}
-                className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors cursor-pointer ${
-                  docType === "TO_TRINH_NOI_BO"
-                    ? "border-amber-500 bg-amber-500/10 text-amber-700 font-semibold"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted"
-                }`}
+                className={cn('col-span-2 sm:col-span-1', docType === "TO_TRINH_NOI_BO" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <FileText className="h-4 w-4 shrink-0 text-amber-500" strokeWidth={1.5} />
+                <FileText className="text-amber-600" strokeWidth={1.5} />
                 <span>Tờ trình nội bộ</span>
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Core Row 1: Original Number & Issued Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground">
-                Số ký hiệu văn bản gốc <span className="text-rose-500">*</span>
-              </label>
-              <input
-                ref={firstInputRef}
-                type="text"
-                value={originalNumber}
-                onChange={(e) => setOriginalNumber(e.target.value)}
-                placeholder="VD: 125/TCGDNN-VP hoặc 89/CĐKTCN-ĐT"
-                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                required
-              />
+              <FormField label="Số ký hiệu văn bản gốc" error={fieldErrors.originalNumber}>
+                <Input
+                  compact
+                  ref={firstInputRef}
+                  type="text"
+                  value={originalNumber}
+                  onChange={(e) => {
+                    setOriginalNumber(e.target.value);
+                    clearFieldError("originalNumber");
+                  }}
+                  placeholder="VD: 125/TCGDNN-VP hoặc 89/CĐKTCN-ĐT"
+                  className="mt-1.5 w-full"
+                  required
+                />
+              </FormField>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="qe-issued-date" className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Ngày ban hành <span className="text-rose-500">*</span>
               </label>
               <VietnameseDatePicker
+                id="qe-issued-date"
+                clearable={false}
                 value={issuedDate}
                 onChange={(val) => setIssuedDate(val)}
                 required
                 variant="input"
+                triggerClassName="h-11 sm:h-7 rounded-md px-2"
                 className="w-full"
               />
             </div>
@@ -334,21 +347,22 @@ export function DocumentQuickEntryModal({
 
           {/* Issuing Authority with Quick Presets */}
           <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium text-muted-foreground">
-                Cơ quan ban hành <span className="text-rose-500">*</span>
-              </label>
-              <span className="text-xs text-muted-foreground">Gợi ý nhanh</span>
-            </div>
-            <input
-              type="text"
-              value={issuingAuthority}
-              onChange={(e) => setIssuingAuthority(e.target.value)}
-              placeholder="Nhập hoặc chọn cơ quan ban hành..."
-              list="common-authorities-list"
-              className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              required
-            />
+            <FormField label="Cơ quan ban hành" error={fieldErrors.issuingAuthority} className="gap-1.5">
+              <Input
+                compact
+                ref={issuingAuthorityRef}
+                type="text"
+                value={issuingAuthority}
+                onChange={(e) => {
+                  setIssuingAuthority(e.target.value);
+                  clearFieldError("issuingAuthority");
+                }}
+                placeholder="Nhập hoặc chọn cơ quan ban hành..."
+                list="common-authorities-list"
+                required
+              />
+            </FormField>
+            <span className="-mt-1 mb-1.5 block text-right text-xs text-muted-foreground">Gợi ý nhanh</span>
             <datalist id="common-authorities-list">
               {COMMON_AUTHORITIES.map((auth) => (
                 <option key={auth} value={auth} />
@@ -362,7 +376,7 @@ export function DocumentQuickEntryModal({
                   key={auth}
                   type="button"
                   onClick={() => setIssuingAuthority(auth)}
-                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
                 >
                   {auth}
                 </button>
@@ -376,100 +390,53 @@ export function DocumentQuickEntryModal({
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Loại văn bản (Thể loại)
               </label>
-              <Select.Root
-                value={category}
+              <Select
+                compact
+                positionerClassName="z-50"
+                aria-label="Loại văn bản"
+                placeholder="Chọn thể loại"
+                options={COMMON_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                value={category || null}
                 onValueChange={(val) => {
                   if (val) setCategory(val);
                 }}
-              >
-                <Select.Trigger
-                  aria-label="Loại văn bản"
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                >
-                  <Select.Value>{category || "Chọn thể loại"}</Select.Value>
-                  <Select.Icon>
-                    <ChevronDown className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4}>
-                    <Select.Popup className="w-56 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
-                      <Select.List>
-                        {COMMON_CATEGORIES.map((cat) => (
-                          <Select.Item
-                            key={cat}
-                            value={cat}
-                            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
-                          >
-                            <Select.ItemText>{cat}</Select.ItemText>
-                            <Select.ItemIndicator>
-                              <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                            </Select.ItemIndicator>
-                          </Select.Item>
-                        ))}
-                      </Select.List>
-                    </Select.Popup>
-                  </Select.Positioner>
-                </Select.Portal>
-              </Select.Root>
+              />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Mức độ khẩn
               </label>
-              <Select.Root
+              <Select
+                compact
+                positionerClassName="z-50"
+                aria-label="Mức độ khẩn"
+                options={URGENCY_CHOICES.map((opt) => ({ value: opt.value, label: opt.label }))}
                 value={urgency}
                 onValueChange={(val) => {
                   if (val) setUrgency(val as DocumentUrgency);
                 }}
-              >
-                <Select.Trigger
-                  aria-label="Mức độ khẩn"
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                >
-                  <Select.Value>{selectedUrgencyObj?.label ?? "Thường"}</Select.Value>
-                  <Select.Icon>
-                    <ChevronDown className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4}>
-                    <Select.Popup className="w-56 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
-                      <Select.List>
-                        {URGENCY_CHOICES.map((opt) => (
-                          <Select.Item
-                            key={opt.value}
-                            value={opt.value}
-                            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
-                          >
-                            <Select.ItemText>{opt.label}</Select.ItemText>
-                            <Select.ItemIndicator>
-                              <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                            </Select.ItemIndicator>
-                          </Select.Item>
-                        ))}
-                      </Select.List>
-                    </Select.Popup>
-                  </Select.Positioner>
-                </Select.Portal>
-              </Select.Root>
+              />
             </div>
           </div>
 
           {/* Summary Input */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground">
-              Trích yếu nội dung <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={2}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="VD: Về việc hướng dẫn kiểm định chất lượng chương trình đào tạo nghề..."
-              className="mt-1.5 w-full rounded-lg border border-border bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-              required
-            />
+            <FormField label="Trích yếu nội dung" error={fieldErrors.summary}>
+              <Textarea
+                compact
+                ref={summaryRef}
+                rows={2}
+                value={summary}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                  clearFieldError("summary");
+                }}
+                placeholder="VD: Về việc hướng dẫn kiểm định chất lượng chương trình đào tạo nghề..."
+                className="mt-1.5"
+                required
+              />
+            </FormField>
           </div>
 
           {/* Department & Due Date */}
@@ -478,70 +445,16 @@ export function DocumentQuickEntryModal({
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 {docType === "VAN_BAN_DI" ? "Đơn vị soạn thảo" : "Đơn vị xử lý / chủ trì"}
               </label>
-              <Select.Root
+              <Select
+                compact
+                positionerClassName="z-50"
+                aria-label="Đơn vị xử lý / chủ trì"
+                placeholder={isDepartmentsLoading ? "Đang tải danh sách đơn vị..." : "— Chọn đơn vị —"}
+                options={[{ value: "", label: "— Chọn đơn vị —" }, ...departmentList.map((dept) => ({ value: dept.id, label: dept.name }))]}
                 value={leadUnitId}
-                onValueChange={(val) => {
-                  setLeadUnitId(val || "");
-                }}
+                onValueChange={(val) => setLeadUnitId(val || "")}
                 disabled={isDepartmentsLoading}
-              >
-                <Select.Trigger
-                  aria-label="Đơn vị xử lý / chủ trì"
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer disabled:opacity-50"
-                >
-                  <Select.Value>
-                    {isDepartmentsLoading ? (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1.5 animate-pulse">
-                        <Loader2 className="size-3.5 animate-spin text-muted-foreground" strokeWidth={1.5} />
-                        Đang tải danh sách đơn vị...
-                      </span>
-                    ) : (
-                      selectedDeptObj?.name || "— Chọn đơn vị —"
-                    )}
-                  </Select.Value>
-                  <Select.Icon>
-                    <ChevronDown className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Positioner className="z-50" side="bottom" align="start" sideOffset={4}>
-                    <Select.Popup className="w-72 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
-                      <Select.List>
-                        {isDepartmentsLoading ? (
-                          <div className="p-3 text-center text-xs text-muted-foreground animate-pulse flex items-center justify-center gap-2">
-                            <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
-                            <span>Đang tải danh sách đơn vị...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <Select.Item
-                              value=""
-                              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
-                            >
-                              <Select.ItemText>— Chọn đơn vị —</Select.ItemText>
-                              <Select.ItemIndicator>
-                                <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                              </Select.ItemIndicator>
-                            </Select.Item>
-                            {departmentList.map((dept) => (
-                              <Select.Item
-                                key={dept.id}
-                                value={dept.id}
-                                className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs outline-none data-[highlighted]:bg-muted data-[selected]:bg-primary/10 data-[selected]:text-primary"
-                              >
-                                <Select.ItemText>{dept.name}</Select.ItemText>
-                                <Select.ItemIndicator>
-                                  <Check className="size-3.5 text-primary" strokeWidth={1.5} />
-                                </Select.ItemIndicator>
-                              </Select.Item>
-                            ))}
-                          </>
-                        )}
-                      </Select.List>
-                    </Select.Popup>
-                  </Select.Positioner>
-                </Select.Portal>
-              </Select.Root>
+              />
               {isDepartmentsLoading && (
                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 animate-pulse">
                   <span className="size-1.5 rounded-full bg-muted-foreground/40 animate-ping" />
@@ -558,6 +471,7 @@ export function DocumentQuickEntryModal({
                 value={dueDate}
                 onChange={(val) => setDueDate(val)}
                 variant="input"
+                triggerClassName="h-11 sm:h-7 rounded-md px-2"
                 className="w-full"
               />
               {/* Quick Due Date buttons */}
@@ -594,12 +508,12 @@ export function DocumentQuickEntryModal({
                 <label className="block text-xs font-medium text-muted-foreground">
                   Người ký
                 </label>
-                <input
+                <Input compact
                   type="text"
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
                   placeholder="TS. Lê Doãn Cường"
-                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
+                  className="mt-1 w-full"
                 />
               </div>
 
@@ -607,12 +521,12 @@ export function DocumentQuickEntryModal({
                 <label className="block text-xs font-medium text-muted-foreground">
                   Chức vụ người ký
                 </label>
-                <input
+                <Input compact
                   type="text"
                   value={signerTitle}
                   onChange={(e) => setSignerTitle(e.target.value)}
                   placeholder="Hiệu trưởng"
-                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
+                  className="mt-1 w-full"
                 />
               </div>
 
@@ -620,12 +534,12 @@ export function DocumentQuickEntryModal({
                 <label className="block text-xs font-medium text-muted-foreground">
                   Nơi nhận
                 </label>
-                <input
+                <Input compact
                   type="text"
                   value={recipientList}
                   onChange={(e) => setRecipientList(e.target.value)}
                   placeholder="Tổng cục GDNN; UBND Tỉnh..."
-                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
+                  className="mt-1 w-full"
                 />
               </div>
             </div>
@@ -636,7 +550,7 @@ export function DocumentQuickEntryModal({
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
               Tệp quét PDF đính kèm (Scan có dấu đỏ)
             </label>
-            <div className="relative rounded-lg border-2 border-dashed border-border p-4 text-center hover:border-indigo-400 transition-colors">
+            <div className="relative rounded-lg border-2 border-dashed border-border p-4 text-center hover:border-primary/60 transition-colors">
               <input
                 type="file"
                 accept=".pdf,application/pdf"
@@ -656,24 +570,25 @@ export function DocumentQuickEntryModal({
                 <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground">
                   <UploadCloud className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
                   <span className="text-xs font-medium">
-                    Kéo thả tệp PDF hoặc bấm để chọn tệp quét
+                    Bấm để chọn tệp PDF quét
                   </span>
-                  <span className="text-xs text-muted-foreground">Hỗ trợ PDF tối đa 25MB</span>
+                  <span className="text-xs text-muted-foreground">Chỉ nhận tệp PDF</span>
                 </div>
               )}
             </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Tệp đã chọn chỉ dùng để xem trước, chưa được lưu cùng văn bản.</p>
           </div>
 
           {/* Feedback messages */}
           {errorMessage && (
-            <div className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700">
+            <div role="alert" className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700">
               <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-700">
+            <div role="status" className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-700">
               <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
               <span>{successMessage}</span>
             </div>
@@ -681,35 +596,26 @@ export function DocumentQuickEntryModal({
         </div>
 
         {/* Modal Action Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-3.5 bg-muted/20">
-          <button
-            type="button"
-            onClick={() => handleOpenChange(false)}
-            className="rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted cursor-pointer"
-          >
+        <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-3 bg-muted/20">
+          <Button type="button" variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
             Hủy
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
-          >
+          <Button type="submit" size="sm" disabled={isSubmitting} aria-busy={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Clock className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                <Clock strokeWidth={1.5} />
                 <span>Đang lưu văn bản...</span>
               </>
             ) : (
               <>
-                <Send className="h-4 w-4" strokeWidth={1.5} />
+                <Send strokeWidth={1.5} />
                 <span>Đăng ký vào sổ</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
-      </div>
+      </form>
     </StandardDialog>
   );
 }

@@ -41,6 +41,8 @@ export interface UseDocumentUrlFiltersReturn {
   filters: DocumentUrlFilters;
   searchInputValue: string;
   isFiltered: boolean;
+  /** Bộ lọc làm đổi kết quả (không tính loại sổ và trang). Dùng cho trạng thái rỗng. */
+  isResultFiltered: boolean;
   isPending: boolean;
   setFilter: <K extends keyof DocumentUrlFilters>(
     key: K,
@@ -337,6 +339,37 @@ export function isDocumentFiltered(
   );
 }
 
+/** Đổi tập kết quả hoặc kích thước trang thì quay về trang 1; chuyển trang tường minh được giữ nguyên. */
+const RESULT_FILTER_KEYS = ["type", "search", "status", "bucket", "urgency", "leadUnitId", "documentYear", "pageSize"] as const;
+
+/**
+ * Gộp cập nhật với từ khóa đang chờ debounce, để một thay đổi bộ lọc khác không làm mất từ khóa vừa gõ.
+ * Cập nhật có khóa `documentYear: undefined` vẫn được coi là đổi bộ lọc (xóa năm).
+ */
+export function buildDocumentFilterUpdate(
+  updates: Partial<DocumentUrlFilters>,
+  pendingSearch: string | null,
+  resetPageOnFilterChange = true
+): Partial<DocumentUrlFilters> {
+  const merged: Partial<DocumentUrlFilters> =
+    pendingSearch !== null && updates.search === undefined
+      ? { ...updates, search: pendingSearch }
+      : { ...updates };
+  const changesResult = RESULT_FILTER_KEYS.some((key) => key in merged);
+  if (resetPageOnFilterChange && changesResult && merged.page === undefined) {
+    merged.page = 1;
+  }
+  return merged;
+}
+
+/** Bộ lọc đang làm đổi kết quả hiển thị: không tính loại sổ (type) và trang. */
+export function isDocumentResultFiltered(
+  filters: DocumentUrlFilters,
+  defaults: DocumentUrlFilters = DEFAULT_DOCUMENT_URL_FILTERS
+): boolean {
+  return isDocumentFiltered({ ...filters, type: defaults.type, page: defaults.page }, defaults);
+}
+
 /**
  * Custom Hook for managing document filters synchronized with URL search params.
  * Includes 300ms search debounce, strict typing, startTransition navigation,
@@ -382,9 +415,31 @@ export function useDocumentUrlFilters(
     setSearchInputValueState(filters.search);
   }, [filters.search]);
 
+  // Query gần nhất đã yêu cầu. Cập nhật liên tiếp dựa trên đây, không dựa trên snapshot của lần render cũ.
+  const latestParamsRef = React.useRef<URLSearchParams>(searchParams);
+  React.useEffect(() => {
+    latestParamsRef.current = new URLSearchParams(searchParamsString);
+  }, [searchParamsString]);
+
   const isFiltered = React.useMemo(() => {
     return isDocumentFiltered(filters, effectiveDefaults);
   }, [filters, effectiveDefaults]);
+
+  const isResultFiltered = React.useMemo(() => {
+    return isDocumentResultFiltered(filters, effectiveDefaults);
+  }, [filters, effectiveDefaults]);
+
+  // Từ khóa đang chờ debounce; null = không có
+  const pendingSearchRef = React.useRef<string | null>(null);
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const cancelPendingSearch = React.useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingSearchRef.current = null;
+  }, []);
 
   // Core URL update dispatcher with startTransition for smooth UI
   const updateUrl = React.useCallback(
@@ -394,27 +449,17 @@ export function useDocumentUrlFilters(
     ) => {
       const { historyMode = "replace", scroll = false } = navOptions;
 
-      const hasFilterChange =
-        updates.type !== undefined ||
-        updates.search !== undefined ||
-        updates.status !== undefined ||
-        updates.urgency !== undefined ||
-        updates.leadUnitId !== undefined ||
-        updates.documentYear !== undefined;
-
-      const mergedUpdates: Partial<DocumentUrlFilters> = {
-        ...updates,
-        ...(resetPageOnFilterChange && hasFilterChange && updates.page === undefined
-          ? { page: 1 }
-          : {}),
-      };
+      const mergedUpdates = buildDocumentFilterUpdate(updates, pendingSearchRef.current, resetPageOnFilterChange);
+      // Từ khóa chờ đã được gộp vào URL này nên không cần flush riêng
+      cancelPendingSearch();
 
       const newUrl = serializeDocumentUrlFilters(mergedUpdates, {
         pathname: pathname || (typeof window !== "undefined" ? window.location.pathname : ""),
-        existingParams: searchParams,
+        existingParams: latestParamsRef.current,
         preserveOtherParams: true,
         defaults: effectiveDefaults,
       });
+      latestParamsRef.current = new URLSearchParams(newUrl.includes("?") ? newUrl.slice(newUrl.indexOf("?") + 1) : "");
 
       startTransition(() => {
         if (router) {
@@ -432,11 +477,8 @@ export function useDocumentUrlFilters(
         }
       });
     },
-    [router, pathname, searchParams, effectiveDefaults, resetPageOnFilterChange]
+    [router, pathname, effectiveDefaults, resetPageOnFilterChange, cancelPendingSearch]
   );
-
-  // Debounce search update to URL
-  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const setSearchInputValue = React.useCallback(
     (value: string) => {
@@ -445,8 +487,10 @@ export function useDocumentUrlFilters(
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
+      pendingSearchRef.current = value;
 
       debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
         updateUrl({ search: value });
       }, debounceMs);
     },
@@ -475,9 +519,6 @@ export function useDocumentUrlFilters(
 
   const setFilters = React.useCallback(
     (updates: Partial<DocumentUrlFilters>) => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
       if (updates.search !== undefined) {
         setSearchInputValueState(updates.search);
       }
@@ -487,9 +528,6 @@ export function useDocumentUrlFilters(
   );
 
   const resetFilters = React.useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
     setSearchInputValueState(effectiveDefaults.search);
     updateUrl({
       type: effectiveDefaults.type,
@@ -508,6 +546,7 @@ export function useDocumentUrlFilters(
     filters,
     searchInputValue,
     isFiltered,
+    isResultFiltered,
     isPending,
     setFilter,
     setFilters,

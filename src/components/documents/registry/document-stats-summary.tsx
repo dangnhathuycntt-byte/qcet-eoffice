@@ -270,7 +270,7 @@ export function DocumentStatsSummary({
           >
             {/* Header: Label & Icon */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-[11px] sm:text-xs font-semibold tracking-wider text-muted-foreground truncate uppercase">
+              <span className="text-xs font-semibold text-muted-foreground truncate">
                 {card.label}
               </span>
               <div
@@ -300,7 +300,7 @@ export function DocumentStatsSummary({
                   <span className="size-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground truncate" title={card.subtext}>
+              <p className="text-xs text-muted-foreground truncate" title={card.subtext}>
                 {card.subtext}
               </p>
             </div>

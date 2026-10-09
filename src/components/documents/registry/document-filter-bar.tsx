@@ -204,7 +204,7 @@ export function DocumentFilterBar({
               placeholder="Tìm kiếm số hiệu, trích yếu, cơ quan ban hành..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full min-h-[44px] sm:min-h-9 pl-10 pr-9 text-xs rounded-xl border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="w-full min-h-[44px] sm:min-h-7 sm:h-7 pl-10 pr-9 text-xs rounded-xl border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               aria-label="Tìm kiếm văn bản và công văn"
             />
             {searchQuery.trim().length > 0 && (
@@ -224,7 +224,7 @@ export function DocumentFilterBar({
             <Popover.Trigger
               type="button"
               className={cn(
-                "min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border border-border/70 bg-background hover:bg-muted/50 flex items-center gap-1.5 active:scale-[0.98] cursor-pointer shrink-0 transition-all select-none",
+                "min-h-[44px] sm:min-h-7 sm:h-7 px-3 text-xs rounded-xl border border-border/70 bg-background hover:bg-muted/50 flex items-center gap-1.5 active:scale-[0.98] cursor-pointer shrink-0 transition-all select-none",
                 (isFilterOpen || activeFiltersCount > 0) && "border-primary/40 bg-primary/5 text-primary font-semibold shadow-2xs"
               )}
               aria-label="Mở bảng bộ lọc"
@@ -277,7 +277,7 @@ export function DocumentFilterBar({
 
                   {/* 1. Status Filter Section */}
                   <div className="space-y-1.5">
-                    <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                       <Clock className="size-3" strokeWidth={1.5} />
                       <span>Trạng thái xử lý:</span>
                     </span>
@@ -313,7 +313,7 @@ export function DocumentFilterBar({
 
                   {/* 2. Urgency Filter Section */}
                   <div className="space-y-1.5">
-                    <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                       <AlertCircle className="size-3" strokeWidth={1.5} />
                       <span>Độ khẩn:</span>
                     </span>
@@ -342,7 +342,7 @@ export function DocumentFilterBar({
                   {/* 3. Department Filter Section */}
                   {onDepartmentChange && (
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <Building2 className="size-3" strokeWidth={1.5} />
                         <span>Đơn vị chủ trì:</span>
                       </span>
@@ -365,7 +365,7 @@ export function DocumentFilterBar({
                   {/* 4. Year Filter Section */}
                   {onYearChange && (
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <Calendar className="size-3" strokeWidth={1.5} />
                         <span>Năm ban hành:</span>
                       </span>
@@ -405,7 +405,7 @@ export function DocumentFilterBar({
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              className="min-h-[44px] sm:min-h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-xl gap-1.5 cursor-pointer active:scale-[0.98]"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-xl gap-1.5 cursor-pointer active:scale-[0.98]"
               aria-label="Xóa tất cả bộ lọc đang áp dụng"
               title="Xóa bộ lọc"
             >
@@ -418,7 +418,7 @@ export function DocumentFilterBar({
           )}
 
           {showDensityToggle && (
-            <DensityToggle className="min-h-[44px] sm:min-h-9 rounded-xl border-border/70 shadow-2xs shrink-0" />
+            <DensityToggle className="min-h-[44px] sm:min-h-7 sm:h-7 rounded-xl border-border/70 shadow-2xs shrink-0" />
           )}
 
           {onExportExcel && (
@@ -428,7 +428,7 @@ export function DocumentFilterBar({
               size="sm"
               onClick={onExportExcel}
               disabled={isExporting}
-              className="min-h-[44px] sm:min-h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 text-foreground cursor-pointer shrink-0 gap-1.5 active:scale-[0.98]"
+              className="min-h-[44px] sm:min-h-7 sm:h-7 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 text-foreground cursor-pointer shrink-0 gap-1.5 active:scale-[0.98]"
               aria-label="Xuất sổ văn bản ra tệp Excel"
               title="Xuất danh sách văn bản sang định dạng Excel"
             >
@@ -451,8 +451,8 @@ export function DocumentFilterBar({
           {searchQuery.trim().length > 0 && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none">
               <Search className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px] whitespace-nowrap">Tìm:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">&quot;{searchQuery}&quot;</span>
+              <span className="text-muted-foreground text-xs whitespace-nowrap">Tìm:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">&quot;{searchQuery}&quot;</span>
               <button
                 type="button"
                 onClick={() => onSearchChange("")}
@@ -467,8 +467,8 @@ export function DocumentFilterBar({
           {statusFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none">
               <Clock className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px] whitespace-nowrap">Trạng thái:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs whitespace-nowrap">Trạng thái:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedStatusObj.label.replace("Trạng thái: ", "")}
               </span>
               <button
@@ -485,8 +485,8 @@ export function DocumentFilterBar({
           {urgencyFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none">
               <AlertCircle className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px] whitespace-nowrap">Độ khẩn:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs whitespace-nowrap">Độ khẩn:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedUrgencyObj.label.replace("Độ khẩn: ", "")}
               </span>
               <button
@@ -503,8 +503,8 @@ export function DocumentFilterBar({
           {departmentFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none">
               <Building2 className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px] whitespace-nowrap">Đơn vị:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px]">
+              <span className="text-muted-foreground text-xs whitespace-nowrap">Đơn vị:</span>
+              <span className="font-medium text-xs truncate max-w-[200px]">
                 {selectedDeptObj.label.replace("Đơn vị: ", "")}
               </span>
               <button
@@ -521,8 +521,8 @@ export function DocumentFilterBar({
           {yearFilter !== "ALL" && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none">
               <Calendar className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[11px] whitespace-nowrap">Năm:</span>
-              <span className="font-medium text-[11.5px] truncate max-w-[200px] font-mono tabular-nums">
+              <span className="text-muted-foreground text-xs whitespace-nowrap">Năm:</span>
+              <span className="font-medium text-xs truncate max-w-[200px] font-mono tabular-nums">
                 {selectedYearObj.label.replace("Năm ban hành: ", "")}
               </span>
               <button

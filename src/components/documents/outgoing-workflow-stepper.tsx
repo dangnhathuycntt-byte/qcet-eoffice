@@ -134,8 +134,8 @@ export interface OutgoingWorkflowStepperProps {
 
 export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflowStepperProps) {
   return (
-    <div className={cn("rounded-xl border border-border/70 bg-card p-4 shadow-xs", className)}>
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+    <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
+      <h3 className="text-xs font-semibold text-muted-foreground mb-3">
         Tiến trình xử lý
       </h3>
       <m.ol
@@ -157,7 +157,7 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
               {!isLast && (
                 <div
                   className={cn(
-                    "absolute left-[14px] top-7 bottom-0 w-px",
+                    "absolute left-[10px] top-6 bottom-0 w-px",
                     state === "completed" ? "bg-emerald-500/40" : "bg-border/50"
                   )}
                   aria-hidden
@@ -165,24 +165,24 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
               )}
 
               {/* Step indicator */}
-              <div className="relative z-10 mt-1 shrink-0">
+              <div className="relative z-10 mt-0.5 shrink-0">
                 {state === "completed" ? (
-                  <div className="size-[28px] rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                    <CheckCircle2 className="size-3.5 text-emerald-600" strokeWidth={2} />
+                  <div className="size-5 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                    <CheckCircle2 className="size-3 text-emerald-600" strokeWidth={1.5} />
                   </div>
                 ) : state === "active" ? (
-                  <div className="size-[28px] rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
-                    <Clock className="size-3 text-primary animate-pulse" strokeWidth={2} />
+                  <div className="size-5 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
+                    <Clock className="size-3 text-primary animate-pulse motion-reduce:animate-none" strokeWidth={1.5} />
                   </div>
                 ) : (
-                  <div className="size-[28px] rounded-full border border-border/60 bg-muted/40 flex items-center justify-center">
+                  <div className="size-5 rounded-full border border-border/60 bg-muted/40 flex items-center justify-center">
                     <Circle className="size-3 text-muted-foreground/40" strokeWidth={1.5} />
                   </div>
                 )}
               </div>
 
               {/* Step content */}
-              <div className="pb-5 min-w-0 flex-1">
+              <div className="pb-3 min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Icon
                     className={cn(
@@ -197,7 +197,7 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
                   />
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-compact font-medium",
                       state === "completed"
                         ? "text-foreground"
                         : state === "active"
@@ -208,14 +208,14 @@ export function OutgoingWorkflowStepper({ workflow, className }: OutgoingWorkflo
                     {step.label}
                   </span>
                   {state === "active" && (
-                    <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary leading-none">
+                    <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary leading-none">
                       Hiện tại
                     </span>
                   )}
                 </div>
 
                 {(actor || timestamp) && state !== "upcoming" && (
-                  <div className="mt-0.5 text-[10px] text-muted-foreground space-x-1">
+                  <div className="mt-0.5 text-xs text-muted-foreground space-x-1">
                     {actor && <span>{actor}</span>}
                     {actor && timestamp && <span>·</span>}
                     {timestamp && <span>{timestamp}</span>}
