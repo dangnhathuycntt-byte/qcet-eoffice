@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   openByteRangeStream,
+  buildContentDisposition,
   resolveSafeFilePath,
-  sanitizeDownloadFilename,
   SECURE_FILE_HEADERS,
 } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
@@ -169,7 +169,7 @@ export async function GET(
     for (const [name, value] of Object.entries(SECURE_FILE_HEADERS)) headers.set(name, value);
     headers.set("x-request-id", requestId);
     headers.set("Content-Type", file.mimeType);
-    headers.set("Content-Disposition", `inline; filename="${sanitizeDownloadFilename(file.originalName)}"`);
+    headers.set("Content-Disposition", buildContentDisposition("inline", file.originalName));
 
     return new NextResponse((streamResult.stream as unknown as BodyInit) ?? null, {
       status: streamResult.status,

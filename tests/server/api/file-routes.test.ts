@@ -600,7 +600,11 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       );
       assert.equal(allowed.status, 206);
       assert.equal(allowed.headers.get("content-range"), `bytes 0-7/${samplePdfContent.length}`);
-      assert.equal(allowed.headers.get("content-disposition"), 'inline; filename="canonical.pdf"');
+      // Tên ASCII giữ nguyên ở filename=; bản UTF-8 đi kèm ở filename* (RFC 5987)
+      assert.equal(
+        allowed.headers.get("content-disposition"),
+        `inline; filename="canonical.pdf"; filename*=UTF-8''canonical.pdf`
+      );
     });
 
     test("canonical FileObject route blocks pending scans and unlinked objects", async () => {

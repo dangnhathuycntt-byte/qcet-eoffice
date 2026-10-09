@@ -5,7 +5,7 @@ import {
   resolveSafeFilePath,
   openByteRangeStream,
   isAllowedFileExtension,
-  sanitizeDownloadFilename,
+  buildContentDisposition,
 } from "@/lib/storage";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
@@ -266,8 +266,7 @@ export async function GET(
     headers.set("X-Frame-Options", "DENY");
 
     if (streamResult.status === 200) {
-      const safeDownloadName = sanitizeDownloadFilename(fileName);
-      headers.set("Content-Disposition", `inline; filename="${safeDownloadName}"`);
+      headers.set("Content-Disposition", buildContentDisposition("inline", fileName));
     }
 
     return new NextResponse(

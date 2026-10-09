@@ -5,7 +5,7 @@ import {
   resolveSafeFilePath,
   openByteRangeStream,
   isAllowedFileExtension,
-  sanitizeDownloadFilename,
+  buildContentDisposition,
 } from "@/lib/storage";
 import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { apiError } from "@/server/api/response";
@@ -175,17 +175,13 @@ export async function GET(req: NextRequest) {
     const rangeHeader = req.headers.get("range");
     const streamResult = await openByteRangeStream(safeResolvedPath, rangeHeader);
 
-    const safeDownloadName = sanitizeDownloadFilename(downloadName);
     const headers = new Headers(streamResult.headers);
     headers.set("x-request-id", requestId);
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("X-Frame-Options", "DENY");
 
     if (streamResult.status === 200) {
-      headers.set(
-        "Content-Disposition",
-        `attachment; filename="${safeDownloadName}"`
-      );
+      headers.set("Content-Disposition", buildContentDisposition("attachment", downloadName));
     }
 
     return new NextResponse(

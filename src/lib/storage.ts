@@ -96,6 +96,18 @@ export function detectUploadMimeType(filename: string, bytes: Buffer): string {
  * Sanitizes a filename for safe download headers.
  * Strips control characters, quotes, newlines, path separators, and restricts to safe ASCII/UTF-8 syntax.
  */
+/**
+ * Header Content-Disposition an toàn với tên tiếng Việt. Header HTTP chỉ nhận Latin-1,
+ * nên đặt trực tiếp tên có dấu làm Headers.set() ném lỗi → ảnh/tệp không tải được.
+ * Theo RFC 5987/6266: `filename` là bản ASCII dự phòng, `filename*` là UTF-8 mã hóa.
+ */
+export function buildContentDisposition(type: "inline" | "attachment", filename: string): string {
+  const safe = sanitizeDownloadFilename(filename);
+  const ascii = safe.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "");
+  const encoded = encodeURIComponent(safe).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `${type}; filename="${ascii || "download"}"; filename*=UTF-8''${encoded}`;
+}
+
 export function sanitizeDownloadFilename(filename: string): string {
   if (!filename || typeof filename !== "string") {
     return "download";
