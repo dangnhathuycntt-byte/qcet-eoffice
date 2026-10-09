@@ -16,10 +16,15 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Search,
+  Bell,
+  Calendar,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PropertyRow } from "@/components/ui/property-row";
+import { TaskStatusIcon } from "@/components/ui/task-status-icon";
+import { PriorityIndicator } from "@/components/ui/priority-indicator";
+import { getStatusLabel } from "@/domain/tasks/state-machine";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { cn } from "@/lib/utils";
@@ -30,9 +35,40 @@ import {
   filterNotificationsByTab,
   formatNotificationContent,
   mapDbNotification,
-  formatRelativeTime,
+  getTypeBadge,
 } from "@/lib/notification-triage";
-import type { SchoolTask } from "@/types/dashboard";
+
+/** Phần nhiệm vụ lấy từ GET /api/tasks/{id} mà hộp thư cần hiển thị. */
+interface InboxTask {
+  id: string;
+  code?: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  priority?: string;
+  dueDate?: string | null;
+  progress?: number | null;
+  leadAssignee?: { name?: string | null } | null;
+  department?: { name?: string | null } | null;
+}
+
+const SYSTEM_ACTOR = "Hệ thống QCET";
+
+/** Thời gian rút gọn kiểu Linear: 36p, 3g, 3n, rồi ngày/tháng. */
+function formatShortTime(input: string | Date | undefined): string {
+  if (!input) return "";
+  const date = typeof input === "string" ? new Date(input) : input;
+  const sec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (Number.isNaN(sec)) return "";
+  if (sec < 60) return "Vừa xong";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}p`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `${hours}g`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}n`;
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}
 
 interface CategoryOption {
   id: NotificationTriageTab;
@@ -68,7 +104,8 @@ export function InboxView() {
   const [error, setError] = React.useState<string | null>(null);
 
   // Task context cache when viewing an item
-  const [taskContext, setTaskContext] = React.useState<SchoolTask | null>(null);
+  const [taskContext, setTaskContext] = React.useState<InboxTask | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [isLoadingTaskContext, setIsLoadingTaskContext] = React.useState(false);
 
   // Keep track of item that was read during the current unread-tab session so it doesn't suddenly disappear
@@ -240,18 +277,11 @@ export function InboxView() {
     let isMounted = true;
     setIsLoadingTaskContext(true);
 
-    fetch(`/api/tasks?id=${encodeURIComponent(targetTaskId)}`, { credentials: "include" })
+    fetch(`/api/tasks/${encodeURIComponent(targetTaskId)}`, { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!isMounted) return;
-        if (data?.success && data?.task) {
-          setTaskContext(data.task);
-        } else if (data?.tasks && data.tasks.length > 0) {
-          const matched = data.tasks.find((t: SchoolTask) => t.id === targetTaskId);
-          setTaskContext(matched || null);
-        } else {
-          setTaskContext(null);
-        }
+        setTaskContext((data?.task ?? data?.data ?? null) as InboxTask | null);
       })
       .catch(() => {
         if (isMounted) setTaskContext(null);
@@ -305,31 +335,39 @@ export function InboxView() {
 
   const selectedContent = selectedNotification ? formatNotificationContent(selectedNotification) : null;
   const selectedTitle =
-    selectedNotification?.targetTitle || selectedNotification?.title || "Thông báo hệ thống";
+    taskContext?.title ||
+    selectedNotification?.targetTitle ||
+    selectedNotification?.title ||
+    "Thông báo hệ thống";
 
   return (
     <div
       data-slot="inbox-workspace"
-      className="flex h-[calc(100vh-56px)] md:h-[calc(100vh-24px)] flex-col overflow-hidden rounded-xl border border-border/70 bg-card select-none"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {/* Khung danh sách */}
         <aside
           data-slot="inbox-list-pane"
           className={cn(
-            "h-full w-full shrink-0 flex-col border-r border-border/70 bg-background md:w-[320px] lg:w-[360px]",
+            "h-full w-full shrink-0 flex-col border-r border-border/60 md:w-[340px] lg:w-[380px]",
             selectedId ? "hidden md:flex" : "flex"
           )}
         >
-          <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
-              {unreadCount > 0 && (
-                <span className="text-xs tabular-nums text-muted-foreground">{unreadCount}</span>
-              )}
-            </div>
+          <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
+            <h1 className="text-compact font-medium text-foreground">Hộp thư</h1>
 
             <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setIsSearchOpen((open) => !open)}
+                title="Tìm kiếm"
+                aria-label="Tìm kiếm thông báo"
+                aria-pressed={isSearchOpen}
+              >
+                <Search strokeWidth={1.5} />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -340,7 +378,6 @@ export function InboxView() {
               >
                 <RotateCcw strokeWidth={1.5} className={cn(isRefreshing && "animate-spin")} />
               </Button>
-
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -352,22 +389,37 @@ export function InboxView() {
                   <CheckCheck strokeWidth={1.5} />
                 </Button>
               )}
-
               <MenuRoot>
                 <MenuTrigger
                   render={
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      title="Lọc theo loại thông báo"
-                      aria-label="Lọc theo loại"
-                      className={cn(categoryFilter !== "all" && "bg-accent text-foreground")}
+                      title="Lọc"
+                      aria-label="Lọc thông báo"
+                      className={cn(
+                        (categoryFilter !== "all" || activeTab === "unread") && "bg-accent text-foreground"
+                      )}
                     />
                   }
                 >
                   <ListFilter strokeWidth={1.5} />
                 </MenuTrigger>
                 <MenuContent align="end" className="w-56">
+                  <MenuItem
+                    onClick={() => {
+                      const next = activeTab === "unread" ? "all" : "unread";
+                      setActiveTab(next);
+                      updateUrlParams(selectedId, next);
+                    }}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs outline-none data-[highlighted]:bg-accent"
+                  >
+                    <MailOpen size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                    <span className="flex-1 truncate">Chỉ chưa đọc</span>
+                    <span className="tabular-nums text-muted-foreground">{unreadCount}</span>
+                    {activeTab === "unread" && <Check size={14} strokeWidth={1.5} className="shrink-0" />}
+                  </MenuItem>
+                  <div role="separator" className="-mx-1 my-1 h-px bg-border" />
                   {CATEGORY_OPTIONS.map((opt) => {
                     const Icon = opt.icon;
                     return (
@@ -387,57 +439,43 @@ export function InboxView() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1 px-3 pb-2">
-            {(
-              [
-                { id: "all", label: "Tất cả", count: notifications.length },
-                { id: "unread", label: "Chưa đọc", count: unreadCount },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                aria-pressed={activeTab === tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  updateUrlParams(selectedId, tab.id);
-                }}
-                className={cn(
-                  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                  activeTab === tab.id
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                )}
-              >
-                {tab.label}
-                {tab.count > 0 && <span className="tabular-nums text-muted-foreground">{tab.count}</span>}
-              </button>
-            ))}
-            <div className="relative ml-auto min-w-0 flex-1">
+          {isSearchOpen && (
+            <div className="relative shrink-0 px-3 py-2">
               <Search
-                className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                className="pointer-events-none absolute left-5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
                 strokeWidth={1.5}
               />
               <input
+                autoFocus
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm"
+                placeholder="Tìm trong hộp thư"
                 aria-label="Tìm kiếm thông báo"
-                className="h-7 w-full rounded-md bg-secondary pl-7 pr-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-7 w-full rounded-md bg-secondary pl-7 pr-7 text-xs text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Xóa từ khóa"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" strokeWidth={1.5} />
+                </button>
+              )}
             </div>
-          </div>
+          )}
 
           <div
             role="listbox"
             aria-label="Danh sách thông báo"
-            className="thin-scrollbar flex-1 overflow-y-auto border-t border-border/60"
+            className="thin-scrollbar flex-1 space-y-0.5 overflow-y-auto p-1.5"
           >
             {isLoading ? (
-              <div className="space-y-1 p-2">
+              <div className="space-y-1 p-1">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex animate-pulse items-start gap-2.5 px-1 py-1.5">
+                  <div key={i} className="flex animate-pulse items-start gap-2.5 px-2 py-2">
                     <div className="size-6 rounded-full bg-muted" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-2/3 rounded bg-muted" />
@@ -470,6 +508,11 @@ export function InboxView() {
               filteredNotifications.map((notif) => {
                 const formatted = formatNotificationContent(notif);
                 const isSelected = selectedId === notif.id;
+                const isSystem = notif.actorName === SYSTEM_ACTOR;
+                const TypeIcon = getTypeBadge(notif.type).icon;
+                const reason = isSystem
+                  ? formatted.actionText
+                  : `${notif.actorName} ${formatted.actionText}`.trim();
 
                 return (
                   <div
@@ -480,36 +523,37 @@ export function InboxView() {
                     onClick={() => handleSelectItem(notif)}
                     onKeyDown={(e) => handleRowKeyDown(e, notif)}
                     className={cn(
-                      "relative flex cursor-pointer items-start gap-2.5 py-2 pl-4 pr-3 text-left outline-none transition-colors focus-visible:bg-accent",
-                      isSelected ? "bg-accent" : "hover:bg-accent/60"
+                      "flex cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors focus-visible:bg-accent",
+                      isSelected ? "bg-accent" : "hover:bg-accent/50"
                     )}
                   >
-                    {!notif.isRead && (
-                      <span
-                        aria-label="Chưa đọc"
-                        className="absolute left-1.5 top-4 size-1.5 rounded-full bg-primary"
-                      />
+                    {isSystem ? (
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <TypeIcon size={14} strokeWidth={1.5} />
+                      </span>
+                    ) : (
+                      <UserAvatar name={notif.actorName} size="md" className="mt-0.5" />
                     )}
-                    <UserAvatar name={notif.actorName} size="md" className="mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {!notif.isRead && (
+                          <span aria-label="Chưa đọc" className="size-1.5 shrink-0 rounded-full bg-primary" />
+                        )}
                         <span
                           className={cn(
-                            "truncate text-compact",
+                            "min-w-0 flex-1 truncate text-compact",
                             notif.isRead ? "text-muted-foreground" : "font-medium text-foreground"
                           )}
                         >
                           {formatted.targetTitle || notif.actorName}
                         </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{reason}</p>
                         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                          {formatRelativeTime(notif.createdAt || notif.timestamp)}
+                          {formatShortTime(notif.createdAt || notif.timestamp)}
                         </span>
                       </div>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {notif.actorName}
-                        {formatted.actionText ? ` · ${formatted.actionText}` : ""}
-                        {formatted.extraBadge ? ` · ${formatted.extraBadge}` : ""}
-                      </p>
                     </div>
                   </div>
                 );
@@ -524,17 +568,17 @@ export function InboxView() {
           className={cn("h-full min-w-0 flex-1 flex-col bg-card", !selectedId ? "hidden md:flex" : "flex")}
         >
           {!selectedNotification || !selectedContent ? (
-            <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-              <InboxIcon className="mb-2 size-6 text-muted-foreground/50" strokeWidth={1.5} />
-              <h3 className="text-compact font-medium text-foreground">Chưa chọn thông báo nào</h3>
-              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                Chọn một thông báo ở danh sách bên trái để xem nội dung, ý kiến chỉ đạo và nhiệm vụ liên quan.
-              </p>
-            </div>
+            <>
+              <div className="h-11 shrink-0 border-b border-border/60" aria-hidden />
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                <InboxIcon className="size-12 text-muted-foreground/60" strokeWidth={1.5} />
+                <p className="text-compact text-muted-foreground">Chưa chọn thông báo nào</p>
+              </div>
+            </>
           ) : (
             <>
-              <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
-                <div className="flex min-w-0 items-center gap-1">
+              <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <Button
                     variant="ghost"
                     size="icon-xs"
@@ -547,10 +591,9 @@ export function InboxView() {
                   >
                     <ArrowLeft strokeWidth={1.5} />
                   </Button>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {selectedNotification.category || "Hệ thống"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">›</span>
+                  {taskContext?.code && (
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{taskContext.code}</span>
+                  )}
                   <span className="truncate text-xs text-foreground">{selectedTitle}</span>
                 </div>
 
@@ -562,14 +605,11 @@ export function InboxView() {
                     title={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
                     aria-label={selectedNotification.isRead ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
                   >
-                    {selectedNotification.isRead ? (
-                      <Mail strokeWidth={1.5} />
-                    ) : (
-                      <MailOpen strokeWidth={1.5} />
-                    )}
+                    {selectedNotification.isRead ? <Mail strokeWidth={1.5} /> : <MailOpen strokeWidth={1.5} />}
                   </Button>
                   {selectedNotification.linkHref && (
                     <Button
+                      variant="secondary"
                       size="sm"
                       onClick={() => router.push(selectedNotification.linkHref || "/tasks")}
                     >
@@ -581,31 +621,58 @@ export function InboxView() {
               </header>
 
               <div className="thin-scrollbar flex-1 overflow-y-auto">
-                <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5 sm:px-6">
-                  <div className="space-y-3">
-                    <h2 className="text-lg font-semibold tracking-tight text-foreground">{selectedTitle}</h2>
-                    <div className="flex items-center gap-2">
-                      <UserAvatar name={selectedNotification.actorName} size="md" />
-                      <span className="text-compact font-medium text-foreground">
-                        {selectedNotification.actorName}
+                <div className="mx-auto w-full max-w-3xl px-6 pb-10 pt-6">
+                  <h2 className="text-xl font-semibold tracking-tight text-foreground">{selectedTitle}</h2>
+
+                  {/* Thuộc tính nhiệm vụ: dạng chip một hàng như Linear */}
+                  {isLoadingTaskContext && !taskContext ? (
+                    <div className="mt-3 h-7 w-2/3 animate-pulse rounded bg-muted" />
+                  ) : taskContext ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-foreground">
+                      <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/70 px-2">
+                        <TaskStatusIcon status={taskContext.status} size={14} />
+                        {getStatusLabel(taskContext.status)}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {selectedNotification.timestamp || "Gần đây"}
-                      </span>
-                      {selectedNotification.type && (
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          {selectedNotification.type}
-                        </Badge>
+                      {taskContext.priority && (
+                        <span className="inline-flex h-7 items-center rounded-md border border-border/70 px-2">
+                          <PriorityIndicator priority={taskContext.priority} showLabel />
+                        </span>
+                      )}
+                      {taskContext.dueDate && (
+                        <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/70 px-2 tabular-nums">
+                          <Calendar size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                          {new Date(taskContext.dueDate).toLocaleDateString("vi-VN")}
+                        </span>
+                      )}
+                      {taskContext.leadAssignee?.name && (
+                        <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/70 px-2">
+                          <UserAvatar name={taskContext.leadAssignee.name} size="sm" />
+                          {taskContext.leadAssignee.name}
+                        </span>
+                      )}
+                      {taskContext.department?.name && (
+                        <span className="inline-flex h-7 items-center rounded-md border border-border/70 px-2 text-muted-foreground">
+                          {taskContext.department.name}
+                        </span>
                       )}
                     </div>
-                  </div>
+                  ) : null}
 
-                  <p className="whitespace-pre-wrap text-compact leading-relaxed text-foreground/90">
-                    {selectedNotification.action || selectedNotification.body || "Không có nội dung mô tả chi tiết."}
-                  </p>
+                  {taskContext?.description ? (
+                    <p className="mt-5 whitespace-pre-wrap text-compact leading-relaxed text-foreground/90">
+                      {taskContext.description}
+                    </p>
+                  ) : (
+                    selectedNotification.body &&
+                    selectedNotification.body !== selectedContent.actionText && (
+                      <p className="mt-5 whitespace-pre-wrap text-compact leading-relaxed text-foreground/90">
+                        {selectedNotification.body}
+                      </p>
+                    )
+                  )}
 
                   {selectedContent.directiveNote && (
-                    <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-amber-950">
+                    <div className="mt-5 space-y-1 rounded-md border border-amber-300 bg-amber-50/80 p-3 text-amber-950">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-amber-900">
                         <ShieldCheck size={14} strokeWidth={1.5} />
                         <span>Ý kiến chỉ đạo / Ghi chú điều hành</span>
@@ -614,51 +681,23 @@ export function InboxView() {
                     </div>
                   )}
 
-                  {(isLoadingTaskContext || taskContext) && (
-                    <div className="space-y-1 border-t border-border/60 pt-4">
-                      <div className="mb-1 text-xs font-medium text-muted-foreground">Nhiệm vụ liên quan</div>
-                      {taskContext ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/tasks?taskId=${taskContext.id}`)}
-                            className="mb-1 block w-full cursor-pointer truncate rounded-md py-1 text-left text-compact font-medium text-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {taskContext.title}
-                          </button>
-                          <PropertyRow label="Trạng thái">
-                            <Badge variant={taskContext.status === "COMPLETED" ? "emerald" : "sapphire"}>
-                              {taskContext.status === "COMPLETED" ? "Đã hoàn thành" : "Đang thực hiện"}
-                            </Badge>
-                          </PropertyRow>
-                          {taskContext.dueDate && (
-                            <PropertyRow label="Hạn chót">
-                              <span className="text-xs tabular-nums text-foreground">
-                                {new Date(taskContext.dueDate).toLocaleDateString("vi-VN")}
-                              </span>
-                            </PropertyRow>
-                          )}
-                          {taskContext.leadAssigneeName && (
-                            <PropertyRow label="Phụ trách">
-                              <span className="flex items-center gap-1.5 text-xs text-foreground">
-                                <UserAvatar name={taskContext.leadAssigneeName} size="sm" />
-                                {taskContext.leadAssigneeName}
-                              </span>
-                            </PropertyRow>
-                          )}
-                          {taskContext.progressPercent !== undefined && (
-                            <PropertyRow label="Tiến độ">
-                              <span className="text-xs tabular-nums text-foreground">
-                                {taskContext.progressPercent}%
-                              </span>
-                            </PropertyRow>
-                          )}
-                        </>
+                  {/* Hoạt động: chính thông báo này */}
+                  <div className="mt-8 border-t border-border/60 pt-4">
+                    <div className="mb-3 text-compact font-medium text-foreground">Hoạt động</div>
+                    <div className="flex items-start gap-2.5">
+                      {selectedNotification.actorName === SYSTEM_ACTOR ? (
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                          <Bell size={14} strokeWidth={1.5} />
+                        </span>
                       ) : (
-                        <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                        <UserAvatar name={selectedNotification.actorName} size="md" />
                       )}
+                      <p className="min-w-0 pt-0.5 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">{selectedNotification.actorName}</span>{" "}
+                        {selectedContent.actionText} · {selectedNotification.timestamp || "Gần đây"}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </>
