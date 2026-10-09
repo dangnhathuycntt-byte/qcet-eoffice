@@ -8,6 +8,7 @@ import { loadAuthorizationContext } from "@/server/authorization/authorization-c
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildDocumentResource } from "@/server/authorization/available-actions";
 import { canReadDocument } from "@/server/policies/document-policy";
+import { prisma } from "@/lib/prisma";
 import { getIncomingDocument } from "@/lib/services/incoming-document-service";
 import { IncomingDocumentDetailView } from "@/components/documents/incoming-document-detail-view";
 import type { IncomingDocumentDetail } from "@/components/documents/incoming-document-detail-view";
@@ -60,12 +61,29 @@ export default async function IncomingDocumentDetailPage({ params }: PageParams)
     notFound();
   }
 
+  // Nhiệm vụ liên kết: hiển thị hàng nhiệm vụ; `leadUnitId` là đơn vị xử lý văn bản khi xét quyền đọc
+  const linkedTask = rawWorkflow.document.linkedTaskId
+    ? await prisma.task.findUnique({
+        where: { id: rawWorkflow.document.linkedTaskId },
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          status: true,
+          dueDate: true,
+          progressPercent: true,
+          leadUnitId: true,
+        },
+      })
+    : null;
+
   // Check authorization
   const authContext = await loadAuthorizationContext(sessionUser.id);
-  const docResource = buildDocumentResource(rawWorkflow.document);
+  const authDocument = { ...rawWorkflow.document, linkedTask };
+  const docResource = buildDocumentResource(authDocument);
   const readDecision = authorize(authContext, "document.read", docResource);
 
-  if (!readDecision.allowed || !canReadDocument(authContext, rawWorkflow.document as any)) {
+  if (!readDecision.allowed || !canReadDocument(authContext, authDocument as any)) {
     notFound();
   }
 

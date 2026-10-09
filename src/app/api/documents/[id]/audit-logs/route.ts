@@ -156,7 +156,7 @@ export async function GET(
           },
         },
         linkedTask: {
-          select: { id: true, title: true, status: true, dueDate: true },
+          select: { id: true, title: true, status: true, dueDate: true, leadUnitId: true },
         },
       },
     });
@@ -169,7 +169,7 @@ export async function GET(
     const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(document as any);
     const readDecision = authorize(authContext, "document.read", docResource);
-    if (!readDecision.allowed || !canReadDocument(authUser, document as any)) {
+    if (!readDecision.allowed || !canReadDocument(authContext, document as any)) {
       throw new ForbiddenError(
         readDecision.reason || "Bạn không có quyền truy cập lịch sử văn bản này"
       );

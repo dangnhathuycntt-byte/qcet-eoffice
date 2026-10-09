@@ -182,7 +182,13 @@ export async function getApiContext(
               // `User.departmentId` đã bị drop (Phase 9). Đơn vị công tác canonical là phân
               // công vị trí việc làm chính đang hiệu lực — `position_assignments.unit_id`.
               positionAssignments: {
-                where: { type: 'PRIMARY', status: 'ACTIVE' },
+                // Chỉ tính phân công đang hiệu lực (cùng quy tắc với loader ngữ cảnh phân quyền)
+                where: {
+                  type: 'PRIMARY',
+                  status: 'ACTIVE',
+                  effectiveFrom: { lte: new Date() },
+                  OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+                },
                 orderBy: { effectiveFrom: 'desc' },
                 take: 1,
                 select: { unitId: true },

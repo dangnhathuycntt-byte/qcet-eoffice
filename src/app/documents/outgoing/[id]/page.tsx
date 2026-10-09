@@ -61,6 +61,7 @@ export default async function OutgoingDocumentDetailPage({ params }: PageParams)
         include: {
           attachments: true,
           signatures: { orderBy: { signedAt: "asc" } },
+          linkedTask: { select: { leadUnitId: true } },
         },
       },
       contentReviewer: { select: { id: true, name: true } },

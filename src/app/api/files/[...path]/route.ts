@@ -85,13 +85,21 @@ export async function GET(
                 unitAssignments: true,
               },
             },
+            linkedTask: { select: { leadUnitId: true } },
           },
         },
       },
     });
 
     if (attachment) {
-      if (!attachment.document || !canReadDocument(authUser, attachment.document)) {
+      // Ngữ cảnh phân quyền đầy đủ (mọi phân công đang hiệu lực, kể cả kiêm nhiệm), nạp mới (không cache)
+      // để phân công vừa hết hạn không còn cấp quyền tải tệp. Giữ thêm cổng cũ theo `authUser` để không làm
+      // mất quyền của tài khoản chỉ có vai trò (ví dụ văn thư chưa có phân công chức danh).
+      const docAuthCtx = await loadAuthorizationContext(authUser.id, new Date());
+      const canReadAttachment =
+        Boolean(attachment.document) &&
+        (canReadDocument(docAuthCtx, attachment.document) || canReadDocument(authUser, attachment.document));
+      if (!canReadAttachment) {
         logger.fileAccessDenied({
           requestId,
           userId: authUser.id,

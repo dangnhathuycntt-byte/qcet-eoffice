@@ -71,6 +71,15 @@ export interface DocumentClassificationTarget {
   hasConsentOrLegalBasis?: boolean;
   directives?: any[] | null;
   incomingWorkflow?: any | null;
+  /**
+   * Nhiệm vụ liên kết (nếu truy vấn có nạp). Chỉ `leadUnitId` được dùng để xác định đơn vị xử lý văn bản.
+   * `Task.scope` (SCHOOL/DEPARTMENT/INDIVIDUAL) là phạm vi hiển thị của nhiệm vụ, không cấp quyền đọc văn bản.
+   */
+  linkedTask?: {
+    leadUnitId?: string | null;
+    leadUnit?: { id: string } | null;
+    [key: string]: unknown;
+  } | null;
   [key: string]: any;
 }
 
@@ -379,6 +388,10 @@ function extractDocumentUnitIds(doc: DocumentClassificationTarget): string[] {
       else if (d?.linkedTask?.leadUnitId) units.push(d.linkedTask.leadUnitId);
     }
   }
+
+  // Đơn vị chủ trì nhiệm vụ do chỉ đạo sinh ra chính là đơn vị nhận chỉ đạo (xem chú thích ở trên).
+  const taskUnitId = doc.linkedTask?.leadUnitId ?? doc.linkedTask?.leadUnit?.id;
+  if (taskUnitId) units.push(taskUnitId);
 
   if (doc.incomingWorkflow) {
     if (doc.incomingWorkflow.leadUnitId) units.push(doc.incomingWorkflow.leadUnitId);

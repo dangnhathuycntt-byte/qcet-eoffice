@@ -21,6 +21,13 @@ import {
   updateDocument,
 } from "@/lib/documents/document-service";
 import { isDocumentImmutable } from "@/lib/documents/state-machine";
+import {
+  assertCanLinkTask,
+  lockDocumentRows,
+  normalizeLinkedTaskId,
+  recordLinkedTaskChange,
+  toLinkedTaskConflict,
+} from "@/lib/documents/linked-task-link";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
 import {
   NotFoundError,
@@ -59,7 +66,7 @@ export async function GET(
     const authContext = await loadAuthorizationContext(authUser.id);
     const docResource = buildDocumentResource(document);
     const readDecision = authorize(authContext, 'document.read', docResource);
-    if (!readDecision.allowed || !canReadDocument(authUser, document)) {
+    if (!readDecision.allowed || !canReadDocument(authContext, document)) {
       throw new ForbiddenError(
         readDecision.reason || "Bạn không có quyền truy cập văn bản này (Forbidden)"
       );
@@ -197,7 +204,52 @@ export async function PATCH(
       );
     }
 
-    const updated = await updateDocument(id, validated as any);
+    // S-1: gắn/đổi/gỡ nhiệm vụ liên kết làm đổi đơn vị xử lý văn bản nên phải kiểm quyền và ghi nhật ký.
+    // Mọi đọc-quyết định-ghi diễn ra trong một transaction sau khi khóa dòng, để hai PATCH đồng thời
+    // không dựa vào trạng thái đã cũ (bỏ sót kiểm quyền hoặc ghi sai nhật ký).
+    let updated;
+    if (validated.linkedTaskId !== undefined) {
+      const { linkedTaskId: requestedLink, ...rest } = validated;
+      try {
+        updated = await prisma.$transaction(async (tx) => {
+          await lockDocumentRows(tx, id);
+          const fresh = await getDocumentById(id, tx);
+          if (!fresh) {
+            throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
+          }
+          if (isDocumentImmutable(fresh)) {
+            throw new ValidationError(
+              "Văn bản đã được ký hoặc đã ban hành/hoàn thành/lưu trữ là bất biến, không thể chỉnh sửa metadata.",
+              undefined,
+              "IMMUTABLE_DOCUMENT"
+            );
+          }
+          if (!canUpdateDocument(authUser, fresh)) {
+            throw new ForbiddenError("Bạn không có quyền cập nhật văn bản này (Forbidden)");
+          }
+          const change = {
+            documentId: id,
+            currentTaskId: fresh.linkedTaskId ?? null,
+            nextTaskId: normalizeLinkedTaskId(requestedLink),
+          };
+          const changing = change.nextTaskId !== change.currentTaskId;
+          const task = changing ? await assertCanLinkTask(tx, authContext, change) : null;
+          const result = await updateDocument(
+            id,
+            { ...(rest as any), ...(changing ? { linkedTaskId: change.nextTaskId } : {}) },
+            tx
+          );
+          if (changing) {
+            await recordLinkedTaskChange(tx, { ...change, actorId: authUser.id, requestId, task });
+          }
+          return result;
+        });
+      } catch (error) {
+        throw toLinkedTaskConflict(error);
+      }
+    } else {
+      updated = await updateDocument(id, validated as any);
+    }
 
     return apiSuccess(
       {

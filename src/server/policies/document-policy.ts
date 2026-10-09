@@ -185,9 +185,8 @@ export function canDeleteDocument(
  * enforcing Decree 30/2020 and institutional governance rules before pagination.
  *
  * Translates access predicates into Prisma.DocumentWhereInput:
- * - Public documents: school-level task linkage (scope: SCHOOL)
  * - Admin / Clerical / Leadership: (VAN_THU / ADMIN / BAN_GIAM_HIEU) can read all non-confidential documents
- * - Creator / Registered by: registeredById = user.id, or linkedTask createdById = user.id
+ * - Registered by: registeredById = user.id
  * - Lead user: leadUserId = user.id
  * - Unit match: user's unit = incomingWorkflow.leadUnitId, or the lead unit of
  *   the task generated from a directive (linkedTask.leadUnitId)
@@ -242,10 +241,9 @@ export function buildDocumentReadWhere(
     { registeredById: userId },
     // Lead user assigned to the document
     { leadUserId: userId },
-    // Linked school-level task (public / school-wide)
-    { linkedTask: { is: { scope: 'SCHOOL' } } },
-    // Linked task created by user
-    { linkedTask: { is: { createdById: userId } } },
+    // Lưu ý: `Task.scope = SCHOOL` và người tạo nhiệm vụ liên kết KHÔNG cấp quyền đọc văn bản
+    // (scope chỉ là phạm vi hiển thị của nhiệm vụ). Danh sách chỉ được chứa văn bản mà
+    // `canAccessClassification` cũng cho phép mở chi tiết.
     // Directives issued by user
     { directives: { some: { leaderId: userId } } },
   ];

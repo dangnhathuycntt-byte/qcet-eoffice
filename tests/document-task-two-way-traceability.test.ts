@@ -124,6 +124,7 @@ describe('Document-Task Two-Way Traceability', () => {
       status: 'IN_PROGRESS',
       progressPercent: 50,
       dueDate: '2026-09-30T00:00:00.000Z',
+      leadUnitId: null,
     });
   });
 

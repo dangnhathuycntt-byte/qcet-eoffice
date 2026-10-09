@@ -116,6 +116,8 @@ export interface DocumentItem {
     status: string;
     progressPercent: number;
     dueDate?: string | null;
+    /** Đơn vị chủ trì nhiệm vụ; dùng xác định đơn vị xử lý văn bản khi xét quyền đọc. */
+    leadUnitId?: string | null;
   } | null;
 
   createdAt?: string;
