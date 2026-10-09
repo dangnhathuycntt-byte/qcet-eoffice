@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Theo Dõi Nhiệm Vụ & Phân Công · QCET e-Office</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body className="bg-background text-foreground font-sans min-h-screen">
+  <div className="flex flex-col min-h-screen">
+    <!-- Header -->
+    <header className="h-14 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-20">
+      <div className="flex items-center gap-3">
+        <span className="font-bold text-sm text-primary tracking-wide">QCET e-Office</span>
+        <span className="text-muted-foreground text-xs">/</span>
+        <span className="text-xs font-medium text-foreground">Theo dõi nhiệm vụ học kỳ I</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button className="rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs">
+          + Giao nhiệm vụ mới
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main className="flex-1 p-6 max-w-7xl mx-auto w-full flex flex-col gap-6">
+      <!-- Status Badges & Quick Stats -->
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border bg-card p-4 shadow-2xs">
+          <p className="text-xs text-muted-foreground font-medium">Đúng hạn & Hoàn thành</p>
+          <p className="text-xl font-bold text-emerald-600 mt-1 tabular-nums">28 nhiệm vụ (74%)</p>
+        </div>
+        <div className="rounded-xl border bg-card p-4 shadow-2xs">
+          <p className="text-xs text-muted-foreground font-medium">Gần đến hạn xử lý</p>
+          <p className="text-xl font-bold text-amber-600 mt-1 tabular-nums">7 nhiệm vụ (18%)</p>
+        </div>
+        <div className="rounded-xl border bg-card p-4 shadow-2xs">
+          <p className="text-xs text-muted-foreground font-medium">Quá hạn cần đôn đốc</p>
+          <p className="text-xl font-bold text-rose-600 mt-1 tabular-nums">3 nhiệm vụ (8%)</p>
+        </div>
+      </div>
+
+      <!-- Task List Table -->
+      <div className="rounded-xl border bg-card shadow-2xs overflow-hidden">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Danh sách nhiệm vụ trọng tâm
+          </h2>
+          <span className="text-xs text-muted-foreground">Tổng số: 38 nhiệm vụ</span>
+        </div>
+
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b bg-muted/40 font-semibold text-muted-foreground">
+              <th className="p-3 w-12 text-center">#</th>
+              <th className="p-3">Tên nhiệm vụ / Công việc</th>
+              <th className="p-3 w-44">Đơn vị chủ trì</th>
+              <th className="p-3 w-36">Cán bộ phụ trách</th>
+              <th className="p-3 w-28">Hạn hoàn thành</th>
+              <th className="p-3 w-32 text-center">Tiến độ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            <tr className="hover:bg-muted/30 transition-colors">
+              <td className="p-3 text-center text-muted-foreground">1</td>
+              <td className="p-3 font-semibold text-foreground">
+                Hoàn thiện đề cương chi tiết học phần và kế hoạch giảng dạy HK1
+              </td>
+              <td className="p-3 text-muted-foreground">Khoa Công nghệ Thông tin</td>
+              <td className="p-3 font-medium text-foreground">Đặng Nhật Huy</td>
+              <td className="p-3 text-muted-foreground tabular-nums">10/10/2026</td>
+              <td className="p-3 text-center">
+                <span className="inline-flex rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                  90% (Gần xong)
+                </span>
+              </td>
+            </tr>
+
+            <tr className="hover:bg-muted/30 transition-colors">
+              <td className="p-3 text-center text-muted-foreground">2</td>
+              <td className="p-3 font-semibold text-foreground">
+                Tổ chức kiểm tra định kỳ cơ sở vật chất phòng máy và xưởng thực hành
+              </td>
+              <td className="p-3 text-muted-foreground">Phòng Quản trị - Thiết bị</td>
+              <td className="p-3 font-medium text-foreground">Lê Văn Hùng</td>
+              <td className="p-3 text-rose-600 font-medium tabular-nums">05/10/2026</td>
+              <td className="p-3 text-center">
+                <span className="inline-flex rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                  50% (Đang làm)
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

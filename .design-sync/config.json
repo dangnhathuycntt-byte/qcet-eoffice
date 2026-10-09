@@ -1,0 +1,260 @@
+{
+  "projectId": "6074e7f8-0648-41ac-9a42-6f2d592f4e3b",
+  "pkg": "qcet-eoffice",
+  "globalName": "QCET",
+  "shape": "package",
+  "buildCmd": "npx @tailwindcss/cli -i src/app/globals.css -o .design-sync/styles.css && node .design-sync/annotate-kinds.mjs .design-sync/styles.css",
+  "srcDir": "src/components/ui",
+  "tsconfig": ".design-sync/tsconfig.json",
+  "cssEntry": ".design-sync/styles.css",
+  "extraFonts": [
+    ".design-sync/fonts/fonts.css"
+  ],
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "Button": {
+      "cardMode": "column"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "primaryStory": "Default"
+    },
+    "Tabs": {
+      "cardMode": "column"
+    },
+    "EmptyState": {
+      "cardMode": "column"
+    },
+    "ErrorState": {
+      "cardMode": "column"
+    },
+    "FileDropzone": {
+      "cardMode": "column"
+    },
+    "FormField": {
+      "cardMode": "column"
+    },
+    "Skeleton": {
+      "cardMode": "column"
+    },
+    "Combobox": {
+      "cardMode": "single",
+      "primaryStory": "Open"
+    },
+    "Select": {
+      "cardMode": "single",
+      "primaryStory": "Open"
+    },
+    "CascadingMenu": {
+      "cardMode": "column"
+    },
+    "Menubar": {
+      "cardMode": "column"
+    },
+    "ContextMenu": {
+      "cardMode": "column"
+    },
+    "Accordion": {
+      "cardMode": "column"
+    },
+    "AnimatedFade": {
+      "cardMode": "column"
+    },
+    "ScrollArea": {
+      "cardMode": "column"
+    },
+    "DirectoryTree": {
+      "cardMode": "column"
+    },
+    "Timeline": {
+      "cardMode": "column"
+    },
+    "BulkActionBar": {
+      "cardMode": "column"
+    },
+    "QuickEntry": {
+      "cardMode": "column"
+    },
+    "Stepper": {
+      "cardMode": "column"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "Toolbar": {
+      "cardMode": "column"
+    },
+    "HorizontalBarChart": {
+      "cardMode": "column"
+    },
+    "StackedBarChart": {
+      "cardMode": "column"
+    },
+    "TrendLine": {
+      "cardMode": "column"
+    },
+    "AdministrativeHeader": {
+      "cardMode": "column"
+    },
+    "DigitalSignatureBadge": {
+      "cardMode": "column"
+    },
+    "RemoteSigningFlow": {
+      "cardMode": "column"
+    },
+    "DelegationCard": {
+      "cardMode": "column"
+    },
+    "DocumentRegisterExport": {
+      "cardMode": "column"
+    },
+    "UrgencyBadge": {
+      "cardMode": "column"
+    },
+    "DocumentStatusTimeline": {
+      "cardMode": "column"
+    },
+    "CommentThread": {
+      "cardMode": "column"
+    },
+    "RolePermissionMatrix": {
+      "cardMode": "column"
+    },
+    "ReviewDecisionPanel": {
+      "cardMode": "column"
+    },
+    "AdvancedFilterPopover": {
+      "cardMode": "single"
+    },
+    "CommandMenu": {
+      "cardMode": "single",
+      "primaryStory": "Default"
+    },
+    "DateRangePicker": {
+      "cardMode": "column"
+    },
+    "MultiSelect": {
+      "cardMode": "column"
+    },
+    "PersonPicker": {
+      "cardMode": "column"
+    },
+    "Slider": {
+      "cardMode": "column"
+    },
+    "TimePicker": {
+      "cardMode": "column"
+    },
+    "Toggle": {
+      "cardMode": "column"
+    }
+  },
+  "libOverrides": {
+    "detect.mjs": "skip unreadable dirs (root-owned .gstack, EACCES) in storybook-dir walk",
+    "source-kit.mjs": "also bundle task-page components from src/components/tasks (group tasks)"
+  },
+  "componentSrcMap": {
+    "ConfidentialityBadge": null,
+    "DocumentSecurityHeader": null,
+    "DocumentFooter": null,
+    "DigitalSignatureStamp": null,
+    "BottomSheetClose": null,
+    "BottomSheetContent": null,
+    "BottomSheetDescription": null,
+    "BottomSheetFooter": null,
+    "BottomSheetHandle": null,
+    "BottomSheetHeader": null,
+    "BottomSheetOverlay": null,
+    "BottomSheetPortal": null,
+    "BottomSheetTitle": null,
+    "BottomSheetTrigger": null,
+    "CardAction": null,
+    "CardContent": null,
+    "CardDescription": null,
+    "CardFooter": null,
+    "CardHeader": null,
+    "CardTitle": null,
+    "CollapsiblePanel": null,
+    "CollapsibleRoot": null,
+    "CollapsibleTrigger": null,
+    "DialogBackdrop": null,
+    "DialogClose": null,
+    "DialogDescription": null,
+    "DialogPopup": null,
+    "DialogPortal": null,
+    "DialogRoot": null,
+    "DialogTitle": null,
+    "DialogTrigger": null,
+    "DrawerClose": null,
+    "DrawerContent": null,
+    "DrawerDescription": null,
+    "DrawerFooter": null,
+    "DrawerHeader": null,
+    "DrawerOverlay": null,
+    "DrawerPortal": null,
+    "DrawerRoot": null,
+    "DrawerTitle": null,
+    "DrawerTrigger": null,
+    "MenuArrow": null,
+    "MenuBackdrop": null,
+    "MenuCheckboxItem": null,
+    "MenuContent": null,
+    "MenuGroup": null,
+    "MenuGroupLabel": null,
+    "MenuItem": null,
+    "MenuPopup": null,
+    "MenuPortal": null,
+    "MenuPositioner": null,
+    "MenuRadioGroup": null,
+    "MenuRadioItem": null,
+    "MenuRoot": null,
+    "MenuSeparator": null,
+    "MenuSubmenuRoot": null,
+    "MenuSubmenuTrigger": null,
+    "MenuTrigger": null,
+    "PopoverArrow": null,
+    "PopoverBackdrop": null,
+    "PopoverClose": null,
+    "PopoverContent": null,
+    "PopoverDescription": null,
+    "PopoverPopup": null,
+    "PopoverPortal": null,
+    "PopoverPositioner": null,
+    "PopoverRoot": null,
+    "PopoverTitle": null,
+    "PopoverTrigger": null,
+    "PopoverViewport": null,
+    "ProgressIndicator": null,
+    "ProgressLabel": null,
+    "ProgressTrack": null,
+    "ProgressValue": null,
+    "TabsContent": null,
+    "TabsList": null,
+    "TabsTrigger": null,
+    "TooltipContent": null,
+    "TooltipProvider": null,
+    "TooltipTrigger": null,
+    "TableBody": null,
+    "TableCell": null,
+    "TableHead": null,
+    "TableHeader": null,
+    "TableRow": null,
+    "KbdGroup": null,
+    "SkeletonText": null,
+    "ToolbarButton": null,
+    "ToolbarGroup": null,
+    "ToolbarSeparator": null,
+    "FileTile": null,
+    "StatsRow": null,
+    "UserPresence": null,
+    "AnimatedItem": null,
+    "AnimatedCollapse": null,
+    "AnimatedNumber": null,
+    "AnimatedList": null,
+    "FileList": null,
+    "StackedBarChart": "src/components/ui/data-viz.tsx",
+    "TrendLine": "src/components/ui/data-viz.tsx",
+    "TimePickerSelect": null,
+    "DateRangePresets": null
+  }
+}

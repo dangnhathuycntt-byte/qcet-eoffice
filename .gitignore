@@ -87,5 +87,7 @@ docs/.obsidian/workspace-mobile.json
 # design-sync artifacts
 .ds-sync/
 ds-bundle/
-.design-sync/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
 
