@@ -9,7 +9,7 @@ Hướng dẫn agent duy nhất: [AGENTS.md](../AGENTS.md). Chỉ đọc phần 
 | Kiến trúc | [ARCHITECTURE](../ARCHITECTURE.md), [tài liệu chi tiết](architecture/) |
 | Quyết định và đề xuất | [ADRs, RFCs và decision gates](architecture/decisions/) |
 | Nghiệp vụ | [Tổng quan domain](domain/README.md), [tài liệu domain](domain/) |
-| Đặc tả và bất biến | [Product](product/), [specs](product/specs/), [invariants](product/invariants.md) |
+| Đặc tả và bất biến | [Product](product/), [specs](product/specs/), [Document Workspace (đề xuất)](product/specs/document-workspace.md), [invariants](product/invariants.md) |
 | Nguồn thiết kế và token hiện tại | [DESIGN](../DESIGN.md) |
 | Bộ thiết kế được chọn | `design-archives/qcet-design-nen-tang-nhiem-vu.zip` (bản lưu cục bộ; chưa có thư mục giải nén trong checkout) |
 | Bảng bàn giao để tham khảo | [Design handoff](design-handoff/INDEX.md); không tự thay thế bộ được chọn |
