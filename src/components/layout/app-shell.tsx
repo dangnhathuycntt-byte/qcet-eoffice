@@ -80,16 +80,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const isRedirectingRef = React.useRef(false);
-  // Chỉ apply sidebarWidth padding trên màn hình md+; mobile luôn là 0
-  const [isMd, setIsMd] = React.useState(false);
-  React.useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    setIsMd(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMd(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  const desktopPaddingLeft = useTransform(sidebarWidthMotion, (v) => isMd ? v : 0);
+  // Padding trái theo độ rộng sidebar qua CSS variable; chỉ áp dụng từ md trở lên (mobile = 0)
+  const sidebarWidthVar = useTransform(sidebarWidthMotion, (v) => `${v}px`);
 
   React.useEffect(() => {
     const handleOpen = () => setIsMobileMenuOpen(true);
@@ -151,8 +143,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
-        className={isTaskDetail ? "min-h-0 flex-1 flex flex-col" : "min-h-[100dvh] flex-1 flex flex-col"}
-        style={{ paddingLeft: desktopPaddingLeft }}
+        className={isTaskDetail ? "md:pl-[var(--sidebar-w)] min-h-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] flex-1 flex flex-col"}
+        style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (Only visible below md) */}
         <AppTopbar />

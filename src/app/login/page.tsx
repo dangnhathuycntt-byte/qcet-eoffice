@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { Send, Copy, Check } from "lucide-react";
+import { Send, Copy, Check, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import {
@@ -462,7 +462,6 @@ function LoginFormContent() {
      STATE: Đã đăng nhập trước đó (Board 1 · card 5) — "Chào mừng quay lại"
      ═══════════════════════════════════════════════════════ */
   if (lastUser && !chooseOther && !oauthError && !fromLogout && !fromExpired) {
-    const firstName = lastUser.name.trim().split(" ").pop() || "bạn";
     const initial = lastUser.name.trim().charAt(0).toUpperCase() || "A";
     const handleQuickLogin = () => {
       setIsQuickLogging(true);
@@ -476,8 +475,11 @@ function LoginFormContent() {
           <h1 className="mt-[22px] text-[28px] min-[600px]:text-2xl font-semibold tracking-[-0.012em]" style={{ color: C.fg }}>Đăng nhập</h1>
           <p className="mt-2 min-[600px]:mt-1.5 text-[15px] min-[600px]:text-sm" style={{ color: C.sub }}>Chào mừng quay lại</p>
 
-          <div
-            className="mt-6 flex w-full items-center gap-3 rounded-2xl bg-[#F2F4F7] p-3 text-left"
+          <button
+            type="button"
+            disabled={isQuickLogging}
+            onClick={handleQuickLogin}
+            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-[#E4E7EC] bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[#C9D1DB] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] cursor-pointer disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0058A0]"
           >
             {lastUser.avatar ? (
               <img src={lastUser.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
@@ -490,18 +492,12 @@ function LoginFormContent() {
               <div className="truncate text-sm font-semibold leading-5" style={{ color: C.fg }}>{lastUser.name}</div>
               <div className="truncate text-xs leading-[18px]" style={{ color: C.sub }}>{lastUser.email}</div>
             </div>
-          </div>
-
-          <div className="mt-3.5 w-full">
-            <GoogleLoginButton
-              returnTo={targetUrl}
-              label={`Tiếp tục với tên ${firstName}`}
-              loginHint={lastUser.email}
-              isLoading={isQuickLogging}
-              onClick={handleQuickLogin}
-              onError={(msg) => setErrorMessage(msg)}
-            />
-          </div>
+            {isQuickLogging ? (
+              <Loader2 className="size-4 shrink-0 animate-spin" strokeWidth={1.5} style={{ color: C.sub }} aria-hidden="true" />
+            ) : (
+              <ArrowRight className="size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5" strokeWidth={1.5} style={{ color: C.sub }} aria-hidden="true" />
+            )}
+          </button>
 
           <div className="mt-3.5 w-full flex flex-col items-center">
             <button

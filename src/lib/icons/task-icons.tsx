@@ -164,6 +164,17 @@ export function TaskIconStatusReview(props: TaskActionIconProps) {
   );
 }
 
+/** Trễ hạn: lục giác viền, dấu chấm than ở giữa (khác hẳn các bậc trạng thái tiến độ) */
+export function TaskIconStatusOverdue(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <path d="M8.03 2.65Q9.5 1.8 10.97 2.65L14.7 4.8Q16.17 5.65 16.17 7.35L16.17 11.65Q16.17 13.35 14.7 14.2L10.97 16.35Q9.5 17.2 8.03 16.35L4.3 14.2Q2.83 13.35 2.83 11.65L2.83 7.35Q2.83 5.65 4.3 4.8Z" />
+      <path d="M9.5 6.1V10" />
+      <path d="M9.5 12.4H9.51" />
+    </TaskActionSvg>
+  );
+}
+
 /** Hoàn thành: lục giác đặc, dấu tick khoét rỗng */
 export function TaskIconStatusDone(props: TaskActionIconProps) {
   return (

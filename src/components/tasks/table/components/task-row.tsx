@@ -36,6 +36,7 @@ import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { getCategoryBadgeConfig } from "../constants";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
+import { TaskIconStatusOverdue } from "@/lib/icons/task-icons";
 import {
   StatusSubNew,
   StatusSubInProgress,
@@ -745,8 +746,12 @@ export const TaskRow = React.memo(function TaskRow({
       {visibleColumns?.status === true && (
         <td className="w-[130px] align-middle whitespace-nowrap px-3 py-2">
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TaskStatusCircle status={task.status} />
-            <span className="truncate">{statusLabel}</span>
+            {statusLabel === "Trễ hạn" ? (
+              <TaskIconStatusOverdue className="size-4 shrink-0 text-rose-600" />
+            ) : (
+              <TaskStatusCircle status={task.status} />
+            )}
+            <span className={cn("truncate", statusLabel === "Trễ hạn" && "text-rose-700")}>{statusLabel}</span>
           </span>
         </td>
       )}

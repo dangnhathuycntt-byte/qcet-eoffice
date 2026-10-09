@@ -569,7 +569,7 @@ export function AppSidebar() {
                         const active = isItemActive(item) && !hasActiveChild;
                         const Icon = item.icon;
                         const children = item.children;
-                        const isExpanded = expandedItems[item.id] ?? (hasActiveChild || isItemActive(item));
+                        const isExpanded = expandedItems[item.id] ?? true;
                         const badgeText = children
                           ? (() => {
                               const pending = badgeCounts?.[children[0].badgeKey];
