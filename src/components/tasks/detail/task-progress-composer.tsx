@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/dashboard";
+import type { ProgressResult } from "./task-detail-state";
 
 export interface TaskProgressComposerProps {
   taskId: string;
@@ -21,7 +22,7 @@ export interface TaskProgressComposerProps {
   completedSubtasks?: number;
   totalSubtasks?: number;
   canEdit?: boolean;
-  onProgressUpdated?: (newProgress: number, note?: string) => Promise<void> | void;
+  onProgressUpdated?: (result: ProgressResult, note?: string) => Promise<void> | void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void> | void;
   className?: string;
 }
@@ -89,7 +90,9 @@ export function TaskProgressComposer({
       }
 
       if (onProgressUpdated) {
-        await onProgressUpdated(progress, note.trim() || undefined);
+        const payload = await res.json().catch(() => null);
+        const result: ProgressResult = payload?.data ?? { progressPercent: progress };
+        await onProgressUpdated(result, note.trim() || undefined);
       }
 
       setFeedback({ type: "success", message: "Đã cập nhật tiến độ thành công." });

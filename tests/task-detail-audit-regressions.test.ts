@@ -38,12 +38,15 @@ describe("Task detail audit regressions", () => {
 
   it("submits completed child work for approval without bypassing maker-checker", () => {
     const source = readSource("src/components/tasks/task-detail-page.tsx");
+    const service = readSource("src/lib/services/task-domain-actions.ts");
 
-    // Maker-checker: when progress reaches 100%, status goes to WAITING_APPROVAL (not COMPLETED)
+    // Maker-checker: the server decides the status; at 100% it must be WAITING_APPROVAL (not COMPLETED)
     assert.match(
-      source,
-      /newProgress === 100\s*\?\s*"WAITING_APPROVAL"/
+      service,
+      /validated\.progressPercent === 100\)\s*\{\s*targetStatus = TaskStatus\.WAITING_APPROVAL/
     );
+    // Client applies the server result instead of deriving the status itself
+    assert.ok(source.includes("applyProgressResult(prev, result)"));
     assert.ok(
       !source.includes('handleStatusChange(task.id, "COMPLETED", `Tự động'),
       "parent rollup must never auto-approve the parent"

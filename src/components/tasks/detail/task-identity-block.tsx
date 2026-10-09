@@ -4,13 +4,11 @@ import * as React from "react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
-import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
-import { formatDisplayDate } from "@/lib/format/date";
 import { formatAssigneeNameWithTitle } from "@/lib/format/personnel";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { DirectInlineEditor } from "./direct-inline-editor";
 import { TaskSourceDocumentBadge } from "./task-source-document-badge";
-import { TaskStatusSelect, TaskAssigneePicker } from "./task-property-controls";
+import { TaskStatusSelect, TaskAssigneePicker, TaskDateRange } from "./task-property-controls";
 import type { TaskStatusChoice } from "./task-property-controls";
 import {
   taskStateMachine,
@@ -120,7 +118,7 @@ export function TaskIdentityBlock({
   [allowedMap, normalizedStatus]);
 
   return (
-    <section data-slot="task-identity-block" className={cn("space-y-4 relative z-30", className)}>
+    <section data-slot="task-identity-block" className={cn("space-y-3 relative z-30", className)}>
       {/* 0. Linked Official Source Document (nếu có) */}
       {isSchoolTask(task) && task.sourceDocument && (
         <div className="pb-1">
@@ -146,15 +144,15 @@ export function TaskIdentityBlock({
               submitOnEnter={true}
               ariaLabel="Tên nhiệm vụ"
               placeholder="Nhập tên nhiệm vụ..."
-              viewClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
-              editorClassName="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              viewClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
+              editorClassName="text-xl font-semibold tracking-tight text-foreground leading-snug break-words whitespace-pre-wrap"
             />
           </div>
         </div>
 
       {showInlineProperties && (
       /* 2. Compact Properties Summary khi Sidebar đóng (Trạng thái · Người phụ trách · Hạn hoàn thành) */
-      <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-muted-foreground font-normal select-none">
+      <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground font-normal select-none">
 
         {/* Status — @base-ui/react Select */}
         <TaskStatusSelect
@@ -165,8 +163,6 @@ export function TaskIdentityBlock({
             if (onStatusChange) onStatusChange(task.id, newStatus);
           }}
         />
-
-        <span>·</span>
 
         {/* Người phụ trách — @base-ui/react Combobox */}
         <TaskAssigneePicker
@@ -188,35 +184,14 @@ export function TaskIdentityBlock({
 
         <span>·</span>
 
-        {/* Ngày bắt đầu → Hạn chót */}
-        <div className="inline-flex items-center gap-1 text-xs text-foreground">
-          {canEdit && onStartDateChange ? (
-            <VietnameseDatePicker
-              value={startDateIso}
-              onChange={(newDate) => onStartDateChange(task.id, newDate)}
-              placeholder="Bắt đầu"
-              variant="chip"
-              align="left"
-              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
-            />
-          ) : (
-            <span className="text-muted-foreground">{startDateIso ? formatDisplayDate(startDateIso) : "-"}</span>
-          )}
-          <span className="text-muted-foreground/60 px-0.5">→</span>
-          {canEdit && onDueDateChange ? (
-            <VietnameseDatePicker
-              value={dueDateIso}
-              onChange={(newDate) => onDueDateChange(task.id, newDate)}
-              placeholder="Hạn chót"
-              variant="chip"
-              showPresets={true}
-              align="left"
-              className="p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent"
-            />
-          ) : (
-            <span className="text-muted-foreground">{dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn"}</span>
-          )}
-        </div>
+        {/* Ngày bắt đầu → Hạn chót: dùng chung với khung việc con */}
+        <TaskDateRange
+          startDateIso={startDateIso}
+          dueDateIso={dueDateIso}
+          canEdit={canEdit}
+          onStartDateChange={onStartDateChange ? (newDate) => onStartDateChange(task.id, newDate) : undefined}
+          onDueDateChange={onDueDateChange ? (newDate) => onDueDateChange(task.id, newDate) : undefined}
+        />
       </div>
       )}
     </section>

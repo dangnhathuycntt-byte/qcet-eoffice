@@ -20,6 +20,7 @@ import { updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { motionTransition } from "@/lib/motion/tokens";
+import { applyProgressResult, type ProgressResult } from "./task-detail-state";
 
 export interface TaskDetailViewProps {
   task: SchoolTask | StaffTask;
@@ -228,19 +229,16 @@ export function TaskDetailView({
     }));
   }, [onDescriptionChange]);
 
-  const handleProgressUpdated = React.useCallback(async (newProgress: number, note?: string) => {
-    setTask((prev) => ({
-      ...prev,
-      progressPercent: newProgress,
-      ...(newProgress === 100 ? { status: "COMPLETED" as TaskStatus } : {}),
-    }));
+  const handleProgressUpdated = React.useCallback(async (result: ProgressResult, note?: string) => {
+    // Server quyết định status (100% -> WAITING_APPROVAL, không tự COMPLETED ở client)
+    setTask((prev) => applyProgressResult(prev, result));
     setAuditEvents((prev) => [
       {
         id: `audit-prog-${Date.now()}`,
         action: "UPDATE_PROGRESS",
         timestamp: new Date().toISOString(),
         actorName: currentUser?.name || "Người thực hiện",
-        description: `Cập nhật tiến độ: ${newProgress}%${note ? ` (${note})` : ""}`,
+        description: `Cập nhật tiến độ: ${result.progressPercent}%${note ? ` (${note})` : ""}`,
       },
       ...prev,
     ]);

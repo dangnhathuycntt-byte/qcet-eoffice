@@ -72,8 +72,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { sidebarWidth, sidebarWidthMotion } = useSidebarLayout();
   const pathname = usePathname();
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
-  // Danh sách và chi tiết nhiệm vụ: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
-  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail;
+  // Hộp thư tự chiếm toàn bộ khung nội dung (danh sách + chi tiết), không đệm
+  const isInbox = pathname === "/inbox";
+  // Danh sách và chi tiết nhiệm vụ, hộp thư: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
+  const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isInbox;
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -137,7 +139,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-[100dvh] bg-sidebar dark:bg-zinc-950 text-foreground antialiased flex flex-col md:flex-row">
+    <div className={cn(
+      "relative bg-sidebar text-foreground antialiased flex flex-col md:flex-row",
+      // Chi tiết nhiệm vụ: chiều cao cố định để vùng nội dung co theo khung, không giãn theo nội dung
+      isTaskDetail ? "h-[100dvh]" : "min-h-[100dvh]"
+    )}>
       {/* Desktop Sidebar (Fixed width) */}
       <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-sidebar" style={{ width: `${sidebarWidth}px` }} />}>
         <AppSidebar />
@@ -145,7 +151,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
-        className="min-h-[100dvh] flex-1 flex flex-col"
+        className={isTaskDetail ? "min-h-0 flex-1 flex flex-col" : "min-h-[100dvh] flex-1 flex flex-col"}
         style={{ paddingLeft: desktopPaddingLeft }}
       >
         {/* Mobile Header (Only visible below md) */}
@@ -161,7 +167,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           id="main-content"
           tabIndex={-1}
           className={isTaskDetail
-            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] outline-none overflow-hidden"
+            ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
+            : isInbox
+            ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card outline-none overflow-hidden"
             : cn(
                 "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
                 hideDesktopTopbar && "md:mt-2 md:min-h-[calc(100dvh-8px)]"
@@ -171,6 +179,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             className={
               isTaskDetail
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
+                : isInbox
+                ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0"
                 : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
             }
           >

@@ -29,10 +29,11 @@ export function TaskDetailSplitLayout({
     return () => mql.removeEventListener("change", handler);
   }, []);
 
+  // Mobile: không min-h-0 để khối nội dung giữ chiều cao tự nhiên; canvas cha là vùng cuộn duy nhất
   if (isMobile) {
     return (
-      <div className={cn("flex-1 min-h-0 flex flex-col", className)}>
-        <div className="flex-1 min-h-0 flex flex-col">{children}</div>
+      <div className={cn("flex-1 flex flex-col", className)}>
+        <div className="flex-1 flex flex-col">{children}</div>
         {inspectorOpen && (
           <div className="w-full border-t border-border/40 pt-4">{inspector}</div>
         )}

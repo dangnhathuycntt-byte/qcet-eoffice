@@ -32,6 +32,13 @@ import { CreateTaskModal } from "@/components/tasks/create/create-task-modal";
 import { updateTaskStatus, updateTaskProgress, updateTaskPriority, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { consolidateActivityFeed, getAuditActionLabel } from "@/lib/tasks/activity-feed-aggregator";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import {
+  applyProgressResult,
+  applySubtaskStatusToAggregates,
+  computeProgressFromSubtasks,
+  resolveSubtaskAggregates,
+  type ProgressResult,
+} from "@/components/tasks/detail/task-detail-state";
 
 export type DetailTab = "overview" | "activity";
 
@@ -78,6 +85,9 @@ export function TaskDetailPage({
   taskIdRef.current = task.id;
   const taskVersionRef = React.useRef<unknown>((task as any).version);
   taskVersionRef.current = (task as any).version;
+  // Snapshot đồng bộ để rollback không phụ thuộc thời điểm React chạy updater
+  const taskSnapshotRef = React.useRef(task);
+  taskSnapshotRef.current = task;
 
   // Inspector visibility state
   const [inspectorExpanded, setShowInspector] = React.useState(true);
@@ -207,15 +217,6 @@ export function TaskDetailPage({
       }
       return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
     };
-    const isInteractiveControl = (el: HTMLElement | null): boolean => {
-      if (!el) return false;
-      const tag = el.tagName?.toLowerCase();
-      return tag === "button" || tag === "a" || el.getAttribute("role") === "button" || el.getAttribute("role") === "menuitem" || el.getAttribute("role") === "option";
-    };
-    const isDialogOpen = (): boolean => Boolean(document.querySelector('[role="dialog"]:not([hidden]), [role="menu"]:not([hidden]), [data-state="open"]'));
-
-
-
     const handleKeyDown = (e: KeyboardEvent) => {
       const focused = document.activeElement as HTMLElement | null;
       const target = e.target as HTMLElement | null;
@@ -231,14 +232,6 @@ export function TaskDetailPage({
         e.preventDefault();
         handleToggleInspector();
       }
-      // Space to toggle inspector
-      if (e.code === "Space" || e.key === " ") {
-        if (e.repeat) return;
-        if (isInteractiveControl(target) || isInteractiveControl(focused)) return;
-        if (isDialogOpen()) return;
-        e.preventDefault();
-        handleToggleInspector();
-      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -247,6 +240,8 @@ export function TaskDetailPage({
 
   // Audit events state (raw complete history from backend)
   const [auditEvents, setAuditEvents] = React.useState<AuditLogItem[]>(initialAuditEvents);
+  const auditSnapshotRef = React.useRef(auditEvents);
+  auditSnapshotRef.current = auditEvents;
 
   // Consolidated activity feed: gộp các lần autosave/sửa đổi văn bản liên tiếp trong 60s
   const feedActivityEvents = React.useMemo(() => {
@@ -258,6 +253,8 @@ export function TaskDetailPage({
   const [deliverables, setDeliverables] = React.useState<
     Array<{ id: string; title: string; fileUrl?: string; notes?: string }>
   >(initialDeliverables);
+  const deliverablesSnapshotRef = React.useRef(deliverables);
+  deliverablesSnapshotRef.current = deliverables;
   React.useEffect(() => {
     setTask(initialTask);
     setAuditEvents(initialAuditEvents);
@@ -271,9 +268,10 @@ export function TaskDetailPage({
   const schoolTask = isSchool ? (task as SchoolTask) : null;
   const staffTask = !isSchool ? (task as StaffTask) : null;
 
-  const currentDescription = isSchool
-    ? schoolTask?.description || ""
-    : staffTask?.deliverableDescription || (task as any).description || "";
+  // Cùng một cột description trong DB: mapper school ghi `description`, mapper staff ghi `deliverableDescription`.
+  // Không phân nhánh theo isSchoolTask vì nhiệm vụ staff có việc con cũng bị nhận nhầm là school.
+  const currentDescription =
+    (task as any).description || (task as any).deliverableDescription || "";
 
   // Computed fields
   const officialCode = task.code || (isSchool ? schoolTask?.taskCode : staffTask?.taskId);
@@ -317,17 +315,28 @@ export function TaskDetailPage({
       if (!isSchoolTask(prev)) return prev;
       const school = prev as SchoolTask;
       if (!Array.isArray(school.subTasks)) return prev;
+      const before = school.subTasks.find((s) => s.id === updated.id);
       const updatedSubtasks = school.subTasks.map((s) =>
         s.id === updated.id ? { ...s, ...updated } : s
       );
-      return { ...prev, subTasks: updatedSubtasks } as SchoolTask;
+      // Số thô của server không tự đổi khi việc con đổi trạng thái: dịch chuyển theo chênh lệch
+      return applySubtaskStatusToAggregates(
+        { ...prev, subTasks: updatedSubtasks } as SchoolTask,
+        before?.status,
+        updated.status,
+      );
     });
 
   }, []);
 
-  const completedSubtasks = subTasks.filter((subTask) => subTask.status === "COMPLETED").length;
-  const currentProgressPercent = subTasks.length > 0
-    ? Math.round((completedSubtasks / subTasks.length) * 100)
+  // Số liệu thô của server (cả việc con không được xem), không chỉ danh sách đã lọc quyền
+  const { total: totalSubtasks, completed: completedSubtasks } = resolveSubtaskAggregates({
+    subTasks,
+    totalSubTasks: (task as any).totalSubTasks,
+    completedSubTasks: (task as any).completedSubTasks,
+  });
+  const currentProgressPercent = totalSubtasks > 0
+    ? computeProgressFromSubtasks(totalSubtasks, completedSubtasks)
     : typeof (task as any).progressPercent === "number"
       ? (task as any).progressPercent
       : isSchool
@@ -420,9 +429,6 @@ export function TaskDetailPage({
     isStatusUpdatingRef.current = true;
     setIsStatusUpdating(true);
 
-    let previousTask: (SchoolTask | StaffTask) | null = null;
-    let previousAudit: AuditLogItem[] = [];
-
     const statusMap: Record<string, string> = {
       NOT_STARTED: "Mới",
       IN_PROGRESS: "Đang thực hiện",
@@ -432,15 +438,9 @@ export function TaskDetailPage({
     };
     const targetLabel = statusMap[newStatus] || newStatus;
 
-    // Capture previous state for rollback
-    setTask((prev) => {
-      previousTask = prev;
-      return prev;
-    });
-    setAuditEvents((prev) => {
-      previousAudit = prev;
-      return prev;
-    });
+    // Chụp snapshot đồng bộ trước optimistic update để rollback
+    const previousTask = taskSnapshotRef.current;
+    const previousAudit = auditSnapshotRef.current;
 
     // Optimistic Update
     setTask((prev) => ({
@@ -617,20 +617,9 @@ export function TaskDetailPage({
   }, [currentUser?.name]);
 
   // Progress updated handler
-  const handleProgressUpdated = React.useCallback(async (newProgress: number, note?: string) => {
-    const derivedStatus: TaskStatus =
-      newProgress === 100
-        ? "WAITING_APPROVAL"
-        : newProgress > 0
-        ? "IN_PROGRESS"
-        : "NOT_STARTED";
-
-    setTask((prev) => ({
-      ...prev,
-      progressPercent: newProgress,
-      progress: newProgress,
-      status: derivedStatus,
-    } as any));
+  const handleProgressUpdated = React.useCallback(async (result: ProgressResult, note?: string) => {
+    // Server trả status và version mới sau khi lưu; áp nguyên trạng để lần sửa sau không bị 412
+    setTask((prev) => applyProgressResult(prev, result));
 
     setAuditEvents((prev) => [
       {
@@ -638,7 +627,7 @@ export function TaskDetailPage({
         action: "UPDATE_PROGRESS",
         timestamp: new Date().toISOString(),
         actorName: currentUser?.name || "Người thực hiện",
-        description: `Cập nhật tiến độ: ${newProgress}%${note ? ` (${note})` : ""}`,
+        description: `Cập nhật tiến độ: ${result.progressPercent}%${note ? ` (${note})` : ""}`,
       },
       ...prev,
     ]);
@@ -710,11 +699,8 @@ export function TaskDetailPage({
 
   // Deliverables delete handler
   const handleDeleteDeliverable = React.useCallback(async (deliverableId: string) => {
-    let previousDeliverables: Array<{ id: string; title: string; fileUrl?: string; notes?: string }> = [];
-    setDeliverables((prev) => {
-      previousDeliverables = prev;
-      return prev.filter((d) => d.id !== deliverableId);
-    });
+    const previousDeliverables = deliverablesSnapshotRef.current;
+    setDeliverables(previousDeliverables.filter((d) => d.id !== deliverableId));
 
     try {
       const res = await fetch(
@@ -801,8 +787,8 @@ export function TaskDetailPage({
   );
 
   const handleProgressModalUpdate = React.useCallback(
-    async (p: number, note?: string) => {
-      await handleProgressUpdated(p, note);
+    async (result: ProgressResult, note?: string) => {
+      await handleProgressUpdated(result, note);
       setIsProgressModalOpen(false);
     },
     [handleProgressUpdated]
@@ -851,31 +837,27 @@ export function TaskDetailPage({
             onToggleInspector={handleToggleInspector}
             isDrawerOpen={Boolean(activeSubtask)}
             onOpenProgressModal={canEdit ? () => setIsProgressModalOpen(true) : undefined}
+            leading={
+              <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as DetailTab)}>
+                <TabsList className="bg-transparent p-0 h-7" aria-label="Các phân mục chi tiết nhiệm vụ">
+                  <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+                  <TabsTrigger value="activity">
+                    Hoạt động
+                    {feedActivityEvents.length > 0 && (
+                      <span className="ml-1.5 rounded-full bg-muted px-1.5 text-xs font-normal tabular-nums text-muted-foreground">
+                        {feedActivityEvents.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            }
           />
-
-          {/* Tabs: Tổng quan + Hoạt động — dưới dải đầu trang */}
-          <div className="shrink-0">
-          <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as DetailTab)}>
-            <TabsList className="bg-transparent p-0 h-6 gap-0.5" aria-label="Các phân mục chi tiết nhiệm vụ">
-              <TabsTrigger value="overview" className="rounded-md h-6 px-2 text-xs font-medium text-muted-foreground hover:text-foreground data-active:bg-accent data-active:text-foreground data-active:font-semibold">
-                Tổng quan
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="rounded-md h-6 px-2 text-xs font-medium text-muted-foreground hover:text-foreground data-active:bg-accent data-active:text-foreground data-active:font-semibold">
-                Hoạt động
-                {feedActivityEvents.length > 0 && (
-                  <span className="ml-1 text-xs font-normal tabular-nums text-muted-foreground">
-                    {feedActivityEvents.length}
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          </div>
 
           {/* Main Workspace Canvas */}
           <div
             ref={canvasRef}
-            className={styles.canvas}
+            className={cn(styles.canvas, "thin-scrollbar")}
             data-selection-canvas="page"
             data-plate-selectable="true"
             onMouseDownCapture={handleCanvasMouseDownCapture}
@@ -1029,9 +1011,10 @@ export function TaskDetailPage({
               taskId={task.id}
               initialProgress={currentProgressPercent}
               taskStatus={task.status}
-              leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
+              /* Mapper school ghi leadAssigneeName, mapper staff ghi assigneeName: lấy trường nào có sẵn */
+              leadName={(task as any).leadAssigneeName || (task as any).assigneeName}
               completedSubtasks={completedSubtasks}
-              totalSubtasks={subTasks.length}
+              totalSubtasks={totalSubtasks}
               canEdit={canEdit}
               onProgressUpdated={handleProgressModalUpdate}
               onStatusChange={handleProgressModalStatusChange}

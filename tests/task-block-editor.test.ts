@@ -305,8 +305,8 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
         "Panel shortcuts must ignore both editable event targets and focused inputs"
       );
       assert.ok(
-        detailPageContent.includes('e.code === "Space"') && detailPageContent.includes('isInteractiveControl(target)'),
-        "Space toggles inspector with proper guards for editables, interactive controls, and dialogs"
+        !detailPageContent.includes('e.code === "Space"'),
+        "Space must not toggle the inspector: it would block native page scrolling"
       );
     });
   });

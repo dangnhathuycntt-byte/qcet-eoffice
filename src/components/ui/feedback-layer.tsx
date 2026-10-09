@@ -462,7 +462,10 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     <FeedbackContext.Provider value={contextValue}>
       {children}
       <Toaster
-        position="top-center"
+        position="bottom-center"
+        offset={16}
+        /* Mobile: nằm trên thanh điều hướng dưới cố định (56px + safe area) */
+        mobileOffset={{ bottom: "calc(56px + env(safe-area-inset-bottom, 0px) + 12px)", left: 16, right: 16 }}
         toastOptions={{
           className:
             "rounded-2xl border-0 bg-card text-foreground font-sans shadow-menu text-xs",

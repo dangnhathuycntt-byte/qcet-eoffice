@@ -15,6 +15,8 @@ export interface TaskDetailHeaderNavProps {
   onToggleInspector?: () => void;
   isDrawerOpen?: boolean;
   onOpenProgressModal?: () => void;
+  /** Nội dung đặt ở bên trái cùng hàng (ví dụ tab Tổng quan / Hoạt động) */
+  leading?: React.ReactNode;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export function TaskDetailHeaderNav({
   onToggleInspector,
   isDrawerOpen = false,
   onOpenProgressModal,
+  leading,
   className,
 }: TaskDetailHeaderNavProps) {
   const [copiedLink, setCopiedLink] = React.useState(false);
@@ -56,8 +59,8 @@ export function TaskDetailHeaderNav({
         className
       )}
     >
-      {/* Bên trái trống — breadcrumb do layout quản lý */}
-      <div />
+      {/* Bên trái: tab; breadcrumb do layout quản lý */}
+      <div className="flex min-w-0 items-center">{leading}</div>
 
       {/* Right actions */}
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5 shrink-0">
