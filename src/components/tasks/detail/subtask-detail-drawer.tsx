@@ -171,7 +171,8 @@ export function SubtaskDetailDrawer({
   }, [onPeekWidthChange]);
 
 
-  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName, personnelList);
+  // Hiển thị tên người phụ trách; chức danh không thay thế tên
+  const assigneeDisplay = formatAssigneeNameWithTitle(subtask?.assigneeName);
 
   // Dates
   const rawStartDate = (subtask as any)?.startDate;

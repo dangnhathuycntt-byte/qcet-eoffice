@@ -73,11 +73,14 @@ export function TaskIdentityBlock({
 
   const { personnel: personnelList } = usePersonnelList();
 
-  const rawLeadName = isSchool
-    ? schoolTask?.leadAssigneeName || "Chưa phân công"
-    : staffTask?.assigneeName || "Chưa phân công";
+  // isSchoolTask() có thể nhận nhầm nhiệm vụ đơn vị có mảng subTasks là cấp trường,
+  // nên đọc cả hai nhóm trường như task-properties-sidebar để không hiện "Chưa phân công" sai.
+  const anyTask = task as any;
+  const rawLeadName: string =
+    anyTask.leadAssigneeName || anyTask.assigneeName || "Chưa phân công";
 
-  const leadName = formatAssigneeNameWithTitle(rawLeadName, personnelList);
+  // Hiển thị tên người phụ trách; chức danh không thay thế tên
+  const leadName = formatAssigneeNameWithTitle(rawLeadName);
 
   const rawStartDate = isSchool
     ? (schoolTask?.startDate || schoolTask?.assignedDate)
