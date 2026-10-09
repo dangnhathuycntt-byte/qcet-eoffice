@@ -1890,10 +1890,12 @@ function SlashMenu({
   const menuListRef = React.useRef<HTMLDivElement>(null);
   const menuItemRefs = React.useRef<Map<number, HTMLButtonElement>>(new Map());
 
-  const { refs, floatingStyles } = useFloating({
+  const { refs, floatingStyles, update } = useFloating({
     strategy: "fixed",
     placement: "bottom-start",
-    whileElementsMounted: autoUpdate,
+    // animationFrame: đo lại mỗi frame, tránh kẹt vị trí cũ khi Slate/void node dựng lại DOM
+    whileElementsMounted: (reference, floating, updateFn) =>
+      autoUpdate(reference, floating, updateFn, { animationFrame: true }),
     middleware: [
       offset(6),
       flip({ padding: 14 }),
@@ -1909,22 +1911,19 @@ function SlashMenu({
     ],
   });
 
+  // Neo menu vào đúng ô nhập ngay sau dấu "/". Không dùng selection làm neo dự phòng:
+  // trên void node selection thường cho rect rỗng (0,0) nên menu bị đẩy về góc trên trái.
   React.useLayoutEffect(() => {
-    if (anchorElement) {
-      refs.setReference(anchorElement);
-      return;
-    }
-    // Fallback: neo vào vị trí con trỏ văn bản hiện tại để không bị lệch về (0,0)
-    if (typeof window !== "undefined") {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        refs.setReference({
-          getBoundingClientRect: () => range.getBoundingClientRect(),
-        });
-      }
-    }
+    refs.setReference(anchorElement);
   }, [anchorElement, refs]);
+
+  // Đo lại ngay khi mở (và sau một frame, khi layout của node đã ổn định)
+  React.useLayoutEffect(() => {
+    if (!anchorElement) return;
+    update();
+    const id = requestAnimationFrame(() => update());
+    return () => cancelAnimationFrame(id);
+  }, [anchorElement, update]);
 
   React.useEffect(() => {
     setActiveIndex(0);
