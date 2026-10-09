@@ -410,11 +410,10 @@ describe("Notion/Linear Minimalist Document Editor Suite — Auto-Height & No In
   });
 
   describe("4e. Multi-block contextual toolbar", () => {
-    it("renders MultiBlockToolbar when blocks are selected", () => {
+    it("does not render a floating bulk action bar for block selection", () => {
       assert.ok(
-        componentContent.includes("MultiBlockToolbar") &&
-          componentContent.includes("BlockSelectionPlugin"),
-        "Must render a MultiBlockToolbar using BlockSelectionPlugin state"
+        !componentContent.includes("MultiBlockToolbar") && !componentContent.includes("multi-block-toolbar"),
+        "The floating multi-block toolbar must be removed"
       );
     });
   });

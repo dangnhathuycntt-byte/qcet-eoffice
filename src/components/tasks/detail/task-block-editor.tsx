@@ -1628,62 +1628,6 @@ function BlockMenu({ editor, element, onClose, contextMode }: { editor: any; ele
   );
 }
 
-function MultiBlockToolbar({ editor }: { editor: any }) {
-  const selectedIds = usePluginOption(BlockSelectionPlugin, "selectedIds");
-  const isReadOnly = editor.api.isReadOnly();
-
-  if (isReadOnly || !selectedIds || selectedIds.size <= 1) {
-    return null;
-  }
-
-  return (
-    <div
-      data-slot="multi-block-toolbar"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-card shadow-xl text-xs font-medium text-foreground animate-in fade-in-0 slide-in-from-bottom-2 duration-150"
-    >
-      <span className="text-muted-foreground mr-1">
-        Đã chọn {selectedIds.size} blocks
-      </span>
-      <button
-        type="button"
-        onClick={() => {
-          editor.getTransforms(BlockSelectionPlugin).blockSelection.duplicate();
-        }}
-        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
-      >
-        <Copy className="size-3.5 text-muted-foreground" /> Nhân bản
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          plateIndent(editor as any);
-        }}
-        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
-      >
-        <IndentIncrease className="size-3.5 text-muted-foreground" /> Thụt vào
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          plateOutdent(editor as any);
-        }}
-        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors cursor-pointer"
-      >
-        <IndentDecrease className="size-3.5 text-muted-foreground" /> Giảm thụt
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          editor.getTransforms(BlockSelectionPlugin).blockSelection.removeNodes();
-        }}
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-      >
-        <Trash2 className="size-3.5" /> Xóa
-      </button>
-    </div>
-  );
-}
-
 function BlockRowDraggable({ children, element }: { children: React.ReactNode; element: any }) {
   const { props: selectableProps } = useBlockSelectable();
   const isSelected = useBlockSelected(element?.id);
@@ -2599,7 +2543,6 @@ export function TaskBlockEditor({
                   }}
                 />
                 <FloatingToolbar editor={editor} />
-                <MultiBlockToolbar editor={editor} />
               </PlateContainer>
             </Plate>
           </PlateDndContainer>
