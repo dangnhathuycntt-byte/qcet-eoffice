@@ -554,6 +554,22 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       assert.equal(denied.status, 403, "unattached upload must remain inaccessible");
     });
 
+    test("POST /api/upload returns 413 (not 500) when the multipart body is truncated/unreadable", async () => {
+      // Next cắt body ở middlewareClientMaxBodySize → formData() ném lỗi parse
+      const req = new NextRequest("http://localhost:3000/api/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${deptBToken}`,
+          "Content-Type": "multipart/form-data; boundary=----truncated",
+        },
+        body: "------truncated\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.png\"\r\n\r\nPNG-partial",
+      });
+      const res = await uploadFileRoute(req);
+      assert.equal(res.status, 413);
+      const body = await res.json();
+      assert.match(JSON.stringify(body), /vượt quá 10MB/);
+    });
+
     test("POST /api/upload rejects content that does not match its extension", async () => {
       const form = new FormData();
       form.append("file", new File(["<html>spoofed</html>"], "spoofed.pdf", { type: "application/pdf" }));

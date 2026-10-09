@@ -1498,6 +1498,9 @@ function FloatingToolbar({ editor }: { editor: any }) {
 // Block wrapper with hover-only six-dot handle + block menu
 // ---------------------------------------------------------------------------
 
+/** Giới hạn tệp của /api/upload (10MB) — chặn sớm để báo đúng thay vì lỗi máy chủ. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 const TURN_INTO_OPTIONS = [
   { type: "text", label: "Văn bản", icon: Type },
   { type: "heading", level: 1, label: "Tiêu đề 1", icon: Heading1 },
@@ -2142,6 +2145,9 @@ export function TaskBlockEditor({
 
   // Upload a file to /api/upload, return server URL
   const uploadFileToServer = React.useCallback(async (file: File): Promise<{fileUrl: string; fileName: string} | null> => {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      throw new Error(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Tối đa ${MAX_UPLOAD_BYTES / 1024 / 1024}MB`);
+    }
     const form = new FormData();
     form.append("file", file);
     if (taskId) {

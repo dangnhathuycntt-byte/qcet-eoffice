@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["lucide-react", "qrcode", "vaul", "motion", "@base-ui/react"],
+    // Middleware chạy Node runtime nên Next đệm body request và cắt ở 10MB (mặc định), làm
+    // upload ~10MB lỗi "Failed to parse body as FormData". Chừa dư cho overhead multipart
+    // (giới hạn tệp thực tế 10MB vẫn do /api/upload kiểm tra).
+    middlewareClientMaxBodySize: "12mb",
   },
   images: {
     remotePatterns: [

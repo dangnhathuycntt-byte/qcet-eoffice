@@ -8,7 +8,7 @@ import { storeUploadedFile } from "@/lib/services/file-service";
 import { prisma } from "@/lib/prisma";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
-import { ForbiddenError } from "@/server/api/errors";
+import { ForbiddenError, PayloadTooLargeError } from "@/server/api/errors";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export async function POST(req: NextRequest) {
@@ -19,7 +19,16 @@ export async function POST(req: NextRequest) {
     const authUser = requireAuthenticated(context);
     await assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
-    const formData = await req.formData();
+    // Next đệm body request ở middleware và cắt khi vượt middlewareClientMaxBodySize;
+    // body bị cắt làm formData() ném lỗi. Báo đúng nguyên nhân thay vì 500.
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      throw new PayloadTooLargeError(
+        `Không đọc được tệp tải lên. Tệp có thể vượt quá ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      );
+    }
     const file = formData.get("file") as File | null;
     if (!file || typeof file === "string") {
       return apiError("Vui lòng gửi tệp trong trường 'file'", requestId);
