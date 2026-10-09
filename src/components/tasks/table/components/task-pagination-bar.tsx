@@ -22,6 +22,8 @@ export interface TaskPaginationBarProps {
   pageSizeOptions?: number[];
   disabled?: boolean;
   className?: string;
+  /** Nhãn domain cho consumer dùng chung; mặc định giữ nguyên bảng Nhiệm vụ. */
+  itemLabel?: string;
   shortcutTrigger?: React.ReactNode;
 }
 
@@ -64,13 +66,9 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   pageSizeOptions = DEFAULT_PAGE_SIZES,
   disabled = false,
   className,
+  itemLabel = "nhiệm vụ",
   shortcutTrigger,
 }: TaskPaginationBarProps) {
-  // Hide the entire pagination footer (including page size selector) when results fit within one page
-  if (totalItems <= pageSize) {
-    return null;
-  }
-
   const [isSizeMenuOpen, setIsSizeMenuOpen] = React.useState(false);
   const sizeMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -114,9 +112,12 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
     }
   };
 
+  // Giữ thứ tự hook ổn định khi dữ liệu hoặc bộ lọc đưa kết quả về một trang.
+  if (totalItems <= pageSize) return null;
+
   return (
     <nav
-      aria-label="Phân trang bảng công việc"
+      aria-label={itemLabel === "nhiệm vụ" ? "Phân trang bảng công việc" : `Phân trang ${itemLabel}`}
       className={cn(
         "flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/40 bg-card/60 px-4 py-2.5 select-none",
         className
@@ -126,7 +127,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
       <div className="flex items-center gap-2.5 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
         <div className="tabular-nums">
           {totalItems === 0 ? (
-            <span>0 nhiệm vụ</span>
+            <span>0 {itemLabel}</span>
           ) : (
             <span>
               <strong className="font-medium text-foreground font-mono">
@@ -136,7 +137,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
               <strong className="font-medium text-foreground font-mono">
                 {totalItems}
               </strong>{" "}
-              nhiệm vụ
+              {itemLabel}
             </span>
           )}
         </div>
@@ -145,13 +146,13 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         <Popover.Root open={isSizeMenuOpen} onOpenChange={setIsSizeMenuOpen}>
         <div className="relative flex items-center gap-1.5 ml-1" ref={sizeMenuRef}>
           <label htmlFor="task-table-page-size" className="sr-only">
-            Số lượng công việc trên mỗi trang
+            {itemLabel === "nhiệm vụ" ? "Số lượng công việc trên mỗi trang" : `Số lượng ${itemLabel} trên mỗi trang`}
           </label>
 
           <Popover.Trigger
             type="button"
             id="task-table-page-size-trigger"
-            aria-label="Số lượng công việc trên mỗi trang"
+            aria-label={itemLabel === "nhiệm vụ" ? "Số lượng công việc trên mỗi trang" : `Số lượng ${itemLabel} trên mỗi trang`}
             aria-expanded={isSizeMenuOpen}
             aria-haspopup="listbox"
             disabled={disabled || totalItems === 0}
@@ -177,7 +178,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             <Popover.Popup
               style={{ maxWidth: "var(--available-width)", maxHeight: "var(--available-height)", overflowY: "auto" }}
               role="listbox"
-              aria-label="Chọn số lượng công việc mỗi trang"
+              aria-label={itemLabel === "nhiệm vụ" ? "Chọn số lượng công việc mỗi trang" : `Chọn số lượng ${itemLabel} mỗi trang`}
               className="min-w-[124px] rounded-xl border border-border/80 bg-popover/95 p-1 shadow-lg shadow-black/10 animate-in fade-in-0 zoom-in-95 duration-100 text-popover-foreground"
             >
               <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/40 mb-1">

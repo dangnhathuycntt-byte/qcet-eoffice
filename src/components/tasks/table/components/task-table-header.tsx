@@ -34,7 +34,7 @@ export interface TaskTableHeaderProps {
 }
 
 interface ColumnDefinition {
-  id: TaskSortField | "subtasks" | "meta" | "actions" | "coAssignees" | "createdAt";
+  id: TaskSortField | "subtasks" | "meta" | "actions" | "coAssignees" | "createdAt" | "startDate";
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
@@ -50,7 +50,7 @@ export function TaskTableHeader({
   indeterminate = false,
   onToggleSelectAll,
   density = "comfortable",
-  visibleColumns = { department: true, priority: true, leadAssignee: true, dueDate: true, progress: false },
+  visibleColumns = { department: true, priority: true, leadAssignee: true, dueDate: true, status: true },
   className,
   showSelection = false,
   showExpandAll = false,
@@ -82,17 +82,17 @@ export function TaskTableHeader({
     if (visibleColumns?.department !== false) {
       cols.push({ id: "department", label: "Đơn vị", sortable: true, widthClass: "w-[170px]" });
     }
+    if (visibleColumns?.startDate === true) {
+      cols.push({ id: "startDate", label: "Bắt đầu", widthClass: "w-[110px]" });
+    }
     if (visibleColumns?.dueDate !== false) {
-      cols.push({ id: "dueDate", label: "Hạn", sortable: true, align: "right", widthClass: "w-[110px]" });
+      cols.push({ id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-[110px]" });
     }
     if (visibleColumns?.createdAt === true) {
-      cols.push({ id: "createdAt", label: "Ngày tạo", align: "right", widthClass: "w-[96px]" });
+      cols.push({ id: "createdAt", label: "Ngày tạo", widthClass: "w-[110px]" });
     }
     if (visibleColumns?.status === true) {
-      cols.push({ id: "status", label: "Trạng thái", sortable: true, widthClass: "w-[130px]" });
-    }
-    if (visibleColumns?.progress === true) {
-      cols.push({ id: "progress", label: "Tiến độ", sortable: true, align: "right", widthClass: "w-[90px]" });
+      cols.push({ id: "status", label: "Trạng thái", sortable: true, widthClass: "w-[180px]" });
     }
     return cols;
   }, [visibleColumns]);
@@ -161,7 +161,7 @@ export function TaskTableHeader({
           const isFirstColumn = !showSelection && colIdx === 0;
           const leadingPaddingClass = isFirstColumn ? "pl-4 sm:pl-5 pr-2.5 py-2.5" : paddingClass;
           const isLastColumn = colIdx === activeColumns.length - 1;
-          const columnPaddingClass = col.id === "dueDate" || isLastColumn
+          const columnPaddingClass = col.id === "dueDate" || col.id === "createdAt" || col.id === "startDate" || isLastColumn
             ? "pl-2.5 pr-4 sm:pr-5 py-2.5"
             : isFirstColumn
             ? leadingPaddingClass

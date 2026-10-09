@@ -64,7 +64,6 @@ export interface KanbanDisplaySettings {
   showAssignee: boolean;     // Avatar + Tên phụ trách (mặc định: bật)
   showDueDate: boolean;      // Hạn hoàn thành (mặc định: bật)
   showParentTask: boolean;   // Nhiệm vụ cha (mặc định: bật)
-  showProgress: boolean;     // Tiến độ % (mặc định: tắt)
   showSubtaskCount: boolean; // Số nhiệm vụ con (mặc định: tắt)
   // Các tùy chọn cũ giữ optional để tương thích ngược interface
   showCategory?: boolean;
@@ -75,7 +74,6 @@ export const DEFAULT_DISPLAY_SETTINGS: KanbanDisplaySettings = {
   showAssignee: true,
   showDueDate: true,
   showParentTask: true,
-  showProgress: false,
   showSubtaskCount: false,
 };
 
@@ -83,12 +81,12 @@ const DISPLAY_SETTINGS_STORAGE_KEY = "qcet_kanban_display_settings";
 
 function loadDisplaySettings(): KanbanDisplaySettings {
   if (typeof window === "undefined") {
-    return { ...DEFAULT_DISPLAY_SETTINGS, showProgress: false };
+    return { ...DEFAULT_DISPLAY_SETTINGS };
   }
   try {
     const stored = localStorage.getItem(DISPLAY_SETTINGS_STORAGE_KEY);
     if (!stored) return DEFAULT_DISPLAY_SETTINGS;
-    return { ...DEFAULT_DISPLAY_SETTINGS, ...JSON.parse(stored), showProgress: false };
+    return { ...DEFAULT_DISPLAY_SETTINGS, ...JSON.parse(stored) };
   } catch {
     return DEFAULT_DISPLAY_SETTINGS;
   }

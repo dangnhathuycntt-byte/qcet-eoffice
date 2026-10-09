@@ -73,6 +73,8 @@ export interface DrawerContentProps
   maxWidth?: number;
   defaultWidth?: number;
   onWidthChange?: (width: number) => void;
+  /** Lớp bổ sung cho lớp phủ, ví dụ `z-50` để nằm trên thanh điều hướng dưới mobile. */
+  overlayClassName?: string;
 }
 
 export const DrawerContent = React.forwardRef<
@@ -89,6 +91,7 @@ export const DrawerContent = React.forwardRef<
       maxWidth = 1727,
       defaultWidth = 680,
       onWidthChange,
+      overlayClassName,
       style,
       ...props
     },
@@ -189,7 +192,7 @@ export const DrawerContent = React.forwardRef<
 
     return (
       <DrawerPortal>
-        <DrawerOverlay />
+        <DrawerOverlay className={overlayClassName} />
         <VaulDrawer.Content
           ref={ref}
           style={contentStyle}

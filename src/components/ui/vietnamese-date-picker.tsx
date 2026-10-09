@@ -35,6 +35,8 @@ export interface VietnameseDatePickerProps {
   variant?: "chip" | "input" | "inline";
   /** Bắt buộc chọn hay không */
   required?: boolean;
+  /** Cho phép xóa giá trị đang chọn. Mặc định giữ nguyên hành vi hiện có. */
+  clearable?: boolean;
   /** Vô hiệu hóa component */
   disabled?: boolean;
   /** Báo lỗi validation */
@@ -91,6 +93,7 @@ export function VietnameseDatePicker({
   icon,
   variant = "chip",
   required = false,
+  clearable = true,
   disabled = false,
   error,
   minDate,
@@ -162,6 +165,7 @@ export function VietnameseDatePicker({
 
   const handleClearDate = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!clearable) return;
     onChange?.("");
     setIsOpen(false);
   };
@@ -350,7 +354,7 @@ export function VietnameseDatePicker({
             {icon !== null && (icon || <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />)}
             <span>{hasValue ? displayDate : placeholder}</span>
           </div>
-          {hasValue && !disabled && (
+          {hasValue && !disabled && clearable && (
             <span
               role="button"
               tabIndex={0}
@@ -385,7 +389,7 @@ export function VietnameseDatePicker({
             placeholder="Select date..."
             className="w-full h-8 px-2.5 text-xs font-sans text-foreground bg-secondary rounded-lg border-0 outline-none focus:bg-selected"
           />
-          {hasValue && (
+          {hasValue && clearable && (
             <button
               type="button"
               onClick={handleClearDate}

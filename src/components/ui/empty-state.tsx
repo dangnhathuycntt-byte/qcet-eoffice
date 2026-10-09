@@ -7,13 +7,20 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   description?: React.ReactNode;
   /** Nút hành động tiếp theo, ví dụ "Tạo nhiệm vụ" hoặc "Xóa bộ lọc". */
   action?: React.ReactNode;
+  /** compact: chữ 13px/12px và khoảng cách gọn cho khung trong bảng hoặc panel hẹp. Mặc định giữ nguyên. */
+  density?: "default" | "compact";
 }
 
 /** Trạng thái không có dữ liệu: nói rõ vì sao trống và việc nên làm tiếp. */
-export function EmptyState({ icon, title, description, action, className, ...props }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
+  const compact = density === "compact";
   return (
     <div
-      className={cn("flex flex-col items-center gap-3 px-6 py-12 text-center", className)}
+      data-density={density}
+      className={cn(
+        compact ? "flex flex-col items-center gap-1.5 px-4 py-8 text-center" : "flex flex-col items-center gap-3 px-6 py-12 text-center",
+        className,
+      )}
       {...props}
     >
       {icon ? (
@@ -22,8 +29,8 @@ export function EmptyState({ icon, title, description, action, className, ...pro
         </div>
       ) : null}
       <div className="max-w-sm">
-        <p className="text-base font-medium text-foreground">{title}</p>
-        {description ? <div className="mt-1 text-sm text-muted-foreground">{description}</div> : null}
+        <p className={cn("font-medium text-foreground", compact ? "text-compact" : "text-base")}>{title}</p>
+        {description ? <div className={cn("text-muted-foreground", compact ? "mt-0.5 text-xs" : "mt-1 text-sm")}>{description}</div> : null}
       </div>
       {action ? <div className="mt-1">{action}</div> : null}
     </div>

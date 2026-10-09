@@ -22,6 +22,12 @@ export interface PropertyRowProps
   label: string;
   /** Optional icon rendered before the label */
   icon?: React.ReactNode;
+  /** Ghi đè nhãn, ví dụ độ rộng cột nhãn cố định trong khối thông tin chỉ đọc. */
+  labelClassName?: string;
+  /** compact: nhãn cao 20px + đệm 8px = hàng 28px, giá trị dài tự xuống dòng. Mặc định giữ nguyên (nhiệm vụ). */
+  density?: "default" | "compact";
+  /** Ghi đè vùng giá trị, ví dụ `justify-start` cho văn bản dài canh trái. */
+  valueClassName?: string;
 }
 
 /**
@@ -33,6 +39,9 @@ export interface PropertyRowProps
 export function PropertyRow({
   label,
   icon,
+  labelClassName,
+  valueClassName,
+  density = "default",
   interactive,
   children,
   className,
@@ -40,11 +49,11 @@ export function PropertyRow({
 }: PropertyRowProps) {
   return (
     <div className={cn(propertyRowVariants({ interactive }), className)} {...props}>
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 min-w-[80px] h-7">
+      <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 min-w-[80px]", density === "compact" ? "h-5" : "h-7", labelClassName)}>
         {icon}
         {label}
       </span>
-      <div className="flex-1 min-w-0 flex items-center justify-end">
+      <div className={cn("flex-1 min-w-0 flex items-center justify-end", density === "compact" && "min-h-5", valueClassName)}>
         {children}
       </div>
     </div>

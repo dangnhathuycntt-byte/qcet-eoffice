@@ -196,9 +196,9 @@ export function TaskIconStatusDone(props: TaskActionIconProps) {
 export function TaskIconPriorityUrgent(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
-      <rect x="2.2" y="2.2" width="14.6" height="14.6" rx="4" />
-      <path d="M9.5 5.9V10.1" />
-      <path d="M9.5 12.9H9.51" />
+      <rect x="2" y="2" width="15" height="15" rx="4" fill="currentColor" stroke="none" />
+      <path d="M9.5 5.7V10" stroke="white" strokeWidth={1.8} />
+      <path d="M9.5 12.8H9.51" stroke="white" strokeWidth={1.8} />
     </TaskActionSvg>
   );
 }
@@ -206,9 +206,9 @@ export function TaskIconPriorityUrgent(props: TaskActionIconProps) {
 function PriorityBars({ level, ...props }: TaskActionIconProps & { level: 1 | 2 | 3 }) {
   return (
     <TaskActionSvg {...props}>
-      <rect x="2.6" y="10.4" width="3.2" height="5.6" rx="1.2" />
-      <rect x="7.9" y="6.6" width="3.2" height="9.4" rx="1.2" strokeOpacity={level >= 2 ? 1 : 0.3} />
-      <rect x="13.2" y="2.8" width="3.2" height="13.2" rx="1.2" strokeOpacity={level >= 3 ? 1 : 0.3} />
+      <rect x="2.4" y="10.2" width="3.6" height="6" rx="1.2" fill="currentColor" stroke="none" />
+      <rect x="7.7" y="6.4" width="3.6" height="9.8" rx="1.2" fill="currentColor" stroke="none" fillOpacity={level >= 2 ? 1 : 0.25} />
+      <rect x="13" y="2.6" width="3.6" height="13.6" rx="1.2" fill="currentColor" stroke="none" fillOpacity={level >= 3 ? 1 : 0.25} />
     </TaskActionSvg>
   );
 }
@@ -303,6 +303,16 @@ export function TaskIconHealth(props: TaskActionIconProps) {
   return (
     <TaskActionSvg {...props}>
       <path d="M1.9 9.8H4.8L6.8 4.6L10.4 14.6L12.4 9.8H17.1" />
+    </TaskActionSvg>
+  );
+}
+
+/** Tiến độ: vòng tròn với cung đã hoàn thành */
+export function TaskIconProgress(props: TaskActionIconProps) {
+  return (
+    <TaskActionSvg {...props}>
+      <circle cx="9.5" cy="9.5" r="6.8" />
+      <path d="M9.5 2.7A6.8 6.8 0 1 1 2.7 9.5" />
     </TaskActionSvg>
   );
 }

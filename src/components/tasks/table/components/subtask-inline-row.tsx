@@ -228,23 +228,8 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         </div>
       </div>
 
-      {/* Right section: Progress bar, Single DRI Assignee, SLA Date */}
+      {/* Right section: Single DRI Assignee, SLA Date */}
       <div className="flex items-center gap-3.5 shrink-0">
-        {/* Progress percent if subtask tracks progress */}
-        {typeof subTask.progressPercent === "number" && (
-          <div className="flex items-center gap-1.5">
-            <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200/80">
-              <div
-                className="h-full bg-emerald-500 transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.max(0, subTask.progressPercent))}%` }}
-              />
-            </div>
-            <span className="font-mono text-xs font-semibold tabular-nums text-slate-700">
-              {subTask.progressPercent}%
-            </span>
-          </div>
-        )}
-
         {/* Single DRI Assignee */}
         <div className="flex items-center gap-1.5">
           <UserAvatar

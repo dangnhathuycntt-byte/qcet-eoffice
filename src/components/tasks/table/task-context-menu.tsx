@@ -25,7 +25,6 @@ import {
 } from "@/lib/tasks/task-actions";
 import { CORE_STATUS_OPTIONS } from "@/domain/tasks/display-config";
 import {
-  TaskIconStar,
   TaskIconStatus,
   TaskIconPriority,
   TaskIconAssignee,
@@ -455,8 +454,8 @@ export function TaskContextMenu({
 
       <MenuRow
         icon={
-          <TaskIconStar
-            className={cn("size-4", currentPriority === "URGENT" ? "text-rose-500 fill-rose-500" : "text-muted-foreground")}
+          <TaskIconPriorityUrgent
+            className={cn("size-4", currentPriority === "URGENT" ? "text-rose-600" : "text-muted-foreground")}
           />
         }
         label={currentPriority === "URGENT" ? "Bỏ ưu tiên khẩn cấp" : "Đánh dấu khẩn cấp"}

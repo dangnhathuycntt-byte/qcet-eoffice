@@ -12,7 +12,7 @@ export {
   TaskIconDeadline as FilterIconDeadline,
   TaskIconTime as FilterIconMonth,
   TaskIconHealth as FilterIconHealth,
-  TaskIconHealth as FilterIconProgress,
+  TaskIconProgress as FilterIconProgress,
   TaskIconOrigin as FilterIconOrigin,
   TaskIconStatusAll as StatusSubAll,
   TaskIconStatusAll as HealthSubAll,

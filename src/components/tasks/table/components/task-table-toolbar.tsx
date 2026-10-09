@@ -25,6 +25,8 @@ import {
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ListToolbarPopover } from "@/components/ui/list-toolbar";
+import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
   CATEGORY_TABS,
   DEPARTMENT_OPTIONS,
@@ -35,7 +37,7 @@ export const DISPLAY_PROPERTY_OPTIONS: Array<{
   id: keyof TableColumnVisibility;
   label: string;
 }> = [
-  // Thứ tự khớp thứ tự cột trên bảng: ô Nhiệm vụ (mã, việc con, danh mục) → mức độ → người → đơn vị → thời gian → trạng thái, tiến độ
+  // Thứ tự khớp thứ tự cột trên bảng: ô Nhiệm vụ (mã, việc con, danh mục) → mức độ → người → đơn vị → bắt đầu → hạn → ngày tạo → trạng thái (kèm tiến độ)
   { id: "code", label: "Mã" },
   { id: "subtasks", label: "Việc con" },
   { id: "category", label: "Danh mục" },
@@ -43,10 +45,10 @@ export const DISPLAY_PROPERTY_OPTIONS: Array<{
   { id: "leadAssignee", label: "Phụ trách" },
   { id: "coAssignees", label: "Phối hợp" },
   { id: "department", label: "Đơn vị" },
+  { id: "startDate", label: "Bắt đầu" },
   { id: "dueDate", label: "Hạn" },
   { id: "createdAt", label: "Ngày tạo" },
   { id: "status", label: "Trạng thái" },
-  { id: "progress", label: "Tiến độ" },
 ];
 
 export const DEFAULT_DISPLAY_PROPERTIES: TableColumnVisibility = {
@@ -54,12 +56,12 @@ export const DEFAULT_DISPLAY_PROPERTIES: TableColumnVisibility = {
   department: true,
   priority: true,
   leadAssignee: true,
+  createdAt: true,
+  startDate: true,
   dueDate: true,
   subtasks: true,
-  progress: true,
-  coAssignees: true,
-  status: false,
-  createdAt: false,
+  coAssignees: false,
+  status: true,
   category: false,
 };
 import { isInputElement } from "../hooks/use-task-keyboard-nav";
@@ -267,31 +269,23 @@ export function TaskTableViewOptionsPopover({
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger
-        type="button"
-        className={cn(
-          "cursor-pointer relative shadow-2xs transition-all",
-          isOpen || isCustomized
-            ? "border-primary/50 bg-primary/5 text-primary"
-            : "border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-          triggerClassName
-        )}
-        aria-label={ariaLabel}
-        title="Tùy chọn hiển thị (View options)"
-      >
-        <SlidersHorizontal className="size-3.5 sm:size-4" strokeWidth={1.5} />
-        <span className="sr-only">Hiển thị</span>
-        {isCustomized && (
-          <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
-        )}
-      </Popover.Trigger>
-
-      {isOpen && (
-        <Popover.Portal>
-          <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-50">
-            <Popover.Popup className="w-[280px] rounded-2xl border border-border/80 bg-card p-0 overflow-hidden shadow-xl select-none animate-in fade-in-0 zoom-in-95 duration-150">
-              <div data-slot="desktop-display-panel">
+    <ListToolbarPopover
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      ariaLabel={ariaLabel}
+      title="Tùy chọn hiển thị (View options)"
+      width="w-[280px]"
+      flush
+      scrollable={false}
+      trigger={
+        <>
+          <SlidersHorizontal className="size-3.5 sm:size-4" strokeWidth={1.5} />
+          <span className="sr-only">Hiển thị</span>
+          {isCustomized && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
+        </>
+      }
+    >
+      <div data-slot="desktop-display-panel">
                 {/* 1. Layout View Mode Switcher */}
                 {onViewModeChange && (
                   <div
@@ -418,25 +412,18 @@ export function TaskTableViewOptionsPopover({
                     {DISPLAY_PROPERTY_OPTIONS.map((prop) => {
                       const isEnabled = visibleColumns[prop.id] !== false;
                       return (
-                        <button
+                        <PropertyToggleChip
                           key={prop.id}
-                          type="button"
-                          onClick={() => {
+                          pressed={isEnabled}
+                          onPressedChange={() => {
                             onVisibleColumnsChange?.({
                               ...visibleColumns,
                               [prop.id]: !isEnabled,
                             });
                           }}
-                          aria-pressed={isEnabled}
-                          className={cn(
-                            "px-2.5 h-6 inline-flex items-center rounded-full text-xs border transition-colors cursor-pointer select-none",
-                            isEnabled
-                              ? "bg-muted border-border text-foreground font-medium"
-                              : "bg-card border-border/70 text-muted-foreground font-normal hover:bg-muted/50 hover:text-foreground"
-                          )}
                         >
                           {prop.label}
-                        </button>
+                        </PropertyToggleChip>
                       );
                     })}
                   </div>
@@ -452,12 +439,8 @@ export function TaskTableViewOptionsPopover({
                     Đặt lại
                   </button>
                 </div>
-              </div>
-            </Popover.Popup>
-          </Popover.Positioner>
-        </Popover.Portal>
-      )}
-    </Popover.Root>
+      </div>
+    </ListToolbarPopover>
   );
 }
 
@@ -534,7 +517,6 @@ const SORT_OPTIONS: Array<{ value: TaskSortField; label: string }> = [
   { value: "priority", label: "Ưu tiên" },
   { value: "status", label: "Trạng thái" },
   { value: "title", label: "Tên" },
-  { value: "progress", label: "Tiến độ" },
 ];
 
 export function TaskTableToolbar({
@@ -559,7 +541,7 @@ export function TaskTableToolbar({
   categoryOptions = CATEGORY_TABS,
   density = "comfortable",
   onDensityChange,
-  visibleColumns = { priority: true, subtasks: true, progress: true },
+  visibleColumns = { priority: true, subtasks: true, status: true },
   onVisibleColumnsChange,
   viewMode = "table",
   onViewModeChange,
@@ -656,12 +638,12 @@ export function TaskTableToolbar({
       visibleColumns.priority !== DEFAULT_DISPLAY_PROPERTIES.priority ||
       visibleColumns.leadAssignee !== DEFAULT_DISPLAY_PROPERTIES.leadAssignee ||
       visibleColumns.dueDate !== DEFAULT_DISPLAY_PROPERTIES.dueDate ||
-      visibleColumns.progress !== DEFAULT_DISPLAY_PROPERTIES.progress ||
       visibleColumns.subtasks !== DEFAULT_DISPLAY_PROPERTIES.subtasks ||
       visibleColumns.coAssignees !== DEFAULT_DISPLAY_PROPERTIES.coAssignees ||
       visibleColumns.status !== DEFAULT_DISPLAY_PROPERTIES.status ||
       visibleColumns.category !== DEFAULT_DISPLAY_PROPERTIES.category ||
-      visibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt
+      visibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt ||
+      visibleColumns.startDate !== DEFAULT_DISPLAY_PROPERTIES.startDate
     );
   }, [visibleColumns]);
 
@@ -891,8 +873,6 @@ export function TaskTableToolbar({
                     ? "Hạn"
                     : sortField === "title"
                     ? "Tên"
-                    : sortField === "progress"
-                    ? "Tiến độ"
                     : "Sắp xếp"}
                 </span>
                 <span className="font-mono text-xs text-muted-foreground">
@@ -1058,8 +1038,6 @@ export function TaskTableToolbar({
                       <option value="dueDate_desc">Hạn chót (Giảm dần - Muộn nhất)</option>
                       <option value="title_asc">Tên nhiệm vụ (A-Z)</option>
                       <option value="title_desc">Tên nhiệm vụ (Z-A)</option>
-                      <option value="progress_desc">Tiến độ cao nhất</option>
-                      <option value="progress_asc">Tiến độ thấp nhất</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   </div>

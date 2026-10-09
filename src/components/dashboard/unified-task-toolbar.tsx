@@ -45,6 +45,7 @@ import {
   FilterIconStatus,
   FilterIconPriority,
   FilterIconHealth,
+  FilterIconProgress,
   FilterIconLead,
   FilterIconCollaborator,
   FilterIconCategory,
@@ -55,6 +56,7 @@ import {
 } from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
+import { ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
   getTaskTimeFilterLabel,
   NO_TASK_TIME_FILTER,
@@ -634,7 +636,6 @@ export function UnifiedTaskToolbar({
   }, [onSearchChange]);
 
   const [isCollapsedFilterOpen, setIsCollapsedFilterOpen] = React.useState(false);
-  const [searchFocused, setSearchFocused] = React.useState(false);
   const [menuSearch, setMenuSearch] = React.useState("");
   const menuSearchInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedLead, setSelectedLead] = React.useState<string | null>(null);
@@ -675,12 +676,12 @@ export function UnifiedTaskToolbar({
       effectiveVisibleColumns.priority !== DEFAULT_DISPLAY_PROPERTIES.priority ||
       effectiveVisibleColumns.leadAssignee !== DEFAULT_DISPLAY_PROPERTIES.leadAssignee ||
       effectiveVisibleColumns.dueDate !== DEFAULT_DISPLAY_PROPERTIES.dueDate ||
-      effectiveVisibleColumns.progress !== DEFAULT_DISPLAY_PROPERTIES.progress ||
       effectiveVisibleColumns.subtasks !== DEFAULT_DISPLAY_PROPERTIES.subtasks ||
       effectiveVisibleColumns.coAssignees !== DEFAULT_DISPLAY_PROPERTIES.coAssignees ||
       effectiveVisibleColumns.status !== DEFAULT_DISPLAY_PROPERTIES.status ||
       effectiveVisibleColumns.category !== DEFAULT_DISPLAY_PROPERTIES.category ||
-      effectiveVisibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt
+      effectiveVisibleColumns.createdAt !== DEFAULT_DISPLAY_PROPERTIES.createdAt ||
+      effectiveVisibleColumns.startDate !== DEFAULT_DISPLAY_PROPERTIES.startDate
     );
   }, [effectiveVisibleColumns]);
 
@@ -1348,7 +1349,7 @@ export function UnifiedTaskToolbar({
       group: "time",
       label: "Tiến độ",
       isActive: isHealthActive,
-      icon: FilterIconHealth,
+      icon: FilterIconProgress,
     },
     {
       key: "origin",
@@ -2391,7 +2392,7 @@ export function UnifiedTaskToolbar({
                   ? HealthSubOverdue
                   : opt.value === "completed"
                     ? HealthSubCompleted
-                    : FilterIconHealth,
+                    : FilterIconProgress,
           selected,
           onSelect: () => {
             handleHealthChange(opt.value);
@@ -2519,16 +2520,16 @@ export function UnifiedTaskToolbar({
           openOnHover
           delay={60}
           closeDelay={180}
-          className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+          className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium transition-colors hover:bg-accent text-foreground hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <category.icon className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
-            <span className="truncate text-foreground/85 group-hover:text-foreground">
+            <category.icon className="size-3.5 shrink-0 text-foreground/80 group-hover:text-foreground transition-colors" strokeWidth={1.5} />
+            <span className="truncate font-medium text-foreground">
               {category.label}
             </span>
           </div>
           <ChevronRight
-            className="size-2.5 shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors ml-auto"
+            className="size-2.5 shrink-0 text-foreground/60 group-hover:text-foreground transition-colors ml-auto"
             strokeWidth={1.5}
           />
         </MenuSubmenuTrigger>
@@ -2635,7 +2636,7 @@ export function UnifiedTaskToolbar({
               onClick={() => handlePrimaryAction()}
               title="Tạo nhiệm vụ"
               aria-label="Tạo nhiệm vụ"
-              className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
+              className={listToolbarPrimaryButtonClass}
             >
               <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <span>{createButtonLabel || (onCreateTask ? "Tạo nhiệm vụ" : primaryActionLabel)}</span>
@@ -2652,51 +2653,18 @@ export function UnifiedTaskToolbar({
       )}
 
       {/* 1. Search */}
-      <div
-        className={cn(
-          "relative shrink-0 transition-all duration-200",
-          !leftContent && !onScopeChange && "ml-auto",
-          searchFocused ? "w-[240px]" : "w-[140px] sm:w-[180px]"
-        )}
-      >
-        <Search
-          className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-          strokeWidth={1.5}
-        />
-        <input
-          ref={searchInputRef}
-          type="text"
-          value={localSearch}
-          onChange={(e) => handleSearchInputChange(e.target.value)}
-          onFocus={() => setSearchFocused(true)}
-          onBlur={() => setSearchFocused(false)}
-          placeholder="Tìm nhiệm vụ… /"
-          aria-label="Tìm nhiệm vụ"
-          className="h-7 w-full rounded-md border border-border/80 bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none transition-colors"
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-          {loading && (
-            <Loader2
-              className="size-3.5 animate-spin text-muted-foreground"
-              aria-label="Đang tải dữ liệu"
-            />
-          )}
-          {localSearch ? (
-            <button
-              type="button"
-              onClick={handleSearchClear}
-              aria-label="Xóa từ khóa tìm kiếm"
-              className="size-4 flex items-center justify-center text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer touch-manipulation"
-            >
-              <X className="size-3" strokeWidth={1.5} />
-            </button>
-          ) : (
-            <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground bg-muted border border-border/60 rounded select-none pointer-events-none">
-              /
-            </kbd>
-          )}
-        </div>
-      </div>
+      <ListToolbarSearch
+        ref={searchInputRef}
+        value={localSearch}
+        onChange={handleSearchInputChange}
+        onClear={handleSearchClear}
+        loading={loading}
+        placeholder="Tìm nhiệm vụ… /"
+        aria-label="Tìm nhiệm vụ"
+        wrapperClassName={!leftContent && !onScopeChange ? "ml-auto" : undefined}
+        collapsedWidthClassName="w-[140px] sm:w-[180px]"
+        expandedWidthClassName="w-[240px]"
+      />
 
       {/* 2. Filter — icon-only trigger */}
       <MenuRoot open={isCollapsedFilterOpen} onOpenChange={(open) => { setIsCollapsedFilterOpen(open); if (!open) setMenuSearch(""); }}>
@@ -2707,12 +2675,7 @@ export function UnifiedTaskToolbar({
               aria-label="Bộ lọc"
               aria-expanded={isCollapsedFilterOpen}
               title="Bộ lọc (F)"
-              className={cn(
-                "inline-flex h-7 shrink-0 cursor-pointer select-none items-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-colors touch-manipulation",
-                isCollapsedFilterOpen || activeFilterCount > 0
-                  ? "border-border bg-accent/60 text-foreground hover:bg-accent"
-                  : "border-border/80 bg-background text-foreground hover:bg-accent"
-              )}
+              className={listToolbarIconButtonClass(isCollapsedFilterOpen || activeFilterCount > 0)}
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
               {activeFilterCount > 0 && (
@@ -2875,7 +2838,7 @@ export function UnifiedTaskToolbar({
           onClick={() => handlePrimaryAction()}
           title="Tạo việc mới"
           aria-label="Tạo việc mới"
-          className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation"
+          className={listToolbarPrimaryButtonClass}
         >
           <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
           <span>{primaryActionLabel}</span>

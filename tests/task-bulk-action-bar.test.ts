@@ -17,7 +17,6 @@ import {
 } from "../src/components/tasks/table/components/task-bulk-action-bar";
 import {
   TaskRow,
-  CircularProgressRing,
   areTaskRowPropsEqual,
   parseLeadAssignee,
 } from "../src/components/tasks/table/components/task-row";
@@ -840,28 +839,6 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
       const title = "Xây dựng khung năng lực số cho sinh viên ngành CNTT";
       assert.ok(html.includes(title), "title must render");
       assert.ok(html.includes(`data-task-id="${mockTask.id}"`), "internal task id must be preserved");
-    });
-
-    it("renders 0% progress with 0% text", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CircularProgressRing, { percent: 0 })
-      );
-      assert.ok(html.includes("0%"), "0% text must render");
-    });
-
-    it("renders completed 100% with 100% text", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CircularProgressRing, { percent: 100 })
-      );
-      assert.ok(html.includes("100%"), "100% text must render");
-    });
-
-    it("renders partial progress with ring indicator", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(CircularProgressRing, { percent: 45 })
-      );
-      assert.ok(html.includes("45%"), "45% text must render");
-      assert.ok(html.includes("<svg"), "progress must render ring svg");
     });
 
     it("renders overdue SLA chip with Trễ hạn text", () => {

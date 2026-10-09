@@ -28,18 +28,30 @@ export interface SelectProps {
   defaultOpen?: boolean;
   className?: string;
   popupClassName?: string;
+  /** Gắn vào nút chọn để `FormField` nối nhãn. */
+  id?: string;
+  /** Nối với gợi ý/lỗi của `FormField`. */
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+  /** Lớp cho Positioner (mặc định `z-30`); truyền `z-50` khi dùng trong modal. */
+  positionerClassName?: string;
+  /** compact: 28px trên desktop (44px trên điện thoại), chữ 13px, mục menu ≤ 32px. Mặc định giữ nguyên. */
+  compact?: boolean;
 }
 
-function renderItem(option: SelectOption) {
+function renderItem(option: SelectOption, compact = false) {
   return (
     <BaseSelect.Item
       key={option.value}
       value={option.value}
       disabled={option.disabled}
-      className="grid cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50 sm:py-1.5"
+      className={cn(
+        "grid cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 rounded-lg px-2.5 text-foreground outline-none select-none data-[highlighted]:bg-accent data-[selected]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        compact ? "min-h-11 py-1 text-xs sm:min-h-7" : "py-2 text-sm sm:py-1.5",
+      )}
     >
       <BaseSelect.ItemIndicator className="col-start-1 text-primary">
-        <Check className="size-4" />
+        <Check className={compact ? "size-3.5" : "size-4"} strokeWidth={compact ? 1.5 : undefined} />
       </BaseSelect.ItemIndicator>
       <BaseSelect.ItemText className="col-start-2 truncate">
         {option.label}
@@ -68,6 +80,11 @@ export function Select({
   defaultOpen,
   className,
   popupClassName,
+  id,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
+  positionerClassName,
+  compact = false,
 }: SelectProps) {
   const items = React.useMemo(
     () => options.map(({ value: v, label: l }) => ({ value: v, label: l })),
@@ -100,10 +117,13 @@ export function Select({
         </BaseSelect.Label>
       ) : null}
       <BaseSelect.Trigger
+        id={id}
+        aria-describedby={ariaDescribedBy}
         aria-label={label ? undefined : ariaLabel}
-        aria-invalid={invalid || undefined}
+        aria-invalid={invalid || ariaInvalid || undefined}
         className={cn(
-          "flex h-12 w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary px-3 text-base outline-none select-none sm:h-9 sm:text-sm",
+          "flex w-full cursor-pointer items-center justify-between gap-2 rounded-control border-0 bg-secondary outline-none select-none",
+          compact ? "h-11 px-2 text-compact sm:h-7" : "h-12 px-3 text-base sm:h-9 sm:text-sm",
           "transition-colors duration-100 motion-reduce:transition-none",
           "hover:bg-accent focus-visible:bg-selected focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 data-[popup-open]:bg-selected",
           "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
@@ -116,7 +136,7 @@ export function Select({
           className="truncate data-[placeholder]:text-muted-foreground"
         />
         <BaseSelect.Icon className="text-muted-foreground">
-          <ChevronsUpDown className="size-4" />
+          <ChevronsUpDown className={compact ? "size-3.5" : "size-4"} strokeWidth={compact ? 1.5 : undefined} />
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
       <BaseSelect.Portal>
@@ -124,7 +144,7 @@ export function Select({
           sideOffset={4}
           alignItemWithTrigger={false}
           collisionPadding={12}
-          className="z-30 outline-none"
+          className={cn("z-30 outline-none", positionerClassName)}
         >
           <BaseSelect.Popup
             className={cn(
@@ -141,10 +161,10 @@ export function Select({
                     <BaseSelect.GroupLabel className="px-2.5 pt-2 pb-1 text-xs font-medium text-muted-foreground">
                       {group}
                     </BaseSelect.GroupLabel>
-                    {list.map(renderItem)}
+                    {list.map((o) => renderItem(o, compact))}
                   </BaseSelect.Group>
                 ) : (
-                  list.map(renderItem)
+                  list.map((o) => renderItem(o, compact))
                 ),
               )}
             </BaseSelect.List>

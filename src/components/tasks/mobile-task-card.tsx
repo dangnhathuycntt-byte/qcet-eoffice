@@ -160,7 +160,6 @@ export function getMobilePriorityBadgeConfig(
  * - Hàng trên: Mã nhiệm vụ (NV-xxx), Huy hiệu trạng thái
  * - Tiêu đề: 14-15px font-semibold text-foreground leading-snug
  * - Đơn vị & Người phụ trách: Tên phòng ban • Tên người phụ trách (avatar/dot)
- * - Thanh tiến độ: Thanh tiến độ mượt mà kèm tỷ lệ phần trăm tabular-nums
  * - Hàng dưới: Ngày hạn (Hạn 14/09) & Huy hiệu thời hạn/trễ hạn
  * - Không có nút bấm rác bên trong thẻ
  */
@@ -223,22 +222,6 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
   const priorityBadge = getMobilePriorityBadgeConfig(
     anyTask.priority || (schoolTask as any)?.priority || flattenedTask?.priority
   );
-
-  // 5. Progress calculation
-  const subTasks = schoolTask?.subTasks || [];
-  const totalSubTasks = schoolTask?.totalSubTasks ?? subTasks.length;
-  const completedSubTasks =
-    schoolTask?.completedSubTasks ??
-    subTasks.filter((s) => s.status === "COMPLETED").length;
-
-  const progressPercent =
-    typeof task.progressPercent === "number"
-      ? Math.min(100, Math.max(0, task.progressPercent))
-      : totalSubTasks > 0
-      ? Math.round((completedSubTasks / totalSubTasks) * 100)
-      : task.status === "COMPLETED"
-      ? 100
-      : 0;
 
   const isDueInMonth =
     selectedAcademicMonth &&
@@ -345,29 +328,6 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
           <span className="font-medium text-foreground truncate" title={assigneeName}>
             {assigneeName}
           </span>
-        </div>
-      </div>
-
-      {/* Progress Bar: Sleek thin bar with tabular percentage */}
-      <div className="space-y-1 pt-0.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
-          <span className="text-xs font-medium text-muted-foreground/80">
-            {totalSubTasks > 0 ? `Tiến độ (${completedSubTasks}/${totalSubTasks} việc)` : "Tiến độ"}
-          </span>
-          <span className="font-semibold text-foreground text-xs">{progressPercent}%</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/80">
-          <div
-            className={cn(
-              "h-full transition-all duration-300 ease-out rounded-full",
-              progressPercent === 100
-                ? "bg-emerald-500"
-                : task.status === "BLOCKED"
-                ? "bg-rose-500"
-                : "bg-primary"
-            )}
-            style={{ width: `${progressPercent}%` }}
-          />
         </div>
       </div>
 

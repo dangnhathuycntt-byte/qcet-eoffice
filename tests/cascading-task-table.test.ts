@@ -290,6 +290,16 @@ describe("Personal Scope Subtask First-Class UX Suite (MY_TASKS)", () => {
 });
 
 describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, compact pagination copy", () => {
+  it("shared pagination uses document terminology only when explicitly requested", () => {
+    const html = renderToStaticMarkup(React.createElement(TaskPaginationBar, {
+      currentPage: 1, pageSize: 10, totalItems: 95,
+      onPageChange: () => {}, onPageSizeChange: () => {}, itemLabel: "văn bản",
+    }));
+    assert.ok(html.includes('aria-label="Phân trang văn bản"'));
+    assert.ok(html.includes("văn bản"));
+    assert.ok(!html.includes("nhiệm vụ"));
+    assert.ok(html.includes("Số lượng văn bản trên mỗi trang"));
+  });
   // NOTE on placement: neither src/components/tasks/cascading-task-table.tsx
   // (facade delegating to ModularCascadingTaskTable) nor
   // src/components/dashboard/cascading-task-table.tsx (re-export facade)
@@ -418,7 +428,7 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
               leadAssignee: true,
               dueDate: true,
               subtasks: true,
-              progress: true,
+              status: true,
             },
           })
         )
@@ -441,7 +451,7 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
     );
   });
 
-  it("renders interactive triggers for inline editing: Priority, Department, Assignee, Due Date, and Progress", () => {
+  it("renders interactive triggers for inline editing: Priority, Department, Assignee, Due Date", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         "table",
@@ -458,7 +468,7 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
               leadAssignee: true,
               dueDate: true,
               subtasks: true,
-              progress: true,
+              status: true,
             },
           })
         )
@@ -483,10 +493,10 @@ describe("Linear Table Redesign: Inline Property Editing & End-of-row Button Rem
       "Must render interactive trigger for due date"
     );
 
-    // 4. Progress trigger
+    // Tiến độ đã gộp vào cột Trạng thái nhưng không còn nút cập nhật riêng
     assert.ok(
-      html.includes('title="Nhấp để cập nhật tiến độ"'),
-      "Must render interactive trigger for progress"
+      !html.includes('title="Nhấp để cập nhật tiến độ"'),
+      "Progress trigger must not render"
     );
   });
 
@@ -556,7 +566,7 @@ describe("Linear Table Redesign: Synchronized Table Headers & Column Alignment",
             priority: true,
             leadAssignee: true,
             dueDate: true,
-            progress: false,
+            status: false,
           },
         })
       )
@@ -567,10 +577,10 @@ describe("Linear Table Redesign: Synchronized Table Headers & Column Alignment",
     assert.ok(html.includes("Ưu tiên"), "Header must include 'Ưu tiên'");
     assert.ok(html.includes("Phụ trách"), "Header must include 'Phụ trách'");
     assert.ok(html.includes("Hạn"), "Header must include 'Hạn'");
-    assert.ok(!html.includes("Tiến độ"), "Header must not include 'Tiến độ' when disabled");
+    assert.ok(!html.includes(">Trạng thái<"), "Header must not include 'Trạng thái' column when disabled");
   });
 
-  it("renders 6 columns when progress column is enabled", () => {
+  it("renders the merged Trạng thái column (with progress) when status is enabled", () => {
     const html = renderToStaticMarkup(
       React.createElement(
         "table",
@@ -581,13 +591,31 @@ describe("Linear Table Redesign: Synchronized Table Headers & Column Alignment",
             priority: true,
             leadAssignee: true,
             dueDate: true,
-            progress: true,
+            status: true,
           },
         })
       )
     );
 
-    assert.ok(html.includes("Tiến độ"), "Header must include 'Tiến độ' when progress: true");
+    assert.ok(html.includes("Trạng thái"), "Header must include 'Trạng thái' when status: true");
+    assert.ok(!html.includes("Tiến độ"), "Tiến độ must not be a separate header column");
+  });
+
+  it("orders Bắt đầu, Hạn, then Ngày tạo in the header", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        "table",
+        null,
+        React.createElement(TaskTableHeader, {
+          visibleColumns: { dueDate: true, createdAt: true, startDate: true, status: true },
+        })
+      )
+    );
+
+    const start = html.indexOf(">Bắt đầu<");
+    const due = html.indexOf(">Hạn");
+    const created = html.indexOf(">Ngày tạo<");
+    assert.ok(start > -1 && due > start && created > due, "order must be Bắt đầu → Hạn → Ngày tạo");
   });
 
   it("dynamically hides optional columns when configured in visibleColumns", () => {
@@ -601,7 +629,7 @@ describe("Linear Table Redesign: Synchronized Table Headers & Column Alignment",
             priority: false,
             leadAssignee: true,
             dueDate: true,
-            progress: false,
+            status: false,
           },
         })
       )
@@ -731,5 +759,4 @@ describe("Linear Table Redesign: Collapsible Grouped Sections", () => {
     assert.ok(html.includes("Nhiệm vụ Đang làm"), "Must render tasks in flat list");
   });
 });
-
 

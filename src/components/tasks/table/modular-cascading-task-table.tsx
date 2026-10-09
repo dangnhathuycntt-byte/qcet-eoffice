@@ -268,11 +268,11 @@ export function ModularCascadingTaskTable({
     if (effectiveVisibleColumns.department !== false) span++;
     if (effectiveVisibleColumns.priority !== false) span++;
     if (effectiveVisibleColumns.subtasks !== false) span++;
-    if (effectiveVisibleColumns.progress === true) span++;
     if (effectiveVisibleColumns.coAssignees === true) span++;
     if (effectiveVisibleColumns.status === true) span++;
     if (effectiveVisibleColumns.category === true) span++;
     if (effectiveVisibleColumns.createdAt === true) span++;
+    if (effectiveVisibleColumns.startDate === true) span++;
     return span;
   }, [effectiveVisibleColumns]);
 
@@ -683,7 +683,7 @@ export function ModularCascadingTaskTable({
     return () => {
       const selected = filteredTasks.filter((t) => tableState.selectedIds.has(t.id));
       if (selected.length === 0) return;
-      const headers = ["Mã nhiệm vụ", "Tiêu đề", "Đơn vị", "Chủ trì", "Hạn chót", "Trạng thái", "Tiến độ"];
+      const headers = ["Mã nhiệm vụ", "Tiêu đề", "Đơn vị", "Chủ trì", "Hạn chót", "Trạng thái"];
       const rows = selected.map((t) => [
         `"${t.code || t.id}"`,
         `"${(t.title || "").replace(/"/g, '""')}"`,
@@ -691,7 +691,6 @@ export function ModularCascadingTaskTable({
         `"${t.leadAssigneeName || ""}"`,
         `"${t.dueDate || ""}"`,
         `"${t.status || ""}"`,
-        `"${t.progressPercent ?? 0}%"`,
       ]);
       const csvContent = "﻿" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -1085,8 +1084,8 @@ export function ModularCascadingTaskTable({
     if (effectiveVisibleColumns.priority !== false) count++;
     if (effectiveVisibleColumns.leadAssignee !== false) count++;
     if (effectiveVisibleColumns.dueDate !== false) count++;
+    if (effectiveVisibleColumns.startDate === true) count++;
     if (effectiveVisibleColumns.coAssignees === true) count++;
-    if (effectiveVisibleColumns.progress === true) count++;
     if (effectiveVisibleColumns.status === true) count++;
     if (effectiveVisibleColumns.createdAt === true) count++;
     return count;
@@ -1301,7 +1300,6 @@ export function ModularCascadingTaskTable({
                         <th className="px-3 py-1">Nhiệm vụ tồn đọng</th>
                         <th className="px-3 py-1">Chủ trì</th>
                         <th className="px-3 py-1">Hạn ban đầu</th>
-                        <th className="px-3 py-1">Tiến độ</th>
                         <th className="w-48 px-3 py-1 text-right">Trạng thái &amp; Thao tác</th>
                       </tr>
                     </thead>
@@ -1340,21 +1338,6 @@ export function ModularCascadingTaskTable({
                             <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
                               {task.dueDate ? formatTableDate(task.dueDate) : "Trễ hạn"}
                             </span>
-                          </td>
-                          <td className="px-3 py-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
-                                <div
-                                  className="h-full bg-amber-500"
-                                  style={{
-                                    width: `${task.progressPercent || 0}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
-                                {task.progressPercent || 0}%
-                              </span>
-                            </div>
                           </td>
                           <td className="px-3 py-1.5 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -1475,10 +1458,10 @@ export function ModularCascadingTaskTable({
                   {effectiveVisibleColumns.leadAssignee !== false && <col className="w-[170px]" />}
                   {effectiveVisibleColumns.coAssignees === true && <col className="w-[110px]" />}
                   {effectiveVisibleColumns.department !== false && <col className="w-[170px]" />}
+                  {effectiveVisibleColumns.startDate === true && <col className="w-[110px]" />}
                   {effectiveVisibleColumns.dueDate !== false && <col className="w-[110px]" />}
-                  {effectiveVisibleColumns.createdAt === true && <col className="w-[96px]" />}
-                  {effectiveVisibleColumns.status === true && <col className="w-[130px]" />}
-                  {effectiveVisibleColumns.progress === true && <col className="w-[90px]" />}
+                  {effectiveVisibleColumns.createdAt === true && <col className="w-[110px]" />}
+                  {effectiveVisibleColumns.status === true && <col className="w-[180px]" />}
                 </colgroup>
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}

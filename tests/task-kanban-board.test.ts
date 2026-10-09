@@ -920,7 +920,6 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showAssignee, true);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showDueDate, true);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showParentTask, true);
-    assert.equal(DEFAULT_DISPLAY_SETTINGS.showProgress, false);
     assert.equal(DEFAULT_DISPLAY_SETTINGS.showSubtaskCount, false);
   });
 
@@ -962,12 +961,10 @@ describe("Linear Kanban Redesign & Display Settings Contract", () => {
           showAssignee: false,
           showDueDate: false,
           showParentTask: false,
-          showProgress: false,
           showSubtaskCount: false,
         },
       })
     );
-    assert.ok(!htmlMinimal.includes("Tiến độ"), "Must not show progress when disabled");
     assert.ok(!htmlMinimal.includes("Nguyễn Văn Test"), "Must not show assignee when disabled");
     assert.ok(!htmlMinimal.includes("Hạn 30/09"), "Must not show due date when disabled");
     assert.ok(htmlMinimal.includes("Thiết kế giao diện Linear"), "Must always show task title");

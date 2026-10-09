@@ -579,12 +579,6 @@ export function sortTasks(
         const dateB = extractIsoDateString(b.dueDate) || "9999-99-99";
         return dateA.localeCompare(dateB);
       }
-      case "progress":
-      case "progressPercent": {
-        const pA = a.progressPercent ?? 0;
-        const pB = b.progressPercent ?? 0;
-        return factor * (pA - pB);
-      }
       case "leadAssignee": {
         const nameA = a.leadAssigneeName || "";
         const nameB = b.leadAssigneeName || "";

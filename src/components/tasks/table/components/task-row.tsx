@@ -12,6 +12,8 @@ import {
   Calendar,
   CalendarCheck,
   CalendarClock,
+  CalendarDays,
+  CalendarPlus,
   CalendarX2,
   Signal,
   SignalHigh,
@@ -31,6 +33,7 @@ import {
   getSlaBadgeStatus,
   getSystemReferenceDate,
 } from "../utils/table-date-helpers";
+import { isTaskLifecycleComplete } from "@/domain/tasks/canonical-semantics";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 import { getTaskContentPreview } from "@/lib/task-content-preview";
 import { getCategoryBadgeConfig } from "../constants";
@@ -241,52 +244,30 @@ function HealthIndicator({
   );
 }
 
-/**
- * Circular Progress Ring (Minimal circular indicator)
- * Clean: When progress is 0%, render subtle plain text to avoid visual clutter
- */
-export function CircularProgressRing({ percent }: { percent: number }) {
-  const bounded = Math.min(100, Math.max(0, percent || 0));
-  if (bounded === 0) {
-    return (
-      <span className="font-mono text-xs tabular-nums text-muted-foreground/50 font-normal">
-        0%
-      </span>
-    );
-  }
-  const radius = 5.5;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (circumference * bounded) / 100;
+/** Ô ngày dùng chung cho cột Ngày tạo và Hạn (cùng padding, căn trái) */
+const TASK_DATE_CELL_CLASS = "w-[110px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-left";
 
+/** Hiển thị ngày dùng chung cho cột Ngày tạo và Hạn: cùng cỡ chữ, số căn đều */
+function TaskDateValue({
+  value,
+  icon: Icon,
+  iconClassName,
+  textClassName,
+  title,
+  srText,
+}: {
+  value: string | Date;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: "true" }>;
+  iconClassName?: string;
+  textClassName?: string;
+  title?: string;
+  srText?: string;
+}) {
   return (
-    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-foreground font-medium">
-      <svg className="size-3.5 shrink-0 -rotate-90" viewBox="0 0 16 16">
-        <circle
-          cx="8"
-          cy="8"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="text-border"
-        />
-        <circle
-          cx="8"
-          cy="8"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          className={cn(
-            "transition-all duration-300",
-            bounded === 100 ? "text-emerald-500" : "text-primary"
-          )}
-        />
-      </svg>
-      <span>{bounded}%</span>
+    <div className="flex items-center gap-1.5 tabular-nums text-xs" title={title}>
+      <Icon className={cn("size-3.5 shrink-0", iconClassName)} strokeWidth={1.5} aria-hidden="true" />
+      <span className={textClassName}>{formatShortTableDate(value)}</span>
+      {srText && <span className="sr-only">{srText}</span>}
     </div>
   );
 }
@@ -298,7 +279,6 @@ export function areTaskRowPropsEqual(
   if (prev.task.id !== next.task.id) return false;
   if (prev.task.title !== next.task.title) return false;
   if (prev.task.status !== next.task.status) return false;
-  if (prev.task.progressPercent !== next.task.progressPercent) return false;
   if (prev.task.dueDate !== next.task.dueDate) return false;
   if (prev.task.priority !== next.task.priority) return false;
   if (prev.task.leadAssigneeId !== next.task.leadAssigneeId) return false;
@@ -338,7 +318,7 @@ export const TaskRow = React.memo(function TaskRow({
   isActive = false,
   isPreviewing = false,
   density = "comfortable",
-  visibleColumns = { priority: true, subtasks: true, progress: true },
+  visibleColumns = { priority: true, subtasks: true, status: true },
   showSelection = false,
   canAssign = false,
   selectedAcademicMonth,
@@ -693,39 +673,42 @@ export const TaskRow = React.memo(function TaskRow({
         </td>
       )}
 
-      {/* 5. Hạn Column */}
+      {/* Bắt đầu Column */}
+      {visibleColumns?.startDate === true && (
+        <td className={TASK_DATE_CELL_CLASS}>
+          {task.startDate ? (
+            <TaskDateValue
+              value={task.startDate}
+              icon={CalendarDays}
+              iconClassName="text-muted-foreground/70"
+              textClassName="text-muted-foreground"
+              title={formatTableDate(task.startDate)}
+            />
+          ) : (
+            <span className="text-muted-foreground/50 text-xs">-</span>
+          )}
+        </td>
+      )}
+
+      {/* Hạn Column */}
       {visibleColumns?.dueDate !== false && (
-        <td className="w-[110px] align-middle whitespace-nowrap pl-2.5 pr-4 sm:pr-5 py-2 text-right relative group/due">
-          <div
-            className="flex flex-col items-end gap-0.5 cursor-pointer hover:opacity-80 transition-opacity"
-            title="Nhấp để đổi hạn hoàn thành"
-          >
+        <td className={cn(TASK_DATE_CELL_CLASS, "relative group/due")}>
+          <div className="cursor-pointer hover:opacity-80 transition-opacity" title="Nhấp để đổi hạn hoàn thành">
             {task.dueDate ? (
-              <span
-                className="inline-flex items-center gap-1.5 tabular-nums text-xs"
+              <TaskDateValue
+                value={task.dueDate}
+                icon={DueIcon}
+                iconClassName={
+                  dueTone === "danger"
+                    ? "text-rose-600"
+                    : dueTone === "warn"
+                    ? "text-amber-600"
+                    : "text-muted-foreground/70"
+                }
+                textClassName={dueTone === "muted" ? "text-muted-foreground font-semibold" : "text-foreground font-semibold"}
                 title={`${formatTableDate(task.dueDate)} · ${dueHint}`}
-              >
-                <DueIcon
-                  className={cn(
-                    "size-3.5 shrink-0",
-                    dueTone === "danger"
-                      ? "text-rose-600"
-                      : dueTone === "warn"
-                      ? "text-amber-600"
-                      : "text-muted-foreground/70"
-                  )}
-                  strokeWidth={1.5}
-                  aria-hidden="true"
-                />
-                <span
-                  className={cn(
-                    dueTone === "muted" ? "text-muted-foreground" : "text-foreground font-medium"
-                  )}
-                >
-                  {formatShortTableDate(task.dueDate)}
-                </span>
-                <span className="sr-only">{dueHint}</span>
-              </span>
+                srText={dueHint}
+              />
             ) : (
               <span className="text-muted-foreground/50 text-xs">-</span>
             )}
@@ -733,38 +716,34 @@ export const TaskRow = React.memo(function TaskRow({
         </td>
       )}
 
-      {/* 8. Ngày tạo Column */}
+      {/* Ngày tạo Column (đứng sau Hạn) */}
       {visibleColumns?.createdAt === true && (
-        <td className="w-[96px] align-middle whitespace-nowrap px-3 py-2 text-right">
-          <span className="font-mono tabular-nums text-xs text-muted-foreground">
-            {task.createdAt ? formatShortTableDate(task.createdAt) : ""}
-          </span>
+        <td className={TASK_DATE_CELL_CLASS}>
+          {task.createdAt ? (
+            <TaskDateValue
+              value={task.createdAt}
+              icon={CalendarPlus}
+              iconClassName="text-muted-foreground/70"
+              textClassName="text-muted-foreground"
+              title={formatTableDate(task.createdAt)}
+            />
+          ) : (
+            <span className="text-muted-foreground/50 text-xs">-</span>
+          )}
         </td>
       )}
 
-      {/* 7. Trạng thái Column */}
+      {/* Trạng thái Column */}
       {visibleColumns?.status === true && (
-        <td className="w-[130px] align-middle whitespace-nowrap px-3 py-2">
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <td className="w-[180px] align-middle whitespace-nowrap px-3 py-2">
+          <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             {statusLabel === "Trễ hạn" ? (
               <TaskIconStatusOverdue className="size-4 shrink-0 text-rose-600" />
             ) : (
               <TaskStatusCircle status={task.status} />
             )}
-            <span className={cn("truncate", statusLabel === "Trễ hạn" && "text-rose-700")}>{statusLabel}</span>
+            <span className={cn("truncate font-semibold", statusLabel === "Trễ hạn" && "text-rose-700")}>{statusLabel}</span>
           </span>
-        </td>
-      )}
-
-      {/* 6. Tiến độ Column (Linear Progress Ring) */}
-      {visibleColumns?.progress === true && (
-        <td className="w-[90px] align-middle whitespace-nowrap px-3 py-2 text-right">
-          <div
-            className="inline-flex items-center justify-end gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-            title="Nhấp để cập nhật tiến độ"
-          >
-            <CircularProgressRing percent={task.progressPercent ?? 0} />
-          </div>
         </td>
       )}
     </tr>

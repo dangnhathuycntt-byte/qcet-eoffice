@@ -12,6 +12,8 @@ export interface PrioritySignalBarsProps {
   priority?: TaskPriority | string;
   className?: string;
   showLabel?: boolean;
+  /** Ghi đè nhãn truy cập (title và aria-label); mặc định "Độ ưu tiên: …". */
+  ariaLabel?: string;
 }
 
 /**
@@ -25,6 +27,7 @@ export function PrioritySignalBars({
   priority = "NORMAL",
   className,
   showLabel = false,
+  ariaLabel,
 }: PrioritySignalBarsProps) {
   const p = (priority || "NORMAL").toUpperCase();
   const isUrgent = p === "URGENT";
@@ -46,9 +49,9 @@ export function PrioritySignalBars({
         isUrgent ? "text-rose-600" : isHigh ? "text-foreground/70" : "text-muted-foreground",
         className
       )}
-      title={`Độ ưu tiên: ${label}`}
+      title={ariaLabel ?? `Độ ưu tiên: ${label}`}
       role="img"
-      aria-label={`Độ ưu tiên: ${label}`}
+      aria-label={ariaLabel ?? `Độ ưu tiên: ${label}`}
     >
       {isUrgent ? (
         <TaskIconPriorityUrgent className="size-4" />

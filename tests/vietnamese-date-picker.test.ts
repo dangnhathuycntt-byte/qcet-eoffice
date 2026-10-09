@@ -5,6 +5,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { VietnameseDatePicker } from "../src/components/ui/vietnamese-date-picker";
 
 describe("VietnameseDatePicker Component Suite", () => {
+  it("keeps the selected date while allowing a form to opt out of clearing it", () => {
+    const render = (clearable?: boolean) => renderToStaticMarkup(React.createElement(VietnameseDatePicker, {
+      value: "2026-10-09", variant: "input", clearable,
+    }));
+    assert.ok(render().includes('role="button"'), "existing consumers retain the clear affordance");
+    const protectedDate = render(false);
+    assert.ok(protectedDate.includes("09/10/2026"));
+    assert.ok(!protectedDate.includes('role="button"'), "required document dates have no clear affordance");
+  });
   it("renders chip variant with formatted Vietnamese date dd/mm/yyyy", () => {
     const html = renderToStaticMarkup(
       React.createElement(VietnameseDatePicker, {

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // Namespace primitives re-export
 export const Dialog = BaseDialog;
@@ -26,6 +27,8 @@ export interface StandardDialogProps {
   size?: "sm" | "md" | "lg" | "xl" | "full";
   showCloseButton?: boolean;
   showHeader?: boolean;
+  /** compact: nút đóng 44px mobile / 28px desktop, icon 1,5px, mô tả 12px. Mặc định giữ nguyên. */
+  compact?: boolean;
 }
 
 const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
@@ -51,14 +54,15 @@ export function StandardDialog({
   size = "md",
   showCloseButton = true,
   showHeader = true,
+  compact = false,
 }: StandardDialogProps) {
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal keepMounted={open}>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none" />
         <BaseDialog.Popup
           className={cn(
-            "fixed left-1/2 top-[10%] z-40 w-full -translate-x-1/2 outline-none max-h-[85vh] flex flex-col overflow-y-auto",
+            "fixed left-1/2 top-[10%] z-50 w-full -translate-x-1/2 outline-none max-h-[85vh] flex flex-col overflow-y-auto",
             "rounded-2xl border-0 bg-card p-4 sm:p-6 shadow-dialog motion-reduce:transition-none",
             sizeClasses[size],
             className
@@ -71,16 +75,24 @@ export function StandardDialog({
                   {title}
                 </BaseDialog.Title>
                 {showCloseButton && (
-                  <BaseDialog.Close
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
-                    aria-label="Đóng"
-                  >
-                    <X className="h-4 w-4" />
-                  </BaseDialog.Close>
+                  compact ? (
+                    <BaseDialog.Close
+                      render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Đóng" />}
+                    >
+                      <X className="size-4" strokeWidth={1.5} />
+                    </BaseDialog.Close>
+                  ) : (
+                    <BaseDialog.Close
+                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+                      aria-label="Đóng"
+                    >
+                      <X className="h-4 w-4" />
+                    </BaseDialog.Close>
+                  )
                 )}
               </div>
               <BaseDialog.Description
-                className={cn(!description && "sr-only", "text-sm text-muted-foreground pb-2")}
+                className={cn(!description && "sr-only", compact ? "text-xs" : "text-sm", "text-muted-foreground pb-2")}
               >
                 {description || title}
               </BaseDialog.Description>

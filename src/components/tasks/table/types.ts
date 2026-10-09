@@ -39,7 +39,6 @@ export type TaskSortField =
   | "title"
   | "dueDate"
   | "status"
-  | "progress"
   | "leadAssignee"
   | "category"
   | "priority"
@@ -163,10 +162,10 @@ export interface TableColumnVisibility {
   leadAssignee?: boolean;// Phụ trách (Lead)
   dueDate?: boolean;     // Hạn chót (Target date)
   subtasks?: boolean;    // Việc con (Subtasks)
-  progress?: boolean;    // Tiến độ (Progress)
   coAssignees?: boolean; // Phối hợp (Members)
-  status?: boolean;      // Trạng thái (Status)
+  status?: boolean;      // Trạng thái & tiến độ (Status + Progress)
   createdAt?: boolean;   // Ngày tạo (Created)
+  startDate?: boolean;   // Bắt đầu (Start)
   category?: boolean;    // Danh mục (Labels)
 }
 
