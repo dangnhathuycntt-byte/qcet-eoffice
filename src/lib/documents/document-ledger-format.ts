@@ -13,6 +13,15 @@ export function formatLedgerDate(value?: string | null): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
 }
 
+/**
+ * Ngày trong ô bảng: luôn có năm ("25/09/2026"). Chỉ rút gọn "25/09" khi danh sách đang lọc đúng năm đó,
+ * để năm vẫn rõ từ bộ lọc đang hiển thị.
+ */
+export function formatLedgerCellDate(value?: string | null, filterYear?: number): string {
+  const full = formatLedgerDate(value);
+  return full && filterYear && full.endsWith(`/${filterYear}`) ? full.slice(0, 5) : full;
+}
+
 function dayNumber(ymd: string): number {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
   if (!m) return NaN;

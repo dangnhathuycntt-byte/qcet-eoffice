@@ -85,13 +85,13 @@ export function getMobileDueBadge(
   if (diffDays < 0) {
     return {
       label: `Trễ hạn ${Math.abs(diffDays)} ngày`,
-      className: "border-rose-500/20 bg-rose-500/10 text-rose-700 font-semibold",
+      className: "border-destructive/20 bg-danger-soft text-destructive font-semibold",
     };
   }
   if (diffDays === 0) {
     return {
       label: "Hạn hôm nay",
-      className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-semibold",
+      className: "border-destructive/20 bg-danger-soft text-destructive font-semibold",
     };
   }
   const soon = getDueIndicator({
@@ -103,7 +103,7 @@ export function getMobileDueBadge(
   if (soon.tone === "warn") {
     return {
       label: `Còn ${diffDays} ngày`,
-      className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-medium",
+      className: "border-warning/20 bg-warning/10 text-warning font-medium",
     };
   }
   return {
@@ -126,20 +126,20 @@ export function getMobilePriorityBadgeConfig(
     case "KHAN_CAP":
       return {
         label: "Khẩn cấp",
-        className: "border-rose-500/30 bg-rose-500/15 text-rose-700 font-semibold",
+        className: "border-destructive/20 bg-danger-soft text-destructive font-semibold",
       };
     case "HIGH":
     case "CAO":
       return {
         label: "Ưu tiên cao",
-        className: "border-orange-500/30 bg-orange-500/15 text-orange-700 font-medium",
+        className: "border-border bg-secondary text-foreground font-medium",
       };
     case "MEDIUM":
     case "NORMAL":
     case "TRUNG_BINH":
       return {
         label: "Trung bình",
-        className: "border-amber-500/30 bg-amber-500/15 text-amber-700 font-medium",
+        className: "border-border bg-secondary text-muted-foreground font-medium",
       };
     case "LOW":
     case "THAP":
@@ -299,7 +299,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
       </div>
 
       {/* Title */}
-      <h3 className="text-[14px] font-semibold text-foreground leading-snug line-clamp-2">
+      <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
         {title}
       </h3>
 
@@ -308,7 +308,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
         <div className="flex items-center gap-1">
           <span
             data-slot="subtask-dri-badge"
-            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums"
+            className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 border border-sky-200/80 px-2 py-0.5 font-mono text-xs font-semibold tabular-nums"
           >
             Phụ trách {(task as any).viewerContext.matchedSubtaskCount} việc con
           </span>

@@ -63,8 +63,9 @@ export async function GET(req: NextRequest) {
       }
 
       let fileRelPath = attachment.fileUrl;
-      if (fileRelPath.startsWith("http://") || fileRelPath.startsWith("https://")) {
-        return NextResponse.redirect(fileRelPath);
+      if (/^[a-z][a-z0-9+.-]*:/i.test(fileRelPath) || fileRelPath.startsWith("//")) {
+        // Liên kết ngoài không được chuyển hướng qua hệ thống (tránh open redirect).
+        throw new NotFoundError("Tệp đính kèm là liên kết ngoài, không tải qua hệ thống");
       }
 
       if (fileRelPath.startsWith("/api/files/")) {

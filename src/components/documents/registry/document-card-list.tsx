@@ -139,7 +139,8 @@ export function DocumentCardList({
         const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
         const stepStatus = { new: "NOT_STARTED", progress: "IN_PROGRESS", review: "WAITING_APPROVAL", done: "COMPLETED" }[step.kind];
         const typeLabel = getDocTypeLabel(doc.type);
-        const displayCode = doc.documentNumber || doc.id;
+        const displayCode = doc.documentNumber || "";
+        const labelCode = displayCode || doc.summary;
         const isSelectedRow = selectedIds.has(doc.id);
         const isCurrentActive = selectedDocument?.id === doc.id;
 
@@ -179,7 +180,7 @@ export function DocumentCardList({
                       onChange={(e) => {
                         onToggleSelect?.(doc.id, (e.nativeEvent as MouseEvent)?.shiftKey);
                       }}
-                      aria-label={`Chọn văn bản ${displayCode}`}
+                      aria-label={`Chọn văn bản ${labelCode}`}
                       className="size-4 rounded border-border/80 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
                     />
                   </div>
@@ -262,7 +263,7 @@ export function DocumentCardList({
                   size="sm"
                   onClick={() => onViewPdf?.(doc)}
                   className="text-primary"
-                  aria-label={`Xem PDF văn bản ${displayCode}`}
+                  aria-label={`Xem PDF văn bản ${labelCode}`}
                 >
                   <FileText strokeWidth={1.5} />
                   <span>Xem PDF</span>
@@ -274,7 +275,7 @@ export function DocumentCardList({
                 variant="secondary"
                 size="sm"
                 onClick={() => onSelectDocument?.(doc)}
-                aria-label={`Chi tiết văn bản ${displayCode}`}
+                aria-label={`Chi tiết văn bản ${labelCode}`}
               >
                 <span>Chi tiết</span>
                 <ChevronRight strokeWidth={1.5} />

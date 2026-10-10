@@ -62,6 +62,8 @@ const ACTION_LABELS: Record<string, string> = {
   DOCUMENT_ASSIGNED_NUMBER: "Cấp số văn bản đi chính thức",
   DOCUMENT_ISSUED: "Phát hành văn bản",
   DOCUMENT_DELIVERED: "Chuyển giao văn bản đến nơi nhận",
+  DOCUMENT_UPDATED: "Cập nhật thông tin văn bản",
+  DOCUMENT_ATTACHMENT_ADDED: "Bổ sung tệp đính kèm",
 };
 
 export async function GET(

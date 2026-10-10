@@ -330,7 +330,7 @@ export function DocumentQuickEntryModal({
 
             <div>
               <label htmlFor="qe-issued-date" className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Ngày ban hành <span className="text-rose-500">*</span>
+                Ngày ban hành <span className="text-destructive">*</span>
               </label>
               <VietnameseDatePicker
                 id="qe-issued-date"
@@ -581,7 +581,7 @@ export function DocumentQuickEntryModal({
 
           {/* Feedback messages */}
           {errorMessage && (
-            <div role="alert" className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700">
+            <div role="alert" className="flex items-center gap-2 rounded-lg bg-danger-soft border border-destructive/20 p-3 text-xs text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
               <span>{errorMessage}</span>
             </div>

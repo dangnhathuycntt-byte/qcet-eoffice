@@ -198,7 +198,7 @@ export function getSlaBadgeStatus(
     const overdueDays = Math.abs(daysRemaining);
     return {
       label: `Trễ hạn ${overdueDays} ngày`,
-      colorClass: "text-rose-700 bg-rose-50 border-rose-200/60 font-medium",
+      colorClass: "text-destructive bg-danger-soft border-destructive/20 font-medium",
       isOverdue: true,
       isToday: false,
       daysRemaining,
@@ -210,7 +210,7 @@ export function getSlaBadgeStatus(
   if (daysRemaining === 0) {
     return {
       label: "Hôm nay",
-      colorClass: "text-amber-700 bg-amber-50 border-amber-200/60 font-medium",
+      colorClass: "text-warning bg-warning/10 border-warning/20 font-medium",
       isOverdue: false,
       isToday: true,
       daysRemaining,

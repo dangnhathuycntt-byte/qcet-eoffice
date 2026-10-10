@@ -1184,7 +1184,7 @@ export function CreateTaskModal({
                           <Flag
                             className={cn(
                               "size-3 shrink-0",
-                              PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.iconColor || "text-blue-500"
+                              PRIORITY_OPTIONS.find((opt) => opt.value === (formData.priority || "MEDIUM"))?.iconColor || "text-muted-foreground"
                             )}
                             strokeWidth={1.5}
                           />

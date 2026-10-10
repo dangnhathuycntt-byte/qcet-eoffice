@@ -63,6 +63,9 @@ export interface CreateDocumentPayload {
 
 export interface UpdateDocumentPayload {
   summary?: string;
+  /** Số/ký hiệu và cơ quan ban hành: cho phép văn thư sửa sai sót khi vào sổ. */
+  originalNumber?: string | null;
+  issuingAuthority?: string | null;
   category?: string;
   urgency?: DocumentUrgency;
   securityLevel?: DocumentSecurityLevel;
@@ -147,7 +150,14 @@ const defaultInclude = {
     },
   },
   incomingWorkflow: {
-    include: { leadUnit: { select: { id: true, name: true, code: true } } },
+    include: {
+      leadUnit: { select: { id: true, name: true, code: true } },
+      // Người phụ trách và thời điểm phân công: dùng cho luân chuyển và phần "Phụ trách" ở Quick View / Full Page
+      unitAssignments: {
+        include: { driUser: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   },
   outgoingWorkflow: true,
   signatures: true,
@@ -521,6 +531,19 @@ export async function updateDocument(
   const data: any = {};
 
   if (payload.summary !== undefined) data.summary = payload.summary;
+  // Hai cột bắt buộc trong DB: không cho xóa trống (tránh lỗi 500 từ Prisma)
+  if (payload.originalNumber !== undefined) {
+    if (!payload.originalNumber?.trim()) {
+      throw new ValidationError("Số/ký hiệu văn bản không được để trống.", { originalNumber: ["Bắt buộc"] });
+    }
+    data.originalNumber = payload.originalNumber.trim();
+  }
+  if (payload.issuingAuthority !== undefined) {
+    if (!payload.issuingAuthority?.trim()) {
+      throw new ValidationError("Cơ quan ban hành không được để trống.", { issuingAuthority: ["Bắt buộc"] });
+    }
+    data.issuingAuthority = payload.issuingAuthority.trim();
+  }
   if (payload.category !== undefined) data.category = payload.category;
   if (payload.urgency !== undefined) data.urgency = payload.urgency;
   if (payload.securityLevel !== undefined) data.securityLevel = payload.securityLevel;

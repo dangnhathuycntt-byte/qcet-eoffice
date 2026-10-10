@@ -210,6 +210,43 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       assert.ok(notif.body.includes(adminUser.name));
     });
 
+    test('only notifies executors, never the actor, assigner or followers', async () => {
+      const task = await prisma.task.create({
+        data: {
+          code: `NV-SCOPE-${Date.now()}`,
+          title: 'Kiểm tra phạm vi người nhận thông báo giao việc',
+          leadUnitId: testDepartmentId,
+          dueDate: new Date('2026-11-25T17:00:00Z'),
+          academicMonth: 11,
+          academicYear: '2026-2027',
+          createdById: adminUser.id,
+        },
+      });
+      createdTaskIds.push(task.id);
+
+      await prisma.taskActor.createMany({
+        data: [
+          { taskId: task.id, userId: adminUser.id, role: TaskActorRole.ASSIGNER },
+          { taskId: task.id, userId: deptHeadUser.id, role: TaskActorRole.FOLLOWER },
+          { taskId: task.id, userId: staffUser.id, role: TaskActorRole.DRI, isPrimaryDRI: true },
+        ],
+      });
+
+      const result = await dispatchTaskAssignedPush({
+        task,
+        actorName: adminUser.name,
+        actorId: adminUser.id,
+      });
+
+      assert.deepStrictEqual(result.notifiedUserIds, [staffUser.id]);
+      const created = await prisma.notification.findMany({
+        where: { linkHref: { contains: task.id } },
+        select: { id: true, userId: true },
+      });
+      createdNotificationIds.push(...created.map((n) => n.id));
+      assert.deepStrictEqual(created.map((n) => n.userId), [staffUser.id]);
+    });
+
     test('gracefully handles task with no assignees', async () => {
       const result = await dispatchTaskAssignedPush({
         task: {

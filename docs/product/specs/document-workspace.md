@@ -1,5 +1,7 @@
 # SPEC — Document Workspace (Quick View + Full Page + Multi-file Viewer)
 
+> **Bổ sung UI/UX ngày 2026-10-09:** [§17 — Danh sách và Quick View](#document-uiux-20261009) là đề xuất dựa trên hai ảnh người dùng gửi, đối chiếu working tree và nghiên cứu nguồn chính thức. Đã triển khai P0 + P1 trên working tree (xem §17.12); các thay đổi khác với quyết định đã duyệt được nêu tại §17.11. Các kết quả kiểm thử ở §16 thuộc lần triển khai trước.
+
 > Trạng thái: **v4 — kiến trúc đã duyệt; C1 (phân quyền) đã sửa và kiểm thử, chưa commit; WS0 đã ghi baseline; tiếp theo WS-E2E** (2026-10-09). Chưa triển khai WS1–WS6.
 > Quy trình: Codex review kế hoạch và quyết định ("bộ não"); Claude thực thi và kiểm thử.
 > Ký hiệu: **[ĐÃ KIỂM]** = đọc trực tiếp từ code; **[GIẢ THUYẾT]** = chưa kiểm chứng, cần đo/kiểm ở WS0; **[v2]** = thêm/sửa theo phản hồi duyệt lần 1; **[v3]** = thêm/sửa theo phản hồi duyệt lần 2.
@@ -275,7 +277,7 @@ Kiểm chứng (bắt buộc, thực tế): unit test `planPaneHistory`; E2E E4 
 - **Full Page:** không có khối danh sách; tên tệp ở đầu viewer là bộ chọn, cùng popover với nút "Tệp N" trên rail.
 - Popover "Tệp N": rộng 256px, hàng ≤ 32px, tên truncate + `title` đầy đủ, dòng phụ `số trang · dung lượng`, ✓ tệp đang xem; ↑/↓/Enter/Esc; cao tối đa ~60vh có cuộn.
 - Vạch tệp trên rail: giữ khi 2 ≤ N ≤ 8; N > 8 chỉ còn nút "Tệp N" (D1).
-- Tệp không phải PDF/ảnh → "Không xem trước được loại tệp này" + Tải về. Ảnh → zoom.
+- Tệp không phải PDF/ảnh → thông báo nêu định dạng (ví dụ "Tệp Word (.docx) chưa xem trước được trong trình duyệt") + Tải về, kèm "Xem <tệp PDF/ảnh khác>" khi có; không có rail công cụ xem. Ảnh → zoom.
 - Trạng thái: đang tải trình xem / đang tải tệp / không có quyền / không tìm thấy / PDF hỏng / URL không an toàn, mỗi trạng thái có hành động (Thử lại, Tải về) khi hợp lý.
 - **Bất biến:** tên tệp hiển thị, `aria-current` trong danh sách/menu, `?file=` và nội dung canvas luôn cùng `attachmentId`.
 
@@ -410,7 +412,7 @@ Kết hợp **Chrome visual verification** (claude-in-chrome): pane 440/640/1100
 | D12 | `@playwright/test` cho E2E smoke + Chrome visual verification | **Đã duyệt** — chạy local, DB test riêng, fixture xác định, auth state không commit (§12.2); thêm job CI là quyết định riêng |
 | D13 | Giữ cách chọn nút theo role ở Full Page văn bản đến; quyền kiểm ở server | **Đã duyệt**, WS0 xác minh (§6.6) |
 | D14 | Hằng số `LIST_MIN` 480px, `PANE_MIN` 440px (§6.1) | **Đã duyệt làm giá trị ban đầu**; hiệu chỉnh theo đo đạc WS0 |
-| D15 | Danh sách tệp Quick View: mở khi N ≤ 5, thu gọn khi N > 5; ghi nhớ lựa chọn người dùng; Full Page dùng bộ chọn tệp + rail | **Đã duyệt (v3)** |
+| D15 | Danh sách tệp Quick View: mở khi N ≤ 5, thu gọn khi N > 5; ghi nhớ lựa chọn người dùng; Full Page dùng bộ chọn tệp + rail | **Đã duyệt (v3); thay ngày 2026-10-10** theo yêu cầu người dùng làm gọn vùng đầu: bỏ danh sách tệp riêng, chọn tệp bằng nút "Tệp N" (có icon loại tệp); khóa `qcet_document_files_pref` không còn dùng |
 | D16 | Runtime: ưu tiên **Node 24 LTS**; nếu không tương thích thì Node 22 LTS | **Đã duyệt**; Node 24.18 + npm 11: `npm ci`, `prisma generate`, `tsc`, `next build` đều OK trong worktree tạm. Chưa đổi `.nvmrc`/`Dockerfile`/`engines` (việc riêng, cần xác nhận khi thực hiện). Docker: không làm |
 | D17 | Quyền đọc qua nhiệm vụ liên kết | **Đã chốt (v4):** `Task.scope = SCHOOL` và người tạo nhiệm vụ KHÔNG cấp quyền đọc văn bản/tệp/nhật ký; chỉ thành viên đơn vị chủ trì nhiệm vụ liên kết (đơn vị xử lý) được tính. Danh sách thu hẹp theo chi tiết, không mở rộng chi tiết để khớp danh sách |
 | S-1 | Kiểm quyền khi đổi `linkedTaskId` | **Đã triển khai (v4):** phải đọc được nhiệm vụ đích, nhiệm vụ chưa gắn văn bản khác, ghi `DOCUMENT_LINKED_TASK_CHANGED`, tất cả trong transaction có khóa |
@@ -548,3 +550,256 @@ Môi trường: Node 22.23.2, npm 10.9.8; DB test `qcet_test` (runner suy ra t�
 - Chưa đo heap khi đổi 10 tệp × 5 vòng và số request khi quay lại tệp cũ (mục WS0 hiệu năng); chưa kiểm Safari/iOS (Fullscreen API dự phòng sang Full Page chưa chạy trên thiết bị thật).
 - Chưa đổi `.nvmrc`/`Dockerfile`/`engines` sang Node 24 (D16); chưa chạy test suite dưới Node 24; không làm Docker.
 - Chưa commit/push/merge: C1 đã staged (15 file), phần còn lại ở working tree theo nhóm C2, C5, C3, C4, C6 (§15.4); `package.json`/`package-lock.json` có thêm `@playwright/test`, `next.config.ts` thêm `distDir` theo `NEXT_DIST_DIR`.
+
+---
+
+<a id="document-uiux-20261009"></a>
+
+## 17. Spec cải thiện UI/UX danh sách và Quick View văn bản
+
+**Trạng thái:** Đã triển khai P0 + P1 theo yêu cầu người dùng (09/10/2026), chưa commit; UX1–UX6 được thực hiện theo yêu cầu đó. **Ngày:** 09/10/2026. **Phạm vi:** danh sách `/documents`, Quick View và phần trình xem tệp dùng chung chịu ảnh hưởng trực tiếp. Văn bản đến là bề mặt tham chiếu từ ảnh; văn bản đi và tờ trình dùng cùng quy tắc trình bày, giữ nghiệp vụ riêng.
+
+**Kết quả cần đạt:** người dùng nhận diện văn bản, thấy mức khẩn/hạn/bước xử lý, mở đọc tệp và chuyển sang văn bản tiếp theo với ít cuộn và ít mất ngữ cảnh. Ưu tiên sửa thứ bậc thông tin, mật độ và khả năng khám phá thao tác. Không thêm dashboard, metric, trạng thái nghiệp vụ, API hay quyền mới từ các ví dụ thiết kế.
+
+### 17.1. Căn cứ và vấn đề quan sát được
+
+Ảnh 1: danh sách thu hẹp cạnh Quick View, văn bản số đến 0011, có 3 tệp. Ảnh 2: danh sách toàn vùng làm việc, có 5 kết quả. Đây là dữ liệu của ảnh để phân tích, không phải fixture hay số đếm mặc định của sản phẩm. Ảnh chụp gồm menu hệ điều hành, cửa sổ và Dock; không suy CSS px trực tiếp từ pixel ảnh Retina.
+
+| ID | Quan sát và mức chắc chắn | Tác động | Hướng xử lý |
+|---|---|---|---|
+| O1 | **Ảnh 1:** PDF chỉ bắt đầu sau một khối thông tin chiếm khoảng nửa chiều cao pane. **Code:** summary, thao tác, nhiệm vụ, thuộc tính, luân chuyển và tệp đều đứng trước viewer. | Đọc văn bản cần cuộn qua thông tin phụ; vùng đọc ban đầu thấp. | Thu gọn thuộc tính/luân chuyển, giảm khoảng cách, giữ thông tin quyết định ở đầu pane. |
+| O2 | **Ảnh 1:** rail công cụ kéo xuống sát đáy; phần tệp nằm rất thấp. **Code:** mọi nhóm xếp dọc, không có phân bổ theo chiều cao khả dụng. | Khó tìm điều khiển tệp và dùng trên cửa sổ thấp. | Bộ chọn tệp có nhãn; rail tự thu gọn nhóm phụ theo chiều cao. |
+| O3 | **Ảnh 1:** nhiều mức khẩn dùng biểu tượng tương tự khi mất nhãn. **Code:** mức vừa chỉ hiện icon, thông tin đầy đủ qua `title`. | Không phân biệt nhanh “Hỏa tốc” và “Thượng khẩn”; phụ thuộc hover. | Tooltip cả hover/focus, tên truy cập đầy đủ, nhãn luôn có trong Quick View. |
+| O4 | **Hai ảnh:** hàng có hai dòng; đơn vị dài tiếp tục xuống dòng. **Code:** `min-h-10 py-1.5`, trích yếu `break-words`. | Chiều cao hàng biến thiên, chưa đạt chuẩn compact ≤32px của repo. | Hàng desktop một dòng 32px; thông tin đầy đủ ở Quick View và tooltip có focus. |
+| O5 | **Ảnh 2:** ngày độc lập hiển thị `09/10`, không có năm ngay trong ngữ cảnh. | Dễ nhầm văn bản khác năm. | Ngày độc lập `dd/MM/yyyy`; chỉ rút gọn khi có phạm vi năm hiển thị rõ. |
+| O6 | **Ảnh 1:** “Chi tiết”, “Thuộc tính”, “Luân chuyển”, “Nhiệm vụ liên kết” chia thông tin thành nhiều điểm xem. | Khó biết nên mở mục nào; metadata bị trải dài. | Một mục “Thông tin” có thuộc tính và luân chuyển; nhiệm vụ liên kết thành một hàng. |
+| O7 | **Code:** hàng dùng `aria-selected={selected || isOpen}`. | Trộn “đang xem” và “đã chọn để thao tác hàng loạt”. | Tách checkbox selection khỏi `aria-current` của văn bản đang xem. |
+| O8 | **Code:** ngưỡng pane = 480 + 440 + 22 = 942px; hysteresis cho phép giữ pane xuống 918px. | Ở workspace 930px, pane tối thiểu 440px chỉ để lại 468px cho danh sách; hai điều kiện tối thiểu mâu thuẫn. | Giữ ngưỡng vật lý 942px khi thoát pane; hysteresis chỉ trì hoãn việc quay lại pane. |
+
+Khoảng trắng dưới 5 kết quả ở ảnh 2 là hệ quả hợp lý của tập dữ liệu ngắn. Không thêm thẻ thống kê hoặc kéo giãn hàng để lấp chỗ trống. Chưa đo thao tác, thời gian tải, độ tương phản hay focus trong trình duyệt ở lần viết spec này; các vấn đề tương tác chưa quan sát trực tiếp là mục cần kiểm chứng.
+
+### 17.2. Nghiên cứu web và cách áp dụng
+
+Nguồn được đọc ngày 09/10/2026. Đây là căn cứ cho nguyên tắc tương tác; kích thước và bố cục đề xuất bên dưới là quyết định thiết kế riêng cho QCET.
+
+| Nguồn chính thức | Kết luận liên quan | Áp dụng vào spec |
+|---|---|---|
+| [IBM Carbon — Data table](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines) | Có mức hàng compact 32px; toolbar chứa tìm kiếm/lọc; selection có thao tác riêng. | Hàng 32px, thanh công cụ gọn, checkbox độc lập với mở xem. |
+| [W3C APG — Modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) | Modal cần quản lý focus, nền không tương tác và trả focus khi đóng. | Overlay hẹp có focus trap; pane desktop vẫn cho phép dùng danh sách. |
+| [W3C WCAG 2.2 — Target size minimum](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) | Mục tiêu tương tác tối thiểu 24×24 CSS px, có các ngoại lệ về khoảng cách/ngữ cảnh. | Control desktop 28px; icon nhỏ không đồng nghĩa vùng bấm nhỏ. |
+| [W3C WCAG 2.2 — Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html) | Nội dung cần reflow ở chiều rộng tương đương 320 CSS px; ngoại lệ bảng không bao trùm toolbar. | Kiểm tra riêng bảng, toolbar và pane; không để toàn trang cuộn ngang. |
+| [Adobe Acrobat — Adjusting PDF views](https://helpx.adobe.com/acrobat/using/adjusting-pdf-views.html) | Phân biệt vừa chiều rộng, vừa trang và kích thước thực. | Làm rõ ý nghĩa zoom hiện tại; không gọi vừa chiều rộng là kích thước thực 100%. |
+
+Không lấy mật độ, màu sắc hay toàn bộ toolbar của các sản phẩm tham khảo để thay token QCET.
+
+### 17.3. Thứ bậc thông tin và tiêu chí thiết kế
+
+1. **Danh sách trả lời:** văn bản nào, khẩn đến đâu, hạn nào, đang ở bước nào. Cơ quan ban hành/chủ trì phục vụ đối chiếu khi đủ chiều rộng.
+2. **Đầu Quick View trả lời:** đang xem văn bản nào, ai ban hành, trạng thái/hạn và thao tác nào được phép.
+3. **Nội dung Quick View ưu tiên tệp.** Thuộc tính đầy đủ và lịch sử mở theo nhu cầu; dữ liệu ảnh hưởng quyết định như mức khẩn, hạn và bước xử lý vẫn hiển thị ngay.
+4. **Một giá trị có một nơi chính.** Không lặp cơ quan/ngày ban hành ở cả summary, thuộc tính đang mở và header viewer cùng lúc.
+5. **Bản đọc và bản xử lý cùng ngữ cảnh.** Chỉnh sửa, thêm tệp và workflow dùng quyền hiện có; thao tác thành công cập nhật danh sách và chi tiết cùng văn bản.
+
+Mốc kiểm nghiệm bố cục: tại viewport **1440×900 CSS px**, browser zoom 100%, pane rộng 640px, tiêu đề tối đa 2 dòng và 3 tệp đang mở theo D15, phần viewer nhìn thấy ban đầu đạt **ít nhất 45% chiều cao bên trong pane**. Đo từ mép trên nội dung tệp đến đáy pane; không tính header tên tệp và rail. Đây là mục tiêu nghiệm thu, chưa phải kết quả đo. Tên dài, nhiều tệp hoặc người dùng chủ động mở thông tin có thể làm vùng đọc thấp hơn; không tự đóng các mục họ đã mở để đạt tỷ lệ.
+
+### 17.4. Danh sách văn bản
+
+#### A. Thanh đầu và công cụ
+
+- Hàng đầu: tên danh sách + số kết quả thực; hành động tạo/vào sổ nằm bên phải theo quyền. Giữ tên hiện có theo loại văn bản.
+- Hàng công cụ: ô tìm “Tìm số, ký hiệu, trích yếu…” + `Bộ lọc` + `Hiển thị`. Ô tìm rộng khoảng 280px khi đủ chỗ, co theo vùng danh sách; cả ba dùng control cao 28px.
+- Ở bảng hẹp, hai nút phụ có thể chỉ còn icon nhưng phải có tooltip và tên truy cập. Khi có bộ lọc, hiển thị số bộ lọc thực và chip có thể bỏ riêng; không đếm search hai lần.
+- Dùng cơ chế tìm kiếm/URL hiện có. Khi tải kết quả mới giữ khung bảng ổn định, đánh dấu đang cập nhật; không trình bày số đếm cũ như số của truy vấn mới.
+- `Hiển thị` phản ánh cột người dùng đã chọn và khả năng hiển thị theo chiều rộng. Cột tự ẩn do thiếu chỗ không bị ghi thành lựa chọn “đã tắt”.
+- Chưa thêm sắp xếp mới nếu API/URL chưa hỗ trợ. Header chỉ có affordance sắp xếp ở cột thực sự hoạt động.
+
+#### B. Hàng và cột
+
+**Desktop:** header và hàng cao 40px ở zoom 100% (cập nhật 10/10/2026 theo yêu cầu người dùng, cỡ medium của Carbon; bản đầu là 32px); nội dung chính `text-compact` 13px, metadata/nhãn `text-xs` 12px. Một dòng, căn giữa theo chiều dọc, gap cột 8px, padding ngang 8px. Không dùng hai dòng chữ rồi ép vào chiều cao 32px.
+
+| Độ rộng container bảng | Cột mặc định | Quy tắc |
+|---|---|---|
+| 480–719px | Chọn 24 · Văn bản co giãn · Hạn 96 · Bước xử lý 112 | Mức khẩn khác thường hiện trong ô văn bản bằng icon có nhãn truy cập. Số đến/ký hiệu đầy đủ xem ở pane/tooltip; ưu tiên trích yếu. |
+| 720–1099px | Thêm Mức khẩn 28 · Ngày ban hành 96 | Số đến là tiền tố gọn trong ô văn bản khi còn đủ chỗ cho trích yếu. Cơ quan/chủ trì nằm trong Quick View. |
+| ≥1100px | Thêm Cơ quan ban hành 144 · Chủ trì 144; Mức khẩn 112 | Hiện nhãn mức khẩn. Cơ quan/chủ trì một dòng, cắt cuối; ký hiệu văn bản là metadata cùng dòng nếu đủ chỗ. |
+
+Các con số là CSS px khởi điểm để kiểm bằng font Be Vietnam Pro; không phải breakpoint theo viewport. Với cấu hình hẹp mặc định tại 480px: `480 − 16 padding − 24 gap − 24 chọn − 96 hạn − 112 bước = 208px` cho ô văn bản. Header và body dùng chung định nghĩa cột; bật/tắt cột không để lại track rỗng.
+
+- Trích yếu không tự xuống dòng ở desktop. Tooltip hiện toàn văn trên hover và focus, Quick View hiển thị đầy đủ khi mở rộng tiêu đề. Không chỉ dựa vào thuộc tính HTML `title`.
+- Số đến và số/ký hiệu văn bản là hai dữ liệu khác nhau, không gộp thành một mã. Không cắt số đến thành giá trị có thể hiểu nhầm.
+- Dữ liệu ngày độc lập dùng `dd/MM/yyyy` với số tabular. Nếu có bộ lọc năm hiển thị rõ và dữ liệu bị giới hạn đúng năm đó, có thể dùng `dd/MM` trong bảng; Quick View vẫn hiện năm.
+- Giá trị rỗng hiển thị `—`; tên truy cập phải nói rõ “Chưa có hạn xử lý” hoặc “Chưa có đơn vị chủ trì”. Không biến giá trị thiếu thành trạng thái nghiệp vụ.
+- Giữ cách phân loại mức khẩn và bước xử lý của domain. Dùng icon trạng thái chung; màu khẩn/hạn không thay thế nhãn. Không tự áp quy tắc hạn của nhiệm vụ sang văn bản.
+
+#### C. Xem, chọn nhiều và trạng thái hàng
+
+| Hành động/trạng thái | Hành vi đề xuất |
+|---|---|
+| Click vùng nội dung hoặc Enter trên hàng | Mở Quick View; click hàng đang mở giữ nguyên. |
+| Click/Space trên checkbox | Chọn hoặc bỏ chọn để thao tác hàng loạt; không mở/đổi Quick View. |
+| Đang xem | `aria-current`, nền `bg-selected`; không tự tick checkbox. |
+| Đã chọn nhiều | Checkbox checked và thanh hành động hiện số chọn; có thể đồng thời là hàng đang xem. |
+| Hover/focus | Hover dùng token riêng; focus ring vẫn thấy trên nền đang chọn. |
+| Đổi trang/bộ lọc | Giữ chính sách reset selection theo `listKey`; pane đang mở giữ văn bản hiện tại. |
+| Văn bản trong pane không thuộc tập kết quả mới | Hiện dòng gọn “Văn bản đang xem nằm ngoài kết quả hiện tại”; không tự chuyển sang hàng đầu tiên. |
+
+“Chọn tất cả” chỉ chọn các hàng trên trang hiện tại theo hành vi đang có; nhãn truy cập diễn đạt đúng phạm vi. Không bổ sung chọn toàn bộ kết quả qua nhiều trang trong lần cải thiện này. Bảng dưới 480px dùng cách trình bày responsive hiện có, chỉnh cùng thứ bậc thông tin; không ép cấu hình 4 cột vào màn hình điện thoại.
+
+### 17.5. Quick View: cấu trúc đề xuất
+
+```text
+┌ Danh sách văn bản ──────────────┐  ┌ Văn bản đến · Số đến {số} ───── [↗][⋯][×] ┐
+│ Tìm…            Lọc  Hiển thị │  │ Trích yếu                                  │
+│                               │  │ Cơ quan · Số/ký hiệu · Ban hành dd/MM/yyyy   │
+│ Văn bản  Hạn     Bước xử lý   │  │ Bước xử lý · Mức khẩn · Hạn dd/MM/yyyy       │
+│ ▸ hàng đang xem              │  │ [Thao tác được phép]              [Sửa]     │
+│   hàng khác                  │  │ Nhiệm vụ liên kết: {tên hoặc trạng thái rỗng}│
+│                               │  │ ▸ Thông tin                                 │
+│                               │  │ ▾ Tệp đính kèm {N}                          │
+│                               │  │   {các tệp — theo D15}                     │
+│                               │  ├ {Tên tệp đang xem}                  [Tệp N]┤
+│                               │  │                                            │
+│                               │  │               Nội dung tệp          rail  │
+│                               │  │                                            │
+└───────────────────────────────┘  └────────────────────────────────────────────┘
+```
+
+Wireframe mô tả vị trí, không cố định nghiệp vụ hay số lượng nút. `{…}` là dữ liệu thực; chỉ dựng thành phần khi có dữ liệu/quyền tương ứng.
+
+#### A. Header và summary
+
+- Header cao 40px, sticky ở đầu pane. Bên trái loại văn bản + số đăng ký; bên phải `Mở trang đầy đủ`, menu `Thao tác khác`, `Đóng` (control 28px). Menu chứa `In phiếu văn bản`, chữ ký số khi có; không làm người dùng hiểu nút in phiếu là in PDF đang xem.
+- Trích yếu dùng 16px/24px, weight 600, mặc định tối đa 2 dòng; `Xem thêm` khi thực sự tràn. Đây là cỡ tiêu đề, không áp cho nội dung bảng. Đổi văn bản đưa tiêu đề về trạng thái thu gọn.
+- Metadata dùng 12px; tối đa hai hàng logic: định danh/ban hành và trạng thái/khẩn/hạn. Cho wrap khi hẹp; không cắt mất nhãn khẩn hay hạn để giữ một dòng.
+- Padding ngang nội dung 16px, khoảng cách giữa các nhóm 8px, giữa nhãn và giá trị 4px. Dùng token hiện có; rà đối chiếu với sidebar và bảng cạnh pane.
+- Mục `Chi tiết` dạng popover hiện tại được hợp nhất vào `Thông tin`, tránh hai lối mở cùng thuộc tính. Dữ liệu vẫn từ một view model.
+
+#### B. Thao tác và nhiệm vụ liên kết
+
+- Một thao tác nghiệp vụ chính khi có action hợp lệ; `Sửa thông tin`, `Thêm tệp` là thao tác phụ. Ưu tiên action đã được domain xác định; nếu nhiều action chưa có thứ tự ưu tiên, giữ nhóm hiện có, không đoán dựa trên role hay tên trạng thái.
+- Khi chi tiết/quyền còn tải, chưa bật mutation dựa trên seed của hàng. Server tiếp tục xác thực mọi thao tác; UI đọc capability/action hiện có, không tự coi loại văn bản là quyền.
+- Nhiệm vụ liên kết thu thành một hàng: tên nhiệm vụ có link, trạng thái nếu đã có trong dữ liệu. Khi rỗng: “Chưa có nhiệm vụ liên kết”; chỉ hiện hành động tạo/giao việc nếu thực sự được phép và đúng luồng nghiệp vụ.
+- Từ vựng hiện có quy định “Giao việc” cho hành động giao nhiệm vụ; ảnh dùng “Tạo nhiệm vụ”. Trước khi đổi nhãn, đối chiếu form mở ra có đúng ngữ nghĩa giao việc. Không đổi tên để che khác biệt luồng tạo và gắn nhiệm vụ.
+- Nếu đã tạo nhiệm vụ nhưng gắn thất bại, giữ thông tin nhiệm vụ vừa tạo và lối phục hồi liên kết; không đề nghị tạo lại gây trùng. Đây là trạng thái lỗi phải kiểm trong luồng sẵn có, không tự thêm workflow mới.
+
+#### C. Thông tin và danh sách tệp
+
+- `Thông tin` mặc định thu gọn; mở inline trong cùng vùng cuộn, gồm thuộc tính còn lại và `Luân chuyển`. Nhật ký chỉ tải khi mở phần tương ứng. Không dựng panel thứ ba cạnh Quick View.
+- Bên trong dùng hàng thuộc tính gọn, nhãn 12px, giá trị 13px. Tên dài được wrap ở đây; không áp chiều cao hàng bảng cho đoạn nội dung tự nhiên.
+- **Giữ D15:** 2–5 tệp mặc định mở danh sách, >5 tệp thu gọn, tôn trọng lựa chọn đã lưu. Một tệp không cần danh sách lặp lại; 0 tệp có trạng thái rỗng và nút thêm theo quyền.
+- Hàng tệp 32px, tên một dòng, tooltip đầy đủ, dung lượng khi có; chỉ hiện số trang sau khi biết số thực. Tệp đang xem có dấu chọn và tên truy cập. Không hiện “1 trang” mặc định khi chưa tải.
+- Nhớ lựa chọn mở/đóng tệp theo khóa hiện có; trạng thái mở `Thông tin` chỉ thuộc văn bản đang xem, reset khi đổi văn bản. Không đưa nội dung nghiệp vụ vào localStorage.
+
+### 17.6. Trình xem tệp và cuộn
+
+**Lựa chọn kiến trúc:** Quick View tiếp tục một vùng cuộn dọc cho thông tin và tệp. Header pane cố định; header tên tệp/rail bám trong vùng viewer khi viewer tới đầu vùng cuộn. Full Page tiếp tục có vùng đọc chuyên dụng. Cách này tái sử dụng viewer và tránh hai vùng cuộn dọc lồng nhau trong pane nhỏ.
+
+- Header viewer cao 32px, tên tệp một dòng; `Tệp N` có nhãn rõ và mở bộ chọn khi N≥2. Popover rộng 256px, tối đa `viewport − 16px`, hàng 32px; tên dài vẫn có cách đọc đầy đủ. Chọn tệp giữ cơ chế URL `file=` và khôi phục vị trí hiện có.
+- Rail giữ rộng 44px và thứ tự nhóm đã duyệt. Trên vùng đủ cao, giữ control 32px đang có của viewer; đây là ngoại lệ cục bộ đã ghi trong `DESIGN.md`, không lan ra toolbar bảng.
+- Khi rail không đủ chiều cao khả dụng, gộp zoom thành một nút mở popover và chuyển nhóm phụ vào `Công cụ xem`. `Tệp N` ở header vẫn truy cập được. Không đặt nút thiết yếu bên dưới đáy vùng nhìn thấy và không chỉ thu nhỏ icon để chứa thêm nút.
+- Ngưỡng thu gọn dựa trên chiều cao thực của rail và vùng còn lại dưới header, không suy từ chiều rộng màn hình. Bổ sung test cửa sổ thấp và browser zoom; tránh ResizeObserver làm nhảy qua lại trạng thái.
+- Số trang hiện trên một hàng `1 / 12` trong popover/điều khiển phù hợp; trang trước/sau disabled ở biên. Không hiện mẫu `1 / 1` xuống nhiều dòng như ảnh. Trong rail hẹp có thể dùng `1/12`, tên truy cập đọc đủ.
+- **Zoom giai đoạn này:** giữ phép tính hiện tại để tránh đổi trạng thái đã lưu; tại giá trị nội bộ 100 hiển thị `Vừa rộng`, các giá trị khác phải được mô tả là tỷ lệ so với vừa chiều rộng. Menu có mô tả “Tỷ lệ so với vừa chiều rộng”. Chuyển sang phần trăm kích thước thực là cải tiến riêng, cần thiết kế chuyển đổi state và kiểm khổ trang hỗn hợp.
+- Đổi văn bản reset về đầu chi tiết/tệp mặc định của văn bản mới; đổi tệp trong cùng văn bản khôi phục vị trí đã lưu. Khi tên tệp/thuộc tính thay đổi chiều cao phía trên, không làm người đang đọc nhảy sang trang khác.
+- Tìm trong tệp vẫn tìm toàn tài liệu, kể cả trang chưa dựng. PDF scan không có lớp chữ phải hiện “Tệp này không có nội dung văn bản để tìm kiếm”; không suy ra cần OCR hay tự thêm dịch vụ OCR.
+- `Mở trang đầy đủ` giữ tệp đang xem; fullscreen giữ trang/zoom/trạng thái đang đọc. Trên thiết bị không hỗ trợ fullscreen, dùng fallback đã duyệt. Không thêm một bản viewer khác.
+
+### 17.7. Responsive, focus và bàn phím
+
+**Pane:** lấy chiều rộng workspace thực, bao gồm phần khung đang được `SHELL_CHROME` tính. Giữ `LIST_MIN=480`, `PANE_MIN=440`, mặc định 640 và tối đa 1100. Hằng số khung phải khớp CSS thực, không coi 22px là chân lý khi CSS thay đổi.
+
+**Đề xuất xử lý biên:** lúc chưa có mode dùng ngưỡng 942px; đang pane chuyển overlay ngay khi <942px; đang overlay chỉ trở lại pane khi ≥966px. Với mọi mode pane phải thỏa `listWidth ≥480` và `paneWidth ≥440`. Không ghi đè độ rộng người dùng lưu bằng độ rộng clamp tạm thời.
+
+| Ngữ cảnh | Quy tắc focus/tương tác |
+|---|---|
+| Desktop mở bằng Enter/click hàng | Focus ở hàng để tiếp tục duyệt; có lối “Đến chi tiết văn bản” bằng bàn phím để chuyển tới tiêu đề pane. Chi tiết tải xong thông báo ngắn, không tự đọc toàn nội dung. |
+| ↑/↓, j/k trong danh sách | Di chuyển theo các hàng đã tải; chỉ đổi văn bản khi pane đang mở. Không áp phím này khi gõ input, editor, popover hoặc khi modifier đang giữ. Không vòng từ cuối về đầu. |
+| Esc | Đóng lớp trên cùng trước: popover/dialog chỉnh sửa/fullscreen theo cơ chế của lớp đó; sau đó mới đóng Quick View. |
+| Đóng pane | Trả focus về hàng đang xem nếu còn; nếu đã bị lọc khỏi DOM thì về vùng danh sách có tên truy cập. |
+| Overlay hẹp | `role=dialog`, `aria-modal=true`, focus vào tiêu đề hoặc nút đóng; trap focus, nền inert, trả focus khi đóng. Không chỉ khóa cuộn body. |
+| Chuyển pane ↔ overlay khi resize | Giữ docId/file/trang; khi sang overlay đưa focus từ nền vào dialog, khi trở lại pane bỏ inert/trap. Không tạo history entry. |
+| Resize handle | Bàn phím ←/→ 20px, Home và double-click khôi phục mặc định; nhãn đọc được và giá trị chiều rộng hợp lệ. |
+
+Giữ máy trạng thái URL §6.3 cho push/replace/Back/Forward; hàng focus trong bảng trên là **đề xuất sửa riêng phần focus** của §6.3. Không ghi đè quyết định lịch sử bằng thay đổi trình bày.
+
+Ở 390px và 320px: overlay toàn vùng ứng dụng, toolbar wrap; popover không vượt mép; nội dung metadata reflow. Vùng chạm chính trên thiết bị cảm ứng hướng tới 44px mà vẫn giữ chữ 12/13px; đây là ngoại lệ responsive, không tăng hàng desktop. Với zoom 200–400%, cho phép nội dung/hàng tăng chiều cao để đọc được thay vì ép 32px. Cuộn ngang do phóng to PDF nằm trong viewer, không kéo rộng toàn trang.
+
+### 17.8. Trạng thái dữ liệu và lỗi
+
+| Tình huống | Yêu cầu hiển thị và phục hồi |
+|---|---|
+| Chưa có văn bản | Thông báo theo loại văn bản; hành động vào sổ/tạo chỉ hiện khi có quyền. |
+| Bộ lọc không có kết quả | Hiển thị truy vấn/bộ lọc đang áp dụng và `Xóa bộ lọc`; không dùng nội dung “chưa có văn bản”. |
+| Đang tải chi tiết | Dùng seed đúng docId cho nhận diện; skeleton phần chưa có dữ liệu. Không giữ tệp/action của văn bản trước. |
+| Chuyển nhanh A → B → C, phản hồi đảo thứ tự | Chỉ dữ liệu C được hiển thị; thao tác cũng gắn C. Không để phản hồi A/B ghi đè. |
+| 403 / 404 / mất quyền giữa phiên | Thông báo đúng loại lỗi, cho đóng; gỡ dữ liệu và action không còn quyền. Không fallback sang văn bản khác. |
+| Mạng lỗi | `Thử lại` đúng yêu cầu lỗi; danh sách vẫn dùng được trong pane. Không đóng pane hoặc xóa bộ lọc. |
+| Không có tệp | `Chưa có tệp đính kèm`; không giữ một khung PDF trắng cao. |
+| PDF hỏng / loại tệp chưa hỗ trợ | Tên tệp, lý do và tải về khi được phép; phân biệt không hỗ trợ với không có quyền. |
+| file= không tồn tại trong văn bản | Chọn tệp hợp lệ theo resolver hiện có và chuẩn hóa URL; thông báo ngắn nếu liên kết yêu cầu tệp không còn. |
+| Mutation đang chạy/thất bại | Khóa action đang chạy, giữ ngữ cảnh; lỗi inline cạnh action, không reset trang đang đọc. Khi thành công làm mới cả chi tiết và hàng liên quan. |
+
+### 17.9. Hướng triển khai và lý do kiến trúc
+
+| Phần | Điểm sửa dự kiến | Lý do |
+|---|---|---|
+| Mật độ, cột, selection | `src/components/documents/registry/document-ledger.tsx` và skeleton tương ứng | Giữ một bảng và một định nghĩa cột; không tạo bảng riêng khi pane mở. |
+| Lọc, selection, URL | `src/components/documents/document-registry-view.tsx`, các hook URL/pane đang dùng | Trạng thái xem lấy từ URL; chọn nhiều giữ độc lập. |
+| Summary và thông tin | `src/components/documents/workspace/document-workspace-parts.tsx`, `document-detail-parts.tsx` | Dùng cùng dữ liệu, cho phép bố cục phù hợp context Quick View/Full Page; không đổi Full Page ngoài ý muốn. |
+| Khung Quick View | `src/components/documents/workspace/document-quick-view.tsx` | Điều phối header, scroll, focus và trạng thái tải; không chứa thêm logic quyền. |
+| Tệp/rail | `src/components/documents/document-file-viewer.tsx`, `document-viewer-rail.tsx` | Giữ state đọc, cửa sổ dựng trang, chỉ mục tìm kiếm và fullscreen dùng chung. |
+| Ngưỡng pane | `src/lib/documents/document-pane-layout.ts`, khung split workspace | Sửa bằng hàm thuần, kiểm đúng bất biến chiều rộng. |
+
+Không cần thư viện mới. Phương án thêm tab `Tệp / Thông tin` được cân nhắc nhưng không chọn cho bản này: tab tách luồng đọc khỏi thuộc tính và làm đổi hành vi mở danh sách tệp D15. Phương án biến Quick View thành viewer có scroll riêng cũng chưa chọn: tăng rủi ro cuộn lồng và khôi phục vị trí. Nếu bản compact vẫn không đạt mốc vùng đọc §17.3 sau đo thực tế, review lại bố cục với số đo; không tự cắt thông tin nghiệp vụ để đạt chỉ tiêu.
+
+### 17.10. Thứ tự thực hiện và nghiệm thu
+
+**P0 — đọc rõ và thao tác đúng:** cấu trúc đầu pane/Thông tin; tên tệp và rail không mất nút; tách xem/chọn; focus overlay; ngưỡng chiều rộng. **P1 — đồng bộ compact:** bảng 32px, cột responsive, ngày có năm, toolbar, tooltip và nhãn zoom. **P2 — chỉ xem xét sau đo:** zoom kích thước thực, thumbnail trang PDF, sắp xếp mới. P2 chưa thuộc phần triển khai đề xuất hiện tại.
+
+| AC | Cách kiểm và kết quả cần đạt |
+|---|---|
+| AC1 — Bố cục | Chụp 1440×900 và 1920×1080, pane đóng/mở 640px; dùng bộ dữ liệu kiểm thử đại diện ảnh với tên dài và 3 tệp. Đạt mốc vùng đọc §17.3; hàng desktop 40px, text 13/12px, control bảng 28px. |
+| AC2 — Container | Đo bảng tại 480, 719, 720, 1099, 1100px; header/body khớp cột, không mất hạn hoặc bước xử lý mặc định, không có overflow ngang ngoài viewer. Kiểm bật/tắt từng cột tùy chọn. |
+| AC3 — Biên pane | Kiểm workspace 918, 930, 941, 942, 965, 966px theo cả chiều tăng/giảm; mode pane luôn đủ hai min. Sidebar thu gọn/mở rộng không làm ghi đè preferred width. |
+| AC4 — Xem/chọn | Mở A không chọn checkbox; chọn B không đổi A; đổi filter reset checkbox đúng chính sách và giữ A với thông báo ngoài kết quả. Check-all biểu thị đúng trang. |
+| AC5 — Bàn phím | Hoàn thành chuỗi mở → đến pane → chọn tệp → mở/đóng popover → đóng pane chỉ bằng bàn phím. Overlay không tab ra nền; pane cho quay lại danh sách; focus luôn nhìn thấy. |
+| AC6 — Lịch sử/race | Back/Forward, deep link ngoài trang, mở full page rồi Back giữ URL/tệp; A/B/C trả lời đảo thứ tự vẫn chỉ hiện C. Không fetch lại danh sách chỉ vì đổi file. |
+| AC7 — Tệp | Kiểm 0/1/3/5/6/12 tệp, tên dài, file bị xóa, PDF scan/hỏng, nhiều khổ trang; D15 và lựa chọn đã lưu đúng. Rail dùng được ở viewport 1280×600; không mất `Tệp N`, tải về, fullscreen. |
+| AC8 — Quyền/lỗi | Kiểm người chỉ đọc và người có action theo fixture test, 403/404/mạng lỗi; mutation không xuất hiện từ seed thiếu quyền. Tạo thành công/gắn thất bại không hướng người dùng tạo trùng. |
+| AC9 — Responsive | 390×844, 320px chiều rộng và browser zoom 200/400%; toolbar/thuộc tính không bị cắt; mọi thao tác có đường truy cập không phụ thuộc hover. |
+| AC10 — Regression | Văn bản đến, đi, tờ trình đều mở được; Full Page không đổi ngoài phần viewer dùng chung đã mô tả. Giữ tìm toàn PDF, render theo cửa sổ và trạng thái đọc từng tệp. |
+
+Khi triển khai TypeScript: chạy `npm run typecheck`, `npm run lint`; chọn test hiện có đúng phần sửa: `tests/document-ledger-columns.test.ts`, `tests/document-pane-layout.test.ts`, `tests/document-pane-history.test.ts`, `tests/document-quick-view.test.ts`, `tests/file-viewer-state.test.ts`, `tests/pdf-layout.test.ts` và E2E `e2e/document-quick-view.spec.ts`. Bổ sung regression cho hành vi mới còn thiếu, không khóa test vào từng class CSS. Dùng DB test do repo hỗ trợ cho E2E; báo số chạy/skip. Không dùng production build để verify.
+
+### 17.11. Đề xuất mới và quan hệ với quyết định đã duyệt
+
+| ID | Đề xuất của §17 | Quan hệ với tài liệu trước |
+|---|---|---|
+| UX1 | Hàng desktop một dòng 40px (bản đầu 32px), cột/metadata thích ứng | Cụ thể hóa chuẩn compact; thay trình bày hai dòng hiện tại. |
+| UX2 | Gộp thuộc tính và luân chuyển vào `Thông tin` thu gọn | Thay thứ bậc Quick View ở wireframe §4; giữ dữ liệu và D15. |
+| UX3 | Đưa in phiếu/chữ ký vào menu; tên tệp và rail thích ứng chiều cao | Điều chỉnh vị trí control; giữ rail dọc, viewer và các khả năng đã duyệt. |
+| UX4 | Desktop giữ focus ở hàng khi mở, có lối chuyển tới pane | Cần thay phần focus tương ứng của §6.3; lịch sử URL giữ nguyên. Code hiện tại đã có một phần hành vi này, không coi đó là bằng chứng duyệt. |
+| UX5 | Hysteresis chỉ ở ngưỡng quay lại pane | Hiệu chỉnh thuật toán để bảo vệ hai min của D14; không hạ min âm thầm. |
+| UX6 | Nhãn zoom nói rõ tỷ lệ so với vừa chiều rộng | Làm rõ ngữ nghĩa §7; chưa đổi thuật toán/state zoom thành kích thước thực. |
+
+§17 là spec đề xuất hoàn chỉnh để bàn giao, không tự đánh dấu UX1–UX6 đã được duyệt. Khi có quyết định triển khai, cập nhật đúng mục cũ chịu ảnh hưởng và `DESIGN.md` để chỉ còn một quy tắc hiện hành cho mỗi hành vi.
+
+**Kiểm chứng của lần viết spec:** đã xem hai ảnh, đối chiếu các component/hàm nêu trên và đọc các nguồn web tại §17.2. Chưa chạy ứng dụng, chưa đo layout bằng trình duyệt, chưa thực thi test UI hoặc xác minh khả năng tiếp cận thực tế. Các AC là tiêu chí cho lần triển khai, không phải kết quả pass.
+
+### 17.12. Kết quả triển khai P0 + P1 (09/10/2026, working tree chưa commit)
+
+| Phạm vi | Đã làm |
+|---|---|
+| Ngưỡng pane (UX5) | `resolvePaneLayout`: hysteresis chỉ ở chiều quay lại pane; pane luôn đủ `LIST_MIN` và `PANE_MIN`. Test khóa `SHELL_CHROME` = padding 2×8 + gap 6 theo CSS thực. |
+| Bảng (UX1) | Hàng và tiêu đề 40px một dòng (nâng từ 32px ngày 10/10); 3 mức cột theo container (480–719 / 720–1099 / ≥1100); ngày `dd/MM/yyyy` (chỉ rút gọn khi lọc đúng năm); `—` kèm tên truy cập; mỗi mức khẩn một icon riêng; tooltip trích yếu khi hover/focus và chỉ khi bị cắt; `aria-current` (đang xem) tách khỏi `aria-selected` (đã chọn); dòng "Văn bản đang xem nằm ngoài kết quả hiện tại". |
+| Quick View (UX2, UX3) | Header 40px: Mở trang đầy đủ · menu Thao tác khác (in phiếu, chữ ký số) · Đóng; trích yếu 16/24px tối đa 2 dòng + "Xem thêm"; mục "Thông tin" thu gọn gộp thuộc tính, ý kiến chỉ đạo, luân chuyển/quy trình (thay popover "Chi tiết" ở Quick View; Full Page giữ nguyên); nhiệm vụ liên kết một hàng; khi chi tiết còn tải không dựng thao tác từ dữ liệu dòng; tạo nhiệm vụ xong mà gắn lỗi thì hiện "Gắn lại" và liên kết tới nhiệm vụ vừa tạo, không đề nghị tạo trùng. |
+| Tệp, rail (UX3, UX6) | Dòng tên tệp 32px bám đầu vùng cuộn kèm nút "Tệp N" có nhãn; rail tự gộp zoom/trang khi vùng cuộn thấp (hysteresis 16px); nhãn zoom "Vừa rộng" / "x% so với vừa chiều rộng"; số trang `3/12` một dòng; PDF scan báo "Tệp này không có nội dung văn bản để tìm kiếm". |
+| Quick View, cập nhật 10/10 | Sửa thông tin, Thêm tệp chuyển vào menu "Thao tác khác" (header chỉ còn Mở rộng · menu · Đóng); thân chỉ còn thao tác theo bước làm nút chính. Dòng hạn "Hạn … · Còn N ngày" cùng màu với bảng. Mục "Tệp đính kèm" thu gọn không lặp tên tệp. Không chọn tệp thì mở tệp PDF/ảnh đầu tiên khi bản gốc không xem trước được (người dùng duyệt 10/10). Tệp không xem trước được: nêu định dạng, Tải về, "Xem <tệp khác>", không dựng rail. |
+| Vùng đầu Quick View, cập nhật 10/10 (lần 2) | Hai dòng metadata không nhãn và dòng nhiệm vụ thay bằng lưới nhãn–giá trị (Trạng thái · Hạn xử lý · Số, ký hiệu · Ban hành · Cơ quan ban hành · Nhiệm vụ), 2 cột khi pane ≥ 560px; "Thông tin" đổi thành "Chi tiết và luân chuyển"; bỏ danh sách tệp riêng (thay D15). Xem trước `.docx` bằng docx-preview (không dựng altChunk, lọc liên kết, căn bảng rộng như Word). Bảng: cơ quan ban hành/chủ trì không ghi tắt, xuống tối đa 2 dòng. |
+| Focus (UX4) | Overlay: nền `inert`, focus vào nút Đóng, Escape đóng kể cả khi focus đã rời hộp thoại; desktop giữ focus ở hàng khi mở, `→` trên dòng đang xem chuyển tới tiêu đề pane. |
+
+**Kiểm chứng thực tế:** `npm run typecheck` sạch; `npm run lint` 110 lỗi, bằng baseline §16, không lỗi nào thuộc file đã sửa; 14 file test liên quan: 111 test pass, 0 skip; E2E Playwright toàn bộ: 41 pass (`qcet_test`, cổng 3101, Chrome). Đo thật tại 1440×900, pane 640px, fixture 5 tệp: vùng đọc ban đầu 46,5% chiều cao pane (mốc 45%); hàng bảng cao đúng 32px.
+
+**Chưa kiểm:** 1920×1080, browser zoom 200/400%, 320px, Safari/iOS, trình đọc màn hình; tương phản màu chưa đo; chưa so với bảng thiết kế gốc. `<nextjs-portal>` (dev tools) có thể nhận focus trong overlay khi chạy `next dev`, E2E bỏ qua phần tử này. Escape đầu tiên có thể chỉ đóng tooltip của nút đang focus, đúng quy tắc "đóng lớp trên cùng trước". Chưa đổi nhãn "Tạo nhiệm vụ" thành "Giao việc" (chưa đối chiếu form).
+
+**Cập nhật 10/10/2026 (theo yêu cầu người dùng):** thanh công cụ và hàng bộ lọc dùng chung component với trang Nhiệm vụ (`ListToolbar*`, `ActiveFilterBar`, `FilterSegmentChip`); bỏ số đến trước trích yếu và số lượng cạnh tiêu đề; hàng bảng 40px; màu tín hiệu dùng token `text-destructive` / `text-warning`. Ngưỡng "sắp tới hạn" của văn bản (≤ 2 ngày) giữ khác nhiệm vụ (≤ 7 ngày) theo §17.4B ("không tự áp quy tắc hạn của nhiệm vụ sang văn bản").

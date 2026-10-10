@@ -85,8 +85,10 @@ export async function dispatchTaskAssignedPush(
     // Phase 9: TaskAssignee dropped. Query only canonical TaskActor model.
     if (task.id) {
       try {
+        // Chỉ người thực hiện (chủ trì/phối hợp) nhận thông báo giao việc;
+        // người giao, theo dõi, quan sát, duyệt không nhận để hộp thư chỉ chứa việc của mình.
         const dbActors = await prisma.taskActor.findMany({
-          where: { taskId: task.id, userId: { not: null } },
+          where: { taskId: task.id, userId: { not: null }, role: { in: ['DRI', 'COLLABORATOR'] } },
           select: { userId: true },
         });
         for (const a of dbActors) {
@@ -96,6 +98,11 @@ export async function dispatchTaskAssignedPush(
         // Continue with memory assignees if DB query encounters an issue
         console.warn('[dispatchTaskAssignedPush] DB assignee lookup warning:', dbErr);
       }
+    }
+
+    // Không tự báo cho người vừa thực hiện thao tác.
+    if (actorId) {
+      targetUserIdSet.delete(actorId);
     }
 
     const targetUserIds = Array.from(targetUserIdSet);

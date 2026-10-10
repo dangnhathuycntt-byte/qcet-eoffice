@@ -3,12 +3,16 @@
 import * as React from "react";
 import { DocumentPdfViewer } from "./document-detail-parts";
 import { DocumentFilesRail, FilesMenu, type RailFile } from "./document-viewer-rail";
+import { FileTypeIcon } from "./file-type-icon";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   MAX_FILES_AS_TICKS,
   clampZoom,
   formatPageDetail,
   getFileState,
   patchFileState,
+  findPreviewableAlternative,
   resolveActiveFileId,
   type FileStates,
 } from "@/lib/documents/file-viewer-state";
@@ -48,7 +52,17 @@ export interface DocumentFileViewerProps {
    */
   persistKey?: string;
   className?: string;
+  /** Lề ngang của dòng tên tệp (Quick View dùng lề của Subtask Peek). */
+  gutterClassName?: string;
+  /**
+   * Dòng tên tệp bám đầu vùng cuộn khi khung xem cuộn tới (Quick View: thông tin và tệp chung một vùng cuộn).
+   * Rail công cụ bám ngay dưới dòng này.
+   */
+  stickyHeader?: boolean;
 }
+
+/** Chiều cao dòng tên tệp (h-8); rail bám dưới dòng này khi `stickyHeader`. */
+const FILE_HEADER_HEIGHT = 32;
 
 const STORAGE_PREFIX = "qcet_doc_view:";
 
@@ -74,8 +88,8 @@ function saveStates(key: string | undefined, states: FileStates) {
 
 /**
  * Xem các tệp đính kèm của một văn bản. Mỗi tệp độc lập (không giả định tệp chính/phụ lục).
- * - Công cụ PDF, điều hướng trang và chuyển tệp nằm ở rail dọc bên phải khung xem.
- * - Nhiều tệp: 2–8 tệp có thêm vạch; nút "Tệp N" luôn mở danh sách đầy đủ.
+ * - Công cụ PDF và điều hướng trang nằm ở rail dọc bên phải khung xem.
+ * - Nhiều tệp: nút "Tệp N" ở dòng tên tệp luôn mở danh sách đầy đủ; 2–8 tệp có thêm vạch trên rail.
  * Chỉ dựng đúng một PDF đang chọn; tệp khác chỉ được tải khi chọn.
  * Thu phóng và trang đang đọc được nhớ riêng cho từng tệp.
  */
@@ -87,6 +101,8 @@ export function DocumentFileViewer({
   railExtra,
   persistKey,
   className,
+  gutterClassName = "px-4 @lg/doc:px-6",
+  stickyHeader = false,
 }: DocumentFileViewerProps) {
   const controlled = activeFileId !== undefined;
   const [internalId, setInternalId] = React.useState(() => resolveActiveFileId(files, activeFileId));
@@ -126,20 +142,36 @@ export function DocumentFileViewer({
   if (!active) return null;
 
   const multiple = files.length > 1;
+  const alternative = findPreviewableAlternative(files, active.id);
   const detailOf = (file: DocumentFile) =>
     formatPageDetail(getFileState(states, file.id).pageCount, formatSize(file.sizeBytes ?? file.sizeLabel));
-  const railFiles: RailFile[] = files.map((file) => ({ id: file.id, name: file.name, url: file.url, detail: detailOf(file) }));
+  const railFiles: RailFile[] = files.map((file) => ({ id: file.id, name: file.name, url: file.url, detail: detailOf(file), mimeType: file.mimeType }));
 
   return (
     <>
-      {/* Tên tệp đang xem: một chỗ duy nhất; công cụ và chuyển tệp nằm ở rail bên phải */}
-      <p className="flex min-w-0 items-baseline gap-1.5 px-4 pb-2 text-xs text-muted-foreground @lg/doc:px-6" aria-live="polite">
-        <span className="min-w-0 truncate text-compact text-foreground" title={active.name} data-slot="active-file-name">
-          {active.name}
-        </span>
-        <span className="shrink-0 tabular-nums">{detailOf(active)}</span>
-      </p>
-      <div data-slot="document-file-viewer-root" data-active-file-id={active.id}>
+      {/* Tên tệp đang xem: một chỗ duy nhất, cùng nút chọn tệp; công cụ xem nằm ở rail bên phải */}
+      <div
+        className={cn(
+          "flex h-8 min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
+          stickyHeader && "sticky top-0 z-20 bg-card",
+          gutterClassName,
+        )}
+        data-slot="document-file-header"
+      >
+        <FileTypeIcon fileName={active.name} mimeType={active.mimeType} />
+        <p className="flex min-w-0 flex-1 items-baseline gap-1.5" aria-live="polite">
+          <span className="min-w-0 truncate text-compact text-foreground" title={active.name} data-slot="active-file-name">
+            {active.name}
+          </span>
+          <span className="shrink-0 tabular-nums">{detailOf(active)}</span>
+        </p>
+        {multiple ? <FilesMenu variant="labelled" files={railFiles} activeId={active.id} onSelect={select} /> : null}
+      </div>
+      <div
+        data-slot="document-file-viewer-root"
+        data-active-file-id={active.id}
+        style={stickyHeader ? ({ "--viewer-sticky-top": `${FILE_HEADER_HEIGHT}px` } as React.CSSProperties) : undefined}
+      >
         <DocumentPdfViewer
           fileUrl={active.url}
           fileName={active.name}
@@ -153,14 +185,16 @@ export function DocumentFileViewer({
           onFullscreen={onFullscreen ? () => onFullscreen(active) : undefined}
           railExtra={railExtra}
           railFiles={
-            multiple ? (
-              <>
-                {files.length <= MAX_FILES_AS_TICKS ? <DocumentFilesRail files={railFiles} activeId={active.id} onSelect={select} /> : null}
-                <FilesMenu files={railFiles} activeId={active.id} onSelect={select} />
-              </>
+            multiple && files.length <= MAX_FILES_AS_TICKS ? (
+              <DocumentFilesRail files={railFiles} activeId={active.id} onSelect={select} />
             ) : undefined
           }
           viewportProps={multiple ? { role: "region", "aria-label": `Xem tệp ${active.name}` } : undefined}
+          unsupportedAction={alternative ? (
+            <Button variant="ghost" size="sm" onClick={() => select(alternative.id)} title={alternative.name}>
+              <span className="max-w-48 truncate">Xem {alternative.name}</span>
+            </Button>
+          ) : undefined}
         />
       </div>
     </>

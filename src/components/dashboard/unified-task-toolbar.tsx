@@ -56,7 +56,7 @@ import {
 } from "./task-filter-icons";
 import type { TaskView } from "@/domain/tasks";
 import { cn } from "@/lib/utils";
-import { ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import { LIST_TOOLBAR_SEARCH_COLLAPSED, LIST_TOOLBAR_SEARCH_EXPANDED, ListToolbarClearFiltersButton, ListToolbarCountBadge, ListToolbarSearch, listToolbarIconButtonClass, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
 import {
   getTaskTimeFilterLabel,
   NO_TASK_TIME_FILTER,
@@ -1414,7 +1414,7 @@ export function UnifiedTaskToolbar({
                   closeOnClick={false}
                   onClick={handleToggle}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1486,7 +1486,7 @@ export function UnifiedTaskToolbar({
                   closeOnClick={false}
                   onClick={handleToggle}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1551,7 +1551,7 @@ export function UnifiedTaskToolbar({
                   closeOnClick={false}
                   onClick={handleToggle}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1620,7 +1620,7 @@ export function UnifiedTaskToolbar({
               closeOnClick={false}
               onClick={() => handleDeptToggle("ALL")}
               className={cn(
-                "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                 isAll
                   ? "bg-accent font-medium text-foreground"
                   : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1650,7 +1650,7 @@ export function UnifiedTaskToolbar({
                 openOnHover
                 delay={60}
                 closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <School className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
@@ -1675,7 +1675,7 @@ export function UnifiedTaskToolbar({
                             closeOnClick={false}
                             onClick={() => handleDeptToggle(dept.code)}
                             className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1710,7 +1710,7 @@ export function UnifiedTaskToolbar({
                 openOnHover
                 delay={60}
                 closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Building className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
@@ -1735,7 +1735,7 @@ export function UnifiedTaskToolbar({
                             closeOnClick={false}
                             onClick={() => handleDeptToggle(dept.code)}
                             className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1794,7 +1794,7 @@ export function UnifiedTaskToolbar({
                     }
                   }}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1849,7 +1849,7 @@ export function UnifiedTaskToolbar({
                     handleCollaboratorChange(opt.value === "all" ? null : opt.value);
                   }}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1891,7 +1891,7 @@ export function UnifiedTaskToolbar({
                 openOnHover
                 delay={60}
                 closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Calendar className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
@@ -1920,7 +1920,7 @@ export function UnifiedTaskToolbar({
                               else onTabChange?.(opt.value === "all" ? "all" : opt.value);
                             }}
                             className={cn(
-                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                              "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                               selected
                                 ? "bg-accent font-medium text-foreground"
                                 : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1930,7 +1930,7 @@ export function UnifiedTaskToolbar({
                               <Calendar className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                               <span>{opt.label}</span>
                               {opt.count !== undefined && opt.count > 0 && (
-                                <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">({opt.count})</span>
+                                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">({opt.count})</span>
                               )}
                             </div>
                             <div
@@ -1958,7 +1958,7 @@ export function UnifiedTaskToolbar({
                 openOnHover
                 delay={60}
                 closeDelay={180}
-                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
+                className="group flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors hover:bg-accent text-foreground/80 hover:text-foreground cursor-pointer select-none outline-none focus-visible:bg-accent focus-visible:text-foreground data-[open]:bg-accent data-[open]:text-foreground"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Clock className="size-3.5 shrink-0 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors" strokeWidth={1.5} />
@@ -1981,7 +1981,7 @@ export function UnifiedTaskToolbar({
                           handleTimeFilterChange(NO_TASK_TIME_FILTER);
                         }}
                         className={cn(
-                          "flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                          "flex h-7 w-full items-center gap-2 rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                           effectiveTimeFilter.kind === "none"
                             ? "bg-accent font-medium text-foreground"
                             : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -1994,7 +1994,7 @@ export function UnifiedTaskToolbar({
                       <MenuSeparator className="h-px bg-border/40 my-1" />
 
                       <div className="px-1.5 py-1">
-                        <p className="mb-1.5 text-[10px] font-medium text-muted-foreground select-none">
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground select-none">
                           Năm học {academicYear}
                         </p>
                         <div className="grid grid-cols-4 gap-1">
@@ -2009,7 +2009,7 @@ export function UnifiedTaskToolbar({
                                   handleTimeFilterChange({ kind: "month", month: period.monthNumber });
                                 }}
                                 className={cn(
-                                  "flex h-6 items-center justify-center rounded text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer select-none touch-manipulation",
+                                  "flex h-6 items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer select-none touch-manipulation",
                                   selected
                                     ? "bg-neutral-800 text-white font-semibold shadow-2xs"
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -2067,7 +2067,7 @@ export function UnifiedTaskToolbar({
                   closeOnClick={false}
                   onClick={() => handleHealthToggle(opt.value)}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -2142,7 +2142,7 @@ export function UnifiedTaskToolbar({
                   closeOnClick={false}
                   onClick={() => handleOriginToggle(opt.value)}
                   className={cn(
-                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-[12px] transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
+                    "group/item flex h-7 w-full items-center justify-between rounded-md px-2 text-xs transition-colors cursor-pointer select-none outline-none whitespace-nowrap",
                     selected
                       ? "bg-muted/70 font-medium text-foreground"
                       : "text-foreground/80 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
@@ -2604,7 +2604,7 @@ export function UnifiedTaskToolbar({
                         data-slot="scope-badge-count"
                         data-scope={tab.id}
                         className={cn(
-                          "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold",
+                          "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
                           isActive
                             ? "bg-background text-foreground border border-border/60 shadow-2xs"
                             : "bg-muted text-muted-foreground"
@@ -2662,8 +2662,8 @@ export function UnifiedTaskToolbar({
         placeholder="Tìm nhiệm vụ… /"
         aria-label="Tìm nhiệm vụ"
         wrapperClassName={!leftContent && !onScopeChange ? "ml-auto" : undefined}
-        collapsedWidthClassName="w-[140px] sm:w-[180px]"
-        expandedWidthClassName="w-[240px]"
+        collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
+        expandedWidthClassName={LIST_TOOLBAR_SEARCH_EXPANDED}
       />
 
       {/* 2. Filter — icon-only trigger */}
@@ -2678,11 +2678,7 @@ export function UnifiedTaskToolbar({
               className={listToolbarIconButtonClass(isCollapsedFilterOpen || activeFilterCount > 0)}
             >
               <Filter className="size-3.5 shrink-0" strokeWidth={1.5} />
-              {activeFilterCount > 0 && (
-                <span className="inline-flex size-4 items-center justify-center rounded-full bg-muted text-foreground/80 border border-border/80 font-mono text-[10px] font-semibold tabular-nums">
-                  {activeFilterCount}
-                </span>
-              )}
+              <ListToolbarCountBadge count={activeFilterCount} />
             </button>
           }
         />
@@ -2714,7 +2710,7 @@ export function UnifiedTaskToolbar({
                     <X className="size-3" strokeWidth={1.5} />
                   </button>
                 ) : (
-                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-[9px] text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
+                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 font-mono text-xs leading-none text-muted-foreground bg-muted/80 border border-border/60 rounded select-none pointer-events-none">
                     F
                   </kbd>
                 )}
@@ -2725,7 +2721,7 @@ export function UnifiedTaskToolbar({
                   {/* Matching options */}
                   {matchingSearchOptions.length > 0 && (
                     <div className="space-y-0.5">
-                      <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                         Giá trị phù hợp
                       </div>
                       {matchingSearchOptions.map((match) => (
@@ -2737,7 +2733,7 @@ export function UnifiedTaskToolbar({
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <match.icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                            <span className="text-muted-foreground text-[11px]">{match.categoryLabel}:</span>
+                            <span className="text-muted-foreground text-xs">{match.categoryLabel}:</span>
                             <span className="truncate font-medium text-foreground">{match.label}</span>
                           </div>
                           <div
@@ -2759,7 +2755,7 @@ export function UnifiedTaskToolbar({
                   {matchingCategories.length > 0 && (
                     <div className="space-y-0.5">
                       {matchingSearchOptions.length > 0 && <MenuSeparator className="h-px bg-border/60 my-1" />}
-                      <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                         Nhóm bộ lọc
                       </div>
                       {matchingCategories.map(renderCategorySubmenu)}
@@ -2784,13 +2780,13 @@ export function UnifiedTaskToolbar({
                   <MenuSeparator className="h-px bg-border/50 my-1" />
                   <MenuItem
                     onClick={handleResetFilters}
-                    className="flex h-7 w-full items-center justify-between rounded-md px-2 text-[11.5px] font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
+                    className="flex h-7 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer select-none outline-none"
                   >
                     <div className="flex items-center gap-1.5">
                       <RotateCcw className="size-3 text-destructive/80" strokeWidth={1.5} />
                       <span>Xóa bộ lọc</span>
                     </div>
-                    <span className="text-[10px] font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
+                    <span className="text-xs font-mono tabular-nums bg-destructive/15 text-destructive px-1.5 py-0.2 rounded-full">
                       {activeFilterCount}
                     </span>
                   </MenuItem>
@@ -2802,18 +2798,7 @@ export function UnifiedTaskToolbar({
       </MenuRoot>
 
       {/* Active Filter Clear on Toolbar */}
-      {isAnyFilterActive && (
-        <button
-          type="button"
-          onClick={handleResetFilters}
-          title="Xóa tất cả bộ lọc"
-          aria-label="Xóa tất cả bộ lọc"
-          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation"
-        >
-          <RotateCcw className="size-3 shrink-0" strokeWidth={1.5} />
-          <span className="hidden sm:inline">Xóa bộ lọc</span>
-        </button>
-      )}
+      {isAnyFilterActive && <ListToolbarClearFiltersButton onClick={handleResetFilters} />}
 
       {/* 3. Linear Display / View Options Popover — Icon hiển thị kề bên Filter! */}
       <TaskTableViewOptionsPopover

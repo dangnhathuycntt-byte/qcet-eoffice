@@ -43,6 +43,11 @@ export function findHits(pages: Array<string[] | undefined>, query: string): Tex
   return pages.flatMap((items, index) => (items ? findHitsInPage(index + 1, items, query) : []));
 }
 
+/** Tệp có ít nhất một đoạn chữ không rỗng trong các trang đã lập chỉ mục (bản scan không có lớp chữ thì false). */
+export function hasSearchableText(pages: Array<string[] | undefined>): boolean {
+  return pages.some((items) => items?.some((text) => text.trim().length > 0));
+}
+
 /** HTML của một đoạn chữ với các kết quả được bọc `<mark>`; `activeNth` là kết quả đang chọn trong đoạn (hoặc null). */
 export function highlightItemHtml(str: string, query: string, activeNth: number | null): string {
   const text = normalizeSearchText(str);

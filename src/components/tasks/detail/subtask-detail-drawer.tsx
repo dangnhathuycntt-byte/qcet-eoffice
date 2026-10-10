@@ -20,6 +20,7 @@ import { TaskBlockEditor } from "./task-block-editor";
 import { updateTaskStatus, updateTaskPriority, updateTaskAssignee, updateTaskDueDate, updateTaskStartDate } from "@/lib/tasks/task-actions";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { clampPeekWidth, DEFAULT_PEEK_WIDTH, SINGLE_PEEK_WIDTH, MIN_PEEK_WIDTH, MAX_PEEK_WIDTH } from "./subtask-peek-layout";
+import { ResizeGrip } from "@/components/ui/pane-resize-handle";
 import {
   taskStateMachine,
   buildActorContext,
@@ -405,8 +406,10 @@ export function SubtaskDetailDrawer({
           title="Kéo để điều chỉnh độ rộng bảng phụ hoặc nhấp đúp để đặt lại"
           onMouseDown={handleResizeMouseDown}
           onDoubleClick={handleResetWidth}
-          className="hidden lg:block absolute -left-3 top-0 bottom-0 w-6 z-50 cursor-col-resize select-none bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden touch-none"
-        />
+          className="group/resize hidden lg:block absolute -left-3 top-0 bottom-0 w-6 z-50 cursor-col-resize select-none bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden touch-none"
+        >
+          <ResizeGrip />
+        </div>
 
         {/* Thanh vạch mỏng ở mép trái khung: chọn nhanh việc con (chỉ khi có từ 2 việc con) */}
         {onSelectSibling && siblings.length > 1 && (

@@ -2,27 +2,28 @@
 
 import * as React from "react";
 import type { CSSProperties } from "react";
-import {
-  Calendar,
-  CalendarCheck,
-  CalendarClock,
-  CalendarPlus,
-  CalendarX2,
-  Check,
-  Plus,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check, Plus, SlidersHorizontal, Inbox, SearchX } from "lucide-react";
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { FilterChip } from "@/components/ui/filter-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
-import { ListToolbarFilterPopover, ListToolbarPopover, ListToolbarSearch, listToolbarPrimaryButtonClass } from "@/components/ui/list-toolbar";
+import {
+  LIST_TOOLBAR_SEARCH_COLLAPSED,
+  LIST_TOOLBAR_SEARCH_EXPANDED,
+  ListToolbarFilterPopover,
+  ListToolbarPopover,
+  ListToolbarSearch,
+  listToolbarPrimaryButtonClass,
+} from "@/components/ui/list-toolbar";
+import { ActiveFilterBar, FilterSegmentChip } from "@/components/workspace/components/active-filter-breadcrumb";
+import { FilterIconDept, FilterIconMonth, FilterIconPriority, FilterIconStatus } from "@/components/dashboard/task-filter-icons";
 import { TaskIconDepartment, TaskIconPriority, TaskIconStatus, TaskIconTime } from "@/lib/icons/task-icons";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  formatLedgerCellDate,
   formatLedgerDate,
   getLedgerDueNote,
   getLedgerStepLabel,
@@ -68,36 +69,46 @@ const LEDGER_COLUMN_OPTIONS: Array<{ id: LedgerColumnId; label: string }> = [
   { id: "leadUnit", label: "Chủ trì" },
   { id: "dueDate", label: "Hạn xử lý" },
   { id: "issuedDate", label: "Ngày ban hành" },
-  { id: "status", label: "Trạng thái" },
+  { id: "status", label: "Bước xử lý" },
 ];
 
+/*
+ * Độ rộng cột (CSS px) theo ba mức của chính bảng (SPEC §17.4B), không theo viewport:
+ * hẹp < 720px: chọn · văn bản · hạn · bước xử lý;
+ * vừa 720–1099px: thêm mức khẩn (chỉ icon) và ngày ban hành;
+ * rộng ≥ 1100px: thêm cơ quan ban hành, chủ trì; mức khẩn có nhãn.
+ */
 const LEDGER_COLUMN_WIDTH: Record<LedgerColumnId, string> = {
-  urgency: "80px",
-  issuingAuthority: "160px",
-  leadUnit: "160px",
+  urgency: "112px",
+  // Giãn theo chỗ trống (trích yếu vẫn chiếm phần lớn) để tên cơ quan/đơn vị không bị cắt
+  issuingAuthority: "minmax(144px,0.4fr)",
+  leadUnit: "minmax(144px,0.4fr)",
   dueDate: "96px",
   issuedDate: "96px",
-  status: "120px",
+  status: "112px",
 };
+
+/** Mức vừa: mức khẩn chỉ còn icon. */
+const MEDIUM_URGENCY_WIDTH = "28px";
 
 /** Hai cột này chỉ hiện khi bảng đủ rộng; hẹp hơn thì không đưa vào lưới để các ô còn lại vẫn thẳng hàng. */
 const WIDE_ONLY_COLUMNS: LedgerColumnId[] = ["issuingAuthority", "leadUnit"];
 
-/** Bảng hẹp (Quick View đang mở): chỉ giữ hạn xử lý và trạng thái, văn bản được ưu tiên chỗ. */
+/** Bảng hẹp (Quick View đang mở): chỉ giữ hạn xử lý và bước xử lý, văn bản được ưu tiên chỗ. */
 const COMPACT_COLUMNS: LedgerColumnId[] = ["dueDate", "status"];
 
 const TONE_TEXT = {
-  danger: "text-rose-600",
-  warning: "text-amber-600",
+  danger: "text-destructive",
+  warning: "text-warning",
   muted: "text-muted-foreground",
   default: "text-foreground/80",
 } as const;
 
-/** Mẫu lưới theo cột đang bật; `wide=false` bỏ các cột chỉ hiện từ xl để khớp với ô đã ẩn. */
+/** Mẫu lưới theo cột đang bật; `wide=false` (mức vừa) bỏ các cột chỉ hiện ở mức rộng để khớp với ô đã ẩn. */
 export function buildColumnTemplate(visible: LedgerColumnVisibility, wide: boolean): string {
   const tracks = LEDGER_COLUMN_OPTIONS.filter(
     (opt) => visible[opt.id] && (wide || !WIDE_ONLY_COLUMNS.includes(opt.id))
-  ).map((opt) => !wide && opt.id === "urgency" ? "56px" : LEDGER_COLUMN_WIDTH[opt.id]);
+  ).map((opt) => !wide && opt.id === "urgency" ? MEDIUM_URGENCY_WIDTH : LEDGER_COLUMN_WIDTH[opt.id]);
   return ["24px", "minmax(0,1fr)", ...tracks].join(" ");
 }
 
@@ -122,11 +133,49 @@ function isShortcutBlocked(e: KeyboardEvent): boolean {
   return Array.from(modals).some((el) => el.getClientRects().length > 0);
 }
 
-/** Nội dung trạng thái rỗng: có bộ lọc đổi kết quả thì nói là không khớp, không thì nói sổ chưa có văn bản. */
-export function getLedgerEmptyCopy(isResultFiltered: boolean): { title: string; description: string } {
-  return isResultFiltered
-    ? { title: "Không có văn bản khớp bộ lọc", description: "Thử bỏ bớt bộ lọc hoặc từ khóa tìm kiếm." }
-    : { title: "Chưa có văn bản nào", description: "Vào sổ văn bản mới để bắt đầu." };
+export interface LedgerEmptyContext {
+  /** Có bộ lọc/từ khóa người dùng đặt (không tính loại sổ, nhóm ở sidebar). */
+  isResultFiltered: boolean;
+  /** Từ khóa đang tìm (đã trim). */
+  search?: string;
+  /** Loại sổ: all | inbox | outbox | submission. */
+  type?: string;
+  /** Nhóm chọn từ sidebar: pending | done | issued. */
+  bucket?: string;
+}
+
+const EMPTY_SCOPE_COPY: Record<string, Record<string, { title: string; description: string }>> = {
+  inbox: {
+    pending: { title: "Không có văn bản đến chờ xử lý", description: "Văn bản đến chưa hoàn thành xử lý sẽ hiện ở đây." },
+    done: { title: "Chưa có văn bản đến đã xử lý", description: "Văn bản đến đã hoàn thành hoặc đã lập hồ sơ sẽ hiện ở đây." },
+  },
+  outbox: {
+    pending: { title: "Không có văn bản đi chờ xử lý", description: "Dự thảo đang soạn, chờ duyệt hoặc chờ ký sẽ hiện ở đây." },
+    done: { title: "Chưa có văn bản đi đã xử lý", description: "Văn bản đã ký, đã cấp số và chờ phát hành sẽ hiện ở đây." },
+    issued: { title: "Chưa có văn bản đi đã phát hành", description: "Văn bản đã phát hành sẽ hiện ở đây." },
+  },
+};
+
+const EMPTY_TYPE_COPY: Record<string, { title: string; description: string }> = {
+  inbox: { title: "Chưa có văn bản đến", description: "Vào sổ văn bản đến để bắt đầu theo dõi và giao xử lý." },
+  outbox: { title: "Chưa có văn bản đi", description: "Soạn văn bản đi để trình duyệt, ký và phát hành." },
+  submission: { title: "Chưa có tờ trình", description: "Soạn tờ trình để trình lãnh đạo xem xét." },
+};
+
+/**
+ * Nội dung trạng thái rỗng theo đúng ngữ cảnh (NN/g: nói rõ vì sao trống, nơi này sẽ hiện gì, lối đi tiếp):
+ * có từ khóa hoặc bộ lọc thì nói không khớp; đang xem một nhóm ở sidebar thì nói nhóm đó trống; còn lại là sổ chưa có văn bản.
+ */
+export function getLedgerEmptyCopy(ctx: LedgerEmptyContext): { title: string; description: string } {
+  if (ctx.isResultFiltered) {
+    const search = ctx.search?.trim();
+    return search
+      ? { title: `Không tìm thấy văn bản với từ khóa "${search}"`, description: "Kiểm tra lại chính tả, thử số, ký hiệu hoặc một phần trích yếu, hoặc bỏ bớt bộ lọc." }
+      : { title: "Không có văn bản khớp bộ lọc", description: "Thử bỏ bớt bộ lọc đang chọn." };
+  }
+  const scoped = ctx.type && ctx.bucket ? EMPTY_SCOPE_COPY[ctx.type]?.[ctx.bucket] : undefined;
+  if (scoped) return scoped;
+  return (ctx.type && EMPTY_TYPE_COPY[ctx.type]) || { title: "Chưa có văn bản nào", description: "Vào sổ hoặc soạn văn bản mới để bắt đầu." };
 }
 
 export interface LedgerFilterOption {
@@ -146,7 +195,6 @@ interface LedgerFilterCategory {
 
 export interface DocumentLedgerToolbarProps {
   title: string;
-  total: number | null;
   searchValue: string;
   onSearchChange: (value: string) => void;
   urgency: string;
@@ -161,7 +209,6 @@ export interface DocumentLedgerToolbarProps {
   onLeadUnitChange: (leadUnitId: string) => void;
   primaryActionLabel: string;
   onPrimaryAction: () => void;
-  activeFilters: Array<{ id: string; label: string; value: string; onClear: () => void }>;
   onClearFilters: () => void;
   visibleColumns: LedgerColumnVisibility;
   onVisibleColumnsChange: (columns: LedgerColumnVisibility) => void;
@@ -169,7 +216,6 @@ export interface DocumentLedgerToolbarProps {
 
 export function DocumentLedgerToolbar({
   title,
-  total,
   searchValue,
   onSearchChange,
   urgency,
@@ -184,7 +230,6 @@ export function DocumentLedgerToolbar({
   onLeadUnitChange,
   primaryActionLabel,
   onPrimaryAction,
-  activeFilters,
   onClearFilters,
   visibleColumns,
   onVisibleColumnsChange,
@@ -255,35 +300,30 @@ export function DocumentLedgerToolbar({
     (urgency !== "ALL" ? 1 : 0) + (status !== "ALL" ? 1 : 0) + (year ? 1 : 0) + (leadUnitId ? 1 : 0);
 
   return (
-    <div data-slot="document-ledger-toolbar">
-      <div className="flex flex-wrap items-center gap-2 min-h-10">
-        <div className="flex shrink-0 items-baseline gap-2">
-          <h1 className="whitespace-nowrap text-compact font-semibold text-foreground">{title}</h1>
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">{total ?? "—"}</span>
-        </div>
-        <span className="flex-1" />
-
-        <div className="order-last flex w-full items-center gap-1.5 sm:order-none sm:w-auto">
-          <ListToolbarSearch
-            ref={searchRef}
-            value={searchValue}
-            onChange={onSearchChange}
-            placeholder="Tìm số, ký hiệu, trích yếu…"
-            aria-label="Tìm văn bản"
-            collapsedWidthClassName="w-full sm:w-56"
-            expandedWidthClassName="w-full sm:w-72"
-          />
-        </div>
-
-        <ListToolbarFilterPopover
-          open={isFilterOpen}
-          onOpenChange={setIsFilterOpen}
-          categories={categories}
-          activeCount={filterCount}
-          onClear={onClearFilters}
-          ariaLabel="Bộ lọc văn bản"
-        />
-
+    // Cùng thanh công cụ trang Nhiệm vụ: tiêu đề bên trái; tìm · lọc · hiển thị · hành động chính bên phải.
+    // Xóa bộ lọc nằm ở hàng chip bên dưới ("Xóa lọc"), không lặp lại cạnh nút Lọc.
+    <div data-slot="document-ledger-toolbar" className="flex items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 items-center pr-4">
+        <h1 className="truncate text-compact font-semibold text-foreground select-none">{title}</h1>
+      </div>
+      <ListToolbarSearch
+        ref={searchRef}
+        value={searchValue}
+        onChange={onSearchChange}
+        placeholder="Tìm văn bản… /"
+        aria-label="Tìm văn bản"
+        title="Tìm theo số, ký hiệu, trích yếu"
+        collapsedWidthClassName={LIST_TOOLBAR_SEARCH_COLLAPSED}
+        expandedWidthClassName={LIST_TOOLBAR_SEARCH_EXPANDED}
+      />
+      <ListToolbarFilterPopover
+        open={isFilterOpen}
+        onOpenChange={setIsFilterOpen}
+        categories={categories}
+        activeCount={filterCount}
+        onClear={onClearFilters}
+        ariaLabel="Bộ lọc văn bản"
+      />
         <ListToolbarPopover
           open={isDisplayOpen}
           onOpenChange={setIsDisplayOpen}
@@ -305,7 +345,6 @@ export function DocumentLedgerToolbar({
                 </PropertyToggleChip>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">Cơ quan ban hành và Chủ trì chỉ hiện khi danh sách đủ rộng.</p>
             <div className="flex justify-end border-t border-border/60 pt-1.5">
               <button
                 type="button"
@@ -317,30 +356,50 @@ export function DocumentLedgerToolbar({
             </div>
           </div>
         </ListToolbarPopover>
-
-        <button
-          type="button"
-          onClick={onPrimaryAction}
-          aria-label={primaryActionLabel}
-          title={primaryActionLabel}
-          className={listToolbarPrimaryButtonClass}
-        >
-          <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-          <span>{primaryActionLabel}</span>
-        </button>
-      </div>
-
-      <div className="h-px bg-border/60" />
-
-      {activeFilters.some((f) => f.id !== "bucket") ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-h-8 mt-3 text-compact">
-          <span className="flex-1" />
-          {activeFilters.filter((f) => f.id !== "bucket").map((f) => (
-            <FilterChip key={f.id} label={f.label} value={f.value} onRemove={f.onClear} />
-          ))}
-        </div>
-      ) : null}
+      <button
+        type="button"
+        onClick={onPrimaryAction}
+        aria-label={primaryActionLabel}
+        title={primaryActionLabel}
+        className={listToolbarPrimaryButtonClass}
+      >
+        <Plus className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+        <span>{primaryActionLabel}</span>
+      </button>
     </div>
+  );
+}
+
+const FILTER_CHIP_ICON: Record<string, React.ComponentType<any> | undefined> = {
+  status: FilterIconStatus,
+  urgency: FilterIconPriority,
+  leadUnit: FilterIconDept,
+  year: FilterIconMonth,
+};
+
+export interface DocumentActiveFiltersProps {
+  filters: Array<{ id: string; label: string; value: string; onClear: () => void }>;
+  onClearAll: () => void;
+  /** Số văn bản khớp bộ lọc; null khi đang tải (không hiện số cũ cho truy vấn mới). */
+  total: number | null;
+}
+
+/** Hàng bộ lọc đang áp dụng dưới thanh công cụ, dùng chung `ActiveFilterBar` của trang Nhiệm vụ. */
+export function DocumentActiveFilters({ filters, onClearAll, total }: DocumentActiveFiltersProps) {
+  if (filters.length === 0) return null;
+  return (
+    <ActiveFilterBar onClearAll={onClearAll} filteredCount={total ?? undefined}>
+      {filters.map((f) => (
+        <FilterSegmentChip
+          key={f.id}
+          dataSlot={`filter-chip-${f.id}`}
+          icon={FILTER_CHIP_ICON[f.id]}
+          label={f.label}
+          value={f.value}
+          onRemove={f.onClear}
+        />
+      ))}
+    </ActiveFilterBar>
   );
 }
 
@@ -352,13 +411,20 @@ export function DocumentLedgerToolbar({
  * Ba mẫu lưới theo độ rộng của chính bảng (container query), không theo viewport:
  * hẹp (< 720px, Quick View đang mở) / vừa / rộng (≥ 1100px, thêm cơ quan ban hành và chủ trì).
  * Ô nào không có trong mẫu của mức hiện tại phải ẩn để các ô còn lại vẫn thẳng hàng.
+ * Hàng và tiêu đề tối thiểu 40px (cỡ medium của Carbon data table), tiêu đề cột cao bằng hàng.
+ * Trích yếu một dòng (cắt cuối, có tooltip); tên cơ quan ban hành/chủ trì không cắt mà xuống tối đa 2 dòng (hàng 48px).
  */
 const GRID =
-  "grid items-center gap-x-4 pl-3 pr-4 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
+  "grid min-h-10 items-center py-1 gap-x-2 px-2 [grid-template-columns:var(--ledger-cols-sm)] @[720px]/ledger:[grid-template-columns:var(--ledger-cols)] @[1100px]/ledger:[grid-template-columns:var(--ledger-cols-xl)]";
 /** Ô ẩn ở mức hẹp, hiện từ mức vừa. */
 const FROM_MEDIUM = "hidden @[720px]/ledger:block";
 /** Ô ẩn dưới mức rộng, hiện từ mức rộng. */
 const FROM_WIDE = "hidden @[1100px]/ledger:block";
+/**
+ * Tên cơ quan/đơn vị: xuống dòng (tối đa 2 dòng × 20px), không ghi tắt bằng "…".
+ * `line-clamp` đặt `display: -webkit-box` nên phải nằm ở thẻ con: đặt chung với `hidden` của ô sẽ làm ô hiện ở mức hẹp/vừa.
+ */
+const WRAP_TEXT = "break-words text-xs leading-5 text-muted-foreground line-clamp-2";
 
 const STEP_STATUS: Record<LedgerStepKind, string> = {
   new: "NOT_STARTED",
@@ -391,7 +457,7 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
         <span
           className={cn(
             "size-4 rounded-[4px] border border-border/70 bg-background/60 transition-opacity",
-            always ? "opacity-60" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+            always ? "opacity-60" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-within:opacity-100"
           )}
         />
       )}
@@ -399,46 +465,76 @@ function RowSelector({ checked, label, onToggle, always }: { checked: boolean; l
   );
 }
 
-function UrgencyCell({ doc }: { doc: OfficialDocument }) {
+/** Nhãn mức khẩn dạng "Thượng khẩn"; null khi văn bản không khẩn. */
+function urgencyText(doc: OfficialDocument): { label: string; toneClass: string } | null {
   const tag = getLedgerUrgencyTag(doc.urgency);
-  if (!tag) {
-    return (
-      <PrioritySignalBars priority="NORMAL" className="text-muted-foreground" ariaLabel="Mức khẩn: Thường" />
-    );
-  }
-  const label = tag.label.charAt(0) + tag.label.slice(1).toLowerCase();
-  const toneClass = tag.tone === "danger" ? TONE_TEXT.danger : TONE_TEXT.warning;
+  if (!tag) return null;
+  return {
+    label: tag.label.charAt(0) + tag.label.slice(1).toLowerCase(),
+    toneClass: tag.tone === "danger" ? TONE_TEXT.danger : TONE_TEXT.warning,
+  };
+}
+
+/**
+ * Mỗi mức khẩn một icon riêng (theo bộ icon độ ưu tiên): Hỏa tốc = dấu chấm than, Thượng khẩn = 3 cột,
+ * Khẩn = 2 cột, Thường = 1 cột. Màu không thay nhãn: tên luôn có trong nhãn truy cập và tooltip.
+ */
+const URGENCY_ICON: Record<string, string> = { flash: "URGENT", top_urgent: "HIGH", urgent: "NORMAL", normal: "LOW" };
+
+function UrgencyIcon({ doc, className }: { doc: OfficialDocument; className?: string }) {
+  const urgent = urgencyText(doc);
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium", toneClass)}>
-      <PrioritySignalBars priority="URGENT" className={toneClass} ariaLabel={`Mức khẩn: ${label}`} />
-      <span className="truncate hidden @[900px]/ledger:inline">{label}</span>
+    <PrioritySignalBars
+      priority={URGENCY_ICON[doc.urgency] ?? "LOW"}
+      className={cn(urgent ? urgent.toneClass : "text-muted-foreground/60", className)}
+      ariaLabel={`Mức khẩn: ${urgent?.label ?? "Thường"}`}
+    />
+  );
+}
+
+function UrgencyCell({ doc }: { doc: OfficialDocument }) {
+  const urgent = urgencyText(doc);
+  return (
+    <span className={cn("inline-flex min-w-0 items-center gap-1 text-xs font-medium", urgent ? urgent.toneClass : "text-muted-foreground")}>
+      <UrgencyIcon doc={doc} />
+      {/* Nhãn chỉ hiện ở mức rộng (cột 112px); mức vừa chỉ icon, tên nằm ở nhãn truy cập/tooltip */}
+      <span className="hidden truncate @[1100px]/ledger:inline">{urgent?.label ?? "Thường"}</span>
     </span>
   );
 }
 
-function DueCell({ doc, today }: { doc: OfficialDocument; today: string }) {
-  if (!doc.dueDate) return <span className="text-muted-foreground/50 text-xs">-</span>;
+function EmptyCell({ label }: { label: string }) {
+  return (
+    <span className="text-xs text-muted-foreground/60">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
+function DueCell({ doc, today, filterYear }: { doc: OfficialDocument; today: string; filterYear?: number }) {
+  if (!doc.dueDate) return <EmptyCell label="Chưa có hạn xử lý" />;
   const note = getLedgerDueNote(doc.dueDate, isLedgerDone(doc.status), today);
   const Icon = !note ? CalendarCheck : note.tone === "danger" ? CalendarX2 : note.tone === "warning" ? CalendarClock : Calendar;
   return (
-    <span className="inline-flex items-center gap-1.5 tabular-nums text-xs" title={`${formatLedgerDate(doc.dueDate)}${note ? ` · ${note.text}` : ""}`}>
+    <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs" title={`Hạn ${formatLedgerDate(doc.dueDate)}${note ? ` · ${note.text}` : ""}`}>
       <Icon
-        className={cn("size-3.5 shrink-0", note?.tone === "danger" ? "text-rose-600" : note?.tone === "warning" ? "text-amber-600" : "text-muted-foreground/70")}
+        className={cn("size-3.5 shrink-0", note?.tone === "danger" ? "text-destructive" : note?.tone === "warning" ? "text-warning" : "text-muted-foreground/70")}
         strokeWidth={1.5}
         aria-hidden="true"
       />
-      <span className={cn(note ? "text-foreground font-semibold" : "text-muted-foreground font-semibold")}>{formatLedgerDate(doc.dueDate).slice(0, 5)}</span>
+      <span className={cn("truncate font-medium", note ? "text-foreground" : "text-muted-foreground")}>{formatLedgerCellDate(doc.dueDate, filterYear)}</span>
       {note ? <span className="sr-only">{note.text}</span> : null}
     </span>
   );
 }
 
-function IssuedDateCell({ doc }: { doc: OfficialDocument }) {
-  if (!doc.issuedDate) return <span className="text-muted-foreground/50 text-xs">-</span>;
+function IssuedDateCell({ doc, filterYear }: { doc: OfficialDocument; filterYear?: number }) {
+  if (!doc.issuedDate) return <EmptyCell label="Chưa có ngày ban hành" />;
   return (
-    <span className="inline-flex items-center gap-1.5 tabular-nums text-xs text-muted-foreground" title={formatLedgerDate(doc.issuedDate)}>
+    <span className="inline-flex min-w-0 items-center gap-1 tabular-nums text-xs text-muted-foreground" title={`Ban hành ${formatLedgerDate(doc.issuedDate)}`}>
       <CalendarPlus className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-      <span>{formatLedgerDate(doc.issuedDate).slice(0, 5)}</span>
+      <span className="truncate">{formatLedgerCellDate(doc.issuedDate, filterYear)}</span>
     </span>
   );
 }
@@ -449,8 +545,12 @@ export interface DocumentLedgerTableProps {
   selectedDocumentId?: string | null;
   numberHeader: string;
   visibleColumns: LedgerColumnVisibility;
+  /** Năm đang lọc: ngày trong bảng được rút gọn "dd/MM" khi trùng năm này. */
+  filterYear?: number;
   /** Có bộ lọc hoặc từ khóa đang áp dụng: phân biệt "không khớp" với "sổ chưa có văn bản". */
   isFiltered?: boolean;
+  /** Nội dung trạng thái rỗng theo ngữ cảnh (`getLedgerEmptyCopy`); bỏ trống thì suy từ `isFiltered`. */
+  emptyCopy?: { title: string; description: string };
   emptyAction?: React.ReactNode;
   isLoading?: boolean;
   error?: string | null;
@@ -458,8 +558,134 @@ export interface DocumentLedgerTableProps {
   onOpen: (doc: OfficialDocument) => void;
   /** Focus chuyển sang dòng khác bằng bàn phím (j/k, ↑/↓): Quick View đang mở thì đổi văn bản theo. */
   onNavigate?: (doc: OfficialDocument) => void;
+  /** → trên dòng đang xem: chuyển focus sang tiêu đề Quick View. */
+  onFocusDetail?: () => void;
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
+}
+
+interface LedgerRowProps {
+  doc: OfficialDocument;
+  documents: OfficialDocument[];
+  selected: boolean;
+  isOpen: boolean;
+  showSelectors: boolean;
+  numberHeader: string;
+  visibleColumns: LedgerColumnVisibility;
+  filterYear?: number;
+  today: string;
+  onOpen: (doc: OfficialDocument) => void;
+  onNavigate?: (doc: OfficialDocument) => void;
+  onFocusDetail?: () => void;
+  onToggleSelect: (id: string) => void;
+}
+
+function LedgerRow({ doc, documents, selected, isOpen, showSelectors, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect }: LedgerRowProps) {
+  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
+  const no = numberLabel(doc);
+  const urgent = urgencyText(doc);
+  const unit = doc.leadDepartment && doc.leadDepartment !== "Chưa phân công" ? doc.leadDepartment : "";
+  const summaryRef = React.useRef<HTMLSpanElement>(null);
+  const [hover, setHover] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
+  const [truncated, setTruncated] = React.useState(false);
+  const wantTooltip = hover || focused;
+  // Chỉ đo khi cần hiện tooltip: trích yếu không bị cắt thì không có gì để xem thêm
+  React.useLayoutEffect(() => {
+    if (!wantTooltip) return;
+    const el = summaryRef.current;
+    setTruncated(Boolean(el && el.scrollWidth > el.clientWidth + 1));
+  }, [wantTooltip]);
+  const identifiers = [no ? `${numberHeader} ${no}` : null, doc.documentNumber || null].filter(Boolean).join(" · ");
+
+  return (
+    <div
+      role="row"
+      tabIndex={0}
+      data-doc-id={doc.id}
+      aria-selected={selected}
+      aria-current={isOpen ? "true" : undefined}
+      aria-keyshortcuts={isOpen && onFocusDetail ? "ArrowRight" : undefined}
+      onClick={() => onOpen(doc)}
+      onFocus={(e) => {
+        if (e.target === e.currentTarget && e.currentTarget.matches(":focus-visible")) setFocused(true);
+      }}
+      onBlur={(e) => {
+        if (e.target === e.currentTarget) setFocused(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onOpen(doc);
+          return;
+        }
+        if (e.key === "ArrowRight" && isOpen && onFocusDetail) {
+          e.preventDefault();
+          onFocusDetail();
+          return;
+        }
+        const delta = e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
+        if (!delta) return;
+        const index = documents.findIndex((d) => d.id === doc.id);
+        const next = documents[index + delta];
+        if (!next) return;
+        e.preventDefault();
+        const row = e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-doc-id="${CSS.escape(next.id)}"]`);
+        row?.focus();
+        onNavigate?.(next);
+      }}
+      className={cn(
+        GRID,
+        "group cursor-pointer select-none text-foreground transition-colors outline-none",
+        "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+        isOpen ? "bg-selected" : selected ? "bg-muted/60 hover:bg-muted/80" : "hover:bg-muted/40"
+      )}
+    >
+      <span role="cell" className="flex items-center">
+        <RowSelector checked={selected} label={`Chọn văn bản ${doc.documentNumber || no || doc.summary}`} onToggle={() => onToggleSelect(doc.id)} always={showSelectors} />
+      </span>
+      <span role="cell" className="flex min-w-0 items-center gap-1.5">
+        {/* Bảng hẹp không có cột mức khẩn: văn bản khẩn hiện icon ngay đầu ô */}
+        {visibleColumns.urgency && urgent ? <UrgencyIcon doc={doc} className="@[720px]/ledger:hidden" /> : null}
+        <Tooltip open={wantTooltip && truncated} onOpenChange={setHover}>
+          <TooltipTrigger asChild>
+            <span ref={summaryRef} className="min-w-0 truncate text-compact font-medium text-foreground transition-colors group-hover:text-primary">
+              {doc.summary}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6} className="max-w-96 whitespace-normal py-1.5 leading-snug">
+            {doc.summary}
+            {identifiers ? <span className="mt-0.5 block font-mono font-normal opacity-70">{identifiers}</span> : null}
+          </TooltipContent>
+        </Tooltip>
+        {doc.documentNumber ? (
+          <span className="hidden min-w-0 max-w-40 shrink-[2] truncate font-mono text-xs text-muted-foreground @[1100px]/ledger:inline" title={`Số, ký hiệu: ${doc.documentNumber}`}>
+            {doc.documentNumber}
+          </span>
+        ) : null}
+      </span>
+      {visibleColumns.urgency ? <span role="cell" className={FROM_MEDIUM}><UrgencyCell doc={doc} /></span> : null}
+      {visibleColumns.issuingAuthority ? (
+        <span role="cell" className={cn(FROM_WIDE, "min-w-0")}>
+          <span className={WRAP_TEXT}>{doc.issuingAuthority || <EmptyCell label="Chưa có cơ quan ban hành" />}</span>
+        </span>
+      ) : null}
+      {visibleColumns.leadUnit ? (
+        <span role="cell" className={cn(FROM_WIDE, "min-w-0")}>
+          <span className={WRAP_TEXT}>{unit || <EmptyCell label="Chưa có đơn vị chủ trì" />}</span>
+        </span>
+      ) : null}
+      {visibleColumns.dueDate ? <span role="cell" className="flex min-w-0"><DueCell doc={doc} today={today} filterYear={filterYear} /></span> : null}
+      {visibleColumns.issuedDate ? <span role="cell" className={cn(FROM_MEDIUM, "min-w-0")}><IssuedDateCell doc={doc} filterYear={filterYear} /></span> : null}
+      {visibleColumns.status ? (
+        <span role="cell" className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={step.label}>
+          <TaskStatusCircle status={STEP_STATUS[step.kind]} />
+          <span className="truncate font-medium">{step.label}</span>
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 export function DocumentLedgerTable({
@@ -468,13 +694,16 @@ export function DocumentLedgerTable({
   selectedDocumentId,
   numberHeader,
   visibleColumns,
+  filterYear,
   isFiltered,
+  emptyCopy,
   emptyAction,
   isLoading,
   error,
   onRetry,
   onOpen,
   onNavigate,
+  onFocusDetail,
   onToggleSelect,
   onSelectAll,
 }: DocumentLedgerTableProps) {
@@ -487,17 +716,22 @@ export function DocumentLedgerTable({
   } as CSSProperties;
 
   const header = (
-    <div role="row" className={cn(GRID, "h-11 text-xs font-medium text-muted-foreground select-none")}>
-      <span role="columnheader">
-        <RowSelector checked={allSelected} label="Chọn tất cả văn bản" onToggle={onSelectAll} always />
+    <div role="row" className={cn(GRID, "whitespace-nowrap text-xs font-medium text-muted-foreground select-none")}>
+      <span role="columnheader" className="flex items-center">
+        <RowSelector checked={allSelected} label="Chọn tất cả văn bản trên trang này" onToggle={onSelectAll} always />
       </span>
       <span role="columnheader">Văn bản</span>
-      {visibleColumns.urgency ? <span role="columnheader" className={FROM_MEDIUM}>Mức khẩn</span> : null}
+      {visibleColumns.urgency ? (
+        <span role="columnheader" className={FROM_MEDIUM}>
+          {/* Cột 28px ở mức vừa chỉ đủ cho icon: tiêu đề ẩn khỏi mắt nhưng vẫn có tên */}
+          <span className="sr-only @[1100px]/ledger:not-sr-only">Mức khẩn</span>
+        </span>
+      ) : null}
       {visibleColumns.issuingAuthority ? <span role="columnheader" className={FROM_WIDE}>Cơ quan ban hành</span> : null}
       {visibleColumns.leadUnit ? <span role="columnheader" className={FROM_WIDE}>Chủ trì</span> : null}
       {visibleColumns.dueDate ? <span role="columnheader">Hạn xử lý</span> : null}
       {visibleColumns.issuedDate ? <span role="columnheader" className={FROM_MEDIUM}>Ngày ban hành</span> : null}
-      {visibleColumns.status ? <span role="columnheader">Trạng thái</span> : null}
+      {visibleColumns.status ? <span role="columnheader">Bước xử lý</span> : null}
     </div>
   );
 
@@ -505,10 +739,10 @@ export function DocumentLedgerTable({
     return (
       <div role="table" aria-busy="true" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
         {header}
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="min-h-14 py-2 flex flex-col justify-center gap-1.5 px-3 animate-pulse">
-            <div className="h-3.5 w-3/5 rounded bg-muted/70" />
-            <div className="h-3 w-2/5 rounded bg-muted/50" />
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex h-10 items-center gap-2 px-2 animate-pulse">
+            <div className="size-4 shrink-0 rounded-[4px] bg-muted/50" />
+            <div className="h-3 rounded bg-muted/70" style={{ width: `${40 + ((i * 17) % 35)}%` }} />
           </div>
         ))}
       </div>
@@ -524,10 +758,18 @@ export function DocumentLedgerTable({
   }
 
   if (documents.length === 0) {
-    const copy = getLedgerEmptyCopy(Boolean(isFiltered));
+    const copy = emptyCopy ?? getLedgerEmptyCopy({ isResultFiltered: Boolean(isFiltered) });
+    // Đặt giữa vùng danh sách như trạng thái rỗng của Nhiệm vụ, không dạt lên đầu để lại khoảng trắng lớn
     return (
-      <div data-slot="document-ledger-table">
-        <EmptyState density="compact" title={copy.title} description={copy.description} action={emptyAction} />
+      <div data-slot="document-ledger-table" className="flex min-h-[48vh] items-center justify-center">
+        <EmptyState
+          role="status"
+          density="compact"
+          icon={isFiltered ? <SearchX strokeWidth={1.5} /> : <Inbox strokeWidth={1.5} />}
+          title={copy.title}
+          description={copy.description}
+          action={emptyAction}
+        />
       </div>
     );
   }
@@ -535,81 +777,24 @@ export function DocumentLedgerTable({
   return (
     <div role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger" style={wrapperStyle}>
       {header}
-      {documents.map((doc) => {
-        const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
-        const selected = selectedIds.has(doc.id);
-        const isOpen = selectedDocumentId === doc.id;
-        const no = numberLabel(doc);
-        const sub = [no, doc.documentNumber, formatLedgerDate(doc.issuedDate)].filter(Boolean);
-        const unit = doc.leadDepartment && doc.leadDepartment !== "Chưa phân công" ? doc.leadDepartment : "";
-        return (
-          <div
-            key={doc.id}
-            role="row"
-            tabIndex={0}
-            data-doc-id={doc.id}
-            aria-selected={selected || isOpen}
-            aria-current={isOpen ? "true" : undefined}
-            onClick={() => onOpen(doc)}
-            onKeyDown={(e) => {
-              if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return;
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onOpen(doc);
-                return;
-              }
-              const step = e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
-              if (!step) return;
-              const index = documents.findIndex((d) => d.id === doc.id);
-              const next = documents[index + step];
-              if (!next) return;
-              e.preventDefault();
-              const row = e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-doc-id="${CSS.escape(next.id)}"]`);
-              row?.focus();
-              onNavigate?.(next);
-            }}
-            className={cn(
-              GRID,
-              "group min-h-12 py-2 cursor-pointer select-none text-foreground transition-colors outline-none",
-              "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
-              selected ? "bg-selected/80 hover:bg-selected" : isOpen ? "bg-primary/[0.08]" : "hover:bg-muted/40"
-            )}
-          >
-            <span role="cell">
-              <RowSelector checked={selected} label={`Chọn văn bản ${doc.documentNumber}`} onToggle={() => onToggleSelect(doc.id)} always={selectedIds.size > 0} />
-            </span>
-            <span role="cell" className="flex min-w-0 flex-col gap-0.5">
-              <span className="min-w-0 break-words text-compact font-medium text-foreground transition-colors group-hover:text-primary" title={doc.summary}>
-                {doc.summary}
-              </span>
-              <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                {no ? <span className="shrink-0 font-mono tabular-nums" title={`${numberHeader} ${no}`}>{no}</span> : null}
-                {no && sub.length > 1 ? <span aria-hidden="true">·</span> : null}
-                <span className="min-w-0 truncate font-mono" title={sub.join(" · ")}>{[doc.documentNumber, formatLedgerDate(doc.issuedDate)].filter(Boolean).join(" · ")}</span>
-              </span>
-            </span>
-            {visibleColumns.urgency ? <span role="cell" className={FROM_MEDIUM}><UrgencyCell doc={doc} /></span> : null}
-            {visibleColumns.issuingAuthority ? (
-              <span role="cell" className="hidden min-w-0 break-words text-xs text-muted-foreground @[1100px]/ledger:line-clamp-2" title={doc.issuingAuthority}>
-                {doc.issuingAuthority || "-"}
-              </span>
-            ) : null}
-            {visibleColumns.leadUnit ? (
-              <span role="cell" className="hidden min-w-0 break-words text-xs text-muted-foreground @[1100px]/ledger:line-clamp-2" title={unit}>
-                {unit || "-"}
-              </span>
-            ) : null}
-            {visibleColumns.dueDate ? <span role="cell"><DueCell doc={doc} today={today} /></span> : null}
-            {visibleColumns.issuedDate ? <span role="cell" className={FROM_MEDIUM}><IssuedDateCell doc={doc} /></span> : null}
-            {visibleColumns.status ? (
-              <span role="cell" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-                <TaskStatusCircle status={STEP_STATUS[step.kind]} />
-                <span className="truncate font-semibold">{step.label}</span>
-              </span>
-            ) : null}
-          </div>
-        );
-      })}
+      {documents.map((doc) => (
+        <LedgerRow
+          key={doc.id}
+          doc={doc}
+          documents={documents}
+          selected={selectedIds.has(doc.id)}
+          isOpen={selectedDocumentId === doc.id}
+          showSelectors={selectedIds.size > 0}
+          numberHeader={numberHeader}
+          visibleColumns={visibleColumns}
+          filterYear={filterYear}
+          today={today}
+          onOpen={onOpen}
+          onNavigate={onNavigate}
+          onFocusDetail={onFocusDetail}
+          onToggleSelect={onToggleSelect}
+        />
+      ))}
     </div>
   );
 }

@@ -6,9 +6,12 @@ export const LIST_MIN = 480;
 export const PANE_MIN = 440;
 export const PANE_DEFAULT = 640;
 export const PANE_MAX = 1100;
-/** Bề rộng thanh kéo giữa danh sách và pane (w-1.5). */
-export const HANDLE_WIDTH = 6;
-/** Chống nhảy qua lại ở ngưỡng chuyển chế độ. */
+/**
+ * Phần khung cộng thêm ngoài hai thẻ: padding của workspace (2 × 8px) và gap giữa hai thẻ (6px),
+ * giống `.splitWorkspace` của Task Detail. Thanh kéo nằm trên mép thẻ nên không chiếm thêm chỗ.
+ */
+export const SHELL_CHROME = 22;
+/** Chống nhảy qua lại: từ overlay chỉ quay lại pane khi dư thêm 24px. */
 export const MODE_HYSTERESIS = 24;
 export const PANE_KEY_STEP = 20;
 
@@ -25,16 +28,16 @@ export interface PaneLayout {
 export const clampWidth = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max));
 
 /**
- * Quy tắc: đủ chỗ cho `LIST_MIN + thanh kéo + PANE_MIN` thì là pane; ngược lại là overlay.
- * `previousMode` dùng cho hysteresis: đã ở pane thì chỉ rớt xuống overlay khi thiếu hơn 24px,
- * đang overlay thì chỉ lên pane khi dư hơn 24px.
+ * Quy tắc: đủ chỗ cho `LIST_MIN + khung + PANE_MIN` thì là pane; ngược lại là overlay.
+ * `previousMode` dùng cho hysteresis chỉ ở chiều quay lại pane: đang overlay thì cần dư thêm 24px.
+ * Đang pane thì rớt xuống overlay ngay dưới ngưỡng, để danh sách và pane luôn đủ hai mức tối thiểu.
  * Độ rộng người dùng chọn (`preferred`) được giữ nguyên ở nơi lưu; chỉ phần hiển thị bị clamp.
  */
 export function resolvePaneLayout(workspaceWidth: number, preferred: number, previousMode?: PaneMode): PaneLayout {
-  const threshold = LIST_MIN + HANDLE_WIDTH + PANE_MIN;
-  const needed = previousMode === "pane" ? threshold - MODE_HYSTERESIS : previousMode === "overlay" ? threshold + MODE_HYSTERESIS : threshold;
+  const threshold = LIST_MIN + SHELL_CHROME + PANE_MIN;
+  const needed = previousMode === "overlay" ? threshold + MODE_HYSTERESIS : threshold;
   if (!(workspaceWidth >= needed)) return { mode: "overlay", width: 0, max: 0 };
-  const max = Math.min(PANE_MAX, workspaceWidth - LIST_MIN - HANDLE_WIDTH);
+  const max = Math.min(PANE_MAX, workspaceWidth - LIST_MIN - SHELL_CHROME);
   return { mode: "pane", width: clampWidth(preferred, PANE_MIN, max), max };
 }
 

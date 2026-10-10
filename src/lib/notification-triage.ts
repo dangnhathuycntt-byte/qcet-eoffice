@@ -17,6 +17,8 @@ export type NotificationTriageTab = "all" | "action_required" | "approvals" | "r
 export interface QCETNotification {
   id: string;
   actorName: string;
+  /** false khi API không cung cấp người gửi; `actorName` chỉ là nhãn dự phòng cho các màn hình cũ. */
+  hasActor?: boolean;
   actorRole?: string;
   action?: string;
   targetTitle?: string;
@@ -135,10 +137,35 @@ const REMINDER_TYPES = new Set([
   "deadline",
   "reminder",
   "deadline_warning_24h",
+  "document_overdue",
+  "document_expiring_soon",
 ]);
+
+export const NOTIFICATION_TRIAGE_TABS: readonly NotificationTriageTab[] = [
+  "all",
+  "action_required",
+  "approvals",
+  "reminders",
+];
+
+/** Giá trị lạ về mặc định "all". */
+export function parseTriageTab(value: string | null | undefined): NotificationTriageTab {
+  return NOTIFICATION_TRIAGE_TABS.includes(value as NotificationTriageTab)
+    ? (value as NotificationTriageTab)
+    : "all";
+}
+
+/** Danh sách type (chữ thường) thuộc một nhóm triage; dùng chung cho server và client. */
+export function getTriageTypes(tab: NotificationTriageTab): string[] {
+  if (tab === "action_required") return [...ACTION_REQUIRED_TYPES];
+  if (tab === "approvals") return [...APPROVAL_TYPES];
+  if (tab === "reminders") return [...REMINDER_TYPES];
+  return [];
+}
 
 /**
  * Filters notifications into one of the 4 triage tabs.
+ * Phân loại chỉ dựa vào type/category, không suy đoán từ nội dung chữ.
  */
 export function filterNotificationsByTab(
   notifications: QCETNotification[],
@@ -148,34 +175,14 @@ export function filterNotificationsByTab(
     return notifications;
   }
 
+  const types = new Set(getTriageTypes(tab));
   return notifications.filter((notif) => {
     const rawType = (notif.type || "").toLowerCase().trim();
     const rawCategory = (notif.category || "").toLowerCase().trim();
-    const titleText = (notif.targetTitle || notif.title || "").toLowerCase();
-    const bodyText = (notif.action || notif.body || "").toLowerCase();
-
     if (tab === "action_required") {
-      return (
-        ACTION_REQUIRED_TYPES.has(rawType) ||
-        rawCategory === "action"
-      );
+      return types.has(rawType) || rawCategory === "action";
     }
-
-    if (tab === "approvals") {
-      return APPROVAL_TYPES.has(rawType);
-    }
-
-    if (tab === "reminders") {
-      return (
-        REMINDER_TYPES.has(rawType) ||
-        titleText.includes("hạn") ||
-        titleText.includes("nhắc nhở") ||
-        bodyText.includes("hạn") ||
-        bodyText.includes("nhắc nhở")
-      );
-    }
-
-    return true;
+    return types.has(rawType);
   });
 }
 
@@ -317,21 +324,26 @@ export function getTimeGroup(dateInput: string | Date): "new" | "earlier" {
  * Maps raw API/database notification record into typed QCETNotification.
  */
 export function mapDbNotification(raw: any): QCETNotification {
-  const dateVal = raw.createdAt ? new Date(raw.createdAt) : new Date();
+  const parsedDate = raw.createdAt ? new Date(raw.createdAt) : null;
+  const dateVal = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null;
+  const actor = typeof raw.actorName === "string" ? raw.actorName.trim() : "";
+  const link = raw.linkHref ?? raw.link;
+  const body = raw.body ?? raw.message;
   return {
     id: raw.id,
-    actorName: raw.actorName || "Hệ thống QCET",
-    action: raw.body || raw.action || "",
+    actorName: actor || "Hệ thống QCET",
+    hasActor: Boolean(actor),
+    action: body || raw.action || "",
     targetTitle: raw.title || raw.targetTitle || "",
-    timestamp: raw.timestamp || formatRelativeTime(dateVal),
+    timestamp: raw.timestamp || (dateVal ? formatRelativeTime(dateVal) : ""),
     category: (raw.category || "QCET").toUpperCase(),
     isRead: Boolean(raw.isRead),
-    timeGroup: raw.timeGroup || getTimeGroup(dateVal),
-    type: raw.type || "completed",
-    linkHref: raw.linkHref || "/",
-    body: raw.body,
+    timeGroup: raw.timeGroup || (dateVal ? getTimeGroup(dateVal) : "earlier"),
+    type: raw.type || "general",
+    linkHref: typeof link === "string" && link.trim() ? link.trim() : undefined,
+    body,
     title: raw.title,
-    createdAt: dateVal,
+    createdAt: dateVal ?? undefined,
   };
 }
 

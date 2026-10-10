@@ -114,7 +114,7 @@ export function TaskTableHeader({
     );
   };
 
-  const rowHeightClass = "h-11";
+  const rowHeightClass = "h-12"; // Tiêu đề cột cao bằng hàng (48px)
   const paddingClass = "px-3 py-2.5";
 
   return (

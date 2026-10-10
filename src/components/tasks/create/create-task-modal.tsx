@@ -42,17 +42,17 @@ const PRIORITY_CONFIG: Record<
 > = {
   URGENT: {
     label: "Khẩn cấp",
-    color: "text-rose-600",
-    bg: "bg-rose-50",
-    border: "border-rose-200",
-    iconColor: "text-rose-500",
+    color: "text-destructive",
+    bg: "bg-danger-soft",
+    border: "border-destructive/20",
+    iconColor: "text-destructive",
   },
   HIGH: {
     label: "Cao",
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    iconColor: "text-amber-500",
+    color: "text-foreground",
+    bg: "bg-muted/40",
+    border: "border-border",
+    iconColor: "text-foreground/70",
   },
   MEDIUM: {
     label: "Bình thường",
@@ -81,6 +81,8 @@ export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess?: (task: unknown) => void;
+  /** Nhận nhiệm vụ vừa tạo từ server (có `id`), dùng khi cần liên kết ngay sau khi tạo. */
+  onCreated?: (task: { id: string }) => void;
   onSubmit?: (data: any, result?: any) => void | Promise<void>;
   initialDepartmentCode?: string;
   initialTitle?: string;
@@ -98,6 +100,7 @@ export function CreateTaskModal({
   isOpen,
   onClose,
   onSubmitSuccess,
+  onCreated,
   onSubmit,
   initialDepartmentCode,
   initialTitle,
@@ -114,6 +117,7 @@ export function CreateTaskModal({
     initialDueDate,
     initialDepartmentCode,
     parentTaskId: initialParentTaskId,
+    onSuccess: (task) => onCreated?.(task as { id: string }),
   });
 
   // ── Local UI state ──────────────────────────────────────────
@@ -318,7 +322,7 @@ export function CreateTaskModal({
                   <button
                     type="button"
                     onClick={form.handleClearDraft}
-                    className="text-xs text-muted-foreground hover:text-rose-600 transition-colors underline underline-offset-2 cursor-pointer"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2 cursor-pointer"
                   >
                     Xóa bản nháp
                   </button>
@@ -332,9 +336,9 @@ export function CreateTaskModal({
                   <div
                     role="alert"
                     aria-live="assertive"
-                    className="flex items-center gap-2 p-2 rounded-md bg-rose-50 border border-rose-200 text-xs text-rose-700 shrink-0"
+                    className="flex items-center gap-2 p-2 rounded-md bg-danger-soft border border-destructive/20 text-xs text-destructive shrink-0"
                   >
-                    <AlertCircle className="size-4 shrink-0 text-rose-500" aria-hidden="true" />
+                    <AlertCircle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
                     <span className="flex-1 font-medium">{errorMessage}</span>
                   </div>
                 )}
@@ -370,11 +374,11 @@ export function CreateTaskModal({
                     placeholder={initialParentTaskId ? "Tên việc con... *" : "Tên nhiệm vụ... *"}
                     className={cn(
                       "w-full text-lg sm:text-xl font-semibold text-foreground placeholder:text-muted-foreground bg-transparent border-0 p-0 focus:outline-none focus:ring-0 leading-snug",
-                      form.fieldErrors.title && "placeholder:text-rose-400 text-rose-900",
+                      form.fieldErrors.title && "placeholder:text-destructive/60 text-destructive",
                     )}
                   />
                   {form.fieldErrors.title && (
-                    <p id="create-task-title-error" role="alert" className="text-xs text-rose-600 font-medium">
+                    <p id="create-task-title-error" role="alert" className="text-xs text-destructive font-medium">
                       {form.fieldErrors.title}
                     </p>
                   )}
@@ -483,7 +487,7 @@ export function CreateTaskModal({
                         className={cn(
                           "inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-medium border transition-all duration-150 cursor-pointer select-none",
                           form.fieldErrors.lead
-                            ? "bg-rose-50 text-rose-700 border-rose-300"
+                            ? "bg-danger-soft text-destructive border-destructive/30"
                             : openDropdown === "dri"
                               ? "border-border bg-accent text-foreground shadow-2xs"
                               : "border-transparent bg-muted/60 hover:bg-accent text-foreground",
@@ -603,7 +607,7 @@ export function CreateTaskModal({
                       <CalendarClock
                         className={cn(
                           "size-3",
-                          form.fieldErrors.dueDate ? "text-rose-500" : "text-muted-foreground",
+                          form.fieldErrors.dueDate ? "text-destructive" : "text-muted-foreground",
                         )}
                         strokeWidth={1.5}
                       />

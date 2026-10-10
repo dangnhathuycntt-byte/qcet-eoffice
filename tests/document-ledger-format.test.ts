@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  formatLedgerCellDate,
   formatLedgerDate,
   getLedgerDueNote,
   getLedgerUrgencyTag,
@@ -18,6 +19,13 @@ describe("document-ledger-format", () => {
     assert.equal(formatLedgerDate("2026-09-25"), "25/09/2026");
     assert.equal(formatLedgerDate("2026-09-25T00:00:00.000Z"), "25/09/2026");
     assert.equal(formatLedgerDate(""), "");
+  });
+
+  it("formatLedgerCellDate luôn có năm, chỉ rút gọn khi đang lọc đúng năm đó (SPEC §17.4)", () => {
+    assert.equal(formatLedgerCellDate("2026-10-09"), "09/10/2026");
+    assert.equal(formatLedgerCellDate("2026-10-09", 2026), "09/10");
+    assert.equal(formatLedgerCellDate("2025-12-31", 2026), "31/12/2025");
+    assert.equal(formatLedgerCellDate(null, 2026), "");
   });
 
   it("getLedgerDueNote tính còn/trễ hạn và bỏ qua văn bản đã xong", () => {

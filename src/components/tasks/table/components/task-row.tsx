@@ -700,9 +700,9 @@ export const TaskRow = React.memo(function TaskRow({
                 icon={DueIcon}
                 iconClassName={
                   dueTone === "danger"
-                    ? "text-rose-600"
+                    ? "text-destructive"
                     : dueTone === "warn"
-                    ? "text-amber-600"
+                    ? "text-warning"
                     : "text-muted-foreground/70"
                 }
                 textClassName={dueTone === "muted" ? "text-muted-foreground font-semibold" : "text-foreground font-semibold"}
@@ -738,11 +738,11 @@ export const TaskRow = React.memo(function TaskRow({
         <td className="w-[180px] align-middle whitespace-nowrap px-3 py-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             {statusLabel === "Trễ hạn" ? (
-              <TaskIconStatusOverdue className="size-4 shrink-0 text-rose-600" />
+              <TaskIconStatusOverdue className="size-4 shrink-0 text-destructive" />
             ) : (
               <TaskStatusCircle status={task.status} />
             )}
-            <span className={cn("truncate font-semibold", statusLabel === "Trễ hạn" && "text-rose-700")}>{statusLabel}</span>
+            <span className={cn("truncate font-semibold", statusLabel === "Trễ hạn" && "text-destructive")}>{statusLabel}</span>
           </span>
         </td>
       )}

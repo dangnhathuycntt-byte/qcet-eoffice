@@ -46,6 +46,12 @@ describe("Rail công cụ trình xem tệp (44px, dọc)", () => {
     assert.ok(html.includes("Trang 3 trên 12"), "hiện trang hiện tại / tổng");
   });
 
+  test("Tệp N có nhãn cho dòng tên tệp: chữ \"Tệp 5\" nhìn thấy, popover không vượt mép màn hình", () => {
+    const html = renderToStaticMarkup(React.createElement(FilesMenu, { files: makeFiles(5), activeId: "f2", onSelect: () => {}, variant: "labelled" }));
+    assert.ok(html.includes('aria-label="Tệp 5"'));
+    assert.ok(html.includes(">Tệp 5<"));
+  });
+
   test("1 tệp: không có nhóm tệp", () => {
     const html = renderRail(1);
     assert.ok(!html.includes("Tệp đính kèm"));
@@ -71,13 +77,36 @@ describe("Rail công cụ trình xem tệp (44px, dọc)", () => {
   test("ảnh chỉ có thu phóng; loại khác không có thu phóng, tìm kiếm, trang", () => {
     const image = renderRail(1, { kind: "image", pages: undefined });
     assert.ok(image.includes('aria-label="Phóng to"') && !image.includes("Tìm trong tệp"));
-    const other = renderRail(1, { kind: "other", pages: undefined });
-    assert.ok(!other.includes("Phóng to") && !other.includes("Tìm trong tệp"));
-    assert.ok(other.includes('aria-label="Tải về"'));
+    // Tệp không xem trước được: không dựng rail (tải về nằm trong thông báo, chọn tệp ở nút "Tệp N")
+    assert.equal(renderRail(3, { kind: "other", pages: undefined }), "");
+    // Full Page vẫn giữ nhóm bổ sung (mở panel thông tin), không có công cụ xem
+    const withExtra = renderRail(3, { kind: "other", pages: undefined, extra: React.createElement("button", { "aria-label": "Thông tin" }) });
+    assert.ok(withExtra.includes('aria-label="Thông tin"'));
+    for (const tool of ["Phóng to", "Tìm trong tệp", "Tải về", "Xem toàn màn hình"]) assert.ok(!withExtra.includes(tool), tool);
   });
 
   test("nhóm Trang ẩn ở pane hẹp (container query) nhưng vẫn có trong markup", () => {
     assert.ok(renderRail(1).includes("@lg/doc:flex"));
+  });
+
+  test("nhãn thu phóng nói rõ là tỷ lệ so với vừa chiều rộng (SPEC §17.6)", () => {
+    const fit = renderRail(1);
+    assert.ok(fit.includes('aria-label="Thu phóng 100%, vừa chiều rộng"'));
+    assert.ok(fit.includes(">Vừa<") && fit.includes(">rộng<"));
+    const zoomed = renderRail(1, { zoom: 115 });
+    assert.ok(zoomed.includes('aria-label="Thu phóng 115% so với vừa chiều rộng"'));
+    assert.ok(zoomed.includes("Tỷ lệ so với vừa chiều rộng"));
+  });
+
+  test("số trang một dòng (3/12); tệp một trang không có nhóm Trang", () => {
+    const html = renderRail(1);
+    assert.match(html, /<span class="whitespace-nowrap"><span class="text-foreground">3<\/span>\/12<\/span>/);
+    const single = renderRail(1, { pages: { current: 1, total: 1, onGoto: () => {} } });
+    assert.ok(!single.includes("Trang trước") && !single.includes("Điều hướng trang"));
+  });
+
+  test("rail bám ngay dưới dòng tên tệp khi dòng đó bám đầu vùng cuộn", () => {
+    assert.ok(renderRail(1).includes("top-[var(--viewer-sticky-top,0px)]"));
   });
 
   test("không có nút toàn màn hình khi không hỗ trợ", () => {

@@ -1,0 +1,28 @@
+/* ── Split workspace — khung dùng chung (Task Detail, Subtask Peek, Sổ văn bản) ──
+   Hai thẻ bo tròn độc lập, cách nhau bằng gap; không có đường kẻ dọc giữa hai thẻ. */
+
+.splitWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  gap: calc(var(--spacing) * 1.5);
+  padding: calc(var(--spacing) * 2);
+}
+
+/* Một thẻ của workspace: viền mảnh, bo xl, nền card, cuộn bên trong */
+.card {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}

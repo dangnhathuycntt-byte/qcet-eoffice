@@ -751,8 +751,14 @@ describe('OWASP API3 Data Sanitization & Response DTO Mappers', () => {
       const keys = Object.keys(dto);
       assert.deepStrictEqual(
         keys.sort(),
-        ['createdAt', 'id', 'isRead', 'link', 'message', 'readAt', 'title', 'type', 'userId'].sort()
+        ['actorName', 'category', 'createdAt', 'id', 'isRead', 'link', 'message', 'readAt', 'title', 'type', 'userId'].sort()
       );
+      // Thiếu người gửi/danh mục thì trả null, không dựng giá trị mặc định
+      assert.strictEqual(dto.actorName, null);
+      assert.strictEqual(dto.category, null);
+      const withActor = toNotificationDTO({ ...rawNotification, actorName: '  Ban Giám hiệu ', category: 'task' });
+      assert.strictEqual(withActor?.actorName, 'Ban Giám hiệu');
+      assert.strictEqual(withActor?.category, 'task');
     });
 
     it('toNotificationDTO handles alternate property names (message, link)', () => {

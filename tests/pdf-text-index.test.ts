@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { findHits, findHitsInPage, highlightItemHtml, toSearchQuery } from "../src/lib/documents/pdf-text-index";
+import { findHits, findHitsInPage, hasSearchableText, highlightItemHtml, toSearchQuery } from "../src/lib/documents/pdf-text-index";
 
 describe("Chỉ mục văn bản PDF (tìm kiếm tách khỏi việc dựng trang)", () => {
   test("từ khóa dưới 2 ký tự bị bỏ; chuẩn hóa chữ thường và NFC", () => {
@@ -32,5 +32,11 @@ describe("Chỉ mục văn bản PDF (tìm kiếm tách khỏi việc dựng tra
     assert.equal((html.match(/data-active="1"/g) ?? []).length, 1);
     assert.ok(html.includes("&amp;"));
     assert.equal(highlightItemHtml("<script>", "kế", null), "&lt;script&gt;");
+  });
+
+  test("bản scan không có lớp chữ được nhận ra để báo đúng lý do (SPEC §17.6)", () => {
+    assert.equal(hasSearchableText([[], ["  ", ""], []]), false);
+    assert.equal(hasSearchableText([]), false);
+    assert.equal(hasSearchableText([[], ["Quyết định"]]), true);
   });
 });

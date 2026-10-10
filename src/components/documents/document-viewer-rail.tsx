@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, ChevronUp, Download, ExternalLink, Files, Maximize2, Minimize2, MoveHorizontal, Search, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Download, Ellipsis, ExternalLink, Files, Maximize2, Minimize2, MoveHorizontal, Search, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTrackOpenPopover } from "./popover-escape-guard";
+import { FileTypeIcon } from "./file-type-icon";
+import type { FilePreviewKind } from "@/lib/documents/file-viewer-state";
 
 // Nút thao tác (có trạng thái hover), không phải hộp bọc icon tĩnh
 const RAIL_BUTTON = cn(
@@ -63,6 +65,8 @@ export interface RailSearch {
   total: number;
   active: number;
   onActiveChange: (index: number) => void;
+  /** Đã đọc hết lớp chữ và tệp không có chữ nào (thường là bản scan). */
+  noText?: boolean;
 }
 
 function SearchButton({ search }: { search: RailSearch }) {
@@ -111,7 +115,11 @@ function SearchButton({ search }: { search: RailSearch }) {
             <ChevronDown strokeWidth={1.5} />
           </button>
         </div>
-        {searching && total === 0 ? <p className="px-1 pt-1.5 text-xs text-muted-foreground">Không thấy kết quả trong lớp chữ của tệp.</p> : null}
+        {searching && total === 0 ? (
+          <p className="px-1 pt-1.5 text-xs text-muted-foreground">
+            {search.noText ? "Tệp này không có nội dung văn bản để tìm kiếm." : "Không thấy kết quả trong lớp chữ của tệp."}
+          </p>
+        ) : null}
       </PopoverContent>
     </PopoverRoot>
   );
@@ -124,65 +132,168 @@ export interface RailPages {
   onGoto: (page: number) => void;
 }
 
+/** "3/12": một dòng khi đủ chỗ trong ô 36px; số dài (≥ 100 trang) mới xếp hai dòng. */
+function pageLabelFits(current: number, total: number): boolean {
+  return `${current || "–"}/${total}`.length <= 5;
+}
+
+function PageJumpForm({ pages, onDone }: { pages: RailPages; onDone: () => void }) {
+  const { current, total, onGoto } = pages;
+  const [draft, setDraft] = React.useState(String(current || 1));
+  return (
+    <form
+      className="flex items-center gap-1"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const value = Number.parseInt(draft, 10);
+        if (Number.isFinite(value)) onGoto(Math.min(total, Math.max(1, value)));
+        onDone();
+      }}
+    >
+      <input
+        autoFocus
+        inputMode="numeric"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value.replace(/\D/g, ""))}
+        aria-label="Số trang"
+        className="h-7 min-w-0 flex-1 rounded-md bg-muted/50 px-2 text-compact tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">/ {total}</span>
+      <button type="submit" className="h-7 shrink-0 cursor-pointer rounded-md px-2 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring">
+        Đi
+      </button>
+    </form>
+  );
+}
+
 function PageGroup({ pages }: { pages: RailPages }) {
   const [open, setOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState("");
   useTrackOpenPopover(open);
   const { current, total, onGoto } = pages;
   const go = (page: number) => onGoto(Math.min(total, Math.max(1, page)));
-  const submit = () => {
-    const value = Number.parseInt(draft, 10);
-    if (Number.isFinite(value)) go(value);
-    setOpen(false);
-  };
+  const oneLine = pageLabelFits(current, total);
   return (
     <div role="group" aria-label="Điều hướng trang" className="hidden flex-col items-center gap-0.5 @lg/doc:flex">
       <RailButton label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)}>
         <ChevronUp strokeWidth={1.5} />
       </RailButton>
-      <PopoverRoot
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (next) setDraft(String(current || 1));
-        }}
-      >
+      <PopoverRoot open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           aria-label={`Trang ${current} trên ${total}, bấm để nhập số trang`}
           data-popup-open={open || undefined}
-          className={cn(RAIL_TILE, "h-9 gap-0.5 text-xs leading-none tabular-nums")}
+          className={cn(RAIL_TILE, "h-8 text-xs leading-none tabular-nums", !oneLine && "h-9 gap-0.5")}
         >
-          <span className="text-foreground">{current || "–"}</span>
-          <span>/{total}</span>
+          {oneLine ? (
+            <span className="whitespace-nowrap">
+              <span className="text-foreground">{current || "–"}</span>/{total}
+            </span>
+          ) : (
+            <>
+              <span className="text-foreground">{current || "–"}</span>
+              <span>/{total}</span>
+            </>
+          )}
         </PopoverTrigger>
         <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-44 p-1.5">
           <PopoverTitle className="sr-only">Đi tới trang</PopoverTitle>
-          <form
-            className="flex items-center gap-1"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submit();
-            }}
-          >
-            <input
-              autoFocus
-              inputMode="numeric"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value.replace(/\D/g, ""))}
-              aria-label="Số trang"
-              className="h-7 min-w-0 flex-1 rounded-md bg-muted/50 px-2 text-compact tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">/ {total}</span>
-            <button type="submit" className="h-7 shrink-0 cursor-pointer rounded-md px-2 text-xs text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring">
-              Đi
-            </button>
-          </form>
+          <PageJumpForm pages={pages} onDone={() => setOpen(false)} />
         </PopoverContent>
       </PopoverRoot>
       <RailButton label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)}>
         <ChevronDown strokeWidth={1.5} />
       </RailButton>
     </div>
+  );
+}
+
+/** Thu phóng là tỷ lệ so với "vừa chiều rộng" (100 = vừa khung), không phải kích thước thực của trang. */
+function zoomAriaLabel(zoom: number): string {
+  return zoom === 100 ? "Thu phóng 100%, vừa chiều rộng" : `Thu phóng ${zoom}% so với vừa chiều rộng`;
+}
+
+function ZoomValue({ zoom }: { zoom: number }) {
+  return zoom === 100 ? (
+    <span className="flex flex-col items-center leading-none">
+      <span>Vừa</span>
+      <span>rộng</span>
+    </span>
+  ) : (
+    <span>{zoom}%</span>
+  );
+}
+
+const MENU_ITEM =
+  "flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-compact text-foreground outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4 [&_svg]:text-muted-foreground";
+
+/** Rail thấp: gộp thu phóng thành một nút mở popover. */
+function ZoomMenu({ zoom, onZoomChange }: { zoom: number; onZoomChange: (zoom: number) => void }) {
+  const [open, setOpen] = React.useState(false);
+  useTrackOpenPopover(open);
+  return (
+    <PopoverRoot open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger aria-label={zoomAriaLabel(zoom)} data-popup-open={open || undefined} className={cn(RAIL_TILE, "h-8 text-xs tabular-nums")}>
+            <ZoomValue zoom={zoom} />
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="left" sideOffset={6} hidden={open}>
+          Thu phóng
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1">
+        <PopoverTitle className="px-2 pb-1 pt-1.5 text-xs font-normal text-muted-foreground">Tỷ lệ so với vừa chiều rộng</PopoverTitle>
+        <button type="button" className={MENU_ITEM} disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
+          <ZoomIn strokeWidth={1.5} />
+          Phóng to
+        </button>
+        <button type="button" className={MENU_ITEM} disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
+          <ZoomOut strokeWidth={1.5} />
+          Thu nhỏ
+        </button>
+        <button type="button" className={MENU_ITEM} disabled={zoom === 100} onClick={() => onZoomChange(100)}>
+          <MoveHorizontal strokeWidth={1.5} />
+          Vừa chiều rộng
+          {zoom === 100 ? <Check className="ml-auto" strokeWidth={1.5} aria-hidden /> : null}
+        </button>
+      </PopoverContent>
+    </PopoverRoot>
+  );
+}
+
+/** Rail thấp: điều hướng trang chuyển vào "Công cụ xem". */
+function ViewToolsMenu({ pages }: { pages: RailPages }) {
+  const [open, setOpen] = React.useState(false);
+  useTrackOpenPopover(open);
+  const { current, total, onGoto } = pages;
+  const go = (page: number) => onGoto(Math.min(total, Math.max(1, page)));
+  return (
+    <PopoverRoot open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger aria-label={`Công cụ xem, trang ${current} trên ${total}`} data-popup-open={open || undefined} className={RAIL_BUTTON}>
+            <Ellipsis strokeWidth={1.5} />
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="left" sideOffset={6} hidden={open}>
+          Công cụ xem
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent side="left" align="start" sideOffset={8} positionerClassName="z-[60]" className="z-[60] w-56 p-1.5">
+        <PopoverTitle className="px-0.5 pb-1.5 text-xs font-normal text-muted-foreground">Trang</PopoverTitle>
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label="Trang trước" disabled={current <= 1} onClick={() => go(current - 1)} className={cn(RAIL_BUTTON, "size-7")}>
+            <ChevronUp strokeWidth={1.5} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <PageJumpForm key={current} pages={pages} onDone={() => setOpen(false)} />
+          </div>
+          <button type="button" aria-label="Trang sau" disabled={current >= total} onClick={() => go(current + 1)} className={cn(RAIL_BUTTON, "size-7")}>
+            <ChevronDown strokeWidth={1.5} />
+          </button>
+        </div>
+      </PopoverContent>
+    </PopoverRoot>
   );
 }
 
@@ -231,10 +342,22 @@ export interface RailFile {
   url?: string | null;
   /** Ví dụ "3 trang · 2,4 MB". */
   detail?: string;
+  mimeType?: string | null;
 }
 
 /** Nút "Tệp N": danh sách đầy đủ tên tệp, số trang và dung lượng; chọn để chuyển tệp ngay. */
-export function FilesMenu({ files, activeId, onSelect }: { files: RailFile[]; activeId: string; onSelect: (id: string) => void }) {
+export function FilesMenu({
+  files,
+  activeId,
+  onSelect,
+  variant = "rail",
+}: {
+  files: RailFile[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  /** `labelled`: nút có chữ "Tệp N" ở dòng tên tệp; `rail`: ô icon trong rail. */
+  variant?: "rail" | "labelled";
+}) {
   const [open, setOpen] = React.useState(false);
   const listRef = React.useRef<HTMLUListElement>(null);
   useTrackOpenPopover(open);
@@ -250,22 +373,40 @@ export function FilesMenu({ files, activeId, onSelect }: { files: RailFile[]; ac
 
   return (
     <PopoverRoot open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger
-            aria-label={`Tệp ${files.length}`}
-            data-popup-open={open || undefined}
-            className={cn(RAIL_TILE, "h-9")}
-          >
-            <Files className="size-4" strokeWidth={1.5} />
-            <span className="text-xs leading-none tabular-nums">{files.length}</span>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="left" sideOffset={6} hidden={open}>
-          Tệp {files.length}
-        </TooltipContent>
-      </Tooltip>
-      <PopoverContent side="left" align="center" sideOffset={8} positionerClassName="z-[60]" className="z-[60] max-h-[60vh] w-64 overflow-y-auto p-1">
+      {variant === "labelled" ? (
+        <PopoverTrigger
+          aria-label={`Tệp ${files.length}`}
+          data-popup-open={open || undefined}
+          className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[popup-open]:bg-muted/60 data-[popup-open]:text-foreground"
+        >
+          <Files className="size-3.5" strokeWidth={1.5} aria-hidden />
+          <span className="tabular-nums">Tệp {files.length}</span>
+          <ChevronDown className="size-3" strokeWidth={1.5} aria-hidden />
+        </PopoverTrigger>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger
+              aria-label={`Tệp ${files.length}`}
+              data-popup-open={open || undefined}
+              className={cn(RAIL_TILE, "h-9")}
+            >
+              <Files className="size-4" strokeWidth={1.5} />
+              <span className="text-xs leading-none tabular-nums">{files.length}</span>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={6} hidden={open}>
+            Tệp {files.length}
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <PopoverContent
+        side={variant === "labelled" ? "bottom" : "left"}
+        align={variant === "labelled" ? "end" : "center"}
+        sideOffset={variant === "labelled" ? 4 : 8}
+        positionerClassName="z-[60]"
+        className="z-[60] max-h-[60vh] w-64 max-w-[calc(100vw-16px)] overflow-y-auto p-1"
+      >
         <PopoverTitle className="sr-only">Chọn tệp đính kèm</PopoverTitle>
         <ul ref={listRef} role="listbox" aria-label="Tệp đính kèm" onKeyDown={moveFocus}>
           {files.map((file) => {
@@ -285,6 +426,7 @@ export function FilesMenu({ files, activeId, onSelect }: { files: RailFile[]; ac
                   }}
                   className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
                 >
+                  <FileTypeIcon fileName={file.name} mimeType={file.mimeType} />
                   <span className={cn("min-w-0 flex-1 truncate text-compact text-foreground", isActive && "font-medium")}>{file.name}</span>
                   {file.detail ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{file.detail}</span> : null}
                   {isActive ? <Check className="size-4 shrink-0 text-foreground" strokeWidth={1.5} aria-hidden /> : null}
@@ -302,7 +444,7 @@ export interface DocumentRailProps {
   fileUrl: string;
   fileName: string;
   /** Loại xem trước: chỉ PDF/ảnh có thu phóng, chỉ PDF có tìm kiếm và điều hướng trang. */
-  kind: "pdf" | "image" | "other";
+  kind: FilePreviewKind;
   zoom: number;
   onZoomChange: (zoom: number) => void;
   search?: RailSearch;
@@ -316,12 +458,67 @@ export interface DocumentRailProps {
   extra?: React.ReactNode;
 }
 
+/** Vùng cuộn dọc gần nhất chứa rail (bỏ qua khung cuộn ngang của PDF và body/html). */
+function findScrollParent(el: HTMLElement): HTMLElement | null {
+  for (let node = el.parentElement; node && node !== document.body && node !== document.documentElement; node = node.parentElement) {
+    if (node.hasAttribute("data-pdf-no-scroll")) continue;
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === "auto" || overflowY === "scroll") return node;
+  }
+  return null;
+}
+
+/** Khoảng dư trước khi bung lại rail đầy đủ, tránh nhảy qua lại ở ngưỡng. */
+const RAIL_EXPAND_SLACK = 16;
+
+/**
+ * Rail thu gọn khi chiều cao khả dụng (vùng cuộn trừ phần đang bám phía trên) không đủ cho rail đầy đủ.
+ * Chiều cao đầy đủ chỉ đo khi đang ở dạng đầy đủ; thu gọn rồi thì cần dư thêm `RAIL_EXPAND_SLACK` mới bung lại.
+ */
+function useRailCompact(ref: React.RefObject<HTMLDivElement | null>): boolean {
+  const [compact, setCompact] = React.useState(false);
+  const compactRef = React.useRef(false);
+  const fullHeight = React.useRef(0);
+  React.useLayoutEffect(() => {
+    const rail = ref.current;
+    if (!rail || typeof ResizeObserver === "undefined") return;
+    const scroller = findScrollParent(rail);
+    const measure = () => {
+      if (!compactRef.current) fullHeight.current = rail.offsetHeight;
+      const stickyTop = parseFloat(getComputedStyle(rail).top) || 0;
+      const available = (scroller ? scroller.clientHeight : window.innerHeight) - stickyTop;
+      const next = compactRef.current ? available < fullHeight.current + RAIL_EXPAND_SLACK : available < fullHeight.current;
+      if (next !== compactRef.current) {
+        compactRef.current = next;
+        setCompact(next);
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rail);
+    if (scroller) observer.observe(scroller);
+    window.addEventListener("resize", measure);
+    document.addEventListener("fullscreenchange", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      document.removeEventListener("fullscreenchange", measure);
+    };
+  }, [ref]);
+  return compact;
+}
+
 /**
  * Rail công cụ dọc ở mép phải viewer, chia nhóm: Xem (thu phóng) — Trang — Tìm — Khung (toàn màn hình, tải về) — Tệp.
  * Dính đầu vùng cuộn nên luôn nằm trong tầm tay khi cuộn PDF; nằm ngoài vùng giấy nên không che nội dung.
+ * Vùng cuộn thấp hơn rail: thu phóng gộp thành một nút, điều hướng trang vào "Công cụ xem", vạch tệp ẩn
+ * (chọn tệp bằng "Tệp N" ở dòng tên tệp) để tìm, toàn màn hình và tải về luôn nhìn thấy.
  */
 export function DocumentViewerRail({ fileUrl, fileName, kind, zoom, onZoomChange, search, pages, fullscreen, onFullscreen, onDownload, files, extra }: DocumentRailProps) {
+  const railRef = React.useRef<HTMLDivElement>(null);
+  const compact = useRailCompact(railRef);
   const zoomable = kind !== "other";
+  const hasPages = kind === "pdf" && pages && pages.total > 1;
   const roving = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     const target = event.target as HTMLElement;
@@ -333,22 +530,44 @@ export function DocumentViewerRail({ fileUrl, fileName, kind, zoom, onZoomChange
     buttons[next]?.focus();
     event.preventDefault();
   };
+  // Tệp không xem trước được: thu phóng, trang, tìm, toàn màn hình không áp dụng; tải về và chọn tệp đã có
+  // ở thông báo và nút "Tệp N". Chỉ giữ nhóm bổ sung (Full Page: mở panel thông tin).
+  if (kind === "other") {
+    return extra ? (
+      <div
+        role="toolbar"
+        aria-orientation="vertical"
+        aria-label={`Công cụ xem ${fileName}`}
+        data-slot="document-viewer-rail"
+        className="sticky top-[var(--viewer-sticky-top,0px)] z-10 flex w-11 shrink-0 flex-col items-center gap-0.5 self-start bg-card py-1.5"
+      >
+        {extra}
+      </div>
+    ) : null;
+  }
   return (
     <div
+      ref={railRef}
       role="toolbar"
       aria-orientation="vertical"
       aria-label={`Công cụ xem ${fileName}`}
       onKeyDown={roving}
       data-slot="document-viewer-rail"
-      className="sticky top-0 z-10 flex w-11 shrink-0 flex-col items-center gap-0.5 self-start bg-card py-1.5"
+      data-compact={compact || undefined}
+      className="sticky top-[var(--viewer-sticky-top,0px)] z-10 flex w-11 shrink-0 flex-col items-center gap-0.5 self-start bg-card py-1.5"
     >
-      {zoomable ? (
+      {zoomable && compact ? <ZoomMenu zoom={zoom} onZoomChange={onZoomChange} /> : null}
+      {zoomable && !compact ? (
         <>
           <RailButton label="Phóng to" disabled={zoom >= 200} onClick={() => onZoomChange(Math.min(zoom + 15, 200))}>
             <ZoomIn strokeWidth={1.5} />
           </RailButton>
-          <span className="flex h-5 items-center text-xs tabular-nums text-muted-foreground" aria-label={`Thu phóng ${zoom}%`}>
-            {zoom}%
+          <span
+            className="flex min-h-5 items-center py-0.5 text-center text-xs tabular-nums text-muted-foreground"
+            aria-label={zoomAriaLabel(zoom)}
+            title="Tỷ lệ so với vừa chiều rộng"
+          >
+            <ZoomValue zoom={zoom} />
           </span>
           <RailButton label="Thu nhỏ" disabled={zoom <= 50} onClick={() => onZoomChange(Math.max(zoom - 15, 50))}>
             <ZoomOut strokeWidth={1.5} />
@@ -358,10 +577,10 @@ export function DocumentViewerRail({ fileUrl, fileName, kind, zoom, onZoomChange
           </RailButton>
         </>
       ) : null}
-      {kind === "pdf" && pages && pages.total > 0 ? (
+      {hasPages ? (
         <>
           <RailDivider />
-          <PageGroup pages={pages} />
+          {compact ? <ViewToolsMenu pages={pages} /> : <PageGroup pages={pages} />}
         </>
       ) : null}
       {kind === "pdf" && search ? (
@@ -377,7 +596,7 @@ export function DocumentViewerRail({ fileUrl, fileName, kind, zoom, onZoomChange
         </RailButton>
       ) : null}
       <DownloadMenu fileUrl={fileUrl} onDownload={onDownload} />
-      {files ? (
+      {files && !compact ? (
         <>
           <RailDivider />
           {files}

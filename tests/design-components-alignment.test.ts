@@ -191,7 +191,7 @@ describe("Design Components & Foundation Alignment Suite", () => {
 
       const htmlUrgent = renderToStaticMarkup(React.createElement(PrioritySignalBars, { priority: "URGENT" }));
       assert.ok(htmlUrgent.includes("Độ ưu tiên: Khẩn cấp"));
-      assert.ok(htmlUrgent.includes("text-rose-600"), "Urgent priority must use rose/red color");
+      assert.ok(htmlUrgent.includes("text-destructive"), "Urgent priority must use the destructive (red) token");
     });
   });
 

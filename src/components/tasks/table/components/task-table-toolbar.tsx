@@ -796,8 +796,8 @@ export function TaskTableToolbar({
               className={cn(
                 "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-[0.98]",
                 activeTab === "overdue"
-                  ? "bg-rose-600 text-white font-semibold shadow-2xs"
-                  : "border border-rose-200 bg-rose-50/70 text-rose-700 font-medium"
+                  ? "bg-destructive text-destructive-foreground font-semibold shadow-2xs"
+                  : "border border-destructive/20 bg-danger-soft text-destructive font-medium"
               )}
             >
               <span>Trễ hạn</span>
@@ -1118,7 +1118,7 @@ export function TaskTableToolbar({
                   <X className="size-3.5" strokeWidth={1.5} />
                 </button>
               ) : (
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70 select-none">
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground/70 select-none">
                   /
                 </kbd>
               )}
@@ -1145,7 +1145,7 @@ export function TaskTableToolbar({
               <Filter className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
               <span>Lọc</span>
               {activeAdvancedFilterCount > 0 && (
-                <span className="flex size-4.5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-[10px] font-bold">
+                <span className="flex size-4.5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold">
                   {activeAdvancedFilterCount}
                 </span>
               )}
@@ -1306,10 +1306,10 @@ export function TaskTableToolbar({
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer whitespace-nowrap shrink-0",
                 isActive
                   ? isOverdueTab
-                    ? "bg-card text-rose-600 font-semibold shadow-2xs border border-rose-200/80"
+                    ? "bg-card text-destructive font-semibold shadow-2xs border border-destructive/20"
                     : "bg-card text-foreground font-semibold shadow-2xs border border-border/50"
                   : isOverdueTab
-                  ? "text-rose-600/90 hover:bg-card/60 hover:text-rose-700 font-medium"
+                  ? "text-destructive/90 hover:bg-card/60 hover:text-destructive font-medium"
                   : "text-muted-foreground hover:bg-card/60 hover:text-foreground font-medium"
               )}
             >
@@ -1317,13 +1317,13 @@ export function TaskTableToolbar({
               {hasCount && (
                 <span
                   className={cn(
-                    "px-1 py-0.2 rounded font-mono text-[11px] tabular-nums",
+                    "px-1 py-0.2 rounded font-mono text-xs tabular-nums",
                     isActive
                       ? isOverdueTab
-                        ? "bg-rose-50 text-rose-700 font-bold"
+                        ? "bg-danger-soft text-destructive font-bold"
                         : "bg-muted text-foreground font-bold"
                       : isOverdueTab
-                      ? "bg-rose-50/60 text-rose-600/90 font-medium"
+                      ? "bg-danger-soft/60 text-destructive/90 font-medium"
                       : "text-muted-foreground/70 font-normal"
                   )}
                 >

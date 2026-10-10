@@ -73,12 +73,14 @@ describe("document filter URL updates", () => {
     assert.ok(qs.includes("search=abc"));
   });
 
-  it("lọc đơn vị và năm được tính là bộ lọc kết quả; loại sổ và trang thì không", () => {
+  it("lọc đơn vị và năm được tính là bộ lọc kết quả; loại sổ, nhóm ở sidebar và trang thì không", () => {
     const base = DEFAULT_DOCUMENT_URL_FILTERS;
     assert.equal(isDocumentResultFiltered({ ...base, type: "inbox" }), false);
     assert.equal(isDocumentResultFiltered({ ...base, page: 4 }), false);
     assert.equal(isDocumentResultFiltered({ ...base, leadUnitId: "unit-1" }), true);
     assert.equal(isDocumentResultFiltered({ ...base, documentYear: 2026 }), true);
-    assert.equal(isDocumentResultFiltered({ ...base, bucket: "done" }), true);
+    // "Đã xử lý" ở sidebar là phạm vi xem, không phải bộ lọc: trạng thái rỗng không được báo "không khớp bộ lọc"
+    assert.equal(isDocumentResultFiltered({ ...base, bucket: "done" }), false);
+    assert.equal(isDocumentResultFiltered({ ...base, bucket: "done", urgency: "urgent" }), true);
   });
 });

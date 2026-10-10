@@ -30,3 +30,26 @@ export function toServedFileUrl(fileUrl: string | null | undefined): string | nu
   const relative = url.replace(/^\/+/, '').replace(/^uploads\//, '');
   return `/api/files/${relative}`;
 }
+
+/**
+ * Kiểm tra URL tệp/liên kết do client gửi lên trước khi lưu: chỉ nhận đường dẫn
+ * tương đối nội bộ hoặc URL http(s) tuyệt đối. Chặn `javascript:`, `data:`,
+ * đường dẫn protocol-relative (`//host`), dấu `\` và ký tự điều khiển.
+ */
+export function isAllowedStoredFileUrl(value: string | null | undefined): boolean {
+  if (typeof value !== 'string') return false;
+  const url = value.trim();
+  if (!url || url.length > 1024) return false;
+  if (/[\r\n\t\0\\]/.test(url) || url.startsWith('//')) return false;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+export const STORED_FILE_URL_MESSAGE = 'Đường dẫn tệp không hợp lệ: chỉ chấp nhận đường dẫn nội bộ hoặc URL http(s)';

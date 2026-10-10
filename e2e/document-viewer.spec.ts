@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { DOC_OUTGOING_ID } from "./fixtures";
+import { buildDocx } from "./support/docx";
 
 async function openDocument(page: Page, summary: string) {
   await page.goto("/documents");
@@ -99,5 +101,57 @@ test.describe("Toàn màn hình (Fullscreen API)", () => {
     await page.getByRole("button", { name: "Thoát toàn màn hình" }).click();
     await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
     await expect(page.getByLabel("Thu phóng 115%")).toBeVisible();
+  });
+});
+
+test.describe("Xem trước tệp Word (.docx)", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("dựng nội dung .docx trong Quick View, vừa chiều rộng, liên kết không an toàn bị bỏ", async ({ page }) => {
+    const docx = await buildDocx({
+      paragraphs: ["Kế hoạch năm học 2026-2027", "Nội dung thử nghiệm xem trước tệp Word."],
+      links: [
+        { text: "Cổng thông tin", target: "https://qcet.edu.vn" },
+        { text: "Liên kết độc", target: "javascript:alert(1)" },
+      ],
+      // Như tệp thật: bảng 10.694 twip căn giữa, vùng chữ chỉ 9.691 twip (trang 12.240, lề 1.699/850)
+      centeredTableCols: [1152, 2738, 2693, 1276, 1559, 1276],
+    });
+    await page.route("**/api/files/e2e-preview.docx", (route) =>
+      route.fulfill({ body: docx, contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }),
+    );
+    await page.route(`**/api/documents/${DOC_OUTGOING_ID}`, async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      const res = await route.fetch();
+      const json = await res.json();
+      const item = json.data ?? json;
+      item.attachments = [
+        { id: "e2e_docx", fileName: "Kế hoạch năm học.docx", fileUrl: "/api/files/e2e-preview.docx", fileSize: docx.length, mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", isOriginal: true },
+        ...(item.attachments ?? []),
+      ];
+      await route.fulfill({ response: res, json });
+    });
+
+    await page.goto(`/documents?docId=${DOC_OUTGOING_ID}&file=e2e_docx`);
+    const canvas = page.locator('[data-slot="docx-canvas"][data-status="ready"]');
+    await expect(canvas).toBeVisible();
+    await expect(canvas.getByText("Nội dung thử nghiệm xem trước tệp Word.")).toBeVisible();
+    await expect(page.locator('[data-slot="file-unsupported"]')).toHaveCount(0);
+
+    // Trang A4 thu vừa khung, không tràn ngang
+    const viewport = page.locator('[data-slot="document-file-viewer"]').first();
+    const [pageBox, viewBox] = await Promise.all([canvas.locator("section").first().boundingBox(), viewport.boundingBox()]);
+    expect(pageBox!.width).toBeLessThanOrEqual(viewBox!.width);
+
+    // Bảng rộng hơn vùng chữ lấn đều hai lề như Word, không bị mép trang cắt
+    const [sectionBox, tableBox] = await Promise.all([canvas.locator("section").first().boundingBox(), canvas.locator("table").first().boundingBox()]);
+    expect(tableBox!.x).toBeGreaterThanOrEqual(sectionBox!.x);
+    expect(tableBox!.x + tableBox!.width).toBeLessThanOrEqual(sectionBox!.x + sectionBox!.width);
+    await expect(canvas.getByText("Cột 6")).toBeInViewport();
+
+    await expect(canvas.getByRole("link", { name: "Cổng thông tin" })).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(canvas.getByText("Liên kết độc")).toBeVisible();
+    expect(await canvas.locator('a[href^="javascript" i]').count()).toBe(0);
+    expect(await canvas.locator("iframe").count()).toBe(0);
   });
 });

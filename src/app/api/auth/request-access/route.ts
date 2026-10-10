@@ -1,45 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { logAuditEvent, AuditAction, AuditEntityType } from "@/lib/db/audit";
+import { getApiContext } from "@/server/api/request-context";
+import { apiError, apiSuccess } from "@/server/api/response";
+import { parseAndValidateJson } from "@/server/api/validation";
+import { assertRateLimit } from "@/server/security/rate-limit";
 
+const RequestAccessSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(254),
+    name: z.string().trim().max(255).optional(),
+  })
+  .strict();
+
+/**
+ * POST /api/auth/request-access — endpoint công khai (chưa đăng nhập).
+ * Giới hạn tần suất theo IP và validate độ dài để không bị dùng làm nguồn spam audit log.
+ */
 export async function POST(req: NextRequest) {
+  let requestId = crypto.randomUUID();
   try {
-    const body = await req.json();
-    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    if (!email || !email.includes("@")) {
-      return NextResponse.json(
-        { error: "Vui lòng cung cấp địa chỉ email hợp lệ" },
-        { status: 400 }
-      );
-    }
+    await assertRateLimit(`request-access:${context.ip || "unknown"}`, "AUTH_REGISTER");
 
-    // Record audit event for access request
-    try {
-      await logAuditEvent({
-        action: AuditAction.USER_ROLE_CHANGED,
-        entityType: AuditEntityType.USER,
-        entityId: email,
-        metadata: {
-          type: "ACCESS_REQUEST",
-          email,
-          name: name || undefined,
-          timestamp: new Date().toISOString(),
-          source: "LOGIN_FLOW",
-        },
-      });
-    } catch {
-      // Non-blocking if audit recording encounters DB issues in test or dev
-    }
+    const { email, name } = await parseAndValidateJson(req, RequestAccessSchema, { maxBytes: 4 * 1024 });
 
-    return NextResponse.json({
-      success: true,
-      message: "Đã gửi yêu cầu cấp quyền. Quản trị viên sẽ xem và phản hồi qua email.",
+    await logAuditEvent({
+      action: AuditAction.ACCESS_REQUESTED,
+      entityType: AuditEntityType.USER,
+      entityId: email,
+      metadata: {
+        type: "ACCESS_REQUEST",
+        email,
+        name: name || undefined,
+        timestamp: new Date().toISOString(),
+        source: "LOGIN_FLOW",
+        ip: context.ip,
+      },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau." },
-      { status: 500 }
+
+    return apiSuccess(
+      {
+        success: true,
+        message: "Đã gửi yêu cầu cấp quyền. Quản trị viên sẽ xem và phản hồi qua email.",
+      },
+      { requestId, headers: { "Cache-Control": "private, no-store" } }
     );
+  } catch (error) {
+    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }

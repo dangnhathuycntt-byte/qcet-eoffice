@@ -54,6 +54,8 @@ describe('Task 2: Canonical Delegation API & Statutory Enforcement', () => {
   const authHeaders = (token: string) => ({
     cookie: `${SESSION_COOKIE_NAME}=${token}`,
     'content-type': 'application/json',
+    // Route mutate có kiểm CSRF: mô phỏng trình duyệt gửi Origin cùng nguồn
+    origin: 'http://localhost',
   });
 
   before(async () => {

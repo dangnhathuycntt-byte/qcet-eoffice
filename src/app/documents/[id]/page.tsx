@@ -7,7 +7,8 @@ import { getSessionFromRequest } from "@/lib/jwt-session";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
 import { authorize } from "@/server/authorization/authorization-engine";
 import { buildDocumentResource } from "@/server/authorization/available-actions";
-import { canReadDocument } from "@/server/policies/document-policy";
+import { canReadDocument, canUpdateDocument } from "@/server/policies/document-policy";
+import { isDocumentImmutable } from "@/lib/documents/state-machine";
 import { getDocumentById } from "@/lib/documents/document-service";
 import { getDocumentKind, getFullPageHref } from "@/lib/documents/document-view-model";
 import { GenericDocumentDetailView } from "@/components/documents/workspace/generic-document-detail-view";
@@ -52,6 +53,8 @@ export default async function DocumentDetailPage({ params, searchParams }: PageP
     redirect(getFullPageHref(kind, id, typeof file === "string" ? file : null));
   }
 
+  const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
+
   // Chuyển về dạng JSON thuần để truyền xuống client component
-  return <GenericDocumentDetailView item={JSON.parse(JSON.stringify(document))} />;
+  return <GenericDocumentDetailView item={JSON.parse(JSON.stringify({ ...document, canEdit }))} />;
 }

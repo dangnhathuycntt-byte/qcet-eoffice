@@ -4,14 +4,17 @@ import {
   DEFAULT_FILE_STATE,
   MAX_FILES_AS_TICKS,
   clampZoom,
+  describeFileFormat,
+  findPreviewableAlternative,
   formatPageDetail,
+  getFileFamily,
+  getPreviewKind,
   getFileState,
   patchFileState,
-  parseFilesListPreference,
   resolveActiveFileId,
-  resolveFilesListOpen,
   sortDocumentFiles,
 } from "../src/lib/documents/file-viewer-state";
+import { isAllowedDocxHref } from "../src/lib/documents/docx-links";
 
 const files = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `f${i + 1}` }));
 
@@ -24,6 +27,57 @@ describe("Trạng thái trình xem nhiều tệp", () => {
       if (count >= 5) assert.equal(resolveActiveFileId(list, "f5"), "f5");
     });
   }
+
+  test("không yêu cầu tệp: bản đầu không xem trước được thì mở tệp PDF/ảnh đầu tiên, không có thì vẫn tệp đầu", () => {
+    // .doc (Word nhị phân cũ) không xem trước được; .docx thì được
+    const docx = { id: "goc", name: "Kế hoạch.doc", mimeType: "application/msword" };
+    const pdf = { id: "scan", name: "ban-scan.pdf", mimeType: "application/pdf" };
+    const png = { id: "anh", name: "anh.PNG", mimeType: null };
+    assert.equal(resolveActiveFileId([docx, pdf, png], null), "scan");
+    assert.equal(resolveActiveFileId([docx, png], null), "anh");
+    assert.equal(resolveActiveFileId([pdf, docx], null), "scan");
+    assert.equal(resolveActiveFileId([docx, { ...docx, id: "x", name: "b.xlsx" }], null), "goc");
+    // Người dùng chọn rõ tệp (?file=) thì giữ đúng tệp đó dù không xem trước được
+    assert.equal(resolveActiveFileId([docx, pdf], "goc"), "goc");
+    const modern = { id: "moi", name: "Kế hoạch.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+    assert.equal(resolveActiveFileId([modern, pdf], null), "moi");
+  });
+
+  test("gợi ý tệp xem được khác tệp đang xem; tên định dạng cho thông báo", () => {
+    const list = [{ id: "a", name: "a.xlsx" }, { id: "b", name: "b.pdf" }, { id: "c", name: "c.zip" }];
+    assert.equal(findPreviewableAlternative(list, "a")?.id, "b");
+    assert.equal(findPreviewableAlternative(list, "b"), undefined);
+    assert.equal(describeFileFormat("Kế hoạch.DOCX"), "Tệp Word (.docx)");
+    assert.equal(describeFileFormat("bang.xlsx"), "Tệp Excel (.xlsx)");
+    assert.equal(describeFileFormat("goi.zip"), "Tệp .zip");
+    assert.equal(describeFileFormat("khong-duoi"), "Tệp");
+  });
+
+  test("xem trước: PDF, ảnh, Word mới (.docx); .doc, Excel, tệp nén thì không", () => {
+    assert.equal(getPreviewKind("application/pdf", "x"), "pdf");
+    assert.equal(getPreviewKind(null, "anh.JPG"), "image");
+    assert.equal(getPreviewKind(null, "ke-hoach.DOCX"), "docx");
+    assert.equal(getPreviewKind("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "khong-duoi"), "docx");
+    assert.equal(getPreviewKind("application/msword", "cu.doc"), "other");
+    assert.equal(getPreviewKind(null, "bang.xlsx"), "other");
+  });
+
+  test("liên kết trong tệp Word: chỉ giữ web, thư điện tử và mục nội bộ", () => {
+    for (const ok of ["https://qcet.edu.vn", "HTTP://a.b", "mailto:vt@qcet.edu.vn", "#_Toc1"]) assert.ok(isAllowedDocxHref(ok), ok);
+    for (const bad of ["javascript:alert(1)", " JavaScript:x", "file:///C:/a", "data:text/html,x", "vbscript:x", "", null]) assert.ok(!isAllowedDocxHref(bad), String(bad));
+  });
+
+  test("nhóm định dạng cho icon loại tệp: theo đuôi, thiếu đuôi thì theo MIME", () => {
+    assert.equal(getFileFamily("5491_SGDĐT-QLCLGDCN-signed_01.PDF"), "pdf");
+    assert.equal(getFileFamily("27.8 đẩy nhanh tiến độ_final.docx"), "word");
+    assert.equal(getFileFamily("24.GiaLai-BC CSDL_2025-2026.xlsx"), "excel");
+    assert.equal(getFileFamily("bao-cao.pptx"), "slide");
+    assert.equal(getFileFamily("anh-chup.jpg"), "image");
+    assert.equal(getFileFamily("ho-so.rar"), "archive");
+    assert.equal(getFileFamily("khong-duoi", "application/pdf"), "pdf");
+    assert.equal(getFileFamily("khong-duoi", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), "excel");
+    assert.equal(getFileFamily("ghi-chu.txt"), "other");
+  });
 
   test("khôi phục đúng zoom/trang của từng tệp, tệp mới có giá trị mặc định", () => {
     let states = patchFileState({}, "a", { zoom: 150, page: 4, ratio: 0.3 });
@@ -61,24 +115,5 @@ describe("Trạng thái trình xem nhiều tệp", () => {
 
   test("ngưỡng vạch trên rail là 8 tệp", () => {
     assert.equal(MAX_FILES_AS_TICKS, 8);
-  });
-});
-
-describe("Danh sách tệp ở Quick View (D15)", () => {
-  test("không có lựa chọn: mở khi ≤ 5 tệp, thu gọn khi > 5", () => {
-    for (const n of [1, 5]) assert.equal(resolveFilesListOpen(n, null), true);
-    for (const n of [6, 12]) assert.equal(resolveFilesListOpen(n, null), false);
-  });
-
-  test("lựa chọn của người dùng thắng mặc định theo số tệp", () => {
-    assert.equal(resolveFilesListOpen(12, "open"), true);
-    assert.equal(resolveFilesListOpen(2, "closed"), false);
-  });
-
-  test("giá trị lưu không hợp lệ bị bỏ qua", () => {
-    assert.equal(parseFilesListPreference("open"), "open");
-    assert.equal(parseFilesListPreference("closed"), "closed");
-    assert.equal(parseFilesListPreference("x"), null);
-    assert.equal(parseFilesListPreference(null), null);
   });
 });

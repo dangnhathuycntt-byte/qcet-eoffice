@@ -124,7 +124,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         </Badge>
 
         {/* Subtask Title - Straight Aligned */}
-        <span className="truncate text-slate-900 font-medium text-xs sm:text-[13px] leading-snug">
+        <span className="truncate text-foreground font-medium text-xs sm:text-compact leading-snug">
           {subTask.title}
         </span>
 
@@ -216,7 +216,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
                     e.stopPropagation();
                     onStatusChange(subTask.id, "IN_PROGRESS", true, parentTask.id);
                   }}
-                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                  className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-warning/10 text-warning hover:bg-warning/20 text-xs font-semibold tabular-nums border border-warning/20 cursor-pointer active:scale-[0.98] transition-colors"
                   title="Tiếp nhận chỉnh sửa"
                 >
                   <RotateCcw className="size-3" strokeWidth={1.5} />

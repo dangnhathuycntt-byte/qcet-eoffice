@@ -13,6 +13,7 @@ import {
 import { signSessionToken } from "../src/lib/jwt-session";
 import { E2E_AUTH_FILE, E2E_BASE_URL, E2E_TMP, E2E_UPLOADS, resolveE2eDatabaseUrl } from "./env";
 import {
+  DOC_EDIT_ID,
   DOC_LONG_ID,
   DOC_MIXED_ID,
   DOC_OUTGOING_ID,
@@ -58,6 +59,10 @@ async function main() {
     await prisma.documentAttachment.deleteMany({ where: { documentId: { in: oldIds } } });
     await prisma.documentIncomingWorkflow.deleteMany({ where: { documentId: { in: oldIds } } });
     await prisma.documentOutgoingWorkflow.deleteMany({ where: { documentId: { in: oldIds } } });    await prisma.document.deleteMany({ where: { id: { in: oldIds } } });
+    // Tệp do spec bổ sung tệp tải lên (đã gỡ khỏi văn bản ở trên): phải xóa trước user vì khóa ngoại
+    await prisma.documentAttachment.deleteMany({ where: { fileObject: { uploadedById: E2E_USER_ID } } });
+    await prisma.fileObject.deleteMany({ where: { uploadedById: E2E_USER_ID } });
+    await prisma.auditEvent.deleteMany({ where: { entityType: "Document", entityId: { in: oldIds } } });
     await prisma.positionAssignment.deleteMany({ where: { userId: E2E_USER_ID } });
     await prisma.user.deleteMany({ where: { id: E2E_USER_ID } });
     await prisma.organizationalUnit.deleteMany({ where: { id: E2E_UNIT_ID } });
@@ -123,6 +128,7 @@ async function main() {
     await createDocument(DOC_OUTGOING_ID, "Văn bản đi E2E hai tệp", [pdf("du-thao.pdf", simplePages(3)), pdf("phu-luc.pdf", simplePages(2))], DocumentType.VAN_BAN_DI);
     await createDocument(DOC_SUBMISSION_ID, "Tờ trình E2E ba tệp", [pdf("to-trinh.pdf", simplePages(2)), pdf("phu-luc-1.pdf", simplePages(1)), pdf("phu-luc-2.pdf", simplePages(1))], DocumentType.TO_TRINH_NOI_BO);
     await createDocument(DOC_MIXED_ID, "Văn bản E2E tệp đa dạng khổ giấy", mixedFiles());
+    await createDocument(DOC_EDIT_ID, "Văn bản E2E để sửa", []);
 
     // Phiên đăng nhập: cookie JWT ký bằng AUTH_SECRET của E2E, không lưu vào Git (playwright/.auth/ đã ignore).
     const token = signSessionToken({ id: user.id, email: user.email, name: user.name, role: user.role });

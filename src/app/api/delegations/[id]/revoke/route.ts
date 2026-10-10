@@ -10,6 +10,7 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiSuccess, apiError } from '@/server/api/response';
 import { ApiError, ForbiddenError, NotFoundError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
+import { assertCsrf } from '@/server/security/csrf';
 import { DelegationStatus } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
@@ -37,6 +38,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, props: RouteParams) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;

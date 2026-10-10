@@ -9,3 +9,4 @@ export const DOC_LONG_ID = "e2e_doc_long"; // 1 tệp 60 trang
 export const DOC_MIXED_ID = "e2e_doc_mixed"; // dọc / ngang / khổ lạ / xoay / scan / hỏng
 export const DOC_OUTGOING_ID = "e2e_doc_outgoing"; // văn bản đi, 2 tệp
 export const DOC_SUBMISSION_ID = "e2e_doc_submission"; // tờ trình, 3 tệp
+export const DOC_EDIT_ID = "e2e_doc_edit"; // văn bản đến, 0 tệp: chỉ spec sửa thông tin/bổ sung tệp được thay đổi

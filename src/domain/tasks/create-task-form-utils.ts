@@ -102,9 +102,9 @@ export const PRIORITY_OPTIONS: {
   iconColor: string;
 }[] = [
   { value: "LOW", label: "Thấp", iconColor: "text-muted-foreground" },
-  { value: "MEDIUM", label: "Bình thường", iconColor: "text-blue-500" },
-  { value: "HIGH", label: "Cao", iconColor: "text-amber-500" },
-  { value: "URGENT", label: "Khẩn cấp", iconColor: "text-rose-500" },
+  { value: "MEDIUM", label: "Bình thường", iconColor: "text-muted-foreground" },
+  { value: "HIGH", label: "Cao", iconColor: "text-foreground/70" },
+  { value: "URGENT", label: "Khẩn cấp", iconColor: "text-destructive" },
 ];
 
 /* ── Role & assignee guards ────────────────────────────────────────── */

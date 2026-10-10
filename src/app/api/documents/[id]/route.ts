@@ -29,6 +29,7 @@ import {
   toLinkedTaskConflict,
 } from "@/lib/documents/linked-task-link";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
+import { logAuditEvent } from "@/lib/db/audit";
 import {
   NotFoundError,
   AuthorizationError,
@@ -78,6 +79,8 @@ export async function GET(
     );
 
     const documentDTO = toDocumentDetailDTO(document);
+    // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
+    const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
 
     return apiSuccess(
       {
@@ -85,10 +88,12 @@ export async function GET(
         data: {
           ...document,
           availableActions,
+          canEdit,
         },
         document: {
           ...documentDTO,
           availableActions,
+          canEdit,
         },
         availableActions,
       },
@@ -248,7 +253,19 @@ export async function PATCH(
         throw toLinkedTaskConflict(error);
       }
     } else {
-      updated = await updateDocument(id, validated as any);
+      // Ghi nhật ký các trường đã sửa (chỉ tên trường) để thay đổi thông tin hiện trong luân chuyển
+      updated = await prisma.$transaction(async (tx) => {
+        const result = await updateDocument(id, validated as any, tx);
+        await logAuditEvent(tx, {
+          actorId: authUser.id,
+          action: "DOCUMENT_UPDATED",
+          entityType: "Document",
+          entityId: id,
+          requestId,
+          metadata: { fields: Object.keys(validated) },
+        });
+        return result;
+      });
     }
 
     return apiSuccess(

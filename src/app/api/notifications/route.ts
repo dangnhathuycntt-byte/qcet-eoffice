@@ -4,6 +4,11 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiError, apiSuccess } from '@/server/api/response';
 import { NotificationQuerySchema } from '@/contracts/notifications';
 import { toNotificationDTOArray } from '@/server/dto/notification-dto';
+import {
+  buildNotificationWhere,
+  decodeNotificationCursor,
+  encodeNotificationCursor,
+} from '@/lib/notification-inbox';
 import { assertCsrf } from '@/server/security/csrf';
 import { assertRateLimit } from '@/server/security/rate-limit';
 
@@ -24,31 +29,31 @@ export async function GET(request: NextRequest) {
       read: searchParams.get('read') ?? undefined,
       category: searchParams.get('category') ?? undefined,
       type: searchParams.get('type') ?? undefined,
+      q: searchParams.get('q') ?? undefined,
+      triage: searchParams.get('triage') ?? undefined,
+      cursor: searchParams.get('cursor') ?? undefined,
       page: searchParams.get('page') ?? undefined,
       pageSize: searchParams.get('limit') ?? searchParams.get('pageSize') ?? undefined,
     });
 
-    const isUnreadFilter =
-      validatedQuery.unreadOnly === true || validatedQuery.read === false;
-
-    const whereClause: {
-      userId: string;
-      isRead?: boolean;
-      category?: string;
-      type?: string;
-    } = {
+    const filter = {
       userId: authUser.id,
-      ...(isUnreadFilter ? { isRead: false } : validatedQuery.read === true ? { isRead: true } : {}),
-      ...(validatedQuery.category ? { category: validatedQuery.category } : {}),
-      ...(validatedQuery.type ? { type: validatedQuery.type } : {}),
+      unreadOnly: validatedQuery.unreadOnly,
+      read: validatedQuery.read,
+      category: validatedQuery.category,
+      type: validatedQuery.type,
+      triage: validatedQuery.triage,
+      q: validatedQuery.q,
+      cursor: validatedQuery.cursor,
     };
+    const usesCursor = Boolean(decodeNotificationCursor(validatedQuery.cursor));
 
-    const [notifications, unreadCount] = await Promise.all([
+    const [rows, unreadCount, filteredTotal] = await Promise.all([
       prisma.notification.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        take: validatedQuery.pageSize,
-        skip: (validatedQuery.page - 1) * validatedQuery.pageSize,
+        where: buildNotificationWhere(filter),
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: validatedQuery.pageSize + 1,
+        skip: usesCursor ? 0 : (validatedQuery.page - 1) * validatedQuery.pageSize,
       }),
       prisma.notification.count({
         where: {
@@ -56,7 +61,13 @@ export async function GET(request: NextRequest) {
           isRead: false,
         },
       }),
+      prisma.notification.count({ where: buildNotificationWhere(filter, false) }),
     ]);
+
+    const hasMore = rows.length > validatedQuery.pageSize;
+    const notifications = hasMore ? rows.slice(0, validatedQuery.pageSize) : rows;
+    const last = notifications[notifications.length - 1];
+    const nextCursor = hasMore && last ? encodeNotificationCursor(last.createdAt, last.id) : null;
 
     const dtoList = toNotificationDTOArray(notifications);
 
@@ -66,6 +77,9 @@ export async function GET(request: NextRequest) {
         items: dtoList,
         unreadCount,
         total: dtoList.length,
+        filteredTotal,
+        hasMore,
+        nextCursor,
       },
       {
         requestId,

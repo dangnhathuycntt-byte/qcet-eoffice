@@ -11,19 +11,19 @@ export function getUrgencyBadgeConfig(urgency: DocumentUrgency): {
     case "HOA_TOC":
       return {
         label: "Hỏa tốc",
-        className: "bg-red-500/15 text-red-700 border-red-500/30 font-bold animate-pulse",
+        className: "bg-danger-soft text-destructive border-destructive/20 font-semibold",
       };
     case "top_urgent":
     case "THUONG_KHAN":
       return {
         label: "Thượng khẩn",
-        className: "bg-rose-500/15 text-rose-700 border-rose-500/30 font-semibold",
+        className: "bg-danger-soft text-destructive border-destructive/20 font-semibold",
       };
     case "urgent":
     case "KHAN":
       return {
         label: "Khẩn",
-        className: "bg-amber-500/15 text-amber-700 border-amber-500/30 font-medium",
+        className: "bg-warning/10 text-warning border-warning/20 font-medium",
       };
     case "normal":
     case "THUONG":

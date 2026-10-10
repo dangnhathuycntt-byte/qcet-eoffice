@@ -110,7 +110,6 @@ export interface KanbanColumnConfig {
   title: string;
   label: string;
   emoji?: string;
-  dotColor: string;
   iconColor: string;
 }
 
@@ -120,7 +119,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Mới",
     label: "Chưa bắt đầu",
     emoji: "",
-    dotColor: "bg-muted-foreground/60",
     iconColor: "text-muted-foreground",
   },
   {
@@ -128,7 +126,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Đang thực hiện",
     label: "Đang thực hiện",
     emoji: "",
-    dotColor: "bg-blue-500",
     iconColor: "text-blue-500",
   },
   {
@@ -136,7 +133,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Cần chỉnh sửa",
     label: "Chờ duyệt",
     emoji: "",
-    dotColor: "bg-amber-500",
     iconColor: "text-amber-500",
   },
   {
@@ -144,7 +140,6 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     title: "Hoàn thành",
     label: "Hoàn thành",
     emoji: "",
-    dotColor: "bg-emerald-500",
     iconColor: "text-emerald-500",
   },
 ];
@@ -155,7 +150,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Mới",
     label: "Mới",
     emoji: "",
-    dotColor: "bg-muted-foreground/60",
     iconColor: "text-muted-foreground",
   },
   {
@@ -163,7 +157,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Đang thực hiện",
     label: "Đang thực hiện",
     emoji: "",
-    dotColor: "bg-blue-500",
     iconColor: "text-blue-500",
   },
   {
@@ -171,7 +164,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Chờ duyệt",
     label: "Chờ duyệt",
     emoji: "",
-    dotColor: "bg-purple-500",
     iconColor: "text-purple-500",
   },
   {
@@ -179,7 +171,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Cần chỉnh sửa",
     label: "Cần chỉnh sửa",
     emoji: "",
-    dotColor: "bg-amber-500",
     iconColor: "text-amber-500",
   },
   {
@@ -187,7 +178,6 @@ export const KANBAN_5_COLUMNS: KanbanColumnConfig[] = [
     title: "Hoàn thành",
     label: "Hoàn thành",
     emoji: "",
-    dotColor: "bg-emerald-500",
     iconColor: "text-emerald-500",
   },
 ];
@@ -723,15 +713,15 @@ function KanbanCard({
       aria-busy={isPending}
       data-slot="kanban-card"
       className={cn(
-        "group/card relative flex flex-col gap-2 rounded-2xl border border-border/40 bg-white p-3.5 sm:p-4 text-card-foreground shadow-2xs transition-all duration-150 cursor-pointer select-none",
+        "group/card relative flex flex-col gap-2 rounded-2xl border border-border/40 bg-card p-3.5 sm:p-4 text-card-foreground shadow-2xs transition-all duration-150 cursor-pointer select-none",
         "hover:bg-muted/30 hover:border-border/60 hover:shadow-xs active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isPending && "opacity-70 pointer-events-none",
-        isDragOverlay && "shadow-lg rotate-[1.5deg] scale-[1.02] bg-white opacity-95 cursor-grabbing"
+        isDragOverlay && "shadow-lg rotate-[1.5deg] scale-[1.02] bg-card opacity-95 cursor-grabbing"
       )}
     >
       {/* Row 1: Title + Subtask Count + Context Menu Trigger */}
       <div className="flex items-start justify-between gap-2">
-        <h4 className="text-[13px] sm:text-[13.5px] font-medium text-foreground leading-snug line-clamp-2 group-hover/card:text-primary transition-colors flex-1">
+        <h4 className="text-compact font-medium text-foreground leading-snug line-clamp-2 group-hover/card:text-primary transition-colors flex-1">
           {item.title}
         </h4>
 
@@ -857,7 +847,7 @@ function KanbanCard({
                               : "text-foreground hover:bg-muted/60"
                           )}
                         >
-                          <span className={cn("size-1.5 rounded-full shrink-0", col.dotColor)} />
+                          <TaskStatusCircle status={col.id} />
                           <span>{STATUS_LABELS[col.id] ?? col.title}</span>
                           {isCurrent && <span className="ml-auto text-primary font-bold">✓</span>}
                         </button>
@@ -891,7 +881,7 @@ function KanbanCard({
 
       {/* Row 2: Optional Parent Breadcrumb (Subtle) */}
       {displaySettings.showParentTask && item.parentSchoolTaskTitle && (
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 line-clamp-1 -mt-0.5">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground/60 line-clamp-1 -mt-0.5">
           <FolderTree strokeWidth={1.5} className="size-2.5 shrink-0 text-muted-foreground/40" />
           <span className="truncate">{item.parentSchoolTaskTitle}</span>
         </div>
@@ -899,13 +889,13 @@ function KanbanCard({
 
       {/* Pending / Error State Feedback */}
       {isPending && (
-        <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/5 px-1.5 py-0.5 rounded">
+        <div className="flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/5 px-1.5 py-0.5 rounded">
           <Clock className="size-3 animate-spin shrink-0" />
           <span>Đang cập nhật…</span>
         </div>
       )}
       {errorMessage && (
-        <div className="flex items-center gap-1.5 text-[11px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+        <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
           <AlertCircle className="size-3 shrink-0" />
           <span className="truncate flex-1">{errorMessage}</span>
           {lastAttemptedStatus && (
@@ -928,14 +918,14 @@ function KanbanCard({
         {displaySettings.showDueDate && item.dueDate ? (
           <div
             className={cn(
-              "flex items-center gap-1 text-[11.5px] font-mono tabular-nums",
-              overdue ? "text-rose-600 font-medium" : "text-muted-foreground/75 font-normal"
+              "flex items-center gap-1 text-xs font-mono tabular-nums",
+              overdue ? "text-destructive font-medium" : "text-muted-foreground/75 font-normal"
             )}
             title={overdue ? `Trễ hạn: ${formatDate(item.dueDate)}` : `Hạn: ${formatDate(item.dueDate)}`}
           >
             <span>Hạn {formatDate(item.dueDate)}</span>
             {overdue && (
-              <span className="text-[11.5px] text-rose-600 font-medium ml-1">
+              <span className="text-xs text-destructive font-medium ml-1">
                 {lateDays > 0 ? `trễ ${lateDays} ngày` : "trễ hạn"}
                 <span className="sr-only">Trễ hạn</span>
               </span>
@@ -950,7 +940,7 @@ function KanbanCard({
               name={parseLeadAssignee(item.assigneeName).primaryName}
               avatarUrl={item.assigneeAvatar}
               size="md"
-              className="size-6 text-[10px]"
+              className="size-6 text-xs"
             />
             <span className="sr-only">{item.assigneeName}</span>
           </div>
@@ -1108,7 +1098,7 @@ function DroppableColumn({
           <button
             type="button"
             onClick={onIncreaseLimit}
-            className="w-full py-1.5 px-2 text-[11px] font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-center"
+            className="w-full py-1.5 px-2 text-xs font-medium font-mono tabular-nums rounded border border-border/50 bg-card hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-center"
           >
             + {Math.min(30, tasks.length - colLimit)} việc nữa ({tasks.length - colLimit})
           </button>
@@ -1174,7 +1164,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
         )}
       >
         <SlidersHorizontal strokeWidth={1.5} className="size-3" />
-        <span className="hidden sm:inline text-[11px]">Hiển thị thẻ</span>
+        <span className="hidden sm:inline text-xs">Hiển thị thẻ</span>
       </button>
 
       {isOpen && (
@@ -1183,7 +1173,7 @@ function DisplaySettingsPopover({ settings, onToggle }: DisplaySettingsPopoverPr
           aria-label="Tùy chọn hiển thị"
           className="absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border border-border/80 bg-popover p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 duration-75 text-xs text-popover-foreground"
         >
-          <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground border-b border-border/40 mb-1">
+          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b border-border/40 mb-1">
             Hiển thị trên thẻ
           </div>
           <div className="space-y-0.5">
@@ -1506,7 +1496,7 @@ export function TaskKanbanBoard({
             {totalVisibleCount} / {totalExtractedCount} công việc
           </span>
           {excludedCount > 0 && (
-            <span className="text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] border border-amber-500/20 font-medium">
+            <span className="text-warning bg-warning/10 px-1.5 py-0.5 rounded text-xs border border-warning/20 font-medium">
               ({excludedCount} công việc bị huỷ / lưu trữ không hiển thị trên bảng)
             </span>
           )}
@@ -1533,7 +1523,7 @@ export function TaskKanbanBoard({
                 : "bg-muted/40 text-muted-foreground hover:bg-muted"
             )}
           >
-            <span className={cn("size-1.5 rounded-full", col.dotColor)} />
+            <TaskStatusCircle status={col.id} />
             <span>{col.title}</span>
             <span className="font-mono tabular-nums opacity-80">({groupedTasks[col.id]?.length || 0})</span>
           </button>

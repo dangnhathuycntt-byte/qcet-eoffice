@@ -11,6 +11,7 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiSuccess, apiError } from '@/server/api/response';
 import { ApiError, ForbiddenError, ValidationError } from '@/server/api/errors';
 import { parseAndValidateJson } from '@/server/api/validation';
+import { assertCsrf } from '@/server/security/csrf';
 import { DelegationStatus, AssignmentStatus, Prisma } from '@prisma/client';
 import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
 import {
@@ -228,6 +229,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);

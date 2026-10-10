@@ -1,44 +1,22 @@
-/* ── Split Workspace — layout container only ──────────────────── */
+/* ── Split Workspace — khung dùng chung (xem split-workspace.module.css) ── */
 .splitWorkspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  gap: calc(var(--spacing) * 1.5);
-  padding: calc(var(--spacing) * 2);
+  composes: splitWorkspace from "../workspace/split-workspace.module.css";
 }
 
 /* ── Parent pane — independent card ───────────────────────────── */
 .workspace {
+  composes: card from "../workspace/split-workspace.module.css";
   position: relative;
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  container-type: inline-size;
-  color: var(--foreground);
-  -webkit-font-smoothing: antialiased;
 }
 
 /* ── Child peek pane ──────────────────────────��───────────────── */
 
 /* Mobile: full-screen overlay from right */
 .peekSurface {
+  composes: card from "../workspace/split-workspace.module.css";
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
 }
 
 /* Desktop: independent card in second grid column */

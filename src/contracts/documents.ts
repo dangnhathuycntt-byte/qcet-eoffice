@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaginationQuerySchema, IsoDateStringSchema } from './common';
+import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@/lib/url-utils';
 
 /**
  * Institutional document types according to Decree 30/2020/ND-CP.
@@ -148,7 +149,7 @@ export type ExportDocumentQuery = z.infer<typeof ExportDocumentQuerySchema>;
 
 const AttachmentInputSchema = z.object({
   fileName: z.string().trim().max(255),
-  fileUrl: z.string().trim().max(1024),
+  fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE),
   fileSize: z.number().int().nonnegative().optional(),
   mimeType: z.string().trim().max(128).optional(),
   sha256Hash: z.string().trim().max(128).optional().nullable(),
@@ -214,6 +215,7 @@ export const CreateDocumentSchema = z
       .string()
       .trim()
       .max(1024, 'File URL cannot exceed 1024 characters')
+      .refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE)
       .optional()
       .nullable(),
     urgency: z.string().trim().max(50).optional().nullable(),
@@ -295,7 +297,7 @@ export const RegisterIncomingDocumentSchema = z
     receivedDate: z.union([IsoDateStringSchema, z.string().trim().max(100)]).optional(),
     securityLevel: z.enum(["THUONG", "MAT", "TOI_MAT", "TUYET_MAT"]).optional(),
     urgency: z.enum(["THUONG", "KHAN", "THUONG_KHAN", "HOA_TOC"]).optional(),
-    fileUrl: z.string().trim().max(1024).optional(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional(),
     fileName: z.string().trim().max(255).optional(),
     fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
     fileType: z.string().trim().max(128).optional(),
@@ -328,7 +330,7 @@ export const CreateOutgoingDraftSchema = z
     draftingDeptId: z.string().trim().max(64).optional(),
     authorizedSignerId: z.string().trim().max(64).optional(),
     recipientList: z.string().trim().max(1000).optional(),
-    fileUrl: z.string().trim().max(1024).optional(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional(),
     fileName: z.string().trim().max(255).optional(),
     fileSize: z.number().int().nonnegative().max(100 * 1024 * 1024).optional(),
     fileType: z.string().trim().max(128).optional(),
@@ -356,7 +358,7 @@ export const UpdateDocumentSchema = z
     /** Đơn vị chủ trì — canonical `OrganizationalUnit.id` (hoặc `code`). */
     leadUnitId: z.string().trim().max(64).optional().nullable(),
     departmentId: z.string().trim().max(64).optional().nullable(),
-    fileUrl: z.string().trim().max(1024).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional().nullable(),
     urgency: z.string().trim().max(50).optional().nullable(),
     securityLevel: z.string().trim().max(50).optional().nullable(),
     status: DocumentStatusSchema.optional().nullable(),
@@ -530,7 +532,7 @@ export const CreateDocumentRevisionSchema = z
       .max(2000, 'Lý do không được vượt quá 2000 ký tự'),
     title: z.string().trim().max(500).optional().nullable(),
     summary: z.string().trim().max(2000).optional().nullable(),
-    fileUrl: z.string().trim().max(1024).optional().nullable(),
+    fileUrl: z.string().trim().max(1024).refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE).optional().nullable(),
     fileName: z.string().trim().max(255).optional().nullable(),
     fileSize: z.coerce.number().int().nonnegative().optional().nullable(),
   })

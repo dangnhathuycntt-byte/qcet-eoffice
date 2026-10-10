@@ -363,7 +363,7 @@ export function DocumentTable({
                       onChange={() => {
                         // Handled by onClick for shiftKey support
                       }}
-                      aria-label={`Chọn văn bản ${doc.documentNumber || doc.id}`}
+                      aria-label={`Chọn văn bản ${doc.documentNumber || doc.summary}`}
                       className="size-4 rounded border-border/80 text-primary focus:ring-primary/20 accent-primary cursor-pointer transition-colors"
                     />
                   </td>
@@ -478,14 +478,14 @@ export function DocumentTable({
                       size="icon"
                       onClick={() => onSelectDocument?.(doc)}
                       className="size-7 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted cursor-pointer active:scale-[0.98]"
-                      aria-label={`Xem chi tiết văn bản ${doc.documentNumber || doc.id}`}
+                      aria-label={`Xem chi tiết văn bản ${doc.documentNumber || doc.summary}`}
                     >
                       <Eye className="size-3.5" strokeWidth={1.5} />
                     </Button>
 
                     <Menu.Root>
                       <Menu.Trigger
-                        aria-label={`Tùy chọn thao tác văn bản ${doc.documentNumber || doc.id}`}
+                        aria-label={`Tùy chọn thao tác văn bản ${doc.documentNumber || doc.summary}`}
                         className="size-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer active:scale-[0.98]"
                       >
                         <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
@@ -556,7 +556,7 @@ export function DocumentTable({
                               role="menuitem"
                               onClick={() =>
                                 handleCopy(
-                                  doc.documentNumber || doc.id,
+                                  doc.documentNumber || doc.summary,
                                   `code-${doc.id}`
                                 )
                               }

@@ -43,8 +43,9 @@ function branchText(node: ts.Expression): string {
   return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : node.getText(shellSource);
 }
 
+// Khung cao cố định dùng chung cho chi tiết nhiệm vụ và Sổ văn bản (cùng workspace shell).
 const isTaskDetailBranch = (node: ts.ConditionalExpression) =>
-  ts.isIdentifier(node.condition) && node.condition.text === "isTaskDetail";
+  ts.isIdentifier(node.condition) && ["isTaskDetail", "isWorkspaceShell"].includes(node.condition.text);
 
 // The element AppShellInner actually returns (its last top-level return; early returns sit inside if-blocks).
 function returnedRootOpening(): ts.JsxOpeningElement {
@@ -154,7 +155,15 @@ test("mobile canvas bottom padding clears the fixed bottom navigation", () => {
 
 // Scroll contract: the parent canvas and the child drawer each own a scroll area inside a bounded chain.
 const cssPath = path.resolve("src/components/tasks/task-detail-page.module.css");
+// Khung workspace (grid, thẻ bo tròn) nằm ở module dùng chung; phần canvas vẫn ở module của task.
+const sharedCssPath = path.resolve("src/components/workspace/split-workspace.module.css");
 const css = readFileSync(cssPath, "utf8");
+const sharedCss = readFileSync(sharedCssPath, "utf8");
+
+function sharedRuleBodies(selector: string): string[] {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return [...sharedCss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, "g"))].map((match) => match[1]);
+}
 
 function ruleBodies(selector: string): string[] {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -162,11 +171,11 @@ function ruleBodies(selector: string): string[] {
 }
 
 test("split workspace, parent card, and parent canvas are bounded so each scrolls on its own", () => {
-  const splitBody = ruleBodies(".splitWorkspace")[0];
+  const splitBody = sharedRuleBodies(".splitWorkspace")[0];
   assert.match(splitBody, /min-height:\s*0/, "split workspace must not grow to content");
   assert.match(splitBody, /grid-template-rows:\s*minmax\(0,\s*1fr\)/);
 
-  const workspaceBody = ruleBodies(".workspace")[0];
+  const workspaceBody = sharedRuleBodies(".card")[0];
   assert.match(workspaceBody, /min-height:\s*0/);
   assert.match(workspaceBody, /overflow:\s*hidden/);
 

@@ -4,13 +4,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus, DocumentItem } from "@/types/document";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useDocumentUrlFilters } from "@/hooks/use-document-url-filters";
 import { useDocumentPane } from "@/hooks/use-document-pane";
 import { PaneResizeHandle } from "@/components/ui/pane-resize-handle";
+import { cn } from "@/lib/utils";
 import { readScroll, writeScroll } from "@/lib/documents/list-scroll-memory";
 import { PANE_DEFAULT, PANE_MAX, PANE_MIN, nextWidthForKey, parseStoredPaneWidth, resolvePaneLayout, type PaneMode } from "@/lib/documents/document-pane-layout";
-import { DocumentLedgerToolbar, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, DEFAULT_LEDGER_COLUMNS, getLedgerEmptyCopy, type LedgerColumnVisibility } from "./registry";
+import { DocumentLedgerToolbar, DocumentActiveFilters, DocumentLedgerTable, DocumentCardList, DocumentBulkToolbar, DEFAULT_LEDGER_COLUMNS, getLedgerEmptyCopy, type LedgerColumnVisibility } from "./registry";
 import { useDepartmentList } from "@/hooks/use-department-list";
 import { DocumentQuickView } from "./workspace/document-quick-view";
 import { CreateDocumentModal } from "./create-document-modal";
@@ -20,6 +20,13 @@ import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagi
 import { InboundDocumentFeatureGuide } from "@/components/feature-guide/feature-guide";
 
 const PANE_WIDTH_KEY = "qcet_document_pane_width";
+
+/**
+ * Khung workspace, cùng giá trị với `src/components/workspace/split-workspace.module.css` (Task Detail dùng module đó).
+ * Viết bằng utility để test Node đọc được; `tests/split-workspace-contract.test.ts` khóa hai bên không lệch nhau.
+ */
+const SPLIT_WORKSPACE = "grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-1.5 p-2";
+const WORKSPACE_CARD = "@container flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground";
 
 interface ApiDoc {
   id: string; type: string; urgency: string; status: string;
@@ -44,7 +51,8 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
   if (item.linkedTaskId && status === "processing") status = "delegated";
 
   const formatDate = (val?: string | Date | null) => val ? (typeof val === "string" ? val.split("T")[0] : new Date(val).toISOString().split("T")[0]) : "";
-  const docNumber = item.originalNumber || item.documentNumber || (item.registrationNumber ? `${item.registrationNumber}/${item.documentYear || new Date().getFullYear()}` : item.id);
+  /* Không dùng item.id (ID hệ thống) làm số hiệu hiển thị; thiếu thì để trống. */
+  const docNumber = item.originalNumber || item.documentNumber || (item.registrationNumber ? `${item.registrationNumber}/${item.documentYear || new Date().getFullYear()}` : "");
   const fileAttachment = item.attachments && item.attachments.length > 0 ? {
     name: item.attachments[0].fileName,
     size: item.attachments[0].fileSize != null ? `${Math.round(item.attachments[0].fileSize / 1024)} KB` : "Chưa rõ dung lượng",
@@ -191,9 +199,10 @@ export function DocumentRegistryView() {
   }, []);
   const layout = resolvePaneLayout(workspaceWidth, preferredWidth, modeRef.current);
   modeRef.current = workspaceWidth > 0 ? layout.mode : undefined;
-  const handleResize = React.useCallback((width: number) => {
+  const handleResize = React.useCallback((width: number, persist = true) => {
     const next = Math.min(PANE_MAX, Math.max(PANE_MIN, Math.round(width)));
     setPreferredWidth(next);
+    if (!persist) return;
     try {
       localStorage.setItem(PANE_WIDTH_KEY, String(next));
     } catch {
@@ -290,6 +299,11 @@ export function DocumentRegistryView() {
     setFocusToken((n) => n + 1);
   }, [pane]);
 
+  // → trên dòng đang xem: tới tiêu đề Quick View (pane không modal nên Tab cũng tới được, đây là lối tắt)
+  const handleFocusDetail = React.useCallback(() => {
+    document.querySelector<HTMLElement>('[data-slot="document-quick-view"] [data-slot="document-quick-title"]')?.focus();
+  }, []);
+
   // Chuyển dòng bằng bàn phím trong danh sách: pane đang mở thì đổi văn bản theo, focus ở lại danh sách
   const handleNavigate = React.useCallback((doc: OfficialDocument) => {
     if (pane.docId) pane.switchDocument(doc.id);
@@ -351,15 +365,20 @@ export function DocumentRegistryView() {
     ...(filters.urgency && filters.urgency !== "ALL" ? [{ id: "urgency", label: "Mức khẩn", value: urgencyLabels[filters.urgency] ?? filters.urgency, onClear: () => setFilter("urgency", "ALL") }] : []),
     ...(filters.leadUnitId ? [{ id: "leadUnit", label: "Đơn vị chủ trì", value: leadUnitName ?? filters.leadUnitId, onClear: () => setFilter("leadUnitId", "") }] : []),
     ...(filters.documentYear ? [{ id: "year", label: "Năm", value: String(filters.documentYear), onClear: () => setFilter("documentYear", undefined) }] : []),
+    ...(filters.search.trim() ? [{ id: "search", label: "Từ khóa", value: `"${filters.search.trim()}"`, onClear: () => setFilter("search", "") }] : []),
   ];
-  // Xóa bộ lọc giữ loại sổ, từ khóa và tham số không thuộc bộ lọc; resetFilters sẽ đưa loại về "Tất cả"
-  const clearFilters = () => setFilters({ bucket: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined });
-  const emptyCopy = getLedgerEmptyCopy(isResultFiltered);
+  // Xóa bộ lọc giữ loại sổ, nhóm ở sidebar (phạm vi xem), từ khóa và tham số không thuộc bộ lọc; resetFilters sẽ đưa loại về "Tất cả"
+  const clearFilters = () => setFilters({ status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined });
+  // "Xóa lọc" ở hàng chip bỏ mọi chip đang hiện, kể cả từ khóa (như trang Nhiệm vụ); vẫn giữ loại sổ và nhóm ở sidebar
+  const clearFiltersAndSearch = () => setFilters({ search: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined });
+  const emptyCopy = getLedgerEmptyCopy({ isResultFiltered, search: filters.search, type: filters.type, bucket: filters.bucket });
   const emptyAction = isResultFiltered ? (
-    <Button size="sm" variant="outline" onClick={() => setFilters({ search: "", bucket: "", status: "ALL", urgency: "ALL", leadUnitId: "", documentYear: undefined })}>
-      Xóa bộ lọc và từ khóa
+    <Button size="sm" variant="outline" onClick={clearFiltersAndSearch}>
+      {!filters.search.trim() ? "Xóa bộ lọc" : activeFilters.some((f) => f.id !== "search" && f.id !== "bucket") ? "Xóa từ khóa và bộ lọc" : "Xóa từ khóa"}
     </Button>
-  ) : (
+  ) : filters.bucket === "done" || filters.bucket === "issued" ? (
+    <Button size="sm" variant="outline" onClick={() => setFilter("bucket", "pending")}>Xem văn bản chờ xử lý</Button>
+  ) : filters.bucket === "pending" ? null : (
     <Button size="sm" variant="outline" onClick={primaryAction.run}>{primaryAction.label}</Button>
   );
 
@@ -384,85 +403,112 @@ export function DocumentRegistryView() {
   const overlayVisible = Boolean(quickViewProps) && workspaceWidth > 0 && layout.mode === "overlay";
 
   return (
-    <div ref={workspaceRef} className="flex min-h-0 w-full flex-1 md:flex-row" data-slot="document-registry-view">
-      <div
-        ref={listRef}
-        tabIndex={-1}
-        data-slot="document-list-region"
-        className="min-w-0 flex-1 pb-6 outline-none md:overflow-y-auto md:p-6 md:pb-10"
-      >
-      <DocumentLedgerToolbar
-        title={typeTitle[filters.type] ?? "Sổ văn bản"}
-        total={isLoading || fetchError ? null : totalCount}
-        searchValue={searchInputValue}
-        onSearchChange={setSearchInputValue}
-        urgency={filters.urgency}
-        onUrgencyChange={(v) => setFilter("urgency", v)}
-        status={filters.status}
-        onStatusChange={(v) => setFilter("status", v)}
-        year={filters.documentYear}
-        onYearChange={(y) => setFilter("documentYear", y)}
-        primaryActionLabel={primaryAction.label}
-        onPrimaryAction={primaryAction.run}
-        activeFilters={activeFilters}
-        onClearFilters={clearFilters}
-        leadUnitId={filters.leadUnitId}
-        leadUnitLabel={leadUnitName}
-        leadUnitOptions={leadUnitOptions}
-        onLeadUnitChange={(id) => setFilter("leadUnitId", id)}
-        visibleColumns={visibleColumns}
-        onVisibleColumnsChange={setVisibleColumns}
-      />
+    <div ref={workspaceRef} className="flex min-h-0 min-w-0 flex-1 flex-col" data-slot="document-registry-view">
+      {/* Cùng khung với Task Detail: hai thẻ bo tròn độc lập, gap 6px, padding 8px. Mobile chừa chỗ cho thanh điều hướng dưới. */}
+      <div className="flex min-h-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0">
+        <div
+          className={SPLIT_WORKSPACE}
+          data-peek-open={paneVisible}
+          style={paneVisible ? { gridTemplateColumns: `minmax(0, 1fr) min(75vw, ${layout.width}px)` } : undefined}
+        >
+          <section className={WORKSPACE_CARD} data-slot="document-list-card" aria-label="Sổ văn bản">
+            <header className="shrink-0 border-b border-border/60 px-4 pb-2 pt-2.5 sm:px-6">
+              <DocumentLedgerToolbar
+                title={typeTitle[filters.type] ?? "Sổ văn bản"}
+                searchValue={searchInputValue}
+                onSearchChange={setSearchInputValue}
+                urgency={filters.urgency}
+                onUrgencyChange={(v) => setFilter("urgency", v)}
+                status={filters.status}
+                onStatusChange={(v) => setFilter("status", v)}
+                year={filters.documentYear}
+                onYearChange={(y) => setFilter("documentYear", y)}
+                primaryActionLabel={primaryAction.label}
+                onPrimaryAction={primaryAction.run}
+                onClearFilters={clearFilters}
+                leadUnitId={filters.leadUnitId}
+                leadUnitLabel={leadUnitName}
+                leadUnitOptions={leadUnitOptions}
+                onLeadUnitChange={(id) => setFilter("leadUnitId", id)}
+                visibleColumns={visibleColumns}
+                onVisibleColumnsChange={setVisibleColumns}
+              />
+            </header>
+            {/* Cách đường kẻ 16px; vùng danh sách bên dưới tự có 16px phía trên, nên có hay không có bộ lọc bảng đều cách đều như trang Nhiệm vụ (space-y-4) */}
+            <div className="shrink-0 px-4 pt-4 sm:px-6 empty:hidden">
+              <DocumentActiveFilters
+                filters={activeFilters.filter((f) => f.id !== "bucket")}
+                onClearAll={clearFiltersAndSearch}
+                total={isLoading || fetchError ? null : totalCount}
+              />
+            </div>
 
-      <InboundDocumentFeatureGuide>
-        <div className="mt-2">
-          <div className="hidden sm:block">
-            <DocumentLedgerTable
-              documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
-              numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
-              visibleColumns={visibleColumns} isFiltered={isResultFiltered}
-              emptyAction={emptyAction}
-              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
-              onOpen={handleOpenDetail} onNavigate={handleNavigate} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
-            />
-          </div>
-          <div className="block sm:hidden">
-            <DocumentCardList
-              documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
-              emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description}
-              emptyAction={emptyAction}
-              onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={handleOpenDetail}
-              isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
-            />
-          </div>
-          <TaskPaginationBar
-            itemLabel="văn bản"
-            currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
-            onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
-          />
+            <div
+              ref={listRef}
+              tabIndex={-1}
+              data-slot="document-list-region"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-6 pt-4 outline-none sm:px-4 md:pb-8"
+            >
+              <InboundDocumentFeatureGuide>
+                <div>
+                  {/* Văn bản đang xem không thuộc kết quả của bộ lọc/trang hiện tại: nói rõ, không tự chuyển sang dòng khác */}
+                  {pane.docId && !paneDoc && !isLoading && !fetchError ? (
+                    <p role="status" className="flex h-8 items-center px-2 text-xs text-muted-foreground">
+                      Văn bản đang xem nằm ngoài kết quả hiện tại.
+                    </p>
+                  ) : null}
+                  <div className="hidden sm:block">
+                    <DocumentLedgerTable
+                      documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
+                      numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
+                      visibleColumns={visibleColumns} filterYear={filters.documentYear} isFiltered={isResultFiltered} emptyCopy={emptyCopy}
+                      emptyAction={emptyAction}
+                      isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
+                      onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
+                    />
+                  </div>
+                  <div className="block sm:hidden">
+                    <DocumentCardList
+                      documents={documents} selectedDocument={paneDoc} selectedIds={selectedIds}
+                      emptyTitle={emptyCopy.title} emptyDescription={emptyCopy.description}
+                      emptyAction={emptyAction}
+                      onSelectDocument={handleOpenDetail} onToggleSelect={handleToggleSelect} onViewPdf={handleOpenDetail}
+                      isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()} selectable
+                    />
+                  </div>
+                  <TaskPaginationBar
+                    itemLabel="văn bản"
+                    currentPage={filters.page} pageSize={filters.pageSize} totalItems={totalCount}
+                    onPageChange={(page) => setFilter("page", page)} onPageSizeChange={(pageSize) => setFilter("pageSize", pageSize)} disabled={isLoading}
+                  />
+                </div>
+              </InboundDocumentFeatureGuide>
+            </div>
+          </section>
+
+          {/* Quick View: thẻ thứ hai, cùng kiểu Subtask Peek; danh sách bên trái vẫn cuộn/chọn/lọc bình thường */}
+          {paneVisible && quickViewProps ? (
+            // overflow-visible để vùng kéo 24px bắc qua khe giữa hai thẻ (như Subtask Peek); nội dung bo góc ở lớp trong
+            <aside className={cn(WORKSPACE_CARD, "relative overflow-visible")} data-slot="document-quick-view-pane">
+              <PaneResizeHandle
+                value={layout.width}
+                min={PANE_MIN}
+                max={layout.max}
+                onResize={handleResize}
+                onKey={(key, current) => nextWidthForKey(key, current, layout)}
+                onReset={() => handleResize(PANE_DEFAULT)}
+              />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[inherit]">
+                <DocumentQuickView {...quickViewProps} mode="pane" />
+              </div>
+            </aside>
+          ) : null}
         </div>
-      </InboundDocumentFeatureGuide>
       </div>
 
-      {/* Quick View không modal: danh sách bên cạnh vẫn cuộn, chọn, lọc được */}
-      {paneVisible && quickViewProps ? (
-        <>
-          <PaneResizeHandle
-            value={layout.width}
-            min={PANE_MIN}
-            max={layout.max}
-            onResize={handleResize}
-            onKey={(key, current) => nextWidthForKey(key, current, layout)}
-            onReset={() => handleResize(PANE_DEFAULT)}
-          />
-          <div style={{ width: layout.width }} className="flex h-full min-h-0 shrink-0 flex-col bg-card" data-slot="document-quick-view-pane">
-            <DocumentQuickView {...quickViewProps} mode="pane" />
-          </div>
-        </>
-      ) : null}
       {overlayVisible && quickViewProps ? <DocumentQuickView {...quickViewProps} mode="overlay" /> : null}
 
-      {/* 6. Floating Bulk Action Toolbar */}
+      {/* Floating Bulk Action Toolbar */}
       <DocumentBulkToolbar
         selectedCount={selectedIds.size} selectedIds={selectedIds} totalCount={totalCount}
         onClearSelection={handleClearSelection} onRefresh={() => { fetchDocuments(); }}
@@ -483,7 +529,7 @@ export function DocumentRegistryView() {
       <DigitalSignatureDialog
         open={isSignatureOpen} onOpenChange={setIsSignatureOpen}
         documentData={signatureDoc}
-        documentNumber={signatureDoc?.documentNumber}
+        documentNumber={signatureDoc?.documentNumber || undefined}
         documentTitle={signatureDoc?.summary}
         existingSignature={(signatureDoc?.signatures?.[0] as any) || null}
       />

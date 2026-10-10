@@ -669,7 +669,7 @@ describe("Task Row Simplification & Bulk Action Floating Bar", () => {
         )
       );
       assert.ok(html.includes("Trễ 8 ngày"), "Overdue task should expose 'Trễ 8 ngày' (tooltip + screen-reader text)");
-      assert.ok(html.includes("text-rose-600"), "Overdue task should render the red due-date icon");
+      assert.ok(html.includes("text-destructive"), "Overdue task should render the red due-date icon");
     });
   });
 

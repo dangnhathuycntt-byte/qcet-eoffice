@@ -361,7 +361,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       </h3>
 
       {/* Description */}
-      <p className="mt-1.5 text-xs sm:text-[13px] text-muted-foreground max-w-md leading-relaxed">
+      <p className="mt-1.5 text-xs sm:text-compact text-muted-foreground max-w-md leading-relaxed">
         {displayDescription}
       </p>
 

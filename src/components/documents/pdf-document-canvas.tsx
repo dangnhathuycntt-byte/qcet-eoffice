@@ -15,7 +15,7 @@ import {
   scrollOffsetForPage,
   type PageSize,
 } from "@/lib/documents/pdf-layout";
-import { findHits, highlightItemHtml, toSearchQuery, type TextHit } from "@/lib/documents/pdf-text-index";
+import { findHits, hasSearchableText, highlightItemHtml, toSearchQuery, type TextHit } from "@/lib/documents/pdf-text-index";
 
 // Worker phải khai báo cùng module với <Document> (theo tài liệu react-pdf).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -48,7 +48,8 @@ export interface PdfDocumentCanvasProps {
   searchQuery?: string;
   /** Kết quả đang chọn (0-based) trong danh sách kết quả; tự cuộn tới đó. */
   activeMatch?: number;
-  onSearchTotal?: (total: number) => void;
+  /** `noText`: đã đọc hết lớp chữ và tệp không có chữ (bản scan). */
+  onSearchTotal?: (total: number, noText?: boolean) => void;
   /** Số trang quanh khung nhìn vẫn được dựng. */
   overscan?: number;
 }
@@ -327,7 +328,7 @@ export default function PdfDocumentCanvas({
         if (cancelled) return;
         const found = findHits(textPages.current, query);
         setHits(found);
-        onSearchTotalRef.current?.(found.length);
+        onSearchTotalRef.current?.(found.length, !hasSearchableText(textPages.current));
       })
       .catch(() => {
         if (!cancelled) onSearchTotalRef.current?.(0);

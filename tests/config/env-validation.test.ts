@@ -6,6 +6,8 @@ import {
   isBuildPhase,
   DEV_AUTH_SECRET_FALLBACK,
   DEV_DATABASE_URL_FALLBACK,
+  assertRuntimeAuthSecret,
+  isPlaceholderAuthSecret,
 } from "@/config/env.server";
 import {
   ClientEnvSchema,
@@ -226,6 +228,35 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
       assert.strictEqual(buildEnv.NODE_ENV, "production");
       assert.ok(Boolean(buildEnv.DATABASE_URL && buildEnv.DATABASE_URL.includes("build-placeholder")));
       assert.ok(Boolean(buildEnv.AUTH_SECRET && buildEnv.AUTH_SECRET.length >= 32));
+    });
+
+    it("production runtime từ chối secret placeholder còn sót từ SKIP_ENV_VALIDATION", () => {
+      const buildEnv = validateServerEnv({ NODE_ENV: "production", SKIP_ENV_VALIDATION: "true" });
+      assert.ok(isPlaceholderAuthSecret(buildEnv.AUTH_SECRET));
+      assert.throws(
+        () => assertRuntimeAuthSecret(buildEnv, { NODE_ENV: "production", SKIP_ENV_VALIDATION: "true" }),
+        /placeholder/
+      );
+      assert.ok(isPlaceholderAuthSecret(DEV_AUTH_SECRET_FALLBACK));
+      assert.throws(
+        () => assertRuntimeAuthSecret({ AUTH_SECRET: DEV_AUTH_SECRET_FALLBACK }, { NODE_ENV: "production" }),
+        /placeholder/
+      );
+    });
+
+    it("guard placeholder bỏ qua khi đang next build hoặc có secret thật", () => {
+      assert.doesNotThrow(() =>
+        assertRuntimeAuthSecret(
+          { AUTH_SECRET: "qcet_build_placeholder_secret_key_2026_min_32_chars" },
+          { NODE_ENV: "production", NEXT_PHASE: "phase-production-build" }
+        )
+      );
+      assert.doesNotThrow(() =>
+        assertRuntimeAuthSecret(
+          { AUTH_SECRET: "real_production_secret_key_2026_at_least_32_chars" },
+          { NODE_ENV: "production" }
+        )
+      );
     });
   });
 

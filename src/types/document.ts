@@ -106,6 +106,8 @@ export interface DocumentItem {
   attachments?: DocumentAttachmentItem[];
   directives?: DocumentDirectiveItem[];
   incomingWorkflow?: any;
+  /** Server tính: người xem được sửa thông tin/bổ sung tệp (có quyền và văn bản chưa bất biến). */
+  canEdit?: boolean;
   outgoingWorkflow?: any;
   signatures?: any[];
   linkedTaskId?: string | null;

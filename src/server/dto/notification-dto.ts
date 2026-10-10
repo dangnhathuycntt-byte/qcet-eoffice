@@ -13,6 +13,8 @@ export interface NotificationDTO {
   message: string;
   type: string;
   link?: string | null;
+  actorName?: string | null;
+  category?: string | null;
   isRead: boolean;
   readAt?: string | null;
   createdAt: string;
@@ -50,6 +52,8 @@ export function toNotificationDTO(rawNotif: unknown): NotificationDTO | null {
     message: String(notif.message ?? notif.body ?? ''),
     type: String(notif.type ?? 'general'),
     link: notif.link ?? notif.linkHref ?? null,
+    actorName: typeof notif.actorName === 'string' && notif.actorName.trim() ? notif.actorName.trim() : null,
+    category: typeof notif.category === 'string' && notif.category.trim() ? notif.category.trim() : null,
     isRead: Boolean(notif.isRead),
     readAt: notif.readAt ? toISOStringSafe(notif.readAt) : null,
     createdAt: toISOStringSafe(notif.createdAt),

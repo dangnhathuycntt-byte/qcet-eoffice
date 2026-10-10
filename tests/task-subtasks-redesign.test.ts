@@ -17,13 +17,15 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
   const sharedEditorContent = fs.readFileSync(sharedEditorPath, "utf-8");
   const headerContent = fs.readFileSync(headerPath, "utf-8");
   const cssContent = fs.readFileSync(cssPath, "utf-8");
+  // Khung dùng chung (grid, thẻ bo tròn) nằm ở module workspace; module của task giữ phần còn lại
+  const sharedCssContent = fs.readFileSync(path.resolve("src/components/workspace/split-workspace.module.css"), "utf-8");
 
   describe("1. Dual Independent Cards Layout", () => {
     it("splitWorkspace uses CSS grid, not flexbox row", () => {
       // Check the .splitWorkspace rule specifically
-      const splitIdx = cssContent.indexOf(".splitWorkspace {");
+      const splitIdx = sharedCssContent.indexOf(".splitWorkspace {");
       assert.ok(splitIdx >= 0, ".splitWorkspace must exist");
-      const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
+      const splitBlock = sharedCssContent.slice(splitIdx, sharedCssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
         splitBlock.includes("display: grid"),
         "splitWorkspace must use CSS grid layout"
@@ -39,7 +41,7 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
     });
 
     it("splitWorkspace is layout-only — no border, no radius, no background", () => {
-      const splitIdx = cssContent.indexOf(".splitWorkspace {");
+      const splitIdx = sharedCssContent.indexOf(".splitWorkspace {");
       const splitBlock = cssContent.slice(splitIdx, cssContent.indexOf("}", splitIdx) + 1);
       assert.ok(
         !splitBlock.includes("border:") && !splitBlock.includes("border-radius") && !splitBlock.includes("background:"),
@@ -52,18 +54,18 @@ describe("Task Detail Dual-Card Workspace — Layout, Tabs, Drawer & Sidebar", (
       const workspaceIdx = cssContent.indexOf(".workspace {");
       assert.ok(workspaceIdx >= 0, ".workspace must exist");
       const workspaceBlock = cssContent.slice(workspaceIdx, cssContent.indexOf("}", workspaceIdx) + 1);
+      assert.ok(workspaceBlock.includes("composes: card"), "workspace must compose the shared card");
+      const cardIdx = sharedCssContent.indexOf(".card {");
+      const cardBlock = sharedCssContent.slice(cardIdx, sharedCssContent.indexOf("}", cardIdx) + 1);
       assert.ok(
-        workspaceBlock.includes("border:") && workspaceBlock.includes("border-radius") && workspaceBlock.includes("background:"),
-        "workspace must have independent card styling"
+        cardBlock.includes("border:") && cardBlock.includes("border-radius") && cardBlock.includes("background:"),
+        "shared card must have independent card styling"
       );
       // peekSurface card (mobile base rule)
       const peekIdx = cssContent.indexOf(".peekSurface {");
       assert.ok(peekIdx >= 0, ".peekSurface must exist");
       const peekBlock = cssContent.slice(peekIdx, cssContent.indexOf("}", peekIdx) + 1);
-      assert.ok(
-        peekBlock.includes("border:") && peekBlock.includes("border-radius") && peekBlock.includes("background:"),
-        "peekSurface must have independent card styling"
-      );
+      assert.ok(peekBlock.includes("composes: card"), "peekSurface must compose the shared card");
     });
 
     it("peekSurface is fixed overlay on mobile, grid column on desktop", () => {

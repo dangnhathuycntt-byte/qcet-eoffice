@@ -3,11 +3,13 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { Download, FileQuestion } from "lucide-react";
+import { FileTypeIcon } from "./file-type-icon";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DocumentViewerRail } from "./document-viewer-rail";
 import type { PdfCanvasController, PdfPosition } from "./pdf-document-canvas";
 import { isSafeUrl, toServedFileUrl } from "@/lib/url-utils";
+import { describeFileFormat, getPreviewKind } from "@/lib/documents/file-viewer-state";
 
 // pdf.js cần API trình duyệt: chỉ nạp ở client, tách chunk riêng
 const PdfDocumentCanvas = dynamic(() => import("./pdf-document-canvas"), {
@@ -15,13 +17,11 @@ const PdfDocumentCanvas = dynamic(() => import("./pdf-document-canvas"), {
   loading: () => <p role="status" className="py-10 text-center text-xs text-muted-foreground">Đang tải trình xem tệp…</p>,
 });
 
-function getPreviewKind(mimeType: string | undefined, fileName: string): "pdf" | "image" | "other" {
-  const mime = (mimeType || "").toLowerCase();
-  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-  if (mime === "application/pdf" || ext === "pdf") return "pdf";
-  if (mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return "image";
-  return "other";
-}
+// docx-preview (~1 MB kèm jszip) chỉ nạp khi mở tệp Word
+const DocxDocumentCanvas = dynamic(() => import("./docx-document-canvas"), {
+  ssr: false,
+  loading: () => <p role="status" className="py-10 text-center text-xs text-muted-foreground">Đang tải trình xem tệp…</p>,
+});
 
 export interface DocumentPdfViewerProps {
   fileUrl?: string | null;
@@ -48,6 +48,8 @@ export interface DocumentPdfViewerProps {
   onPageCount?: (count: number) => void;
   /** Thuộc tính cho vùng xem (ví dụ role="tabpanel" khi toolbar chứa thanh chuyển tệp). */
   viewportProps?: React.HTMLAttributes<HTMLDivElement>;
+  /** Thao tác thêm khi tệp không xem trước được (ví dụ chuyển sang tệp PDF khác của văn bản). */
+  unsupportedAction?: React.ReactNode;
 }
 
 export function DocumentPdfViewer({
@@ -65,6 +67,7 @@ export function DocumentPdfViewer({
   onZoomChange,
   onPageCount,
   viewportProps,
+  unsupportedAction,
 }: DocumentPdfViewerProps) {
   const fileUrl = toServedFileUrl(rawFileUrl);
   const [localZoom, setLocalZoom] = React.useState<number>(100);
@@ -135,6 +138,11 @@ export function DocumentPdfViewer({
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [searchTotal, setSearchTotal] = React.useState(0);
+  const [searchNoText, setSearchNoText] = React.useState(false);
+  const handleSearchTotal = React.useCallback((total: number, noText?: boolean) => {
+    setSearchTotal(total);
+    setSearchNoText(Boolean(noText));
+  }, []);
   const [activeMatch, setActiveMatch] = React.useState(0);
   const handleSearchQuery = React.useCallback((value: string) => {
     setSearchQuery(value);
@@ -144,6 +152,7 @@ export function DocumentPdfViewer({
   React.useEffect(() => {
     setSearchQuery("");
     setSearchTotal(0);
+    setSearchNoText(false);
     setActiveMatch(0);
   }, [fileUrl]);
 
@@ -172,11 +181,13 @@ export function DocumentPdfViewer({
         onPageCount={handlePageCount}
         searchQuery={searchQuery}
         activeMatch={activeMatch}
-        onSearchTotal={setSearchTotal}
+        onSearchTotal={handleSearchTotal}
         initialPosition={initialPosition ?? { page: 1, ratio: 0 }}
         onPositionChange={handlePosition}
         controllerRef={controllerRef}
       />
+    ) : kind === "docx" ? (
+      <DocxDocumentCanvas key={fileUrl} fileUrl={fileUrl} zoom={zoomLevel / 100} />
     ) : kind === "image" ? (
       // eslint-disable-next-line @next/next/no-img-element -- tệp nội bộ có xác thực, không qua next/image
       <img
@@ -186,12 +197,18 @@ export function DocumentPdfViewer({
         style={{ width: `${zoomLevel}%`, maxWidth: "none" }}
       />
     ) : (
-      <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center">
-        <p className="text-compact text-muted-foreground">Không xem trước được loại tệp này.</p>
-        <Button variant="outline" size="sm" onClick={handleDefaultDownload}>
-          <Download strokeWidth={1.5} />
-          Tải về để xem
-        </Button>
+      // Không xem trước được: nêu định dạng, lý do và cách khác; công cụ xem (thu phóng, trang, tìm) không áp dụng nên ẩn
+      <div role="status" className="flex flex-col items-center gap-1 px-4 py-6 text-center" data-slot="file-unsupported">
+        <FileTypeIcon fileName={fileName} mimeType={mimeType} className="size-6" />
+        <p className="pt-1 text-compact text-foreground">{describeFileFormat(fileName)} chưa xem trước được trong trình duyệt</p>
+        <p className="text-xs text-muted-foreground">Tải về để mở bằng ứng dụng trên máy.</p>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
+          <Button variant="outline" size="sm" onClick={handleDefaultDownload}>
+            <Download strokeWidth={1.5} />
+            Tải về
+          </Button>
+          {unsupportedAction}
+        </div>
       </div>
     );
 
@@ -210,7 +227,7 @@ export function DocumentPdfViewer({
           kind={kind}
           zoom={zoomLevel}
           onZoomChange={setZoomLevel}
-          search={{ query: searchQuery, onQueryChange: handleSearchQuery, total: searchTotal, active: activeMatch, onActiveChange: setActiveMatch }}
+          search={{ query: searchQuery, onQueryChange: handleSearchQuery, total: searchTotal, active: activeMatch, onActiveChange: setActiveMatch, noText: searchNoText }}
           pages={pageCount ? { current: position.page, total: pageCount, onGoto: (page) => controllerRef.current?.scrollToPage(page, 0) } : undefined}
           fullscreen={isFullscreen}
           onFullscreen={canFullscreen ? toggleFullscreen : undefined}

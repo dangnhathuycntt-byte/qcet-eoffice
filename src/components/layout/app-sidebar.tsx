@@ -856,7 +856,7 @@ export function AppSidebar() {
           </div>
         </m.aside>
 
-        {/* Collapse toggle — mỏng, dính mép sidebar, chỉ hiện khi hover */}
+        {/* Collapse toggle — mỏng, dính mép sidebar, grip luôn hiện để người dùng biết bấm/thu gọn được */}
         <m.div
           style={{ left: sidebarWidthMotion }}
           className="fixed top-0 bottom-0 z-50 hidden md:flex items-center -ml-px group/collapse-trigger"
@@ -869,9 +869,9 @@ export function AppSidebar() {
                 aria-label={isCollapsed ? "Mở rộng thanh điều hướng (⌘B)" : "Thu gọn thanh điều hướng (⌘B)"}
                 aria-expanded={!isCollapsed}
                 aria-controls="app-sidebar"
-                className="opacity-0 group-hover/collapse-trigger:opacity-100 transition-opacity duration-150 flex h-12 w-3 items-center justify-center cursor-pointer outline-none"
+                className="flex h-12 w-3 items-center justify-center rounded-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="h-6 w-[3px] rounded-full bg-border group-hover/collapse-trigger:bg-muted-foreground/50 transition-colors duration-150" />
+                <div className="h-8 w-1 rounded-full bg-border group-hover/collapse-trigger:bg-muted-foreground/50 transition-colors duration-150" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>

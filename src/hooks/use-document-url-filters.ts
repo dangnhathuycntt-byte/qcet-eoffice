@@ -362,12 +362,15 @@ export function buildDocumentFilterUpdate(
   return merged;
 }
 
-/** Bộ lọc đang làm đổi kết quả hiển thị: không tính loại sổ (type) và trang. */
+/**
+ * Bộ lọc người dùng đặt làm đổi kết quả: không tính loại sổ (type), nhóm ở sidebar (bucket) và trang.
+ * Loại sổ và nhóm là phạm vi xem chọn từ sidebar, không hiện thành chip và không bị "Xóa bộ lọc" bỏ đi.
+ */
 export function isDocumentResultFiltered(
   filters: DocumentUrlFilters,
   defaults: DocumentUrlFilters = DEFAULT_DOCUMENT_URL_FILTERS
 ): boolean {
-  return isDocumentFiltered({ ...filters, type: defaults.type, page: defaults.page }, defaults);
+  return isDocumentFiltered({ ...filters, type: defaults.type, bucket: defaults.bucket, page: defaults.page }, defaults);
 }
 
 /**

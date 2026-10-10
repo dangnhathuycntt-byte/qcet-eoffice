@@ -255,7 +255,7 @@ export function getActiveFilterSummary(params: ActiveFilterSummaryParams): strin
 }
 
 /** Linear-style segmented filter chip (Property | Value | ✕) */
-interface FilterSegmentChipProps {
+export interface FilterSegmentChipProps {
   icon?: React.ComponentType<any>;
   label: string;
   value: React.ReactNode;
@@ -264,7 +264,7 @@ interface FilterSegmentChipProps {
   dataSlot?: string;
 }
 
-function FilterSegmentChip({
+export function FilterSegmentChip({
   icon: Icon,
   label,
   value,
@@ -278,8 +278,8 @@ function FilterSegmentChip({
       className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-xs text-foreground/90 transition-colors select-none group"
     >
       {Icon && <Icon className="size-3.5 text-muted-foreground/75 shrink-0" strokeWidth={1.5} />}
-      <span className="text-muted-foreground text-[11px] whitespace-nowrap">{label}:</span>
-      <span className="font-medium text-[11.5px] truncate max-w-[240px]">{value}</span>
+      <span className="text-muted-foreground text-xs whitespace-nowrap">{label}:</span>
+      <span className="font-medium text-xs truncate max-w-[240px]">{value}</span>
       {onRemove && (
         <button
           type="button"
@@ -403,15 +403,13 @@ export function ActiveFilterBreadcrumb({
   };
 
   return (
-    <div
-      data-slot="active-filter-breadcrumb"
-      className={cn(
-        "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
-        className
-      )}
+    <ActiveFilterBar
+      dataSlot="active-filter-breadcrumb"
+      className={className}
+      onClearAll={onResetFilters || onClearAll ? handleClearAll : undefined}
+      filteredCount={totalFilteredCount}
+      totalCount={totalCount}
     >
-      {/* Active Filter Chips (Linear segmented compounds) */}
-      <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
         {hasStatus && (
           <FilterSegmentChip
             dataSlot="filter-chip-status"
@@ -554,26 +552,54 @@ export function ActiveFilterBreadcrumb({
             removeAriaLabel={`Xóa lọc từ khóa "${search!.trim()}"`}
           />
         )}
-      </div>
+    </ActiveFilterBar>
+  );
+}
 
-      {/* Right Controls: Xóa lọc + Kết quả đ��m */}
+export interface ActiveFilterBarProps {
+  /** Các `FilterSegmentChip` đang áp dụng. */
+  children: React.ReactNode;
+  onClearAll?: () => void;
+  /** Số kết quả sau lọc; `totalCount` (nếu biết) hiện dạng "x kết quả / y". */
+  filteredCount?: number;
+  totalCount?: number;
+  className?: string;
+  dataSlot?: string;
+}
+
+/**
+ * Hàng bộ lọc đang áp dụng dưới thanh công cụ danh sách: chip bên trái, "Xóa lọc" và số kết quả bên phải.
+ * Dùng chung Nhiệm vụ và Văn bản.
+ */
+export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCount, className, dataSlot = "active-filter-bar" }: ActiveFilterBarProps) {
+  return (
+    <div
+      data-slot={dataSlot}
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-2 py-1 text-xs min-h-[30px]",
+        className
+      )}
+    >
+      {/* Active Filter Chips (Linear segmented compounds) */}
+      <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">{children}</div>
+
       <div className="flex items-center gap-2.5 shrink-0 ml-auto">
-        {(onResetFilters || onClearAll) && (
+        {onClearAll && (
           <button
             type="button"
             data-slot="clear-all-filters"
-            onClick={handleClearAll}
+            onClick={onClearAll}
             aria-label="Xóa tất cả bộ lọc"
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/60"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/60"
           >
             <RotateCcw className="size-3" strokeWidth={1.5} />
             <span>Xóa lọc</span>
           </button>
         )}
 
-        {totalFilteredCount !== undefined && (
-          <span className="text-muted-foreground/70 text-[11px] font-mono tabular-nums shrink-0">
-            {totalFilteredCount} kết quả{totalCount !== undefined ? ` / ${totalCount}` : ""}
+        {filteredCount !== undefined && (
+          <span className="text-muted-foreground/70 text-xs font-mono tabular-nums shrink-0">
+            {filteredCount} kết quả{totalCount !== undefined ? ` / ${totalCount}` : ""}
           </span>
         )}
       </div>

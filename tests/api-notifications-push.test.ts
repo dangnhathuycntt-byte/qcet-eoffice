@@ -321,7 +321,7 @@ describe('API Routes: Push & Notifications System', () => {
       assert.strictEqual(res.status, 401);
     });
 
-    test('successfully dispatches a test notification and records an in-app notification', async () => {
+    test('dispatches a test push without writing an inbox notification', async () => {
       // Re-activate the subscription for testing dispatch
       await prisma.pushSubscription.update({
         where: { endpoint: testEndpoint },
@@ -342,6 +342,7 @@ describe('API Routes: Push & Notifications System', () => {
         },
       });
 
+      const countBefore = await prisma.notification.count({ where: { userId: testUser.id } });
       const res = await testPushRoute(req);
       assert.strictEqual(res.status, 200);
       const json = await res.json();
@@ -350,15 +351,9 @@ describe('API Routes: Push & Notifications System', () => {
       assert.strictEqual(json.result.sentCount, 1);
       assert.strictEqual(mockDispatched, true);
 
-      // Check that an in-app notification was also saved
-      const recentNotif = await prisma.notification.findFirst({
-        where: { userId: testUser.id },
-        orderBy: { createdAt: 'desc' },
-      });
-      assert.ok(recentNotif);
-      createdNotificationIds.push(recentNotif.id);
-      assert.strictEqual(recentNotif.isRead, false);
-      assert.strictEqual(recentNotif.category, 'task');
+      // Thử chuông không được ghi vào Hộp thư
+      const countAfter = await prisma.notification.count({ where: { userId: testUser.id } });
+      assert.strictEqual(countAfter, countBefore);
     });
   });
 

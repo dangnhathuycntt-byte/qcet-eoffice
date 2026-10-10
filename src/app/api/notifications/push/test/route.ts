@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { AuthorizationError } from '@/server/api/errors';
@@ -59,27 +58,13 @@ export async function POST(request: NextRequest) {
       payload.body = truncatePushText(body.body, 90);
     }
 
-    // Record an in-app notification for the user
-    const notification = await prisma.notification.create({
-      data: {
-        userId: authUser.id,
-        actorName: authUser.name || 'Hệ thống QCET',
-        title: payload.title,
-        body: payload.body,
-        category: 'task',
-        type: 'test',
-        linkHref: payload.data.linkHref,
-        isRead: false,
-      },
-    });
-
+    // Chỉ thử chuông push; không ghi vào Hộp thư để hộp thư chỉ chứa việc thật của người dùng.
     // Send push notification to user's registered active devices
     const result = await sendPushNotificationToUser(authUser.id, payload);
 
     return apiSuccess(
       {
         result,
-        notification,
       },
       {
         requestId,

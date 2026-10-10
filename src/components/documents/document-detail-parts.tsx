@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronDown, ChevronRight, Download, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, Download } from "lucide-react";
+import { FileTypeIcon } from "./file-type-icon";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@/lib/utils";
 import { PopoverContent, PopoverRoot, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
@@ -78,18 +79,20 @@ export function InspectorCard({
   );
 }
 
-/** Dòng thuộc tính: nhãn 96px, giá trị canh trái ngay cạnh nhãn. */
+/** Dòng thuộc tính: nhãn 96px (Quick View `wide`: 112px cho nhãn "Cơ quan ban hành"), giá trị canh trái ngay cạnh nhãn. */
 export function InspectorRow({
   label,
   children,
   mono,
+  wide,
 }: {
   label: string;
   children: React.ReactNode;
   mono?: boolean;
+  wide?: boolean;
 }) {
   return (
-    <div className="grid min-h-7 grid-cols-[96px_minmax(0,1fr)] items-start gap-2 py-0.5">
+    <div className={cn("grid min-h-7 items-start gap-2 py-0.5", wide ? "grid-cols-[112px_minmax(0,1fr)]" : "grid-cols-[96px_minmax(0,1fr)]")}>
       <span className="flex h-6 items-center whitespace-nowrap text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
@@ -132,8 +135,10 @@ export function AttachmentRow({
   onSelect,
   trailing,
   meta,
+  mimeType,
 }: {
   fileName: string;
+  mimeType?: string | null;
   fileUrl?: string | null;
   fileSize?: number | null;
   /** Dung lượng đã định dạng sẵn từ API, dùng khi không có số byte. */
@@ -148,7 +153,7 @@ export function AttachmentRow({
   const href = toServedFileUrl(fileUrl);
   const label = (
     <>
-      <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
+      <FileTypeIcon fileName={fileName} mimeType={mimeType} />
       <span className={cn("min-w-0 flex-1 truncate text-compact text-foreground", selected && "font-medium")}>{fileName}</span>
       {meta ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{meta}</span> : null}
       {size ? <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{size}</span> : null}
@@ -277,7 +282,7 @@ export function CollapsibleSection({
           strokeWidth={1.5}
           aria-hidden
         />
-        <span className="text-foreground/90">{title}</span>
+        <span>{title}</span>
         {summary ? <span className="min-w-0 truncate font-normal">{summary}</span> : null}
       </Collapsible.Trigger>
       <Collapsible.Panel className="pt-2">{children}</Collapsible.Panel>
@@ -325,14 +330,53 @@ export function DetailsPopover({ rows, title = "Chi tiết văn bản" }: { rows
 /** Nhiệm vụ liên kết dạng hàng gọn; chưa có thì giữ lối tạo nhiệm vụ như trước. */
 export function LinkedTaskSection({
   task,
-  createHref,
+  onCreate,
   hideWhenEmpty,
+  error,
+  inline,
 }: {
   task?: LinkedTaskSummary | null;
-  createHref?: string;
+  /** Mở luồng tạo nhiệm vụ rồi liên kết với văn bản này. */
+  onCreate?: () => void;
   hideWhenEmpty?: boolean;
+  error?: React.ReactNode;
+  /** Quick View: nhãn và nhiệm vụ trên cùng một hàng. */
+  inline?: boolean;
 }) {
   if (!task && hideWhenEmpty) return null;
+  const createButton = onCreate ? (
+    <button
+      type="button"
+      onClick={onCreate}
+      className="cursor-pointer rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      Tạo nhiệm vụ
+    </button>
+  ) : null;
+  const errorLine = error ? <p role="alert" className="pt-1 text-xs text-destructive">{error}</p> : null;
+  if (inline) {
+    // Nối tiếp lưới thuộc tính phía trên: cùng cột nhãn 112px, cùng nhịp hàng (bù khoảng cách 12px của thân)
+    return (
+      <section aria-label="Nhiệm vụ liên kết" className="-mt-3">
+        <div className="grid min-h-7 grid-cols-[112px_minmax(0,1fr)] items-start gap-2 py-0.5">
+          <span className="flex h-6 items-center whitespace-nowrap text-xs text-muted-foreground">Nhiệm vụ</span>
+          {task ? (
+            // Hàng nhiệm vụ cao 24px như giá trị khác trong lưới (vùng bấm vẫn phủ cả hàng)
+            <div className="min-w-0 [&>a]:min-h-6 [&>a]:py-0.5">
+              <LinkedTaskRow task={task} />
+            </div>
+          ) : (
+            <p className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-1.5 text-compact text-muted-foreground">
+              Chưa có
+              {createButton ? <span aria-hidden className="text-muted-foreground/50">·</span> : null}
+              {createButton}
+            </p>
+          )}
+        </div>
+        {errorLine}
+      </section>
+    );
+  }
   return (
     <section aria-label="Nhiệm vụ liên kết">
       <SectionHeading>Nhiệm vụ liên kết</SectionHeading>
@@ -341,13 +385,10 @@ export function LinkedTaskSection({
       ) : (
         <p className="flex min-h-8 items-center gap-1.5 text-compact text-muted-foreground">
           Chưa gán nhiệm vụ trong Kho việc.
-          {createHref ? (
-            <Link href={createHref} className="rounded-sm text-foreground underline decoration-border underline-offset-3 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              Tạo nhiệm vụ
-            </Link>
-          ) : null}
+          {createButton}
         </p>
       )}
+      {errorLine}
     </section>
   );
 }

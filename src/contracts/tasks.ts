@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaginationQuerySchema, IsoDateStringSchema } from './common';
+import { isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE } from '@/lib/url-utils';
 
 /**
  * Task priority enum schema supporting canonical database values and client aliases.
@@ -51,6 +52,7 @@ export const TaskDeliverableInputSchema = z
       .string()
       .trim()
       .max(1024, 'File URL cannot exceed 1024 characters')
+      .refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE)
       .optional()
       .nullable(),
     fileName: z
@@ -427,7 +429,8 @@ export const SubmitDeliverableInputSchema = z
       .string()
       .trim()
       .min(1, 'File URL is required')
-      .max(1024, 'File URL cannot exceed 1024 characters'),
+      .max(1024, 'File URL cannot exceed 1024 characters')
+      .refine(isAllowedStoredFileUrl, STORED_FILE_URL_MESSAGE),
     fileName: z
       .string()
       .trim()

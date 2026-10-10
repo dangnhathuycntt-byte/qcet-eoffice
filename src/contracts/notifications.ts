@@ -46,6 +46,8 @@ export const NotificationQuerySchema = PaginationQuerySchema.extend({
     .optional(),
   category: NotificationCategorySchema.optional(),
   type: NotificationTypeSchema.optional(),
+  q: z.string().trim().max(100, 'Từ khóa không quá 100 ký tự').optional(),
+  triage: z.enum(['all', 'action_required', 'approvals', 'reminders']).optional(),
 });
 
 export type NotificationQuery = z.infer<typeof NotificationQuerySchema>;

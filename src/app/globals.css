@@ -86,6 +86,13 @@
   --color-selected: var(--selected);
   --color-primary-hover: var(--primary-hover);
   --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-file-pdf: var(--file-pdf);
+  --color-file-word: var(--file-word);
+  --color-file-excel: var(--file-excel);
+  --color-file-slide: var(--file-slide);
+  --color-file-image: var(--file-image);
+  --color-file-archive: var(--file-archive);
   /* Align rose-50/rose-700 utilities with design system error tokens so that
      bg-rose-50 renders --danger-soft (#FBEDED) and text-rose-700 renders
      --destructive (#B91C1C), keeping utility class names consistent with
@@ -242,6 +249,15 @@
   --destructive: #B91C1C;
   --destructive-foreground: #FFFFFF;
   --danger-soft: #FBEDED; /* #FBEDED */
+  /* Tín hiệu sắp tới hạn / mức khẩn vừa (chữ và icon). #B45309 đạt ~5:1 trên trắng; mức nguy hiểm dùng --destructive. */
+  --warning: #B45309;
+  /* Icon loại tệp (chỉ trang trí, không mang trạng thái): màu nhận diện quen thuộc của từng định dạng, nhãn trắng đạt ≥ 4.5:1. */
+  --file-pdf: #C62828;
+  --file-word: #2B579A;
+  --file-excel: #1D6F42;
+  --file-slide: #C43E1C;
+  --file-image: #6D4BB5;
+  --file-archive: #6B6F76;
   --feedback-danger: #B91C1C;
   --feedback-danger-bg: #FBEDED;
   --brand: #0058A0; /* xanh logo trường, tương phản 7.6:1 */

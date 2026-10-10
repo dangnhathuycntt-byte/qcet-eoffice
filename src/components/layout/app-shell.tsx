@@ -74,8 +74,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isTaskDetail = /^\/tasks\/[^/]+$/.test(pathname ?? "");
   // Hộp thư tự chiếm toàn bộ khung nội dung (danh sách + chi tiết), không đệm
   const isInbox = pathname === "/inbox";
-  // Sổ văn bản (desktop): chiều cao cố định để danh sách và Quick View cuộn riêng; mobile vẫn cuộn theo trang
-  const isDocuments = pathname === "/documents";
+  // Sổ văn bản dùng cùng khung workspace với chi tiết nhiệm vụ: chiều cao cố định, các thẻ tự cuộn
+  const isWorkspaceShell = isTaskDetail || pathname === "/documents";
   // Danh sách và chi tiết nhiệm vụ, hộp thư, sổ văn bản: bỏ thanh breadcrumb trên desktop để nhường chỗ cho nội dung
   const hideDesktopTopbar = pathname === "/tasks" || isTaskDetail || isInbox || pathname === "/documents";
   const router = useRouter();
@@ -136,7 +136,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     <div className={cn(
       "relative bg-sidebar text-foreground antialiased flex flex-col md:flex-row",
       // Chi tiết nhiệm vụ: chiều cao cố định để vùng nội dung co theo khung, không giãn theo nội dung
-      isTaskDetail ? "h-[100dvh]" : "min-h-[100dvh]"
+      isWorkspaceShell ? "h-[100dvh]" : "min-h-[100dvh]"
     )}>
       {/* Desktop Sidebar (Fixed width) */}
       <React.Suspense fallback={<aside className="hidden md:flex shrink-0 bg-sidebar" style={{ width: `${sidebarWidth}px` }} />}>
@@ -145,7 +145,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area: Content Panel on Desktop */}
       <m.div
-        className={isTaskDetail ? "md:pl-[var(--sidebar-w)] min-h-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] flex-1 flex flex-col"}
+        className={isWorkspaceShell ? "md:pl-[var(--sidebar-w)] min-h-0 flex-1 flex flex-col" : "md:pl-[var(--sidebar-w)] min-h-[100dvh] flex-1 flex flex-col"}
         style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       >
         {/* Mobile Header (Only visible below md) */}
@@ -160,24 +160,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className={isTaskDetail
+          className={isWorkspaceShell
             ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
             : isInbox
             ? "flex flex-1 min-w-0 flex-col h-[calc(100dvh-48px)] md:mt-2 md:h-[calc(100dvh-8px)] md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card outline-none overflow-hidden"
             : cn(
                 "flex-1 flex flex-col md:rounded-tl-2xl md:border-t md:border-l md:border-border md:bg-card md:shadow-2xs min-h-[calc(100dvh-44px)] outline-none overflow-hidden",
-                hideDesktopTopbar && !isDocuments && "md:mt-2 md:min-h-[calc(100dvh-8px)]",
-                isDocuments && "md:mt-2 md:h-[calc(100dvh-8px)] md:min-h-0 md:flex-none"
+                hideDesktopTopbar && "md:mt-2 md:min-h-[calc(100dvh-8px)]"
               )}
         >
           <div
             className={
-              isTaskDetail
+              isWorkspaceShell
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
                 : isInbox
                 ? "flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0"
-                : isDocuments
-                ? "flex min-h-0 w-full flex-1 flex-col p-3 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] sm:p-5 md:p-0"
                 : "w-full flex-1 p-3 sm:p-5 md:p-6 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6 flex flex-col"
             }
           >

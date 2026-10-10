@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDetailDate } from "@/lib/task-detail-helpers";
+import { isSafeUrl } from "@/lib/url-utils";
 
 export interface DeliverableItem {
   id: string;
@@ -239,7 +240,7 @@ export function TaskEvidenceSection({
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {item.fileUrl && (
+                  {item.fileUrl && isSafeUrl(item.fileUrl) && (
                     <a
                       href={item.fileUrl}
                       target="_blank"

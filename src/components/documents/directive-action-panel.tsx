@@ -322,7 +322,7 @@ export function DirectiveActionPanel({
       {/* 1-Touch Preset Chips */}
       <div className="mt-4">
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <Sparkles className="size-3.5 text-amber-500" strokeWidth={1.5} />
+          <Sparkles className="size-3.5 text-warning" strokeWidth={1.5} />
           <span>Mẫu bút phê chỉ đạo nhanh 1-chạm (Quick Presets):</span>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -355,7 +355,7 @@ export function DirectiveActionPanel({
         {/* Instruction Textarea */}
         <div>
           <label className="block text-xs font-medium text-muted-foreground">
-            Nội dung bút phê chỉ đạo <span className="text-rose-500">*</span>
+            Nội dung bút phê chỉ đạo <span className="text-destructive">*</span>
           </label>
           <textarea
             name="instruction"
@@ -378,7 +378,7 @@ export function DirectiveActionPanel({
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Building2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
               <span>Đơn vị chủ trì thực hiện</span>
-              <span className="text-rose-500">*</span>
+              <span className="text-destructive">*</span>
             </label>
             <select
               value={leadUnitId}

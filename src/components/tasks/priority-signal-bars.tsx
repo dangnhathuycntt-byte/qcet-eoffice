@@ -46,7 +46,7 @@ export function PrioritySignalBars({
     <span
       className={cn(
         "inline-flex items-center gap-1 shrink-0 select-none",
-        isUrgent ? "text-rose-600" : isHigh ? "text-foreground/70" : "text-muted-foreground",
+        isUrgent ? "text-destructive" : isHigh ? "text-foreground/70" : "text-muted-foreground",
         className
       )}
       title={ariaLabel ?? `Độ ưu tiên: ${label}`}
@@ -65,8 +65,8 @@ export function PrioritySignalBars({
       {showLabel && (
         <span
           className={cn(
-            "text-[11px] font-medium ml-1",
-            isUrgent ? "text-rose-600" : "text-muted-foreground"
+            "text-xs font-medium ml-1",
+            isUrgent ? "text-destructive" : "text-muted-foreground"
           )}
         >
           {label}

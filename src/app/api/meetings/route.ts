@@ -10,6 +10,7 @@ import { apiSuccess, apiError } from '@/server/api/response';
 import { MeetingService } from '@/server/services/meeting-service';
 import { CreateMeetingSchema, ListMeetingsQuerySchema } from '@/contracts/meeting';
 import { assertRateLimit } from '@/server/security/rate-limit';
+import { assertCsrf } from '@/server/security/csrf';
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
+    assertCsrf(request);
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);

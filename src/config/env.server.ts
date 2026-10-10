@@ -236,12 +236,40 @@ function isTestingOrNonProduction(): boolean {
   }
 }
 
+const BUILD_AUTH_SECRET_PLACEHOLDER = "qcet_build_placeholder_secret_key_2026_min_32_chars";
+
+/**
+ * Secret chỉ dành cho build/dev; không bao giờ được dùng để ký phiên ở production runtime.
+ */
+export function isPlaceholderAuthSecret(secret: string | undefined | null): boolean {
+  return secret === BUILD_AUTH_SECRET_PLACEHOLDER || secret === DEV_AUTH_SECRET_FALLBACK;
+}
+
+/**
+ * Production runtime (ngoài `next build`) không được chạy với secret placeholder,
+ * kể cả khi `SKIP_ENV_VALIDATION=true` còn sót lại từ bước build.
+ */
+export function assertRuntimeAuthSecret(
+  env: Pick<ServerEnv, "AUTH_SECRET">,
+  rawEnv: Record<string, unknown> = process.env
+): void {
+  if (rawEnv.NODE_ENV !== "production") return;
+  if (rawEnv.NEXT_PHASE === "phase-production-build") return;
+  if (isPlaceholderAuthSecret(env.AUTH_SECRET)) {
+    throw new Error(
+      "[QCET-ENV] AUTH_SECRET đang là giá trị placeholder; production runtime bắt buộc cấu hình AUTH_SECRET thật"
+    );
+  }
+}
+
 export function getServerEnv(): ServerEnv {
   if (isTestingOrNonProduction()) {
     return validateServerEnv(process.env);
   }
   if (!_cachedServerEnv) {
-    _cachedServerEnv = validateServerEnv(process.env);
+    const validated = validateServerEnv(process.env);
+    assertRuntimeAuthSecret(validated);
+    _cachedServerEnv = validated;
   }
   return _cachedServerEnv;
 }
@@ -271,5 +299,5 @@ if (
   process.env.NODE_ENV === "production" &&
   !isBuildPhase()
 ) {
-  validateServerEnv(process.env);
+  assertRuntimeAuthSecret(validateServerEnv(process.env));
 }

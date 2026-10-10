@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 import { Menu } from "@base-ui/react/menu";
-import { Check, ChevronRight, Filter, Loader2, Search, X } from "lucide-react";
+import { Check, ChevronRight, Filter, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 
@@ -14,6 +14,36 @@ export function listToolbarIconButtonClass(active = false) {
     active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
   );
 }
+
+/** Số bộ lọc đang áp dụng trên nút Lọc (dùng chung Nhiệm vụ và Văn bản). */
+export function ListToolbarCountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-foreground/80 border border-border/80 font-mono text-xs leading-none font-semibold tabular-nums">
+      {count}
+    </span>
+  );
+}
+
+/** Nút "Xóa bộ lọc" cạnh nút Lọc, chỉ hiện khi có bộ lọc (dùng chung Nhiệm vụ và Văn bản). */
+export function ListToolbarClearFiltersButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Xóa tất cả bộ lọc"
+      aria-label="Xóa tất cả bộ lọc"
+      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer select-none touch-manipulation"
+    >
+      <RotateCcw className="size-3 shrink-0" strokeWidth={1.5} />
+      <span className="hidden sm:inline">Xóa bộ lọc</span>
+    </button>
+  );
+}
+
+/** Ô tìm của trang danh sách: 140/180px, focus giãn 240px (chuẩn thanh Nhiệm vụ). */
+export const LIST_TOOLBAR_SEARCH_COLLAPSED = "w-[140px] sm:w-[180px]";
+export const LIST_TOOLBAR_SEARCH_EXPANDED = "w-[240px]";
 
 /** Nút chính trên thanh công cụ (Tạo việc, Soạn văn bản) */
 export const listToolbarPrimaryButtonClass =
@@ -88,7 +118,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
             <X className="size-3" strokeWidth={1.5} />
           </button>
         ) : (
-          <kbd className="hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-[10px] leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
+          <kbd className="hidden h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/60 px-1 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
             /
           </kbd>
         )}
@@ -217,7 +247,7 @@ export function ListToolbarFilterPopover({
       trigger={
         <>
           <Filter className="size-3.5" strokeWidth={1.5} />
-          {activeCount > 0 ? <span className="font-mono text-xs tabular-nums text-muted-foreground">{activeCount}</span> : null}
+          <ListToolbarCountBadge count={activeCount} />
         </>
       }
     >
@@ -233,7 +263,7 @@ export function ListToolbarFilterPopover({
             autoFocus
             className="h-5 w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 outline-none"
           />
-          <kbd className="hidden items-center rounded border border-border/60 bg-muted/80 px-1.5 font-mono text-[9px] text-muted-foreground select-none pointer-events-none sm:inline-flex">
+          <kbd className="hidden items-center rounded border border-border/60 bg-muted/80 px-1.5 font-mono text-xs leading-none text-muted-foreground select-none pointer-events-none sm:inline-flex">
             F
           </kbd>
         </div>
@@ -280,7 +310,7 @@ export function ListToolbarFilterPopover({
                         >
                           <span className="flex-1 truncate">{opt.label}</span>
                           <Menu.RadioItemIndicator className="flex items-center">
-                            <Check className="size-3.5 text-foreground" strokeWidth={2} />
+                            <Check className="size-3.5 text-foreground" strokeWidth={1.5} />
                           </Menu.RadioItemIndicator>
                         </Menu.RadioItem>
                       ))}
