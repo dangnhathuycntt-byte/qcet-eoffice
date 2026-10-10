@@ -285,7 +285,7 @@ export function DocumentQuickEntryModal({
         <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
           {/* Document Type Toggle */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label className="block text-xs font-medium text-foreground mb-1.5">
               Loại sổ văn bản
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -297,7 +297,7 @@ export function DocumentQuickEntryModal({
                 onClick={() => setDocType("VAN_BAN_DEN")}
                 className={cn(docType === "VAN_BAN_DEN" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <ArrowDownLeft className="text-sky-600" strokeWidth={1.5} />
+                <ArrowDownLeft strokeWidth={1.5} />
                 <span>Văn bản đến</span>
               </Button>
               <Button
@@ -308,7 +308,7 @@ export function DocumentQuickEntryModal({
                 onClick={() => setDocType("VAN_BAN_DI")}
                 className={cn(docType === "VAN_BAN_DI" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <ArrowUpRight className="text-emerald-600" strokeWidth={1.5} />
+                <ArrowUpRight strokeWidth={1.5} />
                 <span>Văn bản đi</span>
               </Button>
               <Button
@@ -319,7 +319,7 @@ export function DocumentQuickEntryModal({
                 onClick={() => setDocType("TO_TRINH_NOI_BO")}
                 className={cn('col-span-2 sm:col-span-1', docType === "TO_TRINH_NOI_BO" ? "bg-selected text-foreground" : "text-muted-foreground")}
               >
-                <FileText className="text-amber-600" strokeWidth={1.5} />
+                <FileText strokeWidth={1.5} />
                 <span>Tờ trình nội bộ</span>
               </Button>
             </div>
@@ -346,7 +346,7 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label htmlFor="qe-issued-date" className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="qe-issued-date" className="block text-xs font-medium text-foreground mb-1.5">
                 Ngày ban hành <span className="text-destructive">*</span>
               </label>
               <VietnameseDatePicker
@@ -379,8 +379,7 @@ export function DocumentQuickEntryModal({
                 required
               />
             </FormField>
-            <span className="-mt-1 mb-1.5 block text-right text-xs text-muted-foreground">Gợi ý nhanh</span>
-            <datalist id="common-authorities-list">
+                        <datalist id="common-authorities-list">
               {COMMON_AUTHORITIES.map((auth) => (
                 <option key={auth} value={auth} />
               ))}
@@ -404,7 +403,7 @@ export function DocumentQuickEntryModal({
           {/* Category & Urgency */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-foreground mb-1.5">
                 Loại văn bản (Thể loại)
               </label>
               <Select
@@ -421,7 +420,7 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-foreground mb-1.5">
                 Mức độ khẩn
               </label>
               <Select
@@ -459,7 +458,7 @@ export function DocumentQuickEntryModal({
           {/* Department & Due Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-foreground mb-1.5">
                 {docType === "VAN_BAN_DI" ? "Đơn vị soạn thảo" : "Đơn vị xử lý / chủ trì"}
               </label>
               <Select
@@ -481,7 +480,7 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label className="block text-xs font-medium text-foreground mb-1.5">
                 Hạn giải quyết (nếu có)
               </label>
               <VietnameseDatePicker
@@ -522,7 +521,7 @@ export function DocumentQuickEntryModal({
           {docType === "VAN_BAN_DI" && (
             <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground">
+                <label className="block text-xs font-medium text-foreground">
                   Người ký
                 </label>
                 <Input compact
@@ -535,7 +534,7 @@ export function DocumentQuickEntryModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground">
+                <label className="block text-xs font-medium text-foreground">
                   Chức vụ người ký
                 </label>
                 <Input compact
@@ -548,7 +547,7 @@ export function DocumentQuickEntryModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground">
+                <label className="block text-xs font-medium text-foreground">
                   Nơi nhận
                 </label>
                 <Input compact
@@ -564,10 +563,10 @@ export function DocumentQuickEntryModal({
 
           {/* Attachment Scan File Dropzone */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label className="block text-xs font-medium text-foreground mb-1.5">
               Tệp quét PDF đính kèm (Scan có dấu đỏ)
             </label>
-            <div className="relative rounded-lg border-2 border-dashed border-border p-4 text-center hover:border-primary/60 transition-colors">
+            <div className="relative rounded-lg border border-dashed border-border p-3 text-center hover:border-primary/60 transition-colors">
               <input
                 type="file"
                 accept=".pdf,application/pdf"
@@ -576,7 +575,7 @@ export function DocumentQuickEntryModal({
                 aria-label="Tải lên tệp PDF"
               />
               {attachmentFile ? (
-                <div className="flex items-center justify-center gap-2 text-xs text-emerald-600">
+                <div className="flex items-center justify-center gap-2 text-xs text-foreground">
                   <File className="h-5 w-5" strokeWidth={1.5} />
                   <span className="font-medium">{attachmentFile.name}</span>
                   <span className="text-muted-foreground">
@@ -585,7 +584,7 @@ export function DocumentQuickEntryModal({
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground">
-                  <UploadCloud className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                  <UploadCloud className="size-5 text-muted-foreground" strokeWidth={1.5} />
                   <span className="text-xs font-medium">
                     Bấm để chọn tệp PDF quét
                   </span>

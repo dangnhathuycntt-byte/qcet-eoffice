@@ -282,7 +282,7 @@ export function DocumentInfoSections({
 
         {vm.kind === "outgoing" && item ? <OutgoingInitialSign key={`initial-sign-${vm.id}`} documentId={vm.id} /> : null}
         {/* Chỉ thao tác theo bước ở thân; sửa thông tin/bổ sung tệp nằm trong menu "Thao tác khác" của header */}
-        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={`incoming-signature-${vm.id}`} documentId={vm.id} /> : null}
+        {isIncoming && incomingStatus ? <IncomingSignatureStatus key={`incoming-signature-${vm.id}`} documentId={vm.id} row /> : null}
 
         {isIncoming && incomingStatus ? <IncomingReturnHistory documentId={vm.id} refreshKey={incomingStatus} /> : null}
         {isIncoming && incomingStatus ? (

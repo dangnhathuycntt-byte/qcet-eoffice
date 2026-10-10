@@ -10,37 +10,23 @@ export interface UseModalDirtyGuardOptions {
 }
 
 /**
- * Hook to guard against accidentally closing a modal when form has unsaved changes.
+ * Điểm đóng modal dùng chung. Không còn hộp thoại xác nhận của trình duyệt (`window.confirm`):
+ * đóng modal là đóng ngay. Giữ nguyên chữ ký hook để các modal gọi như cũ.
  */
 export function useModalDirtyGuard(
   optionsOrDirty: boolean | UseModalDirtyGuardOptions,
   onConfirmCloseCallback?: () => void
 ) {
   const isOptionsObject = typeof optionsOrDirty === "object" && optionsOrDirty !== null;
-
-  const isDirty = isOptionsObject ? optionsOrDirty.isDirty : Boolean(optionsOrDirty);
   const onConfirmClose = isOptionsObject
     ? (optionsOrDirty.onConfirmClose ?? optionsOrDirty.onClose ?? (() => {}))
     : (onConfirmCloseCallback ?? (() => {}));
-  const message = isOptionsObject
-    ? (optionsOrDirty.message ?? "Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn đóng?")
-    : "Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn đóng?";
 
   const handleOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) {
-        if (isDirty) {
-          if (typeof window !== "undefined") {
-            const confirmed = window.confirm(message);
-            if (!confirmed) {
-              return;
-            }
-          }
-        }
-        onConfirmClose();
-      }
+      if (!open) onConfirmClose();
     },
-    [isDirty, message, onConfirmClose]
+    [onConfirmClose]
   );
 
   return { handleOpenChange };

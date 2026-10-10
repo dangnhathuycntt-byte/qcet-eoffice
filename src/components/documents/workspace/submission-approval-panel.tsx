@@ -141,25 +141,25 @@ export function SubmissionApprovalPanel({
   const mustNote = decision !== null && decision !== "APPROVE";
 
   return (
-    <section aria-label="Luồng duyệt tờ trình" className={cn("space-y-2", className)}>
+    <section aria-label="Luồng duyệt tờ trình" className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-2">
-        <h3 className="text-compact font-semibold text-foreground">Duyệt tờ trình</h3>
-        <span className="text-xs text-muted-foreground">
-          {statusLabel}
+        <h3 className="text-xs font-medium text-muted-foreground">Duyệt tờ trình</h3>
+        <span className="text-xs text-foreground">
+          · {statusLabel}
           {round > 1 ? ` · lần trình ${round}` : ""}
         </span>
       </div>
 
       {current.length > 0 && (
-        <ul className="space-y-0.5">
+        <ul className="max-w-md">
           {current.map((s) => (
-            <li key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-xs">
-              <span className="min-w-0 truncate text-foreground">
+            <li key={s.id} className="grid min-h-7 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 text-compact">
+              <span className="min-w-0 truncate text-foreground" title={s.unit?.name ?? undefined}>
                 {s.stage === "LEADER" ? "Lãnh đạo" : s.unit?.name ?? "Đơn vị"}
                 {s.approver ? <span className="text-muted-foreground"> · {s.approver.name}</span> : null}
                 {s.note ? <span className="text-muted-foreground"> · {s.note}</span> : null}
               </span>
-              <span className={cn("flex shrink-0 items-center gap-1", s.status === "PENDING" ? "text-muted-foreground" : "text-foreground")}>
+              <span className={cn("flex shrink-0 items-center gap-1", s.status === "PENDING" ? "text-muted-foreground" : "text-foreground", "text-xs")}>
                 {STEP_STATUS_LABEL[s.status]}
                 {s.status === "PENDING" && state.reassignableStepIds?.includes(s.id) ? (
                   <Button type="button" size="xs" variant="ghost" onClick={() => { setReassignStepId(s.id); setMode("reassign"); }}>
@@ -196,7 +196,7 @@ export function SubmissionApprovalPanel({
       )}
 
       {mode === "idle" && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className={cn("flex flex-wrap gap-1.5", !state.canSubmit && "-ml-2")}>
           {state.canSubmit && (
             <Button type="button" size="sm" onClick={() => setMode("submit")}>
               {state.workflow?.status === "NEEDS_REVISION" ? "Trình lại" : "Trình duyệt"}

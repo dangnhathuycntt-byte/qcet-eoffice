@@ -274,7 +274,7 @@ export function CreateDocumentModal({
         <form onSubmit={handleSubmit} noValidate className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
           {/* Type Selector Tabs */}
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1.5">
+            <label className="text-xs font-medium text-foreground block mb-1.5">
               Phân loại luồng văn bản
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -333,7 +333,7 @@ export function CreateDocumentModal({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
+                <label className="text-xs font-medium text-foreground block mb-1">
                   Mức độ khẩn
                 </label>
                 <Select
@@ -353,7 +353,7 @@ export function CreateDocumentModal({
           {/* Urgency riêng cho văn bản đi */}
           {docType === "outbox" && (
             <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">
+              <label className="text-xs font-medium text-foreground block mb-1">
                 Mức độ khẩn
               </label>
               <Select
@@ -374,7 +374,7 @@ export function CreateDocumentModal({
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">
+                  <label className="text-xs font-medium text-foreground block mb-1">
                     {docType === "inbox" ? "Cơ quan ban hành" : "Đơn vị đề xuất / Ban hành"}
                   </label>
                   {docType === "submission" ? (
@@ -403,7 +403,7 @@ export function CreateDocumentModal({
                 </div>
 
                 <div>
-                  <label htmlFor="create-document-issued-date" className="text-xs font-semibold text-foreground block mb-1">
+                  <label htmlFor="create-document-issued-date" className="text-xs font-medium text-foreground block mb-1">
                     Ngày ban hành
                   </label>
                   <VietnameseDatePicker
@@ -420,7 +420,7 @@ export function CreateDocumentModal({
               {/* Đơn vị chủ trì xử lý (cho văn bản đến) */}
               {docType === "inbox" && (
                 <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">
+                  <label className="text-xs font-medium text-foreground block mb-1">
                     Đơn vị chủ trì xử lý (tùy chọn)
                   </label>
                   <Select
@@ -446,14 +446,14 @@ export function CreateDocumentModal({
 
           {/* Panel dành riêng cho văn bản đi */}
           {docType === "outbox" && (
-            <div className="space-y-3 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-              <p className="text-xs font-semibold text-emerald-700">
-                Thông tin văn bản đi — Dự thảo DRAFT sẽ được khởi tạo kèm quy trình ký duyệt
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                Dự thảo được khởi tạo kèm quy trình ký duyệt
               </p>
 
               {/* Người ký thẩm quyền */}
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">
+                <label className="text-xs font-medium text-foreground block mb-1">
                   Người ký thẩm quyền (tùy chọn)
                 </label>
                 <Select
@@ -479,7 +479,7 @@ export function CreateDocumentModal({
 
               {/* Danh sách nơi nhận */}
               <div>
-                <label htmlFor="cd-recipient-list" className="text-xs font-semibold text-foreground block mb-1">
+                <label htmlFor="cd-recipient-list" className="text-xs font-medium text-foreground block mb-1">
                   Danh sách nơi nhận (tùy chọn)
                 </label>
                 <Textarea
