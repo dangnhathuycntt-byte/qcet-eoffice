@@ -6,7 +6,7 @@ import { Calendar, CalendarCheck, CalendarClock, CalendarPlus, CalendarX2, Check
 import type { OfficialDocument } from "@/types/document";
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
-import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
+import { ArrowHint, EmptyState, type ArrowHintVariant, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
@@ -224,6 +224,8 @@ export interface DocumentLedgerToolbarProps {
   onClearFilters: () => void;
   visibleColumns: LedgerColumnVisibility;
   onVisibleColumnsChange: (columns: LedgerColumnVisibility) => void;
+  /** Sổ chưa có văn bản (không lọc): chỉ giữ tiêu đề và nút chính, ẩn tìm · lọc · hiển thị vì không có gì để lọc. */
+  quiet?: boolean;
 }
 
 export function DocumentLedgerToolbar({
@@ -245,6 +247,7 @@ export function DocumentLedgerToolbar({
   onClearFilters,
   visibleColumns,
   onVisibleColumnsChange,
+  quiet = false,
 }: DocumentLedgerToolbarProps) {
   const searchRef = React.useRef<HTMLInputElement>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -318,6 +321,8 @@ export function DocumentLedgerToolbar({
       <div className="flex min-w-0 flex-1 items-center pr-4">
         <h1 className="truncate text-compact font-semibold text-foreground select-none">{title}</h1>
       </div>
+      {!quiet && (
+        <>
       <ListToolbarSearch
         ref={searchRef}
         value={searchValue}
@@ -368,6 +373,8 @@ export function DocumentLedgerToolbar({
             </div>
           </div>
         </ListToolbarPopover>
+        </>
+      )}
       <button
         type="button"
         onClick={onPrimaryAction}
@@ -564,6 +571,8 @@ export interface DocumentLedgerTableProps {
   /** Nội dung trạng thái rỗng theo ngữ cảnh (`getLedgerEmptyCopy`); bỏ trống thì suy từ `isFiltered`. */
   emptyCopy?: LedgerEmptyCopy;
   emptyAction?: React.ReactNode;
+  /** Có mũi tên chỉ lên nút chính ở thanh công cụ (sổ chưa có văn bản, không lọc). */
+  emptyArrow?: ArrowHintVariant;
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
@@ -710,6 +719,7 @@ export function DocumentLedgerTable({
   isFiltered,
   emptyCopy,
   emptyAction,
+  emptyArrow,
   isLoading,
   error,
   onRetry,
@@ -773,7 +783,8 @@ export function DocumentLedgerTable({
     const copy = emptyCopy ?? getLedgerEmptyCopy({ isResultFiltered: Boolean(isFiltered) });
     // Đặt giữa vùng danh sách như trạng thái rỗng của Nhiệm vụ, không dạt lên đầu để lại khoảng trắng lớn
     return (
-      <div data-slot="document-ledger-table" className="flex min-h-[48vh] items-center justify-center">
+      <div data-slot="document-ledger-table" className="relative flex min-h-[48vh] items-center justify-center">
+        {emptyArrow ? <ArrowHint variant={emptyArrow} className="-top-4 right-14" /> : null}
         <EmptyState
           role="status"
           density="compact"

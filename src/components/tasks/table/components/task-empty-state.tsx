@@ -5,7 +5,7 @@ import * as m from "motion/react-m";
 import { useReducedMotion } from "motion/react";
 import { Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { InkIllustration } from "@/components/ui/empty-state";
+import { ArrowHint, InkIllustration } from "@/components/ui/empty-state";
 import { motionSpring } from "@/lib/motion/tokens";
 import type { SmartFilterTab } from "../types";
 
@@ -192,15 +192,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   return (
     <div className="relative w-full">
     {pointsToCreate ? (
-      <span
-        data-slot="empty-state-arrow"
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-2 right-10 hidden h-[70px] w-20 bg-muted-foreground/40 md:block"
-        style={{
-          WebkitMask: "url(/design/empty-arrow.png) center / contain no-repeat",
-          mask: "url(/design/empty-arrow.png) center / contain no-repeat",
-        }}
-      />
+      <ArrowHint variant="loop" className="-top-2 right-10" />
     ) : null}
     <div
       data-slot="workspace-empty-state"

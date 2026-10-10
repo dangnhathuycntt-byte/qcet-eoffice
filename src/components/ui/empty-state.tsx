@@ -46,6 +46,24 @@ export function InkIllustration({ name, className }: { name: IllustrationName; c
   );
 }
 
+export type ArrowHintVariant = "loop" | "curve" | "squiggle" | "zigzag" | "spiral";
+
+/**
+ * Mũi tên nét mực chỉ lên nút tạo mới ở thanh công cụ khi danh sách chưa có dữ liệu.
+ * Người gọi tự đặt vị trí (`right-*`, `top-*`) để đầu mũi tên nằm dưới nút; chỉ hiện từ md, nơi nút ở góc phải.
+ */
+export function ArrowHint({ variant = "loop", className }: { variant?: ArrowHintVariant; className?: string }) {
+  const mask = `url(/design/illustrations/arrow-${variant}.png) center / contain no-repeat`;
+  return (
+    <span
+      data-slot="empty-state-arrow"
+      aria-hidden="true"
+      className={cn("pointer-events-none absolute hidden h-[70px] w-20 bg-muted-foreground/40 md:block", className)}
+      style={{ WebkitMask: mask, mask }}
+    />
+  );
+}
+
 /** Trạng thái không có dữ liệu: nói rõ vì sao trống và việc nên làm tiếp. */
 export function EmptyState({ icon, illustration, title, description, action, density = "default", className, ...props }: EmptyStateProps) {
   const compact = density === "compact";

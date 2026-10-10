@@ -376,11 +376,15 @@ export function DocumentRegistryView() {
     <Button size="sm" variant="outline" onClick={clearFiltersAndSearch}>
       {!filters.search.trim() ? "Xóa bộ lọc" : activeFilters.some((f) => f.id !== "search" && f.id !== "bucket") ? "Xóa từ khóa và bộ lọc" : "Xóa từ khóa"}
     </Button>
-  ) : filters.bucket === "done" || filters.bucket === "issued" ? (
-    <Button size="sm" variant="outline" onClick={() => setFilter("bucket", "pending")}>Xem văn bản chờ xử lý</Button>
   ) : filters.bucket === "pending" ? null : (
-    <Button size="sm" variant="outline" onClick={primaryAction.run}>{primaryAction.label}</Button>
+    // Từ md đã có mũi tên chỉ lên nút chính ở thanh công cụ: không lặp nút ở giữa
+    <Button size="sm" variant="outline" className="md:hidden" onClick={primaryAction.run}>{primaryAction.label}</Button>
   );
+  // Sổ chưa có văn bản (không lọc, không lỗi): thanh công cụ chỉ còn tiêu đề và nút chính, mũi tên chỉ vào nút đó
+  const isColdStartEmpty = !isLoading && !fetchError && documents.length === 0 && !isResultFiltered;
+  const emptyArrow = isColdStartEmpty
+    ? ({ inbox: "curve", outbox: "squiggle", submission: "zigzag" } as const)[filters.type as "inbox" | "outbox" | "submission"] ?? "spiral"
+    : undefined;
 
   const quickViewProps = pane.docId
     ? {
@@ -432,6 +436,7 @@ export function DocumentRegistryView() {
                 onLeadUnitChange={(id) => setFilter("leadUnitId", id)}
                 visibleColumns={visibleColumns}
                 onVisibleColumnsChange={setVisibleColumns}
+                quiet={isColdStartEmpty}
               />
             </header>
             {/* Cách đường kẻ 16px; vùng danh sách bên dưới tự có 16px phía trên, nên có hay không có bộ lọc bảng đều cách đều như trang Nhiệm vụ (space-y-4) */}
@@ -462,7 +467,7 @@ export function DocumentRegistryView() {
                       documents={documents} selectedIds={selectedIds} selectedDocumentId={pane.docId}
                       numberHeader={filters.type === "outbox" ? "Số đi" : filters.type === "inbox" ? "Số đến" : "Số"}
                       visibleColumns={visibleColumns} filterYear={filters.documentYear} isFiltered={isResultFiltered} emptyCopy={emptyCopy}
-                      emptyAction={emptyAction}
+                      emptyAction={emptyAction} emptyArrow={emptyArrow}
                       isLoading={isLoading} error={fetchError} onRetry={() => fetchDocuments()}
                       onOpen={handleOpenDetail} onNavigate={handleNavigate} onFocusDetail={handleFocusDetail} onToggleSelect={handleToggleSelect} onSelectAll={handleSelectAll}
                     />

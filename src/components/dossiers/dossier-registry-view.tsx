@@ -139,6 +139,9 @@ export function DossierRegistryView() {
   const [statusFilter, setStatusFilter] = React.useState("");
   const [classificationFilter, setClassificationFilter] = React.useState("");
   const [page, setPage] = React.useState(0);
+  // Chưa có hồ sơ nào và không lọc: chỉ giữ tiêu đề, nút và trạng thái trống
+  const isColdStartEmpty =
+    !isLoading && !fetchError && items.length === 0 && !searchInput && !searchQuery && !statusFilter && !classificationFilter;
 
   // Debounced search
   React.useEffect(() => {
@@ -286,7 +289,8 @@ export function DossierRegistryView() {
         </div>
       </div>
 
-      {/* Stats Summary */}
+      {/* Stats Summary — ẩn khi chưa có hồ sơ nào (toàn số 0, không có gì để lọc) */}
+      {!isColdStartEmpty && (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {([
           {
@@ -328,8 +332,10 @@ export function DossierRegistryView() {
           </div>
         ))}
       </div>
+      )}
 
       {/* Filter Bar */}
+      {!isColdStartEmpty && (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         {/* Search */}
         <div className="relative flex-1 sm:max-w-xs">
@@ -381,6 +387,7 @@ export function DossierRegistryView() {
           <option value="PERSONAL_DATA">Dữ liệu cá nhân</option>
         </select>
       </div>
+      )}
 
       {/* Error State */}
       {fetchError && (
@@ -401,7 +408,7 @@ export function DossierRegistryView() {
       {!fetchError && (
         <div className="overflow-x-auto rounded-xl border border-border/50 bg-card shadow-2xs">
           <table className="w-full text-sm">
-            <thead>
+            <thead className={cn(isColdStartEmpty && "hidden")}>
               <tr className="border-b border-border/40 text-left text-xs font-medium text-muted-foreground">
                 <th className="whitespace-nowrap px-4 py-2.5">Mã hồ sơ</th>
                 <th className="px-4 py-2.5">Tiêu đề</th>
